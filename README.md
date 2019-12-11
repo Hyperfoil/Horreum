@@ -14,6 +14,9 @@ docker run -d --name repo_pg12 -v repo_pg12:/var/lib/postgresql/data -e POSTGRES
 
 ## Getting Started
 ```bash
+cd webapp
+npm install
+cd ..
 ./mvnw compile quarkus:dev -Dui.dev
 ```
 

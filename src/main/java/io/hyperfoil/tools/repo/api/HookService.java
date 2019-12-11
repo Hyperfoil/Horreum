@@ -123,12 +123,12 @@ public class HookService {
       return Response.ok(hook).build();
    }
    @GET
-   @PathParam("{id}")
+   @Path("{id}")
    public Hook get(@PathParam("id")Integer id){
       return Hook.find("id",id).firstResult();
    }
    @DELETE
-   @PathParam("{id}")
+   @Path("{id}")
    public void delete(@PathParam("id")Integer id){
       Hook.find("id",id).firstResult().delete();
    }
