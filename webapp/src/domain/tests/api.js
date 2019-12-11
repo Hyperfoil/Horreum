@@ -5,7 +5,7 @@ const endPoints = {
     base: ()=>`${base}`,
     crud: (id)=>`${base}/${id}`,
     schema: (id)=>`${base}/${id}/schema`,
-    summary: ()=>'/api/sql?q=select test.id,test.name,test.description,count(run.id) as count,test.schema is null as hasschema from test inner join run on run.testId = test.id group by test.id' 
+    summary: ()=>'/api/sql?q=select test.id,test.name,test.description,count(run.id) as count,test.schema is not null as hasschema from test left join run on run.testId = test.id group by test.id'
 }
 
 export const all = () => {
