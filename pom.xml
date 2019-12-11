@@ -348,7 +348,6 @@
       </build>
       <properties>
 <!--        <quarkus.native.additional-build-args>-H:ResourceConfigurationFiles=${project.basedir}/src/main/resources/resources-config.json</quarkus.native.additional-build-args>-->
-
         <quarkus.native.additional-build-args>--allow-incomplete-classpath,--report-unsupported-elements-at-runtime,--language:js,-H:ResourceConfigurationFiles=${project.basedir}/src/main/resources/resources-config.json,-H:ReflectionConfigurationFiles=${project.basedir}/src/main/resources/reflection-config.json</quarkus.native.additional-build-args>
         <quarkus.package.type>native</quarkus.package.type>
       </properties>
