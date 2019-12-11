@@ -55,24 +55,19 @@ const idColumn = {
 const definedColumns = [
     { Header: "Start", accessor: v => window.DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") },
     { Header: "Stop", accessor: v => window.DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") },
-    { 
-        Header: "GC Overhead", accessor: "gc", jsonpath: "jsonb_path_query_array(data,'$.benchserver4.gclog[*] ? ( exists(@.capacity) )')",
-        render: (v)=>{
-            const totalSeconds = v.reduce((total,entry)=>total+entry.seconds,0.0);
-            const lastTimestamp = v[v.length-1].timestamp;
-            return Number.parseFloat(100*totalSeconds/lastTimestamp).toFixed(3)+" %";
-        }
-    },
-    { Header: "Scale", accessor: "scale", jsonpath: '$.faban.run.SPECjEnterprise."fa:runConfig"."fa:scale"."text()"' },
-    { Header: "Ramp Up", accessor: "rampup", jsonpath: '$.faban.run.SPECjEnterprise."fa:runConfig"."fa:runControl"."fa:rampUp"."text()"' },
-    { Header: "Faban ID", accessor: "fabanid", jsonpath: '$.faban.xml.benchResults.benchSummary.runId."text()"' },
+//    These are removed because they assume the runs are specjEnterprise2010
+//    {
+//        Header: "GC Overhead", accessor: "gc", jsonpath: "jsonb_path_query_array(data,'$.benchserver4.gclog[*] ? ( exists(@.capacity) )')",
+//        render: (v)=>{
+//            const totalSeconds = v.reduce((total,entry)=>total+entry.seconds,0.0);
+//            const lastTimestamp = v[v.length-1].timestamp;
+//            return Number.parseFloat(100*totalSeconds/lastTimestamp).toFixed(3)+" %";
+//        }
+//    },
+//    { Header: "Scale", accessor: "scale", jsonpath: '$.faban.run.SPECjEnterprise."fa:runConfig"."fa:scale"."text()"' },
+//    { Header: "Ramp Up", accessor: "rampup", jsonpath: '$.faban.run.SPECjEnterprise."fa:runConfig"."fa:runControl"."fa:rampUp"."text()"' },
+//    { Header: "Faban ID", accessor: "fabanid", jsonpath: '$.faban.xml.benchResults.benchSummary.runId."text()"' },
 ]
-/* Example render as html, TODO 
-  render : (value)=>{
-    return `<a href="/scale/${value}">${value}</a>`
-  }
-
-*/
 
 export default () => {
     const { testId } = useParams();
