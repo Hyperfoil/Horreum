@@ -27,7 +27,7 @@ public class TestService {
 
 
    @DELETE
-   @PathParam("{id}")
+   @Path("{id}")
    public void delete(@PathParam("id") Integer id){
       Test.find("id",id).firstResult().delete();
    }
