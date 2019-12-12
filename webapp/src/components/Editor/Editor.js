@@ -15,6 +15,7 @@ import 'codemirror/addon/lint/lint';
 import 'codemirror/addon/lint/lint.css'
 //import 'codemirror/addon/lint/javascript-lint';
 import { JSHINT } from 'jshint';//for linting
+//import jsonlint from 'codemirror/addon/lint/json-lint';
 import 'codemirror/addon/lint/json-lint';
 import './my-javascript-lint';
 
@@ -37,6 +38,7 @@ import beautify from 'js-beautify';
 
 //for codemirror lint @see https://github.com/JedWatson/react-codemirror/issues/89
 window.JSHINT = JSHINT
+window.jsonlint = JSHINT //for json-lint
 //window.jsyaml = jsyaml
 
 function isString(value) {
@@ -75,7 +77,8 @@ function toString(obj, left = 0, step = 2) {
             loop = loop + pad(left + step) + k + " : " + toString(v, left + step, step) +(i<ary.length-1?",":"") +"\n"
         })
         rtrn = loop + pad(left) + "}";
-    }else{
+    }else{ // booleans?
+        rtrn = obj;
     }
     return rtrn;
 }
@@ -114,7 +117,8 @@ export default ({ value = "{}", onChange = (v) => { }, options = {} }) => {
     const classes = useStyles();
     const renderValue = useMemo(()=>{
         if(value instanceof Object){
-            return prepForEditor(value);
+            const postPrep = prepForEditor(value);
+            return postPrep;
         }else{
             return value;
         }

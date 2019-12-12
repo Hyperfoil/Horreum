@@ -7,6 +7,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -16,6 +17,11 @@ import javax.ws.rs.core.Response;
 @Produces(MediaType.APPLICATION_JSON)
 public class LogService {
 
+   @GET
+   @Path("/pattern/{pattern:.*}")
+   public String echoPattern(@PathParam("pattern") String pattern){
+      return pattern;
+   }
 
    @GET
    public String logGet(){
@@ -33,5 +39,11 @@ public class LogService {
       }
       System.out.println("I'm awake!");
       return Response.ok().build();
+   }
+
+   @GET
+   @Path("status/{status}")
+   public Response getStatus(@PathParam("status")Integer status){
+      return Response.status(status).entity("entity").build();
    }
 }

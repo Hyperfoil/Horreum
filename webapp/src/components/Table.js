@@ -18,7 +18,7 @@ function Table({ columns, data }) {
   )
   return (
     <>
-      <table className="pf-c-table pf-m-grid-lg" {...getTableProps()}>
+      <table className="pf-c-table pf-m-compact pf-m-grid-md" {...getTableProps()}>
         <thead>
           {headerGroups.map(headerGroup => {
             return (

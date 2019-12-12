@@ -17,3 +17,6 @@ export const add = (payload) => {
 export const get = (id) => {
     return fetchApi(endPoints.crud(id),null,'get');
 }
+export const remove = (id) => {
+    return fetchApi(endPoints.crud(id),null,'delete');
+}

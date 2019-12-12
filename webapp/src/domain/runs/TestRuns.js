@@ -29,8 +29,8 @@ import Table from '../../components/Table';
 import Editor, {fromEditor} from '../../components/Editor';
 
 const renderCell = (render)=>(arg)=>{
-    const { cell: { value } } = arg;    
-    const rendered = render(value)
+    const {cell: {value, row: {index}}, data} = arg;    
+    const rendered = render(value,data[index])
     if(typeof rendered === "undefined" || rendered === null){
         return "-"
     }else if(typeof rendered === "string"){
@@ -78,18 +78,22 @@ export default () => {
         const reduced = columns
             .filter(v => v.Header.toLowerCase() !== "id")
             .reduce((rtrn, entry) => {
-                if (typeof entry.jsonpath !== "undefined") {
-                    if(typeof entry.accessor === "string"){
-                        rtrn[entry.accessor] = entry.jsonpath
-                    }else{
-                        rtrn[entry.Header.replace(/\s/g,'_')] = entry.jsonpath
-                    }                    
-                } else {
-                    if(typeof entry.accessor === "string"){
-                        rtrn[entry.accessor] = entry.accessor
-                    }else{
-                        rtrn[entry.Header.replace(/\s/g,'_')] = entry.Header.replace(/\s/g,'_');
+                if( ! entry.composite ){
+
+                    if (typeof entry.jsonpath !== "undefined") {
+                        if(typeof entry.accessor === "string"){
+                            rtrn[entry.accessor] = entry.jsonpath
+                        }else{
+                            rtrn[entry.Header.replace(/\s/g,'_')] = entry.jsonpath
+                        }                    
+                    } else {
+                        if(typeof entry.accessor === "string"){
+                            rtrn[entry.accessor] = entry.accessor
+                        }else{
+                            rtrn[entry.Header.replace(/\s/g,'_')] = entry.Header.replace(/\s/g,'_');
+                        }
                     }
+    
                 }
                 return rtrn;
             }, {})

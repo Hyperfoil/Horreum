@@ -3,6 +3,7 @@ package io.hyperfoil.tools.repo.api;
 import io.hyperfoil.tools.repo.entity.json.Hook;
 import io.hyperfoil.tools.repo.entity.json.Run;
 import io.hyperfoil.tools.repo.entity.json.Test;
+import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.vertx.ConsumeEvent;
@@ -10,6 +11,7 @@ import io.vertx.core.http.HttpVersion;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.reactivex.core.buffer.Buffer;
 import io.vertx.reactivex.ext.web.client.WebClient;
+import org.postgresql.util.PSQLException;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -17,6 +19,7 @@ import javax.inject.Inject;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 import javax.persistence.EntityManager;
+import javax.persistence.PersistenceException;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -30,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 @Path("/api/hook")
@@ -96,13 +100,13 @@ public class HookService {
       }
    }
 
-   @Transactional
+   @Transactional //Transactional is a workaround for #6059
    @ConsumeEvent(value="new/test",blocking = true)
    public void newTest(Test test){
       tellHooks("new/test",-1,test);
    }
 
-   @Transactional
+   @Transactional //Transactional is a workaround for #6059
    @ConsumeEvent(value="new/run",blocking = true)
    public void newRun(Run run){
       Integer testId = run.testId;
@@ -111,24 +115,46 @@ public class HookService {
 
 
    @POST
+   @Transactional
    public Response add(Hook hook){
+      System.out.println("HOOKSERVER.add "+hook);
       if(hook == null){
          return Response.serverError().entity("hook is null").build();
       }
-      if(hook.id != null){
-         em.merge(hook);
-      }else{
-         em.persist(hook);
+      try {
+         if (hook.id != null) {
+            em.merge(hook);
+         } else {
+            em.persist(hook);
+         }
+         em.flush();
+         System.out.println("HOOKSERVER.add merge|persist "+hook.id+" "+hook.isPersistent());
+         return Response.ok(hook).build();
+      }catch(Exception e){
+
+         Throwable root = e;
+//         Our favorite Object is not assignable to java/lang/Throwable
+//         HashSet<Throwable> seen = new HashSet<>();
+//         seen.add(root);
+//         while(root.getCause()!=null && !seen.contains(root.getCause())){
+//            root = root.getCause();
+//         }
+         Json errorJson = new Json();
+         errorJson.set("message",root.getMessage());
+         System.out.println("HOOKSERVICE errorJson "+errorJson.toString(0));
+
+         return Response.serverError().entity(errorJson.toString(0)).build();
       }
-      return Response.ok(hook).build();
    }
    @GET
    @Path("{id}")
    public Hook get(@PathParam("id")Integer id){
       return Hook.find("id",id).firstResult();
    }
+
    @DELETE
    @Path("{id}")
+   @Transactional
    public void delete(@PathParam("id")Integer id){
       Hook.find("id",id).firstResult().delete();
    }

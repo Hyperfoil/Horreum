@@ -10,7 +10,7 @@ const initialState = {
 }
 //Takes events and updates the state accordingly
 export const reducer = (state = initialState, action) =>{
-
+    
     switch(action.type){
         case actionTypes.LOADED: {
             if ( !utils.isEmpty(action.runs) ) {

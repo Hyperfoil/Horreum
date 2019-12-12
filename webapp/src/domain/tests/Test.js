@@ -7,15 +7,18 @@ import {
     Card,
     CardHeader,
     CardBody,
+    Form,
+    ActionGroup,
+    FormGroup,
     InputGroup,
     InputGroupText,
     PageSection,
+    TextArea,
     TextInput,
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
-    ToolbarSection
-
+    ToolbarSection,
 } from '@patternfly/react-core';
 import {
     EditIcon,
@@ -25,10 +28,12 @@ import {
 import * as actions from './actions';
 import * as selectors from './selectors';
 
-import Editor from '../../components/Editor';
+import Editor, {fromEditor} from '../../components/Editor';
 export default () => {
     const { testId } = useParams();
     const test = useSelector(selectors.get(testId))
+    const [name,setName] = useState("");
+    const [description,setDescription] = useState("");
     const [schema, setSchema] = useState(test.schema || {})
     const dispatch = useDispatch();
     useEffect(() => {
@@ -36,31 +41,53 @@ export default () => {
     }, [dispatch, testId])
     useEffect(() => {
         setSchema(test.schema || {});//change the loaded document when the test changes
+        setName(test.name);
+        setDescription(test.description);
     }, [test])
 
+    const getFormTest = ()=>({
+        name,
+        description,
+        schema: fromEditor(schema),
+        id: test.id
+    })
     return (
         // <PageSection>
         <React.Fragment>
             <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between", backgroundColor: '#f7f7f7', borderBottom: '1px solid #ddd' }}>
-                <ToolbarGroup style={{flexGrow:1}}>
-                    <ToolbarItem style={{flexGrow:1,padding:5}}>
-                        <InputGroup>
-                            <InputGroupText>Name</InputGroupText>
-                            <TextInput value={test.name} />
-                        </InputGroup>
-                        <InputGroup>
-                            <InputGroupText>Description</InputGroupText>
-                            <TextInput value={test.description} />
-                        </InputGroup>
-                    </ToolbarItem>
-                </ToolbarGroup>
-                <ToolbarGroup>
-                    <ToolbarItem>
-                        <Button variant="control" onClick={e=>{}}><OutlinedSaveIcon/> save</Button>
-                    </ToolbarItem>
-                </ToolbarGroup>
+                <ToolbarSection aria-label="form">
+                    <Form isHorizontal={true} style={{gridGap:"2px",width:"100%",paddingRight:"8px"}}>
+                        <FormGroup label="Name" isRequired={true} fieldId="name" helperText="Test Name" helperTextInvalid="Name must be unique and not empty">
+                            <TextInput
+                                value={name}
+                                isRequired
+                                type="text"
+                                id="name"
+                                aria-describedby="name-helper"
+                                name="name"
+                                // isValid={name !== null && name.trim().length > 0}
+                                onChange={e => setName(e)}
+                            />
+                        </FormGroup>
+                        <FormGroup label="Description" fieldId="description" helperText="" helperTextInvalid="">
+                            <TextArea
+                                value={description}
+                                type="text"
+                                id="description"
+                                aria-describedby="description-helper"
+                                name="description"
+                                isValid={true}
+                                onChange={e => setDescription(e)}
+                            />
+                        </FormGroup>
+                        <ActionGroup style={{marginTop:0}}>
+                            <Button variant="primary" onClick={e => { }}><OutlinedSaveIcon /> save</Button>
+                            <Button variant="secondary" onClick={e => { }}><OutlinedSaveIcon /> cancel</Button>
+                        </ActionGroup>
+                    </Form>
+                </ToolbarSection>
             </Toolbar>
-            <Editor value={schema} onChange={e => { setSchema(e) }} />
+            <Editor value={schema} onChange={e => { setSchema(e) }} options={{mode: "application/ld+json"}}/>
         </React.Fragment>
         // </PageSection>        
     )

@@ -5,7 +5,6 @@ const initialState = {
     byId: Map({}),
 }
 export const reducer = (state = initialState, action) =>{
-
     switch(action.type){
         case actionTypes.LOADED: {
             if ( !utils.isEmpty(action.hooks) ) {
@@ -15,8 +14,16 @@ export const reducer = (state = initialState, action) =>{
                     })
                 })
             }
-            break;
+         
         }
+        break;
+        case actionTypes.DELETE: {
+            if(  state.byId.has(`${action.id}`) ){
+                state.byId = state.byId.delete(`${action.id}`)
+            }
+            
+        }
+        break;
         default:
     }
     return state;

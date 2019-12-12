@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.repo.server;
 
+import javax.enterprise.context.ApplicationScoped;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -15,6 +16,7 @@ import java.util.regex.Pattern;
    Redirects unknown URLs to the default /index.html so that React can try and render them as part of browser Url History
  */
 @WebFilter(urlPatterns = "/*")
+@ApplicationScoped
 public class RouteFilter extends HttpFilter {
    private static final Pattern FILE_NAME_PATTERN = Pattern.compile(".*[.][a-zA-Z\\d]+");
 

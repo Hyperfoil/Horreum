@@ -6,6 +6,6 @@ export const all = () =>{
     return list;    
 }
 export const get = (id)=> ()=>{
-    const rtrn = store.getState().hooks.byId.get(`${id}`,{damn:"sorry"});
+    const rtrn = store.getState().hooks.byId.get(`${id}`,{});
     return rtrn;
 }

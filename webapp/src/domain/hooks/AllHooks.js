@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -23,10 +23,12 @@ import {
 import { DateTime, Duration } from 'luxon';
 import { NavLink } from 'react-router-dom';
 
-import {all} from './actions';
+import {all,add, remove} from './actions';
 import * as selectors from './selectors';
 
 import Table from '../../components/Table';
+import AddHookModal from './AddHookModal';
+
 
 export default ()=>{
     const columns = useMemo(()=>[
@@ -47,12 +49,13 @@ export default ()=>{
             Cell: (arg)=>{
                 const {cell: {value} } = arg;
                 return (<>
-                    <Button variant="link" style={{color: "#a30000"}} onClick={e=>{}}><OutlinedTimesCircleIcon/></Button>
+                    <Button variant="link" style={{color: "#a30000"}} onClick={e=>{dispatch(remove(value))}}><OutlinedTimesCircleIcon/></Button>
                 </>)
             }
         }
 
     ],[])
+    const [isOpen,setOpen] = useState(false);
     const dispatch = useDispatch();
     const list = useSelector(selectors.all);
     useEffect(()=>{
@@ -60,13 +63,13 @@ export default ()=>{
     },[dispatch])
     return (
         <PageSection>
+          <AddHookModal isOpen={isOpen} onCancel={()=>setOpen(false)} onSubmit={(v)=>{setOpen(false); dispatch(add(v)); }} />
           <Card>
             <CardHeader>
                 <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between"}}>
                     <ToolbarSection aria-label="info">
-                    <Button variant="link" style={{color: "#004080"}}><PlusIcon/> Add Hook</Button>
+                    <Button variant="link" style={{color: "#004080"}} onClick={e=>{ setOpen(true); }}><PlusIcon/> Add Hook</Button>
                     </ToolbarSection>
-
                 </Toolbar>
             </CardHeader>
             <CardBody>

@@ -24,13 +24,26 @@ export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}) =
 		// }, item => !_.isEmpty(item)),
 	})[method.toLowerCase()](payload)
 	.catch((e) => {
-		if (e.response && e.response.json) {
-			e.response.json().then((json) => {
-				if (json) throw json;
-				throw e;
-			});
-		} else {
-			throw e;
+		if ( e.response){
+			return e.response.json().then(body=>{
+				return Promise.reject(body)
+			},(noBody)=>{
+				e.response.text().then(body=>{
+					return Promise.reject(body);
+				},(noBodyAgain)=>{
+					return Promise.reject(e);
+				})
+			})
+		
 		}
+		return Promise.reject(e);
+		// if (e.response && e.response.json) {
+		// 	e.response.json().then((json) => {
+		// 		if (json) throw json;
+		// 		throw e;
+		// 	});
+		// } else {
+		// 	throw e;
+		// }
 	});
 };
