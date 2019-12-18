@@ -5,6 +5,7 @@ import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.ext.web.common.template.test;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -36,6 +37,19 @@ public class TestService {
    @Path("{id}")
    public Test get(@PathParam("id") Integer id){
       return Test.find("id",id).firstResult();
+   }
+
+   public Test getByNameOrId(String input){
+      Test foundTest = getByName(input);
+      if(foundTest == null && input.matches("-?\\d+")){
+         foundTest = get(Integer.parseInt(input));
+      }
+      return foundTest;
+   }
+
+   public Test getByName(String name){
+      Test existing = Test.find("name", name).firstResult();
+      return existing;
    }
 
    @GET

@@ -68,7 +68,7 @@ export default ()=>{
             <CardHeader>
                 <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between"}}>
                     <ToolbarSection aria-label="info">
-                    <Button variant="link" style={{color: "#004080"}} onClick={e=>{ setOpen(true); }}><PlusIcon/> Add Hook</Button>
+                    <Button variant="primary" onClick={e=>{ setOpen(true); }}><PlusIcon/> Add Hook</Button>
                     </ToolbarSection>
                 </Toolbar>
             </CardHeader>

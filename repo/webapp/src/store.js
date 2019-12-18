@@ -7,6 +7,7 @@ import thunk from 'redux-thunk';
 import { reducer as runReducer} from './domain/runs/reducers'
 import { reducer as testReducer} from './domain/tests/reducers'
 import { reducer as hookReducer} from './domain/hooks/reducers'
+import { reducer as schemaReducer} from './domain/schemas/reducers'
 
 export const history = createBrowserHistory();
 
@@ -15,6 +16,7 @@ const appReducers = combineReducers({
     runs:  runReducer,
     tests: testReducer,
     hooks: hookReducer,
+    schemas: schemaReducer,
 })
 const enhancer = compose(
     applyMiddleware(

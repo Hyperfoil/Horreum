@@ -3,6 +3,8 @@ import React, { useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
+    Button,
+    ButtonVariant,
     Card,
     CardHeader,
     CardBody,
@@ -51,7 +53,9 @@ export default ()=>{
         <PageSection>
           <Card>
             <CardHeader>
-
+              <NavLink className="pf-c-button pf-m-primary" to="/test/_new">
+                New Test
+              </NavLink>
             </CardHeader>
             <CardBody>
               <Table columns={columns} data={allRuns} />
