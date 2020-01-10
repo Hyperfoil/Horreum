@@ -39,6 +39,7 @@ public class TestService {
       return Test.find("id",id).firstResult();
    }
 
+
    public Test getByNameOrId(String input){
       Test foundTest = getByName(input);
       if(foundTest == null && input.matches("-?\\d+")){
@@ -80,7 +81,7 @@ public class TestService {
    @POST
    @Transactional
    public Response add(Test test){
-      System.out.println("add TEST");
+      System.out.println("add TEST "+test.id);
       if(test == null){
          return Response.serverError().entity("test is null").build();
       }

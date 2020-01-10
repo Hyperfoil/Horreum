@@ -1,32 +1,21 @@
 <?xml version="1.0"?>
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <!-- Parent -->
-<!-- It wouldn't build with this reference -->
-<!--    <parent>-->
-<!--        <groupId>io.hyperfoil</groupId>-->
-<!--        <artifactId>repo-all</artifactId>-->
-<!--        <version>0.1-SNAPSHOT</version>-->
-<!--        <relativePath/>-->
-<!--    </parent>-->
-
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.hyperfoil</groupId>
   <artifactId>repo</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <properties>
-    <surefire-plugin.version>2.22.0</surefire-plugin.version>
-<!--    <quarkus.native.additional-build-args>&#45;&#45;allow-incomplete-classpath,&#45;&#45;report-unsupported-elements-at-runtime,&#45;&#45;language:js,-H:ResourceConfigurationFiles=${project.basedir}/src/main/resources/resources-config.json,-H:ReflectionConfigurationFiles=${project.basedir}/src/main/resources/reflection-config.json</quarkus.native.additional-build-args>-->
-    <maven.compiler.target>1.8</maven.compiler.target>
-    <quarkus.version>1.0.1.Final</quarkus.version>
-<!--    <quarkus.version>1.1.0.CR1</quarkus.version>-->
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <graalvm.version>19.2.0.1</graalvm.version>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <vertx.version>3.8.3</vertx.version>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <maven.compiler.parameters>true</maven.compiler.parameters>
     <compiler-plugin.version>3.8.1</compiler-plugin.version>
+    <graalvm.version>19.2.0.1</graalvm.version>
+    <maven.compiler.parameters>true</maven.compiler.parameters>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <quarkus.version>1.0.1.Final</quarkus.version>
+    <surefire-plugin.version>2.22.0</surefire-plugin.version>
+    <vertx.version>3.8.3</vertx.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -55,11 +44,6 @@
       <artifactId>yaup</artifactId>
       <version>0.2-SNAPSHOT</version>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>io.hyperfoil.tools</groupId>-->
-<!--      <artifactId>parse</artifactId>-->
-<!--      <version>0.1-SNAPSHOT</version>-->
-<!--    </dependency>-->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-jdbc-postgresql</artifactId>
@@ -112,16 +96,11 @@
       <artifactId>vertx-web-client</artifactId>
       <version>${vertx.version}</version>
     </dependency>
-    <!--javax.security.jacc.EJBMethodPermission-->
-<!--    <dependency>-->
-<!--      <groupId>org.jboss.spec.javax.security.jacc</groupId>-->
-<!--      <artifactId>jboss-jacc-api_1.5_spec</artifactId>-->
-<!--      <version>1.0.2.Final</version>-->
-<!--    </dependency>-->
-<!--    <dependency>-->
-<!--      <groupId>io.quarkus</groupId>-->
-<!--      <artifactId>quarkus-smallrye-openapi</artifactId>-->
-<!--    </dependency>-->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-undertow-websockets</artifactId>
+      <version>${quarkus.version}</version>
+    </dependency>
   </dependencies>
   <repositories>
     <repository>
@@ -131,26 +110,6 @@
   </repositories>
   <build>
     <plugins>
-<!--      <plugin>-->
-<!--        <groupId>org.codehaus.mojo</groupId>-->
-<!--        <artifactId>exec-maven-plugin</artifactId>-->
-<!--        <version>1.6.0</version>-->
-<!--        <executions>-->
-<!--          <execution>-->
-<!--            <id>yarn start</id>-->
-<!--            <phase>compile</phase>-->
-<!--            <goals>-->
-<!--              <goal>exec</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <executable>src/main/javascript/node_modules/node/yarn/dist/bin/yarn</executable>-->
-<!--              <commandlineArgs>run start</commandlineArgs>-->
-<!--              <workingDirectory>src/main/javascript</workingDirectory>-->
-<!--              <async>true</async>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--        </executions>-->
-<!--      </plugin>-->
       <plugin>
         <groupId>com.github.eirslett</groupId>
         <artifactId>frontend-maven-plugin</artifactId>
@@ -189,15 +148,7 @@
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${surefire-plugin.version}</version>
-        <!--
-        <configuration>
-          <systemProperties>
-            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-          </systemProperties>
-        </configuration>
-        -->
       </plugin>
-      <!-- Copy the javascript built to the directory used by Quarkus -->
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <version>3.1.0</version>
@@ -224,11 +175,6 @@
   </build>
   <profiles>
     <profile>
-      <!--
-        !!!! USE THIS FOR PRODUCTION BUILDS - IT RESULTS IN A MUCH SMALLER SIZE!!!!
-        Since building the ui this way is very time-consuming, and not all changes necessarily affect the ui, turn on
-        building the ui explicitly by running 'atlas-package -Dob.ui'
-      -->
       <id>Build the UI with AOT</id>
       <activation>
         <property>
@@ -242,9 +188,6 @@
             <artifactId>frontend-maven-plugin</artifactId>
             <executions>
               <execution>
-                <!--
-                  Uses webpack to bundle the application as set up in package.json
-                -->
                 <id>yarn run build</id>
                 <phase>compile</phase>
                 <goals>
@@ -257,7 +200,6 @@
               </execution>
             </executions>
           </plugin>
-          <!-- Copy the javascript built to the directory used by Quarkus -->
           <plugin>
             <artifactId>maven-resources-plugin</artifactId>
             <version>3.1.0</version>
@@ -359,7 +301,6 @@
         </plugins>
       </build>
       <properties>
-<!--        <quarkus.native.additional-build-args>-H:ResourceConfigurationFiles=${project.basedir}/src/main/resources/resources-config.json</quarkus.native.additional-build-args>-->
         <quarkus.native.additional-build-args>--allow-incomplete-classpath,--report-unsupported-elements-at-runtime,--language:js,-H:ResourceConfigurationFiles=${project.basedir}/src/main/resources/resources-config.json,-H:ReflectionConfigurationFiles=${project.basedir}/src/main/resources/reflection-config.json</quarkus.native.additional-build-args>
         <quarkus.package.type>native</quarkus.package.type>
       </properties>

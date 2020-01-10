@@ -48,13 +48,13 @@ function isNumber(value) {
     return typeof value === 'number' && isFinite(value);
 }
 function pad(amount) {
-    return "";
-    // if (amount <= 0) {
-    //     return ""
-    // }
-    // return "".padStart(amount, " ");
+    //return "";
+    if (amount <= 0) {
+        return ""
+    }
+    return "".padStart(amount, " ");
 }
-function toString(obj, left = 0, step = 2) {
+export const toString = (obj, left = 0, step = 2) => {
     let rtrn = false;
     if (isNumber(obj)) {
         rtrn = obj
@@ -74,7 +74,7 @@ function toString(obj, left = 0, step = 2) {
         let loop = "{\n"
         Object.keys(obj).forEach((k,i,ary) => {
             const v = obj[k]
-            loop = loop + pad(left + step) + k + " : " + toString(v, left + step, step) +(i<ary.length-1?",":"") +"\n"
+            loop = loop + pad(left + step) +"\"" +k + "\" : " + toString(v, left + step, step) +(i<ary.length-1?",":"") +"\n"
         })
         rtrn = loop + pad(left) + "}";
     }else{ // booleans?

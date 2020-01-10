@@ -18,5 +18,5 @@ export const summary = () => {
     return fetchApi(endPoints.summary(),null,'get');
 }
 export const send = (test) => {
-    return fetchApi(endPoints.base(),test,'post');
+    return fetchApi(endPoints.base(),test,'post')
 }

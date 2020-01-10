@@ -92,7 +92,7 @@ export default ({value = "{}", language="json", setValueGetter = (v) => {}, opti
         //     editorWillMount={editorWillMount}
         // />
         <Editor
-            value="{}"
+            value={value}
             language="json"
             theme="dark" //light | dark
             options={{

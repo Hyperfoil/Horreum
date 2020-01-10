@@ -11,7 +11,6 @@ import io.hyperfoil.tools.yaup.json.Json;
 import io.hyperfoil.tools.yaup.json.JsonValidator;
 import io.hyperfoil.tools.yaup.json.ValueConverter;
 import io.vertx.core.eventbus.EventBus;
-import org.apache.commons.collections.map.HashedMap;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
@@ -56,12 +55,6 @@ public class RunService {
    @Inject
    EntityManager em;
 
-   @GET
-   @Path("{id}")
-   public Run getRun(@PathParam("id") Integer id) {
-      return Run.find("id", id).firstResult();
-   }
-
    @Inject
    SqlService sqlService;
 
@@ -71,6 +64,24 @@ public class RunService {
 
    @Inject
    TestService testService;
+
+   @GET
+   @Path("{id}")
+   public Run getRun(@PathParam("id") Integer id) {
+      return Run.find("id", id).firstResult();
+   }
+
+   @GET
+   @Path("{id}/structure")
+   public Json getStructure(@PathParam("id")Integer id){
+      Run found = getRun(id);
+      if(found!=null){
+         Json response = Json.typeStructure(found.data);
+         return response;
+      }
+      return new Json(false);
+   }
+
 
    @POST
    @Path("test/{testId}")
@@ -313,7 +324,7 @@ public class RunService {
          });
          if (!grouped.isEmpty()) {
             //create a WITH MATERIALIZED
-            Map<String, String> pathToPrefix = new HashedMap();
+            Map<String, String> pathToPrefix = new HashMap();
             Map<String, String> pathToGroup = new HashMap<>();
             keys = grouped.keys();
             sql.append("WITH jpgroup AS MATERIALIZED ( select id,start,stop,data,testId");

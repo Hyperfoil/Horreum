@@ -24,6 +24,7 @@ export const sendTest = (test) => {
     return dispatch =>
         api.send(test)
         .then(response=>{
+            console.log("sendTest.response",response)
             dispatch(loaded(response));
         })
 }
