@@ -1,6 +1,8 @@
 import store from '../../store';
 
-const emptyTest = {name:"",description:"",schema:{}}
+const emptyTest = {name:"",description:"",schema:{
+    "$schema": "http://json-schema.org/draft-07/schema"
+}}
 
 export const all = () =>{
     let list = [...store.getState().tests.byId.values()]

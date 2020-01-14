@@ -20,6 +20,7 @@ import {
     ToolbarItem,
     ToolbarSection,
 } from '@patternfly/react-core';
+import { NavLink } from 'react-router-dom';
 import {
     EditIcon,
     OutlinedSaveIcon,
@@ -34,7 +35,6 @@ import Editor from '../../components/Editor/monaco/Editor';
 
 export default () => {
     const { testId } = useParams();
-    console.log("Test.testId", testId);
     const test = useSelector(selectors.get(testId))
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -107,7 +107,9 @@ export default () => {
 
                                         }}
                                     >Save</Button>
-                                    <Button variant="secondary" onClick={e => { }}>Cancel</Button>
+                                    <NavLink className="pf-c-button pf-m-secondary" to="/test/">
+                                        Cancel
+                                    </NavLink>
                                 </ActionGroup>
                             </Form>
                         </ToolbarSection>

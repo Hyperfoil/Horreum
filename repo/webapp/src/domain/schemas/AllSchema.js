@@ -13,6 +13,7 @@ import {
     ToolbarItem,
     ToolbarSection,
 } from '@patternfly/react-core';
+import { NavLink } from 'react-router-dom';
 import {
     EditIcon,
     OutlinedSaveIcon,
@@ -34,8 +35,8 @@ export default () => {
         },
         {
             Header: "json-schema", accessor: "schema",
-            Cell: (arg) =>{
-                const {cell: {value, row: {index}}, data} = arg;    
+            Cell: (arg) => {
+                const { cell: { value, row: { index } }, data } = arg;
                 return (<a href={`/api/schema/${data[index].name}`} target="_blank">link</a>)
             }
         },
@@ -47,9 +48,9 @@ export default () => {
                     <Button
                         variant="link"
                         style={{ color: "#a30000" }}
-                        
+
                     >
-                        </Button>
+                    </Button>
                 </>)
             }
         }
@@ -63,11 +64,9 @@ export default () => {
         <PageSection>
             <Card>
                 <CardHeader>
-                    <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
-                        <ToolbarSection aria-label="info">
-                            <Button variant="primary" onClick={e => { console.log("TODO, new schema redirect"); }}><PlusIcon /> Add Schema</Button>
-                        </ToolbarSection>
-                    </Toolbar>
+                    <NavLink className="pf-c-button pf-m-primary" to="/schema/_new">
+                        New Schema
+                    </NavLink>
                 </CardHeader>
                 <CardBody>
                     <Table columns={columns} data={list} />

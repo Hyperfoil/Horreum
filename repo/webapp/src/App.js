@@ -25,6 +25,7 @@ import AllTests from './domain/tests/AllTests';
 import Test from './domain/tests/Test';
 
 import AllSchema from './domain/schemas/AllSchema';
+import Schema from './domain/schemas/Schema';
 
 import AllHooks from './domain/hooks/AllHooks';
 
@@ -98,11 +99,6 @@ function App() {
           <Switch>
             <Route exact path="/" component={AllTests} />
             <Route exact path="/test" component={AllTests} />
-            <Route exact path="/test/~new" render={() => {
-              return (
-                <div>So you want a new test, eh?</div>
-              )
-            }} />
             <Route exact path="/test/:testId" component={Test} />
 
             <Route exact path="/run" component={AllRuns} />
@@ -112,6 +108,8 @@ function App() {
             <Route exact path="/hook" component={AllHooks} />
 
             <Route exact path="/schema" component={AllSchema} />
+            <Route path="/schema/:schemaId" component={Schema} />
+
           </Switch>
         </Page>
       </ConnectedRouter>
