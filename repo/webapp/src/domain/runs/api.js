@@ -6,6 +6,7 @@ const endPoints = {
     getRun: runId => `${base}/${runId}/`,
     addRun: () => `${base}/`,
     listAll: ()=> `${base}/list/`,
+    filter: query => `${base}/filter?query=${query}`,
     js: runId => `${base}/${runId}/js`,
     listByTest: testId => `${base}/list/${testId}`
 
@@ -23,3 +24,5 @@ export const get = (id,js) => {
     }
 }
 export const byTest = (id,payload) => fetchApi(endPoints.listByTest(id),payload,'post');
+
+export const filter = query => fetchApi(endPoints.filter(query),null,'get')

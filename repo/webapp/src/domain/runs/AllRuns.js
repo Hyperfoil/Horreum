@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -11,13 +11,17 @@ import {
 import { DateTime, Duration } from 'luxon';
 import { NavLink } from 'react-router-dom';
 
-import {all} from './actions';
+import {all, filter} from './actions';
 import * as selectors from './selectors';
 
 import Table from '../../components/Table';
+import { Button, ButtonVariant, TextInput, Tooltip, TooltipPosition } from '@patternfly/react-core';
+import { SearchIcon } from '@patternfly/react-icons'
   
 
 export default ()=>{
+    const [filterQuery, setFilterQuery] = useState("")
+    const [filterLoading, setFilterLoading] = useState(false)
     const columns = useMemo(()=>[
         {
           Header:"Id",accessor:"id",
@@ -38,7 +42,11 @@ export default ()=>{
         },
     ],[])
     const dispatch = useDispatch();
-    const allRuns = useSelector(selectors.all);
+    const runs = useSelector(selectors.filter)
+    const runFilter = () => {
+       setFilterLoading(true)
+       dispatch(filter(filterQuery, () => setFilterLoading(false)));
+    };
     useEffect(()=>{
         dispatch(all())
     },[dispatch])
@@ -46,10 +54,23 @@ export default ()=>{
         <PageSection>
           <Card>
             <CardHeader>
-
+              <div className="pf-c-input-group">
+                 {/* TODO: Spinner left as an excercise for the reader */}
+                 <Tooltip position="bottom" content={<div>Enter JSON keys separated by spaces or commas. Multiple keys are combined with OR relation.</div>}>
+                    <TextInput value={filterQuery} onChange={setFilterQuery}
+                               isReadOnly={filterLoading} type="search"
+                               aria-label="search expression"
+                               placeholder="Enter search expression..." />
+                    <Button variant={ButtonVariant.control}
+                            aria-label="search button for search input"
+                            onClick={runFilter}>
+                      <SearchIcon />
+                    </Button>
+                 </Tooltip>
+              </div>
             </CardHeader>
             <CardBody>
-              <Table columns={columns} data={allRuns} />
+              <Table columns={columns} data={runs} />
             </CardBody>
           </Card>
         </PageSection>

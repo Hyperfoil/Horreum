@@ -1,12 +1,11 @@
 import * as actionTypes from './actionTypes';
-import {Map} from 'immutable';
+import { List, Map } from 'immutable';
 import * as utils from '../../utils'
 
 const initialState = {
     byId: Map({}),
-    byTest: Map({
-        
-    })
+    byTest: Map({}),
+    filteredIds: null
 }
 //Takes events and updates the state accordingly
 export const reducer = (state = initialState, action) =>{
@@ -33,6 +32,11 @@ export const reducer = (state = initialState, action) =>{
                 })
             }
             state.byTest = state.byTest.set(`${action.id}`,testMap)
+            break;
+        }
+        case actionTypes.FILTERED: {
+            // The run.ids in LOADED are converted to strings using the backtick notation for whatever reason
+            state.filteredIds = action.ids == null ? null : List(action.ids.map(String))
             break;
         }
         default:

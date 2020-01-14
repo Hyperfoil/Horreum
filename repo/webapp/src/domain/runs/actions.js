@@ -33,3 +33,24 @@ export const byTest = (id,payload)=>
             return dispatch(testId(id,response,payload))
         })
 
+export const filter = (query, callback) => {
+   return dispatch => {
+      if (query == "") {
+         dispatch({
+            type: actionTypes.FILTERED,
+            ids: null
+         })
+         callback()
+         return
+      }
+      api.filter(query)
+      .then(response => {
+         dispatch({
+            type: actionTypes.FILTERED,
+            ids: response
+         })
+         callback()
+      });
+   }
+}
+
