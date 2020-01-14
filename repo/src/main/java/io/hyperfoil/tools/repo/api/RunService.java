@@ -71,6 +71,17 @@ public class RunService {
                "ELSE all_keys.value " +
             "END) AS r2)" +
             "SELECT DISTINCT id, key FROM all_keys WHERE key = ANY(?)";
+   private static final String FILTER_QUERY_ARRAYS =
+         "WITH RECURSIVE all_keys(id, key, value) AS (" +
+            "SELECT id, key, value FROM run, jsonb_each(run.data) " +
+            "UNION ALL " +
+               "(WITH typed AS (SELECT jsonb_typeof(all_keys.value) as type, id, value FROM all_keys) " +
+                  "SELECT id, v.key, v.value FROM typed, jsonb_each(value) v WHERE type = 'object' " +
+                  "UNION ALL " +
+                  "SELECT id, NULL, e FROM typed, jsonb_array_elements(value) e WHERE type = 'array'" +
+               ")" +
+         ")" +
+         "SELECT DISTINCT id, key FROM all_keys WHERE key = ANY(?)";
    //@formatter:on
    // TODO: AND expressions would be modelled as
    //  SELECT DISTINCT a1.id, a1.key AS k1, a2.key AS k2 FROM all_keys AS a1 INNER JOIN all_keys AS a2 ON a1.id = a2.id WHERE a1.key = ? AND a2.key = ?;
@@ -92,18 +103,21 @@ public class RunService {
    AgroalDataSource dataSource;
 
    Connection connection;
-   PreparedStatement filterStatement;
+   PreparedStatement filterQueryStatement;
+   PreparedStatement filterQueryArraysStatement;
 
    @PostConstruct
    public void prepareStatements() throws SQLException {
       System.out.println("Constructing");
       connection = dataSource.getConnection();
-      filterStatement = connection.prepareStatement(FILTER_QUERY);
+      filterQueryStatement = connection.prepareStatement(FILTER_QUERY);
+      filterQueryArraysStatement = connection.prepareStatement(FILTER_QUERY_ARRAYS);
    }
 
    @PreDestroy
    public void closeConnection() throws SQLException {
-      filterStatement.close();
+      filterQueryStatement.close();
+      filterQueryArraysStatement.close();
       if (!connection.isClosed()) {
          connection.close();
       }
@@ -320,7 +334,7 @@ public class RunService {
 
    @GET
    @Path("filter")
-   public Json filter(@QueryParam("query") String query) {
+   public Json filter(@QueryParam("query") String query, @QueryParam("recurseToArrays") boolean recurseToArrays) {
       if (query == null || query.isEmpty()) {
          return EMPTY_ARRAY;
       }
@@ -328,9 +342,10 @@ public class RunService {
       if (keywords.length == 0) {
          return EMPTY_ARRAY;
       }
+      PreparedStatement statement = recurseToArrays ? filterQueryArraysStatement : filterQueryStatement;
       try {
-         filterStatement.setArray(1, connection.createArrayOf("text", keywords));
-         ResultSet rs = filterStatement.executeQuery();
+         statement.setArray(1, connection.createArrayOf("text", keywords));
+         ResultSet rs = statement.executeQuery();
          Json.ArrayBuilder array = Json.array();
          while (rs.next()) {
             array.add(rs.getInt(1));

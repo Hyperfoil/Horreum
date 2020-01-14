@@ -33,7 +33,7 @@ export const byTest = (id,payload)=>
             return dispatch(testId(id,response,payload))
         })
 
-export const filter = (query, callback) => {
+export const filter = (query, recurseToArrays, callback) => {
    return dispatch => {
       if (query == "") {
          dispatch({
@@ -43,7 +43,7 @@ export const filter = (query, callback) => {
          callback()
          return
       }
-      api.filter(query)
+      api.filter(query, recurseToArrays)
       .then(response => {
          dispatch({
             type: actionTypes.FILTERED,

@@ -15,13 +15,14 @@ import {all, filter} from './actions';
 import * as selectors from './selectors';
 
 import Table from '../../components/Table';
-import { Button, ButtonVariant, TextInput, Tooltip, TooltipPosition } from '@patternfly/react-core';
+import { Button, ButtonVariant, Switch, TextInput, Tooltip, TooltipPosition } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons'
   
 
 export default ()=>{
     const [filterQuery, setFilterQuery] = useState("")
     const [filterLoading, setFilterLoading] = useState(false)
+    const [recurseToArrays, setRecurseToArrays] = useState(false)
     const columns = useMemo(()=>[
         {
           Header:"Id",accessor:"id",
@@ -45,7 +46,7 @@ export default ()=>{
     const runs = useSelector(selectors.filter)
     const runFilter = () => {
        setFilterLoading(true)
-       dispatch(filter(filterQuery, () => setFilterLoading(false)));
+       dispatch(filter(filterQuery, recurseToArrays, () => setFilterLoading(false)));
     };
     useEffect(()=>{
         dispatch(all())
@@ -54,19 +55,28 @@ export default ()=>{
         <PageSection>
           <Card>
             <CardHeader>
-              <div className="pf-c-input-group">
+              <div className="pf-c-input-group pf-u-text-align-center">
                  {/* TODO: Spinner left as an excercise for the reader */}
                  <Tooltip position="bottom" content={<div>Enter JSON keys separated by spaces or commas. Multiple keys are combined with OR relation.</div>}>
                     <TextInput value={filterQuery} onChange={setFilterQuery}
+                               onKeyPress={ evt => {
+                                  if (evt.key == "Enter") runFilter()
+                               }}
                                isReadOnly={filterLoading} type="search"
                                aria-label="search expression"
                                placeholder="Enter search expression..." />
-                    <Button variant={ButtonVariant.control}
-                            aria-label="search button for search input"
-                            onClick={runFilter}>
-                      <SearchIcon />
-                    </Button>
                  </Tooltip>
+                 <Button variant={ButtonVariant.control}
+                         aria-label="search button for search input"
+                         onClick={runFilter}>
+                     <SearchIcon />
+                 </Button>
+                 { /* TODO: fixme with some proper class? */ }
+                 <span style={{ padding: "5px 8px", width: "300px" }}>
+                   <Switch id="recurseToArrays" isChecked={ recurseToArrays } onChange={ setRecurseToArrays }
+                           label="Search in arrays"
+                           labelOff="Don't search in arrays"/>
+                 </span>
               </div>
             </CardHeader>
             <CardBody>
