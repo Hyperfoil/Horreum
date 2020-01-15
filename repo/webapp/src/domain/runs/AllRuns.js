@@ -16,7 +16,7 @@ import * as selectors from './selectors';
 
 import Table from '../../components/Table';
 import { Button, ButtonVariant, Radio, Switch, TextInput, Tooltip, TooltipPosition } from '@patternfly/react-core';
-import { SearchIcon } from '@patternfly/react-icons'
+import { HelpIcon, SearchIcon } from '@patternfly/react-icons'
   
 
 export default ()=>{
@@ -64,6 +64,12 @@ export default ()=>{
           <Card>
             <CardHeader>
               <div className="pf-c-input-group">
+                 <Tooltip position="right" content={<span>PostgreSQL JSON path documentation</span>}>
+                     <a style={{ padding: "5px 8px" }} target="_blank"
+                        href="https://www.postgresql.org/docs/12/functions-json.html#FUNCTIONS-SQLJSON-PATH">
+                        <HelpIcon />
+                     </a>
+                 </Tooltip>
                  {/* TODO: Spinner left as an excercise for the reader */}
                  <Tooltip position="bottom" content={
                     <div align="left">Enter query in one of these formats:<br />
@@ -93,9 +99,11 @@ export default ()=>{
                  {/* TODO: add some margin to the radio buttons below */}
                  <React.Fragment>
                    <Radio id="matchAny" name="matchAll" value="false" label="Match any key"
-                          isChecked={!matchAll} isDisabled={matchDisabled} onChange={handleMatchAll}/>
+                          isChecked={!matchAll} isDisabled={matchDisabled} onChange={handleMatchAll}
+                          style={{ margin: "0px 0px 0px 8px" }}/>
                    <Radio id="matchAll" name="matchAll" value="true" label="Match all keys"
-                          isChecked={matchAll} isDisabled={matchDisabled} onChange={handleMatchAll}/>
+                          isChecked={matchAll} isDisabled={matchDisabled} onChange={handleMatchAll}
+                          style={{ margin: "0px 0px 0px 8px" }}/>
                  </React.Fragment>
               </div>
             </CardHeader>
