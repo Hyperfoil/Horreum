@@ -6,7 +6,7 @@ const endPoints = {
     getRun: runId => `${base}/${runId}/`,
     addRun: () => `${base}/`,
     listAll: ()=> `${base}/list/`,
-    filter: (query, recurseToArrays) => `${base}/filter?query=${query}&recurseToArrays=${recurseToArrays}`,
+    filter: (query, matchAll) => `${base}/filter?query=${query}&matchAll=${matchAll}`,
     js: runId => `${base}/${runId}/js`,
     listByTest: testId => `${base}/list/${testId}`
 
@@ -25,4 +25,4 @@ export const get = (id,js) => {
 }
 export const byTest = (id,payload) => fetchApi(endPoints.listByTest(id),payload,'post');
 
-export const filter = (query, recurseToArrays) => fetchApi(endPoints.filter(query, recurseToArrays),null,'get')
+export const filter = (query, matchAll) => fetchApi(endPoints.filter(query, matchAll),null,'get')

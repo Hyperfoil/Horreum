@@ -15,14 +15,16 @@ import {all, filter} from './actions';
 import * as selectors from './selectors';
 
 import Table from '../../components/Table';
-import { Button, ButtonVariant, Switch, TextInput, Tooltip, TooltipPosition } from '@patternfly/react-core';
+import { Button, ButtonVariant, Radio, Switch, TextInput, Tooltip, TooltipPosition } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons'
   
 
 export default ()=>{
     const [filterQuery, setFilterQuery] = useState("")
+    const [filterValid, setFilterValid] = useState(true)
     const [filterLoading, setFilterLoading] = useState(false)
-    const [recurseToArrays, setRecurseToArrays] = useState(false)
+    const [matchDisabled, setMatchDisabled] = useState(false)
+    const [matchAll, setMatchAll] = useState(false)
     const columns = useMemo(()=>[
         {
           Header:"Id",accessor:"id",
@@ -46,8 +48,14 @@ export default ()=>{
     const runs = useSelector(selectors.filter)
     const runFilter = () => {
        setFilterLoading(true)
-       dispatch(filter(filterQuery, recurseToArrays, () => setFilterLoading(false)));
+       dispatch(filter(filterQuery, matchAll, success => {
+         setFilterLoading(false);
+         setFilterValid(success);
+       }))
     };
+    const handleMatchAll = (v, evt) => {
+       if (v) setMatchAll(evt.target.value == "true")
+    }
     useEffect(()=>{
         dispatch(all())
     },[dispatch])
@@ -55,14 +63,25 @@ export default ()=>{
         <PageSection>
           <Card>
             <CardHeader>
-              <div className="pf-c-input-group pf-u-text-align-center">
+              <div className="pf-c-input-group">
                  {/* TODO: Spinner left as an excercise for the reader */}
-                 <Tooltip position="bottom" content={<div>Enter JSON keys separated by spaces or commas. Multiple keys are combined with OR relation.</div>}>
-                    <TextInput value={filterQuery} onChange={setFilterQuery}
+                 <Tooltip position="bottom" content={
+                    <div align="left">Enter query in one of these formats:<br />
+                      - JSON keys separated by spaces or commas. Multiple keys are combined with OR (match any) or AND (match all) relation.<br />
+                      - Full jsonpath query starting with <code>$</code>, e.g. <code>$.foo.bar</code>, or <code>$.foo&nbsp;?&nbsp;@.bar&nbsp;==&nbsp;0</code><br />
+                      - Part of the jsonpath query starting with <code>@</code>, e.g. <code>@.bar&nbsp;==&nbsp;0</code>. This condition will be evaluated on all sub-objects.<br />
+                    </div>}>
+                    <TextInput value={filterQuery} onChange={value => {
+                                 setFilterValid(true)
+                                 setFilterQuery(value)
+                                 setMatchDisabled(value.trim().startsWith("$") || value.trim().startsWith("@"))
+                               }}
                                onKeyPress={ evt => {
                                   if (evt.key == "Enter") runFilter()
                                }}
-                               isReadOnly={filterLoading} type="search"
+                               isReadOnly={filterLoading}
+                               isValid={filterValid}
+                               type="search"
                                aria-label="search expression"
                                placeholder="Enter search expression..." />
                  </Tooltip>
@@ -71,12 +90,13 @@ export default ()=>{
                          onClick={runFilter}>
                      <SearchIcon />
                  </Button>
-                 { /* TODO: fixme with some proper class? */ }
-                 <span style={{ padding: "5px 8px", width: "300px" }}>
-                   <Switch id="recurseToArrays" isChecked={ recurseToArrays } onChange={ setRecurseToArrays }
-                           label="Search in arrays"
-                           labelOff="Don't search in arrays"/>
-                 </span>
+                 {/* TODO: add some margin to the radio buttons below */}
+                 <React.Fragment>
+                   <Radio id="matchAny" name="matchAll" value="false" label="Match any key"
+                          isChecked={!matchAll} isDisabled={matchDisabled} onChange={handleMatchAll}/>
+                   <Radio id="matchAll" name="matchAll" value="true" label="Match all keys"
+                          isChecked={matchAll} isDisabled={matchDisabled} onChange={handleMatchAll}/>
+                 </React.Fragment>
               </div>
             </CardHeader>
             <CardBody>

@@ -33,24 +33,30 @@ export const byTest = (id,payload)=>
             return dispatch(testId(id,response,payload))
         })
 
-export const filter = (query, recurseToArrays, callback) => {
+export const filter = (query, matchAll, callback) => {
    return dispatch => {
       if (query == "") {
          dispatch({
             type: actionTypes.FILTERED,
             ids: null
          })
-         callback()
+         callback(true)
          return
       }
-      api.filter(query, recurseToArrays)
+      api.filter(query, matchAll)
       .then(response => {
-         dispatch({
-            type: actionTypes.FILTERED,
-            ids: response
-         })
-         callback()
-      });
+         // TODO: for some reason a 400 response is passed here as undefined
+         // instead of giving us the full response
+         if (response == undefined) {
+            callback(false)
+         } else {
+            dispatch({
+               type: actionTypes.FILTERED,
+               ids: response
+            })
+            callback(true)
+         }
+      })
    }
 }
 

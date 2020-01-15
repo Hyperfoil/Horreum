@@ -50,7 +50,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Path("/api/run")
 @Consumes({MediaType.APPLICATION_JSON})
@@ -59,32 +58,8 @@ public class RunService {
 
 
    private static final int WITH_THRESHOLD = 2;
-   private static final Json EMPTY_ARRAY = Json.array().build();
-   //@formatter:off
-   private static final String FILTER_QUERY =
-         "WITH RECURSIVE all_keys(id, key, value) AS (" +
-            "SELECT id, key, value FROM run, jsonb_each(run.data) " +
-            "UNION ALL " +
-            "SELECT id, r2.key, r2.value FROM all_keys, jsonb_each(CASE " +
-               "WHEN jsonb_typeof(all_keys.value) <> 'object' THEN '{}' :: JSONB " +
-               // TODO: recurse into arrays
-               "ELSE all_keys.value " +
-            "END) AS r2)" +
-            "SELECT DISTINCT id, key FROM all_keys WHERE key = ANY(?)";
-   private static final String FILTER_QUERY_ARRAYS =
-         "WITH RECURSIVE all_keys(id, key, value) AS (" +
-            "SELECT id, key, value FROM run, jsonb_each(run.data) " +
-            "UNION ALL " +
-               "(WITH typed AS (SELECT jsonb_typeof(all_keys.value) as type, id, value FROM all_keys) " +
-                  "SELECT id, v.key, v.value FROM typed, jsonb_each(value) v WHERE type = 'object' " +
-                  "UNION ALL " +
-                  "SELECT id, NULL, e FROM typed, jsonb_array_elements(value) e WHERE type = 'array'" +
-               ")" +
-         ")" +
-         "SELECT DISTINCT id, key FROM all_keys WHERE key = ANY(?)";
-   //@formatter:on
-   // TODO: AND expressions would be modelled as
-   //  SELECT DISTINCT a1.id, a1.key AS k1, a2.key AS k2 FROM all_keys AS a1 INNER JOIN all_keys AS a2 ON a1.id = a2.id WHERE a1.key = ? AND a2.key = ?;
+
+   private static final String FILTER_JSONPATH_EXISTS = "SELECT id FROM run WHERE jsonb_path_exists(data, ? ::jsonpath)";
 
    @Inject
    EntityManager em;
@@ -103,21 +78,18 @@ public class RunService {
    AgroalDataSource dataSource;
 
    Connection connection;
-   PreparedStatement filterQueryStatement;
-   PreparedStatement filterQueryArraysStatement;
+   PreparedStatement filterJsonpathExistsStatement;
 
    @PostConstruct
    public void prepareStatements() throws SQLException {
       System.out.println("Constructing");
       connection = dataSource.getConnection();
-      filterQueryStatement = connection.prepareStatement(FILTER_QUERY);
-      filterQueryArraysStatement = connection.prepareStatement(FILTER_QUERY_ARRAYS);
+      filterJsonpathExistsStatement = connection.prepareStatement(FILTER_JSONPATH_EXISTS);
    }
 
    @PreDestroy
    public void closeConnection() throws SQLException {
-      filterQueryStatement.close();
-      filterQueryArraysStatement.close();
+      filterJsonpathExistsStatement.close();
       if (!connection.isClosed()) {
          connection.close();
       }
@@ -334,25 +306,56 @@ public class RunService {
 
    @GET
    @Path("filter")
-   public Json filter(@QueryParam("query") String query, @QueryParam("recurseToArrays") boolean recurseToArrays) {
+   public Response filter(@QueryParam("query") String query, @QueryParam("matchAll") boolean matchAll) {
       if (query == null || query.isEmpty()) {
-         return EMPTY_ARRAY;
+         return Response.noContent().build();
       }
-      Object[] keywords = Stream.of(query.split("([ \t\n,])|OR")).filter(s -> !s.isEmpty()).toArray();
-      if (keywords.length == 0) {
-         return EMPTY_ARRAY;
-      }
-      PreparedStatement statement = recurseToArrays ? filterQueryArraysStatement : filterQueryStatement;
+      query = query.trim();
+
       try {
-         statement.setArray(1, connection.createArrayOf("text", keywords));
-         ResultSet rs = statement.executeQuery();
+         if (query.startsWith("$")) {
+            filterJsonpathExistsStatement.setString(1, query);
+         } else if (query.startsWith("@")) {
+            filterJsonpathExistsStatement.setString(1, "$.** ? (" + query + ")");
+         } else {
+            Set<Integer> ids = null;
+            for (String s : query.split("([ \t\n,])|OR")) {
+               if (s.isEmpty()) {
+                  continue;
+               }
+               filterJsonpathExistsStatement.setString(1, "$.**." + s);
+               ResultSet rs = filterJsonpathExistsStatement.executeQuery();
+               if (matchAll) {
+                  Set<Integer> keyIds = new HashSet<>();
+                  while (rs.next()) {
+                     keyIds.add(rs.getInt(1));
+                  }
+                  if (ids == null) {
+                     ids = keyIds;
+                  } else {
+                     ids.retainAll(keyIds);
+                  }
+               } else {
+                  if (ids == null) {
+                     ids = new HashSet<>();
+                  }
+                  while (rs.next()) {
+                     ids.add(rs.getInt(1));
+                  }
+               }
+            }
+            Json.ArrayBuilder array = Json.array();
+            ids.forEach(array::add);
+            return Response.ok(array.build()).build();
+         }
+         ResultSet rs = filterJsonpathExistsStatement.executeQuery();
          Json.ArrayBuilder array = Json.array();
          while (rs.next()) {
             array.add(rs.getInt(1));
          }
-         return array.build();
+         return Response.ok(array.build()).build();
       } catch (SQLException e) {
-         throw new RuntimeException(e);
+         return Response.status(400).entity("Failed processing query '" + query + "':\n" + e.getLocalizedMessage()).build();
       }
    }
 
