@@ -47,7 +47,6 @@ export const reducer = (state = initialState, action) =>{
             } else {
                state.suggestQuery = [ state.suggestQuery[0], action.query ]
             }
-            console.log("LS: " + state.suggestQuery)
             break;
         }
         case actionTypes.SUGGEST: {
@@ -55,7 +54,6 @@ export const reducer = (state = initialState, action) =>{
             if (action.responseReceived) {
                state.suggestQuery.shift()
             }
-            console.log("SG: " + state.suggestQuery)
             break;
         }
         default:

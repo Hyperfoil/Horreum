@@ -68,6 +68,7 @@ export default ()=>{
     useEffect(()=>{
         dispatch(all())
     },[dispatch])
+
     const inputProps = {
        placeholder: "Enter search query",
        value: filterQuery,
@@ -76,9 +77,13 @@ export default ()=>{
           setFilterValid(true)
           setFilterQuery(value)
           setMatchDisabled(value.trim().startsWith("$") || value.trim().startsWith("@"))
+       },
+       onKeyDown: (evt) => {
+          if (evt.key === " " && evt.ctrlKey) {
+             fetchSuggestionsNow()
+          }
        }
     }
-
     const [typingTimer, setTypingTimer] = useState(null)
     const fetchSuggestions = ({value}) => {
        if (value == filterQuery) {
@@ -88,6 +93,12 @@ export default ()=>{
           clearTimeout(typingTimer)
        }
        setTypingTimer(setTimeout(() => suggest(value)(dispatch), 1000))
+    }
+    const fetchSuggestionsNow = () => {
+       if (typingTimer !== null) {
+          clearTimeout(typingTimer)
+       }
+       suggest(filterQuery)(dispatch)
     }
 
     return (
