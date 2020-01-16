@@ -22,6 +22,7 @@
     "luxon": "^1.21.3",
     "monaco-editor": "^0.18.1",
     "react": "^16.11.0",
+    "react-autosuggest": "^9.4.3",
     "react-codemirror2": "^6.0.0",
     "react-dom": "^16.11.0",
     "react-helmet": "^5.2.1",

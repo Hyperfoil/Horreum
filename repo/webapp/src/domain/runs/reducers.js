@@ -5,7 +5,9 @@ import * as utils from '../../utils'
 const initialState = {
     byId: Map({}),
     byTest: Map({}),
-    filteredIds: null
+    filteredIds: null,
+    suggestQuery: [],
+    suggestions: []
 }
 //Takes events and updates the state accordingly
 export const reducer = (state = initialState, action) =>{
@@ -37,6 +39,23 @@ export const reducer = (state = initialState, action) =>{
         case actionTypes.FILTERED: {
             // The run.ids in LOADED are converted to strings using the backtick notation for whatever reason
             state.filteredIds = action.ids == null ? null : List(action.ids.map(String))
+            break;
+        }
+        case actionTypes.LOAD_SUGGESTIONS: {
+            if (state.suggestQuery.length == 0) {
+               state.suggestQuery = [ action.query ]
+            } else {
+               state.suggestQuery = [ state.suggestQuery[0], action.query ]
+            }
+            console.log("LS: " + state.suggestQuery)
+            break;
+        }
+        case actionTypes.SUGGEST: {
+            state.suggestions = action.options
+            if (action.responseReceived) {
+               state.suggestQuery.shift()
+            }
+            console.log("SG: " + state.suggestQuery)
             break;
         }
         default:

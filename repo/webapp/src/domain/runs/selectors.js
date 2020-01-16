@@ -24,3 +24,15 @@ export const filter = () => {
    list.sort((a,b)=>a.id - b.id);
    return list;
 }
+
+export const isFetchingSuggestions = () => {
+   let suggestQuery = store.getState().runs.suggestQuery
+   return suggestQuery.length > 0;
+}
+export const suggestQuery = () => {
+   let suggestQuery = store.getState().runs.suggestQuery
+   // Actually when this is called the suggestQuery.length should be <= 1
+   return suggestQuery.length == 0 ? null : suggestQuery[suggestQuery.length - 1]
+}
+
+export const suggestions = () => store.getState().runs.suggestions

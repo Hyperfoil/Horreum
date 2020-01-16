@@ -1,23 +1,30 @@
 import React, { useState, useMemo, useEffect } from 'react';
 
-import { useSelector } from 'react-redux'
-import { useDispatch } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import {
+    Button,
+    ButtonVariant,
     Card,
     CardHeader,
     CardBody,
     PageSection,
+    Radio,
+    TextInput,
+    Tooltip
 } from '@patternfly/react-core';
+import { Spinner } from '@patternfly/react-core/dist/esm/experimental'
+import { HelpIcon, SearchIcon } from '@patternfly/react-icons'
+import Autosuggest from 'react-autosuggest';
+import './Autosuggest.css'
+
 import { DateTime, Duration } from 'luxon';
 import { NavLink } from 'react-router-dom';
 
-import {all, filter} from './actions';
+import {all, filter, suggest} from './actions';
 import * as selectors from './selectors';
 
 import Table from '../../components/Table';
-import { Button, ButtonVariant, Radio, Switch, TextInput, Tooltip, TooltipPosition } from '@patternfly/react-core';
-import { HelpIcon, SearchIcon } from '@patternfly/react-icons'
-  
+
 
 export default ()=>{
     const [filterQuery, setFilterQuery] = useState("")
@@ -56,9 +63,33 @@ export default ()=>{
     const handleMatchAll = (v, evt) => {
        if (v) setMatchAll(evt.target.value == "true")
     }
+    const suggestions = useSelector(selectors.suggestions)
+    const loadingDisplay = useSelector(selectors.isFetchingSuggestions) ? "inline-block" : "none"
     useEffect(()=>{
         dispatch(all())
     },[dispatch])
+    const inputProps = {
+       placeholder: "Enter search query",
+       value: filterQuery,
+       onChange: (evt, v) => {
+          let value = v.newValue
+          setFilterValid(true)
+          setFilterQuery(value)
+          setMatchDisabled(value.trim().startsWith("$") || value.trim().startsWith("@"))
+       }
+    }
+
+    const [typingTimer, setTypingTimer] = useState(null)
+    const fetchSuggestions = ({value}) => {
+       if (value == filterQuery) {
+         return;
+       }
+       if (typingTimer !== null) {
+          clearTimeout(typingTimer)
+       }
+       setTypingTimer(setTimeout(() => suggest(value)(dispatch), 1000))
+    }
+
     return (
         <PageSection>
           <Card>
@@ -77,19 +108,37 @@ export default ()=>{
                       - Full jsonpath query starting with <code>$</code>, e.g. <code>$.foo.bar</code>, or <code>$.foo&nbsp;?&nbsp;@.bar&nbsp;==&nbsp;0</code><br />
                       - Part of the jsonpath query starting with <code>@</code>, e.g. <code>@.bar&nbsp;==&nbsp;0</code>. This condition will be evaluated on all sub-objects.<br />
                     </div>}>
-                    <TextInput value={filterQuery} onChange={value => {
-                                 setFilterValid(true)
-                                 setFilterQuery(value)
-                                 setMatchDisabled(value.trim().startsWith("$") || value.trim().startsWith("@"))
-                               }}
-                               onKeyPress={ evt => {
-                                  if (evt.key == "Enter") runFilter()
-                               }}
-                               isReadOnly={filterLoading}
-                               isValid={filterValid}
-                               type="search"
-                               aria-label="search expression"
-                               placeholder="Enter search expression..." />
+                    <Autosuggest inputProps={inputProps}
+                                 suggestions={suggestions}
+                                 onSuggestionsFetchRequested={fetchSuggestions}
+                                 onSuggestionsClearRequested={() => {
+                                    if (filterQuery === "") suggest("")(dispatch)
+                                 }}
+                                 getSuggestionValue={(value) => {
+                                    let lastDot = filterQuery.lastIndexOf('.')
+                                    return filterQuery.substring(0, lastDot + 1) + value
+                                 }}
+                                 renderSuggestion={v => <div>{v}</div>}
+                                 renderInputComponent={ inputProps => (
+                                    <input {...inputProps}
+                                           {... (filterLoading ? { readonly : "" } : {}) }
+                                           className="pf-c-form-control"
+                                           aria-invalid={!filterValid}
+                                           onKeyPress={ evt => {
+                                              if (evt.key == "Enter") runFilter()
+                                           }}
+                                           style={{ width: "500px" }}/>
+                                 )}
+                                 renderSuggestionsContainer={ ({ containerProps, children, query }) => (
+                                    <div {...containerProps}>
+                                      <div className="react-autosuggest__loading"
+                                           style={{ display: loadingDisplay }}>
+                                           <Spinner size="md" />&nbsp;Loading...
+                                      </div>
+                                      {children}
+                                    </div>
+                                 )}
+                                 />
                  </Tooltip>
                  <Button variant={ButtonVariant.control}
                          aria-label="search button for search input"

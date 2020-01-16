@@ -55,11 +55,17 @@ import java.util.stream.Collectors;
 @Consumes({MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 public class RunService {
-
-
    private static final int WITH_THRESHOLD = 2;
 
    private static final String FILTER_JSONPATH_EXISTS = "SELECT id FROM run WHERE jsonb_path_exists(data, ? ::jsonpath)";
+   //@formatter:off
+   private static final String FIND_AUTOCOMPLETE = "SELECT * FROM (" +
+            "SELECT DISTINCT jsonb_object_keys(q) AS key " +
+            "FROM run, jsonb_path_query(run.data, ? ::jsonpath) q " +
+            "WHERE jsonb_typeof(q) = 'object') AS keys " +
+         "WHERE keys.key LIKE CONCAT(?, '%');";
+   //@formatter:on
+   private String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
 
    @Inject
    EntityManager em;
@@ -78,18 +84,20 @@ public class RunService {
    AgroalDataSource dataSource;
 
    Connection connection;
-   PreparedStatement filterJsonpathExistsStatement;
+   PreparedStatement filterJsonpathExists;
+   PreparedStatement findAutocomplete;
 
    @PostConstruct
    public void prepareStatements() throws SQLException {
       System.out.println("Constructing");
       connection = dataSource.getConnection();
-      filterJsonpathExistsStatement = connection.prepareStatement(FILTER_JSONPATH_EXISTS);
+      filterJsonpathExists = connection.prepareStatement(FILTER_JSONPATH_EXISTS);
+      findAutocomplete = connection.prepareStatement(FIND_AUTOCOMPLETE);
    }
 
    @PreDestroy
    public void closeConnection() throws SQLException {
-      filterJsonpathExistsStatement.close();
+      filterJsonpathExists.close();
       if (!connection.isClosed()) {
          connection.close();
       }
@@ -305,6 +313,71 @@ public class RunService {
    }
 
    @GET
+   @Path("autocomplete")
+   public Response autocomplete(@QueryParam("query") String query) {
+      if (query == null || query.isEmpty()) {
+         return Response.noContent().build();
+      }
+      String jsonpath = query.trim();
+      String incomplete = "";
+      if (jsonpath.endsWith(".")) {
+         jsonpath = jsonpath.substring(0, jsonpath.length() - 1);
+      } else {
+         int lastDot = jsonpath.lastIndexOf('.');
+         if (lastDot > 0) {
+            incomplete = jsonpath.substring(lastDot + 1);
+            jsonpath = jsonpath.substring(0, lastDot);
+         } else {
+            incomplete = jsonpath;
+            jsonpath = "$.**";
+         }
+      }
+      int conditionIndex = jsonpath.indexOf('@');
+      if (conditionIndex >= 0) {
+         int conditionSelectEnd = jsonpath.length();
+         for (String terminal : CONDITION_SELECT_TERMINAL) {
+            int ti = jsonpath.indexOf(terminal, conditionIndex + 1);
+            if (ti >= 0) {
+               conditionSelectEnd = Math.min(conditionSelectEnd, ti);
+            }
+         }
+         String conditionSelect = jsonpath.substring(conditionIndex + 1, conditionSelectEnd);
+         int queryIndex = jsonpath.indexOf('?');
+         if (queryIndex < 0) {
+            // This is a shortcut query '@.foo...'
+            jsonpath = "$.**" + conditionSelect;
+         } else if (queryIndex > conditionIndex) {
+            // Too complex query with multiple conditions
+            return Response.ok("[]").build();
+         } else {
+            while (queryIndex > 0 && Character.isWhitespace(jsonpath.charAt(queryIndex - 1))) {
+               --queryIndex;
+            }
+            jsonpath = jsonpath.substring(0, queryIndex) + conditionSelect;
+         }
+      }
+      if (!jsonpath.startsWith("$")) {
+         jsonpath = "$.**." + jsonpath;
+      }
+      try {
+         findAutocomplete.setString(1, jsonpath);
+         findAutocomplete.setString(2, incomplete);
+         ResultSet rs = findAutocomplete.executeQuery();
+         Json.ArrayBuilder array = Json.array();
+         while (rs.next()) {
+            String option = rs.getString(1);
+            if (!option.matches("^[a-zA-Z0-9_-]*$")) {
+               option = "\"" + option + "\"";
+            }
+            array.add(option);
+         }
+         return Response.ok(array.build()).build();
+      } catch (SQLException e) {
+         return Response.status(400).entity("Failed processing query '" + query + "':\n" + e.getLocalizedMessage()).build();
+      }
+   }
+
+   @GET
    @Path("filter")
    public Response filter(@QueryParam("query") String query, @QueryParam("matchAll") boolean matchAll) {
       if (query == null || query.isEmpty()) {
@@ -314,17 +387,17 @@ public class RunService {
 
       try {
          if (query.startsWith("$")) {
-            filterJsonpathExistsStatement.setString(1, query);
+            filterJsonpathExists.setString(1, query);
          } else if (query.startsWith("@")) {
-            filterJsonpathExistsStatement.setString(1, "$.** ? (" + query + ")");
+            filterJsonpathExists.setString(1, "$.** ? (" + query + ")");
          } else {
             Set<Integer> ids = null;
             for (String s : query.split("([ \t\n,])|OR")) {
                if (s.isEmpty()) {
                   continue;
                }
-               filterJsonpathExistsStatement.setString(1, "$.**." + s);
-               ResultSet rs = filterJsonpathExistsStatement.executeQuery();
+               filterJsonpathExists.setString(1, "$.**." + s);
+               ResultSet rs = filterJsonpathExists.executeQuery();
                if (matchAll) {
                   Set<Integer> keyIds = new HashSet<>();
                   while (rs.next()) {
@@ -348,7 +421,7 @@ public class RunService {
             ids.forEach(array::add);
             return Response.ok(array.build()).build();
          }
-         ResultSet rs = filterJsonpathExistsStatement.executeQuery();
+         ResultSet rs = filterJsonpathExists.executeQuery();
          Json.ArrayBuilder array = Json.array();
          while (rs.next()) {
             array.add(rs.getInt(1));
