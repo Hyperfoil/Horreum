@@ -16,6 +16,8 @@
   display: block;
   position: absolute;
   width: 500px; /* TODO */
+  max-height: 500px;
+  overflow-y: scroll;
   background-color: #fff;
   border: 1px solid #eee;
   border-bottom-left-radius: 4px;

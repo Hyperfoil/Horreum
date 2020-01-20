@@ -9,7 +9,6 @@ import {
     CardBody,
     PageSection,
     Radio,
-    TextInput,
     Tooltip
 } from '@patternfly/react-core';
 import { Spinner } from '@patternfly/react-core/dist/esm/experimental'
@@ -126,8 +125,22 @@ export default ()=>{
                                     if (filterQuery === "") suggest("")(dispatch)
                                  }}
                                  getSuggestionValue={(value) => {
-                                    let lastDot = filterQuery.lastIndexOf('.')
-                                    return filterQuery.substring(0, lastDot + 1) + value
+                                    let quoted = false;
+                                    for (let i = filterQuery.length; i >= 0; --i) {
+                                       switch (filterQuery.charAt(i)) {
+                                          // we're not handling escaped quotes...
+                                          case '"':
+                                             quoted = !quoted;
+                                             break;
+                                          case '.':
+                                          case ']':
+                                             if (!quoted) {
+                                                return filterQuery.substring(0, i + 1) + value
+                                             }
+                                             break;
+                                       }
+                                    }
+                                    return value;
                                  }}
                                  renderSuggestion={v => <div>{v}</div>}
                                  renderInputComponent={ inputProps => (
