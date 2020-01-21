@@ -16,9 +16,11 @@ export const reducer = (state = initialState, action) =>{
         case actionTypes.LOADED: {
             if ( !utils.isEmpty(action.runs) ) {
                 action.runs.forEach(run => {
-                    state.byId = state.byId.set(`${run.id}`, {
-                        ...(state.byId.get(`${run.id}`) || {}), ...run
-                    })
+                    if (run != undefined) {
+                        state.byId = state.byId.set(`${run.id}`, {
+                            ...(state.byId.get(`${run.id}`) || {}), ...run
+                        })
+                    }
                 })
             }
             break;
@@ -27,10 +29,12 @@ export const reducer = (state = initialState, action) =>{
             let testMap = state.byTest.get(action.id,Map({}));
             if ( !utils.isEmpty(action.runs) ) {
                 action.runs.forEach(run => {
-                    testMap = testMap.set(`${run.id}`, {
-                        ...testMap.get(`${run.id}`, {}),
-                        ...run
-                    })
+                    if ( run != undefined ){
+                        testMap = testMap.set(`${run.id}`, {
+                            ...testMap.get(`${run.id}`, {}),
+                            ...run
+                        })
+                    }
                 })
             }
             state.byTest = state.byTest.set(`${action.id}`,testMap)
