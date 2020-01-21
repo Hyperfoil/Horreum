@@ -16,6 +16,7 @@
     <quarkus.version>1.1.1.Final</quarkus.version>
     <surefire-plugin.version>2.22.0</surefire-plugin.version>
     <vertx.version>3.8.3</vertx.version>
+    <yaup.version>0.3</yaup.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -42,7 +43,7 @@
     <dependency>
       <groupId>io.hyperfoil.tools</groupId>
       <artifactId>yaup</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>${yaup.version}</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
