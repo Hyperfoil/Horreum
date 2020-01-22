@@ -7,7 +7,6 @@ const initialState = {
 export const reducer = (state = initialState, action) =>{
     switch(action.type){
         case actionTypes.LOADED: {
-            console.log("schema.LOADED",action)
             if ( !utils.isEmpty(action.schemas) ) {
                 action.schemas.forEach(schema => {
                     state.byId = state.byId.set(`${schema.id}`, {

@@ -459,16 +459,26 @@ public class RunService {
       if (options.has("map") && options.get("map") instanceof Json) {
 
          Json map = options.getJson("map");
+         System.out.println("RunService.testList map="+map.toString(2));
          List<String> jsonpaths = map.values().stream().map(v -> v.toString()).filter(v -> v.startsWith("$.")).collect(Collectors.toList());
          HashedLists grouped = StringUtil.groupCommonPrefixes(jsonpaths, (a, b) -> {
             String prefix = a.substring(0, StringUtil.commonPrefixLength(a, b));
+            System.out.println("startingPrefix="+prefix);
             if (prefix.length() == 0) {
                return 0;
             }
             //TODO shorten prefix if there are an odd number of ( or [
+            //TODO this unnecessarily shortens .**.JAVA_OPTS, need to identify when prefix ends with a full key
             if (prefix.contains(".")) {
-               prefix = prefix.substring(0, prefix.lastIndexOf("."));
+               if(!a.endsWith(prefix) && !b.endsWith(prefix)) {
+                  prefix = prefix.substring(0, prefix.lastIndexOf("."));
+               }
             }
+            if (prefix.endsWith(".**")){
+               System.out.println("trim off .**");
+               prefix = prefix.substring(0,prefix.length()-".**".length());
+            }
+            System.out.println("prefix="+prefix);
             return prefix.length();
          });
          Set<String> keys = new HashSet(grouped.keys());
@@ -542,7 +552,12 @@ public class RunService {
                   sql.append(StringUtil.quote(value.toString(), "'"));
                   sql.append(") as ");
                   sql.append(key);
-               } else {
+               } else if (value.toString().contains(("jsonb_"))){
+                  sql.append(value.toString());
+                  sql.append(" as ");
+                  sql.append(key);
+               }else {
+
                   sql.append(key);
                }
             });

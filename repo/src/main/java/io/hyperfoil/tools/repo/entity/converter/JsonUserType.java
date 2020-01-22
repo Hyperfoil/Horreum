@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.repo.entity.converter;
 
+import io.hyperfoil.tools.yaup.AsciiArt;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.HibernateException;
@@ -46,11 +47,13 @@ public class JsonUserType implements UserType {
 
       String content = resultSet.getString(strings[0]);
       //return null if the object is not valid json because it could be null / missing from the result set
+      System.out.println(AsciiArt.ANSI_BLUE+"nullSafeGet:"+AsciiArt.ANSI_RESET+content);
       return Json.fromString(content,null);
    }
 
    @Override
    public void nullSafeSet(PreparedStatement preparedStatement, Object o, int i, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException, SQLException {
+      System.out.println("nullSafeSet "+o);
       if(o == null){
          preparedStatement.setNull(i, Types.OTHER);
          return;

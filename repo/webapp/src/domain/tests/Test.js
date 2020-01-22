@@ -15,7 +15,11 @@ import {
     PageSection,
     TextArea,
     TextInput,
-    Toolbar,
+    Toolbar,    
+    Tab,
+    Tabs,
+    TabsVariant,
+    TabContent,
     ToolbarGroup,
     ToolbarItem,
     ToolbarSection,
@@ -33,12 +37,17 @@ import * as selectors from './selectors';
 import { fromEditor, toString } from '../../components/Editor';
 import Editor from '../../components/Editor/monaco/Editor';
 
+const tabs = ["schema","view"]
+
 export default () => {
     const { testId } = useParams();
     const test = useSelector(selectors.get(testId))
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [schema, setSchema] = useState(toString(test.schema) || "{}")
+    const [activeTab,setActiveTab] = useState(0)
+    const [schema,setSchema] = useState(toString(test.schema) || "{}")
+    const [view,setView] = useState(toString(test.view) || "[]")
+    const [editorContent, setEditorContent] = useState(toString(test[tabs[activeTab]]) || "{}")
     const dispatch = useDispatch();
     useEffect(() => {
         if (testId !== "_new") {
@@ -47,15 +56,15 @@ export default () => {
 
     }, [dispatch, testId])
     useEffect(() => {
-        setSchema(toString(test.schema) || "{}");//change the loaded document when the test changes
+        setEditorContent(toString(test[tabs[activeTab]]) || "{}");//change the loaded document when the test changes
         setName(test.name);
         setDescription(test.description);
-    }, [test])
+    }, [test,activeTab])
     const editor = useRef();
     const getFormTest = () => ({
         name,
         description,
-        schema: fromEditor(schema),
+        schema: fromEditor(editorContent),
         id: test.id
     })
     return (
@@ -97,12 +106,14 @@ export default () => {
                                             const newTest = {
                                                 name,
                                                 description,
-                                                schema: editorValue
+                                                schema: fromEditor(schema),
+                                                view: fromEditor(view)
                                             }
+                                            newTest[tabs[activeTab]] = editorValue
                                             if (testId !== "_new") {
                                                 newTest.id = testId;
                                             }
-                                            console.log("newTest", newTest)
+                                            
                                             dispatch(actions.sendTest(newTest))
 
                                         }}
@@ -116,10 +127,32 @@ export default () => {
                     </Toolbar>
                 </CardHeader>
                 <CardBody>
+                    <Tabs 
+                        activeKey={activeTab} 
+                        onSelect={(event,tabIndex)=>{
+                            const editorValue = fromEditor(editor.current.getValue())
+                            switch(activeTab){
+                                case 0:
+                                    setSchema(editorValue)
+                                    break;
+                                case 1:
+                                    setView(editorValue)
+                                    break;
+                                default:
+                                    console.log("unknown activeTab",activeTab)
+                            }
+                            setActiveTab(tabIndex)}
+                        }
+                    >
+                        {tabs.map((tab,tabIndex)=>(
+                            <Tab key={tabIndex} eventKey={tabIndex} title={tab}>
+                            </Tab>
+                        ))}
+                    </Tabs>
                     <Editor
-                        value={schema}
+                        value={editorContent}
                         setValueGetter={e => { console.log("setValueGetter", e); editor.current = e }}
-                        onChange={e => { setSchema(e) }}
+                        onChange={e => { setEditorContent(e) }}
                         options={{ mode: "application/ld+json" }}
                     />
                 </CardBody>

@@ -10,9 +10,48 @@ export const exceptionExtractError = (exception) => {
 	}
 	return error;
 };
+const serialize = (input)=>{
+	if(input === null || input === undefined){
+		return input
+	}else if(Array.isArray(input)){
+        return input.map(v=>serialize(v))
+    }else if (typeof input === "function"){
+        return input.toString()
+    }else if (typeof input === "object"){
+        const rtrn = {}
+        Object.keys(input).forEach(key=>{
+            rtrn[key] = serialize(input[key])
+        })
+        return rtrn;
+    }else{
+        return input;
+    }
+}
+const deserialize = (input)=>{
+	if(input === null || input === undefined){
+		return input
+	}else if(Array.isArray(input)){
+        return input.map(v=>deserialize(v))
+    }else if (typeof input === "object"){
+        const rtrn = {}
+        Object.keys(input).forEach(key=>{
+            rtrn[key] = deserialize(input[key])
+        })
+        return rtrn;
+    }else if (typeof input === "string"){
+        if(input.includes("=>") || input.startsWith("function ")){
+            return new Function("return "+input)();
+        }else{
+            return input;
+        }
+    }else{
+        return input;
+    }
+}
 
 export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}) => {
 	//const accessToken = sessionSelectors.get().tokens.access.value;
+	const serialized = serialize(payload)
 	return fetchival(`${apiConfig.url}${endPoint}`, {
 		// headers: _.pickBy({
 		// 	...(accessToken ? {
@@ -22,8 +61,10 @@ export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}) =
 		// 	}),
 		// 	...headers,
 		// }, item => !_.isEmpty(item)),
-	})[method.toLowerCase()](payload)
-	.catch((e) => {
+	})[method.toLowerCase()](serialized)
+	.then(response=>{
+		return Promise.resolve(deserialize(response));
+	},(e) => {
 		if ( e.response){
 			return e.response.json().then(body=>{
 				return Promise.reject(body)

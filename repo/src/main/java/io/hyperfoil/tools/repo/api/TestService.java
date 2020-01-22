@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.repo.api;
 
 import io.hyperfoil.tools.repo.entity.json.Test;
+import io.hyperfoil.tools.yaup.AsciiArt;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -36,6 +37,7 @@ public class TestService {
    @GET
    @Path("{id}")
    public Test get(@PathParam("id") Integer id){
+      System.out.println("GET /api/test/"+id);
       return Test.find("id",id).firstResult();
    }
 
@@ -78,10 +80,35 @@ public class TestService {
 
    }
 
+   @GET
+   @Path("{id}/view")
+   public Response getView(@PathParam("id") Integer id){
+      Test t =  Test.find("id",id).firstResult();
+      if(t!=null){
+         return Response.ok(t.view).build();
+      }else{
+         return Response.noContent().build();
+      }
+   }
+   @POST
+   @Path("{id}/view")
+   @Transactional
+   public Response setView(@PathParam("id") Integer id, Json view){
+      Test t =  Test.find("id",id).firstResult();
+      if( t != null){
+         t.view = view;
+         em.persist(t);
+         return Response.ok().build();
+      }else{
+         return Response.noContent().build();
+      }
+   }
+
    @POST
    @Transactional
    public Response add(Test test){
-      System.out.println("add TEST "+test.id);
+      System.out.println(AsciiArt.ANSI_RED+"add TEST "+AsciiArt.ANSI_RESET+test.id);
+      System.out.println("view "+test.view);
       if(test == null){
          return Response.serverError().entity("test is null").build();
       }

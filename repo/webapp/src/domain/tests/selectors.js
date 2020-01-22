@@ -1,8 +1,15 @@
 import store from '../../store';
 
-const emptyTest = {name:"",description:"",schema:{
-    "$schema": "http://json-schema.org/draft-07/schema"
-}}
+const emptyTest = {
+    name:"",
+    description:"",
+    schema:{
+        "$schema": "http://json-schema.org/draft-07/schema"
+    }, 
+    view: [
+        { Header: "Start", accessor: v => window.DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") },
+        { Header: "Stop", accessor: v => window.DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") }  
+    ]}
 
 export const all = () =>{
     let list = [...store.getState().tests.byId.values()]

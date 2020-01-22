@@ -27,13 +27,13 @@ export const all = () => {
         });
     }
 
-export const byTest = (id,payload)=>
-    dispatch =>
+export const byTest = (id,payload)=> {
+   return dispatch =>
         api.byTest(id,payload)
         .then(response => {
             return dispatch(testId(id,response,payload))
         })
-
+}
 export const filter = (query, matchAll, callback) => {
    return dispatch => {
       if (query == "") {

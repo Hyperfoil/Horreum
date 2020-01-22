@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.repo.api;
 
+import io.hyperfoil.tools.repo.JsonAdapter;
 import io.hyperfoil.tools.repo.entity.json.Hook;
 import io.hyperfoil.tools.repo.entity.json.Run;
 import io.hyperfoil.tools.repo.entity.json.Test;
@@ -18,6 +19,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.transaction.Transactional;
@@ -73,9 +75,11 @@ public class HookService {
 //      h.url="http://laptop:8080/api/log";
 //      hooks.add(h);
 //      hooks.add(h);
-      final Jsonb jsonb = JsonbBuilder.create();
+      JsonbConfig jsonbConfig = new JsonbConfig();
+      jsonbConfig.withAdapters(new JsonAdapter());
+      final Jsonb jsonb = JsonbBuilder.create(jsonbConfig);
       String json = jsonb.toJson(value);
-      System.out.println("toJson -> "+json);
+      System.out.println("HookService.toJson -> "+json);
       for(Hook hook : hooks){
          System.out.println("Hook:"+hook.url);
          try{

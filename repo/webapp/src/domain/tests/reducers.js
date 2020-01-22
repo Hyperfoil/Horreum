@@ -9,7 +9,6 @@ const initialState = {
 export const reducer = (state = initialState, action) => {
     switch (action.type) {
         case actionTypes.LOADED: {
-            console.log("TEST.LOADED",action)
             if (!utils.isEmpty(action.tests)) {
                 action.tests.forEach(test => {
                     if (test.id !== null && typeof test.id !== "undefined") {

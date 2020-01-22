@@ -20,14 +20,14 @@ function Table({ columns, data }) {
     <>
       <table className="pf-c-table pf-m-compact pf-m-grid-md" {...getTableProps()}>
         <thead>
-          {headerGroups.map(headerGroup => {
+          {headerGroups.map((headerGroup,headerGroupIndex) => {
             return (
-              <tr {...headerGroup.getHeaderGroupProps()}>
-                {headerGroup.headers.map(column => (
+              <tr key={headerGroupIndex} {...headerGroup.getHeaderGroupProps()}>
+                {headerGroup.headers.map((column,columnIndex) => (
                   // Add the sorting props to control sorting. For this example
                   // we can add them into the header props
 
-                  <th className={clsx("pf-c-table__sort", column.isSorted ? "pf-m-selected" : "")}  {...column.getHeaderProps(column.getSortByToggleProps())}>
+                  <th className={clsx("pf-c-table__sort", column.isSorted ? "pf-m-selected" : "")} key={columnIndex} {...column.getHeaderProps(column.getSortByToggleProps())} key={columnIndex}>
                     <button className="pf-c-button pf-m-plain" type="button">
                       {column.render('Header')}
                       {/* Add a sort direction indicator */}
@@ -49,10 +49,10 @@ function Table({ columns, data }) {
             (row, i) => {
               prepareRow(row);
               return (
-                <tr {...row.getRowProps()}>
-                  {row.cells.map(cell => {
+                <tr key={i} {...row.getRowProps()} key={i}>
+                  {row.cells.map((cell,cellIndex) => {
                     return (
-                      <td data-label={cell.column.Header} {...cell.getCellProps()}>{cell.render('Cell')}</td>
+                      <td data-label={cell.column.Header} key={cellIndex} {...cell.getCellProps()} key={cellIndex}>{cell.render('Cell')}</td>
                     )
                   })}
                 </tr>

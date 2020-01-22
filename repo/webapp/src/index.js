@@ -21,4 +21,3 @@ serviceWorker.unregister();
 global.Duration = Duration;
 global.DateTime = DateTime;
 global.jsonpath = jsonpath;
-

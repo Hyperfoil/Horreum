@@ -32,4 +32,7 @@ public class Test extends PanacheEntityBase {
    @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
    public Json schema;
 
+   @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
+   public Json view;
+
 }

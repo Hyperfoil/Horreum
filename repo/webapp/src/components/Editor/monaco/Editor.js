@@ -54,10 +54,8 @@ export default ({value = "{}", language="json", setValueGetter = (v) => {}, opti
 
     const editorDidMount =(getter, editor) => {
         //console.log("editorDidMount",editor,monaco)
-        console.log("editor",editor)
         valueGetter.current = getter;
         setValueGetter({ getValue:()=>valueGetter.current()});
-        console.log("monaco.keys",Object.keys(monaco))
         editor.addAction({
             id: 'my-unique-id',
             label: 'my label',
