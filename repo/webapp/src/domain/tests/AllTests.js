@@ -35,14 +35,21 @@ export default ()=>{
             const {cell: {value, row: {index}}, data} = arg;
             return (<NavLink to={`/run/list/${data[index].id}`}>{value}</NavLink>)
           }
-      },
+        },
         {
-          Header:"Schema",accessor: 'haschema',
+          Header:"Schema",accessor: 'hasschema',
           Cell: (arg) => { 
-          const {cell: {value} } = arg
-          return (value === true ? <i className="fas fa-check" /> : null)
-        }      
-      },
+            const {cell: {value} } = arg
+            return (value === true ? <i className="fas fa-check" /> : null)
+          }
+        },
+        {
+          Header:"View",accessor: 'hasview',
+          Cell: (arg) => { 
+            const {cell: {value} } = arg
+            return (value === true ? <i className="fas fa-check" /> : null)
+          }        
+        },
     ],[])
     const dispatch = useDispatch();
     const allRuns = useSelector(selectors.all);
