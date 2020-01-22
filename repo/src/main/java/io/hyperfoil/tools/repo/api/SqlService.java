@@ -73,7 +73,8 @@ public class SqlService {
       while (resultSet.next()) {
          Json entry = new Json();
          for (String name : names.keySet()) {
-            entry.set(name, getValue(resultSet, name, names.get(name)));
+            Object value = getValue(resultSet, name, names.get(name));
+            entry.set(name, value );
          }
          rtrn.add(entry);
       }
@@ -108,6 +109,9 @@ public class SqlService {
             } else {
                return str;
             }
+         case Types.BIT:
+         case Types.BOOLEAN:
+            return resultSet.getBoolean(column);
          default:
             String def = StringUtil.removeQuotes(resultSet.getString(column));
             return def;
