@@ -54,7 +54,9 @@ export default () => {
     const [pathSuggestions, setPathSuggestions] = useState([])
     const dispatch = useDispatch();
     useEffect(() => {
-        dispatch(actions.get(id))
+        const urlParams = new URLSearchParams(window.location.search)
+        const token = urlParams.get('token')
+        dispatch(actions.get(id, token))
     }, [dispatch, id])
     useEffect(() => {
         setData(toString(run.data) || "{}");//change the loaded document when the run changes

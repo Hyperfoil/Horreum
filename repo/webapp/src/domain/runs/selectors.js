@@ -36,3 +36,7 @@ export const suggestQuery = () => {
 }
 
 export const suggestions = () => store.getState().runs.suggestions
+
+export const selectedRoles = () => {
+   return store.getState().runs.selectedRoles;
+}

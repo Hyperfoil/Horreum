@@ -1,22 +1,31 @@
 import React from 'react';
+import { Component } from 'react'
 import '@patternfly/patternfly/patternfly.css'; //have to use this import to customize scss-variables.scss
 
 import {
-  Page,
+  Flex,
+  FlexItem,
   Nav,
-  PageHeader,
-  PageSidebar,
   NavItem,
   NavList,
   NavVariants,
+  Page,
+  PageHeader,
+  PageSidebar,
 } from '@patternfly/react-core';
 import { ConnectedRouter } from 'connected-react-router'
 import { NavLink } from 'react-router-dom';
 
-import { Provider } from 'react-redux'
+import { Provider, useSelector } from 'react-redux'
 import { Route, Switch } from 'react-router'
 
 import store, { history } from './store'
+import {
+   initKeycloak,
+   isAdminSelector,
+   LoginLogout,
+   RequestForbiddenAlert,
+} from './auth.js'
 
 import AllRuns from './domain/runs/AllRuns';
 import TestRuns from './domain/runs/TestRuns';
@@ -29,73 +38,67 @@ import Schema from './domain/schemas/Schema';
 
 import AllHooks from './domain/hooks/AllHooks';
 
-function App() {
-  return (
-    <Provider store={store}>
+class App extends Component {
+  constructor(props) {
+     super(props)
+     initKeycloak()
+  }
+
+  render() {
+     return (
+       <Provider store={store}>
+         <Main />
+       </Provider>
+     );
+  }
+}
+
+function Main() {
+   const isAdmin = useSelector(isAdminSelector)
+   return (
       <ConnectedRouter history={history}>
         <Page header={(
           <PageHeader
             // showNavToggle={true}
             topNav={(
+              <>
+              <div>
               <Nav aria-label="Nav">
                 <NavList variant={NavVariants.horizontal}>
                   <NavItem itemId={0} isActive={false}>
                     <NavLink to="/test" activeClassName="pf-m-current">
                       Tests
-                </NavLink>
+                    </NavLink>
                   </NavItem>
                   <NavItem itemId={0} isActive={false}>
                     <NavLink to="/run" activeClassName="pf-m-current">
                       Runs
-                </NavLink>
+                    </NavLink>
                   </NavItem>
+                  { isAdmin &&
                   <NavItem itemId={0} isActive={false}>
                     <NavLink to="/hook" activeClassName="pf-m-current">
                       WebHooks
-                </NavLink>
+                    </NavLink>
                   </NavItem>
+                  }
                   <NavItem itemId={0} isActive={false}>
                     <NavLink to="/schema" activeClassName="pf-m-current">
                       Schema
-                </NavLink>
+                    </NavLink>
                   </NavItem>
                 </NavList>
               </Nav>
+              </div>
+              <div style={{ position : "absolute", right: "0", paddingRight: "20px" }} >
+                <LoginLogout />
+              </div>
+              </>
             )}
           />
         )}
-        // isManagedSidebar={true}
-        // sidebar={(
-        //   <PageSidebar theme="dark" nav={(
-        //     <Nav theme="dark" onSelect={(e) => { console.log("sideNavSelect", e); }} aria-label="Nav">
-        //       <NavList variant={NavVariants.simple}>
-        //         <NavItem itemId={0} isActive={true}>
-        //           <NavLink to="/test" activeClassName="pf-m-current">
-        //             Tests
-        //     </NavLink>
-        //         </NavItem>
-        //         <NavItem itemId={0} isActive={false}>
-        //           <NavLink to="/run" activeClassName="pf-m-current">
-        //             Runs
-        //     </NavLink>
-        //         </NavItem>
-        //         <NavItem itemId={0} isActive={false}>
-        //           <NavLink to="/hook" activeClassName="pf-m-current">
-        //             WebHooks
-        //     </NavLink>
-        //         </NavItem>
-        //         <NavItem itemId={0} isActive={false}>
-        //           <NavLink to="/schema" activeClassName="pf-m-current">
-        //             Schema
-        //     </NavLink>
-        //         </NavItem>
-        //       </NavList>
-        //     </Nav>
-        //   )} />
-
-        // )}
-
         >
+          <RequestForbiddenAlert />
           <Switch>
             <Route exact path="/" component={AllTests} />
             <Route exact path="/test" component={AllTests} />
@@ -113,8 +116,7 @@ function App() {
           </Switch>
         </Page>
       </ConnectedRouter>
-    </Provider>
-  );
+   );
 }
 
 export default App;

@@ -1,5 +1,7 @@
 import fetchival from 'fetchival';
 import apiConfig from './config';
+import store from "../../store.js"
+import { REQUEST_FAILED } from "../../auth.js"
 
 export const exceptionExtractError = (exception) => {
 	if (!exception.Errors) return false;
@@ -49,42 +51,43 @@ const deserialize = (input)=>{
     }
 }
 
-export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}) => {
+export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}, responseAs = 'json') => {
 	//const accessToken = sessionSelectors.get().tokens.access.value;
 	const serialized = serialize(payload)
-	return fetchival(`${apiConfig.url}${endPoint}`, {
-		// headers: _.pickBy({
-		// 	...(accessToken ? {
-		// 		Authorization: `Bearer ${accessToken}`,
-		// 	} : {
-		// 		'Client-ID': apiConfig.clientId,
-		// 	}),
-		// 	...headers,
-		// }, item => !_.isEmpty(item)),
-	})[method.toLowerCase()](serialized)
-	.then(response=>{
-		return Promise.resolve(deserialize(response));
-	},(e) => {
-		if ( e.response){
-			return e.response.json().then(body=>{
-				return Promise.reject(body)
-			},(noBody)=>{
-				e.response.text().then(body=>{
-					return Promise.reject(body);
-				},(noBodyAgain)=>{
-					return Promise.reject(e);
-				})
-			})
-		
-		}
-		return Promise.reject(e);
-		// if (e.response && e.response.json) {
-		// 	e.response.json().then((json) => {
-		// 		if (json) throw json;
-		// 		throw e;
-		// 	});
-		// } else {
-		// 	throw e;
-		// }
-	});
+	const keycloak = store.getState().auth.keycloak
+   let updateTokenPromise;
+	if (keycloak != null && keycloak.authenticated) {
+	   updateTokenPromise = keycloak.updateToken(30)
+	} else {
+	   updateTokenPromise = Promise.resolve(false)
+   }
+	return updateTokenPromise.then(() => {
+	   let authHeaders = {}
+      if (keycloak != null && keycloak.token != null) {
+         authHeaders.Authorization = "Bearer " + keycloak.token;
+      }
+      return fetchival(`${apiConfig.url}${endPoint}`, {
+         headers: { ...authHeaders, ...headers },
+         responseAs: responseAs,
+      })[method.toLowerCase()](serialized)
+   }).then(response => {
+      return Promise.resolve(deserialize(response));
+   }, (e) => {
+      if (e.response) {
+         if (e.response.status == 401 || e.response.status == 403) {
+            store.dispatch({ type: REQUEST_FAILED })
+         }
+         return e.response.json().then(body => {
+            return Promise.reject(body)
+         }, (noBody) => {
+            return e.response.text().then(body => {
+               return Promise.reject(body);
+            }, (noBodyAgain) => {
+               return Promise.reject(e);
+            })
+         })
+      } else {
+         return Promise.reject(e);
+      }
+   });
 };

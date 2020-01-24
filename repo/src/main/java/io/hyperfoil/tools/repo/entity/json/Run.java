@@ -2,7 +2,6 @@ package io.hyperfoil.tools.repo.entity.json;
 
 import io.hyperfoil.tools.repo.entity.converter.InstantSerializer;
 import io.hyperfoil.tools.yaup.json.Json;
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.annotations.Type;
@@ -45,4 +44,11 @@ public class Run extends PanacheEntityBase {
    @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
    public Json data;
 
+   @NotNull
+   public String owner;
+
+   public String token;
+
+   @NotNull
+   public Access access = Access.PUBLIC;
 }

@@ -12,25 +12,36 @@ import {
     Tooltip
 } from '@patternfly/react-core';
 import { Spinner } from '@patternfly/react-core/dist/esm/experimental'
-import { HelpIcon, SearchIcon } from '@patternfly/react-icons'
+import {
+    HelpIcon,
+    SearchIcon,
+} from '@patternfly/react-icons'
 import Autosuggest from 'react-autosuggest';
 import './Autosuggest.css'
 
 import { DateTime, Duration } from 'luxon';
 import { NavLink } from 'react-router-dom';
 
-import {all, filter, suggest} from './actions';
+import {all, filter, suggest, selectRoles, resetToken, dropToken, updateAccess } from './actions';
 import * as selectors from './selectors';
+import { isAuthenticatedSelector, rolesSelector, registerAfterLogin, roleToName } from '../../auth.js'
 
 import Table from '../../components/Table';
-
+import AccessIcon from '../../components/AccessIcon';
+import OwnerSelect from '../../components/OwnerSelect';
+import ActionMenu from '../../components/ActionMenu';
 
 export default ()=>{
+    const runs = useSelector(selectors.filter)
+    const roles = useSelector(rolesSelector)
+    const isAuthenticated = useSelector(isAuthenticatedSelector)
+
     const [filterQuery, setFilterQuery] = useState("")
     const [filterValid, setFilterValid] = useState(true)
     const [filterLoading, setFilterLoading] = useState(false)
     const [matchDisabled, setMatchDisabled] = useState(false)
     const [matchAll, setMatchAll] = useState(false)
+
     const columns = useMemo(()=>[
         {
           Header:"Id",accessor:"id",
@@ -39,6 +50,11 @@ export default ()=>{
             return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
             }
         },
+        {
+          Header: "Access", accessor:"access",
+          Cell: (arg) => <AccessIcon access={arg.cell.value} />
+        },
+        {Header:"Owner",accessor:"owner", Cell: (arg) => roleToName(arg.cell.value)},
         {Header:"Start",accessor:v=>DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")},
         {Header:"Stop",accessor:v=>DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")},
         {Header:"Duration",accessor:v => Duration.fromMillis(v.stop - v.start).toFormat("hh:mm:ss.SSS")},
@@ -49,12 +65,29 @@ export default ()=>{
             return (<NavLink to={`/run/list/${value}`}>{value}</NavLink>)
           }
         },
-    ],[])
+        {
+          Header:"Actions",
+          accessor: "id",
+          Cell: (arg) => {
+            return (
+             <ActionMenu id={arg.cell.value}
+                         owner={ arg.row.original.owner }
+                         access={ arg.row.original.access }
+                         token={ arg.row.original.token }
+                         tokenToLink={ (id, token) => "/run/" + id + "?token=" + token }
+                         onTokenReset={ id => dispatch(resetToken(id)) }
+                         onTokenDrop={ id => dispatch(dropToken(id)) }
+                         onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, owner, access)) } />
+          )}
+        }
+    ],[roles])
+
+    const selectedRoles = useSelector(selectors.selectedRoles)
+
     const dispatch = useDispatch();
-    const runs = useSelector(selectors.filter)
-    const runFilter = () => {
+    const runFilter = (roles) => {
        setFilterLoading(true)
-       dispatch(filter(filterQuery, matchAll, success => {
+       dispatch(filter(filterQuery, matchAll, roles, success => {
          setFilterLoading(false);
          setFilterValid(success);
        }))
@@ -66,6 +99,10 @@ export default ()=>{
     const loadingDisplay = useSelector(selectors.isFetchingSuggestions) ? "inline-block" : "none"
     useEffect(()=>{
         dispatch(all())
+        dispatch(registerAfterLogin("reload_runs", () => {
+           dispatch(all())
+           runFilter(selectors.selectedRoles().key)
+        }))
     },[dispatch])
 
     const inputProps = {
@@ -91,13 +128,13 @@ export default ()=>{
        if (typingTimer !== null) {
           clearTimeout(typingTimer)
        }
-       setTypingTimer(setTimeout(() => suggest(value)(dispatch), 1000))
+       setTypingTimer(setTimeout(() => suggest(value, selectors.selectedRoles().key)(dispatch), 1000))
     }
     const fetchSuggestionsNow = () => {
        if (typingTimer !== null) {
           clearTimeout(typingTimer)
        }
-       suggest(filterQuery)(dispatch)
+       suggest(filterQuery, selectors.selectedRoles().key)(dispatch)
     }
 
     return (
@@ -118,11 +155,12 @@ export default ()=>{
                       - Full jsonpath query starting with <code>$</code>, e.g. <code>$.foo.bar</code>, or <code>$.foo&nbsp;?&nbsp;@.bar&nbsp;==&nbsp;0</code><br />
                       - Part of the jsonpath query starting with <code>@</code>, e.g. <code>@.bar&nbsp;==&nbsp;0</code>. This condition will be evaluated on all sub-objects.<br />
                     </div>}>
+                    { /* TODO: It seems Patternfly has this as Select variant={SelectVariant.typeahead} */ }
                     <Autosuggest inputProps={inputProps}
                                  suggestions={suggestions}
                                  onSuggestionsFetchRequested={fetchSuggestions}
                                  onSuggestionsClearRequested={() => {
-                                    if (filterQuery === "") suggest("")(dispatch)
+                                    if (filterQuery === "") suggest("", selectors.selectedRoles().key)(dispatch)
                                  }}
                                  getSuggestionValue={(value) => {
                                     let quoted = false;
@@ -145,7 +183,7 @@ export default ()=>{
                                  renderSuggestion={v => <div>{v}</div>}
                                  renderInputComponent={ inputProps => (
                                     <input {...inputProps}
-                                           {... (filterLoading ? { readonly : "" } : {}) }
+                                           {... (filterLoading ? { readOnly : "" } : {}) }
                                            className="pf-c-form-control"
                                            aria-invalid={!filterValid}
                                            onKeyPress={ evt => {
@@ -178,12 +216,23 @@ export default ()=>{
                           isChecked={matchAll} isDisabled={matchDisabled} onChange={handleMatchAll}
                           style={{ margin: "0px 0px 0px 8px" }}/>
                  </React.Fragment>
+                 { isAuthenticated &&
+                 <div style={{ width: "200px", marginLeft: "16px" }}>
+                    <OwnerSelect includeGeneral={true}
+                                 selection={selectedRoles.toString()}
+                                 onSelect={selection => {
+                                    dispatch(selectRoles(selection))
+                                    runFilter(selection.key)
+                                 }} />
+                 </div>
+                 }
               </div>
             </CardHeader>
             <CardBody>
-              <Table columns={columns} data={runs} />
+              <Table columns={columns} data={runs}/>
             </CardBody>
           </Card>
         </PageSection>
     )
 }
+

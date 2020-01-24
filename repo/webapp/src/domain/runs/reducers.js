@@ -1,11 +1,13 @@
 import * as actionTypes from './actionTypes';
 import { List, Map } from 'immutable';
 import * as utils from '../../utils'
+import { ONLY_MY_OWN } from '../../components/OwnerSelect'
 
 const initialState = {
     byId: Map({}),
     byTest: Map({}),
     filteredIds: null,
+    selectedRoles: ONLY_MY_OWN,
     suggestQuery: [],
     suggestions: []
 }
@@ -58,6 +60,24 @@ export const reducer = (state = initialState, action) =>{
                state.suggestQuery.shift()
             }
             break;
+        }
+        case actionTypes.SELECT_ROLES: {
+            state.selectedRoles = action.selection
+            break
+        }
+        case actionTypes.UPDATE_TOKEN: {
+            let run = state.byId.get(`${action.id}`);
+            if (run) {
+               state.byId = state.byId.set(`${run.id}`, { ...run, token: action.token })
+            }
+            break
+        }
+        case actionTypes.UPDATE_ACCESS: {
+            let run = state.byId.get(`${action.id}`);
+            if (run) {
+                state.byId = state.byId.set(`${run.id}`, { ...run, owner: action.owner, access: action.access })
+            }
+            break
         }
         default:
     }

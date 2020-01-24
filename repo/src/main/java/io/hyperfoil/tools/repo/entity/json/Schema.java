@@ -36,5 +36,11 @@ public class Schema extends PanacheEntityBase {
    @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
    public Json schema;
 
+   @NotNull
+   public String owner;
 
+   public String token;
+
+   @NotNull
+   public Access access;
 }

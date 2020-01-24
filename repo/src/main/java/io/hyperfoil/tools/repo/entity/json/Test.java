@@ -35,4 +35,11 @@ public class Test extends PanacheEntityBase {
    @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
    public Json view;
 
+   @NotNull
+   public String owner;
+
+   public String token;
+
+   @NotNull
+   public Access access = Access.PUBLIC;
 }

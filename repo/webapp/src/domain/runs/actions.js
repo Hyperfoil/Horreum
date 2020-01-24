@@ -1,6 +1,7 @@
 import * as api from './api';
 import * as actionTypes from './actionTypes';
 import { isFetchingSuggestions, suggestQuery } from './selectors'
+import { accessName } from '../../auth.js'
 
 const loaded = run =>({
     type: actionTypes.LOADED,
@@ -12,9 +13,9 @@ const testId = (id,runs,payload) =>({
     runs
 })
 
-export const get = id =>
+export const get = (id, token) =>
     dispatch =>
-        api.get(id)
+        api.get(id, token)
         .then(response => {
             dispatch(loaded(response))
         });
@@ -27,16 +28,17 @@ export const all = () => {
         });
     }
 
-export const byTest = (id,payload)=> {
+export const byTest = (id, payload, roles)=> {
    return dispatch =>
-        api.byTest(id,payload)
+        api.byTest(id, payload, roles)
         .then(response => {
             return dispatch(testId(id,response,payload))
         })
 }
-export const filter = (query, matchAll, callback) => {
+
+export const filter = (query, matchAll, roles, callback) => {
    return dispatch => {
-      if (query == "") {
+      if (query == "" && roles == "__all") {
          dispatch({
             type: actionTypes.FILTERED,
             ids: null
@@ -44,24 +46,18 @@ export const filter = (query, matchAll, callback) => {
          callback(true)
          return
       }
-      api.filter(query, matchAll)
+      api.filter(query, matchAll, roles)
       .then(response => {
-         // TODO: for some reason a 400 response is passed here as undefined
-         // instead of giving us the full response
-         if (response == undefined) {
-            callback(false)
-         } else {
-            dispatch({
-               type: actionTypes.FILTERED,
-               ids: response
-            })
-            callback(true)
-         }
-      })
+         dispatch({
+            type: actionTypes.FILTERED,
+            ids: response
+         })
+         callback(true)
+      }, e => callback(false))
    }
 }
 
-export const suggest = query => dispatch => {
+export const suggest = (query, roles) => dispatch => {
   if (query == "") {
      dispatch({
         type: actionTypes.SUGGEST,
@@ -75,31 +71,66 @@ export const suggest = query => dispatch => {
         query: query
      })
      if (!fetching) {
-        fetchSuggestions(query, dispatch)
+        fetchSuggestions(query, roles, dispatch)
      }
   }
 }
 
-const fetchSuggestions = (query, dispatch) => {
-   console.log(new Date() + " Looking up " + query)
-   api.suggest(query).then(response => {
-      if (response == undefined) {
-        dispatch({
-           type: actionTypes.SUGGEST,
-           responseReceived: true,
-           options: []
-        })
-      } else {
-        console.log(new Date() + " Received for " + query + ": " + response)
-        dispatch({
-           type: actionTypes.SUGGEST,
-           responseReceived: true,
-           options: response
-        })
-      }
+const fetchSuggestions = (query, roles, dispatch) => {
+   api.suggest(query, roles).then(response => {
+      dispatch({
+         type: actionTypes.SUGGEST,
+         responseReceived: true,
+         options: response
+      })
+   }, e => {
+      dispatch({
+         type: actionTypes.SUGGEST,
+         responseReceived: true,
+         options: []
+      })
+   }).finally(() => {
       let nextQuery = suggestQuery()
       if (nextQuery != null) {
-        fetchSuggestions(nextQuery, dispatch)
+         fetchSuggestions(nextQuery, dispatch)
       }
-  })
+   })
+}
+
+export const selectRoles = (selection) => {
+   return {
+      type: actionTypes.SELECT_ROLES,
+      selection: selection,
+   }
+}
+
+export const resetToken = (id) => dispatch => {
+   return api.resetToken(id).then(token => {
+      dispatch({
+         type: actionTypes.UPDATE_TOKEN,
+         id: id,
+         token: token,
+      })
+   })
+}
+
+export const dropToken = (id) => dispatch => {
+   return api.dropToken(id).then(response => {
+      dispatch({
+         type: actionTypes.UPDATE_TOKEN,
+         id: id,
+         token: null,
+      })
+   })
+}
+
+export const updateAccess = (id, owner, access) => dispatch => {
+   return api.updateAccess(id, owner, accessName(access)).then(response => {
+      dispatch({
+         type: actionTypes.UPDATE_ACCESS,
+         id: id,
+         owner: owner,
+         access: access,
+      })
+   })
 }

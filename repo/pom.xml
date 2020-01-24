@@ -102,6 +102,11 @@
       <artifactId>quarkus-undertow-websockets</artifactId>
       <version>${quarkus.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-oidc</artifactId>
+      <version>${quarkus.version}</version>
+    </dependency>
   </dependencies>
   <repositories>
     <repository>

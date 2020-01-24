@@ -18,8 +18,23 @@ export const reducer = (state = initialState, action) => {
                     }
                 })
             }
-            break;
         }
+        break;
+        case actionTypes.UPDATE_TOKEN: {
+            let test = state.byId.get("t" + action.id)
+            if (test) {
+               state.byId = state.byId.set("t" + action.id, { ...test, token: action.token })
+            }
+        }
+        break;
+        case actionTypes.UPDATE_ACCESS: {
+            let test = state.byId.get("t" + action.id)
+            if (test) {
+               state.byId = state.byId.set("t" + action.id, { ...test, owner: action.owner, access: action.access })
+            }
+        }
+        break;
+        default:
     }
     return state;
 }

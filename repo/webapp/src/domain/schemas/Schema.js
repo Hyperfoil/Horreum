@@ -20,7 +20,7 @@ import {
     ToolbarItem,
     ToolbarSection,
 } from '@patternfly/react-core';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Redirect } from 'react-router-dom';
 import {
     EditIcon,
     OutlinedSaveIcon,
@@ -28,9 +28,13 @@ import {
 } from '@patternfly/react-icons';
 import * as actions from './actions';
 import * as selectors from './selectors';
+import { accessName, isTesterSelector, defaultRoleSelector, roleToName } from '../../auth.js'
 
 import { fromEditor, toString } from '../../components/Editor';
 import Editor from '../../components/Editor/monaco/Editor';
+import AccessIcon from '../../components/AccessIcon'
+import AccessChoice from '../../components/AccessChoice'
+import OwnerSelect from '../../components/OwnerSelect'
 
 export default () => {
     const { schemaId } = useParams();
@@ -63,9 +67,14 @@ export default () => {
         }
         return rtrn;
     }
-
+    const isTester = useSelector(isTesterSelector)
+    const defaultRole = useSelector(defaultRoleSelector)
+    const [access, setAccess] = useState(0)
+    const [owner, setOwner] = useState(defaultRole)
+    const [goBack, setGoBack] = useState(false)
     return (
         <React.Fragment>
+            { goBack && <Redirect to='/schema' /> }
             <Card style={{ flexGrow: 1 }}>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
@@ -79,6 +88,7 @@ export default () => {
                                         id="schemaName"
                                         aria-describedby="name-helper"
                                         name="schemaName"
+                                        isReadOnly={ !isTester }
                                         onChange={e => setName(e)}
                                     />
                                 </FormGroup>
@@ -89,10 +99,28 @@ export default () => {
                                         id="schemaDescription"
                                         aria-describedby="description-helper"
                                         name="schemaDescription"
+                                        readOnly={ !isTester }
                                         isValid={true}
                                         onChange={e => setDescription(e)}
                                     />
                                 </FormGroup>
+                                <FormGroup label="Owner" fieldId="schemaOwner">
+                                   { isTester ? (
+                                      <OwnerSelect includeGeneral={false}
+                                                   selection={roleToName(owner)}
+                                                   onSelect={selection => setOwner(selection.key)} />
+                                   ) : (
+                                      <TextInput value={roleToName(owner)} isReadOnly />
+                                   )}
+                                </FormGroup>
+                                <FormGroup label="Access rights" fieldId="schemaAccess">
+                                   { isTester ? (
+                                      <AccessChoice checkedValue={access} onChange={setAccess} />
+                                   ) : (
+                                      <AccessIcon access={access} />
+                                   )}
+                                </FormGroup>
+                                { isTester && <>
                                 <ActionGroup style={{ marginTop: 0 }}>
                                     <Button variant="primary" 
                                         onClick={e => {
@@ -100,18 +128,22 @@ export default () => {
                                             const newSchema = {
                                                 name,
                                                 description,
+                                                access: accessName(access),
+                                                owner,
                                                 schema: editorValue
                                             }
                                             if (schemaId !== "_new"){
                                                 newSchema.id = schemaId;
                                             }
                                             dispatch(actions.add(newSchema))
+                                            setGoBack(true)
                                         }}
                                     >Save</Button>
                                     <NavLink className="pf-c-button pf-m-secondary" to="/schema/">
                                         Cancel
                                     </NavLink>
                                 </ActionGroup>
+                                </>}
                             </Form>
                         </ToolbarSection>
                     </Toolbar>
@@ -125,7 +157,6 @@ export default () => {
                     />
                 </CardBody>
             </Card>
-
         </React.Fragment>
     )
 }

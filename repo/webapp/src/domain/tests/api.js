@@ -6,7 +6,10 @@ const endPoints = {
     crud: (id)=>`${base}/${id}`,
     schema: (id)=>`${base}/${id}/schema`,
     view: (id)=>`${base}/${id}/view`,
-    summary: ()=>'/api/sql?q=select test.id,test.name,test.description,count(run.id) as count,test.schema is not null as hasschema,test.view is not null as hasview from test left join run on run.testId = test.id group by test.id'
+    summary: ()=>`${base}/summary`,
+    resetToken: (id) => `${base}/${id}/resetToken`,
+    dropToken: (id) => `${base}/${id}/dropToken`,
+    updateAccess: (id, owner, access) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
 }
 
 export const all = () => {
@@ -23,4 +26,15 @@ export const summary = () => {
 }
 export const send = (test) => {
     return fetchApi(endPoints.base(),test,'post')
+}
+
+export const resetToken = (id) => fetchApi(endPoints.resetToken(id), null, 'post', {}, 'text');
+
+export const dropToken = (id) => fetchApi(endPoints.dropToken(id), null, 'post');
+
+export const updateAccess = (id, owner, access) => {
+   // TODO: fetchival does not support form parameters, it tries to JSONify everything
+   return fetchApi(endPoints.updateAccess(id, owner, access), null, 'post', {}, 'response')
+//                   "owner=" + encodeURIComponent(owner) + "&access=" + encodeURIComponent(access),
+//                   'post', { 'content-type' : 'application/x-www-form-urlencoded'}, 'response')
 }

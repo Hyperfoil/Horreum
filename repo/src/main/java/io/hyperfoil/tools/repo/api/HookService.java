@@ -7,14 +7,18 @@ import io.hyperfoil.tools.repo.entity.json.Test;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
+import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.http.HttpVersion;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.reactivex.core.buffer.Buffer;
 import io.vertx.reactivex.ext.web.client.WebClient;
+
+import org.jboss.logging.Logger;
 import org.postgresql.util.PSQLException;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.bind.Jsonb;
@@ -25,6 +29,7 @@ import javax.persistence.PersistenceException;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -35,14 +40,24 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
+@RolesAllowed(Roles.ADMIN)
 @Path("/api/hook")
 @Consumes({MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 @ApplicationScoped
 public class HookService {
+   private static final Logger log = Logger.getLogger(HookService.class);
+
+   @Inject
+   SqlService sqlService;
+
+   @Inject
+   SecurityIdentity identity;
 
    private static int getIntFromEnv(String var, int def) {
       String env = System.getenv(var);
@@ -69,8 +84,12 @@ public class HookService {
          .setKeepAlive(false);
       http1xClient = WebClient.create(reactiveVertx, new WebClientOptions(options).setProtocolVersion(HttpVersion.HTTP_1_1));
    }
+
    private void tellHooks(String type,Integer id,Object value){
-      List<Hook> hooks = getEventHooks(type,id);
+      List<Hook> hooks;
+      try (CloseMe h = sqlService.withRoles(em, Arrays.asList("admin"))) {
+         hooks = getEventHooks(type, id);
+      }
 //      Hook h = new Hook();
 //      h.url="http://laptop:8080/api/log";
 //      hooks.add(h);
@@ -117,7 +136,6 @@ public class HookService {
       //tellHooks("new/run",testId,run);
    }
 
-
    @POST
    @Transactional
    public Response add(Hook hook){
@@ -125,7 +143,7 @@ public class HookService {
       if(hook == null){
          return Response.serverError().entity("hook is null").build();
       }
-      try {
+      try (CloseMe h = sqlService.withRoles(em, identity)) {
          if (hook.id != null) {
             em.merge(hook);
          } else {
@@ -134,7 +152,7 @@ public class HookService {
          em.flush();
          System.out.println("HOOKSERVER.add merge|persist "+hook.id+" "+hook.isPersistent());
          return Response.ok(hook).build();
-      }catch(Exception e){
+      } catch (Exception e) {
 
          Throwable root = e;
 //         Our favorite Object is not assignable to java/lang/Throwable
@@ -150,48 +168,52 @@ public class HookService {
          return Response.serverError().entity(errorJson.toString(0)).build();
       }
    }
+
    @GET
    @Path("{id}")
    public Hook get(@PathParam("id")Integer id){
-      return Hook.find("id",id).firstResult();
+      try (CloseMe h = sqlService.withRoles(em, identity)) {
+         return Hook.find("id", id).firstResult();
+      }
    }
 
    @DELETE
    @Path("{id}")
    @Transactional
    public void delete(@PathParam("id")Integer id){
-      Hook.find("id",id).firstResult().delete();
+      try (CloseMe h = sqlService.withRoles(em, identity)) {
+         Hook.find("id", id).firstResult().delete();
+      }
    }
 
    public List<Hook> getEventHooks(String type,Integer target){
       System.out.println("getEventHooks("+type+" , "+target+")");
       try {
-         List<Hook> rtrn = new ArrayList<>();
+         List<Hook> rtrn;
          if(target == null || target == -1){
             rtrn = Hook.find("type = ?1 and active = true",type).list();
          }else {
             rtrn = Hook.find("type = ?1 and ( target = ?2 or target = -1) and active = true", type, target).list();
          }
          return rtrn;
-      }catch(Exception e){
-         e.printStackTrace();
+      } catch(Exception e){
+         log.error("Failed to get event hooks.", e);
       }
       return new ArrayList<>();
    }
 
    @GET
    @Path("list")
-   public List<Hook> list(@QueryParam("limit") Integer limit, @QueryParam("page") Integer page, @QueryParam("sort") String sort, @QueryParam("direction") String direction){
-      if(sort == null || sort.isEmpty()){
-         sort = "url";
-      }
-      if(direction == null || direction.isEmpty()){
-         direction = "Ascending";
-      }
-      if(limit != null && page != null){
-         return Hook.findAll(Sort.by(sort).direction(Sort.Direction.valueOf(direction))).page(Page.of(page,limit)).list();
-      }else{
-         return Hook.listAll(Sort.by(sort).direction(Sort.Direction.valueOf(direction)));
+   public List<Hook> list(@QueryParam("limit") Integer limit,
+                          @QueryParam("page") Integer page,
+                          @QueryParam("sort") @DefaultValue("url") String sort,
+                          @QueryParam("direction") @DefaultValue("Ascending") Sort.Direction direction){
+      try (CloseMe h = sqlService.withRoles(em, identity)) {
+         if (limit != null && page != null) {
+            return Hook.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
+         } else {
+            return Hook.listAll(Sort.by(sort).direction(direction));
+         }
       }
    }
 

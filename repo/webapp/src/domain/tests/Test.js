@@ -10,32 +10,34 @@ import {
     Form,
     ActionGroup,
     FormGroup,
-    InputGroup,
-    InputGroupText,
-    PageSection,
     TextArea,
     TextInput,
     Toolbar,    
     Tab,
     Tabs,
-    TabsVariant,
-    TabContent,
-    ToolbarGroup,
-    ToolbarItem,
     ToolbarSection,
 } from '@patternfly/react-core';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Redirect } from 'react-router-dom';
 import {
-    EditIcon,
     OutlinedSaveIcon,
     OutlinedTimesCircleIcon
 } from '@patternfly/react-icons';
 import * as actions from './actions';
 import * as selectors from './selectors';
 
+import {
+    accessName,
+    defaultRoleSelector,
+    isTesterSelector,
+    roleToName
+} from '../../auth.js'
+
 //import Editor, {fromEditor} from '../../components/Editor';
 import { fromEditor, toString } from '../../components/Editor';
 import Editor from '../../components/Editor/monaco/Editor';
+import AccessIcon from '../../components/AccessIcon'
+import AccessChoice from '../../components/AccessChoice'
+import OwnerSelect from '../../components/OwnerSelect'
 
 const tabs = ["schema","view"]
 
@@ -67,9 +69,15 @@ export default () => {
         schema: fromEditor(editorContent),
         id: test.id
     })
+    const isTester = useSelector(isTesterSelector)
+    const defaultRole = useSelector(defaultRoleSelector)
+    const [access, setAccess] = useState(0)
+    const [owner, setOwner] = useState(defaultRole)
+    const [goBack, setGoBack] = useState(false)
     return (
         // <PageSection>
         <React.Fragment>
+            { goBack && <Redirect to="/test" /> }
             <Card style={{flexGrow:1}}>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
@@ -83,6 +91,7 @@ export default () => {
                                         id="name"
                                         aria-describedby="name-helper"
                                         name="name"
+                                        isReadOnly={!isTester}
                                         // isValid={name !== null && name.trim().length > 0}
                                         onChange={e => setName(e)}
                                     />
@@ -94,10 +103,28 @@ export default () => {
                                         id="description"
                                         aria-describedby="description-helper"
                                         name="description"
+                                        readOnly={!isTester}
                                         isValid={true}
                                         onChange={e => setDescription(e)}
                                     />
                                 </FormGroup>
+                                <FormGroup label="Owner" fieldId="testOwner">
+                                   { isTester ? (
+                                      <OwnerSelect includeGeneral={false}
+                                                   selection={roleToName(owner)}
+                                                   onSelect={selection => setOwner(selection.key)} />
+                                   ) : (
+                                      <TextInput value={roleToName(owner)} isReadOnly />
+                                   )}
+                                </FormGroup>
+                                <FormGroup label="Access rights" fieldId="testAccess">
+                                   { isTester ? (
+                                      <AccessChoice checkedValue={access} onChange={setAccess} />
+                                   ) : (
+                                      <AccessIcon access={access} />
+                                   )}
+                                </FormGroup>
+                                { isTester &&
                                 <ActionGroup style={{ marginTop: 0 }}>
                                     <Button
                                         variant="primary"
@@ -106,6 +133,8 @@ export default () => {
                                             const newTest = {
                                                 name,
                                                 description,
+                                                owner: owner,
+                                                access: accessName(access),
                                                 schema: fromEditor(schema),
                                                 view: fromEditor(view)
                                             }
@@ -115,13 +144,14 @@ export default () => {
                                             }
                                             
                                             dispatch(actions.sendTest(newTest))
-
+                                            setGoBack(true)
                                         }}
                                     >Save</Button>
                                     <NavLink className="pf-c-button pf-m-secondary" to="/test/">
                                         Cancel
                                     </NavLink>
                                 </ActionGroup>
+                                }
                             </Form>
                         </ToolbarSection>
                     </Toolbar>
