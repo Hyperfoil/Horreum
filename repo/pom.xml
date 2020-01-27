@@ -13,7 +13,7 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <quarkus.version>1.0.1.Final</quarkus.version>
+    <quarkus.version>1.2.0.Final</quarkus.version>
     <surefire-plugin.version>2.22.0</surefire-plugin.version>
     <vertx.version>3.8.3</vertx.version>
     <yaup.version>0.3</yaup.version>
