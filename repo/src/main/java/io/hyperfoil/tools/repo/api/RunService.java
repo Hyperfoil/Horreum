@@ -191,7 +191,9 @@ public class RunService {
       }
       try {
          if (run.id == null) {
-            run.persistAndFlush();
+             em.persist(run);
+             em.flush();
+//            run.persistAndFlush(); //currently appears to be a bug in Panache where validation fails
          } else {
             em.merge(run);
          }
