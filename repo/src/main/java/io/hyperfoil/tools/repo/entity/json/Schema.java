@@ -12,10 +12,16 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
 @Entity
 @RegisterForReflection
+@Table(
+      name = "schema",
+      uniqueConstraints = @UniqueConstraint(columnNames = "uri")
+)
 public class Schema extends PanacheEntityBase {
 
    @Id
@@ -26,6 +32,9 @@ public class Schema extends PanacheEntityBase {
       initialValue = 1)
    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "schemaSequence")
    public Integer id;
+
+   @NotNull
+   public String uri;
 
    @NotNull
    @Column(name="name",unique = true)

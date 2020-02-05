@@ -19,7 +19,9 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.sql.Connection;
@@ -53,6 +55,7 @@ public class SchemaService {
    @PermitAll
    @GET
    @Path("{name:.*}")
+   @Produces(MediaType.APPLICATION_JSON)
    public Schema getSchema(@PathParam("name") String name, @QueryParam("token") String token){
       try (CloseMe h1 = sqlService.withRoles(em, identity);
            CloseMe h2 = sqlService.withToken(em, token)) {

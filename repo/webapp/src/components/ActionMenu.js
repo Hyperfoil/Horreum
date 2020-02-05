@@ -49,7 +49,7 @@ export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenRese
                        }}
                        isDisabled={!isOwner}
          >Change access</DropdownItem>,
-         <DropdownItem key="delete" isDisabled>Delete run</DropdownItem>,
+         <DropdownItem key="delete" isDisabled>Delete</DropdownItem>,
          ...(extraItems ? extraItems : [])
          ]}
       />

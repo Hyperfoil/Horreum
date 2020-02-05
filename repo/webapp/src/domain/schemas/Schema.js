@@ -3,6 +3,7 @@ import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
+    Alert,
     Button,
     Card,
     CardHeader,
@@ -19,13 +20,17 @@ import {
     ToolbarGroup,
     ToolbarItem,
     ToolbarSection,
+    Tooltip,
 } from '@patternfly/react-core';
 import { NavLink, Redirect } from 'react-router-dom';
 import {
     EditIcon,
+    ImportIcon,
     OutlinedSaveIcon,
     OutlinedTimesCircleIcon
 } from '@patternfly/react-icons';
+import jsonpath from 'jsonpath';
+
 import * as actions from './actions';
 import * as selectors from './selectors';
 import { accessName, isTesterSelector, defaultRoleSelector, roleToName } from '../../auth.js'
@@ -38,7 +43,6 @@ import OwnerSelect from '../../components/OwnerSelect'
 
 export default () => {
     const { schemaId } = useParams();
-    console.log("schemaId",schemaId)
     const schema = useSelector(selectors.getById(schemaId))
     const [name, setName] = useState("")
     const [description, setDescription] = useState("");
@@ -67,6 +71,31 @@ export default () => {
         }
         return rtrn;
     }
+    const [uri, setUri] = useState("")
+    const [uriMatching, setUriMatching] = useState(true)
+    const [importFailed, setImportFailed] = useState(false)
+    // TODO: use this in reaction to editor change
+    const parseUri = newJson => {
+        let jsonUri = jsonpath.value(JSON.parse(newJson), "$['$id']")
+        if (!jsonUri || jsonUri === "") {
+           setImportFailed(true)
+           setInterval(() => setImportFailed(false), 5000)
+        } else if (!uri || uri === "") {
+           setUri(jsonUri);
+           setUriMatching(true)
+        } else {
+           setUriMatching(uri == jsonUri)
+        }
+    }
+    const checkUri = newUri => {
+        let jsonUri = jsonpath.value(JSON.parse(editor.current.getValue()), "$['$id']")
+        if (!jsonUri || jsonUri === "") {
+           return // nothing to do
+        } else {
+           setUriMatching(newUri == jsonUri)
+        }
+    }
+
     const isTester = useSelector(isTesterSelector)
     const defaultRole = useSelector(defaultRoleSelector)
     const [access, setAccess] = useState(0)
@@ -88,9 +117,46 @@ export default () => {
                                         id="schemaName"
                                         aria-describedby="name-helper"
                                         name="schemaName"
+                                        isValid={ name && name != "" || !isTester }
                                         isReadOnly={ !isTester }
                                         onChange={e => setName(e)}
                                     />
+                                </FormGroup>
+                                <FormGroup label="URI" isRequired={true} fieldId="schemaURI" helperTextInvalid="Must provide a valid URI">
+                                   <>
+                                   <div style={{ display: "flex" }}>
+                                   { (!uri || uri === "") && isTester &&
+                                   <Tooltip content={"Import URI from the schema"}>
+                                      <Button variant="control"
+                                              style={{ float: "left" }}
+                                              onClick={ () => parseUri(editor.current.getValue()) }
+                                      ><ImportIcon /></Button>
+                                   </Tooltip>
+                                   }
+                                   <TextInput
+                                        value={uri}
+                                        isRequired
+                                        type="text"
+                                        id="schemaURI"
+                                        name="schemaURI"
+                                        onChange={setUri}
+                                        isReadOnly={ !isTester }
+                                        isValid={uri && uri != "" || !isTester}
+                                        onChange={e => {
+                                            setUri(e)
+                                            checkUri(e)
+                                        }}
+                                        placeholder={ isTester ? "Click button to import" : "" }
+                                        style={{ width: "100%" }}
+                                   />
+                                   </div>
+                                   { uriMatching ||
+                                       <Alert variant="warning" title="Schema $id in JSON is not matching to this URI" />
+                                   }
+                                   { importFailed &&
+                                       <Alert variant="warning" title="Schema does not have $id - cannot import." />
+                                   }
+                                   </>
                                 </FormGroup>
                                 <FormGroup label="Description" fieldId="schemaDescription" helperText="" helperTextInvalid="">
                                     <TextArea
@@ -110,7 +176,7 @@ export default () => {
                                                    selection={roleToName(owner)}
                                                    onSelect={selection => setOwner(selection.key)} />
                                    ) : (
-                                      <TextInput value={roleToName(owner)} isReadOnly />
+                                      <TextInput id="schemaOwner" value={roleToName(owner) || ""} isReadOnly />
                                    )}
                                 </FormGroup>
                                 <FormGroup label="Access rights" fieldId="schemaAccess">
@@ -127,6 +193,7 @@ export default () => {
                                             const editorValue = fromEditor(editor.current.getValue())
                                             const newSchema = {
                                                 name,
+                                                uri,
                                                 description,
                                                 access: accessName(access),
                                                 owner,
@@ -152,7 +219,6 @@ export default () => {
                     <Editor
                         value={json}
                         setValueGetter={e => { editor.current = e }}
-                        onChange={e => { setJson(e) }}
                         options={{ mode: "application/ld+json" }}
                     />
                 </CardBody>

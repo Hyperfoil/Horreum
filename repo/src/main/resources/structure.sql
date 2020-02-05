@@ -44,6 +44,7 @@ CREATE SEQUENCE public.run_id_seq
 
 CREATE TABLE public.schema (
     id integer NOT NULL,
+    uri text NOT NULL,
     description character varying(255),
     name character varying(255) NOT NULL,
     schema jsonb,
@@ -85,6 +86,9 @@ ALTER TABLE ONLY public.run
 
 ALTER TABLE ONLY public.schema
     ADD CONSTRAINT schema_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.schema
+    ADD CONSTRAINT unique_uri UNIQUE (uri);
 
 ALTER TABLE ONLY public.test
     ADD CONSTRAINT test_pkey PRIMARY KEY (id);
