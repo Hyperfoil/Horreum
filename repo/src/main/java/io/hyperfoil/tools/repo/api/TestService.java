@@ -76,11 +76,12 @@ public class TestService {
 
 
    public Test getByNameOrId(String input){
-      Test foundTest = getByName(input);
-      if(foundTest == null && input.matches("-?\\d+")){
-         foundTest = get(Integer.parseInt(input), null);
+      if (input.matches("-?\\d+")) {
+         int id = Integer.parseInt(input);
+         return Test.find("name = ?1 or id = ?2", input, id).firstResult();
+      } else {
+         return Test.find("name", input).firstResult();
       }
-      return foundTest;
    }
 
    public Test getByName(String name){
@@ -162,17 +163,19 @@ public class TestService {
          if (test == null) {
             return Response.serverError().entity("test is null").build();
          }
-         Test existing = Test.find("name", test.name).firstResult();
-         if (existing != null) {
-            test.id = existing.id;
-            em.merge(test);
-         } else {
-            em.persist(test);
-            eventBus.publish("new/test", test);
-
-         }
-         //test.persistAndFlush();
+         addAuthenticated(test);
          return Response.ok(test).build();
+      }
+   }
+
+   void addAuthenticated(Test test) {
+      Test existing = Test.find("name", test.name).firstResult();
+      if (existing != null) {
+         test.id = existing.id;
+         em.merge(test);
+      } else {
+         em.persist(test);
+         eventBus.publish("new/test", test);
       }
    }
 

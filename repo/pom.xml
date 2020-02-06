@@ -17,6 +17,7 @@
     <surefire-plugin.version>2.22.0</surefire-plugin.version>
     <vertx.version>3.8.3</vertx.version>
     <yaup.version>0.3</yaup.version>
+    <everit.json.schema.version>1.12.1</everit.json.schema.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -106,6 +107,11 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-oidc</artifactId>
       <version>${quarkus.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.everit-org.json-schema</groupId>
+      <artifactId>org.everit.json.schema</artifactId>
+      <version>${everit.json.schema.version}</version>
     </dependency>
   </dependencies>
   <repositories>

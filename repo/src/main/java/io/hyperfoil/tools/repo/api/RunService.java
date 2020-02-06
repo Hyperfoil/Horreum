@@ -95,6 +95,9 @@ public class RunService {
    TestService testService;
 
    @Inject
+   SchemaService schemaService;
+
+   @Inject
    AgroalDataSource dataSource;
 
    @PermitAll
@@ -195,37 +198,49 @@ public class RunService {
    public Response addHyperfoilRun(@QueryParam("owner") String owner,
                                    @QueryParam("access") Access access,
                                    Json json){
-      return addRunFromData("$.info.startTime", "$.info.terminateTime", "$.info.benchmark", owner, access, json);
+      return addRunFromData("$.info.startTime", "$.info.terminateTime", "$.info.benchmark", owner, access, "http://hyperfoil.io/run-schema/0.6", json);
    }
 
    @RolesAllowed(Roles.UPLOADER)
    @POST
    @Path("data")
+   @Transactional
    public Response addRunFromData(@QueryParam("start") String start,
                                   @QueryParam("stop") String stop,
                                   @QueryParam("test") String test,
                                   @QueryParam("owner") String owner,
                                   @QueryParam("access") Access access,
+                                  @QueryParam("schema") String schemaUri,
                                   Json data) {
-      Object foundTest = test != null && test.startsWith("$.") ? Json.find(data, test, "") : test;
-      Object foundStart = start != null && start.startsWith("$.") ? Json.find(data, start, "") : start;
-      Object foundStop = stop != null && stop.startsWith("$.") ? Json.find(data, stop, "") : stop;
+      Object foundTest = findIfNotSet(test, data);
+      Object foundStart = findIfNotSet(start, data);
+      Object foundStop = findIfNotSet(stop, data);
 
       if (foundTest == null || foundTest.toString().trim().isEmpty()) {
          return Response.noContent().entity("cannot find " + test + " in data").build();
       }
 
       try (CloseMe h = sqlService.withRoles(em, identity)) {
-         Test testEntity = getTest(foundTest.toString());
+         Test testEntity = getOrCreateTest(foundTest.toString(), owner, access);
          if (testEntity == null) {
             return Response.serverError().entity("failed to find or create test " + foundTest.toString()).build();
+         }
+         if (schemaUri == null || schemaUri.isEmpty()) {
+            schemaUri = data.getString("$schema");
+         } else {
+            data.set("$schema", schemaUri);
+         }
+         String validationError = schemaService.validate(data, schemaUri);
+         if (validationError != null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(validationError).build();
          }
 
          Run run = new Run();
          run.testId = testEntity.id;
-         run.start = foundStart instanceof Number ? Instant.ofEpochMilli(Long.parseLong(foundStart.toString())) : Instant.parse(foundStart.toString());
-         run.stop = foundStop instanceof Number ? Instant.ofEpochMilli(Long.parseLong(foundStop.toString())) : Instant.parse(foundStop.toString());
+         run.start = toInstant(foundStart);
+         run.stop = toInstant(foundStop);
          run.data = data;
+         run.schemaUri = schemaUri;
          run.owner = owner;
          run.access = access;
 
@@ -233,18 +248,27 @@ public class RunService {
       }
    }
 
-   private Test getTest(String testNameOrId) {
+   private Object findIfNotSet(String value, Json data) {
+      return value != null && value.startsWith("$.") ? Json.find(data, value, "") : value;
+   }
+
+   private Instant toInstant(Object time) {
+      if (time instanceof Number) {
+         return Instant.ofEpochMilli(((Number) time).longValue());
+      } else {
+         return Instant.parse(time.toString());
+      }
+   }
+
+   private Test getOrCreateTest(String testNameOrId, String owner, Access access) {
       Test testEntity = testService.getByNameOrId(testNameOrId);
       if (testEntity == null && !testNameOrId.matches("-?\\d+")) {
          testEntity = new Test();
          testEntity.name = testNameOrId;
          testEntity.description = "created by data upload";
-         Object response = testService.add(testEntity);
-         if (response instanceof Test) {
-            testEntity = (Test) response;
-         } else {
-            System.out.println("addTest.response = " + response);
-         }
+         testEntity.owner = owner;
+         testEntity.access = access;
+         testService.addAuthenticated(testEntity);
       }
       return testEntity;
    }

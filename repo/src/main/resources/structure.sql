@@ -30,6 +30,7 @@ CREATE TABLE public.run (
     start timestamp without time zone NOT NULL,
     stop timestamp without time zone NOT NULL,
     testid integer NOT NULL,
+    schemaUri text,
     owner text NOT NULL,
     access integer,
     token text

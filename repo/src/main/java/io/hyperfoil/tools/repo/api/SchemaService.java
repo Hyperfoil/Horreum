@@ -3,7 +3,6 @@ package io.hyperfoil.tools.repo.api;
 import io.agroal.api.AgroalDataSource;
 import io.hyperfoil.tools.repo.entity.json.Access;
 import io.hyperfoil.tools.repo.entity.json.Schema;
-import io.hyperfoil.tools.repo.entity.json.Test;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -31,6 +30,8 @@ import java.sql.Types;
 import java.util.List;
 import java.util.Objects;
 
+import org.everit.json.schema.ValidationException;
+import org.everit.json.schema.loader.SchemaLoader;
 import org.jboss.logging.Logger;
 
 @Path("api/schema")
@@ -163,6 +164,19 @@ public class SchemaService {
          log.error("GET /id/resetToken failed", e);
          return Response.serverError().entity("Access change failed").build();
       }
+   }
+
+   public String validate(Json data, String schemaUri) {
+      if (schemaUri == null || schemaUri.isEmpty()) {
+         return null;
+      }
+      Schema schema = Schema.find("uri", schemaUri).firstResult();
+      try {
+         SchemaLoader.load(Json.toJSONObject(schema.schema)).validate(Json.toJSONObject(data));
+      } catch (ValidationException e) {
+         return e.toJSON().toString(2);
+      }
+      return null;
    }
 
 //I'm not sure being able to delete a schema is a good idea since we don't have reference tracking built into the table

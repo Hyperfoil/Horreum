@@ -44,6 +44,8 @@ public class Run extends PanacheEntityBase {
    @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
    public Json data;
 
+   public String schemaUri;
+
    @NotNull
    public String owner;
 
