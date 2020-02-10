@@ -1,9 +1,7 @@
 package io.hyperfoil.tools.repo.entity.json;
 
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -29,11 +27,8 @@ public class Test extends PanacheEntityBase {
    @Column(name="description",unique = false)
    public String description;
 
-   @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
-   public Json schema;
-
-   @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
-   public Json view;
+   @OneToOne(cascade = CascadeType.ALL)
+   public View defaultView;
 
    @NotNull
    public String owner;
@@ -42,4 +37,18 @@ public class Test extends PanacheEntityBase {
 
    @NotNull
    public Access access = Access.PUBLIC;
+
+   public void ensureLinked() {
+      if (defaultView != null) {
+         defaultView.test = this;
+         defaultView.ensureLinked();
+      }
+   }
+
+   public void copyIds(Test other) {
+      this.id = other.id;
+      if (defaultView != null && other.defaultView != null) {
+         defaultView.copyIds(other.defaultView);
+      }
+   }
 }

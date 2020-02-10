@@ -3,7 +3,6 @@ import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
-    Button,
     Card,
     CardHeader,
     CardBody,
@@ -16,8 +15,6 @@ import {
 } from '@patternfly/react-core';
 import {
     EditIcon,
-    OutlinedSaveIcon,
-    OutlinedTimesCircleIcon
 } from '@patternfly/react-icons';
 import { DateTime } from 'luxon';
 import { NavLink } from 'react-router-dom';
@@ -29,15 +26,17 @@ import { fetchTest } from '../tests/actions';
 import { get } from '../tests/selectors';
 
 import Table from '../../components/Table';
-import Editor, { fromEditor } from '../../components/Editor';
 
 //TODO how to prevent rendering before the data is loaded? (we just have start,stop,id)
 const renderCell = (render) => (arg) => {
     const { cell: { value, row: { index } }, data, column } = arg;
+    if (!render) {
+        return value
+    }
     try {
         const useValue = (value === null || value === undefined) ? data[index][column.id.toLowerCase()] : value;
         const rendered = render(useValue, data[index])
-        if (typeof rendered === "undefined" || rendered === null) {
+        if (!rendered) {
             return "-"
         } else if (typeof rendered === "string") {
             //this is a hacky way to see if it looks like html :)
@@ -54,14 +53,16 @@ const renderCell = (render) => (arg) => {
         return "--"
     }
 }
-const idColumn = {
-    Header: "Id", accessor: "id",
-    Cell: (arg) => {
-        const { cell: { value } } = arg;
-        return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
-    }
-};
-const definedColumns = [
+
+
+const staticColumns = [
+    {
+        Header: "Id", accessor: "id",
+        Cell: (arg) => {
+            const { cell: { value } } = arg;
+            return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
+        }
+    },
     { Header: "Start", accessor: v => window.DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") },
     { Header: "Stop", accessor: v => window.DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") },
     //    These are removed because they assume the runs are specjEnterprise2010
@@ -81,46 +82,16 @@ const definedColumns = [
 export default () => {
     const { testId } = useParams();
     const test = useSelector(get(testId))
-    const [edit, setEdit] = useState(false);
-    const [columns, setColumns] = useState((test && test.view) ? test.view : definedColumns)
+    const [columns, setColumns] = useState((test && test.defaultView) ? test.defaultView.components : [])
     const [data, setData] = useState(columns)
-    const payload = useMemo(() => {
-        const filtered = columns.filter(v => v.Header.toLowerCase() !== "id")
-        filtered.sort((a,b)=>(typeof a.jsonpath !== "undefined") ? -1 : 0)
-        const reduced = filtered
-            .reduce((rtrn, entry) => {
-                if (!entry.composite) {
-                    if (typeof entry.jsonpath !== "undefined") {
-                        if (typeof entry.accessor === "string") {
-                            rtrn[entry.accessor] = entry.jsonpath
-                        } else {
-                            rtrn[entry.Header.replace(/\s/g, '_')] = entry.jsonpath
-                        }
-                    } else {
-                        if (typeof rtrn[entry.accessor] === "undefined"){
-                            if (typeof entry.accessor === "string") {
-                                rtrn[entry.accessor] = entry.accessor
-                            } else {
-                                rtrn[entry.Header.replace(/\s/g, '_')] = entry.Header.replace(/\s/g, '_');
-                            }    
-                        }
-                    }
-                }
-                return rtrn;
-            }, {})
-        return reduced;
-    }, [columns]);
     const tableColumns = useMemo(() => {
-        const rtrn = [idColumn]
-        columns.forEach(col => {
-            if (typeof col.render !== "undefined") {
-                rtrn.push({
-                    ...col,
-                    Cell: renderCell(col.render)
-                })
-            } else {
-                rtrn.push(col)
-            }
+        const rtrn = [...staticColumns]
+        columns.forEach((col, index) => {
+             rtrn.push({
+                 Header: col.headerName,
+                 accessor: `view[${index}]`,
+                 Cell: renderCell(col.render)
+             })
         })
         return rtrn;
     }, [columns]);
@@ -131,12 +102,11 @@ export default () => {
         dispatch(fetchTest(testId));
     }, [dispatch, testId])
     useEffect(() => {
-        dispatch(byTest(testId, { map: payload }))
-
-    }, [dispatch, payload])
+        dispatch(byTest(testId))
+    }, [dispatch])
     useEffect(() => {
-        if (test && test.view) {
-            setColumns(test.view)
+        if (test && test.defaultView) {
+            setColumns(test.defaultView.components)
         }
     }, [test])
     useEffect(() => {
@@ -144,31 +114,20 @@ export default () => {
     }, [columns])
     return (
         <PageSection>
-            <Card style={{ [edit ? "height" : null]: '100%' }}>
+            <Card>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
                         <ToolbarGroup>
                             <ToolbarItem className="pf-u-mr-xl">{`Test: ${test.name || testId}`}</ToolbarItem>
                         </ToolbarGroup>
                         <ToolbarGroup>
-                            {edit ? (
-                                <React.Fragment>
-                                    <ToolbarItem><Button variant="plain" onClick={e => {
-                                        setEdit(false);
-                                        const fromE = fromEditor(data);
-                                        setColumns(fromE);
-                                    }
-                                    }><OutlinedSaveIcon /></Button></ToolbarItem>
-                                    <ToolbarItem><Button variant="plain" onClick={e => { setEdit(false) }}><OutlinedTimesCircleIcon /></Button></ToolbarItem>
-                                </React.Fragment>
-                            ) : (<Button variant="plain" onClick={e => setEdit(true)}><EditIcon /></Button>)}
-
+                            <NavLink to={ `/test/${testId}` } ><EditIcon /></NavLink>
                         </ToolbarGroup>
                     </Toolbar>
                 </CardHeader>
-                <CardBody>{
-                    edit ? (<Editor value={data} onChange={e => { setData(e) }} />) : (<Table columns={tableColumns} data={runs} />)
-                }</CardBody>
+                <CardBody>
+                    <Table columns={tableColumns} data={runs} />
+                </CardBody>
             </Card>
         </PageSection>
     )

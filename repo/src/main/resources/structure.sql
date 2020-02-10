@@ -49,6 +49,10 @@ CREATE TABLE public.schema (
     description character varying(255),
     name character varying(255) NOT NULL,
     schema jsonb,
+    testPath text,
+    startPath text,
+    stopPath text,
+    view jsonb,
     owner text NOT NULL,
     token text,
     access integer NOT NULL
@@ -65,8 +69,6 @@ CREATE TABLE public.test (
     id integer NOT NULL,
     description character varying(255),
     name character varying(255) NOT NULL,
-    schema jsonb,
-    view jsonb,
     owner text NOT NULL,
     access integer NOT NULL,
     token text

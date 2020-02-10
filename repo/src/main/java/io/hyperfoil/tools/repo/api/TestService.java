@@ -4,7 +4,6 @@ import io.agroal.api.AgroalDataSource;
 import io.hyperfoil.tools.repo.entity.json.Access;
 import io.hyperfoil.tools.repo.entity.json.Test;
 import io.hyperfoil.tools.yaup.AsciiArt;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -34,8 +33,7 @@ public class TestService {
    private static final Logger log = Logger.getLogger(TestService.class);
 
    private static final String SUMMARY = "select test.id,test.name,test.description,count(run.id) as count," +
-         "test.schema is not null as hasschema,test.view is not null as hasview,test.owner,test.token,test.access " +
-         "from test left join run on run.testId = test.id group by test.id";
+         "test.owner,test.token,test.access from test left join run on run.testId = test.id group by test.id";
    private static final String UPDATE_TOKEN = "UPDATE test SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
 
@@ -89,77 +87,12 @@ public class TestService {
       return existing;
    }
 
-   @PermitAll
-   @GET
-   @Path("{id}/schema")
-   public Response getSchema(@PathParam("id") Integer id, @QueryParam("token") String token){
-      try (CloseMe h1 = sqlService.withRoles(em, identity);
-           CloseMe h2 = sqlService.withToken(em, token)) {
-         Test t = Test.find("id", id).firstResult();
-         if (t != null) {
-            return Response.ok(t.schema).build();
-         } else {
-            return Response.noContent().build();
-         }
-      }
-   }
-
-   @RolesAllowed(Roles.TESTER)
-   @POST
-   @Path("{id}/schema")
-   @Transactional
-   public Response setSchema(@PathParam("id") Integer id, Json schema){
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
-         Test t = Test.find("id", id).firstResult();
-         if (t != null) {
-            t.schema = schema;
-            em.persist(t);
-            return Response.ok().build();
-         } else {
-            return Response.noContent().build();
-         }
-      }
-   }
-
-   @PermitAll
-   @GET
-   @Path("{id}/view")
-   public Response getView(@PathParam("id") Integer id, @QueryParam("token") String token){
-      try (CloseMe h1 = sqlService.withRoles(em, identity);
-           CloseMe h2 = sqlService.withToken(em, token)) {
-         Test t = Test.find("id", id).firstResult();
-         if (t != null) {
-            return Response.ok(t.view).build();
-         } else {
-            return Response.noContent().build();
-         }
-      }
-   }
-
-   @RolesAllowed(Roles.TESTER)
-   @POST
-   @Path("{id}/view")
-   @Transactional
-   public Response setView(@PathParam("id") Integer id, Json view){
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
-         Test t = Test.find("id", id).firstResult();
-         if (t != null) {
-            t.view = view;
-            em.persist(t);
-            return Response.ok().build();
-         } else {
-            return Response.noContent().build();
-         }
-      }
-   }
-
    @RolesAllowed(Roles.TESTER)
    @POST
    @Transactional
    public Response add(Test test){
       try (CloseMe h = sqlService.withRoles(em, identity)) {
          System.out.println(AsciiArt.ANSI_RED + "add TEST " + AsciiArt.ANSI_RESET + test.id);
-         System.out.println("view " + test.view);
          if (test == null) {
             return Response.serverError().entity("test is null").build();
          }
@@ -170,8 +103,9 @@ public class TestService {
 
    void addAuthenticated(Test test) {
       Test existing = Test.find("name", test.name).firstResult();
+      test.ensureLinked();
       if (existing != null) {
-         test.id = existing.id;
+         test.copyIds(existing);
          em.merge(test);
       } else {
          em.persist(test);

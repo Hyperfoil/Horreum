@@ -8,12 +8,15 @@ import {
     Card,
     CardHeader,
     CardBody,
+    CardFooter,
     Form,
     ActionGroup,
     FormGroup,
     InputGroup,
     InputGroupText,
     PageSection,
+    Tab,
+    Tabs,
     TextArea,
     TextInput,
     Toolbar,
@@ -26,13 +29,13 @@ import { NavLink, Redirect } from 'react-router-dom';
 import {
     EditIcon,
     ImportIcon,
-    OutlinedSaveIcon,
     OutlinedTimesCircleIcon
 } from '@patternfly/react-icons';
 import jsonpath from 'jsonpath';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
+import * as api from './api';
 import { accessName, isTesterSelector, defaultRoleSelector, roleToName } from '../../auth.js'
 
 import { fromEditor, toString } from '../../components/Editor';
@@ -46,7 +49,11 @@ export default () => {
     const schema = useSelector(selectors.getById(schemaId))
     const [name, setName] = useState("")
     const [description, setDescription] = useState("");
-    const [json, setJson] = useState(toString(schema.schema) || "{}")
+    const [testPath, setTestPath] = useState(schema.testPath || "")
+    const [startPath, setStartPath] = useState(schema.startPath || "")
+    const [stopPath, setStopPath] = useState(schema.stopPath || "")
+    const [editorSchema, setEditorSchema] = useState(toString(schema.schema) || "{}")
+
     const dispatch = useDispatch();
     useEffect(() => {
         if (schemaId !== "_new") {
@@ -57,42 +64,49 @@ export default () => {
         console.log("userEffect",schema)
         setName(schema.name || "");
         setDescription(schema.description || "")
-        setJson(toString(schema.schema) || "{}")
+        setUri(schema.uri || "")
+        setTestPath(schema.testPath)
+        setStartPath(schema.startPath)
+        setStopPath(schema.stopPath)
+        setOwner(schema.owner)
+        setAccess(schema.access)
+        setEditorSchema(toString(schema.schema) || "{}")
     }, [schema])
     const editor = useRef();
     const getFormSchema = () => {
         const rtrn = {
             name,
             description,
-            schema: fromEditor(json),
+            schema: fromEditor(schema),
         }
         if (schemaId !== "_new") {
             rtrn.id = schemaId;
         }
         return rtrn;
     }
-    const [uri, setUri] = useState("")
+    const [uri, setUri] = useState(schema.uri)
     const [uriMatching, setUriMatching] = useState(true)
     const [importFailed, setImportFailed] = useState(false)
     // TODO: use this in reaction to editor change
-    const parseUri = newJson => {
-        let jsonUri = jsonpath.value(JSON.parse(newJson), "$['$id']")
-        if (!jsonUri || jsonUri === "") {
+    const parseUri = newSchema => {
+        const schemaUri = jsonpath.value(JSON.parse(newSchema), "$['$id']")
+        if (!schemaUri || schemaUri === "") {
            setImportFailed(true)
            setInterval(() => setImportFailed(false), 5000)
         } else if (!uri || uri === "") {
-           setUri(jsonUri);
+           setUri(schemaUri);
            setUriMatching(true)
         } else {
-           setUriMatching(uri == jsonUri)
+           setUriMatching(uri == schemaUri)
         }
     }
     const checkUri = newUri => {
-        let jsonUri = jsonpath.value(JSON.parse(editor.current.getValue()), "$['$id']")
-        if (!jsonUri || jsonUri === "") {
+        const currentSchema = editor.current.getValue()
+        const schemaUri = jsonpath.value(JSON.parse(currentSchema), "$['$id']")
+        if (!schemaUri || schemaUri === "") {
            return // nothing to do
         } else {
-           setUriMatching(newUri == jsonUri)
+           setUriMatching(newUri == schemaUri)
         }
     }
 
@@ -101,6 +115,16 @@ export default () => {
     const [access, setAccess] = useState(0)
     const [owner, setOwner] = useState(defaultRole)
     const [goBack, setGoBack] = useState(false)
+    const [saveFailed, setSaveFailed] = useState(false)
+
+    const [activeTab, setActiveTab] = useState(0)
+    const [extractors, setExtractors] = useState([])
+    useEffect(() => {
+        api.listExtractors(schemaId).then(result => setExtractors(result.map(e => {
+            e.newName = e.accessor
+            return e
+        }).sort((a, b) => a.accessor.localeCompare(b.accessor))))
+    }, [schemaId])
     return (
         <React.Fragment>
             { goBack && <Redirect to='/schema' /> }
@@ -134,7 +158,7 @@ export default () => {
                                    </Tooltip>
                                    }
                                    <TextInput
-                                        value={uri}
+                                        value={uri || ""}
                                         isRequired
                                         type="text"
                                         id="schemaURI"
@@ -166,9 +190,29 @@ export default () => {
                                         aria-describedby="description-helper"
                                         name="schemaDescription"
                                         readOnly={ !isTester }
-                                        isValid={true}
                                         onChange={e => setDescription(e)}
                                     />
+                                </FormGroup>
+                                <FormGroup label="Test name JSON path" fieldId="testPath">
+                                    <TextInput id="testPath"
+                                               value={testPath || ""}
+                                               onChange={setTestPath}
+                                               placeholder="e.g. $.testName"
+                                               isReadOnly={ !isTester } />
+                                </FormGroup>
+                                <FormGroup label="Start time JSON path" fieldId="startPath">
+                                    <TextInput id="startPath"
+                                               value={startPath || ""}
+                                               onChange={setStartPath}
+                                               placeholder="e.g. $.startTimestamp"
+                                               isReadOnly={ !isTester } />
+                                </FormGroup>
+                                <FormGroup label="Stop time JSON path" fieldId="stopPath">
+                                    <TextInput id="stopPath"
+                                               value={stopPath || ""}
+                                               onChange={setStopPath}
+                                               placeholder="e.g. $.stopTimestamp"
+                                               isReadOnly={ !isTester } />
                                 </FormGroup>
                                 <FormGroup label="Owner" fieldId="schemaOwner">
                                    { isTester ? (
@@ -186,42 +230,97 @@ export default () => {
                                       <AccessIcon access={access} />
                                    )}
                                 </FormGroup>
-                                { isTester && <>
-                                <ActionGroup style={{ marginTop: 0 }}>
-                                    <Button variant="primary" 
-                                        onClick={e => {
-                                            const editorValue = fromEditor(editor.current.getValue())
-                                            const newSchema = {
-                                                name,
-                                                uri,
-                                                description,
-                                                access: accessName(access),
-                                                owner,
-                                                schema: editorValue
-                                            }
-                                            if (schemaId !== "_new"){
-                                                newSchema.id = schemaId;
-                                            }
-                                            dispatch(actions.add(newSchema))
-                                            setGoBack(true)
-                                        }}
-                                    >Save</Button>
-                                    <NavLink className="pf-c-button pf-m-secondary" to="/schema/">
-                                        Cancel
-                                    </NavLink>
-                                </ActionGroup>
-                                </>}
                             </Form>
                         </ToolbarSection>
                     </Toolbar>
                 </CardHeader>
                 <CardBody>
-                    <Editor
-                        value={json}
-                        setValueGetter={e => { editor.current = e }}
-                        options={{ mode: "application/ld+json" }}
-                    />
+                    <Tabs>
+                       <Tab key="schema" eventKey={0} title="JSON schema" style={{ height: "100%" }} onClick={ () => setActiveTab(0) }/>
+                       <Tab key="extractors" eventKey={1} title="Schema extractors" onClick={ () => setActiveTab(1) }/>
+                    </Tabs>
+                    { activeTab == 0 &&
+                    <div style={{ height: "600px" }}>
+                       <Editor
+                         value={editorSchema || "{}"}
+                         setValueGetter={e => { editor.current = e }}
+                         options={{ mode: "application/ld+json" }}
+                       />
+                    </div>
+                    }
+                    { activeTab == 1 && extractors.filter(e => !e.deleted).map(e => (<>
+                       <Form isHorizontal={true} style={{ gridGap: "2px", marginBottom: "10px", paddingRight: "40px", position: "relative" }}>
+                          <FormGroup label="Accessor">
+                              <TextInput value={e.newName}
+                                         isReadOnly={!isTester}
+                                         onChange={newValue => {
+                                 e.newName = newValue
+                                 e.changed = true
+                                 setExtractors([...extractors])
+                              }}/>
+                          </FormGroup>
+                          <FormGroup label="JSON path">
+                              <TextInput value={e.jsonpath}
+                                         isReadOnly={!isTester}
+                                         onChange={newValue => {
+                                 e.jsonpath = newValue
+                                 e.changed = true
+                                 setExtractors([...extractors])
+                              }}/>
+                          </FormGroup>
+                          { isTester &&
+                          <Button variant="plain" style={{ position: "absolute", right: "0px", top: "22px" }}
+                                  onClick={ () => {
+                              e.deleted = true;
+                              setExtractors([...extractors])
+                          }}>
+                             <OutlinedTimesCircleIcon style={{color: "#a30000"}} />
+                          </Button>
+                          }
+                       </Form>
+                    </>))}
+                    { activeTab == 1 && isTester &&
+                       <Button onClick={() => setExtractors([...extractors, { schema: uri }])}>Add extractor</Button>
+                    }
                 </CardBody>
+                { isTester &&
+                <CardFooter>
+                  { saveFailed &&
+                     <Alert variant="warning" title="Failed to save the schema" />
+                  }
+                  <ActionGroup style={{ marginTop: 0 }}>
+                      <Button variant="primary"
+                          onClick={e => {
+                              // const editorValue = fromEditor(editor.current.getValue())
+                              const newSchema = {
+                                  name,
+                                  uri,
+                                  description,
+                                  schema: fromEditor(editor.current.getValue()),
+                                  testPath: testPath,
+                                  startPath: startPath,
+                                  stopPath: stopPath,
+                                  access: accessName(access),
+                                  owner,
+                              }
+                              if (schemaId !== "_new"){
+                                  newSchema.id = schemaId;
+                              }
+                              actions.add(newSchema)(dispatch)
+                                     .then(() => Promise.all(extractors.filter(e => e.changed || e.deleted).map(e => api.addOrUpdateExtractor(e))))
+                                     .then(() => setGoBack(true))
+                                     .catch(() => {
+                                        setSaveFailed(true)
+                                        setInterval(() => setSaveFailed(false), 5000)
+                                     })
+                          }}
+                      >Save</Button>
+                      <NavLink className="pf-c-button pf-m-secondary" to="/schema/">
+                          Cancel
+                      </NavLink>
+                  </ActionGroup>
+                </CardFooter>
+                }
             </Card>
         </React.Fragment>
     )

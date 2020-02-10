@@ -32,13 +32,7 @@ export const getByName = name =>
             }
             );
 export const add = (payload) =>
-    dispatch =>
-        api.add(payload)
-            .then(response => {
-                dispatch(loaded(response))
-            }, rejected => {
-
-            })
+    dispatch => api.add(payload)
 
 export const all = () => {
     return dispatch =>

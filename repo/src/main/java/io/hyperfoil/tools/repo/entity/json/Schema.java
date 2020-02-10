@@ -20,7 +20,7 @@ import javax.validation.constraints.NotNull;
 @RegisterForReflection
 @Table(
       name = "schema",
-      uniqueConstraints = @UniqueConstraint(columnNames = "uri")
+      uniqueConstraints = @UniqueConstraint(columnNames = {"owner", "uri"})
 )
 public class Schema extends PanacheEntityBase {
 
@@ -44,6 +44,21 @@ public class Schema extends PanacheEntityBase {
 
    @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
    public Json schema;
+
+   /**
+    * JsonPath query selecting the test name.
+    */
+   public String testPath;
+
+   /**
+    * JsonPath query selecting start timestamp.
+    */
+   public String startPath;
+
+   /**
+    * JsonPath query selection stop timestamp;
+    */
+   public String stopPath;
 
    @NotNull
    public String owner;

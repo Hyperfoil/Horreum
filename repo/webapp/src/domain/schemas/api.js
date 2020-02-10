@@ -5,7 +5,9 @@ const endPoints = {
     crud:  (id)=> `${base}/${id}/`,
     resetToken: (id) => `${base}/${id}/resetToken`,
     dropToken: (id) => `${base}/${id}/dropToken`,
-    updateAccess: (id, owner, access) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`
+    updateAccess: (id, owner, access) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
+    extractor: () => `${base}/extractor`,
+    extractorForSchema: (schemaId) => `${base}/extractor?schema=${schemaId}`,
 }
 export const all = ()=>{
     return fetchApi(endPoints.base(),null,'get');
@@ -30,3 +32,9 @@ export const updateAccess = (id, owner, access) => {
 //                   "owner=" + encodeURIComponent(owner) + "&access=" + encodeURIComponent(access),
 //                   'post', { 'content-type' : 'application/x-www-form-urlencoded'}, 'response')
 }
+
+export const listExtractors = (schemaId) => {
+   return fetchApi(schemaId ? endPoints.extractorForSchema(schemaId) : endPoints.extractor(), null, 'get')
+}
+
+export const addOrUpdateExtractor = (extractor) => fetchApi(endPoints.extractor(), extractor, 'post')

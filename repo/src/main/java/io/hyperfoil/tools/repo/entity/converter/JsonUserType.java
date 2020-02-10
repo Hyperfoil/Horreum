@@ -53,7 +53,7 @@ public class JsonUserType implements UserType {
 
    @Override
    public void nullSafeSet(PreparedStatement preparedStatement, Object o, int i, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException, SQLException {
-      System.out.println("nullSafeSet "+o);
+//      System.out.println("nullSafeSet "+o);
       if(o == null){
          preparedStatement.setNull(i, Types.OTHER);
          return;

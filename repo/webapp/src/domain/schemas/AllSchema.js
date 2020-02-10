@@ -38,31 +38,16 @@ export default () => {
             Header: "Owner", accessor:"owner",
             Cell: (arg) => roleToName(arg.cell.value)},
         {
-            Header: "Name", accessor: "name"
+            Header: "Name", accessor: "name",
+            Cell: (arg) => { return (
+               <NavLink to={ "/schema/" + arg.row.original.id } >{ arg.cell.value }</NavLink>
+            )}
+        },
+        {
+            Header: "URI", accessor: "uri"
         },
         {
             Header: "Description", accessor: "description"
-        },
-        {
-            Header: "json-schema", accessor: "schema",
-            Cell: (arg) => {
-                const { cell: { value, row: { index } }, data } = arg;
-                return (<a href={`/api/schema/${data[index].name}`} target="_blank">link</a>)
-            }
-        },
-        {
-            Header: "", accessor: "id", disableSortBy: true,
-            Cell: (arg) => {
-                const { cell: { value } } = arg;
-                return (<>
-                    <Button
-                        variant="link"
-                        style={{ color: "#a30000" }}
-
-                    >
-                    </Button>
-                </>)
-            }
         },
         {
             Header:"Actions",

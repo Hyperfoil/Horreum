@@ -6,7 +6,9 @@ import io.hyperfoil.tools.repo.JsProxyObject;
 import io.hyperfoil.tools.repo.entity.converter.JsonContext;
 import io.hyperfoil.tools.repo.entity.json.Access;
 import io.hyperfoil.tools.repo.entity.json.Run;
+import io.hyperfoil.tools.repo.entity.json.Schema;
 import io.hyperfoil.tools.repo.entity.json.Test;
+import io.hyperfoil.tools.repo.entity.json.ViewComponent;
 import io.hyperfoil.tools.yaup.HashedLists;
 import io.hyperfoil.tools.yaup.StringUtil;
 import io.hyperfoil.tools.yaup.json.Json;
@@ -194,15 +196,6 @@ public class RunService {
 
    @RolesAllowed(Roles.UPLOADER)
    @POST
-   @Path("hyperfoil")
-   public Response addHyperfoilRun(@QueryParam("owner") String owner,
-                                   @QueryParam("access") Access access,
-                                   Json json){
-      return addRunFromData("$.info.startTime", "$.info.terminateTime", "$.info.benchmark", owner, access, "http://hyperfoil.io/run-schema/0.6", json);
-   }
-
-   @RolesAllowed(Roles.UPLOADER)
-   @POST
    @Path("data")
    @Transactional
    public Response addRunFromData(@QueryParam("start") String start,
@@ -212,24 +205,28 @@ public class RunService {
                                   @QueryParam("access") Access access,
                                   @QueryParam("schema") String schemaUri,
                                   Json data) {
-      Object foundTest = findIfNotSet(test, data);
-      Object foundStart = findIfNotSet(start, data);
-      Object foundStop = findIfNotSet(stop, data);
-
-      if (foundTest == null || foundTest.toString().trim().isEmpty()) {
-         return Response.noContent().entity("cannot find " + test + " in data").build();
-      }
-
       try (CloseMe h = sqlService.withRoles(em, identity)) {
-         Test testEntity = getOrCreateTest(foundTest.toString(), owner, access);
-         if (testEntity == null) {
-            return Response.serverError().entity("failed to find or create test " + foundTest.toString()).build();
-         }
          if (schemaUri == null || schemaUri.isEmpty()) {
             schemaUri = data.getString("$schema");
          } else {
             data.set("$schema", schemaUri);
          }
+         Schema schema = Schema.find("uri", schemaUri).firstResult();
+
+         Object foundTest = findIfNotSet(test, data, schema == null ? null : schema.testPath);
+         Object foundStart = findIfNotSet(start, data, schema == null ? null : schema.startPath);
+         Object foundStop = findIfNotSet(stop, data, schema == null ? null : schema.stopPath);
+
+         String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
+         if (testNameOrId == null || testNameOrId.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Cannot identify test name.").build();
+         }
+
+         Test testEntity = getOrCreateTest(testNameOrId, owner, access);
+         if (testEntity == null) {
+            return Response.serverError().entity("Failed to find or create test " + testNameOrId).build();
+         }
+
          String validationError = schemaService.validate(data, schemaUri);
          if (validationError != null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(validationError).build();
@@ -248,8 +245,18 @@ public class RunService {
       }
    }
 
-   private Object findIfNotSet(String value, Json data) {
-      return value != null && value.startsWith("$.") ? Json.find(data, value, "") : value;
+   private Object findIfNotSet(String value, Json data, String path) {
+      if (value != null) {
+         if (value.startsWith("$.")) {
+            return Json.find(data, value, null);
+         } else {
+            return value;
+         }
+      } else if (path != null) {
+         return Json.find(data, path, null);
+      } else {
+         return null;
+      }
    }
 
    private Instant toInstant(Object time) {
@@ -295,14 +302,6 @@ public class RunService {
          return Response.status(400).entity("This user does not have permissions to upload run for owner=" + run.owner).build();
       }
 
-      if (test.schema != null && !test.schema.isEmpty()) {
-         JsonValidator validator = new JsonValidator(test.schema);
-
-         Json result = validator.validate(run.data);
-         if (result.has("messages") && result.has("details")) {
-            return Response.serverError().entity(result.toString(2)).build();
-         }
-      }
       try {
          if (run.id == null) {
              em.persist(run);
@@ -603,26 +602,62 @@ public class RunService {
                             @QueryParam("sort") String sort,
                             @QueryParam("direction") String direction) {
       // TODO: this is combining EntityManager and JDBC access :-/
+      StringBuilder sql = new StringBuilder("SELECT id, start, stop, testId");
+      Test test;
       try (CloseMe h = sqlService.withRoles(em, identity)) {
-         Test test = Test.find("id", testId).firstResult();
+         test = Test.find("id", testId).firstResult();
          if (test == null) {
             return Response.serverError().entity("failed to find test " + testId).build();
          }
+         if (test.defaultView != null) {
+            for (ViewComponent c : test.defaultView.components) {
+               sql.append(", ").append(c.isArray ? "jsonb_path_query_array" : "jsonb_path_query_first").append("(data, (");
+               sql.append("   SELECT jsonpath FROM schemaextractor se INNER JOIN schema ON se.schema_id = schema.id");
+               sql.append("   WHERE schema.uri = run.schemauri AND se.accessor = ?");
+               sql.append(")::jsonpath)#>>'{}'");
+            }
+         }
       }
-      StringBuilder sql = new StringBuilder("select id,start,stop,testId from run where testId = " + testId);
+      sql.append(" FROM run WHERE testid = ?");
+      // TODO: use parameters in paging
       addPaging(sql, limit, page, sort, direction);
       try (Connection connection = dataSource.getConnection();
            CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           Statement statement = connection.createStatement()){
-         Json list = SqlService.fromResultSet(statement.executeQuery(sql.toString()));
-         return Response.ok(list).build();
+           PreparedStatement statement = connection.prepareStatement(sql.toString())){
+         int counter = 1;
+         if (test.defaultView != null) {
+            for (ViewComponent c : test.defaultView.components) {
+               statement.setString(counter++, c.accessor);
+            }
+         }
+         statement.setInt(counter, testId);
+         ResultSet resultSet = statement.executeQuery();
+         Json.ArrayBuilder jsonResult = Json.array();
+         while (resultSet.next()) {
+            Json.ArrayBuilder view = Json.array();
+            for (int i = 1; i < counter; ++i) {
+               String value = resultSet.getString(4 + i);
+               if (test.defaultView.components.get(i - 1).isArray) {
+                  view.add(Json.fromString(value));
+               } else {
+                  view.add(value);
+               }
+            }
+            jsonResult.add(Json.map()
+                  .add("id", resultSet.getInt(1))
+                  .add("start", resultSet.getTimestamp(2).getTime())
+                  .add("stop", resultSet.getTimestamp(3).getTime())
+                  .add("testId", resultSet.getInt(4))
+                  .add("view", view.build()).build());
+         }
+         return Response.ok(jsonResult.build()).build();
       } catch (SQLException e) {
          log.error("GET /list/testId failed", e);
          return Response.serverError().entity(Json.fromThrowable(e)).build();
       }
    }
 
-   // TODO: why is this a POST?
+   @Deprecated
    @PermitAll
    @POST
    @Path("list/{testId}/")

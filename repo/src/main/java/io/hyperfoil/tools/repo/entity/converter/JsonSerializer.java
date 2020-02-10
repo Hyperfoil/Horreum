@@ -112,11 +112,13 @@ public class JsonSerializer implements JsonbSerializer<Json>, JsonbDeserializer<
             if(value instanceof Json){
                serialize((Json)value,jsonGenerator,serializationContext);
             }else{
-               if(value instanceof Long) {
+               if (value instanceof Long) {
                   jsonGenerator.write((Long)value);
-               }else if (value instanceof Double){
-                  jsonGenerator.write((Double)value);
-               }else {
+               } else if (value instanceof Double) {
+                  jsonGenerator.write((Double) value);
+               } else if (value instanceof Boolean) {
+                  jsonGenerator.write((Boolean) value);
+               } else {
                   jsonGenerator.write(value.toString());
                }
             }
@@ -129,11 +131,13 @@ public class JsonSerializer implements JsonbSerializer<Json>, JsonbDeserializer<
             if(value instanceof Json){
                serialize((Json)value,jsonGenerator,serializationContext);
             }else{
-               if(value instanceof Long) {
+               if (value instanceof Long) {
                   jsonGenerator.write((Long)value);
-               }else if (value instanceof Double){
-                  jsonGenerator.write((Double)value);
-               }else {
+               } else if (value instanceof Double) {
+                  jsonGenerator.write((Double) value);
+               } else if (value instanceof Boolean) {
+                  jsonGenerator.write((Boolean) value);
+               } else {
                   jsonGenerator.write(value.toString());
                }
             }

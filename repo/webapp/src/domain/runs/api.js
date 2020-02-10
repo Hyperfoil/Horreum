@@ -9,7 +9,7 @@ const endPoints = {
     filter: (query, matchAll, roles) => `${base}/filter?query=${query}&matchAll=${matchAll}&roles=${roles}`,
     suggest: (query, roles) => `${base}/autocomplete?query=${query}&roles=${roles}`,
     js: runId => `${base}/${runId}/js`,
-    listByTest: (testId, roles) => `${base}/list/${testId}?roles=${roles}`,
+    listByTest: (testId) => `${base}/list/${testId}`,
     resetToken: (runId) => `${base}/${runId}/resetToken`,
     dropToken: (runId) => `${base}/${runId}/dropToken`,
     updateAccess: (runId, owner, access) => `${base}/${runId}/updateAccess?owner=${owner}&access=${access}`
@@ -27,7 +27,7 @@ export const get = (id, token, js) => {
     }
 }
 
-export const byTest = (id, payload, roles) => fetchApi(endPoints.listByTest(id, roles),payload,'post');
+export const byTest = (id) => fetchApi(endPoints.listByTest(id), null, 'get');
 
 export const filter = (query, matchAll, roles) => fetchApi(endPoints.filter(query, matchAll, roles),null,'get')
 
