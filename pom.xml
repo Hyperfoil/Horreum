@@ -34,12 +34,12 @@
     <artifactId>repo-all</artifactId>
     <packaging>pom</packaging>
     <version>0.1-SNAPSHOT</version>
-    <name>Hyperfoil Repo All</name>
+    <name>Hyperfoil Horreum All</name>
     <description>Hyperfoil will rock your application with load</description>
     <scm>
-        <connection>scm:git:git://github.com/Hyperfoil/repo.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/Hyperfoil/repo.git</developerConnection>
-        <url>https://github.com/Hyperfoil/repo</url>
+        <connection>scm:git:git://github.com/Hyperfoil/Horreum.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/Hyperfoil/Horreum.git</developerConnection>
+        <url>https://github.com/Hyperfoil/Horreum</url>
         <tag>HEAD</tag>
     </scm>
 

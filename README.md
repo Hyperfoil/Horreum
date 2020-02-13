@@ -1,4 +1,4 @@
-# Hyperfoil-repo
+# Hyperfoil Horreum
 A Proof of Concept service for storing performance data in postgres.
 Expect breaking changes around every turn.
 
