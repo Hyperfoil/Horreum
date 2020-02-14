@@ -12,7 +12,6 @@ import io.hyperfoil.tools.repo.entity.json.ViewComponent;
 import io.hyperfoil.tools.yaup.HashedLists;
 import io.hyperfoil.tools.yaup.StringUtil;
 import io.hyperfoil.tools.yaup.json.Json;
-import io.hyperfoil.tools.yaup.json.JsonValidator;
 import io.hyperfoil.tools.yaup.json.ValueConverter;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.eventbus.EventBus;
@@ -227,9 +226,9 @@ public class RunService {
             return Response.serverError().entity("Failed to find or create test " + testNameOrId).build();
          }
 
-         String validationError = schemaService.validate(data, schemaUri);
-         if (validationError != null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(validationError).build();
+         Json validationErrors = schemaService.validate(data, schemaUri);
+         if (!validationErrors.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(validationErrors).build();
          }
 
          Run run = new Run();

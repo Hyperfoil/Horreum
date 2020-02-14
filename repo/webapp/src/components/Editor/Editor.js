@@ -56,7 +56,9 @@ function pad(amount) {
 }
 export const toString = (obj, left = 0, step = 2) => {
     let rtrn = false;
-    if (isNumber(obj)) {
+    if (obj == null) {
+        rtrn = "null"
+    } else if (isNumber(obj)) {
         rtrn = obj
     } else if (isString(obj)) {
         //could be a function

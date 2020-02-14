@@ -47,7 +47,7 @@ public class JsonUserType implements UserType {
 
       String content = resultSet.getString(strings[0]);
       //return null if the object is not valid json because it could be null / missing from the result set
-      System.out.println(AsciiArt.ANSI_BLUE+"nullSafeGet:"+AsciiArt.ANSI_RESET+content);
+//      System.out.println(AsciiArt.ANSI_BLUE+"nullSafeGet:"+AsciiArt.ANSI_RESET+content);
       return Json.fromString(content,null);
    }
 
