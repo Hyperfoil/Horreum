@@ -71,6 +71,11 @@ public class JsonSerializer implements JsonbSerializer<Json>, JsonbDeserializer<
             }
             break;
             case VALUE_NULL:
+               if (key != null) {
+                  rtrn.set(key, null);
+               } else {
+                  rtrn.add(null);
+               }
                break;
             case VALUE_TRUE:
                if(key!=null){
@@ -137,8 +142,10 @@ public class JsonSerializer implements JsonbSerializer<Json>, JsonbDeserializer<
                   jsonGenerator.write((Double) value);
                } else if (value instanceof Boolean) {
                   jsonGenerator.write((Boolean) value);
-               } else {
+               } else if (value != null) {
                   jsonGenerator.write(value.toString());
+               } else {
+                  jsonGenerator.writeNull();
                }
             }
          });

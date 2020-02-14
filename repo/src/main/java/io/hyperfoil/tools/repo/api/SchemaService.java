@@ -31,11 +31,15 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.everit.json.schema.ValidationException;
-import org.everit.json.schema.loader.SchemaLoader;
 import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.networknt.schema.JsonMetaSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.ValidationMessage;
 
 @Path("api/schema")
 public class SchemaService {
@@ -43,6 +47,14 @@ public class SchemaService {
 
    private static final String UPDATE_TOKEN = "UPDATE schema SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE schema SET owner = ?, access = ? WHERE id = ?";
+
+   private static final JsonSchemaFactory JSON_SCHEMA_FACTORY = new JsonSchemaFactory.Builder()
+         .defaultMetaSchemaURI(JsonMetaSchema.getV4().getUri())
+         .addMetaSchema(JsonMetaSchema.getV4())
+         .addMetaSchema(JsonMetaSchema.getV6())
+         .addMetaSchema(JsonMetaSchema.getV7())
+         .addMetaSchema(JsonMetaSchema.getV201909()).build();
+
 
    @Inject
    EntityManager em;
@@ -169,17 +181,32 @@ public class SchemaService {
       }
    }
 
-   public String validate(Json data, String schemaUri) {
+   public Json validate(Json data, String schemaUri) {
       if (schemaUri == null || schemaUri.isEmpty()) {
          return null;
       }
       Schema schema = Schema.find("uri", schemaUri).firstResult();
-      try {
-         SchemaLoader.load(Json.toJSONObject(schema.schema)).validate(Json.toJSONObject(data));
-      } catch (ValidationException e) {
-         return e.toJSON().toString(2);
-      }
-      return null;
+      // TODO: inlined JsonValidator due to https://github.com/Hyperfoil/yaup/issues/23
+      JsonNode jsonData = Json.toJsonNode(data);
+      JsonNode jsonSchema = Json.toJsonNode(schema.schema);
+      Set<ValidationMessage> errors = JSON_SCHEMA_FACTORY.getSchema(jsonSchema).validate(jsonData);
+      Json rtrn = new Json();
+      errors.forEach(validationMessage -> {
+         Json entry = new Json();
+         entry.set("message", validationMessage.getMessage());
+         entry.set("code", validationMessage.getCode());
+         entry.set("path", validationMessage.getPath());
+         entry.set("arguemnts", new Json(true));
+         for (String arg : validationMessage.getArguments()) {
+            entry.getJson("arguments").add(arg);
+         }
+         entry.set("details", new Json(false));
+         validationMessage.getDetails().forEach((k, v) -> {
+            entry.getJson("details").set(k, v);
+         });
+         rtrn.add(entry);
+      });
+      return rtrn;
    }
 
    @PermitAll
