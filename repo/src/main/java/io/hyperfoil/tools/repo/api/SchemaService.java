@@ -13,6 +13,7 @@ import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -25,14 +26,20 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.jboss.logging.Logger;
 
@@ -40,6 +47,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.JsonMetaSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.ValidationMessage;
+import com.networknt.schema.uri.URIFactory;
+import com.networknt.schema.uri.URIFetcher;
+import com.networknt.schema.uri.URLFactory;
 
 @Path("api/schema")
 public class SchemaService {
@@ -47,6 +57,11 @@ public class SchemaService {
 
    private static final String UPDATE_TOKEN = "UPDATE schema SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE schema SET owner = ?, access = ? WHERE id = ?";
+   private static final String FETCH_SCHEMAS_RECURSIVE = "WITH RECURSIVE refs(uri) AS (" +
+         "SELECT ? UNION ALL " +
+         "SELECT substring(jsonb_path_query(schema, '$.**.\"$ref\" ? (! (@ starts with \"#\"))')#>>'{}' from '[^#]*') as uri " +
+            "FROM refs INNER JOIN schema on refs.uri = schema.uri) " +
+         "SELECT schema.* FROM schema INNER JOIN refs ON schema.uri = refs.uri";
 
    private static final JsonSchemaFactory JSON_SCHEMA_FACTORY = new JsonSchemaFactory.Builder()
          .defaultMetaSchemaURI(JsonMetaSchema.getV4().getUri())
@@ -54,6 +69,20 @@ public class SchemaService {
          .addMetaSchema(JsonMetaSchema.getV6())
          .addMetaSchema(JsonMetaSchema.getV7())
          .addMetaSchema(JsonMetaSchema.getV201909()).build();
+   private static final URIFactory URN_FACTORY = new URIFactory() {
+      @Override
+      public URI create(String uri) {
+         return URI.create(uri);
+      }
+
+      @Override
+      public URI create(URI baseURI, String segment) {
+         throw new UnsupportedOperationException();
+      }
+   };
+   private static final String[] ALL_URNS = Stream.concat(
+         URLFactory.SUPPORTED_SCHEMES.stream(), Stream.of("urn")
+   ).toArray(String[]::new);
 
 
    @Inject
@@ -181,29 +210,49 @@ public class SchemaService {
       }
    }
 
-   public Json validate(Json data, String schemaUri) {
+   @PermitAll
+   @POST
+   @Path("validate")
+   @Consumes(MediaType.APPLICATION_JSON)
+   public Json validate(Json data, @QueryParam("schema") String schemaUri) {
       if (schemaUri == null || schemaUri.isEmpty()) {
          return null;
       }
-      Schema schema = Schema.find("uri", schemaUri).firstResult();
-      // TODO: inlined JsonValidator due to https://github.com/Hyperfoil/yaup/issues/23
+      Query fetchSchemas = em.createNativeQuery(FETCH_SCHEMAS_RECURSIVE, Schema.class);
+      fetchSchemas.setParameter(1, schemaUri);
+      Map<String, Schema> schemas = ((Stream<Schema>) fetchSchemas.getResultStream())
+            .collect(Collectors.toMap(s -> s.uri, Function.identity()));
+      Schema rootSchema = schemas.get(schemaUri);
+      if (rootSchema == null) {
+         return null;
+      }
+      URIFetcher uriFetcher = uri -> new ByteArrayInputStream(schemas.get(uri.toString()).schema.toString().getBytes(StandardCharsets.UTF_8));
+
+      JsonSchemaFactory factory = JsonSchemaFactory.builder(JSON_SCHEMA_FACTORY)
+            .uriFactory(URN_FACTORY, "urn")
+            .uriFetcher(uriFetcher, ALL_URNS).build();
+
       JsonNode jsonData = Json.toJsonNode(data);
-      JsonNode jsonSchema = Json.toJsonNode(schema.schema);
-      Set<ValidationMessage> errors = JSON_SCHEMA_FACTORY.getSchema(jsonSchema).validate(jsonData);
+      JsonNode jsonSchema = Json.toJsonNode(rootSchema.schema);
+      Set<ValidationMessage> errors = factory.getSchema(jsonSchema).validate(jsonData);
       Json rtrn = new Json();
       errors.forEach(validationMessage -> {
          Json entry = new Json();
          entry.set("message", validationMessage.getMessage());
          entry.set("code", validationMessage.getCode());
          entry.set("path", validationMessage.getPath());
-         entry.set("arguemnts", new Json(true));
-         for (String arg : validationMessage.getArguments()) {
-            entry.getJson("arguments").add(arg);
+         if (validationMessage.getArguments() != null) {
+            entry.set("arguments", new Json(true));
+            for (String arg : validationMessage.getArguments()) {
+               entry.getJson("arguments").add(arg);
+            }
          }
-         entry.set("details", new Json(false));
-         validationMessage.getDetails().forEach((k, v) -> {
-            entry.getJson("details").set(k, v);
-         });
+         if (validationMessage.getDetails() != null) {
+            entry.set("details", new Json(false));
+            validationMessage.getDetails().forEach((k, v) -> {
+               entry.getJson("details").set(k, v);
+            });
+         }
          rtrn.add(entry);
       });
       return rtrn;
