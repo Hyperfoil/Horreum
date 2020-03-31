@@ -10,6 +10,7 @@ psql -h localhost -U repo -f repo/src/main/resources/structure.sql
 # Replace password and secret passphrase (repo.db.secret in application properties) below
 psql -h localhost -U repo -c "create database keycloak; create role repo_restricted noinherit login password 'repo'; insert into dbsecret (passphrase) values ('secret');"
 psql -h localhost -U repo -f repo/src/main/resources/policies.sql
+psql -h localhost -U repo -f repo/src/main/resources/permissions.sql
 docker run -d --name keycloak -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=admin -e DB_VENDOR=postgres -e DB_ADDR=172.17.0.1 -e DB_USER=repo -e DB_PASSWORD=repo -p 8180:8080 jboss/keycloak
 ```
 

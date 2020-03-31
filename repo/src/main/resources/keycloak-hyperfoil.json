@@ -57,21 +57,6 @@
         "attributes": {}
       },
       {
-        "id": "6928da1e-cd35-4c13-85b4-e334f90beaac",
-        "name": "perf-tester",
-        "composite": true,
-        "composites": {
-          "realm": [
-            "viewer",
-            "tester",
-            "perf-team"
-          ]
-        },
-        "clientRole": false,
-        "containerId": "hyperfoil",
-        "attributes": {}
-      },
-      {
         "id": "965e681f-36bb-4959-8a0a-68a8b99f47b7",
         "name": "admin",
         "description": "Manages webhooks and general instance configuration.",
@@ -81,26 +66,9 @@
         "attributes": {}
       },
       {
-        "id": "8bc08438-d574-40f4-b513-45bc491a6661",
-        "name": "perf-team",
-        "description": "Read access for team 'perf'",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "hyperfoil",
-        "attributes": {}
-      },
-      {
         "id": "b9ed15e9-8c20-4161-8bed-c6558f849102",
         "name": "offline_access",
         "description": "${role_offline-access}",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "hyperfoil",
-        "attributes": {}
-      },
-      {
-        "id": "b6b27d3e-6be3-4a27-852b-c222f46c109d",
-        "name": "engineers-team",
         "composite": false,
         "clientRole": false,
         "containerId": "hyperfoil",
