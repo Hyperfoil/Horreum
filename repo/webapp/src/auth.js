@@ -1,7 +1,6 @@
 import React from 'react';
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import keycloakConfig from './keycloakConfig.js'
 
 import {
   Alert,
@@ -12,6 +11,7 @@ import {
 import Keycloak from "keycloak-js"
 
 import store from './store'
+import { fetchApi } from './services/api';
 
 const INIT = "auth/INIT"
 const AUTHENTICATED = "auth/AUTHENTICATED"
@@ -68,20 +68,23 @@ export const roleToName = (role) => {
 }
 
 export const isAuthenticatedSelector = () => {
-   let keycloak = store.getState().auth.keycloak;
+   let keycloak = store.getState().auth.keycloak
    return !!keycloak && keycloak.authenticated;
 }
 
 export const isUploaderSelector = () => {
-   return store.getState().auth.keycloak.hasRealmRole("uploader")
+   let keycloak = store.getState().auth.keycloak
+   return !!keycloak && keycloak.hasRealmRole("uploader")
 }
 
 export const isTesterSelector = () => {
-   return store.getState().auth.keycloak.hasRealmRole("tester")
+   let keycloak = store.getState().auth.keycloak
+   return !!keycloak && keycloak.hasRealmRole("tester")
 }
 
 export const isAdminSelector = () => {
-   return store.getState().auth.keycloak.hasRealmRole("admin")
+   let keycloak = store.getState().auth.keycloak
+   return !!keycloak && keycloak.hasRealmRole("admin")
 }
 
 export const rolesSelector = () => {
@@ -96,20 +99,26 @@ export const defaultRoleSelector = () => {
 
 export const initKeycloak = () => {
    let keycloak = keycloakSelector();
+   let keycloakPromise;
    if (keycloak === null) {
-     keycloak = Keycloak(keycloakConfig)
+      keycloakPromise = fetchApi("/api/config/keycloak", null)
+         .then(response => Keycloak(response))
+   } else {
+      keycloakPromise = Promise.resolve(keycloak)
    }
-   let initPromise = null;
-   if (!keycloak.authenticated) {
-     initPromise = keycloak.init({
-       promiseType: 'native',
-     });
-     initPromise.then(authenticated => {
-       store.dispatch({type: AUTHENTICATED })
-       store.getState().auth.afterLogin.forEach(a => a.func())
-     })
-   }
-   store.dispatch({ type: INIT, keycloak: keycloak, initPromise: initPromise })
+   keycloakPromise.then(keycloak => {
+      let initPromise = null;
+      if (!keycloak.authenticated) {
+        initPromise = keycloak.init({
+          promiseType: 'native',
+        });
+        initPromise.then(authenticated => {
+          store.dispatch({type: AUTHENTICATED })
+          store.getState().auth.afterLogin.forEach(a => a.func())
+        })
+      }
+      store.dispatch({ type: INIT, keycloak: keycloak, initPromise: initPromise })
+   })
 }
 
 export const RequestForbiddenAlert = () => {
@@ -130,7 +139,7 @@ export const RequestForbiddenAlert = () => {
 
 export const LoginLogout = () => {
    const keycloak = useSelector(keycloakSelector)
-   if (keycloak.authenticated) {
+   if (!!keycloak && keycloak.authenticated) {
       return (
          <Button onClick={ () => keycloak.logout() }>Log out</Button>
       )
