@@ -75,6 +75,14 @@
         "attributes": {}
       },
       {
+        "id": "b6b2ad3e-6bf3-4127-862b-c222f46c109d",
+        "name": "uploader",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "hyperfoil",
+        "attributes": {}
+      },
+      {
         "id": "ef65f920-8806-4131-9cf2-317a8889863c",
         "name": "tester",
         "description": "Pemits to add/modify tests and schemas",
