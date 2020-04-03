@@ -48,6 +48,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -204,6 +205,9 @@ public class RunService {
                                   @QueryParam("access") Access access,
                                   @QueryParam("schema") String schemaUri,
                                   Json data) {
+      if (data == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("No data!").build();
+      }
       try (CloseMe h = sqlService.withRoles(em, identity)) {
          if (schemaUri == null || schemaUri.isEmpty()) {
             schemaUri = data.getString("$schema");
@@ -221,20 +225,28 @@ public class RunService {
             return Response.status(Response.Status.BAD_REQUEST).entity("Cannot identify test name.").build();
          }
 
+         Instant startInstant = toInstant(foundStart);
+         Instant stopInstant = toInstant(foundStop);
+         if (startInstant == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Cannot get start time.").build();
+         } else if (stopInstant == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Cannot get stop time.").build();
+         }
+
          Test testEntity = getOrCreateTest(testNameOrId, owner, access);
          if (testEntity == null) {
             return Response.serverError().entity("Failed to find or create test " + testNameOrId).build();
          }
 
          Json validationErrors = schemaService.validate(data, schemaUri);
-         if (!validationErrors.isEmpty()) {
+         if (validationErrors != null && !validationErrors.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST).entity(validationErrors).build();
          }
 
          Run run = new Run();
          run.testId = testEntity.id;
-         run.start = toInstant(foundStart);
-         run.stop = toInstant(foundStop);
+         run.start = startInstant;
+         run.stop = stopInstant;
          run.data = data;
          run.schemaUri = schemaUri;
          run.owner = owner;
@@ -259,10 +271,21 @@ public class RunService {
    }
 
    private Instant toInstant(Object time) {
-      if (time instanceof Number) {
+      if (time == null) {
+         return null;
+      } else if (time instanceof Number) {
          return Instant.ofEpochMilli(((Number) time).longValue());
       } else {
-         return Instant.parse(time.toString());
+         try {
+            return Instant.ofEpochMilli(Long.parseLong((String) time));
+         } catch (NumberFormatException e) {
+            // noop
+         }
+         try {
+            return Instant.parse(time.toString());
+         } catch (DateTimeParseException e) {
+            return null;
+         }
       }
    }
 
