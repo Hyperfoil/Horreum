@@ -223,18 +223,25 @@ public class SchemaService {
       Map<String, Schema> schemas = ((Stream<Schema>) fetchSchemas.getResultStream())
             .collect(Collectors.toMap(s -> s.uri, Function.identity()));
       Schema rootSchema = schemas.get(schemaUri);
-      if (rootSchema == null) {
+      if (rootSchema == null || rootSchema.schema == null) {
          return null;
       }
-      URIFetcher uriFetcher = uri -> new ByteArrayInputStream(schemas.get(uri.toString()).schema.toString().getBytes(StandardCharsets.UTF_8));
+      Set<ValidationMessage> errors;
+      try {
+         URIFetcher uriFetcher = uri -> new ByteArrayInputStream(schemas.get(uri.toString()).schema.toString().getBytes(StandardCharsets.UTF_8));
 
-      JsonSchemaFactory factory = JsonSchemaFactory.builder(JSON_SCHEMA_FACTORY)
-            .uriFactory(URN_FACTORY, "urn")
-            .uriFetcher(uriFetcher, ALL_URNS).build();
+         JsonSchemaFactory factory = JsonSchemaFactory.builder(JSON_SCHEMA_FACTORY)
+               .uriFactory(URN_FACTORY, "urn")
+               .uriFetcher(uriFetcher, ALL_URNS).build();
 
-      JsonNode jsonData = Json.toJsonNode(data);
-      JsonNode jsonSchema = Json.toJsonNode(rootSchema.schema);
-      Set<ValidationMessage> errors = factory.getSchema(jsonSchema).validate(jsonData);
+         JsonNode jsonData = Json.toJsonNode(data);
+         JsonNode jsonSchema = Json.toJsonNode(rootSchema.schema);
+         errors = factory.getSchema(jsonSchema).validate(jsonData);
+      } catch (Exception e) {
+         // Do not let messed up schemas fail the upload
+         log.warn("Schema validation failed", e);
+         return null;
+      }
       Json rtrn = new Json();
       errors.forEach(validationMessage -> {
          Json entry = new Json();
