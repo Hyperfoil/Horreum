@@ -19,11 +19,19 @@ export default ({ value = "", onChange = newValue => {}}) => {
       allSchemas().then(response => {
          const schemas = response.map(s => { return { name: s.name, uri: s.uri }; })
          setOptions(schemas)
-         if (schemas.length > 0) {
+         if ((selected == null || selected == "") && schemas.length > 0) {
             onChange(schemas[0].uri)
          }
       })
    }, [])
+   useEffect(() => {
+      if (value && value != "") {
+         let o = options.find(s => s.uri === value)
+         if (o && o != selected) {
+            setSelected({ ...o, toString: () => `${o.name} (${o.uri})` })
+         }
+      }
+   }, [value])
    return (
       <Select aria-label="Select schema"
                     isExpanded={isExpanded}

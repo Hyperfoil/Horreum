@@ -11,7 +11,6 @@ import {
     ToolbarGroup,
     ToolbarItem,
     ToolbarSection
-
 } from '@patternfly/react-core';
 import {
     EditIcon,
@@ -65,6 +64,17 @@ const staticColumns = [
     },
     { Header: "Start", accessor: v => window.DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") },
     { Header: "Stop", accessor: v => window.DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") },
+    { Header: "Schema", accessor: "schema",
+      Cell: (arg) => {
+            const { cell: { value } } = arg;
+            // LEFT JOIN results in schema.id == 0
+            if (value != null && value.id != 0) {
+               return (<NavLink to={`/schema/${value.id}`}>{value.name}</NavLink>)
+            } else {
+               return "--"
+            }
+      }
+    }
     //    These are removed because they assume the runs are specjEnterprise2010
     //    {
     //        "Header": "GC Overhead", "accessor": "gc", "jsonpath": "jsonb_path_query_array(data,'$.benchserver4.gclog[*] ? ( exists(@.capacity) )')",

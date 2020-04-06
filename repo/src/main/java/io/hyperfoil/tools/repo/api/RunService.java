@@ -172,6 +172,27 @@ public class RunService {
       }
    }
 
+   @RolesAllowed("tester")
+   @POST
+   @Path("{id}/updateSchema")
+   @Transactional
+   // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
+   public Response updateAccess(@PathParam("id") Integer id,
+                            @QueryParam("schema") String schemaUri) {
+      if (schemaUri == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing schema").build();
+      }
+      try (CloseMe h = sqlService.withRoles(em, identity)) {
+         Run run = em.find(Run.class, id);
+         if (run == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+         }
+         run.schemaUri = schemaUri;
+         run.persistAndFlush();
+         return Response.noContent().build();
+      }
+   }
+
    @PermitAll
    @GET
    @Path("{id}/structure")
@@ -624,7 +645,7 @@ public class RunService {
                             @QueryParam("sort") String sort,
                             @QueryParam("direction") String direction) {
       // TODO: this is combining EntityManager and JDBC access :-/
-      StringBuilder sql = new StringBuilder("SELECT id, start, stop, testId");
+      StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, run.owner, run.schemauri, schema.id");
       Test test;
       try (CloseMe h = sqlService.withRoles(em, identity)) {
          test = Test.find("id", testId).firstResult();
@@ -640,7 +661,7 @@ public class RunService {
             }
          }
       }
-      sql.append(" FROM run WHERE testid = ?");
+      sql.append(" FROM run LEFT JOIN schema ON run.schemauri = schema.uri WHERE run.testid = ?");
       // TODO: use parameters in paging
       addPaging(sql, limit, page, sort, direction);
       try (Connection connection = dataSource.getConnection();
@@ -658,7 +679,7 @@ public class RunService {
          while (resultSet.next()) {
             Json.ArrayBuilder view = Json.array();
             for (int i = 1; i < counter; ++i) {
-               String value = resultSet.getString(4 + i);
+               String value = resultSet.getString(7 + i);
                if (test.defaultView.components.get(i - 1).isArray) {
                   view.add(Json.fromString(value));
                } else {
@@ -670,6 +691,8 @@ public class RunService {
                   .add("start", resultSet.getTimestamp(2).getTime())
                   .add("stop", resultSet.getTimestamp(3).getTime())
                   .add("testId", resultSet.getInt(4))
+                  .add("owner", resultSet.getString(5))
+                  .add("schema", Json.map().add("name", resultSet.getString(6)).add("id", resultSet.getInt(7)).build())
                   .add("view", view.build()).build());
          }
          return Response.ok(jsonResult.build()).build();

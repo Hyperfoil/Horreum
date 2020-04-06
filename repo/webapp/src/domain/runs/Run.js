@@ -7,8 +7,11 @@ import jsonpath from 'jsonpath';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
+import { isTesterSelector } from '../../auth'
 
 import Editor from '../../components/Editor/monaco/Editor';
+import SchemaSelect from '../../components/SchemaSelect';
+
 //import Editor from '../../components/Editor';
 import {
     Button,
@@ -46,6 +49,8 @@ export default () => {
     const editor = useRef();
     const run = useSelector(selectors.get(id));
     const [data, setData] = useState(toString(run.data) || "{}")
+    const [schemaUri, setSchemaUri] = useState(run.schemaUri)
+    const isTester = useSelector(isTesterSelector)
 
     const [pathQuery, setPathQuery] = useState("")
     const [pathInvalid, setPathInvalid] = useState(false)
@@ -59,7 +64,9 @@ export default () => {
         dispatch(actions.get(id, token))
     }, [dispatch, id])
     useEffect(() => {
-        setData(toString(run.data) || "{}");//change the loaded document when the run changes
+        //change the loaded document when the run changes
+        setData(toString(run.data) || "{}");
+        setSchemaUri(run.schemaUri);
     }, [run])
 
     const inputProps = {
@@ -245,16 +252,27 @@ export default () => {
                                         <th>test</th>
                                         <th>start</th>
                                         <th>stop</th>
+                                        <th>Schema</th>
                                     </tr>
                                     <tr>
                                         <td>{run.id}</td>
                                         <td><NavLink to={`/test/${run.testId}`} >{run.testId}</NavLink></td>
                                         <td>{run.start ? DateTime.fromMillis(run.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") : "--"}</td>
                                         <td>{run.stop ? DateTime.fromMillis(run.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") : "--"}</td>
+                                        <td style={{ padding: "0" }}>
+                                           { isTester &&
+                                              <InputGroup>
+                                                 <SchemaSelect value={schemaUri} onChange={setSchemaUri}/>
+                                                 <Button onClick={ () => dispatch(actions.updateSchema(run.id, schemaUri)) }>Update</Button>
+                                              </InputGroup>
+                                           }
+                                           { !isTester && <span>{schemaUri}</span> }
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </ToolbarSection>
+
                         <ToolbarSection aria-label="search" style={{ marginTop: 0 }}>
                             <InputGroup>
                                 <Dropdown

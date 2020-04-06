@@ -198,7 +198,7 @@ export default () => {
                     <ActionGroup>
                         <Button onClick={ () => {
                            const components = view.components || []
-                           setView({ ...view, components: [ ...components, { headerOrder: components.length} ] })
+                           setView({ ...view, components: [ ...components, { isArray: false, headerOrder: components.length} ] })
                         }} >Add component</Button>
 
                     </ActionGroup>
