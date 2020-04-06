@@ -15,22 +15,26 @@ import javax.json.bind.adapter.JsonbAdapter;
 public class JsonAdapter implements JsonbAdapter<Json, JsonStructure> {
 
    @Override
-   public JsonStructure adaptToJson(Json json) throws Exception {
-      JsonStructure rtrn = null;
-      if(json == null){
+   public JsonStructure adaptToJson(Json json) {
+      JsonStructure rtrn;
+      if (json == null) {
          return null;
       }
-      if(json.isArray()){
+      if (json.isArray()) {
          JsonArrayBuilder builder =  javax.json.Json.createArrayBuilder();
-         json.forEach((value)->{
+         json.forEach((value) -> {
             try {
-               if(value instanceof Json){
-                  builder.add(adaptToJson((Json)value));
-               } if (value instanceof Long || value instanceof Integer){
-                  builder.add((long)value);
-               } if (value instanceof Number){
-                  builder.add((double)value);
-               } else{
+               if (value == null) {
+                  builder.addNull();
+               } else if (value instanceof Json) {
+                  builder.add(adaptToJson((Json) value));
+               } else if (value instanceof Integer) {
+                  builder.add(((Number) value).intValue());
+               } else if (value instanceof Long) {
+                  builder.add(((Number) value).longValue());
+               } else if (value instanceof Number) {
+                  builder.add(((Number) value).doubleValue());
+               } else {
                   builder.add(value.toString());
                }
             } catch (Exception e) {
@@ -38,19 +42,23 @@ public class JsonAdapter implements JsonbAdapter<Json, JsonStructure> {
             }
          });
          rtrn = builder.build();
-      }else{
+      } else {
          JsonObjectBuilder builder = javax.json.Json.createObjectBuilder();
-         json.forEach((key,value)->{
+         json.forEach((key, value) -> {
             String keyString = key.toString();
             try {
-               if(value instanceof Json){
-                  builder.add(keyString,adaptToJson((Json)value));
-               } if (value instanceof Long || value instanceof Integer){
-                  builder.add(keyString,(long)value);
-               } if (value instanceof Number){
-                  builder.add(keyString,(double)value);
-               } else{
-                  builder.add(keyString,value.toString());
+               if (value == null) {
+                  builder.addNull(keyString);
+               } else if (value instanceof Json) {
+                  builder.add(keyString, adaptToJson((Json) value));
+               } else if (value instanceof Integer) {
+                  builder.add(keyString, ((Number) value).intValue());
+               } else if (value instanceof Long) {
+                  builder.add(keyString, ((Number) value).longValue());
+               } else if (value instanceof Number) {
+                  builder.add(keyString, ((Number) value).doubleValue());
+               } else {
+                  builder.add(keyString, value.toString());
                }
             } catch (Exception e) {
                e.printStackTrace();
