@@ -674,7 +674,7 @@ public class RunService {
          }
          return Response.ok(jsonResult.build()).build();
       } catch (SQLException e) {
-         log.error("GET /list/testId failed", e);
+         log.errorf(e, "GET /list/testId failed, query was:\n%s", sql.toString());
          return Response.serverError().entity(Json.fromThrowable(e)).build();
       }
    }

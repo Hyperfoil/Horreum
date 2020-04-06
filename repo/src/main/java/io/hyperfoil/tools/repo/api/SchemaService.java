@@ -291,7 +291,7 @@ public class SchemaService {
       if (accessor == null && newName != null) {
          accessor = newName;
       }
-      if (accessor == null || accessor.isEmpty() || schema == null || jsonpath == null || !jsonpath.startsWith("$.")) {
+      if (accessor == null || accessor.isEmpty() || schema == null || jsonpath == null || !jsonpath.startsWith("$")) {
          return Response.status(Response.Status.BAD_REQUEST).build();
       }
       try (CloseMe h = sqlService.withRoles(em, identity)) {

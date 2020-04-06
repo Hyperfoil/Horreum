@@ -7,7 +7,7 @@ const endPoints = {
     dropToken: (id) => `${base}/${id}/dropToken`,
     updateAccess: (id, owner, access) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
     extractor: () => `${base}/extractor`,
-    extractorForSchema: (schemaId) => `${base}/extractor?schema=${schemaId}`,
+    extractorForSchema: (schemaId) => `${base}/extractor?schemaId=${schemaId}`,
 }
 export const all = ()=>{
     return fetchApi(endPoints.base(),null,'get');
