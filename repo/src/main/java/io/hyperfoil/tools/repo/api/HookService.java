@@ -12,10 +12,10 @@ import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.http.HttpVersion;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.reactivex.core.buffer.Buffer;
+import io.vertx.reactivex.ext.web.client.HttpResponse;
 import io.vertx.reactivex.ext.web.client.WebClient;
 
 import org.jboss.logging.Logger;
-import org.postgresql.util.PSQLException;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.RolesAllowed;
@@ -25,7 +25,6 @@ import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 import javax.json.bind.JsonbConfig;
 import javax.persistence.EntityManager;
-import javax.persistence.PersistenceException;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -39,19 +38,19 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-@RolesAllowed(Roles.ADMIN)
 @Path("/api/hook")
 @Consumes({MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 @ApplicationScoped
 public class HookService {
    private static final Logger log = Logger.getLogger(HookService.class);
+   private static final Pattern FIND_EXPRESSIONS = Pattern.compile("\\$\\{([^}]*)\\}");
 
    @Inject
    SqlService sqlService;
@@ -75,7 +74,6 @@ public class HookService {
 
    @PostConstruct()
    public void postConstruct(){
-      System.out.println("HookService.postConstruct");
       int maxConnections = getIntFromEnv("MAX_CONNECTIONS", 20);
       WebClientOptions options = new WebClientOptions()
          .setFollowRedirects(true)
@@ -85,57 +83,65 @@ public class HookService {
       http1xClient = WebClient.create(reactiveVertx, new WebClientOptions(options).setProtocolVersion(HttpVersion.HTTP_1_1));
    }
 
-   private void tellHooks(String type,Integer id,Object value){
+   private void tellHooks(String type, int testId, Object value){
       List<Hook> hooks;
       try (CloseMe h = sqlService.withRoles(em, Arrays.asList("admin"))) {
-         hooks = getEventHooks(type, id);
+         hooks = getEventHooks(type, testId);
       }
-//      Hook h = new Hook();
-//      h.url="http://laptop:8080/api/log";
-//      hooks.add(h);
-//      hooks.add(h);
       JsonbConfig jsonbConfig = new JsonbConfig();
       jsonbConfig.withAdapters(new JsonAdapter());
       final Jsonb jsonb = JsonbBuilder.create(jsonbConfig);
       String json = jsonb.toJson(value);
-      System.out.println("HookService.toJson -> "+json);
-      for(Hook hook : hooks){
-         System.out.println("Hook:"+hook.url);
-         try{
-            String input = hook.url.startsWith("http") ? hook.url : "http://"+hook.url;
-            URL url = new URL(input);
-            http1xClient.post(url.getPort(),url.getHost(),url.getFile())
-               .putHeader("Content-Type", "application/json")
-               .sendBuffer(Buffer.buffer(json), ar->{
-                  if(ar.succeeded()){
-                     System.out.println("sent to "+url);
-                  }else{
-                     System.out.println("failed to send to "+url);
-                     //TODO disable the callback?
-                  }
-               });
-
-         }catch(Exception e){
-            e.printStackTrace();
-            //TODO disable the hook?
+      Json yetAnotherJson = Json.fromString(json);
+      for (Hook hook : hooks) {
+         try {
+            String input = hook.url.startsWith("http") ? hook.url : "http://" + hook.url;
+            Matcher matcher = FIND_EXPRESSIONS.matcher(input);
+            StringBuilder replacedUrl = new StringBuilder();
+            int lastMatch = 0;
+            while (matcher.find()) {
+               replacedUrl.append(input, lastMatch, matcher.start());
+               String path = matcher.group(1).trim();
+               replacedUrl.append(Json.find(yetAnotherJson, path));
+               lastMatch = matcher.end();
+            }
+            replacedUrl.append(input.substring(lastMatch));
+            URL url = new URL(replacedUrl.toString());
+            int port = url.getPort() >= 0 ? url.getPort() : url.getDefaultPort();
+            http1xClient.post(port, url.getHost(), url.getFile())
+                  .putHeader("Content-Type", "application/json")
+                  .sendBuffer(Buffer.buffer(json), ar -> {
+                     if (ar.succeeded()) {
+                        HttpResponse<Buffer> response = ar.result();
+                        if (response.statusCode() < 400) {
+                           log.debugf("Successfully(%d) notified hook: %s", response.statusCode(), url);
+                        } else {
+                           log.errorf("Failed to notify hook %s, response %d: ", url, response.statusCode(), response.bodyAsString());
+                        }
+                     } else {
+                        log.errorf(ar.cause(), "Failed to notify hook %s", url);
+                     }
+                  });
+         } catch (Exception e) {
+            log.errorf(e, "Failed to invoke hook to %s", hook.url);
          }
-
       }
    }
 
    @Transactional //Transactional is a workaround for #6059
    @ConsumeEvent(value="new/test",blocking = true)
-   public void newTest(Test test){
-      tellHooks("new/test",-1,test);
+   public void newTest(Test test) {
+      tellHooks("new/test", -1, test);
    }
 
-   @Transactional //Transactional is a workaround for #6059
-   @ConsumeEvent(value="new/run",blocking = true)
-   public void newRun(Run run){
+   @Transactional
+   @ConsumeEvent(value="new/run", blocking = true)
+   public void newRun(Run run) {
       Integer testId = run.testId;
-      //tellHooks("new/run",testId,run);
+      tellHooks("new/run", testId, run);
    }
 
+   @RolesAllowed(Roles.ADMIN)
    @POST
    @Transactional
    public Response add(Hook hook){
@@ -169,6 +175,7 @@ public class HookService {
       }
    }
 
+   @RolesAllowed(Roles.ADMIN)
    @GET
    @Path("{id}")
    public Hook get(@PathParam("id")Integer id){
@@ -177,6 +184,7 @@ public class HookService {
       }
    }
 
+   @RolesAllowed(Roles.ADMIN)
    @DELETE
    @Path("{id}")
    @Transactional
@@ -186,22 +194,22 @@ public class HookService {
       }
    }
 
-   public List<Hook> getEventHooks(String type,Integer target){
-      System.out.println("getEventHooks("+type+" , "+target+")");
+   public List<Hook> getEventHooks(String type, int testId) {
       try {
          List<Hook> rtrn;
-         if(target == null || target == -1){
-            rtrn = Hook.find("type = ?1 and active = true",type).list();
-         }else {
-            rtrn = Hook.find("type = ?1 and ( target = ?2 or target = -1) and active = true", type, target).list();
+         if (testId == -1) {
+            rtrn = Hook.find("type = ?1 and active = true", type).list();
+         } else {
+            rtrn = Hook.find("type = ?1 and ( target = ?2 or target = -1) and active = true", type, testId).list();
          }
          return rtrn;
-      } catch(Exception e){
+      } catch (Exception e) {
          log.error("Failed to get event hooks.", e);
       }
-      return new ArrayList<>();
+      return Collections.emptyList();
    }
 
+   @RolesAllowed(Roles.ADMIN)
    @GET
    @Path("list")
    public List<Hook> list(@QueryParam("limit") Integer limit,
