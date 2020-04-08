@@ -1,6 +1,6 @@
 {
-  "id": "hyperfoil",
-  "realm": "hyperfoil",
+  "id": "horreum",
+  "realm": "horreum",
   "notBefore": 0,
   "revokeRefreshToken": false,
   "refreshTokenMaxReuse": 0,
@@ -44,7 +44,7 @@
         "description": "General access to view records.",
         "composite": false,
         "clientRole": false,
-        "containerId": "hyperfoil",
+        "containerId": "horreum",
         "attributes": {}
       },
       {
@@ -53,7 +53,7 @@
         "description": "${role_uma_authorization}",
         "composite": false,
         "clientRole": false,
-        "containerId": "hyperfoil",
+        "containerId": "horreum",
         "attributes": {}
       },
       {
@@ -62,7 +62,7 @@
         "description": "Manages webhooks and general instance configuration.",
         "composite": false,
         "clientRole": false,
-        "containerId": "hyperfoil",
+        "containerId": "horreum",
         "attributes": {}
       },
       {
@@ -71,7 +71,7 @@
         "description": "${role_offline-access}",
         "composite": false,
         "clientRole": false,
-        "containerId": "hyperfoil",
+        "containerId": "horreum",
         "attributes": {}
       },
       {
@@ -79,7 +79,7 @@
         "name": "uploader",
         "composite": false,
         "clientRole": false,
-        "containerId": "hyperfoil",
+        "containerId": "horreum",
         "attributes": {}
       },
       {
@@ -88,7 +88,7 @@
         "description": "Pemits to add/modify tests and schemas",
         "composite": false,
         "clientRole": false,
-        "containerId": "hyperfoil",
+        "containerId": "horreum",
         "attributes": {}
       }
     ],
@@ -306,8 +306,8 @@
         }
       ],
       "security-admin-console": [],
-      "hyperfoil-repo-ui": [],
-      "hyperfoil-repo": [
+      "horreum-ui": [],
+      "horreum": [
         {
           "id": "c2992750-54bb-4dea-9e16-f39056ceca1e",
           "name": "uma_protection",
@@ -521,13 +521,13 @@
       "clientId": "security-admin-console",
       "name": "${client_security-admin-console}",
       "rootUrl": "${authAdminUrl}",
-      "baseUrl": "/admin/hyperfoil/console/",
+      "baseUrl": "/admin/horreum/console/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
       "secret": "**********",
       "redirectUris": [
-        "/admin/hyperfoil/console/*"
+        "/admin/horreum/console/*"
       ],
       "webOrigins": [
         "+"
@@ -579,7 +579,7 @@
     },
     {
       "id": "6b80736f-675b-4987-9ea2-4e44b8df45cf",
-      "clientId": "hyperfoil-repo-ui",
+      "clientId": "horreum-ui",
       "rootUrl": "http://localhost:3000/",
       "adminUrl": "http://localhost:3000/",
       "surrogateAuthRequired": false,
@@ -639,7 +639,7 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/hyperfoil/account/",
+      "baseUrl": "/realms/horreum/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
@@ -649,7 +649,7 @@
         "manage-account"
       ],
       "redirectUris": [
-        "/realms/hyperfoil/account/*"
+        "/realms/horreum/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -720,7 +720,7 @@
     },
     {
       "id": "d97ddd4c-cbd0-4c25-bf0b-ae0cd07494e6",
-      "clientId": "hyperfoil-repo",
+      "clientId": "horreum",
       "rootUrl": "http://localhost:8080",
       "adminUrl": "http://localhost:8080",
       "surrogateAuthRequired": false,
@@ -825,7 +825,7 @@
         "resources": [
           {
             "name": "Default Resource",
-            "type": "urn:hyperfoil-repo:resources:default",
+            "type": "urn:horreum:resources:default",
             "ownerManagedAccess": false,
             "attributes": {},
             "_id": "e737d447-47e5-4b82-a15c-d68d77853570",
@@ -864,7 +864,7 @@
             "logic": "POSITIVE",
             "decisionStrategy": "UNANIMOUS",
             "config": {
-              "defaultResourceType": "urn:hyperfoil-repo:resources:default",
+              "defaultResourceType": "urn:horreum:resources:default",
               "applyPolicies": "[\"Default Policy\"]"
             }
           }

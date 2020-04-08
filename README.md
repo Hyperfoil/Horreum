@@ -15,7 +15,7 @@ docker run -d --name keycloak -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=admin 
 ```
 
 Now that the database is running, it's time to configure Keycloak. Open [localhost:8180](http://localhost:8180) and login using credentials `admin`/`admin`.
-Import `repo/src/main/resources/keycloak-hyperfoil.json` with realm `hyperfoil`. The only defined user `user` has password `secret`; you'll use that one to login into UI.                                                                                       
+Import `repo/src/main/resources/keycloak-horreum.json` with realm `horreum`. The only defined user `user` has password `secret`; you'll use that one to login into UI.                                                                                       
 
 ## Getting Started
 ```bash

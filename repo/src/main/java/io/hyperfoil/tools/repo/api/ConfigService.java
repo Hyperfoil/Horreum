@@ -22,9 +22,9 @@ public class ConfigService {
    @Produces(MediaType.APPLICATION_JSON)
    public Response keycloak() {
       return Response.ok(Json.map()
-            .add("realm", "hyperfoil")
+            .add("realm", "horreum")
             .add("url", keycloakUrl)
-            .add("clientId", "hyperfoil-repo-ui")
+            .add("clientId", "horreum-ui")
             .build().toString()).build();
    }
 }
