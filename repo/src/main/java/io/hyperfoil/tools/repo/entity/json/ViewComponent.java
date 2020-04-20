@@ -46,7 +46,7 @@ public class ViewComponent extends PanacheEntityBase {
 
    // TODO: we'll probably change this into enum: PLAIN, ARRAY, SUM, MAX, MIN, COUNT
    @NotNull
-   @Column(columnDefinition = "false")
+   @Column(columnDefinition = "bool default false")
    public Boolean isArray;
 
    /**
