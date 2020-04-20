@@ -36,3 +36,6 @@ release.properties
 
 # Yarn
 package-lock.json
+
+# Quarkus .env
+.env

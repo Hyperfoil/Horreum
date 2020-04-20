@@ -1,0 +1,103 @@
+version: '3.1'
+volumes:
+  horreum_pg12: {}
+services:
+  postgres:
+    image: docker.io/postgres:12
+    environment:
+    - POSTGRES_DB=horreum
+    - POSTGRES_USER=dbadmin
+    - POSTGRES_PASSWORD=secret
+    ports:
+    - 5432:5432
+    volumes:
+    - horreum_pg12:/var/lib/postgresql/data
+  db-init:
+    image: docker.io/postgres:12
+    restart: on-failure
+    environment:
+    - PGHOST=172.17.0.1
+    - PGPORT=5432
+    - PGDATABASE=horreum
+    - PGUSER=dbadmin
+    - PGPASSWORD=secret
+    command:
+    - bash
+    - -x
+    - -c
+    - |
+      psql -c "SELECT 1;" || exit 1
+      if ! psql -t -c "SELECT 1 FROM pg_roles WHERE rolname = 'keycloak';" | grep -q 1; then
+        psql -c "CREATE ROLE keycloak noinherit login password 'secret';"
+      fi
+      if ! psql -t -c "SELECT 1 FROM pg_database WHERE datname = 'keycloak';" | grep -q 1; then
+        psql -c "CREATE DATABASE keycloak WITH OWNER = 'keycloak';"
+      fi
+      if ! psql -t -c "SELECT 1 FROM pg_tables WHERE tablename = 'dbsecret'" | grep -q 1; then
+        psql -f /etc/horreum/imports/structure.sql
+        psql -c "INSERT INTO dbsecret (passphrase) VALUES ('secret');"
+        psql -f /etc/horreum/imports/policies.sql
+      fi
+      if ! psql -t -c "SELECT 1 FROM pg_roles WHERE rolname = 'appuser';" | grep -q 1; then
+          psql -c "CREATE ROLE appuser noinherit login password 'secret';"
+      fi
+      if [ $$(psql -t -c "SELECT count(*) FROM information_schema.role_table_grants WHERE grantee='appuser';") == "0" ]; then
+          psql -f /etc/horreum/imports/permissions.sql
+      fi
+    volumes:
+    - ./repo/src/main/resources:/etc/horreum/imports:ro,z
+  keycloak:
+    depends_on:
+    - postgres
+    image: docker.io/jboss/keycloak:latest
+    command:
+    - -Dkeycloak.profile.feature.upload_scripts=enabled
+    - -Dkeycloak.migration.action=import
+    - -Dkeycloak.migration.provider=singleFile
+    - -Dkeycloak.migration.file=/etc/keycloak/imports/keycloak-horreum.json
+    - -Dkeycloak.migration.strategy=IGNORE_EXISTING
+    environment:
+    - KEYCLOAK_USER=admin
+    - KEYCLOAK_PASSWORD=secret
+    - DB_VENDOR=postgres
+    - DB_ADDR=172.17.0.1
+    - DB_PORT=5432
+    - DB_DATABASE=keycloak
+    - DB_USER=keycloak
+    - DB_PASSWORD=secret
+    ports:
+    - 8180:8080
+    volumes:
+    - ./repo/src/main/resources:/etc/keycloak/imports:ro,z
+  app-init:
+    image: docker.io/dwdraju/alpine-curl-jq:latest
+    restart: on-failure
+    command:
+    - bash
+    - -x
+    - -c
+    - |
+      export TOKEN=$$(curl -s 172.17.0.1:8180/auth/realms/master/protocol/openid-connect/token -X POST -H 'content-type: application/x-www-form-urlencoded' -d 'username=admin&password=secret&grant_type=password&client_id=admin-cli' | jq -r .access_token)
+      [ -n "$$TOKEN" ] || exit 1
+      export AUTH='Authorization: Bearer '$$TOKEN
+      export BASEURL=172.17.0.1:8180/auth/admin/realms/horreum
+      export CLIENTID=$$(curl -s $$BASEURL/clients -H "$$AUTH" | jq -r '.[] | select(.clientId=="horreum") | .id')
+      export CLIENTSECRET=$$(curl -s $$BASEURL/clients/$$CLIENTID/client-secret -X POST -H "$$AUTH" | jq -r '.value')
+      [ -n "$$CLIENTSECRET" ] || exit 1
+      echo QUARKUS_OIDC_CREDENTIALS_SECRET=$$CLIENTSECRET > /etc/horreum/cwd/.env
+      export UPLOADER_ID=$$(curl -s $$BASEURL/roles/uploader -H "$$AUTH"  | jq -r '.id')
+      export TESTER_ID=$$(curl -s $$BASEURL/roles/tester -H "$$AUTH" | jq -r '.id')
+      export VIEWER_ID=$$(curl -s $$BASEURL/roles/viewer -H "$$AUTH" | jq -r '.id')
+      export ADMIN_ID=$$(curl -s $$BASEURL/roles/viewer -H "$$AUTH" | jq -r '.id')
+      export TEAM_ID=$$(curl -s $$BASEURL/roles -H "$$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-team"}' | grep Location | rev | cut -f 1 -d / | rev)
+      curl -s $$BASEURL/roles -H "$$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-uploader","composite":true}'
+      export TEAM_UPLOADER_ID=$$(curl -s $$BASEURL/roles/dev-uploader -H "$$AUTH" | jq -r '.id')
+      curl -s $$BASEURL/roles/dev-uploader/composites -H "$$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$$TEAM_ID'"},{"id":"'$$UPLOADER_ID'"}]'
+      curl -s $$BASEURL/roles -H "$$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-tester","composite":true}'
+      export TEAM_TESTER_ID=$$(curl -s $$BASEURL/roles/dev-tester -H "$$AUTH" | jq -r '.id')
+      curl -s $$BASEURL/roles/dev-tester/composites -H "$$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$$TEAM_ID'"},{"id":"'$$TESTER_ID'"},{"id":"'$$VIEWER_ID'"}]'
+      curl -s $$BASEURL/users -H "$$AUTH" -X POST -d '{"username":"user","enabled":true,"credentials":[{"type":"password","value":"secret"}]}' -H 'content-type: application/json'
+      export USER_ID=$$(curl -s $$BASEURL/users -H "$$AUTH" | jq -r '.[] | select(.username="user") | .id')
+      curl -s $$BASEURL/users/$$USER_ID/role-mappings/realm -H "$$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$$TEAM_UPLOADER_ID'"},{"id":"'$$TEAM_TESTER_ID'"},{"id":"'$$ADMIN_ID'"}]'
+    volumes:
+    - ./:/etc/horreum/cwd:rw,z
