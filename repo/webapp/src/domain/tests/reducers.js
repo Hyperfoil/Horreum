@@ -10,11 +10,13 @@ export const reducer = (state = initialState, action) => {
     switch (action.type) {
         case actionTypes.LOADED:
             if (!utils.isEmpty(action.tests)) {
+                if (!state.byId) {
+                    state.byId = Map({})
+                }
                 action.tests.forEach(test => {
                     if (test.id !== null && typeof test.id !== "undefined") {
-                        const byId = state.byId || Map({})
-                        state.byId = byId.set("t" + test.id, {
-                            ...(byId.get("t" + test.id, {})), ...test
+                        state.byId = state.byId.set("t" + test.id, {
+                            ...(state.byId.get("t" + test.id, {})), ...test
                         })
                     }
                 })

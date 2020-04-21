@@ -8,11 +8,14 @@ export const reducer = (state = initialState, action) =>{
     switch(action.type){
         case actionTypes.LOADED: {
             if ( !utils.isEmpty(action.schemas) ) {
-                const byId = state.byId || Map({})
-                state.byId = byId.clear()
+                if (!state.byId) {
+                    state.byId = Map({})
+                } else {
+                    state.byId = state.byId.clear()
+                }
                 action.schemas.forEach(schema => {
-                    state.byId = byId.set(`${schema.id}`, {
-                        ...(byId.get(`${schema.id}`) || {}), ...schema
+                    state.byId = state.byId.set(`${schema.id}`, {
+                        ...(state.byId.get(`${schema.id}`) || {}), ...schema
                     })
                 })
             }

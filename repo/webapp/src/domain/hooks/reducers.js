@@ -8,10 +8,12 @@ export const reducer = (state = initialState, action) =>{
     switch(action.type){
         case actionTypes.LOADED: {
             if ( !utils.isEmpty(action.hooks) ) {
+                if (!state.byId) {
+                    state.byId = Map({})
+                }
                 action.hooks.forEach(hook => {
-                    const byId = state.byId || Map({})
-                    state.byId = byId.set(`${hook.id}`, {
-                        ...(byId.get(`${hook.id}`) || {}), ...hook
+                    state.byId = state.byId.set(`${hook.id}`, {
+                        ...(state.byId.get(`${hook.id}`) || {}), ...hook
                     })
                 })
             }
