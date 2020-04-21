@@ -15,10 +15,10 @@ const initialState = {
 export const reducer = (state = initialState, action) =>{
     switch(action.type){
         case actionTypes.LOADED: {
+            if (!state.byId) {
+                state.byId = Map({})
+            }
             if ( !utils.isEmpty(action.runs) ) {
-                if (!state.byId) {
-                    state.byId = Map({})
-                }
                 action.runs.forEach(run => {
                     if (run !== undefined) {
                         state.byId = state.byId.set(`${run.id}`, {
