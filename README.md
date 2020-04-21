@@ -29,6 +29,23 @@ cd ..
 This builds the webapp and adds it to the `repo-${version}-runner.jar`.
 Start the server with `java -jar repo-${version}-runner.jar` after docker is already running
 
+## Insecure mode
+
+While by default Horreum runs with DB security enabled, it's easier to experiment with database schema
+using Hibernate's `drop-and-create` database generation mode. To be able to modify database schema
+you need to use database user `dbadmin` (see security section below). Therefore, run Horreum
+with `-Dquarkus.profile=insecure` flag:
+```bash
+./mvnw compile quarkus:dev -Dui.dev -Dquarkus.profile=insecure
+```
+The insecure mode also triggers generating some test data based on `src/main/resources/import.sql`.
+Note though that the `drop-and-create` mode also drops database permissions for the `appuser`;
+before starting with enforced security you need to run
+```
+PGPASSWORD=secret psql -h 172.17.0.1 -U dbadmin -f src/main/resources/permissions.sql horreum
+``` 
+Alternatively you can just drop the database volume and start docker-compose from scratch.
+
 ## native mode
 ###does not work~
 ```bash
@@ -42,8 +59,8 @@ java.lang.NoClassDefFoundError: com/sun/jna/LastErrorException
 ## Security
 
 Security uses RBAC with authz and authn provided by Keycloak server, and heavily relies on row-level security (RLS) in the database.
-The should be two DB users (roles); `repo` who has full access to the database, and `appuser` with limited access.
-`repo` should set up DB structure - tables with RLS policies and grant RW access to all tables but `dbsecret` to `appuser`.
+The should be two DB users (roles); `dbadmin` who has full access to the database, and `appuser` with limited access.
+`dbadmin` should set up DB structure - tables with RLS policies and grant RW access to all tables but `dbsecret` to `appuser`.
 When the application performs a database query, impersonating the authenticated user, it invokes `SET repo.userroles = '...'`
 to declare all roles the user has based on information from Keycloak. RLS policies makes sure that the user cannot read or modify
 anything that does not belong to this user or is made available to him.
