@@ -55,50 +55,50 @@ export const registerAfterLogin = (name, func) => {
    }
 }
 
-const keycloakSelector = () => {
-   return store.getState().auth.keycloak;
+const keycloakSelector = state => {
+   return state.auth.keycloak;
 }
 
-const insufficientPermissionsSelector = () => {
-   return store.getState().auth.insufficientPermissions
+const insufficientPermissionsSelector = state => {
+   return state.auth.insufficientPermissions
 }
 
 export const roleToName = (role) => {
    return role ? (role.charAt(0).toUpperCase() + role.slice(1, -5)) : null
 }
 
-export const isAuthenticatedSelector = () => {
-   let keycloak = store.getState().auth.keycloak
+export const isAuthenticatedSelector = state => {
+   let keycloak = state.auth.keycloak
    return !!keycloak && keycloak.authenticated;
 }
 
-export const isUploaderSelector = () => {
-   let keycloak = store.getState().auth.keycloak
+export const isUploaderSelector = state => {
+   let keycloak = state.auth.keycloak
    return !!keycloak && keycloak.hasRealmRole("uploader")
 }
 
-export const isTesterSelector = () => {
-   let keycloak = store.getState().auth.keycloak
+export const isTesterSelector = state => {
+   let keycloak = state.auth.keycloak
    return !!keycloak && keycloak.hasRealmRole("tester")
 }
 
-export const isAdminSelector = () => {
-   let keycloak = store.getState().auth.keycloak
+export const isAdminSelector = state => {
+   let keycloak = state.auth.keycloak
    return !!keycloak && keycloak.hasRealmRole("admin")
 }
 
-export const rolesSelector = () => {
-   let keycloak = store.getState().auth.keycloak;
+export const rolesSelector = state => {
+   let keycloak = state.auth.keycloak;
    return keycloak && keycloak.realmAccess ? keycloak.realmAccess.roles : []
 }
 
-export const defaultRoleSelector = () => {
-   let teamRoles = rolesSelector().filter(r => r.endsWith("-team")).sort()
+export const defaultRoleSelector = state => {
+   let teamRoles = rolesSelector(state).filter(r => r.endsWith("-team")).sort()
    return teamRoles.length > 0 ? teamRoles[0] : null;
 }
 
-export const initKeycloak = () => {
-   let keycloak = keycloakSelector();
+export const initKeycloak = state => {
+   let keycloak = keycloakSelector(state);
    let keycloakPromise;
    if (keycloak === null) {
       keycloakPromise = fetchApi("/api/config/keycloak", null)

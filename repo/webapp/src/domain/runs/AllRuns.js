@@ -101,7 +101,7 @@ export default ()=>{
         dispatch(all())
         dispatch(registerAfterLogin("reload_runs", () => {
            dispatch(all())
-           runFilter(selectors.selectedRoles().key)
+           runFilter(selectedRoles.key)
         }))
     },[dispatch])
 
@@ -128,13 +128,13 @@ export default ()=>{
        if (typingTimer !== null) {
           clearTimeout(typingTimer)
        }
-       setTypingTimer(setTimeout(() => suggest(value, selectors.selectedRoles().key)(dispatch), 1000))
+       setTypingTimer(setTimeout(() => suggest(value, selectedRoles.key)(dispatch), 1000))
     }
     const fetchSuggestionsNow = () => {
        if (typingTimer !== null) {
           clearTimeout(typingTimer)
        }
-       suggest(filterQuery, selectors.selectedRoles().key)(dispatch)
+       suggest(filterQuery, selectedRoles.key)(dispatch)
     }
 
     return (
@@ -160,7 +160,7 @@ export default ()=>{
                                  suggestions={suggestions}
                                  onSuggestionsFetchRequested={fetchSuggestions}
                                  onSuggestionsClearRequested={() => {
-                                    if (filterQuery === "") suggest("", selectors.selectedRoles().key)(dispatch)
+                                    if (filterQuery === "") suggest("", selectedRoles.key)(dispatch)
                                  }}
                                  getSuggestionValue={(value) => {
                                     let quoted = false;

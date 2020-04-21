@@ -41,7 +41,7 @@ import AllHooks from './domain/hooks/AllHooks';
 class App extends Component {
   constructor(props) {
      super(props)
-     initKeycloak()
+     initKeycloak(store.getState())
   }
 
   render() {
