@@ -1,10 +1,8 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect } from 'react';
 
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
-    Button,
-    ButtonVariant,
     Card,
     CardHeader,
     CardBody,
@@ -60,7 +58,7 @@ export default ()=>{
             )
           }
         }
-    ], [])
+    ], [dispatch])
     const dispatch = useDispatch();
     const allRuns = useSelector(selectors.all);
     useEffect(()=>{
@@ -68,7 +66,7 @@ export default ()=>{
         dispatch(registerAfterLogin("reload_tests", () => {
           dispatch(fetchSummary())
         }))
-    },[])
+    },[dispatch])
     const isTester = useSelector(isTesterSelector)
     return (
         <PageSection>

@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react'
 
-import { useDispatch } from 'react-redux'
-
 import { addOrUpdateExtractor, listExtractors } from '../domain/schemas/api.js'
 import SchemaSelect from './SchemaSelect'
 
@@ -30,18 +28,17 @@ export default ({ value = "", onChange = newValue => {}, isReadOnly = false}) =>
    const [isExpanded, setExpanded] = useState(false)
    const [selected, setSelected] = useState({ accessor: value, toString: () => value })
    const [options, setOptions] = useState([])
-   const dispatch = useDispatch()
    useEffect(() => {
       listExtractors().then(response => {
          setOptions(response)
-         const firstMatch = response.filter(o => o.accessor == selected.accessor)[0]
+         const firstMatch = response.filter(o => o.accessor === selected.accessor)[0]
          if (firstMatch) {
             setSelected({ ...firstMatch, ...selected })
          }
       })
    }, [])
    useEffect(() => {
-      const firstMatch = options.filter(o => o.accessor == value)[0]
+      const firstMatch = options.filter(o => o.accessor === value)[0]
       if (firstMatch) {
          setSelected({ ...firstMatch, accessor: value, toString: () => value })
       }
@@ -77,9 +74,9 @@ export default ({ value = "", onChange = newValue => {}, isReadOnly = false}) =>
          <SelectOption key={index} value={{ ...option, toString: () => option.accessor }} />
       ))}
       </Select>
-      { selected != null && selected.schema &&
+      { selected !== null && selected.schema &&
          <div style={{ marginTop: "5px" }}>Valid for schemas:{'\u00A0'}
-         { options.filter(e => e.accessor == selected.accessor).map(e => (<>
+         { options.filter(e => e.accessor === selected.accessor).map(e => (<>
             <span style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{e.schema}</span>{'\u00A0'}
          </>)) }
          { !isReadOnly && selected.accessor && selected.accessor !== "" &&
@@ -96,7 +93,7 @@ export default ({ value = "", onChange = newValue => {}, isReadOnly = false}) =>
                           isRequired
                           id="extractor-accessor"
                           name="extractor-accessor"
-                          isValid={ selected.accessor && selected.accessor != "" }
+                          isValid={ selected.accessor && selected.accessor !== "" }
                           onChange={ value => setSelected({ ...selected, accessor: value})}
                 />
             </FormGroup>
@@ -109,7 +106,7 @@ export default ({ value = "", onChange = newValue => {}, isReadOnly = false}) =>
                           isRequired
                           id="extractor-jsonpath"
                           name="extractor-jsonpath"
-                          isValid={ selected.jsonpath && selected.jsonpath != "" }
+                          isValid={ selected.jsonpath && selected.jsonpath !== "" }
                           onChange={ value => setSelected({ ...selected, jsonpath: value})}
               />
             </FormGroup>

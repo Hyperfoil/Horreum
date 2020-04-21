@@ -8,7 +8,7 @@ const initialState = {
 
 export const reducer = (state = initialState, action) => {
     switch (action.type) {
-        case actionTypes.LOADED: {
+        case actionTypes.LOADED:
             if (!utils.isEmpty(action.tests)) {
                 action.tests.forEach(test => {
                     if (test.id !== null && typeof test.id !== "undefined") {
@@ -18,7 +18,6 @@ export const reducer = (state = initialState, action) => {
                     }
                 })
             }
-        }
         break;
         case actionTypes.UPDATE_TOKEN: {
             let test = state.byId.get("t" + action.id)

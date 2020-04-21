@@ -10,12 +10,10 @@ import {
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
-    ToolbarSection
 } from '@patternfly/react-core';
 import {
     EditIcon,
 } from '@patternfly/react-icons';
-import { DateTime } from 'luxon';
 import { NavLink } from 'react-router-dom';
 
 import { byTest } from './actions';

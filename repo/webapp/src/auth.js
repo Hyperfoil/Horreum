@@ -1,5 +1,4 @@
 import React from 'react';
-import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
 import {
@@ -37,12 +36,13 @@ export const reducer = (state = initialState, action) => {
          state.insufficientPermissions = false
          break;
       case REQUEST_FAILED:
-         state.insufficientPermissions = action.value == undefined ? true : action.value
+         state.insufficientPermissions = action.value === undefined ? true : action.value
          break;
       case REGISTER_AFTER_LOGIN:
-         state.afterLogin = [...state.afterLogin.filter(({ name, func }) => name != action.name),
+         state.afterLogin = [...state.afterLogin.filter(({ name, func }) => name !== action.name),
                              { name: action.name, func: action.func }]
          break;
+      default:
    }
    return state;
 }

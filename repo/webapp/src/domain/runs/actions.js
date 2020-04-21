@@ -38,7 +38,7 @@ export const byTest = (id, payload, roles)=> {
 
 export const filter = (query, matchAll, roles, callback) => {
    return dispatch => {
-      if (query == "" && roles == "__all") {
+      if (query === "" && roles === "__all") {
          dispatch({
             type: actionTypes.FILTERED,
             ids: null
@@ -58,7 +58,7 @@ export const filter = (query, matchAll, roles, callback) => {
 }
 
 export const suggest = (query, roles) => dispatch => {
-  if (query == "") {
+  if (query === "") {
      dispatch({
         type: actionTypes.SUGGEST,
         responseReceived: false,

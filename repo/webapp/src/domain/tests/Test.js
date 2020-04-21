@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -24,7 +24,6 @@ import { NavLink, Redirect } from 'react-router-dom';
 import {
     ArrowAltCircleDownIcon,
     ArrowAltCircleUpIcon,
-    OutlinedSaveIcon,
     OutlinedTimesCircleIcon
 } from '@patternfly/react-icons';
 import * as actions from './actions';
@@ -60,7 +59,6 @@ export default () => {
             setView(test.defaultView)
         }
     }, [test])
-    const editor = useRef();
     const isTester = useSelector(isTesterSelector)
     const defaultRole = useSelector(defaultRoleSelector)
     useEffect(() => {
@@ -132,7 +130,7 @@ export default () => {
                         <Tab key="__default" eventKey={0} title="Default view"></Tab>
                         <Tab key="__new" eventKey={1} title="+"></Tab>
                     </Tabs>
-                    { (!view.components || view.components.length == 0) && "The view is not defined" }
+                    { (!view.components || view.components.length === 0) && "The view is not defined" }
                     { view.components && view.components.map((c, i) => (
                         <div style={{ display: "flex "}}>
                            <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
@@ -154,7 +152,7 @@ export default () => {
                                            isDisabled={!isTester}/>
                                </FormGroup>
                                <FormGroup label="Rendering">
-                                 <TextArea value={ c.render && c.render.toString() || "" }
+                                 <TextArea value={ (c.render && c.render.toString()) || "" }
                                            onChange={ value => { c.render = value; setView({ ...view }) }}
                                            readOnly={!isTester}/>
                                </FormGroup>
@@ -163,7 +161,7 @@ export default () => {
                            <div style={{ width: "40px", float: "right", display: "table-cell", position: "relative", marginBottom: "25px" }}>
                                <Button style={{width: "100%", marginTop: "4px"}}
                                        variant="plain"
-                                       isDisabled={ i == 0 }
+                                       isDisabled={ i === 0 }
                                        onClick={ () => {
                                           let prev = view.components[i - 1]
                                           view.components[i - 1] = c;
@@ -181,7 +179,7 @@ export default () => {
                                }}><OutlinedTimesCircleIcon style={{color: "#a30000"}}/></Button>
                                <Button style={{width: "100%", position: "absolute", left: "0px", bottom: "4px"}}
                                        variant="plain"
-                                       isDisabled={ i == view.components.length - 1 }
+                                       isDisabled={ i === view.components.length - 1 }
                                        onClick={ () => {
                                           let prev = view.components[i + 1]
                                           view.components[i + 1] = c;

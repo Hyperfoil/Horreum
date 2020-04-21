@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -12,22 +12,16 @@ import {
     Form,
     ActionGroup,
     FormGroup,
-    InputGroup,
-    InputGroupText,
-    PageSection,
     Tab,
     Tabs,
     TextArea,
     TextInput,
     Toolbar,
-    ToolbarGroup,
-    ToolbarItem,
     ToolbarSection,
     Tooltip,
 } from '@patternfly/react-core';
 import { NavLink, Redirect } from 'react-router-dom';
 import {
-    EditIcon,
     ImportIcon,
     OutlinedTimesCircleIcon
 } from '@patternfly/react-icons';
@@ -73,17 +67,6 @@ export default () => {
         setEditorSchema(toString(schema.schema) || "{}")
     }, [schema])
     const editor = useRef();
-    const getFormSchema = () => {
-        const rtrn = {
-            name,
-            description,
-            schema: fromEditor(schema),
-        }
-        if (schemaId !== "_new") {
-            rtrn.id = schemaId;
-        }
-        return rtrn;
-    }
     const [uri, setUri] = useState(schema.uri)
     const [uriMatching, setUriMatching] = useState(true)
     const [importFailed, setImportFailed] = useState(false)

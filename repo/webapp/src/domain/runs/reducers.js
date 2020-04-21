@@ -17,7 +17,7 @@ export const reducer = (state = initialState, action) =>{
         case actionTypes.LOADED: {
             if ( !utils.isEmpty(action.runs) ) {
                 action.runs.forEach(run => {
-                    if (run != undefined) {
+                    if (run !== undefined) {
                         state.byId = state.byId.set(`${run.id}`, {
                             ...(state.byId.get(`${run.id}`) || {}), ...run
                         })
@@ -30,7 +30,7 @@ export const reducer = (state = initialState, action) =>{
             let testMap = state.byTest.get(action.id,Map({}));
             if ( !utils.isEmpty(action.runs) ) {
                 action.runs.forEach(run => {
-                    if ( run != undefined ){
+                    if ( run !== undefined ){
                         testMap = testMap.set(`${run.id}`, {
                             ...testMap.get(`${run.id}`, {}),
                             ...run
@@ -47,7 +47,7 @@ export const reducer = (state = initialState, action) =>{
             break;
         }
         case actionTypes.LOAD_SUGGESTIONS: {
-            if (state.suggestQuery.length == 0) {
+            if (state.suggestQuery.length === 0) {
                state.suggestQuery = [ action.query ]
             } else {
                state.suggestQuery = [ state.suggestQuery[0], action.query ]
