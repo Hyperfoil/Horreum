@@ -12,6 +12,7 @@ import {
     Form,
     ActionGroup,
     FormGroup,
+    Spinner,
     Tab,
     Tabs,
     TextArea,
@@ -112,6 +113,8 @@ export default () => {
         <React.Fragment>
             { goBack && <Redirect to='/schema' /> }
             <Card style={{ flexGrow: 1 }}>
+                { !schema && (<center><Spinner /></center>) }
+                { schema && (<>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
                         <ToolbarSection aria-label="form">
@@ -304,6 +307,7 @@ export default () => {
                   </ActionGroup>
                 </CardFooter>
                 }
+                </>)}
             </Card>
         </React.Fragment>
     )

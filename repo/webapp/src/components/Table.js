@@ -1,6 +1,10 @@
 import React from 'react';
+import { Spinner } from '@patternfly/react-core';
 import { useTable, useSortBy } from 'react-table'
 import clsx from 'clsx';
+
+// We need to pass the same empty list to prevent re-renders
+const NO_DATA = []
 
 function Table({ columns, data }) {
   const {
@@ -12,10 +16,15 @@ function Table({ columns, data }) {
   } = useTable(
     {
       columns,
-      data,
+      data: data || NO_DATA
     },
     useSortBy
   )
+  if (!data) {
+     return (
+        <center><Spinner /></center>
+     )
+  }
   return (
     <>
       <table className="pf-c-table pf-m-compact pf-m-grid-md" {...getTableProps()}>
@@ -27,7 +36,7 @@ function Table({ columns, data }) {
                   // Add the sorting props to control sorting. For this example
                   // we can add them into the header props
 
-                  <th className={clsx("pf-c-table__sort", column.isSorted ? "pf-m-selected" : "")} key={columnIndex} {...column.getHeaderProps(column.getSortByToggleProps())} key={columnIndex}>
+                  <th className={clsx("pf-c-table__sort", column.isSorted ? "pf-m-selected" : "")} key={columnIndex} {...column.getHeaderProps(column.getSortByToggleProps())} >
                     <button className="pf-c-button pf-m-plain" type="button">
                       {column.render('Header')}
                       {/* Add a sort direction indicator */}

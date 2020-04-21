@@ -13,6 +13,7 @@ import {
     Form,
     ActionGroup,
     FormGroup,
+    Spinner,
     Tab,
     Tabs,
     TextArea,
@@ -53,6 +54,9 @@ export default () => {
         }
     }, [dispatch, testId])
     useEffect(() => {
+        if (!test) {
+            return
+        }
         setName(test.name);
         setDescription(test.description);
         if (test.defaultView) {
@@ -75,6 +79,8 @@ export default () => {
             { goBack && <Redirect to="/test" /> }
             { updateFailed && <Alert variant="warning" title="Test update failed" /> }
             <Card style={{flexGrow:1}}>
+                { !test && (<center><Spinner /></center>) }
+                { test && (<>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
                         <ToolbarSection aria-label="form">
@@ -231,6 +237,7 @@ export default () => {
                    </ActionGroup>
                 </CardFooter>
                 }
+                </>)}
             </Card>
         </React.Fragment>
         // </PageSection>        

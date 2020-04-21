@@ -4,8 +4,8 @@ import * as utils from '../../utils'
 import { ONLY_MY_OWN } from '../../components/OwnerSelect'
 
 const initialState = {
-    byId: Map({}),
-    byTest: Map({}),
+    byId: undefined,
+    byTest: undefined,
     filteredIds: null,
     selectedRoles: ONLY_MY_OWN,
     suggestQuery: [],
@@ -18,8 +18,9 @@ export const reducer = (state = initialState, action) =>{
             if ( !utils.isEmpty(action.runs) ) {
                 action.runs.forEach(run => {
                     if (run !== undefined) {
-                        state.byId = state.byId.set(`${run.id}`, {
-                            ...(state.byId.get(`${run.id}`) || {}), ...run
+                        const byId = state.byId || Map({})
+                        state.byId = byId.set(`${run.id}`, {
+                            ...(byId.get(`${run.id}`) || {}), ...run
                         })
                     }
                 })
@@ -27,7 +28,8 @@ export const reducer = (state = initialState, action) =>{
             break;
         }
         case actionTypes.TESTID: {
-            let testMap = state.byTest.get(action.id,Map({}));
+            const byTest = state.byTest || Map({})
+            let testMap = byTest.get(action.id,Map({}));
             if ( !utils.isEmpty(action.runs) ) {
                 action.runs.forEach(run => {
                     if ( run !== undefined ){
@@ -38,7 +40,7 @@ export const reducer = (state = initialState, action) =>{
                     }
                 })
             }
-            state.byTest = state.byTest.set(`${action.id}`,testMap)
+            state.byTest = byTest.set(`${action.id}`,testMap)
             break;
         }
         case actionTypes.FILTERED: {
@@ -66,21 +68,21 @@ export const reducer = (state = initialState, action) =>{
             break
         }
         case actionTypes.UPDATE_TOKEN: {
-            let run = state.byId.get(`${action.id}`);
+            let run = state.byId && state.byId.get(`${action.id}`);
             if (run) {
                state.byId = state.byId.set(`${run.id}`, { ...run, token: action.token })
             }
             break
         }
         case actionTypes.UPDATE_ACCESS: {
-            let run = state.byId.get(`${action.id}`);
+            let run = state.byId && state.byId.get(`${action.id}`);
             if (run) {
                 state.byId = state.byId.set(`${run.id}`, { ...run, owner: action.owner, access: action.access })
             }
             break
         }
         case actionTypes.UPDATE_SCHEMA: {
-            let run = state.byId.get(`${action.id}`);
+            let run = state.byId && state.byId.get(`${action.id}`);
             if (run) {
                 state.byId = state.byId.set(`${run.id}`, { ...run, schemaUri: action.schemaUri })
             }

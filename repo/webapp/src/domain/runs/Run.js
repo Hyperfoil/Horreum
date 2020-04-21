@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from "react-router"
-import { useSelector } from 'react-redux'
-import { useDispatch } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { DateTime, Duration } from 'luxon';
+import { Spinner } from '@patternfly/react-core';
 import jsonpath from 'jsonpath';
 
 import * as actions from './actions';
@@ -241,8 +241,9 @@ export default () => {
         // <PageSection>
         <React.Fragment>
             <Card style={{ flexGrow: 1 }}>
+                { !run && (<center><Spinner /></center>)}
+                { run && (<>
                 <CardHeader>
-
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
                         <ToolbarSection aria-label="info">
                             <table className="pf-c-table pf-m-compact">
@@ -335,6 +336,7 @@ export default () => {
                         options={{ mode: "application/ld+json" }}
                     />
                 </CardBody>
+                </>) }
             </Card>
         </React.Fragment>
         // </PageSection>        
