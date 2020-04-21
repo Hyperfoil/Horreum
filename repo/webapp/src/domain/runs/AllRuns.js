@@ -67,6 +67,7 @@ export default ()=>{
         },
         {
           Header:"Actions",
+          id: "actions",
           accessor: "id",
           Cell: (arg) => {
             return (

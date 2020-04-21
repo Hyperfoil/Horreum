@@ -20,6 +20,7 @@ import ActionMenu from '../../components/ActionMenu';
 import { isTesterSelector, registerAfterLogin, roleToName } from '../../auth.js'
 
 export default ()=>{
+    const dispatch = useDispatch();
     const columns = useMemo(()=>[
         {
           Header:"Id",accessor:"id",
@@ -44,6 +45,7 @@ export default ()=>{
         },
         {
           Header:"Actions",
+          id:"actions",
           accessor: "id",
           Cell: (arg) => {
             return (
@@ -59,7 +61,6 @@ export default ()=>{
           }
         }
     ], [dispatch])
-    const dispatch = useDispatch();
     const allRuns = useSelector(selectors.all);
     useEffect(()=>{
         dispatch(fetchSummary())
