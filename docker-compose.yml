@@ -77,27 +77,28 @@ services:
     - -x
     - -c
     - |
-      export TOKEN=$$(curl -s 172.17.0.1:8180/auth/realms/master/protocol/openid-connect/token -X POST -H 'content-type: application/x-www-form-urlencoded' -d 'username=admin&password=secret&grant_type=password&client_id=admin-cli' | jq -r .access_token)
+      TOKEN=$$(curl -s 172.17.0.1:8180/auth/realms/master/protocol/openid-connect/token -X POST -H 'content-type: application/x-www-form-urlencoded' -d 'username=admin&password=secret&grant_type=password&client_id=admin-cli' | jq -r .access_token)
       [ -n "$$TOKEN" ] || exit 1
-      export AUTH='Authorization: Bearer '$$TOKEN
-      export BASEURL=172.17.0.1:8180/auth/admin/realms/horreum
-      export CLIENTID=$$(curl -s $$BASEURL/clients -H "$$AUTH" | jq -r '.[] | select(.clientId=="horreum") | .id')
-      export CLIENTSECRET=$$(curl -s $$BASEURL/clients/$$CLIENTID/client-secret -X POST -H "$$AUTH" | jq -r '.value')
+      AUTH='Authorization: Bearer '$$TOKEN
+      BASEURL=172.17.0.1:8180/auth/admin/realms/horreum
+      CLIENTID=$$(curl -s $$BASEURL/clients -H "$$AUTH" | jq -r '.[] | select(.clientId=="horreum") | .id')
+      CLIENTSECRET=$$(curl -s $$BASEURL/clients/$$CLIENTID/client-secret -X POST -H "$$AUTH" | jq -r '.value')
       [ -n "$$CLIENTSECRET" ] || exit 1
       echo QUARKUS_OIDC_CREDENTIALS_SECRET=$$CLIENTSECRET > /etc/horreum/cwd/.env
-      export UPLOADER_ID=$$(curl -s $$BASEURL/roles/uploader -H "$$AUTH"  | jq -r '.id')
-      export TESTER_ID=$$(curl -s $$BASEURL/roles/tester -H "$$AUTH" | jq -r '.id')
-      export VIEWER_ID=$$(curl -s $$BASEURL/roles/viewer -H "$$AUTH" | jq -r '.id')
-      export ADMIN_ID=$$(curl -s $$BASEURL/roles/viewer -H "$$AUTH" | jq -r '.id')
-      export TEAM_ID=$$(curl -s $$BASEURL/roles -H "$$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-team"}' | grep Location | rev | cut -f 1 -d / | rev)
+      UPLOADER_ID=$$(curl -s $$BASEURL/roles/uploader -H "$$AUTH"  | jq -r '.id')
+      TESTER_ID=$$(curl -s $$BASEURL/roles/tester -H "$$AUTH" | jq -r '.id')
+      VIEWER_ID=$$(curl -s $$BASEURL/roles/viewer -H "$$AUTH" | jq -r '.id')
+      ADMIN_ID=$$(curl -s $$BASEURL/roles/admin -H "$$AUTH" | jq -r '.id')
+      curl -s $$BASEURL/roles -H "$$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-team"}'
+      TEAM_ID=$$(curl -s $$BASEURL/roles/dev-team -H "$$AUTH" | jq -r '.id')
       curl -s $$BASEURL/roles -H "$$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-uploader","composite":true}'
-      export TEAM_UPLOADER_ID=$$(curl -s $$BASEURL/roles/dev-uploader -H "$$AUTH" | jq -r '.id')
+      TEAM_UPLOADER_ID=$$(curl -s $$BASEURL/roles/dev-uploader -H "$$AUTH" | jq -r '.id')
       curl -s $$BASEURL/roles/dev-uploader/composites -H "$$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$$TEAM_ID'"},{"id":"'$$UPLOADER_ID'"}]'
       curl -s $$BASEURL/roles -H "$$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-tester","composite":true}'
-      export TEAM_TESTER_ID=$$(curl -s $$BASEURL/roles/dev-tester -H "$$AUTH" | jq -r '.id')
+      TEAM_TESTER_ID=$$(curl -s $$BASEURL/roles/dev-tester -H "$$AUTH" | jq -r '.id')
       curl -s $$BASEURL/roles/dev-tester/composites -H "$$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$$TEAM_ID'"},{"id":"'$$TESTER_ID'"},{"id":"'$$VIEWER_ID'"}]'
       curl -s $$BASEURL/users -H "$$AUTH" -X POST -d '{"username":"user","enabled":true,"credentials":[{"type":"password","value":"secret"}]}' -H 'content-type: application/json'
-      export USER_ID=$$(curl -s $$BASEURL/users -H "$$AUTH" | jq -r '.[] | select(.username="user") | .id')
-      curl -s $$BASEURL/users/$$USER_ID/role-mappings/realm -H "$$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$$TEAM_UPLOADER_ID'"},{"id":"'$$TEAM_TESTER_ID'"},{"id":"'$$ADMIN_ID'"}]'
+      USER_ID=$$(curl -s $$BASEURL/users -H "$$AUTH" | jq -r '.[] | select(.username="user") | .id')
+      curl -s $$BASEURL/users/$$USER_ID/role-mappings/realm -H "$$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$$TEAM_UPLOADER_ID'","name":"dev-uploader"},{"id":"'$$TEAM_TESTER_ID'","name":"dev-tester"},{"id":"'$$ADMIN_ID'","name":"admin"}]'
     volumes:
     - ./:/etc/horreum/cwd:rw,z

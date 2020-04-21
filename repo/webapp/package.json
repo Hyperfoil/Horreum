@@ -19,7 +19,7 @@
     "js-beautify": "^1.10.2",
     "jshint": "^2.10.3",
     "jsonpath": "^1.0.2",
-    "keycloak-js": "^8.0.1",
+    "keycloak-js": "^9.0.3",
     "luxon": "^1.21.3",
     "monaco-editor": "^0.18.1",
     "react": "^16.11.0",
