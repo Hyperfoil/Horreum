@@ -17,6 +17,7 @@ import AccessIcon from '../../components/AccessIcon';
 import ActionMenu from '../../components/ActionMenu';
 
 export default () => {
+    const dispatch = useDispatch();
     const columns = useMemo(() => [
         {
             Header: "Access", accessor:"access",
@@ -53,8 +54,7 @@ export default () => {
                 )
             }
         }
-    ], [])
-    const dispatch = useDispatch();
+    ], [dispatch])
     const list = useSelector(selectors.all);
     useEffect(() => {
         dispatch(actions.all())

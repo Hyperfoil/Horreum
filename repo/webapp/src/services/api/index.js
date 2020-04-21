@@ -74,7 +74,7 @@ export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}, r
       return Promise.resolve(deserialize(response));
    }, (e) => {
       if (e.response) {
-         if (e.response.status == 401 || e.response.status == 403) {
+         if (e.response.status === 401 || e.response.status === 403) {
             store.dispatch({ type: REQUEST_FAILED })
          }
          return e.response.json().then(body => {

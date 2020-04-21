@@ -4,24 +4,17 @@ import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
     Button,
-    ButtonVariant,
     Card,
     CardHeader,
     CardBody,
     PageSection,
     Toolbar,
-    ToolbarGroup,
-    ToolbarItem,
     ToolbarSection,
 } from '@patternfly/react-core';
 import {
-    EditIcon,
-    OutlinedSaveIcon,
     OutlinedTimesCircleIcon,
     PlusIcon,
 } from '@patternfly/react-icons';
-import { DateTime, Duration } from 'luxon';
-import { NavLink } from 'react-router-dom';
 
 import {all,add, remove} from './actions';
 import * as selectors from './selectors';
@@ -31,6 +24,7 @@ import AddHookModal from './AddHookModal';
 
 
 export default ()=>{
+    const dispatch = useDispatch();
     const columns = useMemo(()=>[
         {
             Header:"Url",accessor:"url"
@@ -54,9 +48,8 @@ export default ()=>{
             }
         }
 
-    ],[])
+    ],[dispatch])
     const [isOpen,setOpen] = useState(false);
-    const dispatch = useDispatch();
     const list = useSelector(selectors.all);
     useEffect(()=>{
         dispatch(all())

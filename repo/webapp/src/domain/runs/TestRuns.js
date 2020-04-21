@@ -66,7 +66,7 @@ const staticColumns = [
       Cell: (arg) => {
             const { cell: { value } } = arg;
             // LEFT JOIN results in schema.id == 0
-            if (value != null && value.id != 0) {
+            if (value !== null && value.id !== 0) {
                return (<NavLink to={`/schema/${value.id}`}>{value.name}</NavLink>)
             } else {
                return "--"
@@ -91,7 +91,6 @@ export default () => {
     const { testId } = useParams();
     const test = useSelector(get(testId))
     const [columns, setColumns] = useState((test && test.defaultView) ? test.defaultView.components : [])
-    const [data, setData] = useState(columns)
     const tableColumns = useMemo(() => {
         const rtrn = [...staticColumns]
         columns.forEach((col, index) => {
@@ -117,9 +116,6 @@ export default () => {
             setColumns(test.defaultView.components)
         }
     }, [test])
-    useEffect(() => {
-        setData(columns)
-    }, [columns])
     return (
         <PageSection>
             <Card>

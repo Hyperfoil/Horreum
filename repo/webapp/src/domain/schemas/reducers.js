@@ -6,7 +6,7 @@ const initialState = {
 }
 export const reducer = (state = initialState, action) =>{
     switch(action.type){
-        case actionTypes.LOADED: {
+        case actionTypes.LOADED:
             if (!state.byId) {
                 state.byId = Map({})
             }
@@ -18,14 +18,11 @@ export const reducer = (state = initialState, action) =>{
                     })
                 })
             }
-        }
         break;
-        case actionTypes.DELETE: {
+        case actionTypes.DELETE:
             if ( state.byId && state.byId.has(`${action.id}`) ){
                 state.byId = state.byId.delete(`${action.id}`)
             }
-            
-        }
         break;
         case actionTypes.UPDATE_TOKEN: {
             let schema = state.byId && state.byId.get(`${action.id}`)

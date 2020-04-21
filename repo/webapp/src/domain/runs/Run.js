@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from "react-router"
 import { useSelector, useDispatch } from 'react-redux'
-import { DateTime, Duration } from 'luxon';
+import { DateTime } from 'luxon';
 import { Spinner } from '@patternfly/react-core';
 import jsonpath from 'jsonpath';
 
@@ -22,24 +22,12 @@ import {
     Dropdown,
     DropdownToggle,
     DropdownItem,
-    DropdownSeparator,
     InputGroup,
-    InputGroupText,
-    PageSection,
     Popover,
-    TextInput,
-    Title,
     Toolbar,
-    ToolbarGroup,
-    ToolbarItem,
     ToolbarSection,
 } from '@patternfly/react-core';
-import {
-    EditIcon,
-    OutlinedSaveIcon,
-    OutlinedTimesCircleIcon
-} from '@patternfly/react-icons';
-import { HelpIcon, SearchIcon } from '@patternfly/react-icons'
+import { HelpIcon } from '@patternfly/react-icons'
 import { toString } from '../../components/Editor';
 import { NavLink } from 'react-router-dom';
 import Autosuggest from 'react-autosuggest'
@@ -193,7 +181,7 @@ export default () => {
                .map(path => path[path.length - 1].toString())
                .filter(k => k.startsWith(incomplete))
                .map(k => k.match(/^[a-zA-Z0-9_]*$/) ? k : '"' + k + '"')
-          setPathSuggestions([ ... new Set(sgs)].sort())
+          setPathSuggestions([ ...new Set(sgs)].sort())
        } catch (e) {
           console.log("Failed query: " + query)
           setPathSuggestions([])
@@ -221,6 +209,8 @@ export default () => {
                    lastClosingSquareBracket = i;
                    break outer;
                 }
+                break;
+             default:
           }
        }
        if (lastDot >= lastClosingSquareBracket) {

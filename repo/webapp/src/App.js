@@ -3,15 +3,12 @@ import { Component } from 'react'
 import '@patternfly/patternfly/patternfly.css'; //have to use this import to customize scss-variables.scss
 
 import {
-  Flex,
-  FlexItem,
   Nav,
   NavItem,
   NavList,
   NavVariants,
   Page,
   PageHeader,
-  PageSidebar,
 } from '@patternfly/react-core';
 import { ConnectedRouter } from 'connected-react-router'
 import { NavLink } from 'react-router-dom';

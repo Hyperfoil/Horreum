@@ -81,7 +81,7 @@ export default () => {
            setUri(schemaUri);
            setUriMatching(true)
         } else {
-           setUriMatching(uri == schemaUri)
+           setUriMatching(uri === schemaUri)
         }
     }
     const checkUri = newUri => {
@@ -90,7 +90,7 @@ export default () => {
         if (!schemaUri || schemaUri === "") {
            return // nothing to do
         } else {
-           setUriMatching(newUri == schemaUri)
+           setUriMatching(newUri === schemaUri)
         }
     }
 
@@ -127,7 +127,7 @@ export default () => {
                                         id="schemaName"
                                         aria-describedby="name-helper"
                                         name="schemaName"
-                                        isValid={ name && name != "" || !isTester }
+                                        isValid={ (name && name !== "") || !isTester }
                                         isReadOnly={ !isTester }
                                         onChange={e => setName(e)}
                                     />
@@ -149,9 +149,8 @@ export default () => {
                                         type="text"
                                         id="schemaURI"
                                         name="schemaURI"
-                                        onChange={setUri}
                                         isReadOnly={ !isTester }
-                                        isValid={uri && uri != "" || !isTester}
+                                        isValid={(uri && uri !== "") || !isTester}
                                         onChange={e => {
                                             setUri(e)
                                             checkUri(e)
@@ -225,7 +224,7 @@ export default () => {
                        <Tab key="schema" eventKey={0} title="JSON schema" style={{ height: "100%" }} onClick={ () => setActiveTab(0) }/>
                        <Tab key="extractors" eventKey={1} title="Schema extractors" onClick={ () => setActiveTab(1) }/>
                     </Tabs>
-                    { activeTab == 0 &&
+                    { activeTab === 0 &&
                     <div style={{ height: "600px" }}>
                        <Editor
                          value={editorSchema || "{}"}
@@ -234,7 +233,7 @@ export default () => {
                        />
                     </div>
                     }
-                    { activeTab == 1 && extractors.filter(e => !e.deleted).map(e => (<>
+                    { activeTab === 1 && extractors.filter(e => !e.deleted).map(e => (<>
                        <Form isHorizontal={true} style={{ gridGap: "2px", marginBottom: "10px", paddingRight: "40px", position: "relative" }}>
                           <FormGroup label="Accessor">
                               <TextInput value={e.newName}
@@ -265,7 +264,7 @@ export default () => {
                           }
                        </Form>
                     </>))}
-                    { activeTab == 1 && isTester &&
+                    { activeTab === 1 && isTester &&
                        <Button onClick={() => setExtractors([...extractors, { schema: uri }])}>Add extractor</Button>
                     }
                 </CardBody>

@@ -58,10 +58,10 @@ function Table({ columns, data }) {
             (row, i) => {
               prepareRow(row);
               return (
-                <tr key={i} {...row.getRowProps()} key={i}>
+                <tr key={i} {...row.getRowProps()} >
                   {row.cells.map((cell,cellIndex) => {
                     return (
-                      <td data-label={cell.column.Header} key={cellIndex} {...cell.getCellProps()} key={cellIndex}>{cell.render('Cell')}</td>
+                      <td data-label={cell.column.Header} key={cellIndex} {...cell.getCellProps()} >{cell.render('Cell')}</td>
                     )
                   })}
                 </tr>

@@ -5,8 +5,8 @@ const initialState = {
     byId: undefined,
 }
 export const reducer = (state = initialState, action) =>{
-    switch(action.type){
-        case actionTypes.LOADED: {
+    switch(action.type) {
+        case actionTypes.LOADED:
             if (!state.byId) {
                 state.byId = Map({})
             }
@@ -17,8 +17,6 @@ export const reducer = (state = initialState, action) =>{
                     })
                 })
             }
-         
-        }
         break;
         case actionTypes.DELETE: {
             const byId = state.byId || Map({})

@@ -2,21 +2,12 @@ import React, { useState } from 'react';
 import {
     Button,
     ButtonVariant,
-    Card,
-    CardHeader,
-    CardBody,
     Form,
-  FormGroup,
-  TextInput,
-  TextArea,
-  FormSelectOption,
-  FormSelect,
+    FormGroup,
+    FormSelectOption,
+    FormSelect,
     Modal,
-    PageSection,
-    Toolbar,
-    ToolbarGroup,
-    ToolbarItem,
-    ToolbarSection,
+    TextInput,
 } from '@patternfly/react-core';
 
 const eventTypes = ["new/test","new/run"]

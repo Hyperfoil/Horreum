@@ -42,6 +42,7 @@ export default ()=>{
     const [matchDisabled, setMatchDisabled] = useState(false)
     const [matchAll, setMatchAll] = useState(false)
 
+    const dispatch = useDispatch();
     const columns = useMemo(()=>[
         {
           Header:"Id",accessor:"id",
@@ -81,11 +82,10 @@ export default ()=>{
                          onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, owner, access)) } />
           )}
         }
-    ],[roles])
+    ],[roles, dispatch])
 
     const selectedRoles = useSelector(selectors.selectedRoles)
 
-    const dispatch = useDispatch();
     const runFilter = (roles) => {
        setFilterLoading(true)
        dispatch(filter(filterQuery, matchAll, roles, success => {
@@ -94,7 +94,7 @@ export default ()=>{
        }))
     };
     const handleMatchAll = (v, evt) => {
-       if (v) setMatchAll(evt.target.value == "true")
+       if (v) setMatchAll(evt.target.value === "true")
     }
     const suggestions = useSelector(selectors.suggestions)
     const loadingDisplay = useSelector(selectors.isFetchingSuggestions) ? "inline-block" : "none"
@@ -123,7 +123,7 @@ export default ()=>{
     }
     const [typingTimer, setTypingTimer] = useState(null)
     const fetchSuggestions = ({value}) => {
-       if (value == filterQuery) {
+       if (value === filterQuery) {
          return;
        }
        if (typingTimer !== null) {
@@ -144,7 +144,7 @@ export default ()=>{
             <CardHeader>
               <div className="pf-c-input-group">
                  <Tooltip position="right" content={<span>PostgreSQL JSON path documentation</span>}>
-                     <a style={{ padding: "5px 8px" }} target="_blank"
+                     <a style={{ padding: "5px 8px" }} target="_blank" rel="noopener noreferrer"
                         href="https://www.postgresql.org/docs/12/functions-json.html#FUNCTIONS-SQLJSON-PATH">
                         <HelpIcon />
                      </a>
@@ -177,6 +177,7 @@ export default ()=>{
                                                 return filterQuery.substring(0, i + 1) + value
                                              }
                                              break;
+                                          default:
                                        }
                                     }
                                     return value;
@@ -188,7 +189,7 @@ export default ()=>{
                                            className="pf-c-form-control"
                                            aria-invalid={!filterValid}
                                            onKeyPress={ evt => {
-                                              if (evt.key == "Enter") runFilter()
+                                              if (evt.key === "Enter") runFilter()
                                            }}
                                            style={{ width: "500px" }}/>
                                  )}
