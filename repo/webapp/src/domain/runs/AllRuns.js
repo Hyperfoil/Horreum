@@ -45,28 +45,40 @@ export default ()=>{
     const dispatch = useDispatch();
     const columns = useMemo(()=>[
         {
-          Header:"Id",accessor:"id",
+          Header:"Id",
+          accessor:"id",
           Cell: (arg) => {
             const {cell: {value} } = arg;
             return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
             }
-        },
-        {
-          Header: "Access", accessor:"access",
+        }, {
+          Header: "Access",
+          accessor: "access",
           Cell: (arg) => <AccessIcon access={arg.cell.value} />
-        },
-        {Header:"Owner",accessor:"owner", Cell: (arg) => roleToName(arg.cell.value)},
-        {Header:"Start",accessor:v=>DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")},
-        {Header:"Stop",accessor:v=>DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")},
-        {Header:"Duration",accessor:v => Duration.fromMillis(v.stop - v.start).toFormat("hh:mm:ss.SSS")},
-        {
-          Header:"Test",accessor:"testid",
+        }, {
+          Header: "Owner",
+          accessor:"owner",
+          Cell: (arg) => roleToName(arg.cell.value)
+        }, {
+          Header: "Start",
+          id: "start",
+          accessor: v => DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+        }, {
+          Header:"Stop",
+          id: "stop",
+          accessor: v => DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+        }, {
+          Header:"Duration",
+          id: "duration",
+          accessor: v => Duration.fromMillis(v.stop - v.start).toFormat("hh:mm:ss.SSS")
+        }, {
+          Header:"Test",
+          accessor:"testid",
           Cell: (arg) => {
             const {cell: {value} } = arg;
             return (<NavLink to={`/run/list/${value}`}>{value}</NavLink>)
           }
-        },
-        {
+        }, {
           Header:"Actions",
           id: "actions",
           accessor: "id",
@@ -231,7 +243,7 @@ export default ()=>{
               </div>
             </CardHeader>
             <CardBody>
-              <Table columns={columns} data={runs}/>
+              <Table columns={columns} data={runs} initialSortBy={[{id: "stop", desc: true}]}/>
             </CardBody>
           </Card>
         </PageSection>

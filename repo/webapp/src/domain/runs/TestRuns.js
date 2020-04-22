@@ -54,16 +54,24 @@ const renderCell = (render) => (arg) => {
 
 const staticColumns = [
     {
-        Header: "Id", accessor: "id",
+        Header: "Id",
+        accessor: "id",
         Cell: (arg) => {
             const { cell: { value } } = arg;
             return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
         }
-    },
-    { Header: "Start", accessor: v => window.DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") },
-    { Header: "Stop", accessor: v => window.DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") },
-    { Header: "Schema", accessor: "schema",
-      Cell: (arg) => {
+    }, {
+        Header: "Start",
+        id: "start",
+        accessor: v => window.DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+    }, {
+        Header: "Stop",
+        id: "stop",
+        accessor: v => window.DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+    }, {
+        Header: "Schema",
+        accessor: "schema",
+        Cell: (arg) => {
             const { cell: { value } } = arg;
             // LEFT JOIN results in schema.id == 0
             if (value !== null && value.id !== 0) {
@@ -71,20 +79,8 @@ const staticColumns = [
             } else {
                return "--"
             }
-      }
+        }
     }
-    //    These are removed because they assume the runs are specjEnterprise2010
-    //    {
-    //        "Header": "GC Overhead", "accessor": "gc", "jsonpath": "jsonb_path_query_array(data,'$.benchserver4.gclog[*] ? ( exists(@.capacity) )')",
-    //        "render": (v)=>{
-    //            const totalSeconds = v.reduce((total,entry)=>total+entry.seconds,0.0);
-    //            const lastTimestamp = v[v.length-1].timestamp;
-    //            return Number.parseFloat(100*totalSeconds/lastTimestamp).toFixed(3)+" %";
-    //        }
-    //    },
-    //    { Header: "Scale", accessor: "scale", jsonpath: '$.faban.run.SPECjEnterprise."fa:runConfig"."fa:scale"."text()"' },
-    //    { Header: "Ramp Up", accessor: "rampup", jsonpath: '$.faban.run.SPECjEnterprise."fa:runConfig"."fa:runControl"."fa:rampUp"."text()"' },
-    //    { Header: "Faban ID", accessor: "fabanid", jsonpath: '$.faban.xml.benchResults.benchSummary.runId."text()"' },
 ]
 
 export default () => {
@@ -130,7 +126,7 @@ export default () => {
                     </Toolbar>
                 </CardHeader>
                 <CardBody>
-                    <Table columns={tableColumns} data={runs} />
+                    <Table columns={tableColumns} data={runs} initialSortBy={[{id: "stop", desc: true}]}/>
                 </CardBody>
             </Card>
         </PageSection>

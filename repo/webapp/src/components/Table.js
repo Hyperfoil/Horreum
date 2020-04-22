@@ -6,7 +6,7 @@ import clsx from 'clsx';
 // We need to pass the same empty list to prevent re-renders
 const NO_DATA = []
 
-function Table({ columns, data }) {
+function Table({ columns, data, initialSortBy = [] }) {
   const {
     getTableProps,
     getTableBodyProps,
@@ -16,7 +16,10 @@ function Table({ columns, data }) {
   } = useTable(
     {
       columns,
-      data: data || NO_DATA
+      data: data || NO_DATA,
+      initialState: {
+         sortBy: initialSortBy
+      }
     },
     useSortBy
   )
