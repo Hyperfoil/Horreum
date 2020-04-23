@@ -58,6 +58,7 @@ export default () => {
             return
         }
         setName(test.name);
+        document.title = test && test.name ? test.name + " | Horreum" :  "Loading test... | Horreum";
         setDescription(test.description);
         if (test.defaultView) {
             setView(test.defaultView)

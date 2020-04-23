@@ -51,6 +51,7 @@ export default () => {
     }, [dispatch, id])
     useEffect(() => {
         //change the loaded document when the run changes
+        document.title = run && run.id ? "Run " + run.id + " | Horreum" : "Loading run... | Horreum"
         setData(toString(run.data) || "{}");
     }, [run])
 
@@ -307,11 +308,14 @@ export default () => {
                     </Toolbar>
                 </CardHeader>
                 <CardBody>
+                    { !run.data && (<center><Spinner /></center>) }
+                    { run.data &&
                     <Editor
                         value={data}
                         setValueGetter={e => { editor.current = e }}
                         options={{ mode: "application/ld+json" }}
                     />
+                    }
                 </CardBody>
                 </>) }
             </Card>

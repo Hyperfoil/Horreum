@@ -32,6 +32,7 @@ import OwnerSelect from '../../components/OwnerSelect';
 import ActionMenu from '../../components/ActionMenu';
 
 export default ()=>{
+    document.title = "Runs | Horreum"
     const runs = useSelector(selectors.filter)
     const roles = useSelector(rolesSelector)
     const isAuthenticated = useSelector(isAuthenticatedSelector)

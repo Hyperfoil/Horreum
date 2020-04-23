@@ -24,6 +24,7 @@ import AddHookModal from './AddHookModal';
 
 
 export default ()=>{
+    document.title = "WebHooks | Horreum"
     const dispatch = useDispatch();
     const columns = useMemo(()=>[
         {

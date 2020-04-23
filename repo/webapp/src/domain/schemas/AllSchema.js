@@ -17,6 +17,7 @@ import AccessIcon from '../../components/AccessIcon';
 import ActionMenu from '../../components/ActionMenu';
 
 export default () => {
+    document.title = "Schemas | Horreum"
     const dispatch = useDispatch();
     const columns = useMemo(() => [
         {

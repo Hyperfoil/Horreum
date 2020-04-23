@@ -20,6 +20,7 @@ import ActionMenu from '../../components/ActionMenu';
 import { isTesterSelector, registerAfterLogin, roleToName } from '../../auth.js'
 
 export default ()=>{
+    document.title = "Tests | Horreum"
     const dispatch = useDispatch();
     const columns = useMemo(()=>[
         {

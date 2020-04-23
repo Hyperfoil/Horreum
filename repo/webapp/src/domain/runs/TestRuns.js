@@ -108,6 +108,7 @@ export default () => {
         dispatch(byTest(testId))
     }, [dispatch])
     useEffect(() => {
+        document.title = test.name + " | Horreum"
         if (test && test.defaultView) {
             setColumns(test.defaultView.components)
         }
