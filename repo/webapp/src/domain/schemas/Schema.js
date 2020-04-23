@@ -244,11 +244,14 @@ export default () => {
                                  setExtractors([...extractors])
                               }}/>
                           </FormGroup>
-                          <FormGroup label="JSON path">
+                          <FormGroup label="JSON path"
+                                     isValid={!e.jsonpath || !e.jsonpath.trim().startsWith("$")}
+                                     helperTextInvalid="JSON path must not start with '$'">
                               <TextInput value={e.jsonpath}
                                          isReadOnly={!isTester}
+                                         isValid={!e.jsonpath || !e.jsonpath.trim().startsWith("$")}
                                          onChange={newValue => {
-                                 e.jsonpath = newValue
+                                 e.jsonpath = newValue.trim()
                                  e.changed = true
                                  setExtractors([...extractors])
                               }}/>
