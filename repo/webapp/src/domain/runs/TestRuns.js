@@ -74,8 +74,8 @@ const staticColumns = [
         Cell: (arg) => {
             const { cell: { value } } = arg;
             // LEFT JOIN results in schema.id == 0
-            if (value !== null && value.id !== 0) {
-               return (<NavLink to={`/schema/${value.id}`}>{value.name}</NavLink>)
+            if (value) {
+               return Object.keys(value).map(key => (<><NavLink to={`/schema/${key}`}>{value[key]}</NavLink>&nbsp;</>))
             } else {
                return "--"
             }

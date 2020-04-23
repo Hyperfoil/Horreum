@@ -76,6 +76,17 @@ public class RunService {
             "FROM run, jsonb_path_query(run.data, ? ::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
+   private static final String FIND_ACCESSORS =
+         "SELECT accessor, (SELECT '$' || se.jsonpath) as path, schema.uri, schema.id as schemaid, run.id as runid " +
+         "FROM run JOIN schema ON schema.uri IN (" +
+            "SELECT jsonb_path_query(run.data, '$.\\$schema'::jsonpath)#>>'{}' " +
+         ") LEFT JOIN schemaextractor se on se.schema_id = schema.id " +
+         "WHERE run.testid = ?" +
+         "UNION SELECT accessor, (SELECT '$.*' || se.jsonpath) as path, schema.uri, schema.id as schemaid, run.id as runid " +
+         "FROM run JOIN schema ON schema.uri IN (" +
+            "SELECT jsonb_path_query(run.data, '$.*.\\$schema'::jsonpath)#>>'{}' " +
+         ") LEFT JOIN schemaextractor se on se.schema_id = schema.id " +
+         "WHERE run.testid = ?";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -172,27 +183,6 @@ public class RunService {
       }
    }
 
-   @RolesAllowed("tester")
-   @POST
-   @Path("{id}/updateSchema")
-   @Transactional
-   // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-   public Response updateAccess(@PathParam("id") Integer id,
-                            @QueryParam("schema") String schemaUri) {
-      if (schemaUri == null) {
-         return Response.status(Response.Status.BAD_REQUEST).entity("Missing schema").build();
-      }
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
-         Run run = em.find(Run.class, id);
-         if (run == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-         }
-         run.schemaUri = schemaUri;
-         run.persistAndFlush();
-         return Response.noContent().build();
-      }
-   }
-
    @PermitAll
    @GET
    @Path("{id}/structure")
@@ -269,7 +259,6 @@ public class RunService {
          run.start = startInstant;
          run.stop = stopInstant;
          run.data = data;
-         run.schemaUri = schemaUri;
          run.owner = owner;
          run.access = access;
 
@@ -645,7 +634,10 @@ public class RunService {
                             @QueryParam("sort") String sort,
                             @QueryParam("direction") String direction) {
       // TODO: this is combining EntityManager and JDBC access :-/
-      StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, run.owner, run.schemauri, schema.id");
+      StringBuilder sql = new StringBuilder("WITH access AS (").append(FIND_ACCESSORS).append(") ")
+         .append("SELECT run.id, run.start, run.stop, run.testId, run.owner, (")
+         .append("    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) FROM access WHERE run.id = access.runid GROUP BY schemaid")
+         .append(")::text as schemas");
       Test test;
       try (CloseMe h = sqlService.withRoles(em, identity)) {
          test = Test.find("id", testId).firstResult();
@@ -655,44 +647,46 @@ public class RunService {
          if (test.defaultView != null) {
             for (ViewComponent c : test.defaultView.components) {
                sql.append(", ").append(c.isArray ? "jsonb_path_query_array" : "jsonb_path_query_first").append("(data, (");
-               sql.append("   SELECT jsonpath FROM schemaextractor se INNER JOIN schema ON se.schema_id = schema.id");
-               sql.append("   WHERE schema.uri = run.schemauri AND se.accessor = ?");
+               sql.append("   SELECT path FROM access WHERE access.accessor = ? AND access.runid = run.id");
                sql.append(")::jsonpath)#>>'{}'");
             }
          }
       }
-      sql.append(" FROM run LEFT JOIN schema ON run.schemauri = schema.uri WHERE run.testid = ?");
+      sql.append(" FROM run WHERE run.testid = ?");
       // TODO: use parameters in paging
       addPaging(sql, limit, page, sort, direction);
       try (Connection connection = dataSource.getConnection();
            CloseMeJdbc h = sqlService.withRoles(connection, identity);
            PreparedStatement statement = connection.prepareStatement(sql.toString())){
+         statement.setInt(1, testId);
+         statement.setInt(2, testId);
          int counter = 1;
          if (test.defaultView != null) {
             for (ViewComponent c : test.defaultView.components) {
-               statement.setString(counter++, c.accessor);
+               statement.setString(2 + counter++, c.accessor);
             }
          }
-         statement.setInt(counter, testId);
+         statement.setInt(2 + counter, testId);
          ResultSet resultSet = statement.executeQuery();
          Json.ArrayBuilder jsonResult = Json.array();
          while (resultSet.next()) {
             Json.ArrayBuilder view = Json.array();
             for (int i = 1; i < counter; ++i) {
-               String value = resultSet.getString(7 + i);
+               String value = resultSet.getString(6 + i);
                if (test.defaultView.components.get(i - 1).isArray) {
                   view.add(Json.fromString(value));
                } else {
                   view.add(value);
                }
             }
+            String schemas = resultSet.getString(6);
             jsonResult.add(Json.map()
                   .add("id", resultSet.getInt(1))
                   .add("start", resultSet.getTimestamp(2).getTime())
                   .add("stop", resultSet.getTimestamp(3).getTime())
                   .add("testId", resultSet.getInt(4))
                   .add("owner", resultSet.getString(5))
-                  .add("schema", Json.map().add("name", resultSet.getString(6)).add("id", resultSet.getInt(7)).build())
+                  .add("schema", schemas == null ? null : Json.fromJs(schemas))
                   .add("view", view.build()).build());
          }
          return Response.ok(jsonResult.build()).build();

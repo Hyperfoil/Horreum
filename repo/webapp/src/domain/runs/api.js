@@ -13,7 +13,6 @@ const endPoints = {
     resetToken: (runId) => `${base}/${runId}/resetToken`,
     dropToken: (runId) => `${base}/${runId}/dropToken`,
     updateAccess: (runId, owner, access) => `${base}/${runId}/updateAccess?owner=${owner}&access=${access}`,
-    updateSchema: (runId, schemaUri) => `${base}/${runId}/updateSchema?schema=${schemaUri}`,
 }
 
 export const all = () => {
@@ -44,5 +43,3 @@ export const updateAccess = (id, owner, access) => {
 //                   "owner=" + encodeURIComponent(owner) + "&access=" + encodeURIComponent(access),
 //                   'post', { 'content-type' : 'application/x-www-form-urlencoded'}, 'response')
 }
-
-export const updateSchema = (id, schemaUri) => fetchApi(endPoints.updateSchema(id, schemaUri), null, 'post');

@@ -83,13 +83,6 @@ export const reducer = (state = initialState, action) =>{
             }
             break
         }
-        case actionTypes.UPDATE_SCHEMA: {
-            let run = state.byId && state.byId.get(`${action.id}`);
-            if (run) {
-                state.byId = state.byId.set(`${run.id}`, { ...run, schemaUri: action.schemaUri })
-            }
-            break
-        }
         default:
     }
     return state;

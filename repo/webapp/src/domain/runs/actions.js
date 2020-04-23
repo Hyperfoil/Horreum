@@ -134,13 +134,3 @@ export const updateAccess = (id, owner, access) => dispatch => {
       })
    })
 }
-
-export const updateSchema = (id, schemaUri) => dispatch => {
-   return api.updateSchema(id, schemaUri).then(response => {
-      dispatch({
-         type: actionTypes.UPDATE_SCHEMA,
-         id: id,
-         schemaUri: schemaUri,
-      })
-   })
-}
