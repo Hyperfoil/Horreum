@@ -678,25 +678,27 @@ public class RunService {
          Json.ArrayBuilder jsonResult = Json.array();
          while (resultSet.next()) {
             Json.ArrayBuilder view = Json.array();
-            int i = 7;
-            for (ViewComponent c : test.defaultView.components) {
-               String[] accessors = c.accessors();
-               if (accessors.length == 1) {
-                  String value = resultSet.getString(i++);
-                  if (ViewComponent.isArray(accessors[0])) {
-                     view.add(Json.fromString(value));
-                  } else {
-                     view.add(value);
-                  }
-               } else {
-                  Json.MapBuilder map = Json.map();
-                  view.add(map);
-                  for (String accessor : accessors) {
+            if (test.defaultView != null) {
+               int i = 7;
+               for (ViewComponent c : test.defaultView.components) {
+                  String[] accessors = c.accessors();
+                  if (accessors.length == 1) {
                      String value = resultSet.getString(i++);
-                     if (ViewComponent.isArray(accessor)) {
-                        map.add(ViewComponent.arrayName(accessor), Json.fromString(value));
+                     if (ViewComponent.isArray(accessors[0])) {
+                        view.add(Json.fromString(value));
                      } else {
-                        map.add(accessor, value);
+                        view.add(value);
+                     }
+                  } else {
+                     Json.MapBuilder map = Json.map();
+                     view.add(map);
+                     for (String accessor : accessors) {
+                        String value = resultSet.getString(i++);
+                        if (ViewComponent.isArray(accessor)) {
+                           map.add(ViewComponent.arrayName(accessor), Json.fromString(value));
+                        } else {
+                           map.add(accessor, value);
+                        }
                      }
                   }
                }
