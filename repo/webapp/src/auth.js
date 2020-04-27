@@ -110,6 +110,7 @@ export const initKeycloak = state => {
       let initPromise = null;
       if (!keycloak.authenticated) {
         initPromise = keycloak.init({
+          onLoad: "check-sso",
           promiseType: 'native',
         });
         initPromise.then(authenticated => {
