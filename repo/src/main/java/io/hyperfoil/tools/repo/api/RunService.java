@@ -646,9 +646,11 @@ public class RunService {
          }
          if (test.defaultView != null) {
             for (ViewComponent c : test.defaultView.components) {
-               sql.append(", ").append(c.isArray ? "jsonb_path_query_array" : "jsonb_path_query_first").append("(data, (");
-               sql.append("   SELECT path FROM access WHERE access.accessor = ? AND access.runid = run.id");
-               sql.append(")::jsonpath)#>>'{}'");
+               for (String accessor : c.accessors()) {
+                  sql.append(", ").append(ViewComponent.isArray(accessor) ? "jsonb_path_query_array" : "jsonb_path_query_first").append("(data, (");
+                  sql.append("   SELECT path FROM access WHERE access.accessor = ? AND access.runid = run.id");
+                  sql.append(")::jsonpath)#>>'{}'");
+               }
             }
          }
       }
@@ -663,7 +665,12 @@ public class RunService {
          int counter = 1;
          if (test.defaultView != null) {
             for (ViewComponent c : test.defaultView.components) {
-               statement.setString(2 + counter++, c.accessor);
+               for (String accessor : c.accessors()) {
+                  if (ViewComponent.isArray(accessor)) {
+                     accessor = ViewComponent.arrayName(accessor);
+                  }
+                  statement.setString(2 + counter++, accessor);
+               }
             }
          }
          statement.setInt(2 + counter, testId);
@@ -671,12 +678,27 @@ public class RunService {
          Json.ArrayBuilder jsonResult = Json.array();
          while (resultSet.next()) {
             Json.ArrayBuilder view = Json.array();
-            for (int i = 1; i < counter; ++i) {
-               String value = resultSet.getString(6 + i);
-               if (test.defaultView.components.get(i - 1).isArray) {
-                  view.add(Json.fromString(value));
+            int i = 7;
+            for (ViewComponent c : test.defaultView.components) {
+               String[] accessors = c.accessors();
+               if (accessors.length == 1) {
+                  String value = resultSet.getString(i++);
+                  if (ViewComponent.isArray(accessors[0])) {
+                     view.add(Json.fromString(value));
+                  } else {
+                     view.add(value);
+                  }
                } else {
-                  view.add(value);
+                  Json.MapBuilder map = Json.map();
+                  view.add(map);
+                  for (String accessor : accessors) {
+                     String value = resultSet.getString(i++);
+                     if (ViewComponent.isArray(accessor)) {
+                        map.add(ViewComponent.arrayName(accessor), Json.fromString(value));
+                     } else {
+                        map.add(accessor, value);
+                     }
+                  }
                }
             }
             String schemas = resultSet.getString(6);
@@ -686,7 +708,7 @@ public class RunService {
                   .add("stop", resultSet.getTimestamp(3).getTime())
                   .add("testId", resultSet.getInt(4))
                   .add("owner", resultSet.getString(5))
-                  .add("schema", schemas == null ? null : Json.fromJs(schemas))
+                  .add("schema", schemas == null ? null : Json.fromString(schemas))
                   .add("view", view.build()).build());
          }
          return Response.ok(jsonResult.build()).build();

@@ -251,7 +251,7 @@ export default () => {
                                          isReadOnly={!isTester}
                                          isValid={!e.jsonpath || !e.jsonpath.trim().startsWith("$")}
                                          onChange={newValue => {
-                                 e.jsonpath = newValue.trim()
+                                 e.jsonpath = newValue;
                                  e.changed = true
                                  setExtractors([...extractors])
                               }}/>

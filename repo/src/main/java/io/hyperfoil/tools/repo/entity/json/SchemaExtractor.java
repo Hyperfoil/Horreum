@@ -4,7 +4,6 @@ import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.json.bind.serializer.JsonbSerializer;
 import javax.json.bind.serializer.SerializationContext;
 import javax.json.stream.JsonGenerator;
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -15,7 +14,7 @@ import javax.validation.constraints.NotNull;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
- * Defines a mapping between {@link ViewComponent} through {@link ViewComponent#accessor} matching {@link #accessor}
+ * Defines a mapping between {@link ViewComponent} through {@link ViewComponent#accessors} matching {@link #accessor}
  * and the {@link Schema}. Access is limited by access to the schema.
  */
 @Entity

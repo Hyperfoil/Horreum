@@ -1,9 +1,9 @@
 package io.hyperfoil.tools.repo.entity.json;
 
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import javax.json.bind.annotation.JsonbTransient;
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -42,17 +42,25 @@ public class ViewComponent extends PanacheEntityBase {
    public String headerName;
 
    @NotNull
-   public String accessor;
-
-   // TODO: we'll probably change this into enum: PLAIN, ARRAY, SUM, MAX, MIN, COUNT
-   @NotNull
-   @Column(columnDefinition = "bool default false")
-   public Boolean isArray;
+   public String accessors;
 
    /**
     * When this is <code>null</code> defaults to rendering as plain text.
     */
    public String render;
+
+   // TODO: eventually we could have syntax for min, max, sum...
+   public static boolean isArray(String accessor) {
+      return accessor.endsWith("[]");
+   }
+
+   public static String arrayName(String accessor) {
+      return accessor.substring(0, accessor.length() - 2);
+   }
+
+   public String[] accessors() {
+      return Stream.of(accessors.split("[,;] *")).map(String::trim).toArray(String[]::new);
+   }
 
    @Override
    public boolean equals(Object o) {
@@ -62,12 +70,12 @@ public class ViewComponent extends PanacheEntityBase {
       return headerOrder == that.headerOrder &&
             Objects.equals(id, that.id) &&
             Objects.equals(headerName, that.headerName) &&
-            Objects.equals(accessor, that.accessor) &&
+            Objects.equals(accessors, that.accessors) &&
             Objects.equals(render, that.render);
    }
 
    @Override
    public int hashCode() {
-      return Objects.hash(id, headerOrder, headerName, accessor, render);
+      return Objects.hash(id, headerOrder, headerName, accessors, render);
    }
 }

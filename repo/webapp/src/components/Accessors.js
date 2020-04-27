@@ -19,35 +19,27 @@ import {
    AddCircleOIcon,
 } from '@patternfly/react-icons';
 
-/* This is going to be a complex component with modal for Extractor definition */
-export default ({ value = "", onChange = newValue => {}, isReadOnly = false}) => {
+export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) => {
+   const [created, setCreated] = useState({})
    const onCreate = newValue => {
-      setSelected({ accessor: newValue })
-      setModalOpen(true)
+         setCreated({ accessor: newValue })
+         setModalOpen(true)
    }
    const [isExpanded, setExpanded] = useState(false)
-   const [selected, setSelected] = useState({ accessor: value, toString: () => value })
-   const [options, setOptions] = useState([])
+   const [options, setOptions] = useState(value.map(v => ({ accessor: v })))
+   const [selected, setSelected] = useState(value)
    useEffect(() => {
       listExtractors().then(response => {
          setOptions(response)
-         const firstMatch = response.filter(o => o.accessor === selected.accessor)[0]
-         if (firstMatch) {
-            setSelected({ ...firstMatch, ...selected })
-         }
       })
    }, [])
-   useEffect(() => {
-      const firstMatch = options.filter(o => o.accessor === value)[0]
-      if (firstMatch) {
-         setSelected({ ...firstMatch, accessor: value, toString: () => value })
-      }
-   }, [value])
    const [modalOpen, setModalOpen] = useState(false)
    const [addFailed, setAddFailed] = useState(false)
    return (<>
-      <Select variant="typeahead"
+      <Select variant="typeaheadmulti"
               aria-label="Select accessor"
+              ariaLabelTypeAhead="Select accessor"
+              placeholderText="Select accessor"
               isCreatable={true}
               onCreateOption={onCreate}
               isExpanded={isExpanded}
@@ -55,23 +47,24 @@ export default ({ value = "", onChange = newValue => {}, isReadOnly = false}) =>
               selections={selected}
               isDisabled={isReadOnly}
               onClear={ () => {
-                 setSelected(null)
+                 setSelected([])
                  setExpanded(false)
-                 onChange(null)
+                 onChange([])
               }}
               onSelect={ (e, newValue) => {
-                 if (typeof(newValue) === "string") {
-                    setSelected({ accessor: newValue, toString: () => newValue })
-                    onChange(newValue)
+                 var updated
+                 if (selected.includes(newValue)) {
+                    updated = selected.filter(o => o != newValue)
                  } else {
-                    setSelected(newValue)
-                    onChange(newValue.accessor)
+                    updated = [...selected, newValue]
                  }
+                 setSelected(updated)
+                 onChange(updated)
                  setExpanded(false)
               }}
       >
-      {options.map((option, index) => (
-         <SelectOption key={index} value={{ ...option, toString: () => option.accessor }} />
+      { options.map((option, index) => (
+         <SelectOption key={index} value={option.accessor} />
       ))}
       </Select>
       { selected !== null && selected.schema &&
@@ -88,33 +81,35 @@ export default ({ value = "", onChange = newValue => {}, isReadOnly = false}) =>
              isOpen={modalOpen}
              onClose={() => setModalOpen(false) }>
          <Form isHorizontal={true}>
-            <FormGroup label="Accessor" isRequired={true}>
-               <TextInput value={ selected.accessor }
+            <FormGroup label="Accessor" isRequired={true} fieldId="extractor-accessor">
+               <TextInput value={ created.accessor || "" }
                           isRequired
                           id="extractor-accessor"
                           name="extractor-accessor"
-                          isValid={ selected.accessor && selected.accessor !== "" }
-                          onChange={ value => setSelected({ ...selected, accessor: value})}
+                          isValid={ created.accessor && created.accessor !== "" }
+                          onChange={ value => setCreated({ ...created, accessor: value})}
                 />
             </FormGroup>
-            <FormGroup label="Schema" isRequired={true}>
+            <FormGroup label="Schema" isRequired={true} fieldId="extractor-schema" >
                <SchemaSelect value={ selected.schema }
-                             onChange={ value => { setSelected({ ...selected, schema: value, toString: () => selected.accessor })}} />
+                             id="extractor-schema"
+                             onChange={ value => { setCreated({ ...created, schema: value, toString: () => created.accessor })}} />
             </FormGroup>
-            <FormGroup label="JSON path" isRequired={true}>
-               <TextInput value={ selected.jsonpath }
+            <FormGroup label="JSON path" isRequired={true} fieldId="extractor-jsonpath">
+               <TextInput value={ created.jsonpath || "" }
                           isRequired
                           id="extractor-jsonpath"
                           name="extractor-jsonpath"
-                          isValid={ selected.jsonpath && selected.jsonpath !== "" }
-                          onChange={ value => setSelected({ ...selected, jsonpath: value})}
+                          isValid={ created.jsonpath && created.jsonpath !== "" && !created.jsonpath.startsWith("$") }
+                          onChange={ value => setCreated({ ...created, jsonpath: value})}
               />
             </FormGroup>
             <ActionGroup>
                <Button variant="primary"
                        onClick={e => {
-                          addOrUpdateExtractor(selected).then(response => {
-                             setOptions([ ...options, selected ].sort())
+                          addOrUpdateExtractor(created).then(response => {
+                             setOptions([...options, created].sort())
+                             setSelected([...selected, created.accessor])
                              setModalOpen(false)
                           }, e => {
                              setAddFailed(true)

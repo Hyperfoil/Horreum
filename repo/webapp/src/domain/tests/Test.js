@@ -39,7 +39,7 @@ import {
 
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
-import Accessor from '../../components/Accessor'
+import Accessors from '../../components/Accessors'
 import OwnerSelect from '../../components/OwnerSelect'
 
 export default () => {
@@ -87,7 +87,7 @@ export default () => {
                             <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
                                 <FormGroup label="Name" isRequired={true} fieldId="name" helperText="names must be unique" helperTextInvalid="Name must be unique and not empty">
                                     <TextInput
-                                        value={name}
+                                        value={name || ""}
                                         isRequired
                                         type="text"
                                         id="name"
@@ -100,7 +100,7 @@ export default () => {
                                 </FormGroup>
                                 <FormGroup label="Description" fieldId="description" helperText="" helperTextInvalid="">
                                     <TextArea
-                                        value={description}
+                                        value={description || ""}
                                         type="text"
                                         id="description"
                                         aria-describedby="description-helper"
@@ -116,7 +116,7 @@ export default () => {
                                                    selection={roleToName(owner)}
                                                    onSelect={selection => setOwner(selection.key)} />
                                    ) : (
-                                      <TextInput value={roleToName(owner)} isReadOnly />
+                                      <TextInput value={roleToName(owner) || ""} id="testOwner" isReadOnly />
                                    )}
                                 </FormGroup>
                                 <FormGroup label="Access rights" fieldId="testAccess">
@@ -140,25 +140,22 @@ export default () => {
                     { view.components && view.components.map((c, i) => (
                         <div style={{ display: "flex "}}>
                            <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
-                               <FormGroup label="Header">
+                               <FormGroup label="Header" fieldId="header">
                                  <TextInput value={ c.headerName || "" } placeholder="e.g. 'Run duration'"
+                                            id="header"
                                             onChange={ value => { c.headerName = value; setView({ ...view}) }}
                                             isValid={ !!c.headerName && c.headerName.trim() !== "" }
                                             isReadOnly={!isTester} />
                                </FormGroup>
-                               <FormGroup label="Accessor">
-                                 <Accessor value={ c.accessor || "" }
-                                           onChange={ value => { c.accessor = value; setView({ ...view }) }}
-                                           isReadOnly={!isTester} />
+                               <FormGroup label="Accessors" fieldId="accessor">
+                                 <Accessors id="accessor"
+                                            value={ (c.accessors && c.accessors.split("[,;] *").map(a => a.trim()).filter(a => a.length != 0)) || [] }
+                                            onChange={ value => { c.accessors = value.join(";"); setView({ ...view }) }}
+                                            isReadOnly={!isTester} />
                                </FormGroup>
-                               <FormGroup label="Type">
-                                 <Checkbox label="Fetch first match (not checked)/Fetch all matches (checked)"
-                                           isChecked={ c.isArray }
-                                           onChange={ checked => { c.isArray = checked; setView({ ...view })}}
-                                           isDisabled={!isTester}/>
-                               </FormGroup>
-                               <FormGroup label="Rendering">
+                               <FormGroup label="Rendering" fieldId="rendering">
                                  <TextArea value={ (c.render && c.render.toString()) || "" }
+                                           id="rendering"
                                            onChange={ value => { c.render = value; setView({ ...view }) }}
                                            readOnly={!isTester}/>
                                </FormGroup>

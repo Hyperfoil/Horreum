@@ -96,12 +96,11 @@ CREATE TABLE public.view (
 
 CREATE TABLE public.viewcomponent (
     id integer NOT NULL,
-    accessor character varying(255) NOT NULL,
+    accessors character varying(255) NOT NULL,
     headername character varying(255) NOT NULL,
     headerorder integer NOT NULL,
     render text,
     view_id integer,
-    isarray boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.hook
