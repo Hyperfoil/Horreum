@@ -10,9 +10,11 @@ import {
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
+    Tooltip,
 } from '@patternfly/react-core';
 import {
     EditIcon,
+    WarningTriangleIcon,
 } from '@patternfly/react-icons';
 import { NavLink } from 'react-router-dom';
 
@@ -29,6 +31,8 @@ const renderCell = (render) => (arg) => {
     const { cell: { value, row: { index } }, data, column } = arg;
     if (!render) {
         return value
+    } else if (typeof render === "string") {
+        return (<Tooltip content={ "Render failure: " + render } ><WarningTriangleIcon style={{color: "#a30000"}} /></Tooltip>);
     }
     try {
         const useValue = (value === null || value === undefined) ? data[index][column.id.toLowerCase()] : value;
@@ -75,7 +79,7 @@ const staticColumns = [
             const { cell: { value } } = arg;
             // LEFT JOIN results in schema.id == 0
             if (value) {
-               return Object.keys(value).map(key => (<><NavLink to={`/schema/${key}`}>{value[key]}</NavLink>&nbsp;</>))
+               return Object.keys(value).map(key => (<><NavLink key={key} to={`/schema/${key}`}>{value[key]}</NavLink>&nbsp;</>))
             } else {
                return "--"
             }

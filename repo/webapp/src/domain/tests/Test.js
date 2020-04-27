@@ -21,7 +21,7 @@ import {
     Toolbar,    
     ToolbarSection,
 } from '@patternfly/react-core';
-import { NavLink, Redirect } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import {
     ArrowAltCircleDownIcon,
     ArrowAltCircleUpIcon,
@@ -71,13 +71,12 @@ export default () => {
     }, [defaultRole])
     const [access, setAccess] = useState(0)
     const [owner, setOwner] = useState(defaultRole)
-    const [goBack, setGoBack] = useState(false)
     const [view, setView] = useState({ name: "default", components: []})
     const [updateFailed, setUpdateFailed] = useState(false)
+    const history = useHistory()
     return (
         // <PageSection>
         <React.Fragment>
-            { goBack && <Redirect to="/test" /> }
             { updateFailed && <Alert variant="warning" title="Test update failed" /> }
             <Card style={{flexGrow:1}}>
                 { !test && (<center><Spinner /></center>) }
@@ -223,15 +222,15 @@ export default () => {
                                    newTest.id = testId;
                                }
 
-                               dispatch(actions.sendTest(newTest)).then(() => setGoBack(true), e => {
+                               dispatch(actions.sendTest(newTest)).then(() => history.goBack(), e => {
                                   setUpdateFailed(true);
                                   setInterval(() => setUpdateFailed(false), 5000)
                                })
                            }}
                        >Save</Button>
-                       <NavLink className="pf-c-button pf-m-secondary" to="/test/">
+                       <Button className="pf-c-button pf-m-secondary" onClick={() => history.goBack()}>
                            Cancel
-                       </NavLink>
+                       </Button>
                    </ActionGroup>
                 </CardFooter>
                 }

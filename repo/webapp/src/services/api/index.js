@@ -41,9 +41,15 @@ const deserialize = (input)=>{
         })
         return rtrn;
     }else if (typeof input === "string"){
-        if(input.includes("=>") || input.startsWith("function ")){
-            return new Function("return "+input)();
-        }else{
+        if (input.includes("=>") || input.startsWith("function ")) {
+            try {
+               return new Function("return "+input)();
+            } catch (e) {
+               console.log("Error deserializing " + input)
+               console.log(e)
+               return input
+            }
+        } else {
             return input;
         }
     }else{
