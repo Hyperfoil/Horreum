@@ -31,6 +31,7 @@ public class RouteFilter extends HttpFilter {
          if (!FILE_NAME_PATTERN.matcher(path).matches()) {
             // We could not find the resource, i.e. it is not anything known to the server (i.e. it is not a REST
             // endpoint or a servlet), and does not look like a file so try handling it in the front-end routes.
+            response.setStatus(200); //force response status when redirecting to /
             request.getRequestDispatcher("/").forward(request, response);
          }
       }
