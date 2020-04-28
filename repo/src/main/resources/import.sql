@@ -27,6 +27,9 @@ INSERT INTO public.run (id, access, data, owner, start, stop, testid, token) VAL
 INSERT INTO public.run (id, access, data, owner, start, stop, testid, token) VALUES (3, 0, '{ "all.json": {"info": {"id": "0002", "errors": [], "benchmark": "single-request", "cancelled": false, "startTime": 1580906854462, "description": null, "terminateTime": 1580906854678}, "$schema": "http://hyperfoil.io/run-schema/0.6"}, "other.json": { "$schema": "someother" }}', 'dev-team', '2020-04-06 12:00:54.462', '2020-04-06 12:00:54.678', 2, NULL);
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (9,'runId', '.info.id',2);
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (10,'benchmark', '.info.benchmark',2);
+INSERT INTO view (id,name,test_id) VALUES (2,'default',2);
+UPDATE test SET defaultview_id = 2 WHERE id = 2;
+INSERT INTO viewcomponent (id,accessors,headername,headerorder,render,view_id) VALUES (9,'runId','Run ID',0,NULL,2);
 
 INSERT INTO hook (id,url,type,target,active) VALUES (  0,'http://laptop:8080/api/log','new/test',  1,true);
 INSERT INTO hook (id,url,type,target,active) VALUES (  1,'http://laptop:8080/api/log','new/test', -1,false);
@@ -35,4 +38,4 @@ ALTER SEQUENCE test_id_seq RESTART WITH 3;
 ALTER SEQUENCE schema_id_seq RESTART WITH 3;
 ALTER SEQUENCE hook_id_seq RESTART WITH 2;
 ALTER SEQUENCE run_id_seq RESTART WITH 4;
-ALTER SEQUENCE hibernate_sequence RESTART WITH 11;
+ALTER SEQUENCE hibernate_sequence RESTART WITH 100;

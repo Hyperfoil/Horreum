@@ -9,6 +9,7 @@ import {
    Button,
    Form,
    FormGroup,
+   Radio,
    Select,
    SelectOption,
    TextInput,
@@ -19,22 +20,42 @@ import {
    AddCircleOIcon,
 } from '@patternfly/react-icons';
 
+function makeOptions(options) {
+   return Array.from(new Set(options.map(o => o.accessor)))
+      .map(a => options.find(o => o.accessor === a)) // distinct
+      .sort((a, b) => a.accessor.localeCompare(b.accessor))
+}
+
+function baseName(name) {
+   return name.endsWith("[]") ? name.substring(0, name.length - 2) : name
+}
+
 export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) => {
    const [created, setCreated] = useState({})
    const onCreate = newValue => {
          setCreated({ accessor: newValue })
-         setModalOpen(true)
+         setCreateOpen(true)
    }
    const [isExpanded, setExpanded] = useState(false)
    const [options, setOptions] = useState(value.map(v => ({ accessor: v })))
    const [selected, setSelected] = useState(value)
    useEffect(() => {
       listExtractors().then(response => {
-         setOptions(response)
+         setOptions(makeOptions(response.concat(value.map(v => ({ accessor: v})))))
       })
    }, [])
-   const [modalOpen, setModalOpen] = useState(false)
+   const [createOpen, setCreateOpen] = useState(false)
    const [addFailed, setAddFailed] = useState(false)
+
+   const [variantOpen, setVariantOpen] = useState(false)
+   const [variant, setVariant] = useState(0)
+   const [addedOption, setAddedOption] = useState(null)
+   const openVariantModal = newOption => {
+      setAddedOption(newOption)
+      setVariant(newOption.accessor.endsWith("[]") ? 1 : 0)
+      setVariantOpen(true)
+   }
+
    return (<>
       <Select variant="typeaheadmulti"
               aria-label="Select accessor"
@@ -52,15 +73,25 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                  onChange([])
               }}
               onSelect={ (e, newValue) => {
-                 var updated
+                 if (!options.find(o => o.accessor === newValue)) {
+                     return // this is the create
+                 }
+                 setExpanded(false)
+                 let base = baseName(newValue)
+                 let array = base + "[]"
+                 let updated
                  if (selected.includes(newValue)) {
                     updated = selected.filter(o => o != newValue)
+                 } else if (selected.includes(base)) {
+                    updated = [...selected.filter(o => o != base), newValue]
+                 } else if (selected.includes(array)) {
+                    updated = [...selected.filter(o => o != array), newValue]
                  } else {
-                    updated = [...selected, newValue]
+                    openVariantModal(options.filter(o => o.accessor === newValue)[0])
+                    return
                  }
                  setSelected(updated)
                  onChange(updated)
-                 setExpanded(false)
               }}
       >
       { options.map((option, index) => (
@@ -73,13 +104,13 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
             <span style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{e.schema}</span>{'\u00A0'}
          </>)) }
          { !isReadOnly && selected.accessor && selected.accessor !== "" &&
-            <Button variant="link" onClick={() => setModalOpen(true)}><AddCircleOIcon /></Button>
+            <Button variant="link" onClick={() => setCreateOpen(true)}><AddCircleOIcon /></Button>
          }
          </div>
       }
       <Modal title="Create extractor"
-             isOpen={modalOpen}
-             onClose={() => setModalOpen(false) }>
+             isOpen={createOpen}
+             onClose={() => setCreateOpen(false) }>
          <Form isHorizontal={true}>
             <FormGroup label="Accessor" isRequired={true} fieldId="extractor-accessor">
                <TextInput value={ created.accessor || "" }
@@ -106,25 +137,51 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
             </FormGroup>
             <ActionGroup>
                <Button variant="primary"
-                       onClick={e => {
+                       onClick={() => {
                           addOrUpdateExtractor(created).then(response => {
-                             setOptions([...options, created].sort())
-                             setSelected([...selected, created.accessor])
-                             setModalOpen(false)
-                          }, e => {
+                             setCreateOpen(false)
+                             openVariantModal(created)
+                          }, () => {
                              setAddFailed(true)
                              setInterval(() => setAddFailed(false), 5000)
                           })
                        }}>Save</Button>
                <Button variant="secondary"
                        onClick={ () => {
-                          setModalOpen(false)
+                          setCreateOpen(false)
                        }}>Cancel</Button>
-         </ActionGroup>
+            </ActionGroup>
          </Form>
          { addFailed &&
             <Alert variant="warning" title="Failed to add extractor" />
          }
-       </Modal>
+      </Modal>
+      <Modal isSmall title="Select variant"
+             isOpen={variantOpen}
+             onClose={() => setVariantOpen(false)}>
+         <Radio isChecked={variant == 0}
+                id="first-match"
+                name="first-match"
+                label="First match"
+                onChange={() => setVariant(0)}/>
+         <Radio isChecked={variant == 1}
+                id="all-matches"
+                name="all-matches"
+                label="All matches (as array)"
+                onChange={() => setVariant(1)}/>
+         <ActionGroup>
+            <Button variant="primary"
+                    onClick={() => {
+                       setVariantOpen(false)
+                       let base = baseName(addedOption.accessor)
+                       let name = variant == 0 ? base : base + "[]"
+                       setOptions(makeOptions([...options, { ...addedOption, accessor: name }]))
+                       setSelected([...selected, name])
+                    }}>Select</Button>
+            <Button variant="secondary"
+                    onClick={() => setVariantOpen(false)}
+                    >Cancel</Button>
+         </ActionGroup>
+      </Modal>
    </>)
 }

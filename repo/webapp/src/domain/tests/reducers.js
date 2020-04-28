@@ -14,7 +14,7 @@ export const reducer = (state = initialState, action) => {
             }
             if (!utils.isEmpty(action.tests)) {
                 action.tests.forEach(test => {
-                    if (test.id !== null && typeof test.id !== "undefined") {
+                    if (test && test.id !== null && typeof test.id !== "undefined") {
                         state.byId = state.byId.set("t" + test.id, {
                             ...(state.byId.get("t" + test.id, {})), ...test
                         })
