@@ -20,10 +20,10 @@ import {
    AddCircleOIcon,
 } from '@patternfly/react-icons';
 
-function makeOptions(options) {
-   return Array.from(new Set(options.map(o => o.accessor)))
-      .map(a => options.find(o => o.accessor === a)) // distinct
-      .sort((a, b) => a.accessor.localeCompare(b.accessor))
+function distinctSorted(list, selector) {
+   return Array.from(new Set(list.map(selector)))
+         .map(a => list.find(o => selector(o) === a)) // distinct
+         .sort((a, b) => selector(a).localeCompare(selector(b)))
 }
 
 function baseName(name) {
@@ -41,7 +41,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
    const [selected, setSelected] = useState(value)
    useEffect(() => {
       listExtractors().then(response => {
-         setOptions(makeOptions(response.concat(value.map(v => ({ accessor: v})))))
+         setOptions(response)
       })
    }, [])
    const [createOpen, setCreateOpen] = useState(false)
@@ -94,20 +94,21 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                  onChange(updated)
               }}
       >
-      { options.map((option, index) => (
-         <SelectOption key={index} value={option.accessor} />
-      ))}
+      { distinctSorted(options.concat(value.map(v => ({ accessor: v}))), o => o.accessor)
+         .map((option, index) => (<SelectOption key={index} value={option.accessor} />)
+      )}
       </Select>
-      { selected !== null && selected.schema &&
-         <div style={{ marginTop: "5px" }}>Valid for schemas:{'\u00A0'}
-         { options.filter(e => e.accessor === selected.accessor).map(e => (<>
-            <span style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{e.schema}</span>{'\u00A0'}
+      { selected && selected.map(s => (
+         <div key={s} style={{ marginTop: "5px" }}>
+            <span style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{s}</span> is valid for schemas:{'\u00A0'}
+         { distinctSorted(options.filter(o => o.accessor === s), o => o.schema).map((o, i) => (<>
+            <span key={s + "-" + i} style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{o.schema}</span>{'\u00A0'}
          </>)) }
-         { !isReadOnly && selected.accessor && selected.accessor !== "" &&
+         { !isReadOnly && s !== "" &&
             <Button variant="link" onClick={() => setCreateOpen(true)}><AddCircleOIcon /></Button>
          }
          </div>
-      }
+      ))}
       <Modal title="Create extractor"
              isOpen={createOpen}
              onClose={() => setCreateOpen(false) }>
@@ -175,7 +176,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                        setVariantOpen(false)
                        let base = baseName(addedOption.accessor)
                        let name = variant == 0 ? base : base + "[]"
-                       setOptions(makeOptions([...options, { ...addedOption, accessor: name }]))
+                       setOptions([...options, { ...addedOption, accessor: name }])
                        setSelected([...selected, name])
                     }}>Select</Button>
             <Button variant="secondary"
