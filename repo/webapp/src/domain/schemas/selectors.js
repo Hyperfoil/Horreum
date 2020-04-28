@@ -1,5 +1,5 @@
 const emptySchema = {name:"",description:"",schema:{
-    "$schema": "http://json-schema.org/draft-07/schema"
+    "$schema": "http://json-schema.org/draft-07/schema#"
 }}
 
 export const all = state => {

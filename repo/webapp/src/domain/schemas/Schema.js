@@ -60,11 +60,15 @@ export default () => {
         setName(schema.name || "");
         setDescription(schema.description || "")
         setUri(schema.uri || "")
-        setTestPath(schema.testPath)
-        setStartPath(schema.startPath)
-        setStopPath(schema.stopPath)
-        setOwner(schema.owner)
-        setAccess(schema.access)
+        setTestPath(schema.testPath || "")
+        setStartPath(schema.startPath || "")
+        setStopPath(schema.stopPath || "")
+        if (schema && schema.owner) {
+            setOwner(schema.owner)
+        }
+        if (schema && schema.access) {
+            setAccess(schema.access)
+        }
         setEditorSchema(toString(schema.schema) || "{}")
     }, [schema])
     const editor = useRef();
@@ -73,7 +77,10 @@ export default () => {
     const [importFailed, setImportFailed] = useState(false)
     // TODO: use this in reaction to editor change
     const parseUri = newSchema => {
-        const schemaUri = jsonpath.value(JSON.parse(newSchema), "$['$id']")
+        try {
+           var schemaUri = jsonpath.value(JSON.parse(newSchema), "$['$id']")
+        } catch (e) {
+        }
         if (!schemaUri || schemaUri === "") {
            setImportFailed(true)
            setInterval(() => setImportFailed(false), 5000)
@@ -86,7 +93,10 @@ export default () => {
     }
     const checkUri = newUri => {
         const currentSchema = editor.current.getValue()
-        const schemaUri = jsonpath.value(JSON.parse(currentSchema), "$['$id']")
+        try {
+           var schemaUri = jsonpath.value(JSON.parse(currentSchema), "$['$id']")
+        } catch (e) {
+        }
         if (!schemaUri || schemaUri === "") {
            return // nothing to do
         } else {
