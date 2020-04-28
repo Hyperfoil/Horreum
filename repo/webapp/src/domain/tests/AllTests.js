@@ -10,6 +10,10 @@ import {
 } from '@patternfly/react-core';
 import { NavLink } from 'react-router-dom';
 
+import {
+   FolderOpenIcon
+} from '@patternfly/react-icons'
+
 import {fetchSummary, resetToken, dropToken, updateAccess } from './actions';
 import * as selectors from './selectors';
 
@@ -41,7 +45,7 @@ export default ()=>{
           Header:"Run Count",accessor:"count",
           Cell: (arg) => {
             const {cell: {value, row: {index}}, data} = arg;
-            return (<NavLink to={`/run/list/${data[index].id}`}>{value}</NavLink>)
+            return (<NavLink to={`/run/list/${data[index].id}`}>{value}&nbsp;<FolderOpenIcon /></NavLink>)
           }
         },
         {

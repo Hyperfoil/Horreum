@@ -56,7 +56,7 @@ export default () => {
         }
     }, [dispatch, schemaId])
     useEffect(() => {
-        document.title = schema.name + " | Horreum"
+        document.title = (schemaId === "_new" ? "New schema" : schema.name)  + " | Horreum"
         setName(schema.name || "");
         setDescription(schema.description || "")
         setUri(schema.uri || "")
