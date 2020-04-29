@@ -30,6 +30,9 @@ import Table from '../../components/Table';
 const renderCell = (render) => (arg) => {
     const { cell: { value, row: { index } }, data, column } = arg;
     if (!render) {
+        if (typeof value === "object") {
+            return JSON.stringify(value)
+        }
         return value
     } else if (typeof render === "string") {
         return (<Tooltip content={ "Render failure: " + render } ><WarningTriangleIcon style={{color: "#a30000"}} /></Tooltip>);

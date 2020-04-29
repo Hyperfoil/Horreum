@@ -77,7 +77,7 @@ export default ()=>{
           accessor:"testid",
           Cell: (arg) => {
             const {cell: {value} } = arg;
-            return (<NavLink to={`/run/list/${value}`}>{value}</NavLink>)
+            return (<NavLink to={`/run/list/${value}`}>{arg.row.original.testname}</NavLink>)
           }
         }, {
           Header:"Actions",

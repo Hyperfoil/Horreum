@@ -480,7 +480,9 @@ public class RunService {
                     @QueryParam("page") Integer page,
                     @QueryParam("sort") String sort,
                     @QueryParam("direction") String direction) {
-      StringBuilder sql = new StringBuilder("select id,start,stop,testId,owner,access,token from run");
+      StringBuilder sql = new StringBuilder("select ")
+         .append("run.id,start,stop,testId,run.owner,run.access,run.token,test.name as testname ")
+         .append("from run inner join test on run.testId = test.id");
       addPaging(sql, limit, page, sort, direction);
       try (Connection connection = dataSource.getConnection();
            CloseMeJdbc h = sqlService.withRoles(connection, identity);
