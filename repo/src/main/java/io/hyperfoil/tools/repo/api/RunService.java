@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Path("/api/run")
@@ -113,15 +114,34 @@ public class RunService {
    @Inject
    AgroalDataSource dataSource;
 
-   @PermitAll
-   @GET
-   @Path("{id}")
-   public Run getRun(@PathParam("id") Integer id,
-                     @QueryParam("token") String token) {
+   private Run findRun(@PathParam("id") Integer id, @QueryParam("token") String token) {
       try (CloseMe h1 = sqlService.withRoles(em, identity);
            CloseMe h2 = sqlService.withToken(em, token)) {
          return Run.find("id", id).firstResult();
       }
+   }
+
+   private <S, T> Response createResponse(T object, Function<T, S> selector) {
+      if (object == null) {
+         return Response.status(Response.Status.NOT_FOUND).build();
+      } else {
+         return Response.ok(selector.apply(object)).build();
+      }
+   }
+
+   @PermitAll
+   @GET
+   @Path("{id}")
+   public Response getRun(@PathParam("id") Integer id,
+                     @QueryParam("token") String token) {
+      return createResponse(findRun(id, token), Function.identity());
+   }
+
+   @PermitAll
+   @GET
+   @Path("{id}/data")
+   public Response getData(@PathParam("id") Integer id, @QueryParam("token") String token) {
+      return createResponse(findRun(id, token), run -> run.data);
    }
 
    @RolesAllowed("tester")
@@ -188,8 +208,8 @@ public class RunService {
    @Path("{id}/structure")
    public Json getStructure(@PathParam("id") Integer id,
                             @QueryParam("token") String token) {
-      Run found = getRun(id, token);
-      if(found!=null){
+      Run found = findRun(id, token);
+      if (found != null) {
          Json response = Json.typeStructure(found.data);
          return response;
       }
@@ -385,7 +405,7 @@ public class RunService {
          Value factory = context.eval("js", "new Function('jsonpath','DateTime','fetch','return '+" + StringUtil.quote(body) + ")");
          Value fn = factory.execute(jsonPath, dateTime, fetch);
 
-         Run run = getRun(id, token);
+         Run run = findRun(id, token);
 
 
          JsonContext jsonContext = new JsonContext();
@@ -691,7 +711,6 @@ public class RunService {
                      }
                   } else {
                      Json.MapBuilder map = Json.map();
-                     view.add(map);
                      for (String accessor : accessors) {
                         String value = resultSet.getString(i++);
                         if (ViewComponent.isArray(accessor)) {
@@ -700,6 +719,7 @@ public class RunService {
                            map.add(accessor, value);
                         }
                      }
+                     view.add(map.build());
                   }
                }
             }
