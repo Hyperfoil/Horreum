@@ -34,8 +34,10 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
    const [created, setCreated] = useState({})
    const onCreate = newValue => {
          setCreated({ accessor: newValue })
+         setDisabledSchemas([])
          setCreateOpen(true)
    }
+   const [disabledSchemas, setDisabledSchemas] = useState([])
    const [isExpanded, setExpanded] = useState(false)
    const [options, setOptions] = useState(value.map(v => ({ accessor: v })))
    const [selected, setSelected] = useState(value)
@@ -98,17 +100,23 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
          .map((option, index) => (<SelectOption key={index} value={option.accessor} />)
       )}
       </Select>
-      { selected && selected.map(s => (
+      { selected && selected.map(s => {
+         const distinctSchemaOptions = distinctSorted(options.filter(o => o.accessor === s), o => o.schema)
+         return (
          <div key={s} style={{ marginTop: "5px" }}>
             <span style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{s}</span> is valid for schemas:{'\u00A0'}
-         { distinctSorted(options.filter(o => o.accessor === s), o => o.schema).map((o, i) => (<>
-            <span key={s + "-" + i} style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{o.schema}</span>{'\u00A0'}
-         </>)) }
-         { !isReadOnly && s !== "" &&
-            <Button variant="link" onClick={() => setCreateOpen(true)}><AddCircleOIcon /></Button>
-         }
+            { distinctSchemaOptions.map((o, i) => (<>
+               <span key={s + "-" + i} style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{o.schema}</span>{'\u00A0'}
+            </>)) }
+            { !isReadOnly && s !== "" &&
+               <Button variant="link" onClick={() => {
+                  setCreated({ accessor: s })
+                  setDisabledSchemas(distinctSchemaOptions.map(o => o.schema))
+                  setCreateOpen(true)
+               }}><AddCircleOIcon /></Button>
+            }
          </div>
-      ))}
+      )})}
       <Modal title="Create extractor"
              isOpen={createOpen}
              onClose={() => setCreateOpen(false) }>
@@ -125,6 +133,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
             <FormGroup label="Schema" isRequired={true} fieldId="extractor-schema" >
                <SchemaSelect value={ selected.schema }
                              id="extractor-schema"
+                             disabled={ disabledSchemas }
                              onChange={ value => { setCreated({ ...created, schema: value, toString: () => created.accessor })}} />
             </FormGroup>
             <FormGroup label="JSON path" isRequired={true} fieldId="extractor-jsonpath">
@@ -177,7 +186,9 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                        let base = baseName(addedOption.accessor)
                        let name = variant == 0 ? base : base + "[]"
                        setOptions([...options, { ...addedOption, accessor: name }])
-                       setSelected([...selected, name])
+                       let updated = [...selected, name]
+                       setSelected(updated)
+                       onChange(updated)
                     }}>Select</Button>
             <Button variant="secondary"
                     onClick={() => setVariantOpen(false)}

@@ -8,7 +8,7 @@ import {
 } from '@patternfly/react-core';
 
 /* This is going to be a complex component with modal for Extractor definition */
-export default ({ value = "", onChange = newValue => {}}) => {
+export default ({ value = "", onChange = newValue => {}, disabled = []}) => {
    const [isExpanded, setExpanded] = useState(false)
    const [selected, setSelected] = useState(value)
    const [options, setOptions] = useState([])
@@ -47,7 +47,9 @@ export default ({ value = "", onChange = newValue => {}}) => {
                     }}
             >
       {options.map((option, index) => (
-         <SelectOption key={index} value={{ ...option, toString: () => `${option.name} (${option.uri})` }} />
+         <SelectOption key={index}
+                       value={{ ...option, toString: () => `${option.name} (${option.uri})` }}
+                       isDisabled={disabled.includes(option.uri)}/>
       ))}
       </Select>
    )
