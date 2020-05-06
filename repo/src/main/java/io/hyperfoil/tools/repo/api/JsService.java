@@ -80,8 +80,8 @@ public class JsService {
          context.eval(fetchSource);
          Source sqlSource = Source.newBuilder("js","sql = async (query)=>{ print('sql',query); return new Promise(async (resolve)=>{ const resp = _http.jsApply('http://localhost:8080/api/sql?q='+encodeURI(query),{}); resolve(resp); } ); }","sql").build();
          context.eval(sqlSource);
-         context.eval("js","global.btoa = (str)=>Java.type('io.quarkus.test.JsFetch').btoa(str)");
-         context.eval("js","global.atob = (str)=>Java.type('io.quarkus.test.JsFetch').atob(str)");
+         context.eval("js","btoa = (str)=>Java.type('io.quarkus.test.JsFetch').btoa(str)");
+         context.eval("js","atob = (str)=>Java.type('io.quarkus.test.JsFetch').atob(str)");
 
          context.eval(org.graalvm.polyglot.Source.newBuilder("js", new BufferedReader(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("jsonpath.js"))).lines()
             .parallel().collect(Collectors.joining("\n")), "jsonpath.js").build());
