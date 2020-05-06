@@ -118,7 +118,7 @@ public class SchemaService {
             if (Objects.equals(schema.id, byName.id)) {
                em.merge(schema);
             } else {
-               Response.serverError().entity("Name already used");
+               return Response.serverError().entity("Name already used").build();
             }
          } else {
             schema.id = null; //remove the id so we don't override an existing entry
