@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
+import { useDispatch } from 'react-redux'
 
 import { addOrUpdateExtractor, listExtractors } from '../domain/schemas/api.js'
 import SchemaSelect from './SchemaSelect'
 
+import { ADD_ALERT, defaultFormatError } from "../alerts"
+
 import {
    ActionGroup,
-   Alert,
    Button,
    Form,
    FormGroup,
@@ -47,7 +49,6 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
       })
    }, [])
    const [createOpen, setCreateOpen] = useState(false)
-   const [addFailed, setAddFailed] = useState(false)
 
    const [variantOpen, setVariantOpen] = useState(false)
    const [variant, setVariant] = useState(0)
@@ -57,6 +58,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
       setVariant(newOption.accessor.endsWith("[]") ? 1 : 0)
       setVariantOpen(true)
    }
+   const dispatch = useDispatch()
 
    return (<>
       <Select variant="typeaheadmulti"
@@ -151,9 +153,13 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                           addOrUpdateExtractor(created).then(response => {
                              setCreateOpen(false)
                              openVariantModal(created)
-                          }, () => {
-                             setAddFailed(true)
-                             setInterval(() => setAddFailed(false), 5000)
+                          }, e => {
+                             dispatch({ type: ADD_ALERT,
+                                        alert: {
+                                           type: "EXTRACTOR_UPDATE",
+                                           title: "Failed to add/update schema extractor.",
+                                           content: defaultFormatError(e),
+                                        }})
                           })
                        }}>Save</Button>
                <Button variant="secondary"
@@ -162,9 +168,6 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                        }}>Cancel</Button>
             </ActionGroup>
          </Form>
-         { addFailed &&
-            <Alert variant="warning" title="Failed to add extractor" />
-         }
       </Modal>
       <Modal isSmall title="Select variant"
              isOpen={variantOpen}

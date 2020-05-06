@@ -3,7 +3,6 @@ import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
-    Alert,
     Button,
     Card,
     CardHeader,
@@ -36,6 +35,8 @@ import {
     isTesterSelector,
     roleToName
 } from '../../auth.js'
+
+import { ADD_ALERT, defaultFormatError } from "../../alerts"
 
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
@@ -72,12 +73,10 @@ export default () => {
     const [access, setAccess] = useState(0)
     const [owner, setOwner] = useState(defaultRole)
     const [view, setView] = useState({ name: "default", components: []})
-    const [updateFailed, setUpdateFailed] = useState(false)
     const history = useHistory()
     return (
         // <PageSection>
         <React.Fragment>
-            { updateFailed && <Alert variant="warning" title="Test update failed" /> }
             <Card style={{flexGrow:1}}>
                 { !test && (<center><Spinner /></center>) }
                 { test && (<>
@@ -223,8 +222,14 @@ export default () => {
                                }
 
                                dispatch(actions.sendTest(newTest)).then(() => history.goBack(), e => {
-                                  setUpdateFailed(true);
-                                  setInterval(() => setUpdateFailed(false), 5000)
+                                  dispatch({
+                                     type: ADD_ALERT,
+                                     alert: {
+                                        type: "TEST_UPDATE_FAILED",
+                                        title: "Test update failed",
+                                        content: defaultFormatError(e),
+                                     }
+                                  })
                                })
                            }}
                        >Save</Button>

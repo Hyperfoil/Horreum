@@ -25,6 +25,16 @@ export const reducer = (state = [], action) => {
    return state;
 }
 
+export const defaultFormatError = e => {
+   if (!e) {
+      return ""
+   } else if (typeof e !== "object") {
+      return String(e)
+   } else {
+      return String(e)
+   }
+}
+
 const alertsSelector = state => state.alerts
 
 export default () => {
