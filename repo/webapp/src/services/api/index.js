@@ -1,7 +1,9 @@
+import React from 'react';
 import fetchival from 'fetchival';
 import apiConfig from './config';
 import store from "../../store.js"
-import { REQUEST_FAILED } from "../../auth.js"
+import { ADD_ALERT } from "../../alerts"
+import { TryLoginAgain } from "../../auth"
 
 export const exceptionExtractError = (exception) => {
 	if (!exception.Errors) return false;
@@ -79,9 +81,23 @@ export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}, r
    }).then(response => {
       return Promise.resolve(deserialize(response));
    }, (e) => {
-      if (e.response) {
+      if (e === true) {
+         // This happens when token update fails
+         store.dispatch({ type: ADD_ALERT,
+                          alert: {
+                             type: "TOKEN_UPDATE_FAILED",
+                             title: "Token update failed",
+                             content: (<TryLoginAgain />),
+                          }})
+         return Promise.reject()
+      } else if (e.response) {
          if (e.response.status === 401 || e.response.status === 403) {
-            store.dispatch({ type: REQUEST_FAILED })
+            store.dispatch({ type: ADD_ALERT,
+                             alert: {
+                                type: "REQUEST_FORBIDDEN",
+                                title: "Request failed due to insufficient permissions",
+                                content: (<TryLoginAgain />),
+                             }})
          }
          return e.response.json().then(body => {
             return Promise.reject(body)

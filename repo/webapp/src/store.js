@@ -8,7 +8,8 @@ import { reducer as runReducer} from './domain/runs/reducers'
 import { reducer as testReducer} from './domain/tests/reducers'
 import { reducer as hookReducer} from './domain/hooks/reducers'
 import { reducer as schemaReducer} from './domain/schemas/reducers'
-import { reducer as authReducer} from './auth.js'
+import { reducer as authReducer} from './auth'
+import { reducer as alertReducer } from './alerts'
 
 export const history = createBrowserHistory();
 
@@ -19,6 +20,7 @@ const appReducers = combineReducers({
     hooks: hookReducer,
     schemas: schemaReducer,
     auth: authReducer,
+    alerts: alertReducer,
 })
 const enhancer = compose(
     applyMiddleware(

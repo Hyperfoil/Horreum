@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 
 import {
   Alert,
@@ -11,16 +11,14 @@ import Keycloak from "keycloak-js"
 
 import store from './store'
 import { fetchApi } from './services/api';
+import { CLEAR_ALERT } from './alerts'
 
 const INIT = "auth/INIT"
-const AUTHENTICATED = "auth/AUTHENTICATED"
-export const REQUEST_FAILED = "auth/REQUEST_FAILED"
 const REGISTER_AFTER_LOGIN = "auth/REGISTER_AFTER_LOGIN"
 
 const initialState = {
   keycloak: null,
   initPromise: null,
-  insufficientPermissions: false,
   afterLogin: []
 }
 
@@ -31,12 +29,6 @@ export const reducer = (state = initialState, action) => {
          if (action.initPromise) {
             state.initPromise = action.initPromise;
          }
-         break;
-      case AUTHENTICATED:
-         state.insufficientPermissions = false
-         break;
-      case REQUEST_FAILED:
-         state.insufficientPermissions = action.value === undefined ? true : action.value
          break;
       case REGISTER_AFTER_LOGIN:
          state.afterLogin = [...state.afterLogin.filter(({ name, func }) => name !== action.name),
@@ -57,10 +49,6 @@ export const registerAfterLogin = (name, func) => {
 
 const keycloakSelector = state => {
    return state.auth.keycloak;
-}
-
-const insufficientPermissionsSelector = state => {
-   return state.auth.insufficientPermissions
 }
 
 export const roleToName = (role) => {
@@ -114,7 +102,7 @@ export const initKeycloak = state => {
           promiseType: 'native',
         });
         initPromise.then(authenticated => {
-          store.dispatch({type: AUTHENTICATED })
+          store.dispatch({type: CLEAR_ALERT })
           store.getState().auth.afterLogin.forEach(a => a.func())
         })
       }
@@ -122,21 +110,7 @@ export const initKeycloak = state => {
    })
 }
 
-export const RequestForbiddenAlert = () => {
-   const insufficientPermissions = useSelector(insufficientPermissionsSelector)
-   const dispatch = useDispatch();
-   if (insufficientPermissions) {
-      return (
-         <Alert variant="warning" title="Request failed due to insufficient permissions"
-                action={<AlertActionCloseButton onClose={() => {
-              dispatch({ type: REQUEST_FAILED, value: false})
-           }} />} >
-            Try <a href="/">log in again</a>.
-         </Alert>
-      )
-   }
-   return "";
-}
+export const TryLoginAgain = () => (<>Try <Button variant="link" onClick={() => store.getState().auth.keycloak.login() }>log in again</Button></>)
 
 export const LoginLogout = () => {
    const keycloak = useSelector(keycloakSelector)

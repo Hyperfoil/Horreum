@@ -32,12 +32,27 @@ import * as actions from './actions';
 import * as selectors from './selectors';
 import * as api from './api';
 import { accessName, isTesterSelector, defaultRoleSelector, roleToName } from '../../auth.js'
+import { ADD_ALERT } from '../../alerts'
 
 import { fromEditor, toString } from '../../components/Editor';
 import Editor from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import OwnerSelect from '../../components/OwnerSelect'
+
+function formatError(e) {
+   if (!e) {
+      return ""
+   } else if (typeof e !== "object") {
+      return String(e)
+   } else if (e.error === "javax.validation.ConstraintViolationException") {
+      return (<><span>Some constraints on the saved schema have failed:</span><br /><ul>
+         { e.violations.map((v, i) => (<li key={i}><code>{v.class}/{v.path}</code>: {v.message}</li>))}
+      </ul></>)
+   } else {
+      return String(e)
+   }
+}
 
 export default () => {
     const { schemaId } = useParams();
@@ -109,7 +124,6 @@ export default () => {
     const [access, setAccess] = useState(0)
     const [owner, setOwner] = useState(defaultRole)
     const [goBack, setGoBack] = useState(false)
-    const [saveFailed, setSaveFailed] = useState(false)
 
     const [activeTab, setActiveTab] = useState(0)
     const [extractors, setExtractors] = useState([])
@@ -283,9 +297,6 @@ export default () => {
                 </CardBody>
                 { isTester &&
                 <CardFooter>
-                  { saveFailed &&
-                     <Alert variant="warning" title="Failed to save the schema" />
-                  }
                   <ActionGroup style={{ marginTop: 0 }}>
                       <Button variant="primary"
                           onClick={e => {
@@ -307,9 +318,15 @@ export default () => {
                               actions.add(newSchema)(dispatch)
                                      .then(() => Promise.all(extractors.filter(e => e.changed || e.deleted).map(e => api.addOrUpdateExtractor(e))))
                                      .then(() => setGoBack(true))
-                                     .catch(() => {
-                                        setSaveFailed(true)
-                                        setInterval(() => setSaveFailed(false), 5000)
+                                     .catch(e => {
+                                        dispatch({
+                                          type: ADD_ALERT,
+                                          alert: {
+                                             type: "SAVE_SCHEMA",
+                                             title: "Failed to save the schema",
+                                             content: formatError(e),
+                                          }
+                                        })
                                      })
                           }}
                       >Save</Button>

@@ -21,7 +21,6 @@ import {
    initKeycloak,
    isAdminSelector,
    LoginLogout,
-   RequestForbiddenAlert,
 } from './auth.js'
 
 import AllRuns from './domain/runs/AllRuns';
@@ -34,6 +33,7 @@ import AllSchema from './domain/schemas/AllSchema';
 import Schema from './domain/schemas/Schema';
 
 import AllHooks from './domain/hooks/AllHooks';
+import Alerts from './alerts'
 
 class App extends Component {
   constructor(props) {
@@ -58,8 +58,6 @@ function Main() {
           <PageHeader
             // showNavToggle={true}
             topNav={(
-              <>
-              <div>
               <Nav aria-label="Nav">
                 <NavList variant={NavVariants.horizontal}>
                   <NavItem itemId={0} isActive={false}>
@@ -86,16 +84,14 @@ function Main() {
                   </NavItem>
                 </NavList>
               </Nav>
-              </div>
-              <div style={{ position : "absolute", right: "0", paddingRight: "20px" }} >
-                <LoginLogout />
-              </div>
-              </>
+            )}
+            toolbar={(
+               <LoginLogout />
             )}
           />
         )}
         >
-          <RequestForbiddenAlert />
+          <Alerts />
           <Switch>
             <Route exact path="/" component={AllTests} />
             <Route exact path="/test" component={AllTests} />
