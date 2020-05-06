@@ -36,6 +36,12 @@ export const reducer = (state = initialState, action) => {
             }
         }
         break;
+        case actionTypes.DELETE: {
+            if (state.byId) {
+               state.byId = state.byId.delete("t" + action.id)
+            }
+        }
+        break;
         default:
     }
     return state;

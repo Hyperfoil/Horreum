@@ -38,3 +38,5 @@ export const updateAccess = (id, owner, access) => {
 //                   "owner=" + encodeURIComponent(owner) + "&access=" + encodeURIComponent(access),
 //                   'post', { 'content-type' : 'application/x-www-form-urlencoded'}, 'response')
 }
+
+export const deleteTest = id => fetchApi(endPoints.crud(id), null, 'delete')

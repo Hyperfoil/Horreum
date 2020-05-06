@@ -38,3 +38,5 @@ export const listExtractors = (schemaId) => {
 }
 
 export const addOrUpdateExtractor = (extractor) => fetchApi(endPoints.extractor(), extractor, 'post')
+
+export const deleteSchema = (id) => fetchApi(endPoints.crud(id), null, 'delete')

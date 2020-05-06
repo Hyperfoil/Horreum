@@ -3,7 +3,10 @@ package io.hyperfoil.tools.repo.api;
 import io.agroal.api.AgroalDataSource;
 import io.hyperfoil.tools.repo.entity.json.Access;
 import io.hyperfoil.tools.repo.entity.json.Test;
+import io.hyperfoil.tools.repo.entity.json.View;
+import io.hyperfoil.tools.repo.entity.json.ViewComponent;
 import io.hyperfoil.tools.yaup.AsciiArt;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -56,8 +59,13 @@ public class TestService {
    @RolesAllowed(Roles.TESTER)
    @DELETE
    @Path("{id}")
+   @Transactional
    public void delete(@PathParam("id") Integer id){
       try (CloseMe h = sqlService.withRoles(em, identity)){
+         View.find("test_id", id).stream().forEach(view -> {
+            ViewComponent.delete("view_id", ((View) view).id);
+            view.delete();
+         });
          Test.find("id", id).firstResult().delete();
       }
    }

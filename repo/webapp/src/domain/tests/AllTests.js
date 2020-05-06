@@ -14,7 +14,13 @@ import {
    FolderOpenIcon
 } from '@patternfly/react-icons'
 
-import {fetchSummary, resetToken, dropToken, updateAccess } from './actions';
+import {
+   fetchSummary,
+   resetToken,
+   dropToken,
+   updateAccess,
+   deleteTest,
+} from './actions';
 import * as selectors from './selectors';
 
 import Table from '../../components/Table';
@@ -22,6 +28,7 @@ import AccessIcon from '../../components/AccessIcon';
 import ActionMenu from '../../components/ActionMenu';
 
 import { isTesterSelector, registerAfterLogin, roleToName } from '../../auth.js'
+import { alertAction } from '../../alerts'
 
 export default ()=>{
     document.title = "Tests | Horreum"
@@ -61,7 +68,9 @@ export default ()=>{
                         tokenToLink={ (id, token) => "/test/" + id + "?token=" + token }
                         onTokenReset={ id => dispatch(resetToken(id)) }
                         onTokenDrop={ id => dispatch(dropToken(id)) }
-                        onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, owner, access)) } />
+                        onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, owner, access)) }
+                        description={ "test " + arg.row.original.name }
+                        onDelete={ id => dispatch(deleteTest(id)).catch(e => dispatch(alertAction("DELETE_TEST", "Failed to delete test", e))) }/>
             )
           }
         }

@@ -60,3 +60,6 @@ export const updateAccess = (id, owner, access) => {
             dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access });
         })
 }
+
+export const deleteTest = id => dispatch => api.deleteTest(id)
+   .then(() => dispatch({ type: actionTypes.DELETE, id }))

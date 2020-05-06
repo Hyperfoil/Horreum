@@ -73,3 +73,10 @@ export const updateAccess = (id, owner, access) => {
             dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access });
         })
 }
+
+export const deleteSchema = id => dispatch => api.deleteSchema(id).then(() => {
+   dispatch({
+      type: actionTypes.DELETE,
+      id: id,
+   })
+})

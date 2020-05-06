@@ -16,6 +16,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -333,15 +334,18 @@ public class SchemaService {
 
 
 //I'm not sure being able to delete a schema is a good idea since we don't have reference tracking built into the table
-//   @DELETE
-//   @Path("{name:.*}")
-//   public Response delete(@PathParam("name")String name){
-//      Schema byName = Schema.find("name",name).firstResult();
-//      if(byName == null){
-//         return Response.noContent().build();
-//      }else{
-//         byName.delete();
-//         return Response.ok(byName.id).build();
-//      }
-//   }
+   @RolesAllowed("tester")
+   @DELETE
+   @Path("{id}")
+   @Transactional
+   public Response delete(@PathParam("id") Integer id){
+      Schema schema = Schema.find("id", id).firstResult();
+      if (schema == null){
+         return Response.status(Response.Status.NOT_FOUND).build();
+      } else {
+         SchemaExtractor.delete("schema_id", id);
+         schema.delete();
+         return Response.noContent().build();
+      }
+   }
 }

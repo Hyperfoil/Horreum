@@ -36,7 +36,10 @@ import {
     roleToName
 } from '../../auth.js'
 
-import { ADD_ALERT, defaultFormatError } from "../../alerts"
+import {
+   alertAction,
+   constraintValidationFormatter,
+} from "../../alerts"
 
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
@@ -222,14 +225,7 @@ export default () => {
                                }
 
                                dispatch(actions.sendTest(newTest)).then(() => history.goBack(), e => {
-                                  dispatch({
-                                     type: ADD_ALERT,
-                                     alert: {
-                                        type: "TEST_UPDATE_FAILED",
-                                        title: "Test update failed",
-                                        content: defaultFormatError(e),
-                                     }
-                                  })
+                                  dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", e, constraintValidationFormatter("the saved test")))
                                })
                            }}
                        >Save</Button>

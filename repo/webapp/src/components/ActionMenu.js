@@ -12,8 +12,9 @@ import { rolesSelector } from '../auth.js'
 
 import ShareLinkModal from './ShareLinkModal'
 import ChangeAccessModal from './ChangeAccessModal'
+import ConfirmDeleteModal from './ConfirmDeleteModal'
 
-export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenReset, onTokenDrop, onAccessUpdate }) => {
+export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenReset, onTokenDrop, onAccessUpdate, description, onDelete }) => {
    const [menuOpen, setMenuOpen] = useState(false)
 
    const roles = useSelector(rolesSelector)
@@ -23,6 +24,8 @@ export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenRese
    const [changeAccessModalOpen, setChangeAccessModalOpen] = useState(false)
    const [newAccess, setNewAccess] = useState(access)
    const [newOwner, setNewOwner] = useState(owner)
+
+   const [confirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false)
 
    useEffect(() => {
       setNewOwner(owner)
@@ -49,7 +52,13 @@ export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenRese
                        }}
                        isDisabled={!isOwner}
          >Change access</DropdownItem>,
-         <DropdownItem key="delete" isDisabled>Delete</DropdownItem>,
+         <DropdownItem key="delete"
+                       onClick={() => {
+                           setMenuOpen(false)
+                           setConfirmDeleteModalOpen(true)
+                       }}
+                       isDisabled={!isOwner || !onDelete}
+         >Delete</DropdownItem>,
          ...(extraItems ? extraItems : [])
          ]}
       />
@@ -69,5 +78,9 @@ export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenRese
                             setChangeAccessModalOpen(false)
                             onAccessUpdate(id, newOwner, newAccess)
                          }} />
+      <ConfirmDeleteModal isOpen={ confirmDeleteModalOpen }
+                          onClose={ () => setConfirmDeleteModalOpen(false) }
+                          onDelete={ () => onDelete(id) }
+                          description={ description } />
    </>)
 }

@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux'
 import { addOrUpdateExtractor, listExtractors } from '../domain/schemas/api.js'
 import SchemaSelect from './SchemaSelect'
 
-import { ADD_ALERT, defaultFormatError } from "../alerts"
+import { alertAction } from "../alerts"
 
 import {
    ActionGroup,
@@ -154,12 +154,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                              setCreateOpen(false)
                              openVariantModal(created)
                           }, e => {
-                             dispatch({ type: ADD_ALERT,
-                                        alert: {
-                                           type: "EXTRACTOR_UPDATE",
-                                           title: "Failed to add/update schema extractor.",
-                                           content: defaultFormatError(e),
-                                        }})
+                              dispatch(alertAction("EXTRACTOR_UPDATE", "Failed to add/update schema extractor.", e))
                           })
                        }}>Save</Button>
                <Button variant="secondary"

@@ -21,8 +21,40 @@ export const reducer = (state = [], action) => {
             return []
          }
          break;
+      default:
    }
    return state;
+}
+
+export const constraintValidationFormatter = object => e => {
+    if (e && e.error === "javax.validation.ConstraintViolationException") {
+       return (<><span>Some constraints on { object } have failed:</span><br /><ul>
+          { e.violations.map((v, i) => (<li key={i}><code>{v.class}/{v.path}</code>: {v.message}</li>))}
+       </ul></>)
+    } else {
+       return false
+    }
+ }
+
+export const alertAction = (type, title, e, errorFormatter = []) => {
+   let formatted = false;
+   if (Array.isArray(errorFormatter)) {
+      for (const f of errorFormatter) {
+         formatted = f.call(null, e);
+         if (formatted) break;
+      }
+   } else {
+      formatted = errorFormatter.call(null, e)
+   }
+   if (!formatted) {
+      formatted = defaultFormatError(e)
+   }
+   return {
+      type: ADD_ALERT,
+      alert: {
+         type, title, content: formatted
+      }
+   }
 }
 
 export const defaultFormatError = e => {
@@ -31,7 +63,7 @@ export const defaultFormatError = e => {
    } else if (typeof e !== "object") {
       return String(e)
    } else {
-      return String(e)
+      return JSON.stringify(e)
    }
 }
 
@@ -40,10 +72,10 @@ const alertsSelector = state => state.alerts
 export default () => {
    const alerts = useSelector(alertsSelector)
    const dispatch = useDispatch()
-   if (alerts.length == 0) {
+   if (alerts.length === 0) {
       return ""
    }
-   return (<div style={{ position: "absolute" }}>
+   return (<div style={{ position: "absolute", zIndex: "1000", width: "100%" }}>
       { alerts.map(alert => (
          <Alert variant={ alert.variant || "warning" }
                 title={ alert.title || "Title is missing" }

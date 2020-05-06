@@ -12,6 +12,7 @@ import { NavLink } from 'react-router-dom';
 import * as actions from './actions';
 import * as selectors from './selectors';
 import { isTesterSelector, registerAfterLogin, roleToName } from '../../auth.js'
+import { alertAction } from '../../alerts'
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import ActionMenu from '../../components/ActionMenu';
@@ -51,7 +52,11 @@ export default () => {
                         tokenToLink={ (id, token) => "/schema/" + id + "?token=" + token }
                         onTokenReset={ id => dispatch(actions.resetToken(id)) }
                         onTokenDrop={ id => dispatch(actions.dropToken(id)) }
-                        onAccessUpdate={ (id, owner, access) => dispatch(actions.updateAccess(id, owner, access)) } />
+                        onAccessUpdate={ (id, owner, access) => dispatch(actions.updateAccess(id, owner, access)) }
+                        description={ "schema " + arg.row.original.name + " (" + arg.row.original.uri + ")" }
+                        onDelete={ id => dispatch(actions.deleteSchema(id)).catch(e => {
+                           dispatch(alertAction("SCHEMA_DELETE", "Failed to delete schema", e))
+                        }) }/>
                 )
             }
         }
