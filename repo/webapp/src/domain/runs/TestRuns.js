@@ -20,6 +20,7 @@ import { NavLink } from 'react-router-dom';
 
 import { byTest } from './actions';
 import * as selectors from './selectors';
+import { tokenSelector } from '../../auth'
 
 import { fetchTest } from '../tests/actions';
 import { get } from '../tests/selectors';
@@ -37,9 +38,10 @@ const renderCell = (render) => (arg) => {
     } else if (typeof render === "string") {
         return (<Tooltip content={ "Render failure: " + render } ><WarningTriangleIcon style={{color: "#a30000"}} /></Tooltip>);
     }
+    const token = useSelector(tokenSelector)
     try {
         const useValue = (value === null || value === undefined) ? data[index][column.id.toLowerCase()] : value;
-        const rendered = render(useValue, data[index])
+        const rendered = render(useValue, data[index], token)
         if (!rendered) {
             return "-"
         } else if (typeof rendered === "string") {
