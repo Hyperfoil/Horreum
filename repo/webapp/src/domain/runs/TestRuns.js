@@ -122,6 +122,7 @@ export default () => {
             setColumns(test.defaultView.components)
         }
     }, [test])
+    const isLoading = useSelector(selectors.isLoading)
     return (
         <PageSection>
             <Card>
@@ -136,7 +137,7 @@ export default () => {
                     </Toolbar>
                 </CardHeader>
                 <CardBody>
-                    <Table columns={tableColumns} data={runs} initialSortBy={[{id: "stop", desc: true}]}/>
+                    <Table columns={tableColumns} data={runs} initialSortBy={[{id: "stop", desc: true}]} isLoading={isLoading}/>
                 </CardBody>
             </Card>
         </PageSection>

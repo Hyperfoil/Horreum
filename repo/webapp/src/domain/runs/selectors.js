@@ -1,5 +1,7 @@
 import {Map} from 'immutable';
 
+export const isLoading = state => state.runs.loading
+
 export const all = state => {
     if (!state.runs.byId) {
         return false

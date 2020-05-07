@@ -6,7 +6,7 @@ import clsx from 'clsx';
 // We need to pass the same empty list to prevent re-renders
 const NO_DATA = []
 
-function Table({ columns, data, initialSortBy = [] }) {
+function Table({ columns, data, initialSortBy = [], isLoading = false }) {
   const {
     getTableProps,
     getTableBodyProps,
@@ -57,6 +57,11 @@ function Table({ columns, data, initialSortBy = [] }) {
           })}
         </thead>
         <tbody {...getTableBodyProps()}>
+          { isLoading &&
+          <tr key="loading">
+            <td key="loading" colspan={ columns.length } style={{ textAlign: "center" }}><Spinner size="lg"/></td>
+          </tr>
+          }
           {rows.map(
             (row, i) => {
               prepareRow(row);

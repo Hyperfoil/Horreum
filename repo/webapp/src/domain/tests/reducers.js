@@ -3,12 +3,17 @@ import {Map} from 'immutable';
 import * as utils from "../../utils";
 
 const initialState = {
-    byId: undefined
+    byId: undefined,
+    loading: false,
 }
 
 export const reducer = (state = initialState, action) => {
     switch (action.type) {
+        case actionTypes.LOADING:
+            state.loading = true
+        break;
         case actionTypes.LOADED:
+            state.loading = false
             if (!state.byId) {
                 state.byId = Map({})
             }

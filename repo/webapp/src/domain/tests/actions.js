@@ -8,6 +8,7 @@ const loaded = tests =>({
 })
 export const fetchSummary = () => {
     return dispatch => {
+        dispatch({ type: actionTypes.LOADING })
         api.summary()
         .then(response=>{
             dispatch(loaded(response))

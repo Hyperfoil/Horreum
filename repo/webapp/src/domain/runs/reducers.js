@@ -4,6 +4,7 @@ import * as utils from '../../utils'
 import { ONLY_MY_OWN } from '../../components/OwnerSelect'
 
 const initialState = {
+    loading: false,
     byId: undefined,
     byTest: undefined,
     filteredIds: null,
@@ -13,8 +14,12 @@ const initialState = {
 }
 //Takes events and updates the state accordingly
 export const reducer = (state = initialState, action) =>{
-    switch(action.type){
+    switch(action.type) {
+        case actionTypes.LOADING:
+            state.loading = true
+        break;
         case actionTypes.LOADED: {
+            state.loading = false
             if (!state.byId) {
                 state.byId = Map({})
             }
@@ -30,6 +35,7 @@ export const reducer = (state = initialState, action) =>{
             break;
         }
         case actionTypes.TESTID: {
+            state.loading = false
             const byTest = state.byTest || Map({})
             let testMap = byTest.get(action.id,Map({}));
             if ( !utils.isEmpty(action.runs) ) {

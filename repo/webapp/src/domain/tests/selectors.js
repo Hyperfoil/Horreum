@@ -3,6 +3,8 @@ const emptyTest = {
     description:"",
 }
 
+export const isLoading = state => state.tests.loading
+
 export const all = state => {
     if (!state.tests.byId) {
         return false

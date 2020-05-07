@@ -13,27 +13,17 @@ const testId = (id,runs,payload) =>({
     runs
 })
 
-export const get = (id, token) =>
-    dispatch =>
-        api.get(id, token)
-        .then(response => {
-            dispatch(loaded(response))
-        });
+export const get = (id, token) => dispatch =>
+   api.get(id, token).then(response => dispatch(loaded(response)))
 
-export const all = () => {
-    return dispatch =>
-        api.all()
-        .then(response => {
-            dispatch(loaded(response))
-        });
-    }
+export const all = () => dispatch => {
+   dispatch({ type: actionTypes.LOADING })
+   api.all().then(response => dispatch(loaded(response)));
+}
 
-export const byTest = (id, payload, roles)=> {
-   return dispatch =>
-        api.byTest(id, payload, roles)
-        .then(response => {
-            return dispatch(testId(id,response,payload))
-        })
+export const byTest = (id, payload, roles) => dispatch => {
+   dispatch({ type: actionTypes.LOADING })
+   api.byTest(id, payload, roles).then(response => dispatch(testId(id,response,payload)))
 }
 
 export const filter = (query, matchAll, roles, callback) => {

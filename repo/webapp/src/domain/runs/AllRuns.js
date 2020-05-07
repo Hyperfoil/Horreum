@@ -150,7 +150,7 @@ export default ()=>{
        }
        suggest(filterQuery, selectedRoles.key)(dispatch)
     }
-
+    const isLoading = useSelector(selectors.isLoading)
     return (
         <PageSection>
           <Card>
@@ -244,7 +244,7 @@ export default ()=>{
               </div>
             </CardHeader>
             <CardBody>
-              <Table columns={columns} data={runs} initialSortBy={[{id: "stop", desc: true}]}/>
+              <Table columns={columns} data={runs} initialSortBy={[{id: "stop", desc: true}]} isLoading={ isLoading }/>
             </CardBody>
           </Card>
         </PageSection>

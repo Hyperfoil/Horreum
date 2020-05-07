@@ -1,3 +1,4 @@
+export const LOADING = 'runs/LOADING'
 export const CREATE = 'runs/CREATE';
 export const DELETE = 'runs/DELETE';
 export const UPDATE = 'runs/UPDATE';

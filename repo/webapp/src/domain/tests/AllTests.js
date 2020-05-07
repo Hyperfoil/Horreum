@@ -83,6 +83,7 @@ export default ()=>{
         }))
     },[dispatch])
     const isTester = useSelector(isTesterSelector)
+    const isLoading = useSelector(selectors.isLoading)
     return (
         <PageSection>
           <Card>
@@ -94,7 +95,7 @@ export default ()=>{
             </CardHeader>
             }
             <CardBody>
-              <Table columns={columns} data={allRuns} />
+              <Table columns={columns} data={allRuns} isLoading={isLoading}/>
             </CardBody>
           </Card>
         </PageSection>
