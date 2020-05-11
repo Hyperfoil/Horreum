@@ -13,6 +13,7 @@ import {
 } from '@patternfly/react-core';
 import { Spinner } from '@patternfly/react-core/dist/esm/experimental'
 import {
+    FolderOpenIcon,
     HelpIcon,
     SearchIcon,
 } from '@patternfly/react-icons'
@@ -84,7 +85,7 @@ export default ()=>{
           accessor:"testid",
           Cell: (arg) => {
             const {cell: {value} } = arg;
-            return (<NavLink to={`/run/list/${value}`}>{arg.row.original.testname}</NavLink>)
+            return (<NavLink to={`/run/list/${value}`}>{arg.row.original.testname} <FolderOpenIcon /></NavLink>)
           }
         }, {
           Header:"Actions",
