@@ -20,6 +20,7 @@ import Autosuggest from 'react-autosuggest';
 import './Autosuggest.css'
 
 import { DateTime, Duration } from 'luxon';
+import * as moment from 'moment'
 import { NavLink } from 'react-router-dom';
 
 import {all, filter, suggest, selectRoles, resetToken, dropToken, updateAccess } from './actions';
@@ -60,14 +61,20 @@ export default ()=>{
           Header: "Owner",
           accessor:"owner",
           Cell: (arg) => roleToName(arg.cell.value)
-        }, {
-          Header: "Start",
-          id: "start",
-          accessor: v => DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
-        }, {
-          Header:"Stop",
-          id: "stop",
-          accessor: v => DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+        },
+        {
+          Header: "Executed",
+          id: "executed",
+          Cell: arg => {
+            const format = time => DateTime.fromMillis(time).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+            const content = (<table style={{ width: "300px" }}>
+                              <tr><td>Started:</td><td>{format(arg.row.original.start)}</td></tr>
+                              <tr><td>Finished:</td><td>{format(arg.row.original.stop)}</td></tr>
+                             </table>)
+            return (<Tooltip isContentLeftAligned content={content}>
+                        <span>{moment(arg.row.original.stop).fromNow()}</span>
+                    </Tooltip>)
+          }
         }, {
           Header:"Duration",
           id: "duration",

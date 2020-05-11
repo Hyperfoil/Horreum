@@ -18,6 +18,9 @@ import {
 } from '@patternfly/react-icons';
 import { NavLink } from 'react-router-dom';
 
+import { DateTime, Duration } from 'luxon';
+import * as moment from 'moment'
+
 import { byTest } from './actions';
 import * as selectors from './selectors';
 import { tokenSelector } from '../../auth'
@@ -70,13 +73,22 @@ const staticColumns = [
             return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
         }
     }, {
-        Header: "Start",
-        id: "start",
-        accessor: v => window.DateTime.fromMillis(v.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+        Header: "Executed",
+        id: "executed",
+        Cell: arg => {
+            const format = time => DateTime.fromMillis(time).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+            const content = (<table style={{ width: "300px" }}>
+                                <tr><td>Started:</td><td>{format(arg.row.original.start)}</td></tr>
+                                <tr><td>Finished:</td><td>{format(arg.row.original.stop)}</td></tr>
+                             </table>)
+            return (<Tooltip isContentLeftAligned content={content}>
+                      <span>{moment(arg.row.original.stop).fromNow()}</span>
+                    </Tooltip>)
+        }
     }, {
-        Header: "Stop",
-        id: "stop",
-        accessor: v => window.DateTime.fromMillis(v.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+        Header:"Duration",
+        id: "duration",
+        accessor: v => Duration.fromMillis(v.stop - v.start).toFormat("hh:mm:ss.SSS")
     }, {
         Header: "Schema",
         accessor: "schema",
