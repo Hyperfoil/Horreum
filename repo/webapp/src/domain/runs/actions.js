@@ -7,44 +7,51 @@ const loaded = run =>({
     type: actionTypes.LOADED,
     runs: Array.isArray(run) ? run : [run]
 })
-const testId = (id,runs,payload) =>({
+const testId = (id, runs) =>({
     type: actionTypes.TESTID,
     id,
     runs
 })
 
 export const get = (id, token) => dispatch =>
-   api.get(id, token).then(response => dispatch(loaded(response)))
+   api.get(id, token).then(
+      response => dispatch(loaded(response)),
+      error => dispatch(loaded([]))
+   )
 
 export const all = () => dispatch => {
    dispatch({ type: actionTypes.LOADING })
-   api.all().then(response => dispatch(loaded(response)));
+   api.all().then(
+      response => dispatch(loaded(response)),
+      error => dispatch(loaded([]))
+   )
 }
 
 export const byTest = (id, payload, roles) => dispatch => {
    dispatch({ type: actionTypes.LOADING })
-   api.byTest(id, payload, roles).then(response => dispatch(testId(id,response,payload)))
+   api.byTest(id, payload, roles).then(
+      response => dispatch(testId(id,response)),
+      error => dispatch(testId(id, []))
+   )
 }
 
-export const filter = (query, matchAll, roles, callback) => {
-   return dispatch => {
-      if (query === "" && roles === "__all") {
-         dispatch({
-            type: actionTypes.FILTERED,
-            ids: null
-         })
-         callback(true)
-         return
-      }
-      api.filter(query, matchAll, roles)
-      .then(response => {
-         dispatch({
-            type: actionTypes.FILTERED,
-            ids: response
-         })
-         callback(true)
-      }, e => callback(false))
+export const filter = (query, matchAll, roles, callback) => dispatch => {
+   if (query === "" && roles === "__all") {
+      dispatch({
+         type: actionTypes.FILTERED,
+         ids: null
+      })
+      callback(true)
+      return
    }
+   api.filter(query, matchAll, roles)
+   .then(response => {
+      dispatch({
+         type: actionTypes.FILTERED,
+         ids: response
+      })
+      callback(true)
+   }, e => callback(false))
 }
 
 export const suggest = (query, roles) => dispatch => {

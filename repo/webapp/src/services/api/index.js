@@ -2,7 +2,7 @@ import React from 'react';
 import fetchival from 'fetchival';
 import apiConfig from './config';
 import store from "../../store.js"
-import { ADD_ALERT } from "../../alerts"
+import { alertAction, ADD_ALERT } from "../../alerts"
 import { TryLoginAgain } from "../../auth"
 
 export const exceptionExtractError = (exception) => {
@@ -98,6 +98,10 @@ export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}, r
                                 title: "Request failed due to insufficient permissions",
                                 content: (<TryLoginAgain />),
                              }})
+         } else if (e.response.status >= 500) {
+            e.response.text().then(body => body, noBody => noBody).then(
+               body => store.dispatch(alertAction("SERVER_ERROR", e.response.status + " " + e.response.statusText, body))
+            )
          }
          return e.response.json().then(body => {
             return Promise.reject(body)

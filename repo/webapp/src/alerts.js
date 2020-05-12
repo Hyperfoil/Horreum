@@ -59,12 +59,18 @@ export const alertAction = (type, title, e, errorFormatter = []) => {
 export const defaultFormatError = e => {
    if (!e) {
       return ""
-   } else if (typeof e !== "object") {
+   }
+   if (typeof e === "string") {
+      try {
+         e = JSON.parse(e)
+      } catch {}
+   }
+   if (typeof e !== "object") {
       return String(e)
    } else if (e instanceof Error) {
       return e.toString()
    } else {
-      return JSON.stringify(e)
+      return (<pre>{ JSON.stringify(e, null, 2) }</pre>)
    }
 }
 
