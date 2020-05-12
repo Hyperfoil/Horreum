@@ -38,6 +38,8 @@ public class Test extends PanacheEntityBase {
    @NotNull
    public Access access = Access.PUBLIC;
 
+   public String compareUrl;
+
    public void ensureLinked() {
       if (defaultView != null) {
          defaultView.test = this;

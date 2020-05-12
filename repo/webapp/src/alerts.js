@@ -62,6 +62,8 @@ export const defaultFormatError = e => {
       return ""
    } else if (typeof e !== "object") {
       return String(e)
+   } else if (e instanceof Error) {
+      return e.toString()
    } else {
       return JSON.stringify(e)
    }

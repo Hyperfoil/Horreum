@@ -51,6 +51,7 @@ export default () => {
     const test = useSelector(selectors.get(testId))
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+    const [compareUrl, setCompareUrl] = useState("");
     const dispatch = useDispatch();
     useEffect(() => {
         if (testId !== "_new") {
@@ -64,6 +65,7 @@ export default () => {
         setName(test.name);
         document.title = (testId === "_new" ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
         setDescription(test.description);
+        setCompareUrl((test.compareUrl && test.compareUrl.toString()) || "")
         if (test.defaultView) {
             setView(test.defaultView)
         }
@@ -127,6 +129,14 @@ export default () => {
                                    ) : (
                                       <AccessIcon access={access} />
                                    )}
+                                </FormGroup>
+                                <FormGroup label="Compare URL function"
+                                           fieldId="compareUrl"
+                                           helperText="This function receives an array of ids as first argument and auth token as second. It should return URL to comparator service.">
+                                    <TextArea value={ (compareUrl && compareUrl.toString()) || "" }
+                                             id="compareUrl"
+                                             onChange={ setCompareUrl }
+                                             readOnly={!isTester}/>
                                 </FormGroup>
                             </Form>
                         </ToolbarSection>
@@ -216,6 +226,7 @@ export default () => {
                                const newTest = {
                                    name,
                                    description,
+                                   compareUrl,
                                    defaultView: view,
                                    owner: owner,
                                    access: accessName(access),

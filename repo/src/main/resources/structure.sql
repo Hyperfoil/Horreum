@@ -78,7 +78,8 @@ CREATE TABLE public.test (
     owner text NOT NULL,
     access integer NOT NULL,
     token text,
-    defaultview_id integer
+    defaultview_id integer,
+    compareUrl text
 );
 
 CREATE SEQUENCE public.test_id_seq

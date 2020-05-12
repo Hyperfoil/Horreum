@@ -3,6 +3,7 @@ import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
+    Button,
     Card,
     CardHeader,
     CardBody,
@@ -24,6 +25,7 @@ import * as moment from 'moment'
 import { byTest } from './actions';
 import * as selectors from './selectors';
 import { tokenSelector } from '../../auth'
+import { alertAction } from '../../alerts'
 
 import { fetchTest } from '../tests/actions';
 import { get } from '../tests/selectors';
@@ -66,6 +68,16 @@ const renderCell = (render) => (arg) => {
 
 const staticColumns = [
     {
+        Header: "",
+        id: "selection",
+        disableSortBy: true,
+        Cell: ({ row, selectedFlatRows }) => {
+           const props = row.getToggleRowSelectedProps()
+           delete props.indeterminate
+           return (<input type="checkbox" {... props}
+                          disabled={ !row.isSelected && selectedFlatRows.length >= 2 }/>)
+        },
+    }, {
         Header: "Id",
         accessor: "id",
         Cell: (arg) => {
@@ -77,10 +89,10 @@ const staticColumns = [
         id: "executed",
         Cell: arg => {
             const format = time => DateTime.fromMillis(time).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
-            const content = (<table style={{ width: "300px" }}>
+            const content = (<table style={{ width: "300px" }}><tbody>
                                 <tr><td>Started:</td><td>{format(arg.row.original.start)}</td></tr>
                                 <tr><td>Finished:</td><td>{format(arg.row.original.stop)}</td></tr>
-                             </table>)
+                             </tbody></table>)
             return (<Tooltip isContentLeftAligned content={content}>
                       <span>{moment(arg.row.original.stop).fromNow()}</span>
                     </Tooltip>)
@@ -108,8 +120,9 @@ export default () => {
     const { testId } = useParams();
     const test = useSelector(get(testId))
     const [columns, setColumns] = useState((test && test.defaultView) ? test.defaultView.components : [])
+    const [selectedRows, setSelectedRows] = useState({})
     const tableColumns = useMemo(() => {
-        const rtrn = [...staticColumns]
+        const rtrn = [ ...staticColumns ]
         columns.forEach((col, index) => {
              rtrn.push({
                  Header: col.headerName,
@@ -135,6 +148,27 @@ export default () => {
         }
     }, [test])
     const isLoading = useSelector(selectors.isLoading)
+
+    const [actualCompareUrl, compareError] = useMemo(() => {
+       if ( test && test.compareUrl && typeof test.compareUrl === "function" ) {
+          try {
+             const rows = Object.keys(selectedRows).map(id => runs[id].id)
+             if (rows.length >= 2) {
+                return [test.compareUrl(rows), undefined]
+             }
+          } catch (e) {
+             return [undefined, e]
+          }
+       }
+       return [undefined, undefined]
+    }, [test.compareUrl, runs, selectedRows])
+    const hasError = !!compareError
+    useEffect(() => {
+       if (compareError) {
+          dispatch(alertAction("COMPARE_FAILURE", "Compare function failed", compareError))
+       }
+    }, [hasError])
+
     return (
         <PageSection>
             <Card>
@@ -143,13 +177,30 @@ export default () => {
                         <ToolbarGroup>
                             <ToolbarItem className="pf-u-mr-xl">{`Test: ${test.name || testId}`}</ToolbarItem>
                         </ToolbarGroup>
+                        { test && test.compareUrl &&
+                        <ToolbarGroup>
+                           <ToolbarItem>
+                              <Button variant="primary"
+                                      component="a"
+                                      target="_blank"
+                                      href={ actualCompareUrl || "" }
+                                      isDisabled={ !actualCompareUrl }>Compare runs</Button>
+                           </ToolbarItem>
+                        </ToolbarGroup>
+                        }
                         <ToolbarGroup>
                             <NavLink to={ `/test/${testId}` } ><EditIcon /></NavLink>
                         </ToolbarGroup>
                     </Toolbar>
                 </CardHeader>
                 <CardBody>
-                    <Table columns={tableColumns} data={runs} initialSortBy={[{id: "stop", desc: true}]} isLoading={isLoading}/>
+                    <Table columns={tableColumns}
+                           data={runs}
+                           initialSortBy={[{id: "stop", desc: true}]}
+                           isLoading={isLoading}
+                           selected={selectedRows}
+                           onSelected={setSelectedRows}
+                           />
                 </CardBody>
             </Card>
         </PageSection>
