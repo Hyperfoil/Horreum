@@ -85,11 +85,11 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                  let array = base + "[]"
                  let updated
                  if (selected.includes(newValue)) {
-                    updated = selected.filter(o => o != newValue)
+                    updated = selected.filter(o => o !== newValue)
                  } else if (selected.includes(base)) {
-                    updated = [...selected.filter(o => o != base), newValue]
+                    updated = [...selected.filter(o => o !== base), newValue]
                  } else if (selected.includes(array)) {
-                    updated = [...selected.filter(o => o != array), newValue]
+                    updated = [...selected.filter(o => o !== array), newValue]
                  } else {
                     openVariantModal(options.filter(o => o.accessor === newValue)[0])
                     return
@@ -167,12 +167,12 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
       <Modal isSmall title="Select variant"
              isOpen={variantOpen}
              onClose={() => setVariantOpen(false)}>
-         <Radio isChecked={variant == 0}
+         <Radio isChecked={variant === 0}
                 id="first-match"
                 name="first-match"
                 label="First match"
                 onChange={() => setVariant(0)}/>
-         <Radio isChecked={variant == 1}
+         <Radio isChecked={variant === 1}
                 id="all-matches"
                 name="all-matches"
                 label="All matches (as array)"
@@ -182,7 +182,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                     onClick={() => {
                        setVariantOpen(false)
                        let base = baseName(addedOption.accessor)
-                       let name = variant == 0 ? base : base + "[]"
+                       let name = variant === 0 ? base : base + "[]"
                        setOptions([...options, { ...addedOption, accessor: name }])
                        let updated = [...selected, name]
                        setSelected(updated)

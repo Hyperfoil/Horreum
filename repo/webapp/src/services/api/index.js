@@ -47,8 +47,8 @@ const deserialize = (input)=>{
             try {
                return new Function("return "+input)();
             } catch (e) {
-               console.log("Error deserializing " + input)
-               console.log(e)
+               console.warn("Error deserializing " + input)
+               console.warn(e)
                return input
             }
         } else {

@@ -20,7 +20,6 @@ export const reducer = (state = [], action) => {
          } else {
             return []
          }
-         break;
       default:
    }
    return state;

@@ -8,7 +8,6 @@ import {
     CardHeader,
     CardBody,
     CardFooter,
-    Checkbox,
     Form,
     ActionGroup,
     FormGroup,
@@ -161,7 +160,7 @@ export default () => {
                                </FormGroup>
                                <FormGroup label="Accessors" fieldId="accessor">
                                  <Accessors id="accessor"
-                                            value={ (c.accessors && c.accessors.split(/[,;] */).map(a => a.trim()).filter(a => a.length != 0)) || [] }
+                                            value={ (c.accessors && c.accessors.split(/[,;] */).map(a => a.trim()).filter(a => a.length !== 0)) || [] }
                                             onChange={ value => { c.accessors = value.join(";"); setView({ ...view }) }}
                                             isReadOnly={!isTester} />
                                </FormGroup>

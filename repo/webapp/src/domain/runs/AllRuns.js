@@ -68,10 +68,10 @@ export default ()=>{
           id: "executed",
           Cell: arg => {
             const format = time => DateTime.fromMillis(time).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
-            const content = (<table style={{ width: "300px" }}>
+            const content = (<table style={{ width: "300px" }}><tbody>
                               <tr><td>Started:</td><td>{format(arg.row.original.start)}</td></tr>
                               <tr><td>Finished:</td><td>{format(arg.row.original.stop)}</td></tr>
-                             </table>)
+                             </tbody></table>)
             return (<Tooltip isContentLeftAligned content={content}>
                         <span>{moment(arg.row.original.stop).fromNow()}</span>
                     </Tooltip>)
@@ -103,7 +103,7 @@ export default ()=>{
                          onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, owner, access)) } />
           )}
         }
-    ],[roles, dispatch])
+    ],[dispatch])
 
     const selectedRoles = useSelector(selectors.selectedRoles)
 

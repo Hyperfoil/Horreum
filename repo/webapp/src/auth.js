@@ -2,8 +2,6 @@ import React from 'react';
 import { useSelector } from 'react-redux'
 
 import {
-  Alert,
-  AlertActionCloseButton,
   Button,
 } from '@patternfly/react-core';
 

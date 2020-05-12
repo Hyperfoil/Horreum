@@ -5,8 +5,6 @@ import {
     Modal,
 } from '@patternfly/react-core';
 
-import { roleToName } from '../auth.js'
-
 export default ({ isOpen, onClose, onDelete, description, extra = "" }) => {
    return (<Modal isSmall title="Confirm deletion"
                   isOpen={isOpen}

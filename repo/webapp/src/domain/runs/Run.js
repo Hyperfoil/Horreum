@@ -7,7 +7,6 @@ import jsonpath from 'jsonpath';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
-import { isTesterSelector } from '../../auth'
 
 import Editor from '../../components/Editor/monaco/Editor';
 
@@ -36,7 +35,6 @@ export default () => {
     const editor = useRef();
     const run = useSelector(selectors.get(id));
     const [data, setData] = useState(toString(run.data) || "{}")
-    const isTester = useSelector(isTesterSelector)
 
     const [pathQuery, setPathQuery] = useState("")
     const [pathInvalid, setPathInvalid] = useState(false)
