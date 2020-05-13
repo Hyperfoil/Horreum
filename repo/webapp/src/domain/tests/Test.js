@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -25,6 +25,8 @@ import {
     ArrowAltCircleUpIcon,
     OutlinedTimesCircleIcon
 } from '@patternfly/react-icons';
+import Editor from '../../components/Editor/monaco/Editor'
+
 import * as actions from './actions';
 import * as selectors from './selectors';
 
@@ -45,12 +47,18 @@ import AccessChoice from '../../components/AccessChoice'
 import Accessors from '../../components/Accessors'
 import OwnerSelect from '../../components/OwnerSelect'
 
+function swap(array, i1, i2) {
+   const temp = array[i1]
+   array[i1] = array[i2]
+   array[i2] = temp
+}
+
 export default () => {
     const { testId } = useParams();
     const test = useSelector(selectors.get(testId))
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [compareUrl, setCompareUrl] = useState("");
+    const compareUrlEditor = useRef()
     const dispatch = useDispatch();
     useEffect(() => {
         if (testId !== "_new") {
@@ -64,7 +72,6 @@ export default () => {
         setName(test.name);
         document.title = (testId === "_new" ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
         setDescription(test.description);
-        setCompareUrl((test.compareUrl && test.compareUrl.toString()) || "")
         if (test.defaultView) {
             setView(test.defaultView)
         }
@@ -77,6 +84,12 @@ export default () => {
     const [access, setAccess] = useState(0)
     const [owner, setOwner] = useState(defaultRole)
     const [view, setView] = useState({ name: "default", components: []})
+
+    const renderRefs = useRef(view.components.map(c => React.createRef()));
+    const updateRenders = () => view.components.forEach((c, i) => {
+         c.render = renderRefs.current[i].getValue()
+    })
+
     const history = useHistory()
     return (
         // <PageSection>
@@ -132,10 +145,11 @@ export default () => {
                                 <FormGroup label="Compare URL function"
                                            fieldId="compareUrl"
                                            helperText="This function receives an array of ids as first argument and auth token as second. It should return URL to comparator service.">
-                                    <TextArea value={ (compareUrl && compareUrl.toString()) || "" }
-                                             id="compareUrl"
-                                             onChange={ setCompareUrl }
-                                             readOnly={!isTester}/>
+                                    <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
+                                       <Editor value={ (test.compareUrl && test.compareUrl.toString()) || "" }
+                                            setValueGetter={e => { compareUrlEditor.current = e }}
+                                            options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
+                                    </div>
                                 </FormGroup>
                             </Form>
                         </ToolbarSection>
@@ -165,10 +179,11 @@ export default () => {
                                             isReadOnly={!isTester} />
                                </FormGroup>
                                <FormGroup label="Rendering" fieldId="rendering">
-                                 <TextArea value={ (c.render && c.render.toString()) || "" }
-                                           id="rendering"
-                                           onChange={ value => { c.render = value; setView({ ...view }) }}
-                                           readOnly={!isTester}/>
+                                 <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
+                                     <Editor value={ (c.render && c.render.toString()) || "" }
+                                             setValueGetter={e => { renderRefs.current[i] = e }}
+                                             options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
+                                 </div>
                                </FormGroup>
                            </Form>
                            { isTester &&
@@ -177,17 +192,18 @@ export default () => {
                                        variant="plain"
                                        isDisabled={ i === 0 }
                                        onClick={ () => {
-                                          let prev = view.components[i - 1]
-                                          view.components[i - 1] = c;
-                                          view.components[i] = prev;
+                                          updateRenders()
+                                          swap(view.components, i - 1, i)
+                                          swap(renderRefs.current, i - 1, i)
                                           c.headerOrder = i - 1;
-                                          prev.headerOrder = i;
+                                          view.components[i].headerOrder = i;
                                           setView({ ...view })
                                }} ><ArrowAltCircleUpIcon /></Button>
                                <Button style={{width: "100%", position: "absolute", left: "0px", top: "38%"}}
                                        variant="plain"
                                        onClick={ () => {
                                           view.components.splice(i, 1)
+                                          renderRefs.current.splice(i, 1)
                                           view.components.forEach((c, i) => c.headerOrder = i)
                                           setView({ ...view})
                                }}><OutlinedTimesCircleIcon style={{color: "#a30000"}}/></Button>
@@ -195,11 +211,11 @@ export default () => {
                                        variant="plain"
                                        isDisabled={ i === view.components.length - 1 }
                                        onClick={ () => {
-                                          let prev = view.components[i + 1]
-                                          view.components[i + 1] = c;
-                                          view.components[i] = prev;
+                                          updateRenders()
+                                          swap(view.components, i + 1, i)
+                                          swap(renderRefs.current, i + 1, i)
                                           c.headerOrder = i + 1;
-                                          prev.headerOrder = i;
+                                          view.components[i].headerOrder = i;
                                           setView({ ...view})
                                }} ><ArrowAltCircleDownIcon /></Button>
                            </div>
@@ -210,7 +226,9 @@ export default () => {
                     <ActionGroup>
                         <Button onClick={ () => {
                            const components = view.components || []
-                           setView({ ...view, components: [ ...components, { isArray: false, headerOrder: components.length} ] })
+                           components.push({ headerOrder: components.length})
+                           setView({ ...view, components })
+                           renderRefs.current.push(React.createRef())
                         }} >Add component</Button>
 
                     </ActionGroup>
@@ -222,10 +240,11 @@ export default () => {
                        <Button
                            variant="primary"
                            onClick={e => {
+                               updateRenders()
                                const newTest = {
                                    name,
                                    description,
-                                   compareUrl,
+                                   compareUrl: compareUrlEditor.current.getValue(),
                                    defaultView: view,
                                    owner: owner,
                                    access: accessName(access),

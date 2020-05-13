@@ -48,6 +48,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
          setOptions(response)
       })
    }, [])
+   useEffect(() => setSelected(value), [value])
    const [createOpen, setCreateOpen] = useState(false)
 
    const [variantOpen, setVariantOpen] = useState(false)

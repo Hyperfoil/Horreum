@@ -26,32 +26,6 @@ export default ({value = "{}", language="json", setValueGetter = (v) => {}, opti
     
     const valueGetter = useRef();
 
-    const editorWillMount = (monaco)=>{
-        console.log("editorWillMount",monaco)
-
-        /*
-                monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-            validate: true,
-            schemas: [{
-                uri: "http://myserver/foo-schema.json",
-                fileMatch: ['*'],
-                schema: {
-                    type: "object",
-                    properties: {
-                        p1: {
-                            enum: [ "v1", "v2"]
-                        },
-                        p2: {
-                            $ref: "http://myserver/bar-schema.json"
-                        }
-                    }
-                }
-            }]
-        });
-
-        */
-    }
-
     const editorDidMount =(getter, editor) => {
         //console.log("editorDidMount",editor,monaco)
         valueGetter.current = getter;
@@ -71,24 +45,9 @@ export default ({value = "{}", language="json", setValueGetter = (v) => {}, opti
                 return null;
             }
         })
-
-
-
     }
-    const _onChange = (newValue, e)=>{
-        console.log('onChange', newValue, e);
-      }
 
     return (
-        // <MonacoEditor
-        //     language="json"
-        //     theme="vs-dark"
-        //     defaultValue={"{}"}
-        //     options={options}
-        //     onChange={_onChange}
-        //     editorDidMount={editorDidMount}
-        //     editorWillMount={editorWillMount}
-        // />
         <Editor
             value={value}
             language="json"
@@ -98,7 +57,6 @@ export default ({value = "{}", language="json", setValueGetter = (v) => {}, opti
                 ...options
             }}
             editorDidMount={editorDidMount}
-            editorWillMount={editorWillMount}
         />
     )
 }
