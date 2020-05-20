@@ -78,16 +78,9 @@ public class RunService {
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
    private static final String FIND_ACCESSORS =
-         "SELECT accessor, (SELECT '$' || se.jsonpath) as path, schema.uri, schema.id as schemaid, run.id as runid " +
-         "FROM run JOIN schema ON schema.uri IN (" +
-            "SELECT jsonb_path_query(run.data, '$.\\$schema'::jsonpath)#>>'{}' " +
-         ") LEFT JOIN schemaextractor se on se.schema_id = schema.id " +
-         "WHERE run.testid = ?" +
-         "UNION SELECT accessor, (SELECT '$.*' || se.jsonpath) as path, schema.uri, schema.id as schemaid, run.id as runid " +
-         "FROM run JOIN schema ON schema.uri IN (" +
-            "SELECT jsonb_path_query(run.data, '$.*.\\$schema'::jsonpath)#>>'{}' " +
-         ") LEFT JOIN schemaextractor se on se.schema_id = schema.id " +
-         "WHERE run.testid = ?";
+         "SELECT run_schemas.runid as runid, se.accessor, (prefix || se.jsonpath) as path, schemaid, uri " +
+         "FROM schemaextractor se JOIN run_schemas ON schema_id = schemaid " +
+         "WHERE run_schemas.testid = ? ";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -683,7 +676,6 @@ public class RunService {
            CloseMeJdbc h = sqlService.withRoles(connection, identity);
            PreparedStatement statement = connection.prepareStatement(sql.toString())){
          statement.setInt(1, testId);
-         statement.setInt(2, testId);
          int counter = 1;
          if (test.defaultView != null) {
             for (ViewComponent c : test.defaultView.components) {
@@ -691,12 +683,12 @@ public class RunService {
                   if (ViewComponent.isArray(accessor)) {
                      accessor = ViewComponent.arrayName(accessor);
                   }
-                  statement.setString(2 + counter++, accessor);
+                  statement.setString(1 + counter++, accessor);
                }
             }
          }
-         statement.setInt(2 + counter, testId);
-         ResultSet resultSet = statement.executeQuery();
+         statement.setInt(1 + counter, testId);
+         ResultSet resultSet = SqlService.execute(statement);
          Json.ArrayBuilder jsonResult = Json.array();
          while (resultSet.next()) {
             Json.ArrayBuilder view = Json.array();

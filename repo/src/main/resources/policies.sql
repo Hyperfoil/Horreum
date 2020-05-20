@@ -91,3 +91,16 @@ CREATE POLICY schema_delete ON schema FOR DELETE
 ALTER TABLE hook ENABLE ROW LEVEL SECURITY;
 CREATE POLICY hook_policy ON hook
     USING (has_role('admin')) WITH CHECK (has_role('admin'));
+
+-- Policies on the generated table run_schemas
+ALTER TABLE run_schemas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY rs_select ON run_schemas FOR SELECT
+    USING (
+        access = 0
+        OR (access = 1 AND has_role('viewer'))
+        OR (access = 2 AND has_role(run_schemas.owner) AND has_role('viewer'))
+        OR token = current_setting('repo.token', true)
+    );
+CREATE POLICY rs_insert ON run_schemas FOR INSERT WITH CHECK (false);
+CREATE POLICY rs_update ON run_schemas FOR UPDATE USING (false) WITH CHECK (false);
+CREATE POLICY rs_delete ON run_schemas FOR DELETE USING (false);

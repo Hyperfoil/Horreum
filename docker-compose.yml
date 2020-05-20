@@ -35,6 +35,7 @@ services:
       fi
       if ! psql -t -c "SELECT 1 FROM pg_tables WHERE tablename = 'dbsecret'" | grep -q 1; then
         psql -f /etc/horreum/imports/structure.sql
+        psql -f /etc/horreum/imports/auxiliary.sql
         psql -c "INSERT INTO dbsecret (passphrase) VALUES ('secret');"
         psql -f /etc/horreum/imports/policies.sql
       fi

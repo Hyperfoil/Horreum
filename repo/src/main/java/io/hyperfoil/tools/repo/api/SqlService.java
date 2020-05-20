@@ -9,7 +9,6 @@ import io.quarkus.security.identity.SecurityIdentity;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.security.DenyAll;
-import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -17,6 +16,10 @@ import javax.persistence.Query;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -25,18 +28,23 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.lang.Exception;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 @Path("/api/sql")
 @Consumes({MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 @ApplicationScoped
 public class SqlService {
+   private static final Logger log = Logger.getLogger(SqlService.class);
+
    private static final String SET_ROLES = "SELECT set_config('repo.userroles', ?, false)";
    private static final String SET_TOKEN = "SELECT set_config('repo.token', ?, false)";
    private static final CloseMe NOOP = () -> {};
@@ -51,12 +59,11 @@ public class SqlService {
    String dbSecret;
    byte[] dbSecretBytes;
 
+   @ConfigProperty(name = "horreum.db.init.scripts")
+   Optional<String> initScripts;
+
    private ExecutorService abortExecutor = Executors.newSingleThreadExecutor();
    private Map<String, String> signedRoleCache = new ConcurrentHashMap<>();
-
-   public SqlService() {
-      System.out.println("created a new SQLSERVICE");
-   }
 
    @DenyAll
    @GET
@@ -72,13 +79,47 @@ public class SqlService {
    }
 
    @PostConstruct
-   void init() throws SQLException {
+   void init() {
+      log.info("Initializing SqlService");
       dbSecretBytes = dbSecret.getBytes(StandardCharsets.UTF_8);
+      if (initScripts.isPresent()) {
+         for (String script : initScripts.get().split("[,;]")) {
+            loadScript(script);
+         }
+      }
    }
 
    @PreDestroy
    void destroy() {
       abortExecutor.shutdown();
+   }
+
+   private void loadScript(String script) {
+      try (InputStream stream = SqlService.class.getClassLoader().getResourceAsStream(script)) {
+         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+         String line;
+         StringBuilder query = new StringBuilder();
+         try (Connection connection = dataSource.getConnection()) {
+            while ((line = reader.readLine()) != null) {
+               line = line.trim();
+               if (line.equals("--;")) {
+                  if (query.length() > 0) {
+                     try (Statement statement = connection.createStatement()) {
+                        statement.execute(query.toString());
+                     } finally {
+                        query = new StringBuilder();
+                     }
+                  }
+               } else if (!line.startsWith("--") && !line.isEmpty()) {
+                  query.append("\n").append(line);
+               }
+            }
+         } catch (SQLException e) {
+            log.errorf(e, "Failed to execute DB script %s, query %s", script, query.toString());
+         }
+      } catch (IOException e) {
+         log.errorf(e, "Failed to load DB script %s", script);
+      }
    }
 
    private Json query(AgroalDataSource agroalDataSource, String sql) {
@@ -252,6 +293,16 @@ public class SqlService {
             unsetToken.setParameter(1, "");
             unsetToken.getSingleResult();
          };
+      }
+   }
+
+   public static ResultSet execute(PreparedStatement statement) throws SQLException {
+      long startTime = System.nanoTime();
+      try {
+         return statement.executeQuery();
+      } finally {
+         long endTime = System.nanoTime();
+         log.debugf("SQL query execution took %d ms, query: %s", TimeUnit.NANOSECONDS.toMillis(endTime - startTime), statement);
       }
    }
 }
