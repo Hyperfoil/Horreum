@@ -77,10 +77,11 @@ public class RunService {
             "FROM run, jsonb_path_query(run.data, ? ::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
-   private static final String FIND_ACCESSORS =
-         "SELECT run_schemas.runid as runid, se.accessor, (prefix || se.jsonpath) as path, schemaid, uri " +
-         "FROM schemaextractor se JOIN run_schemas ON schema_id = schemaid " +
-         "WHERE run_schemas.testid = ? ";
+   private static final String TEST_RUN_VIEW = "SELECT run.id, run.start, run.stop, run.testId, run.owner, (" +
+         "    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) FROM run_schemas rs WHERE run.id = rs.runid GROUP BY schemaid" +
+         ")::text as schemas, jsonb_object_agg(view_data.vcid, view_data.object) as view FROM run " +
+         "JOIN view_data ON view_data.runid = run.id " +
+         "WHERE run.testid = ? GROUP BY run.id, run.start, run.stop, run.testId, run.owner";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -649,71 +650,35 @@ public class RunService {
                             @QueryParam("sort") String sort,
                             @QueryParam("direction") String direction) {
       // TODO: this is combining EntityManager and JDBC access :-/
-      StringBuilder sql = new StringBuilder("WITH access AS (").append(FIND_ACCESSORS).append(") ")
-         .append("SELECT run.id, run.start, run.stop, run.testId, run.owner, (")
-         .append("    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) FROM access WHERE run.id = access.runid GROUP BY schemaid")
-         .append(")::text as schemas");
+      StringBuilder sql = new StringBuilder(TEST_RUN_VIEW);
       Test test;
       try (CloseMe h = sqlService.withRoles(em, identity)) {
          test = Test.find("id", testId).firstResult();
-         if (test == null) {
-            return Response.serverError().entity("failed to find test " + testId).build();
-         }
-         if (test.defaultView != null) {
-            for (ViewComponent c : test.defaultView.components) {
-               for (String accessor : c.accessors()) {
-                  sql.append(", ").append(ViewComponent.isArray(accessor) ? "jsonb_path_query_array" : "jsonb_path_query_first").append("(data, (");
-                  sql.append("   SELECT path FROM access WHERE access.accessor = ? AND access.runid = run.id");
-                  sql.append(")::jsonpath)#>>'{}'");
-               }
-            }
-         }
       }
-      sql.append(" FROM run WHERE run.testid = ?");
       // TODO: use parameters in paging
       addPaging(sql, limit, page, sort, direction);
       try (Connection connection = dataSource.getConnection();
            CloseMeJdbc h = sqlService.withRoles(connection, identity);
            PreparedStatement statement = connection.prepareStatement(sql.toString())){
          statement.setInt(1, testId);
-         int counter = 1;
-         if (test.defaultView != null) {
-            for (ViewComponent c : test.defaultView.components) {
-               for (String accessor : c.accessors()) {
-                  if (ViewComponent.isArray(accessor)) {
-                     accessor = ViewComponent.arrayName(accessor);
-                  }
-                  statement.setString(1 + counter++, accessor);
-               }
-            }
-         }
-         statement.setInt(1 + counter, testId);
          ResultSet resultSet = SqlService.execute(statement);
          Json.ArrayBuilder jsonResult = Json.array();
          while (resultSet.next()) {
+            String viewString = resultSet.getString(7);
+            Json unorderedView = viewString == null ? Json.map().build() : Json.fromString(viewString);
             Json.ArrayBuilder view = Json.array();
             if (test.defaultView != null) {
-               int i = 7;
                for (ViewComponent c : test.defaultView.components) {
-                  String[] accessors = c.accessors();
-                  if (accessors.length == 1) {
-                     String value = resultSet.getString(i++);
-                     if (ViewComponent.isArray(accessors[0])) {
-                        view.add(Json.fromString(value));
-                     } else {
-                        view.add(value);
-                     }
+                  Json componentData = unorderedView.getJson(String.valueOf(c.id));
+                  if (componentData == null) {
+                     view.add(null);
                   } else {
-                     Json.MapBuilder map = Json.map();
-                     for (String accessor : accessors) {
-                        String value = resultSet.getString(i++);
-                        if (ViewComponent.isArray(accessor)) {
-                           map.add(ViewComponent.arrayName(accessor), Json.fromString(value));
-                        } else {
-                           map.add(accessor, value);
-                        }
+                     String[] accessors = c.accessors();
+                     if (accessors.length == 1) {
+                        view.add(componentData.get(accessors[0]));
+                     } else {
+                        view.add(componentData);
                      }
-                     view.add(map.build());
                   }
                }
             }

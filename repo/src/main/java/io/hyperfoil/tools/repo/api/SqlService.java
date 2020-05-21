@@ -114,6 +114,11 @@ public class SqlService {
                   query.append("\n").append(line);
                }
             }
+            if (query.length() > 0) {
+               try (Statement statement = connection.createStatement()) {
+                  statement.execute(query.toString());
+               }
+            }
          } catch (SQLException e) {
             log.errorf(e, "Failed to execute DB script %s, query %s", script, query.toString());
          }

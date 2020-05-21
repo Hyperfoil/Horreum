@@ -106,7 +106,7 @@ DROP TRIGGER IF EXISTS after_schema_update ON run;
 --;
 CREATE TRIGGER before_run_delete BEFORE DELETE ON run FOR EACH ROW EXECUTE FUNCTION before_run_delete_func();
 --;
-CREATE TRIGGER before_run_update BEFORE DELETE OR UPDATE ON run FOR EACH ROW EXECUTE FUNCTION before_run_update_func();
+CREATE TRIGGER before_run_update BEFORE UPDATE ON run FOR EACH ROW EXECUTE FUNCTION before_run_update_func();
 --;
 CREATE TRIGGER after_run_update AFTER INSERT OR UPDATE ON run FOR EACH ROW EXECUTE FUNCTION after_run_update_func();
 --;
@@ -115,3 +115,160 @@ CREATE TRIGGER before_schema_delete BEFORE DELETE ON schema FOR EACH ROW EXECUTE
 CREATE TRIGGER before_schema_update BEFORE UPDATE OF uri ON schema FOR EACH ROW EXECUTE FUNCTION before_schema_update_func();
 --;
 CREATE TRIGGER after_schema_update AFTER INSERT OR UPDATE OF uri ON schema FOR EACH ROW EXECUTE FUNCTION after_schema_update_func();
+
+--;
+CREATE TABLE IF NOT EXISTS view_data AS (
+   WITH vcs AS (
+      SELECT id, unnest(regexp_split_to_array(accessors, ';')) as aa
+      FROM viewcomponent
+   )
+   SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+      jsonb_object_agg(se.accessor, (CASE
+      WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+      ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+   END)) as object
+   FROM vcs
+   JOIN schemaextractor se ON se.accessor = replace(aa, '[]', '')
+   JOIN run_schemas rs ON rs.schemaid = se.schema_id
+   JOIN run on run.id = rs.runid
+   GROUP BY runid, vcid, run.owner, run.access, run.token
+);
+--;
+CREATE OR REPLACE FUNCTION vd_before_delete_run_func() RETURNS TRIGGER AS $$
+BEGIN
+   DELETE FROM view_data WHERE runid = OLD.runid;
+   RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+--;
+CREATE OR REPLACE FUNCTION vd_after_insert_run_func() RETURNS TRIGGER AS $$
+BEGIN
+   WITH vcs AS (
+      SELECT id, unnest(regexp_split_to_array(accessors, ';')) as aa
+      FROM viewcomponent
+   )
+   INSERT INTO view_data
+   SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+      jsonb_object_agg(se.accessor, (CASE
+      WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+      ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+   END)) as object
+   FROM vcs
+   JOIN schemaextractor se ON se.accessor = replace(aa, '[]', '')
+   JOIN run_schemas rs ON rs.schemaid = se.schema_id
+   JOIN run on run.id = rs.runid
+   WHERE run.id = NEW.runid
+   GROUP BY runid, vcid, run.owner, run.access, run.token;
+   RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+--;
+CREATE OR REPLACE FUNCTION vd_before_delete_extractor_func() RETURNS TRIGGER AS $$
+BEGIN
+   DELETE FROM view_data WHERE OLD.id = ANY(extractor_ids);
+   RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+--;
+CREATE OR REPLACE FUNCTION vd_before_update_extractor_func() RETURNS TRIGGER AS $$
+BEGIN
+   DELETE FROM view_data WHERE OLD.id = ANY(extractor_ids);
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+--;
+CREATE OR REPLACE FUNCTION vd_after_update_extractor_func() RETURNS TRIGGER AS $$
+BEGIN
+   WITH vcs AS (
+      SELECT id, unnest(regexp_split_to_array(accessors, ';')) as aa
+      FROM viewcomponent
+   )
+   INSERT INTO view_data
+   SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+      jsonb_object_agg(se.accessor, (CASE
+      WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+      ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+   END)) as object
+   FROM vcs
+   JOIN schemaextractor se ON se.accessor = replace(aa, '[]', '')
+   JOIN run_schemas rs ON rs.schemaid = se.schema_id
+   JOIN run on run.id = rs.runid
+   WHERE se.id = NEW.id
+   GROUP BY runid, vcid, run.owner, run.access, run.token;
+   RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+--;
+CREATE OR REPLACE FUNCTION vd_before_delete_vc_func() RETURNS TRIGGER AS $$
+BEGIN
+   DELETE FROM view_data WHERE vcid = OLD.id;
+   RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+--;
+CREATE OR REPLACE FUNCTION vd_before_update_vc_func() RETURNS TRIGGER AS $$
+BEGIN
+   DELETE FROM view_data WHERE vcid = OLD.id;
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+--;
+CREATE OR REPLACE FUNCTION vd_after_update_vc_func() RETURNS TRIGGER AS $$
+BEGIN
+   WITH vcs AS (
+      SELECT id, unnest(regexp_split_to_array(accessors, ';')) as aa
+      FROM viewcomponent
+      WHERE id = NEW.id
+   )
+   INSERT INTO view_data
+   SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+      jsonb_object_agg(se.accessor, (CASE
+      WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+      ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+   END)) as object
+   FROM vcs
+   JOIN schemaextractor se ON se.accessor = replace(aa, '[]', '')
+   JOIN run_schemas rs ON rs.schemaid = se.schema_id
+   JOIN run on run.id = rs.runid
+   GROUP BY runid, vcid, run.owner, run.access, run.token;
+   RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+--;
+DROP TRIGGER IF EXISTS vd_before_delete ON run_schemas;
+--;
+DROP TRIGGER IF EXISTS vd_after_insert ON run_schemas;
+--;
+DROP TRIGGER IF EXISTS vd_before_delete ON schemaextractor;
+--;
+DROP TRIGGER IF EXISTS vd_before_update ON schemaextractor;
+--;
+DROP TRIGGER IF EXISTS vd_after_update ON schemaextractor;
+--;
+DROP TRIGGER IF EXISTS vd_before_delete ON viewcomponent;
+--;
+DROP TRIGGER IF EXISTS vd_before_update ON viewcomponent;
+--;
+DROP TRIGGER IF EXISTS vd_after_update ON viewcomponent;
+--;
+
+-- Run schemas are never updated, just deleted and inserted - we can have triggers only for these events.
+-- In addition we don't have to listen on table `run` since any change will trigger run_schemas modification.
+--;
+CREATE TRIGGER vd_before_delete BEFORE DELETE ON run_schemas FOR EACH ROW EXECUTE FUNCTION vd_before_delete_run_func();
+--;
+CREATE TRIGGER vd_after_insert AFTER INSERT ON run_schemas FOR EACH ROW EXECUTE FUNCTION vd_after_insert_run_func();
+--;
+CREATE TRIGGER vd_before_delete BEFORE DELETE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION vd_before_delete_extractor_func();
+--;
+CREATE TRIGGER vd_before_update BEFORE UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION vd_before_update_extractor_func();
+--;
+CREATE TRIGGER vd_after_update AFTER INSERT OR UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION vd_after_update_extractor_func();
+--;
+CREATE TRIGGER vd_before_delete BEFORE DELETE ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_before_delete_vc_func();
+--;
+CREATE TRIGGER vd_before_update BEFORE UPDATE OF id, accessors ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_before_update_vc_func();
+--;
+CREATE TRIGGER vd_after_update AFTER INSERT OR UPDATE OF id, accessors ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_after_update_vc_func();
