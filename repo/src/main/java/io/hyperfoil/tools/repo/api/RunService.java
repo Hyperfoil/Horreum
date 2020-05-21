@@ -57,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Path("/api/run")
@@ -115,11 +114,21 @@ public class RunService {
       }
    }
 
-   private <S, T> Response createResponse(T object, Function<T, S> selector) {
-      if (object == null) {
-         return Response.status(Response.Status.NOT_FOUND).build();
-      } else {
-         return Response.ok(selector.apply(object)).build();
+   private Response runQuery(String query, Integer id, String token) {
+      try (CloseMe h1 = sqlService.withRoles(em, identity);
+           CloseMe h2 = sqlService.withToken(em, token);
+           Connection connection = dataSource.getConnection();
+           PreparedStatement statement = connection.prepareStatement(query)) {
+         statement.setInt(1, id);
+         ResultSet rs = SqlService.execute(statement);
+         if (rs.next()) {
+            return Response.ok(rs.getString(1)).build();
+         } else {
+            return Response.status(Response.Status.NOT_FOUND).build();
+         }
+      } catch (SQLException e) {
+         log.error("Failed to read the run", e);
+         return Response.serverError().build();
       }
    }
 
@@ -127,15 +136,15 @@ public class RunService {
    @GET
    @Path("{id}")
    public Response getRun(@PathParam("id") Integer id,
-                     @QueryParam("token") String token) {
-      return createResponse(findRun(id, token), Function.identity());
+                          @QueryParam("token") String token) {
+      return runQuery("SELECT row_to_json(run) from run where id = ?", id, token);
    }
 
    @PermitAll
    @GET
    @Path("{id}/data")
    public Response getData(@PathParam("id") Integer id, @QueryParam("token") String token) {
-      return createResponse(findRun(id, token), run -> run.data);
+      return runQuery("SELECT data#>>'{}' from run where id = ?", id, token);
    }
 
    @RolesAllowed("tester")
