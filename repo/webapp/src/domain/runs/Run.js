@@ -7,6 +7,7 @@ import jsonpath from 'jsonpath';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
+import { formatDateTime } from '../../utils'
 
 import Editor from '../../components/Editor/monaco/Editor';
 
@@ -243,8 +244,8 @@ export default () => {
                                     <tr>
                                         <td>{run.id}</td>
                                         <td><NavLink to={`/test/${run.testId}`} >{run.testId}</NavLink></td>
-                                        <td>{run.start ? DateTime.fromMillis(run.start).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") : "--"}</td>
-                                        <td>{run.stop ? DateTime.fromMillis(run.stop).toFormat("yyyy-LL-dd HH:mm:ss ZZZ") : "--"}</td>
+                                        <td>{ formatDateTime(run.start) }</td>
+                                        <td>{ formatDateTime(run.stop) }</td>
                                     </tr>
                                 </tbody>
                             </table>

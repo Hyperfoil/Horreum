@@ -21,6 +21,7 @@ import { NavLink } from 'react-router-dom';
 
 import { DateTime, Duration } from 'luxon';
 import * as moment from 'moment'
+import { formatDateTime, toEpochMillis } from '../../utils'
 
 import { byTest } from './actions';
 import * as selectors from './selectors';
@@ -88,19 +89,18 @@ const staticColumns = [
         Header: "Executed",
         id: "executed",
         Cell: arg => {
-            const format = time => DateTime.fromMillis(time).toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
             const content = (<table style={{ width: "300px" }}><tbody>
-                                <tr><td>Started:</td><td>{format(arg.row.original.start)}</td></tr>
-                                <tr><td>Finished:</td><td>{format(arg.row.original.stop)}</td></tr>
+                                <tr><td>Started:</td><td>{formatDateTime(arg.row.original.start)}</td></tr>
+                                <tr><td>Finished:</td><td>{formatDateTime(arg.row.original.stop)}</td></tr>
                              </tbody></table>)
             return (<Tooltip isContentLeftAligned content={content}>
-                      <span>{moment(arg.row.original.stop).fromNow()}</span>
+                      <span>{moment(toEpochMillis(arg.row.original.stop)).fromNow()}</span>
                     </Tooltip>)
         }
     }, {
         Header:"Duration",
         id: "duration",
-        accessor: v => Duration.fromMillis(v.stop - v.start).toFormat("hh:mm:ss.SSS")
+        accessor: v => Duration.fromMillis(toEpochMillis(v.stop) - toEpochMillis(v.start)).toFormat("hh:mm:ss.SSS")
     }, {
         Header: "Schema",
         accessor: "schema",
