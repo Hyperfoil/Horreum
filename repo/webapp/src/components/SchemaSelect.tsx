@@ -5,26 +5,38 @@ import { all as allSchemas } from '../domain/schemas/api.js'
 import {
    Select,
    SelectOption,
+   SelectOptionObject,
 } from '@patternfly/react-core';
 
+type SchemaSelectProps = {
+   value: string,
+   onChange(schema: string | undefined): void,
+   disabled: string[],
+}
+
+interface Schema extends SelectOptionObject {
+   name: string,
+   uri: string,
+}
+
 /* This is going to be a complex component with modal for Extractor definition */
-export default ({ value = "", onChange = newValue => {}, disabled = []}) => {
+export default ({ value = "", onChange = (_: string) => {}, disabled = []}: SchemaSelectProps) => {
    const [isExpanded, setExpanded] = useState(false)
-   const [selected, setSelected] = useState(value)
-   const [options, setOptions] = useState([])
+   const [selected, setSelected] = useState<Schema | null>(null)
+   const [options, setOptions] = useState<Schema[]>([])
    useEffect(() => {
       // TODO: this is fetching all schemas including the schema JSONs
-      allSchemas().then(response => {
+      allSchemas().then((response: Schema[]) => {
          const schemas = response.map(s => { return { name: s.name, uri: s.uri }; })
          setOptions(schemas)
-         if ((selected === null || selected === "") && schemas.length > 0) {
+         if (selected === null && schemas.length > 0) {
             onChange(schemas[0].uri)
          }
       })
    }, [])
    useEffect(() => {
       if (value && value !== "") {
-         let o = options.find(s => s.uri === value)
+         const o = options.find(s => s.uri === value)
          if (o && o !== selected) {
             setSelected({ ...o, toString: () => `${o.name} (${o.uri})` })
          }
@@ -34,16 +46,17 @@ export default ({ value = "", onChange = newValue => {}, disabled = []}) => {
       <Select aria-label="Select schema"
                     isExpanded={isExpanded}
                     onToggle={setExpanded}
-                    selections={selected}
+                    selections={selected || []}
                     onClear={ () => {
                        setSelected(null)
                        setExpanded(false)
-                       onChange(null)
+                       onChange(undefined)
                     }}
                     onSelect={ (e, newValue) => {
-                       setSelected(newValue)
+                       const schema = (newValue as Schema);
+                       setSelected(schema)
                        setExpanded(false)
-                       onChange(newValue.uri)
+                       onChange(schema.uri)
                     }}
             >
       {options.map((option, index) => (

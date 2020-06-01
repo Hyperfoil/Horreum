@@ -10,7 +10,17 @@ import { roleToName } from '../auth'
 import AccessChoice from './AccessChoice'
 import OwnerSelect from './OwnerSelect'
 
-export default ({ isOpen, onClose, owner, onOwnerChange, access, onAccessChange, onUpdate }) => {
+type ChangeAccessModalProps = {
+  isOpen: boolean,
+  onClose(): void,
+  owner: string,
+  onOwnerChange(owner: string): void,
+  access: number,
+  onAccessChange(access: number): void,
+  onUpdate(): void,
+}
+
+export default ({ isOpen, onClose, owner, onOwnerChange, access, onAccessChange, onUpdate }: ChangeAccessModalProps) => {
    return (
       <Modal isSmall title="Change access rights"
              isOpen={ isOpen }
@@ -18,7 +28,7 @@ export default ({ isOpen, onClose, owner, onOwnerChange, access, onAccessChange,
          <div>
             Owner:
             <OwnerSelect includeGeneral={false}
-                         selection={roleToName(owner)}
+                         selection={roleToName(owner) || ""}
                          onSelect={selection => onOwnerChange(selection.key) } />
          </div>
          <div>

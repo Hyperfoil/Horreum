@@ -14,7 +14,21 @@ import ShareLinkModal from './ShareLinkModal'
 import ChangeAccessModal from './ChangeAccessModal'
 import ConfirmDeleteModal from './ConfirmDeleteModal'
 
-export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenReset, onTokenDrop, onAccessUpdate, description, onDelete }) => {
+type ActionMenuProps = {
+   id: string,
+   owner: string,
+   access: number,
+   token: string,
+   tokenToLink(id: string, token: string): string,
+   extraItems: any[],
+   onTokenReset(id: string): void,
+   onTokenDrop(id: string): void,
+   onAccessUpdate(id: string, owner: string, access: number): void,
+   description: string,
+   onDelete(id: string): void,
+}
+
+export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenReset, onTokenDrop, onAccessUpdate, description, onDelete }: ActionMenuProps) => {
    const [menuOpen, setMenuOpen] = useState(false)
 
    const roles = useSelector(rolesSelector)
@@ -65,7 +79,7 @@ export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenRese
       <ShareLinkModal isOpen={ shareLinkModalOpen }
                       onClose={ () => setShareLinkModalOpen(false) }
                       isOwner={ isOwner }
-                      link={ token ? tokenToLink(id, token) : null}
+                      link={ token ? tokenToLink(id, token) : ""}
                       onReset={ () => onTokenReset(id) }
                       onDrop={ () => onTokenDrop(id) } />
       <ChangeAccessModal isOpen={ changeAccessModalOpen }

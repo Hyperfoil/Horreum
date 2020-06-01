@@ -22,29 +22,41 @@ import {
    AddCircleOIcon,
 } from '@patternfly/react-icons';
 
-function distinctSorted(list, selector) {
+function distinctSorted(list: Extractor[], selector: (e: Extractor) => any): Extractor[] {
    return Array.from(new Set(list.map(selector)))
-         .map(a => list.find(o => selector(o) === a)) // distinct
+         .map(a => list.find(o => selector(o) === a) || a) // distinct
          .sort((a, b) => selector(a).localeCompare(selector(b)))
 }
 
-function baseName(name) {
+function baseName(name: string) {
    return name.endsWith("[]") ? name.substring(0, name.length - 2) : name
 }
 
-export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) => {
-   const [created, setCreated] = useState({})
-   const onCreate = newValue => {
+export interface Extractor {
+   accessor: string,
+   schema?: string,
+   jsonpath?: string,
+}
+
+type AccessorsProps = {
+   value: string[],
+   onChange(selectors: string[]): void,
+   isReadOnly: boolean,
+}
+
+export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly = false}: AccessorsProps) => {
+   const [created, setCreated] = useState<Extractor>({ accessor: ""})
+   const onCreate = (newValue: string) => {
          setCreated({ accessor: newValue })
          setDisabledSchemas([])
          setCreateOpen(true)
    }
-   const [disabledSchemas, setDisabledSchemas] = useState([])
+   const [disabledSchemas, setDisabledSchemas] = useState<string[]>([])
    const [isExpanded, setExpanded] = useState(false)
    const [options, setOptions] = useState(value.map(v => ({ accessor: v })))
    const [selected, setSelected] = useState(value)
    useEffect(() => {
-      listExtractors().then(response => {
+      listExtractors().then((response: Extractor[]) => {
          setOptions(response)
       })
    }, [])
@@ -53,8 +65,8 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
 
    const [variantOpen, setVariantOpen] = useState(false)
    const [variant, setVariant] = useState(0)
-   const [addedOption, setAddedOption] = useState(null)
-   const openVariantModal = newOption => {
+   const [addedOption, setAddedOption] = useState<Extractor | undefined>(undefined)
+   const openVariantModal = (newOption: Extractor) => {
       setAddedOption(newOption)
       setVariant(newOption.accessor.endsWith("[]") ? 1 : 0)
       setVariantOpen(true)
@@ -78,19 +90,20 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
                  onChange([])
               }}
               onSelect={ (e, newValue) => {
+                 const newSelected = newValue.toString()
                  if (!options.find(o => o.accessor === newValue)) {
                      return // this is the create
                  }
                  setExpanded(false)
-                 let base = baseName(newValue)
+                 let base = baseName(newSelected)
                  let array = base + "[]"
-                 let updated
-                 if (selected.includes(newValue)) {
-                    updated = selected.filter(o => o !== newValue)
+                 let updated: string[]
+                 if (selected.includes(newSelected)) {
+                    updated = selected.filter(o => o !== newSelected)
                  } else if (selected.includes(base)) {
-                    updated = [...selected.filter(o => o !== base), newValue]
+                    updated = [...selected.filter(o => o !== base), newSelected]
                  } else if (selected.includes(array)) {
-                    updated = [...selected.filter(o => o !== array), newValue]
+                    updated = [...selected.filter(o => o !== array), newSelected]
                  } else {
                     openVariantModal(options.filter(o => o.accessor === newValue)[0])
                     return
@@ -104,7 +117,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
       )}
       </Select>
       { selected && selected.map(s => {
-         const distinctSchemaOptions = distinctSorted(options.filter(o => o.accessor === s), o => o.schema)
+         const distinctSchemaOptions = distinctSorted(options.filter(o => o.accessor === s), (o: Extractor) => o.schema)
          return (
          <div key={s} style={{ marginTop: "5px" }}>
             <span style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{s}</span> is valid for schemas:{'\u00A0'}
@@ -114,7 +127,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
             { !isReadOnly && s !== "" &&
                <Button variant="link" onClick={() => {
                   setCreated({ accessor: s })
-                  setDisabledSchemas(distinctSchemaOptions.map(o => o.schema))
+                  setDisabledSchemas(distinctSchemaOptions.map(o => o.schema).filter(schema => !!schema) as string[])
                   setCreateOpen(true)
                }}><AddCircleOIcon /></Button>
             }
@@ -125,26 +138,25 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
              onClose={() => setCreateOpen(false) }>
          <Form isHorizontal={true}>
             <FormGroup label="Accessor" isRequired={true} fieldId="extractor-accessor">
-               <TextInput value={ created.accessor || "" }
+               <TextInput value={ created.accessor }
                           isRequired
                           id="extractor-accessor"
                           name="extractor-accessor"
-                          isValid={ created.accessor && created.accessor !== "" }
+                          isValid={ created.accessor !== "" }
                           onChange={ value => setCreated({ ...created, accessor: value})}
                 />
             </FormGroup>
             <FormGroup label="Schema" isRequired={true} fieldId="extractor-schema" >
-               <SchemaSelect value={ selected.schema }
-                             id="extractor-schema"
+               <SchemaSelect value={ created.schema || "" }
                              disabled={ disabledSchemas }
-                             onChange={ value => { setCreated({ ...created, schema: value, toString: () => created.accessor })}} />
+                             onChange={ value => { setCreated({ ...created, schema: value })}} />
             </FormGroup>
             <FormGroup label="JSON path" isRequired={true} fieldId="extractor-jsonpath">
-               <TextInput value={ created.jsonpath || "" }
+               <TextInput value={ created?.jsonpath || "" }
                           isRequired
                           id="extractor-jsonpath"
                           name="extractor-jsonpath"
-                          isValid={ created.jsonpath && created.jsonpath !== "" && !created.jsonpath.startsWith("$") }
+                          isValid={ !!created.jsonpath && created.jsonpath !== "" && !created.jsonpath.startsWith("$") }
                           onChange={ value => setCreated({ ...created, jsonpath: value})}
               />
             </FormGroup>
@@ -182,7 +194,7 @@ export default ({ value = [], onChange = newValue => {}, isReadOnly = false}) =>
             <Button variant="primary"
                     onClick={() => {
                        setVariantOpen(false)
-                       let base = baseName(addedOption.accessor)
+                       let base = addedOption ? baseName(addedOption.accessor) : ""
                        let name = variant === 0 ? base : base + "[]"
                        setOptions([...options, { ...addedOption, accessor: name }])
                        let updated = [...selected, name]

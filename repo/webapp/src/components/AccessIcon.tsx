@@ -4,7 +4,7 @@ import {
    LockedIcon,
 } from '@patternfly/react-icons'
 
-export default ({access}) => {
+export default ({access}: { access: number | string}) => {
    var color;
    var text;
    switch (access) {
@@ -33,7 +33,7 @@ export default ({access}) => {
    }
    }
    return (<>
-      <LockedIcon fill={ "var(" + color + ")" } /><span>&nbsp;{text}</span>
+      <LockedIcon style={{ fill: "var(" + color + ")" }} /><span>&nbsp;{text}</span>
    </>
    )
 }

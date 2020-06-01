@@ -7,7 +7,16 @@ import {
     Text,
 } from '@patternfly/react-core';
 
-export default ({ isOpen, onClose, link, isOwner, onReset, onDrop }) => {
+type ShareLinkModalProps = {
+   isOpen: boolean,
+   onClose(): void,
+   link: string,
+   isOwner: boolean,
+   onReset(): void,
+   onDrop(): void,
+}
+
+export default ({ isOpen, onClose, link, isOwner, onReset, onDrop }: ShareLinkModalProps) => {
    return (
       <Modal isSmall title="Shareable link"
              isOpen={ isOpen }

@@ -5,7 +5,15 @@ import {
     Modal,
 } from '@patternfly/react-core';
 
-export default ({ isOpen, onClose, onDelete, description, extra = "" }) => {
+type ConfirmDeleteModalProps = {
+   isOpen: boolean,
+   onClose(): void,
+   onDelete(): void,
+   description: string,
+   extra?: string
+}
+
+export default ({ isOpen, onClose, onDelete, description, extra }: ConfirmDeleteModalProps) => {
    return (<Modal isSmall title="Confirm deletion"
                   isOpen={isOpen}
                   onClose={onClose}>

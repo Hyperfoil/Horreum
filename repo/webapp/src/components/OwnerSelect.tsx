@@ -5,6 +5,7 @@ import {
     SelectGroup,
     SelectOption,
     SelectVariant,
+    SelectOptionObject,
 } from '@patternfly/react-core';
 
 import { useSelector } from 'react-redux'
@@ -14,13 +15,23 @@ import { rolesSelector, roleToName } from '../auth'
 export const ONLY_MY_OWN = { key: "__my", toString: () => "Only my own"}
 export const SHOW_ALL = { key: "__all", toString: () => "Show all" }
 
-export default ({ includeGeneral, selection, onSelect }) => {
+type OwnerSelectProps = {
+   includeGeneral: boolean,
+   selection: string,
+   onSelect(selection: RoleOption): void
+}
+
+interface RoleOption extends SelectOptionObject {
+   key: string,
+}
+
+export default ({ includeGeneral, selection, onSelect }: OwnerSelectProps) => {
    const roles = useSelector(rolesSelector)
    const rolesAsSelectOptions = () => {
       return (roles ? roles.filter(role => role.endsWith("-team"))
                            .sort()
                            .map(role => (
-                     <SelectOption key={role} value={{ key: role, toString: () => roleToName(role) }}/>
+                     <SelectOption key={role} value={{ key: role, toString: () => roleToName(role) || "" } as RoleOption}/>
                    )) : [])
    }
    const [expanded, setExpanded] = useState(false)
@@ -31,7 +42,7 @@ export default ({ includeGeneral, selection, onSelect }) => {
          onToggle={setExpanded}
          onSelect={(event, selection, isPlaceholder) => {
             setExpanded(false)
-            onSelect(selection)
+            onSelect(selection as RoleOption)
          }}
          selections={selection}
          isExpanded={expanded}
