@@ -8,7 +8,7 @@ import {
     KebabToggle,
 } from '@patternfly/react-core'
 
-import { rolesSelector } from '../auth.js'
+import { rolesSelector } from '../auth'
 
 import ShareLinkModal from './ShareLinkModal'
 import ChangeAccessModal from './ChangeAccessModal'

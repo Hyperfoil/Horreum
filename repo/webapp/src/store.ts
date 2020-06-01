@@ -8,10 +8,15 @@ import { reducer as runReducer} from './domain/runs/reducers'
 import { reducer as testReducer} from './domain/tests/reducers'
 import { reducer as hookReducer} from './domain/hooks/reducers'
 import { reducer as schemaReducer} from './domain/schemas/reducers'
-import { reducer as authReducer} from './auth'
+import { AuthState, reducer as authReducer} from './auth'
 import { reducer as alertReducer } from './alerts'
 
 export const history = createBrowserHistory();
+
+export interface State {
+   auth: AuthState,
+   // TODO: other fields from below
+}
 
 const appReducers = combineReducers({
     router: connectRouter(history),

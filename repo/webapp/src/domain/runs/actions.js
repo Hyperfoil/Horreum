@@ -1,7 +1,7 @@
 import * as api from './api';
 import * as actionTypes from './actionTypes';
 import { isFetchingSuggestions, suggestQuery } from './selectors'
-import { accessName } from '../../auth.js'
+import { accessName } from '../../auth'
 
 const loaded = run =>({
     type: actionTypes.LOADED,

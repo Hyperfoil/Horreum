@@ -9,7 +9,7 @@ import {
 
 import { useSelector } from 'react-redux'
 
-import { rolesSelector, roleToName } from '../auth.js'
+import { rolesSelector, roleToName } from '../auth'
 
 export const ONLY_MY_OWN = { key: "__my", toString: () => "Only my own"}
 export const SHOW_ALL = { key: "__all", toString: () => "Show all" }

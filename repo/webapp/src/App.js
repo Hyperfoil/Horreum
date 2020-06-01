@@ -21,7 +21,7 @@ import {
    initKeycloak,
    isAdminSelector,
    LoginLogout,
-} from './auth.js'
+} from './auth'
 
 import AllRuns from './domain/runs/AllRuns';
 import TestRuns from './domain/runs/TestRuns';

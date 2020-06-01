@@ -9,6 +9,12 @@
     "@patternfly/react-core": "^3.153.3",
     "@patternfly/react-icons": "^3.14.24",
     "@patternfly/react-table": "^2.24.41",
+    "@types/history": "^4.7.6",
+    "@types/keycloak-js": "^3.4.1",
+    "@types/luxon": "^1.24.0",
+    "@types/react-redux": "^7.1.9",
+    "@types/redux": "^3.6.0",
+    "@types/redux-thunk": "^2.1.0",
     "axios": "^0.19.0",
     "clsx": "^1.0.4",
     "codemirror": "^5.49.2",
@@ -32,11 +38,12 @@
     "react-redux": "^7.1.3",
     "react-router": "^5.1.2",
     "react-router-dom": "^5.1.2",
-    "react-scripts": "3.2.0",
+    "react-scripts": "^3.4.1",
     "react-table": "^7.0.0-rc.1",
     "redux": "^4.0.4",
     "redux-thunk": "^2.3.0",
-    "reselect": "^4.0.0"
+    "reselect": "^4.0.0",
+    "typescript": "^3.9.3"
   },
   "scripts": {
     "start": " BROWSER=none react-scripts start",

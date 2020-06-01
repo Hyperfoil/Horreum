@@ -35,7 +35,7 @@ import {
     defaultRoleSelector,
     isTesterSelector,
     roleToName
-} from '../../auth.js'
+} from '../../auth'
 
 import {
    alertAction,

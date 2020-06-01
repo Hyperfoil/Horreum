@@ -5,7 +5,7 @@ import {
     Modal,
 } from '@patternfly/react-core';
 
-import { roleToName } from '../auth.js'
+import { roleToName } from '../auth'
 
 import AccessChoice from './AccessChoice'
 import OwnerSelect from './OwnerSelect'

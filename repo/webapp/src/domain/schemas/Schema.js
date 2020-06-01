@@ -31,7 +31,7 @@ import jsonpath from 'jsonpath';
 import * as actions from './actions';
 import * as selectors from './selectors';
 import * as api from './api';
-import { accessName, isTesterSelector, defaultRoleSelector, roleToName } from '../../auth.js'
+import { accessName, isTesterSelector, defaultRoleSelector, roleToName } from '../../auth'
 import {
    alertAction,
    constraintValidationFormatter,

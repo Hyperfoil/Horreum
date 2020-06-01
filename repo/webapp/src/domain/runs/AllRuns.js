@@ -26,7 +26,7 @@ import { NavLink } from 'react-router-dom';
 
 import {all, filter, suggest, selectRoles, resetToken, dropToken, updateAccess } from './actions';
 import * as selectors from './selectors';
-import { isAuthenticatedSelector, rolesSelector, registerAfterLogin, roleToName } from '../../auth.js'
+import { isAuthenticatedSelector, rolesSelector, registerAfterLogin, roleToName } from '../../auth'
 import { formatDateTime, toEpochMillis } from '../../utils'
 
 import Table from '../../components/Table';

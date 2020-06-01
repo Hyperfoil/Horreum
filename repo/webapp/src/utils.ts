@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 
-export function isEmpty(obj) {
+export function isEmpty(obj: object): boolean {
     for(var key in obj) {
         if(obj.hasOwnProperty(key))
             return false;
@@ -8,7 +8,7 @@ export function isEmpty(obj) {
     return true;
 }
 
-export function formatDateTime(timestamp) {
+export function formatDateTime(timestamp: any): string {
    var datetime;
    if (!timestamp) {
       return "--"
@@ -22,7 +22,7 @@ export function formatDateTime(timestamp) {
    return datetime.toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
 }
 
-export function toEpochMillis(timestamp) {
+export function toEpochMillis(timestamp: any): number {
    if (!timestamp) {
       return 0
    } else if (typeof timestamp === "string") {

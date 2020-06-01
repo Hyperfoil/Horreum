@@ -27,7 +27,7 @@ import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import ActionMenu from '../../components/ActionMenu';
 
-import { isTesterSelector, registerAfterLogin, roleToName } from '../../auth.js'
+import { isTesterSelector, registerAfterLogin, roleToName } from '../../auth'
 import { alertAction } from '../../alerts'
 
 export default ()=>{

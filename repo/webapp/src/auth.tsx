@@ -7,20 +7,36 @@ import {
 
 import Keycloak from "keycloak-js"
 
-import store from './store'
+import store, { State } from './store'
 import { fetchApi } from './services/api';
 import { CLEAR_ALERT } from './alerts'
 
 const INIT = "auth/INIT"
 const REGISTER_AFTER_LOGIN = "auth/REGISTER_AFTER_LOGIN"
 
-const initialState = {
-  keycloak: null,
-  initPromise: null,
-  afterLogin: []
+export class AuthState {
+  keycloak?: Keycloak.KeycloakInstance = undefined;
+  initPromise?: Promise<boolean> = undefined;
+  afterLogin: { name: string, func(): void }[] = [];
 }
 
-export const reducer = (state = initialState, action) => {
+const initialState = new AuthState()
+
+interface InitAction {
+   type: typeof INIT,
+   keycloak: Keycloak.KeycloakInstance,
+   initPromise?: Promise<boolean>,
+}
+
+interface RegisterAfterLoginAction {
+   type: typeof REGISTER_AFTER_LOGIN,
+   name: string,
+   func(): void,
+}
+
+type AuthActions = InitAction | RegisterAfterLoginAction
+
+export const reducer = (state = initialState, action: AuthActions) => {
    switch (action.type) {
       case INIT:
          state.keycloak = action.keycloak;
@@ -37,7 +53,7 @@ export const reducer = (state = initialState, action) => {
    return state;
 }
 
-export const registerAfterLogin = (name, func) => {
+export const registerAfterLogin = (name: string, func: () => void) => {
    return {
       type: REGISTER_AFTER_LOGIN,
       name: name,
@@ -45,65 +61,66 @@ export const registerAfterLogin = (name, func) => {
    }
 }
 
-const keycloakSelector = state => {
+const keycloakSelector = (state: State) => {
    return state.auth.keycloak;
 }
 
-export const tokenSelector = state => {
+export const tokenSelector = (state: State) => {
    return state.auth.keycloak && state.auth.keycloak.token
 }
 
-export const roleToName = (role) => {
+export const roleToName = (role: string) => {
    return role ? (role.charAt(0).toUpperCase() + role.slice(1, -5)) : null
 }
 
-export const isAuthenticatedSelector = state => {
+export const isAuthenticatedSelector = (state: State) => {
    let keycloak = state.auth.keycloak
    return !!keycloak && keycloak.authenticated;
 }
 
-export const isUploaderSelector = state => {
+export const isUploaderSelector = (state: State) => {
    let keycloak = state.auth.keycloak
    return !!keycloak && keycloak.hasRealmRole("uploader")
 }
 
-export const isTesterSelector = state => {
+export const isTesterSelector = (state: State) => {
    let keycloak = state.auth.keycloak
    return !!keycloak && keycloak.hasRealmRole("tester")
 }
 
-export const isAdminSelector = state => {
+export const isAdminSelector = (state: State) => {
    let keycloak = state.auth.keycloak
    return !!keycloak && keycloak.hasRealmRole("admin")
 }
 
-export const rolesSelector = state => {
+export const rolesSelector = (state: State): string[] => {
    let keycloak = state.auth.keycloak;
    return keycloak && keycloak.realmAccess ? keycloak.realmAccess.roles : []
 }
 
-export const defaultRoleSelector = state => {
+export const defaultRoleSelector = (state: State) => {
    let teamRoles = rolesSelector(state).filter(r => r.endsWith("-team")).sort()
    return teamRoles.length > 0 ? teamRoles[0] : null;
 }
 
-export const initKeycloak = state => {
+export const initKeycloak = (state: State) => {
    let keycloak = keycloakSelector(state);
    let keycloakPromise;
-   if (keycloak === null) {
-      keycloakPromise = fetchApi("/api/config/keycloak", null)
+   if (!keycloak) {
+      keycloakPromise = fetchApi("/api/config/keycloak")
          .then(response => Keycloak(response))
    } else {
       keycloakPromise = Promise.resolve(keycloak)
    }
    keycloakPromise.then(keycloak => {
-      let initPromise = null;
+      let initPromise: Promise<boolean> | undefined = undefined;
       if (!keycloak.authenticated) {
+        // Typecast required due to https://github.com/keycloak/keycloak/pull/5858
         initPromise = keycloak.init({
           onLoad: "check-sso",
           promiseType: 'native',
-        });
-        initPromise.then(authenticated => {
+        } as Keycloak.KeycloakInitOptions);
+        (initPromise as Promise<boolean>).then(authenticated => {
           store.dispatch({type: CLEAR_ALERT })
           store.getState().auth.afterLogin.forEach(a => a.func())
         })
@@ -112,11 +129,16 @@ export const initKeycloak = state => {
    })
 }
 
-export const TryLoginAgain = () => (<>Try <Button variant="link" onClick={() => store.getState().auth.keycloak.login() }>log in again</Button></>)
+export const TryLoginAgain = () => {
+   const keycloak = useSelector(keycloakSelector)
+   return keycloak && (<>Try <Button variant="link" onClick={() => keycloak.login()}>log in again</Button></>)
+}
 
 export const LoginLogout = () => {
    const keycloak = useSelector(keycloakSelector)
-   if (!!keycloak && keycloak.authenticated) {
+   if (!keycloak) {
+      return (<></>)
+   } else if (keycloak.authenticated) {
       return (
          <Button onClick={ () => keycloak.logout() }>Log out</Button>
       )
@@ -127,11 +149,11 @@ export const LoginLogout = () => {
    }
 }
 
-export const accessName = access => {
+export const accessName = (access: number) => {
    switch (access) {
        case 0: return 'PUBLIC'
        case 1: return 'PROTECTED'
        case 2: return 'PRIVATE'
-       default: return access;
+       default: return String(access);
    }
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import fetchival from 'fetchival';
 import apiConfig from './config';
-import store from "../../store.js"
+import store from "../../store"
 import { alertAction, ADD_ALERT } from "../../alerts"
 import { TryLoginAgain } from "../../auth"
 

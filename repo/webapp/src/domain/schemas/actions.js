@@ -1,6 +1,6 @@
 import * as api from './api';
 import * as actionTypes from './actionTypes';
-import { accessName } from '../../auth.js'
+import { accessName } from '../../auth'
 
 const loaded = schema => ({
    type: actionTypes.LOADED,

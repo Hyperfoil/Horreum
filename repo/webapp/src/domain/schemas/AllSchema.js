@@ -11,7 +11,7 @@ import { NavLink } from 'react-router-dom';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
-import { isTesterSelector, registerAfterLogin, roleToName } from '../../auth.js'
+import { isTesterSelector, registerAfterLogin, roleToName } from '../../auth'
 import { alertAction } from '../../alerts'
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
