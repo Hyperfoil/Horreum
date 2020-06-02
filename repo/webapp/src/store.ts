@@ -4,10 +4,10 @@ import {connectRouter} from 'connected-react-router'
 import thunk from 'redux-thunk';
 //import { persistStore, autoRehydrate } from 'redux-persist';
 
-import { reducer as runReducer} from './domain/runs/reducers'
-import { reducer as testReducer} from './domain/tests/reducers'
-import { reducer as hookReducer} from './domain/hooks/reducers'
-import { reducer as schemaReducer} from './domain/schemas/reducers'
+import { RunsState, reducer as runReducer} from './domain/runs/reducers'
+import { TestsState, reducer as testReducer} from './domain/tests/reducers'
+import { HooksState, reducer as hookReducer} from './domain/hooks/reducers'
+import { SchemasState, reducer as schemaReducer} from './domain/schemas/reducers'
 import { AuthState, reducer as authReducer} from './auth'
 import { Alert, reducer as alertReducer } from './alerts'
 
@@ -16,7 +16,10 @@ export const history = createBrowserHistory();
 export interface State {
    auth: AuthState,
    alerts: Alert[]
-   // TODO: other fields from below
+   hooks: HooksState,
+   runs: RunsState,
+   schemas: SchemasState,
+   tests: TestsState
 }
 
 const appReducers = combineReducers({

@@ -1,10 +1,28 @@
 import * as actionTypes from './actionTypes';
 import {Map} from 'immutable';
 import * as utils from "../../utils";
-const initialState = {
-    byId: undefined,
+
+export interface Hook {
+    id: number
 }
-export const reducer = (state = initialState, action) =>{
+
+export class HooksState {
+    byId?: Map<string, Hook> = undefined
+}
+
+export interface LoadedAction {
+    type: typeof actionTypes.LOADED,
+    hooks: Hook[],
+}
+
+export interface DeleteAction {
+    type: typeof actionTypes.DELETE,
+    id: number,
+}
+
+type HooksAction = LoadedAction | DeleteAction
+
+export const reducer = (state = new HooksState(), action : HooksAction) =>{
     switch(action.type) {
         case actionTypes.LOADED:
             if (!state.byId) {
@@ -12,8 +30,9 @@ export const reducer = (state = initialState, action) =>{
             }
             if ( !utils.isEmpty(action.hooks) ) {
                 action.hooks.forEach(hook => {
-                    state.byId = state.byId.set(`${hook.id}`, {
-                        ...(state.byId.get(`${hook.id}`) || {}), ...hook
+                    const byId = state.byId as Map<string, Hook>
+                    state.byId = byId.set(`${hook.id}`, {
+                        ...(byId.get(`${hook.id}`) || {}), ...hook
                     })
                 })
             }

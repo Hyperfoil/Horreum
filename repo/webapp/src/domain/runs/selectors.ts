@@ -1,8 +1,8 @@
-import {Map} from 'immutable';
+import { State } from '../../store'
 
-export const isLoading = state => state.runs.loading
+export const isLoading = (state: State) => state.runs.loading
 
-export const all = state => {
+export const all = (state: State) => {
     if (!state.runs.byId) {
         return false
     }
@@ -10,21 +10,21 @@ export const all = state => {
     list.sort((a,b)=>a.start - b.start);
     return list;
 }
-export const testRuns = (id) => state => {
+export const testRuns = (id: number) => (state: State) => {
     if (!state.runs.byTest) {
         return false
     }
-    let list = [...state.runs.byTest.get(id,Map({})).values()]
+    let list = [...state.runs.byTest.get(id)?.values()]
     list.sort((a,b)=>a.id - b.id);
-    return list;    
+    return list;
 }
-export const get = (id) => state =>{
+export const get = (id: string) => (state: State) =>{
     if (!state.runs.byId) {
         return false
     }
     return state.runs.byId.get(id) || false;
 }
-export const filter = state => {
+export const filter = (state: State) => {
    const filteredIds = state.runs.filteredIds
    if (filteredIds == null) {
       return all(state);
@@ -38,18 +38,18 @@ export const filter = state => {
    return list;
 }
 
-export const isFetchingSuggestions = state => {
+export const isFetchingSuggestions = (state: State) => {
    let suggestQuery = state.runs.suggestQuery
    return suggestQuery.length > 0;
 }
-export const suggestQuery = state => {
+export const suggestQuery = (state: State) => {
    let suggestQuery = state.runs.suggestQuery
    // Actually when this is called the suggestQuery.length should be <= 1
    return suggestQuery.length === 0 ? null : suggestQuery[suggestQuery.length - 1]
 }
 
-export const suggestions = state => state.runs.suggestions
+export const suggestions = (state: State) => state.runs.suggestions
 
-export const selectedRoles = state => {
+export const selectedRoles = (state: State) => {
    return state.runs.selectedRoles;
 }

@@ -1,4 +1,3 @@
-export const ERROR = "hooks/ERROR";
 export const CREATE = 'hooks/CREATE';
 export const DELETE = 'hooks/DELETE';
 export const UPDATE = 'hooks/UPDATE';

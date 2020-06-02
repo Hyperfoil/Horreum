@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 
-import { addOrUpdateExtractor, listExtractors } from '../domain/schemas/api.js'
+import { addOrUpdateExtractor, listExtractors } from '../domain/schemas/api'
 import SchemaSelect from './SchemaSelect'
 
 import { alertAction } from "../alerts"

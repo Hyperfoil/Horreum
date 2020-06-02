@@ -17,7 +17,7 @@ export interface Alert {
    title: string,
    type: string,
    variant?: AlertVariant,
-   content: any,
+   content: Element | string | undefined,
 }
 
 export interface ConstraintValidationException {

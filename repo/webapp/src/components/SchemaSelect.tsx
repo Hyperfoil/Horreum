@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 
-import { all as allSchemas } from '../domain/schemas/api.js'
+import { all as allSchemas } from '../domain/schemas/api'
 
 import {
    Select,

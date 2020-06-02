@@ -14,6 +14,8 @@ import { CLEAR_ALERT } from './alerts'
 const INIT = "auth/INIT"
 const REGISTER_AFTER_LOGIN = "auth/REGISTER_AFTER_LOGIN"
 
+export type Access = 0 | 1 | 2
+
 export class AuthState {
   keycloak?: Keycloak.KeycloakInstance = undefined;
   initPromise?: Promise<boolean> = undefined;
@@ -131,7 +133,7 @@ export const initKeycloak = (state: State) => {
 
 export const TryLoginAgain = () => {
    const keycloak = useSelector(keycloakSelector)
-   return keycloak && (<>Try <Button variant="link" onClick={() => keycloak.login()}>log in again</Button></>)
+   return keycloak ? (<>Try <Button variant="link" onClick={() => keycloak.login()}>log in again</Button></>) : null
 }
 
 export const LoginLogout = () => {
@@ -149,7 +151,7 @@ export const LoginLogout = () => {
    }
 }
 
-export const accessName = (access: number) => {
+export const accessName = (access: Access) => {
    switch (access) {
        case 0: return 'PUBLIC'
        case 1: return 'PROTECTED'

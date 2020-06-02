@@ -5,16 +5,7 @@ import store from "../../store"
 import { alertAction, ADD_ALERT } from "../../alerts"
 import { TryLoginAgain } from "../../auth"
 
-export const exceptionExtractError = (exception) => {
-	if (!exception.Errors) return false;
-	let error = false;
-	const errorKeys = Object.keys(exception.Errors);
-	if (errorKeys.length > 0) {
-		error = exception.Errors[errorKeys[0]][0].message;
-	}
-	return error;
-};
-const serialize = (input)=>{
+const serialize = (input: any): any => {
 	if(input === null || input === undefined){
 		return input
 	}else if(Array.isArray(input)){
@@ -22,7 +13,7 @@ const serialize = (input)=>{
     }else if (typeof input === "function"){
         return input.toString()
     }else if (typeof input === "object"){
-        const rtrn = {}
+        const rtrn: { [key: string]: any } = {}
         Object.keys(input).forEach(key=>{
             rtrn[key] = serialize(input[key])
         })
@@ -31,13 +22,14 @@ const serialize = (input)=>{
         return input;
     }
 }
-const deserialize = (input)=>{
+
+const deserialize = (input: any): any =>{
 	if(input === null || input === undefined){
 		return input
 	}else if(Array.isArray(input)){
         return input.map(v=>deserialize(v))
     }else if (typeof input === "object"){
-        const rtrn = {}
+        const rtrn: { [key: string]: any } = {}
         Object.keys(input).forEach(key=>{
             rtrn[key] = deserialize(input[key])
         })
@@ -59,7 +51,7 @@ const deserialize = (input)=>{
     }
 }
 
-export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}, responseAs = 'json') => {
+export const fetchApi = (endPoint: string, payload: any = {}, method: string = 'get', headers = {}, responseAs = 'json') => {
 	//const accessToken = sessionSelectors.get().tokens.access.value;
 	const serialized = serialize(payload)
 	const keycloak = store.getState().auth.keycloak
@@ -70,7 +62,7 @@ export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}, r
 	   updateTokenPromise = Promise.resolve(false)
    }
 	return updateTokenPromise.then(() => {
-	   let authHeaders = {}
+	   let authHeaders: any = {}
       if (keycloak != null && keycloak.token != null) {
          authHeaders.Authorization = "Bearer " + keycloak.token;
       }
@@ -99,16 +91,16 @@ export const fetchApi = (endPoint, payload = {}, method = 'get', headers = {}, r
                                 content: (<TryLoginAgain />),
                              }})
          } else if (e.response.status >= 500) {
-            e.response.text().then(body => body, noBody => noBody).then(
-               body => store.dispatch(alertAction("SERVER_ERROR", e.response.status + " " + e.response.statusText, body))
+            e.response.text().then((body: any) => body, (noBody: any) => noBody).then(
+               (body: any) => store.dispatch(alertAction("SERVER_ERROR", e.response.status + " " + e.response.statusText, body))
             )
          }
-         return e.response.json().then(body => {
+         return e.response.json().then((body: any) => {
             return Promise.reject(body)
-         }, (noBody) => {
-            return e.response.text().then(body => {
+         }, (noBody: any) => {
+            return e.response.text().then((body: any) => {
                return Promise.reject(body);
-            }, (noBodyAgain) => {
+            }, (noBodyAgain: any) => {
                return Promise.reject(e);
             })
          })
