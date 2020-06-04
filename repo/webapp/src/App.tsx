@@ -36,7 +36,7 @@ import AllHooks from './domain/hooks/AllHooks';
 import Alerts from './alerts'
 
 class App extends Component {
-  constructor(props) {
+  constructor(props: any) {
      super(props)
      initKeycloak(store.getState())
   }

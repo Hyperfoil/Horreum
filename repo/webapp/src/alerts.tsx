@@ -110,7 +110,7 @@ export default () => {
    const alerts = useSelector(alertsSelector)
    const dispatch = useDispatch()
    if (alerts.length === 0) {
-      return ""
+      return <>""</>
    }
    return (<div style={{ position: "absolute", zIndex: 1000, width: "100%" }}>
       { alerts.map(alert => (
