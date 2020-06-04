@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, RefObject } from 'react';
 import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -26,7 +26,7 @@ import {
     ArrowAltCircleUpIcon,
     OutlinedTimesCircleIcon
 } from '@patternfly/react-icons';
-import Editor from '../../components/Editor/monaco/Editor'
+import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 
 import * as actions from './actions';
 import * as selectors from './selectors';
@@ -61,7 +61,7 @@ export default () => {
     const test = useSelector(selectors.get(testId))
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const compareUrlEditor = useRef<any>()
+    const compareUrlEditor = useRef<ValueGetter>()
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<TestDispatch>()
     useEffect(() => {
@@ -89,9 +89,9 @@ export default () => {
     const [owner, setOwner] = useState(defaultRole)
     const [view, setView] = useState<View>({ name: "default", components: []})
 
-    const renderRefs = useRef<any[]>(view.components.map(c => React.createRef()));
+    const renderRefs = useRef(new Array<ValueGetter | undefined>(view.components.length));
     const updateRenders = () => view.components.forEach((c, i) => {
-         c.render = renderRefs.current[i].getValue()
+         c.render = renderRefs.current[i]?.getValue()
     })
 
     const history = useHistory()
@@ -237,7 +237,7 @@ export default () => {
                                headerOrder: components.length
                            })
                            setView({ ...view, components })
-                           renderRefs.current.push(React.createRef())
+                           renderRefs.current.push(undefined)
                         }} >Add component</Button>
 
                     </ActionGroup>
@@ -254,7 +254,7 @@ export default () => {
                                    id: testId !== "_new" ? parseInt(testId) : 0,
                                    name,
                                    description,
-                                   compareUrl: compareUrlEditor.current.getValue(),
+                                   compareUrl: compareUrlEditor.current?.getValue(),
                                    defaultView: view,
                                    owner: owner || "__test_created_without_a_role__",
                                    access: access,

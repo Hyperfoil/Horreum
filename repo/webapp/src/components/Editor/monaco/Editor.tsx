@@ -1,18 +1,9 @@
 import React, {useRef} from 'react';
-import { render } from 'react-dom';
-// import MonacoEditor from 'react-monaco-editor';
-// import 'monaco-editor/dev/vs/editor/editor.main.css'
-// import 'monaco-editor/dev/vs/loader.js'
-// import 'monaco-editor/dev/vs/language/json/jsonMode.js'
-// import 'monaco-editor/dev/vs/language/json/jsonWorker.js'
 
-import Editor, {monaco as getMonaco} from '@monaco-editor/react';
+import Editor, {Monaco, monaco as getMonaco, EditorProps, EditorDidMount} from '@monaco-editor/react';
+import { editor } from 'monaco-editor/esm/vs/editor/editor.api';
 
-import beautify from 'js-beautify';
-
-import {prepForEditor} from '../Editor';
-
-let monaco;
+let monaco: Monaco;
 
 getMonaco
   .init()
@@ -22,27 +13,29 @@ getMonaco
   })
   .catch(error => console.error('An error occurred during initialization of Monaco: ', error));
 
-export default ({value = "{}", language="json", setValueGetter = (v) => {}, options = {} }) => {
-    
-    const valueGetter = useRef();
+export type ValueGetter = {
+    getValue(): string | undefined
+}
 
-    const editorDidMount =(getter, editor) => {
-        //console.log("editorDidMount",editor,monaco)
-        valueGetter.current = getter;
-        setValueGetter({ getValue:()=>valueGetter.current()});
+export default ({value = "{}", language="json", setValueGetter = (_: ValueGetter) => {}, options = {} }) => {
+
+    const valueGetter = useRef<() => string>();
+
+    const editorDidMount: EditorDidMount = (getEditorValue: () => string, editor: editor.IStandaloneCodeEditor) => {
+        valueGetter.current = getEditorValue;
+        setValueGetter({ getValue: () => valueGetter.current ? valueGetter.current() : undefined });
         editor.addAction({
             id: 'my-unique-id',
             label: 'my label',
             keybindings: [
                 monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S
             ],
-            precondition: null,
-            keybindingContext: null,
+            precondition: undefined,
+            keybindingContext: undefined,
             contextMenuGroupId: 'navigation',
             contextMenuOrder: 1.5,
-            run: function(ed) {
+            run: ed => {
                 console.log("Ctrl+S => " + ed.getPosition());
-                return null;
             }
         })
     }

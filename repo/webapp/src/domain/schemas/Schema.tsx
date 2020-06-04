@@ -39,7 +39,7 @@ import {
 } from "../../alerts"
 
 import { fromEditor, toString } from '../../components/Editor';
-import Editor from '../../components/Editor/monaco/Editor';
+import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import OwnerSelect from '../../components/OwnerSelect'
@@ -79,12 +79,15 @@ export default () => {
         setEditorSchema(toString(schema?.schema) || "{}")
     }, [schema])
      // TODO editor types
-    const editor = useRef<any>();
+    const editor = useRef<ValueGetter>();
     const [uri, setUri] = useState(schema?.uri)
     const [uriMatching, setUriMatching] = useState(true)
     const [importFailed, setImportFailed] = useState(false)
     // TODO: use this in reaction to editor change
-    const parseUri = (newSchema: any) => {
+    const parseUri = (newSchema?: string) => {
+        if (!newSchema) {
+            return
+        }
         try {
            var schemaUri = jsonpath.value(JSON.parse(newSchema), "$['$id']")
         } catch (e) {
@@ -156,7 +159,7 @@ export default () => {
                                    <Tooltip content={"Import URI from the schema"}>
                                       <Button variant="control"
                                               style={{ float: "left" }}
-                                              onClick={ () => parseUri(editor.current.getValue()) }
+                                              onClick={ () => parseUri(editor.current?.getValue()) }
                                       ><ImportIcon /></Button>
                                    </Tooltip>
                                    }
@@ -299,13 +302,12 @@ export default () => {
                   <ActionGroup style={{ marginTop: 0 }}>
                       <Button variant="primary"
                           onClick={e => {
-                              // const editorValue = fromEditor(editor.current.getValue())
                               let newSchema: Schema = {
                                   id: schemaId !== "_new" ? parseInt(schemaId) : 0,
                                   name,
                                   uri: uri || "", // TODO require URI set?
                                   description,
-                                  schema: fromEditor(editor.current.getValue()),
+                                  schema: JSON.parse(editor.current?.getValue() || "null"),
                                   testPath: testPath,
                                   startPath: startPath,
                                   stopPath: stopPath,

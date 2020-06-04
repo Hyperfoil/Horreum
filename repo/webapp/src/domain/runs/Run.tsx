@@ -11,7 +11,6 @@ import { formatDateTime } from '../../utils'
 
 import Editor from '../../components/Editor/monaco/Editor';
 
-//import Editor from '../../components/Editor';
 import {
     Button,
     ButtonVariant,
@@ -33,7 +32,6 @@ import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams }
 
 export default () => {
     const { id } = useParams();
-    const editor = useRef();
     const run = useSelector(selectors.get(id));
     const [data, setData] = useState(run ? toString(run.data) : "{}")
 
@@ -324,7 +322,6 @@ export default () => {
                     { run.data &&
                     <Editor
                         value={data}
-                        setValueGetter={e => { editor.current = e }}
                         options={{ mode: "application/ld+json" }}
                     />
                     }

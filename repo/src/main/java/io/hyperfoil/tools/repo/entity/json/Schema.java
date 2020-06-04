@@ -26,6 +26,10 @@ import javax.validation.constraints.NotNull;
 )
 public class Schema extends PanacheEntityBase {
 
+   public Schema() {
+      System.out.println("xxx");
+   }
+
    @Id
    @SequenceGenerator(
       name = "schemaSequence",
