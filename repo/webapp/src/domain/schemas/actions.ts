@@ -3,6 +3,8 @@ import * as actionTypes from './actionTypes';
 import { accessName, Access } from '../../auth'
 import { Schema, DeleteAction, LoadedAction, UpdateTokenAction, UpdateAccessAction } from './reducers';
 import { Dispatch } from 'react';
+import { ThunkDispatch, ThunkAction } from 'redux-thunk';
+import { Action } from 'redux';
 
 const loaded = (schema: Schema | Schema[]): LoadedAction => ({
    type: actionTypes.LOADED,
@@ -50,11 +52,11 @@ export const dropToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>)
    )
 
 export const updateAccess = (id: number, owner: string, access: Access) => (dispatch: Dispatch<UpdateAccessAction>) =>
-   api.updateAccess(id, owner, accessName(access)).then(
+   api.updateAccess(id, owner, access).then(
       () => dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access })
    )
 
-export const deleteSchema = (id: number) => (dispatch: Dispatch<DeleteAction>) =>
+export const deleteSchema = (id: number) => async (dispatch: ThunkDispatch<any, unknown, DeleteAction>) =>
    api.deleteSchema(id).then(() => {
       dispatch({
          type: actionTypes.DELETE,

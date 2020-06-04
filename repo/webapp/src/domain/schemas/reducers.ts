@@ -2,9 +2,18 @@ import * as actionTypes from './actionTypes';
 import {Map} from 'immutable';
 import * as utils from "../../utils";
 import { Access } from "../../auth"
+import { Action } from 'redux';
+import { ThunkDispatch } from 'redux-thunk';
 
 export interface Schema {
     id: number,
+    name: string,
+    description: string,
+    uri: string,
+    testPath: string,
+    startPath: string,
+    stopPath: string,
+    schema: string,
     owner: string,
     access: Access,
     token: string | null,
@@ -14,30 +23,32 @@ export class SchemasState {
     byId?: Map<string, Schema> = undefined
 }
 
-export interface LoadedAction {
+export interface LoadedAction extends Action {
     type: typeof actionTypes.LOADED,
     schemas: Schema[],
 }
 
-export interface DeleteAction {
+export interface DeleteAction extends Action {
     type: typeof actionTypes.DELETE,
     id: number,
 }
 
-export interface UpdateTokenAction {
+export interface UpdateTokenAction extends Action {
     type: typeof actionTypes.UPDATE_TOKEN,
     id: number,
     token: string | null,
 }
 
-export interface UpdateAccessAction {
+export interface UpdateAccessAction extends Action {
     type: typeof actionTypes.UPDATE_ACCESS,
     id: number,
     owner: string,
     access: Access,
 }
 
-type SchemaAction = LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction
+export type SchemaAction = LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction
+
+export type SchemaDispatch = ThunkDispatch<any, unknown, SchemaAction>
 
 export const reducer = (state = new SchemasState(), action: SchemaAction) =>{
     switch(action.type){

@@ -1,8 +1,11 @@
 package io.hyperfoil.tools.repo.entity.json;
 
+import io.hyperfoil.tools.repo.entity.converter.AccessSerializer;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
+import javax.json.bind.annotation.JsonbTypeDeserializer;
+import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
@@ -36,6 +39,8 @@ public class Test extends PanacheEntityBase {
    public String token;
 
    @NotNull
+   @JsonbTypeSerializer(AccessSerializer.class)
+   @JsonbTypeDeserializer(AccessSerializer.class)
    public Access access = Access.PUBLIC;
 
    public String compareUrl;

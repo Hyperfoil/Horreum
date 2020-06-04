@@ -7,10 +7,17 @@ import { Access } from "../../auth"
 
 export interface Run {
     id: number,
+    testid: number,
     start: number,
+    stop: number,
     owner: string,
     access: Access,
     token: string | null,
+    data: any,
+    testname?: string,
+    schema?: Map<string, number>
+    // TODO - this could rather be a map<view_id, viewcomponent[]>
+    view?: any[]
 }
 
 export class RunsState {

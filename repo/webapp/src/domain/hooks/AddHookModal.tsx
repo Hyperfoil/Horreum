@@ -9,21 +9,22 @@ import {
     Modal,
     TextInput,
 } from '@patternfly/react-core';
+import { Hook } from './reducers';
 
 const eventTypes = ["new/test","new/run"]
 
-const isValidUrl = (string) => {
+const isValidUrl = (string: string) => {
     try {
       new URL(string);
       return true;
     } catch (_) {
-      return false;  
+      return false;
     }
   }
 
-const allValid = {url:true,type:true,target:true}
+const allValid = { url: true, type: true, target: true }
 
-export default ({isOpen=false,onCancel=()=>{},onSubmit=()=>{}})=>{
+export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})=>{
 
     const [url,setUrl] = useState("");
     const [eventType,setEventType] = useState(0)
@@ -31,13 +32,12 @@ export default ({isOpen=false,onCancel=()=>{},onSubmit=()=>{}})=>{
 
     const [valid,setValid] = useState(allValid)
 
-
-    
-    const validate = ()=>{
-        const rtrn={}
-        rtrn.url = isValidUrl(url)
-        rtrn.type = true//eventTypes.includes(eventType);
-        rtrn.target = target === "" || target === "-1" || /^\d*\.?\d*$/.test(target)
+    const validate = () => {
+        const rtrn = {
+            url: isValidUrl(url),
+            type: true,
+            target: target === "" || target === "-1" || /^\d*\.?\d*$/.test(target)
+        }
         setValid(rtrn)
         return rtrn.url && rtrn.type && rtrn.target
     }
@@ -46,7 +46,13 @@ export default ({isOpen=false,onCancel=()=>{},onSubmit=()=>{}})=>{
         const isValid = validate();
         if(isValid){
             const convertedType = isNaN(parseInt(target)) ? -1 : parseInt(target)
-            const toSubmit = {url:url.trim(),type:eventTypes[eventType],target : convertedType , active: true}
+            const toSubmit: Hook = {
+                id: 0,
+                url: url.trim(),
+                type: eventTypes[eventType],
+                target : convertedType,
+                active: true
+            }
             onSubmit(toSubmit)
         }
     }
@@ -55,7 +61,7 @@ export default ({isOpen=false,onCancel=()=>{},onSubmit=()=>{}})=>{
         <Modal
             title="New Hook"
             isOpen={isOpen}
-            onClose={e=>onCancel()}
+            onClose={onCancel}
             actions={[
                 <Button key="save" variant={ButtonVariant.primary} onClick={checkSubmit}>Save</Button>,
                 <Button key="cancel" variant={ButtonVariant.link} onClick={(e)=>{setValid(allValid); onCancel();}}>Cancel</Button>
@@ -80,14 +86,14 @@ export default ({isOpen=false,onCancel=()=>{},onSubmit=()=>{}})=>{
                         id="type"
                         validated={"default"}
                         value={eventType}
-                        onChange={(e)=>{ setEventType(e) }}
+                        onChange={(e)=>{ setEventType(parseInt(e)) }}
                         aria-label="Event Type"
                         >
                         {eventTypes.map((option, index)=>{
-                            return (<FormSelectOption 
+                            return (<FormSelectOption
                                 isDisabled={false}
-                                key={index} 
-                                value={index} 
+                                key={index}
+                                value={index}
                                 label={option}/>)
                         })}
                     </FormSelect>

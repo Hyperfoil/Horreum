@@ -1,4 +1,4 @@
-INSERT INTO schema (id,name,uri,owner,access) VALUES (1,'SPECjEnterprise2010','urn:spec:jenterprise2010','perf-team',0);
+INSERT INTO schema (id,name,uri,owner,access) VALUES (1,'SPECjEnterprise2010','urn:spec:jenterprise2010','dev-team',0);
 INSERT INTO test (id,name,description,defaultview_id,owner,access) VALUES (1,'SPECjEnterprise2010','spec.org 2010 enterprise benchmark',NULL,'perf-team',0);
 INSERT INTO view (id,name,test_id) VALUES (1,'default',1);
 UPDATE test SET defaultview_id = 1 WHERE id = 1;

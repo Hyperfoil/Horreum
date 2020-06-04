@@ -36,6 +36,10 @@ export interface Extractor {
    accessor: string,
    schema?: string,
    jsonpath?: string,
+   // upload-only fields
+   newName?: string,
+   deleted?: boolean,
+   changed?: boolean,
 }
 
 type AccessorsProps = {

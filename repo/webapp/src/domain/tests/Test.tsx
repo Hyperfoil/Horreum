@@ -16,8 +16,9 @@ import {
     Tabs,
     TextArea,
     TextInput,
-    Toolbar,    
+    Toolbar,
     ToolbarSection,
+    Bullseye,
 } from '@patternfly/react-core';
 import { useHistory } from 'react-router-dom';
 import {
@@ -34,7 +35,8 @@ import {
     accessName,
     defaultRoleSelector,
     isTesterSelector,
-    roleToName
+    roleToName,
+    Access
 } from '../../auth'
 
 import {
@@ -46,8 +48,9 @@ import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import Accessors from '../../components/Accessors'
 import OwnerSelect from '../../components/OwnerSelect'
+import { View, Test, TestDispatch } from './reducers';
 
-function swap(array, i1, i2) {
+function swap(array: any[], i1: number, i2: number) {
    const temp = array[i1]
    array[i1] = array[i2]
    array[i2] = temp
@@ -58,8 +61,9 @@ export default () => {
     const test = useSelector(selectors.get(testId))
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const compareUrlEditor = useRef()
+    const compareUrlEditor = useRef<any>()
     const dispatch = useDispatch();
+    const thunkDispatch = useDispatch<TestDispatch>()
     useEffect(() => {
         if (testId !== "_new") {
             dispatch(actions.fetchTest(testId))
@@ -81,11 +85,11 @@ export default () => {
     useEffect(() => {
       setOwner(defaultRole)
     }, [defaultRole])
-    const [access, setAccess] = useState(0)
+    const [access, setAccess] = useState<Access>(0)
     const [owner, setOwner] = useState(defaultRole)
-    const [view, setView] = useState({ name: "default", components: []})
+    const [view, setView] = useState<View>({ name: "default", components: []})
 
-    const renderRefs = useRef(view.components.map(c => React.createRef()));
+    const renderRefs = useRef<any[]>(view.components.map(c => React.createRef()));
     const updateRenders = () => view.components.forEach((c, i) => {
          c.render = renderRefs.current[i].getValue()
     })
@@ -95,7 +99,7 @@ export default () => {
         // <PageSection>
         <React.Fragment>
             <Card style={{flexGrow:1}}>
-                { !test && (<center><Spinner /></center>) }
+                { !test && (<Bullseye><Spinner /></Bullseye>) }
                 { test && (<>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
@@ -129,7 +133,7 @@ export default () => {
                                 <FormGroup label="Owner" fieldId="testOwner">
                                    { isTester ? (
                                       <OwnerSelect includeGeneral={false}
-                                                   selection={roleToName(owner)}
+                                                   selection={roleToName(owner) || ""}
                                                    onSelect={selection => setOwner(selection.key)} />
                                    ) : (
                                       <TextInput value={roleToName(owner) || ""} id="testOwner" isReadOnly />
@@ -173,7 +177,7 @@ export default () => {
                                             isReadOnly={!isTester} />
                                </FormGroup>
                                <FormGroup label="Accessors" fieldId="accessor">
-                                 <Accessors id="accessor"
+                                 <Accessors
                                             value={ (c.accessors && c.accessors.split(/[,;] */).map(a => a.trim()).filter(a => a.length !== 0)) || [] }
                                             onChange={ value => { c.accessors = value.join(";"); setView({ ...view }) }}
                                             isReadOnly={!isTester} />
@@ -226,7 +230,12 @@ export default () => {
                     <ActionGroup>
                         <Button onClick={ () => {
                            const components = view.components || []
-                           components.push({ headerOrder: components.length})
+                           components.push({
+                               headerName: "",
+                               accessors: "",
+                               render: "",
+                               headerOrder: components.length
+                           })
                            setView({ ...view, components })
                            renderRefs.current.push(React.createRef())
                         }} >Add component</Button>
@@ -241,19 +250,17 @@ export default () => {
                            variant="primary"
                            onClick={e => {
                                updateRenders()
-                               const newTest = {
+                               const newTest: Test = {
+                                   id: testId !== "_new" ? parseInt(testId) : 0,
                                    name,
                                    description,
                                    compareUrl: compareUrlEditor.current.getValue(),
                                    defaultView: view,
-                                   owner: owner,
-                                   access: accessName(access),
+                                   owner: owner || "__test_created_without_a_role__",
+                                   access: access,
+                                   token: null,
                                }
-                               if (testId !== "_new") {
-                                   newTest.id = testId;
-                               }
-
-                               dispatch(actions.sendTest(newTest)).then(() => history.goBack(), e => {
+                               thunkDispatch(actions.sendTest(newTest)).then(() => history.goBack(), e => {
                                   dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", e, constraintValidationFormatter("the saved test")))
                                })
                            }}
@@ -267,6 +274,6 @@ export default () => {
                 </>)}
             </Card>
         </React.Fragment>
-        // </PageSection>        
+        // </PageSection>
     )
 }

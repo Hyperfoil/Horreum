@@ -2,12 +2,30 @@ import * as actionTypes from './actionTypes';
 import {Map} from 'immutable';
 import * as utils from "../../utils";
 import { Access } from "../../auth"
+import { ThunkDispatch } from 'redux-thunk';
+
+export interface ViewComponent {
+    headerName: string,
+    accessors: string,
+    render: string | Function | undefined,
+    headerOrder: number,
+}
+
+export interface View {
+    name: string,
+    components: ViewComponent[]
+}
 
 export interface Test {
     id: number,
+    name: string,
+    description: string,
+    compareUrl: string | Function | undefined,
     owner: string,
     access: Access,
     token: string | null,
+    defaultView: View,
+    count?: number, // run count in AllTests
 }
 
 export class TestsState {
@@ -42,7 +60,9 @@ export interface UpdateAccessAction {
     access: Access,
 }
 
-type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction
+export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction
+
+export type TestDispatch = ThunkDispatch<any, unknown, TestAction>
 
 export const reducer = (state = new TestsState(), action: TestAction) => {
     switch (action.type) {

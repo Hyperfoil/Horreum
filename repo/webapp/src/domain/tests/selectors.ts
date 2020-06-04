@@ -1,10 +1,5 @@
 import { State } from '../../store'
 
-const emptyTest = {
-    name:"",
-    description:"",
-}
-
 export const isLoading = (state: State) => state.tests.loading
 
 export const all = (state: State) => {
@@ -20,6 +15,5 @@ export const get = (id: number)=> (state: State) => {
     if (!state.tests.byId) {
         return false
     }
-    const rtrn = state.tests.byId.get("t"+id,emptyTest);
-    return rtrn;
+    return state.tests.byId.get("t"+id);
 }

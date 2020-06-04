@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.repo.entity.json;
 
+import io.hyperfoil.tools.repo.entity.converter.AccessSerializer;
 import io.hyperfoil.tools.repo.entity.converter.InstantSerializer;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -50,5 +51,7 @@ public class Run extends PanacheEntityBase {
    public String token;
 
    @NotNull
+   @JsonbTypeSerializer(AccessSerializer.class)
+   @JsonbTypeDeserializer(AccessSerializer.class)
    public Access access = Access.PUBLIC;
 }

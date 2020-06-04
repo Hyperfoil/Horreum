@@ -71,7 +71,7 @@ export const tokenSelector = (state: State) => {
    return state.auth.keycloak && state.auth.keycloak.token
 }
 
-export const roleToName = (role: string) => {
+export const roleToName = (role: string | null) => {
    return role ? (role.charAt(0).toUpperCase() + role.slice(1, -5)) : null
 }
 

@@ -20,7 +20,7 @@ import {
 import { NavLink } from 'react-router-dom';
 
 import { DateTime, Duration } from 'luxon';
-import * as moment from 'moment'
+import moment from 'moment'
 import { formatDateTime, toEpochMillis } from '../../utils'
 
 import { byTest } from './actions';
@@ -32,9 +32,13 @@ import { fetchTest } from '../tests/actions';
 import { get } from '../tests/selectors';
 
 import Table from '../../components/Table';
+import { CellProps, UseTableOptions, UseRowSelectInstanceProps, UseRowSelectRowProps, Column, UseSortByColumnOptions } from 'react-table';
+import { Run } from './reducers';
+
+type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row:  UseRowSelectRowProps<Run> }
 
 //TODO how to prevent rendering before the data is loaded? (we just have start,stop,id)
-const renderCell = (render) => (arg) => {
+const renderCell = (render: string | Function | undefined) => (arg: C) => {
     const { cell: { value, row: { index } }, data, column } = arg;
     if (!render) {
         if (typeof value === "object") {
@@ -46,7 +50,7 @@ const renderCell = (render) => (arg) => {
     }
     const token = useSelector(tokenSelector)
     try {
-        const useValue = (value === null || value === undefined) ? data[index][column.id.toLowerCase()] : value;
+        const useValue = (value === null || value === undefined) ? (data[index] as any)[column.id.toLowerCase()] : value;
         const rendered = render(useValue, data[index], token)
         if (!rendered) {
             return "-"
@@ -66,13 +70,14 @@ const renderCell = (render) => (arg) => {
     }
 }
 
+type RunColumn = Column<Run> & UseSortByColumnOptions<Run>
 
-const staticColumns = [
+const staticColumns: RunColumn[] = [
     {
         Header: "",
         id: "selection",
         disableSortBy: true,
-        Cell: ({ row, selectedFlatRows }) => {
+        Cell: ({ row, selectedFlatRows }: C) => {
            const props = row.getToggleRowSelectedProps()
            delete props.indeterminate
            return (<input type="checkbox" {... props}
@@ -81,14 +86,15 @@ const staticColumns = [
     }, {
         Header: "Id",
         accessor: "id",
-        Cell: (arg) => {
+        Cell: (arg: C) => {
             const { cell: { value } } = arg;
             return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
         }
     }, {
         Header: "Executed",
+        accessor: "id",
         id: "executed",
-        Cell: arg => {
+        Cell: (arg: C) => {
             const content = (<table style={{ width: "300px" }}><tbody>
                                 <tr><td>Started:</td><td>{formatDateTime(arg.row.original.start)}</td></tr>
                                 <tr><td>Finished:</td><td>{formatDateTime(arg.row.original.stop)}</td></tr>
@@ -100,11 +106,11 @@ const staticColumns = [
     }, {
         Header:"Duration",
         id: "duration",
-        accessor: v => Duration.fromMillis(toEpochMillis(v.stop) - toEpochMillis(v.start)).toFormat("hh:mm:ss.SSS")
+        accessor: (run: Run) => Duration.fromMillis(toEpochMillis(run.stop) - toEpochMillis(run.start)).toFormat("hh:mm:ss.SSS")
     }, {
         Header: "Schema",
         accessor: "schema",
-        Cell: (arg) => {
+        Cell: (arg: C) => {
             const { cell: { value } } = arg;
             // LEFT JOIN results in schema.id == 0
             if (value) {
@@ -120,13 +126,13 @@ export default () => {
     const { testId } = useParams();
     const test = useSelector(get(testId))
     const [columns, setColumns] = useState((test && test.defaultView) ? test.defaultView.components : [])
-    const [selectedRows, setSelectedRows] = useState({})
+    const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
     const tableColumns = useMemo(() => {
         const rtrn = [ ...staticColumns ]
         columns.forEach((col, index) => {
              rtrn.push({
                  Header: col.headerName,
-                 accessor: `view[${index}]`,
+                 accessor: (run: Run) => run.view && run.view[index],
                  Cell: renderCell(col.render)
              })
         })
@@ -142,7 +148,7 @@ export default () => {
         dispatch(byTest(testId))
     }, [dispatch])
     useEffect(() => {
-        document.title = test.name + " | Horreum"
+        document.title = (test ? test.name : "Loading...") + " | Horreum"
         if (test && test.defaultView) {
             setColumns(test.defaultView.components)
         }
@@ -152,7 +158,7 @@ export default () => {
     const [actualCompareUrl, compareError] = useMemo(() => {
        if ( test && test.compareUrl && typeof test.compareUrl === "function" ) {
           try {
-             const rows = Object.keys(selectedRows).map(id => runs[id].id)
+             const rows = Object.keys(selectedRows).map(id => runs ? runs[parseInt(id)].id : [])
              if (rows.length >= 2) {
                 return [test.compareUrl(rows), undefined]
              }
@@ -161,7 +167,7 @@ export default () => {
           }
        }
        return [undefined, undefined]
-    }, [test.compareUrl, runs, selectedRows])
+    }, [test ? test.compareUrl : undefined, runs, selectedRows])
     const hasError = !!compareError
     useEffect(() => {
        if (compareError) {
@@ -175,7 +181,7 @@ export default () => {
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
                         <ToolbarGroup>
-                            <ToolbarItem className="pf-u-mr-xl">{`Test: ${test.name || testId}`}</ToolbarItem>
+                            <ToolbarItem className="pf-u-mr-xl">{`Test: ${test && test.name || testId}`}</ToolbarItem>
                         </ToolbarGroup>
                         { test && test.compareUrl &&
                         <ToolbarGroup>
@@ -195,7 +201,7 @@ export default () => {
                 </CardHeader>
                 <CardBody>
                     <Table columns={tableColumns}
-                           data={runs}
+                           data={runs || []}
                            initialSortBy={[{id: "stop", desc: true}]}
                            isLoading={isLoading}
                            selected={selectedRows}

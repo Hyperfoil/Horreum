@@ -3,7 +3,11 @@ import {Map} from 'immutable';
 import * as utils from "../../utils";
 
 export interface Hook {
-    id: number
+    id: number,
+    url: string,
+    type: string,
+    target: number,
+    active: boolean,
 }
 
 export class HooksState {

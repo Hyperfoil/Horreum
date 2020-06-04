@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, KeyboardEvent } from 'react';
 
 import { useSelector, useDispatch } from 'react-redux'
 import {
@@ -9,30 +9,34 @@ import {
     CardBody,
     PageSection,
     Radio,
+    Spinner,
     Tooltip
 } from '@patternfly/react-core';
-import { Spinner } from '@patternfly/react-core/dist/esm/experimental'
 import {
     FolderOpenIcon,
     HelpIcon,
     SearchIcon,
 } from '@patternfly/react-icons'
-import Autosuggest from 'react-autosuggest';
+import Autosuggest, { SuggestionsFetchRequestedParams, InputProps, ChangeEvent } from 'react-autosuggest';
 import './Autosuggest.css'
 
-import { DateTime, Duration } from 'luxon';
-import * as moment from 'moment'
+import { Duration } from 'luxon';
+import moment from 'moment'
 import { NavLink } from 'react-router-dom';
+import { CellProps, Column } from 'react-table'
 
 import {all, filter, suggest, selectRoles, resetToken, dropToken, updateAccess } from './actions';
 import * as selectors from './selectors';
-import { isAuthenticatedSelector, rolesSelector, registerAfterLogin, roleToName } from '../../auth'
+import { isAuthenticatedSelector, rolesSelector, registerAfterLogin, roleToName, Access } from '../../auth'
 import { formatDateTime, toEpochMillis } from '../../utils'
 
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import OwnerSelect from '../../components/OwnerSelect';
 import ActionMenu from '../../components/ActionMenu';
+import { Run } from './reducers';
+
+type C = CellProps<Run>
 
 export default ()=>{
     document.title = "Runs | Horreum"
@@ -47,27 +51,27 @@ export default ()=>{
     const [matchAll, setMatchAll] = useState(false)
 
     const dispatch = useDispatch();
-    const columns = useMemo(()=>[
+    const columns: Column<Run>[] = useMemo(()=>[
         {
           Header:"Id",
           accessor:"id",
-          Cell: (arg) => {
+          Cell: (arg: C) => {
             const {cell: {value} } = arg;
             return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
             }
         }, {
           Header: "Access",
           accessor: "access",
-          Cell: (arg) => <AccessIcon access={arg.cell.value} />
+          Cell: (arg: C) => <AccessIcon access={arg.cell.value} />
         }, {
           Header: "Owner",
           accessor:"owner",
-          Cell: (arg) => roleToName(arg.cell.value)
+          Cell: (arg: C) => roleToName(arg.cell.value)
         },
         {
           Header: "Executed",
           id: "executed",
-          Cell: arg => {
+          Cell: (arg: C) => {
             const content = (<table style={{ width: "300px" }}><tbody>
                               <tr><td>Started:</td><td>{formatDateTime(arg.row.original.start)}</td></tr>
                               <tr><td>Finished:</td><td>{formatDateTime(arg.row.original.stop)}</td></tr>
@@ -79,11 +83,11 @@ export default ()=>{
         }, {
           Header:"Duration",
           id: "duration",
-          accessor: v => Duration.fromMillis(toEpochMillis(v.stop) - toEpochMillis(v.start)).toFormat("hh:mm:ss.SSS")
+          accessor: (v: Run) => Duration.fromMillis(toEpochMillis(v.stop) - toEpochMillis(v.start)).toFormat("hh:mm:ss.SSS")
         }, {
-          Header:"Test",
-          accessor:"testid",
-          Cell: (arg) => {
+          Header: "Test",
+          accessor: "testid",
+          Cell: (arg: C) => {
             const {cell: {value} } = arg;
             return (<NavLink to={`/run/list/${value}`}>{arg.row.original.testname} <FolderOpenIcon /></NavLink>)
           }
@@ -91,12 +95,12 @@ export default ()=>{
           Header:"Actions",
           id: "actions",
           accessor: "id",
-          Cell: (arg) => {
+          Cell: (arg: CellProps<Run, number>) => {
             return (
              <ActionMenu id={arg.cell.value}
                          owner={ arg.row.original.owner }
                          access={ arg.row.original.access }
-                         token={ arg.row.original.token }
+                         token={ arg.row.original.token || undefined }
                          tokenToLink={ (id, token) => "/run/" + id + "?token=" + token }
                          onTokenReset={ id => dispatch(resetToken(id)) }
                          onTokenDrop={ id => dispatch(dropToken(id)) }
@@ -107,15 +111,15 @@ export default ()=>{
 
     const selectedRoles = useSelector(selectors.selectedRoles)
 
-    const runFilter = (roles) => {
+    const runFilter = (roles: string) => {
        setFilterLoading(true)
        dispatch(filter(filterQuery, matchAll, roles, success => {
          setFilterLoading(false);
          setFilterValid(success);
        }))
     };
-    const handleMatchAll = (v, evt) => {
-       if (v) setMatchAll(evt.target.value === "true")
+    const handleMatchAll = (checked: boolean, evt: React.ChangeEvent<any>) => {
+       if (checked) setMatchAll(evt.target.value === "true")
     }
     const suggestions = useSelector(selectors.suggestions)
     const loadingDisplay = useSelector(selectors.isFetchingSuggestions) ? "inline-block" : "none"
@@ -127,30 +131,31 @@ export default ()=>{
         }))
     },[dispatch])
 
-    const inputProps = {
+    const inputProps: InputProps<string> = {
        placeholder: "Enter search query",
        value: filterQuery,
-       onChange: (evt, v) => {
-          let value = v.newValue
+       onChange: (evt: React.FormEvent<any>, v: ChangeEvent) => {
+          // TODO
+          let value = (v as any).newValue
           setFilterValid(true)
           setFilterQuery(value)
           setMatchDisabled(value.trim().startsWith("$") || value.trim().startsWith("@"))
        },
-       onKeyDown: (evt) => {
+       onKeyDown: (evt: KeyboardEvent<Element>) => {
           if (evt.key === " " && evt.ctrlKey) {
              fetchSuggestionsNow()
           }
        }
     }
-    const [typingTimer, setTypingTimer] = useState(null)
-    const fetchSuggestions = ({value}) => {
+    const [typingTimer, setTypingTimer] = useState<number | null>(null)
+    const fetchSuggestions = ({value}: SuggestionsFetchRequestedParams) => {
        if (value === filterQuery) {
          return;
        }
        if (typingTimer !== null) {
           clearTimeout(typingTimer)
        }
-       setTypingTimer(setTimeout(() => suggest(value, selectedRoles.key)(dispatch), 1000))
+       setTypingTimer(window.setTimeout(() => suggest(value, selectedRoles.key)(dispatch), 1000))
     }
     const fetchSuggestionsNow = () => {
        if (typingTimer !== null) {
@@ -172,11 +177,12 @@ export default ()=>{
                  </Tooltip>
                  {/* TODO: Spinner left as an excercise for the reader */}
                  <Tooltip position="bottom" content={
-                    <div align="left">Enter query in one of these formats:<br />
+                    <div style={{ textAlign: "left" }}>Enter query in one of these formats:<br />
                       - JSON keys separated by spaces or commas. Multiple keys are combined with OR (match any) or AND (match all) relation.<br />
                       - Full jsonpath query starting with <code>$</code>, e.g. <code>$.foo.bar</code>, or <code>$.foo&nbsp;?&nbsp;@.bar&nbsp;==&nbsp;0</code><br />
                       - Part of the jsonpath query starting with <code>@</code>, e.g. <code>@.bar&nbsp;==&nbsp;0</code>. This condition will be evaluated on all sub-objects.<br />
-                    </div>}>
+                    </div>
+                 }><>
                     { /* TODO: It seems Patternfly has this as Select variant={SelectVariant.typeahead} */ }
                     <Autosuggest inputProps={inputProps}
                                  suggestions={suggestions}
@@ -204,13 +210,13 @@ export default ()=>{
                                     return value;
                                  }}
                                  renderSuggestion={v => <div>{v}</div>}
-                                 renderInputComponent={ inputProps => (
-                                    <input {...inputProps}
-                                           {... (filterLoading ? { readOnly : "" } : {}) }
+                                 renderInputComponent={ (inputProps: InputProps<string>) => (
+                                    <input {...inputProps as any}
+                                           {... (filterLoading ? { readOnly : true } : {}) }
                                            className="pf-c-form-control"
                                            aria-invalid={!filterValid}
                                            onKeyPress={ evt => {
-                                              if (evt.key === "Enter") runFilter()
+                                              if (evt.key === "Enter") runFilter(selectedRoles.key)
                                            }}
                                            style={{ width: "500px" }}/>
                                  )}
@@ -224,10 +230,10 @@ export default ()=>{
                                     </div>
                                  )}
                                  />
-                 </Tooltip>
+                 </></Tooltip>
                  <Button variant={ButtonVariant.control}
                          aria-label="search button for search input"
-                         onClick={runFilter}>
+                         onClick={() => runFilter(selectedRoles.key)}>
                      <SearchIcon />
                  </Button>
                  {/* TODO: add some margin to the radio buttons below */}
@@ -252,10 +258,9 @@ export default ()=>{
               </div>
             </CardHeader>
             <CardBody>
-              <Table columns={columns} data={runs} initialSortBy={[{id: "stop", desc: true}]} isLoading={ isLoading }/>
+              <Table columns={columns} data={runs || []} initialSortBy={[{id: "stop", desc: true}]} isLoading={ isLoading }/>
             </CardBody>
           </Card>
         </PageSection>
     )
 }
-

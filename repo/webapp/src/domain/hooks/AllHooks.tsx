@@ -21,12 +21,14 @@ import * as selectors from './selectors';
 
 import Table from '../../components/Table';
 import AddHookModal from './AddHookModal';
+import { Column } from 'react-table';
+import { Hook } from './reducers';
 
 
 export default ()=>{
     document.title = "WebHooks | Horreum"
     const dispatch = useDispatch();
-    const columns = useMemo(()=>[
+    const columns: Column<Hook>[] = useMemo(()=>[
         {
             Header:"Url",accessor:"url"
         },
@@ -41,7 +43,7 @@ export default ()=>{
         },
         {
             Header:"",accessor:"id",disableSortBy:true,
-            Cell: (arg)=>{
+            Cell: (arg: any)=>{
                 const {cell: {value} } = arg;
                 return (<>
                     <Button variant="link" style={{color: "#a30000"}} onClick={e=>{dispatch(remove(value))}}><OutlinedTimesCircleIcon/></Button>
@@ -67,7 +69,7 @@ export default ()=>{
                 </Toolbar>
             </CardHeader>
             <CardBody>
-              <Table columns={columns} data={list} />
+              <Table columns={columns} data={list || []} />
             </CardBody>
           </Card>
         </PageSection>

@@ -12,9 +12,8 @@ import { useSelector } from 'react-redux'
 
 import { rolesSelector, roleToName } from '../auth'
 
-export interface Role {
+export interface Role extends SelectOptionObject {
    key: string,
-   toString(): string,
 }
 
 export const ONLY_MY_OWN: Role = { key: "__my", toString: () => "Only my own"}
@@ -23,11 +22,7 @@ export const SHOW_ALL: Role = { key: "__all", toString: () => "Show all" }
 type OwnerSelectProps = {
    includeGeneral: boolean,
    selection: string,
-   onSelect(selection: RoleOption): void
-}
-
-interface RoleOption extends SelectOptionObject {
-   key: string,
+   onSelect(selection: Role): void
 }
 
 export default ({ includeGeneral, selection, onSelect }: OwnerSelectProps) => {
@@ -36,7 +31,7 @@ export default ({ includeGeneral, selection, onSelect }: OwnerSelectProps) => {
       return (roles ? roles.filter(role => role.endsWith("-team"))
                            .sort()
                            .map(role => (
-                     <SelectOption key={role} value={{ key: role, toString: () => roleToName(role) || "" } as RoleOption}/>
+                     <SelectOption key={role} value={{ key: role, toString: () => roleToName(role) || "" } as Role}/>
                    )) : [])
    }
    const [expanded, setExpanded] = useState(false)
@@ -47,7 +42,7 @@ export default ({ includeGeneral, selection, onSelect }: OwnerSelectProps) => {
          onToggle={setExpanded}
          onSelect={(event, selection, isPlaceholder) => {
             setExpanded(false)
-            onSelect(selection as RoleOption)
+            onSelect(selection as Role)
          }}
          selections={selection}
          isExpanded={expanded}

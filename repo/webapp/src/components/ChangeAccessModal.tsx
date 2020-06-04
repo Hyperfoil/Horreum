@@ -5,7 +5,7 @@ import {
     Modal,
 } from '@patternfly/react-core';
 
-import { roleToName } from '../auth'
+import { roleToName, Access } from '../auth'
 
 import AccessChoice from './AccessChoice'
 import OwnerSelect from './OwnerSelect'
@@ -15,8 +15,8 @@ type ChangeAccessModalProps = {
   onClose(): void,
   owner: string,
   onOwnerChange(owner: string): void,
-  access: number,
-  onAccessChange(access: number): void,
+  access: Access,
+  onAccessChange(access: Access): void,
   onUpdate(): void,
 }
 

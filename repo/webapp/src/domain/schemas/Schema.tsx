@@ -20,6 +20,7 @@ import {
     Toolbar,
     ToolbarSection,
     Tooltip,
+    Bullseye,
 } from '@patternfly/react-core';
 import { NavLink, Redirect } from 'react-router-dom';
 import {
@@ -31,7 +32,7 @@ import jsonpath from 'jsonpath';
 import * as actions from './actions';
 import * as selectors from './selectors';
 import * as api from './api';
-import { accessName, isTesterSelector, defaultRoleSelector, roleToName } from '../../auth'
+import { accessName, isTesterSelector, defaultRoleSelector, roleToName, Access } from '../../auth'
 import {
    alertAction,
    constraintValidationFormatter,
@@ -42,16 +43,18 @@ import Editor from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import OwnerSelect from '../../components/OwnerSelect'
+import { Extractor } from '../../components/Accessors';
+import { Schema } from './reducers';
 
 export default () => {
     const { schemaId } = useParams();
     const schema = useSelector(selectors.getById(schemaId))
     const [name, setName] = useState("")
     const [description, setDescription] = useState("");
-    const [testPath, setTestPath] = useState(schema.testPath || "")
-    const [startPath, setStartPath] = useState(schema.startPath || "")
-    const [stopPath, setStopPath] = useState(schema.stopPath || "")
-    const [editorSchema, setEditorSchema] = useState(toString(schema.schema) || "{}")
+    const [testPath, setTestPath] = useState(schema?.testPath || "")
+    const [startPath, setStartPath] = useState(schema?.startPath || "")
+    const [stopPath, setStopPath] = useState(schema?.stopPath || "")
+    const [editorSchema, setEditorSchema] = useState(toString(schema?.schema) || "{}")
 
     const dispatch = useDispatch();
     useEffect(() => {
@@ -60,27 +63,28 @@ export default () => {
         }
     }, [dispatch, schemaId])
     useEffect(() => {
-        document.title = (schemaId === "_new" ? "New schema" : schema.name)  + " | Horreum"
-        setName(schema.name || "");
-        setDescription(schema.description || "")
-        setUri(schema.uri || "")
-        setTestPath(schema.testPath || "")
-        setStartPath(schema.startPath || "")
-        setStopPath(schema.stopPath || "")
+        document.title = (schemaId === "_new" ? "New schema" : schema?.name)  + " | Horreum"
+        setName(schema?.name || "");
+        setDescription(schema?.description || "")
+        setUri(schema?.uri || "")
+        setTestPath(schema?.testPath || "")
+        setStartPath(schema?.startPath || "")
+        setStopPath(schema?.stopPath || "")
         if (schema && schema.owner) {
             setOwner(schema.owner)
         }
         if (schema && schema.access) {
             setAccess(schema.access)
         }
-        setEditorSchema(toString(schema.schema) || "{}")
+        setEditorSchema(toString(schema?.schema) || "{}")
     }, [schema])
-    const editor = useRef();
-    const [uri, setUri] = useState(schema.uri)
+     // TODO editor types
+    const editor = useRef<any>();
+    const [uri, setUri] = useState(schema?.uri)
     const [uriMatching, setUriMatching] = useState(true)
     const [importFailed, setImportFailed] = useState(false)
     // TODO: use this in reaction to editor change
-    const parseUri = newSchema => {
+    const parseUri = (newSchema: any) => {
         try {
            var schemaUri = jsonpath.value(JSON.parse(newSchema), "$['$id']")
         } catch (e) {
@@ -95,8 +99,8 @@ export default () => {
            setUriMatching(uri === schemaUri)
         }
     }
-    const checkUri = newUri => {
-        const currentSchema = editor.current.getValue()
+    const checkUri = (newUri: string) => {
+        const currentSchema = editor.current?.getValue() || "{}"
         try {
            var schemaUri = jsonpath.value(JSON.parse(currentSchema), "$['$id']")
         } catch (e) {
@@ -110,23 +114,23 @@ export default () => {
 
     const isTester = useSelector(isTesterSelector)
     const defaultRole = useSelector(defaultRoleSelector)
-    const [access, setAccess] = useState(0)
+    const [access, setAccess] = useState<Access>(0)
     const [owner, setOwner] = useState(defaultRole)
     const [goBack, setGoBack] = useState(false)
 
     const [activeTab, setActiveTab] = useState(0)
-    const [extractors, setExtractors] = useState([])
+    const [extractors, setExtractors] = useState<Extractor[]>([])
     useEffect(() => {
-        api.listExtractors(schemaId).then(result => setExtractors(result.map(e => {
+        api.listExtractors(schemaId).then(result => setExtractors(result.map((e: Extractor) => {
             e.newName = e.accessor
             return e
-        }).sort((a, b) => a.accessor.localeCompare(b.accessor))))
+        }).sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))))
     }, [schemaId])
     return (
         <React.Fragment>
             { goBack && <Redirect to='/schema' /> }
             <Card style={{ flexGrow: 1 }}>
-                { !schema && (<center><Spinner /></center>) }
+                { !schema && (<Bullseye><Spinner /></Bullseye>) }
                 { schema && (<>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
@@ -215,7 +219,7 @@ export default () => {
                                 <FormGroup label="Owner" fieldId="schemaOwner">
                                    { isTester ? (
                                       <OwnerSelect includeGeneral={false}
-                                                   selection={roleToName(owner)}
+                                                   selection={roleToName(owner) || ""}
                                                    onSelect={selection => setOwner(selection.key)} />
                                    ) : (
                                       <TextInput id="schemaOwner" value={roleToName(owner) || ""} isReadOnly />
@@ -246,10 +250,11 @@ export default () => {
                        />
                     </div>
                     }
-                    { activeTab === 1 && extractors.filter(e => !e.deleted).map(e => (<>
+                    { activeTab === 1 && extractors.filter((e: Extractor) => !e.deleted).map((e: Extractor) => (<>
                        <Form isHorizontal={true} style={{ gridGap: "2px", marginBottom: "10px", paddingRight: "40px", position: "relative" }}>
-                          <FormGroup label="Accessor">
-                              <TextInput value={e.newName}
+                          <FormGroup label="Accessor" fieldId="accessor">
+                              <TextInput id="accessor"
+                                         value={e.newName || ""}
                                          isReadOnly={!isTester}
                                          onChange={newValue => {
                                  e.newName = newValue
@@ -257,10 +262,11 @@ export default () => {
                                  setExtractors([...extractors])
                               }}/>
                           </FormGroup>
-                          <FormGroup label="JSON path"
+                          <FormGroup label="JSON path" fieldId="jsonpath"
                                      isValid={!e.jsonpath || !e.jsonpath.trim().startsWith("$")}
                                      helperTextInvalid="JSON path must not start with '$'">
-                              <TextInput value={e.jsonpath}
+                              <TextInput id="jsonpath"
+                                         value={e.jsonpath}
                                          isReadOnly={!isTester}
                                          isValid={!e.jsonpath || !e.jsonpath.trim().startsWith("$")}
                                          onChange={newValue => {
@@ -281,7 +287,11 @@ export default () => {
                        </Form>
                     </>))}
                     { activeTab === 1 && isTester &&
-                       <Button onClick={() => setExtractors([...extractors, { schema: uri }])}>Add extractor</Button>
+                       <Button onClick={() => {
+                           if (uri) {
+                               setExtractors([...extractors, { accessor: "", schema: uri }])
+                           }
+                       }} >Add extractor</Button>
                     }
                 </CardBody>
                 { isTester &&
@@ -290,19 +300,18 @@ export default () => {
                       <Button variant="primary"
                           onClick={e => {
                               // const editorValue = fromEditor(editor.current.getValue())
-                              const newSchema = {
+                              let newSchema: Schema = {
+                                  id: schemaId !== "_new" ? parseInt(schemaId) : 0,
                                   name,
-                                  uri,
+                                  uri: uri || "", // TODO require URI set?
                                   description,
                                   schema: fromEditor(editor.current.getValue()),
                                   testPath: testPath,
                                   startPath: startPath,
                                   stopPath: stopPath,
-                                  access: accessName(access),
-                                  owner,
-                              }
-                              if (schemaId !== "_new"){
-                                  newSchema.id = schemaId;
+                                  access: access,
+                                  owner: owner || "__schema_created_by_user_without_role__", // TODO this shouldn't happen,
+                                  token: null
                               }
                               actions.add(newSchema)(dispatch)
                                      .then(() => Promise.all(extractors.filter(e => e.changed || e.deleted).map(e => api.addOrUpdateExtractor(e))))
@@ -323,5 +332,3 @@ export default () => {
         </React.Fragment>
     )
 }
-
-

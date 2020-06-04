@@ -17,19 +17,25 @@ import clsx from 'clsx';
 // We need to pass the same empty list to prevent re-renders
 const NO_DATA: {}[] = []
 
+interface TableColumn<D extends object> extends ColumnInstance<D>, UseSortByColumnProps<D> {}
+
 type TableProps<D extends object> = {
   columns: Column<D>[],
   data: D[],
   initialSortBy: SortingRule<D>[], //TODO
   isLoading: boolean,
-  selected: D[],
+  selected: Record<string, boolean>,
   onSelected(ids: Record<string, boolean>): void,
 }
 
-
-interface TableColumn<D extends object> extends ColumnInstance<D>, UseSortByColumnProps<D> {}
-
-function Table<D extends object>({ columns, data, initialSortBy = [], isLoading = false, selected = NO_DATA as D[], onSelected = () => {} }: TableProps<D>) {
+// FIXME: Default values in parameters doesn't work: https://github.com/microsoft/TypeScript/issues/31247
+const defaultProps = {
+  initialSortBy: [],
+  isLoading: false,
+  selected: NO_DATA,
+  onSelected: () => {}
+}
+function Table<D extends object>({ columns, data, initialSortBy, isLoading, selected, onSelected }: TableProps<D>) {
   const {
     getTableProps,
     getTableBodyProps,
@@ -121,5 +127,6 @@ function Table<D extends object>({ columns, data, initialSortBy = [], isLoading 
     </>
   )
 }
+Table.defaultProps = defaultProps;
 
 export default Table;

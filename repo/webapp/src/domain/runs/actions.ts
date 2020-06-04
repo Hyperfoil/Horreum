@@ -1,5 +1,5 @@
 import { Dispatch } from 'react';
-import { accessName, Access } from '../../auth';
+import { Access } from '../../auth';
 import { Role } from '../../components/OwnerSelect';
 import { FilteredAction, LoadedAction, LoadingAction, LoadSuggestionsAction, Run, SelectRolesAction, SuggestAction, TestIdAction, UpdateAccessAction, UpdateTokenAction } from '../runs/reducers';
 import * as actionTypes from './actionTypes';
@@ -18,7 +18,7 @@ const testId = (id: number, runs: Run[]): TestIdAction =>({
     runs
 })
 
-export const get = (id: number, token: string) => (dispatch: Dispatch<LoadedAction>) =>
+export const get = (id: number, token?: string) => (dispatch: Dispatch<LoadedAction>) =>
    api.get(id, token).then(
       response => dispatch(loaded(response)),
       error => dispatch(loaded([]))
@@ -127,7 +127,7 @@ export const dropToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>)
 }
 
 export const updateAccess = (id: number, owner: string, access: Access) => (dispatch: Dispatch<UpdateAccessAction>) => {
-   return api.updateAccess(id, owner, accessName(access)).then(response => {
+   return api.updateAccess(id, owner, access).then(response => {
       dispatch({
          type: actionTypes.UPDATE_ACCESS,
          id: id,

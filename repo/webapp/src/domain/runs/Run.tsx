@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from "react-router"
 import { useSelector, useDispatch } from 'react-redux'
 import { DateTime } from 'luxon';
-import { Spinner } from '@patternfly/react-core';
+import { Spinner, Bullseye } from '@patternfly/react-core';
 import jsonpath from 'jsonpath';
 
 import * as actions from './actions';
@@ -29,37 +29,39 @@ import {
 import { HelpIcon } from '@patternfly/react-icons'
 import { toString } from '../../components/Editor';
 import { NavLink } from 'react-router-dom';
-import Autosuggest from 'react-autosuggest'
+import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams } from 'react-autosuggest'
 
 export default () => {
     const { id } = useParams();
     const editor = useRef();
     const run = useSelector(selectors.get(id));
-    const [data, setData] = useState(toString(run.data) || "{}")
+    const [data, setData] = useState(run ? toString(run.data) : "{}")
 
     const [pathQuery, setPathQuery] = useState("")
     const [pathInvalid, setPathInvalid] = useState(false)
     const [pathType, setPathType] = useState('js')
     const [pathTypeOpen, setPathTypeOpen] = useState(false)
-    const [pathSuggestions, setPathSuggestions] = useState([])
+    const [pathSuggestions, setPathSuggestions] = useState<string[]>([])
     const dispatch = useDispatch();
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get('token')
-        dispatch(actions.get(id, token))
+        dispatch(actions.get(id, token || undefined))
     }, [dispatch, id])
     useEffect(() => {
         //change the loaded document when the run changes
         document.title = run && run.id ? "Run " + run.id + " | Horreum" : "Loading run... | Horreum"
-        setData(toString(run.data) || "{}");
+        setData(run ? toString(run.data) : "{}");
     }, [run])
 
-    const inputProps = {
+    const inputProps: InputProps<string> = {
         placeholder: "Enter selection path, e.g. $.foo[?(@.bar > 42)]",
         value: pathQuery,
-        onChange: (evt, v) => {
+        onChange: (evt: React.FormEvent<any>, v: ChangeEvent) => {
+            // TODO
+            const value = (v as any).newValue
             setPathInvalid(false)
-            setPathQuery(v.newValue)
+            setPathQuery(value)
         },
         onKeyDown: evt => {
             if (evt.key === " " && evt.ctrlKey) {
@@ -69,7 +71,7 @@ export default () => {
             }
         }
     }
-    const postgresTojsJsonPath = query => {
+    const postgresTojsJsonPath = (query: string) => {
        query = query.replace(/\.\*\*\.?/g, "..");
        query = query.replace(/\."([^"]*)"/g, "['$1']")
        query = query.replace(/ *\? */, '?')
@@ -81,11 +83,14 @@ export default () => {
        }
        return query;
     }
-    const runPathQuery = evt => {
+    const runPathQuery = () => {
         if (pathQuery === "") {
             setPathInvalid(false);
-            setData(toString(run.data) || "{}");
+            setData(run ? toString(run.data) : "{}");
         } else {
+            if (!run) {
+               return;
+            }
             let query = postgresTojsJsonPath(pathQuery);
             while (query.endsWith(".")) {
                query = query.substring(0, query.length - 1);
@@ -97,11 +102,11 @@ export default () => {
             }
             try {
                 const found = jsonpath.nodes(run.data, query).map(({path, value}) => {
-                  let obj = {}
+                  let obj: { [key: string]: string } = {}
                   var combinedPath = "";
                   path.forEach(x => {
                      if (combinedPath === "") {
-                        combinedPath = x;
+                        combinedPath = String(x);
                      } else {
                         if (typeof(x) === "number") {
                            combinedPath = combinedPath + "[" + x + "]"
@@ -124,14 +129,17 @@ export default () => {
             }
         }
     }
-    const typingTimer = useRef(null)
-    const delayedUpdateSuggestions = ({value}) => {
+    const typingTimer = useRef<number | null>(null)
+    const delayedUpdateSuggestions = ({value}: SuggestionsFetchRequestedParams) => {
        if (typingTimer.current !== null) {
           clearTimeout(typingTimer.current)
        }
-       typingTimer.current = setTimeout(() => updateSuggestions(value), 1000)
+       typingTimer.current = window.setTimeout(() => updateSuggestions(value), 1000)
     }
-    const updateSuggestions = (value) => {
+    const updateSuggestions = (value: string) => {
+       if (!run) {
+           return
+       }
        let query = postgresTojsJsonPath(value.trim())
        let conditionStart = query.indexOf("@")
        if (conditionStart >= 0) {
@@ -185,7 +193,7 @@ export default () => {
           setPathInvalid(true)
        }
     }
-    const updateSuggestionValue = (value) => {
+    const updateSuggestionValue = (value: string) => {
        let quoted = false;
        let lastDot = 0;
        let lastClosingSquareBracket = 0;
@@ -228,7 +236,7 @@ export default () => {
         // <PageSection>
         <React.Fragment>
             <Card style={{ flexGrow: 1 }}>
-                { !run && (<center><Spinner /></center>)}
+                { !run && (<Bullseye><Spinner /></Bullseye>)}
                 { run && (<>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
@@ -243,7 +251,7 @@ export default () => {
                                     </tr>
                                     <tr>
                                         <td>{run.id}</td>
-                                        <td><NavLink to={`/test/${run.testId}`} >{run.testId}</NavLink></td>
+                                        <td><NavLink to={`/test/${run.testid}`} >{run.testid}</NavLink></td>
                                         <td>{ formatDateTime(run.start) }</td>
                                         <td>{ formatDateTime(run.stop) }</td>
                                     </tr>
@@ -255,7 +263,12 @@ export default () => {
                             <InputGroup>
                                 <Dropdown
                                     isOpen={pathTypeOpen}
-                                    onSelect={(e) => { setPathType(e.currentTarget.id); setPathTypeOpen(false); }}
+                                    onSelect={(e?: React.SyntheticEvent<HTMLDivElement>) => {
+                                       if (e) {
+                                          setPathType(e.currentTarget.id);
+                                       }
+                                       setPathTypeOpen(false);
+                                    }}
                                     toggle={
                                         <DropdownToggle onToggle={e => { setPathTypeOpen(e); }}>{pathType}</DropdownToggle>
                                     }
@@ -270,9 +283,9 @@ export default () => {
                                 <Popover closeBtnAriaLabel="close jsonpath help"
                                          aria-label="jsonpath help"
                                          position="bottom"
-                                         style={{ width : "500px " }}
                                          bodyContent={
-                                       <div><p>The search expression is a JSONPath implemented in the browser.
+                                       <div style={{ width : "500px " }}>
+                                            <p>The search expression is a JSONPath implemented in the browser.
                                             The syntax used in PostgreSQL JSONPath queries is partially transformed
                                             into JSONPath which has some limitations, though.</p>
                                             <p>Examples:</p>
@@ -294,7 +307,7 @@ export default () => {
                                              getSuggestionValue={updateSuggestionValue}
                                              renderSuggestion={v => <div>{v}</div>}
                                              renderInputComponent={ inputProps => (
-                                                 <input {...inputProps}
+                                                 <input {...inputProps as any}
                                                         className="pf-c-form-control"
                                                         aria-label="jsonpath"
                                                         aria-invalid={pathInvalid}
@@ -307,7 +320,7 @@ export default () => {
                     </Toolbar>
                 </CardHeader>
                 <CardBody>
-                    { !run.data && (<center><Spinner /></center>) }
+                    { !run.data && (<Bullseye><Spinner /></Bullseye>) }
                     { run.data &&
                     <Editor
                         value={data}
@@ -319,6 +332,6 @@ export default () => {
                 </>) }
             </Card>
         </React.Fragment>
-        // </PageSection>        
+        // </PageSection>
     )
 }

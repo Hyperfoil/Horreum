@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, Dispatch } from 'react';
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
@@ -16,21 +16,26 @@ import { alertAction } from '../../alerts'
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import ActionMenu from '../../components/ActionMenu';
+import { CellProps, Column } from 'react-table';
+import { Schema, SchemaDispatch } from './reducers';
+
+type C = CellProps<Schema>
 
 export default () => {
     document.title = "Schemas | Horreum"
-    const dispatch = useDispatch();
-    const columns = useMemo(() => [
+    const thunkDispatch = useDispatch<SchemaDispatch>()
+    const dispatch = useDispatch()
+    const columns: Column<Schema>[] = useMemo(() => [
         {
             Header: "Access", accessor:"access",
-            Cell: (arg) => <AccessIcon access={arg.cell.value} />
+            Cell: (arg: C) => <AccessIcon access={arg.cell.value} />
         },
         {
             Header: "Owner", accessor:"owner",
-            Cell: (arg) => roleToName(arg.cell.value)},
+            Cell: (arg: C) => roleToName(arg.cell.value)},
         {
             Header: "Name", accessor: "name",
-            Cell: (arg) => { return (
+            Cell: (arg: C) => { return (
                <NavLink to={ "/schema/" + arg.row.original.id } >{ arg.cell.value }</NavLink>
             )}
         },
@@ -48,14 +53,16 @@ export default () => {
                     <ActionMenu id={arg.cell.value}
                         owner={ arg.row.original.owner }
                         access={ arg.row.original.access }
-                        token={ arg.row.original.token }
+                        token={ arg.row.original.token || undefined }
                         tokenToLink={ (id, token) => "/schema/" + id + "?token=" + token }
                         onTokenReset={ id => dispatch(actions.resetToken(id)) }
                         onTokenDrop={ id => dispatch(actions.dropToken(id)) }
-                        onAccessUpdate={ (id, owner, access) => dispatch(actions.updateAccess(id, owner, access)) }
+                        onAccessUpdate={ (id, owner, access) => thunkDispatch(actions.updateAccess(id, owner, access)).catch(e => {
+                            dispatch(alertAction("SCHEMA_UPDATE", "Schema update failed", e))
+                        }) }
                         description={ "schema " + arg.row.original.name + " (" + arg.row.original.uri + ")" }
-                        onDelete={ id => dispatch(actions.deleteSchema(id)).catch(e => {
-                           dispatch(alertAction("SCHEMA_DELETE", "Failed to delete schema", e))
+                        onDelete={ id => thunkDispatch(actions.deleteSchema(id)).catch((e: any) => {
+                            dispatch(alertAction("SCHEMA_DELETE", "Failed to delete schema", e))
                         }) }/>
                 )
             }
@@ -80,7 +87,7 @@ export default () => {
                 </CardHeader>
                 }
                 <CardBody>
-                    <Table columns={columns} data={list} />
+                    <Table columns={columns} data={list || []} />
                 </CardBody>
             </Card>
         </PageSection>

@@ -8,27 +8,27 @@ import {
     KebabToggle,
 } from '@patternfly/react-core'
 
-import { rolesSelector } from '../auth'
+import { rolesSelector, Access } from '../auth'
 
 import ShareLinkModal from './ShareLinkModal'
 import ChangeAccessModal from './ChangeAccessModal'
 import ConfirmDeleteModal from './ConfirmDeleteModal'
 
 type ActionMenuProps = {
-   id: string,
+   id: number,
    owner: string,
-   access: number,
-   token: string,
-   tokenToLink(id: string, token: string): string,
-   extraItems: any[],
-   onTokenReset(id: string): void,
-   onTokenDrop(id: string): void,
-   onAccessUpdate(id: string, owner: string, access: number): void,
-   description: string,
-   onDelete(id: string): void,
+   access: Access,
+   token?: string,
+   tokenToLink(id: number, token: string): string,
+   extraItems?: any[],
+   onTokenReset(id: number): void,
+   onTokenDrop(id: number): void,
+   onAccessUpdate(id: number, owner: string, access: Access): void,
+   description?: string,
+   onDelete?(id: number): void,
 }
 
-export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenReset, onTokenDrop, onAccessUpdate, description, onDelete }: ActionMenuProps) => {
+export default function ActionMenu({ id, owner, access, token, tokenToLink, extraItems, onTokenReset, onTokenDrop, onAccessUpdate, description, onDelete }: ActionMenuProps) {
    const [menuOpen, setMenuOpen] = useState(false)
 
    const roles = useSelector(rolesSelector)
@@ -44,8 +44,17 @@ export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenRese
    useEffect(() => {
       setNewOwner(owner)
    }, [owner])
+   useEffect(() => {
+      setNewAccess(access)
+   }, [access])
 
    const isOwner = roles && roles.includes(owner)
+
+   const onChangeAccessClose = () => {
+      setNewOwner(owner)
+      setNewAccess(access)
+      setChangeAccessModalOpen(false)
+   }
 
    return (<>
       <Dropdown
@@ -83,18 +92,23 @@ export default ({ id, owner, access, token, tokenToLink, extraItems, onTokenRese
                       onReset={ () => onTokenReset(id) }
                       onDrop={ () => onTokenDrop(id) } />
       <ChangeAccessModal isOpen={ changeAccessModalOpen }
-                         onClose={ () => setChangeAccessModalOpen(false) }
+                         onClose={ onChangeAccessClose }
                          owner={ newOwner }
                          onOwnerChange={ setNewOwner }
                          access={ newAccess }
                          onAccessChange={ setNewAccess }
                          onUpdate={ () => {
-                            setChangeAccessModalOpen(false)
                             onAccessUpdate(id, newOwner, newAccess)
+                            onChangeAccessClose()
                          }} />
       <ConfirmDeleteModal isOpen={ confirmDeleteModalOpen }
                           onClose={ () => setConfirmDeleteModalOpen(false) }
-                          onDelete={ () => onDelete(id) }
-                          description={ description } />
+                          onDelete={ () => {
+                              setConfirmDeleteModalOpen(false)
+                              if (onDelete) {
+                                 onDelete(id)
+                              }
+                          }}
+                          description={ description || "" } />
    </>)
 }

@@ -29,28 +29,33 @@ import ActionMenu from '../../components/ActionMenu';
 
 import { isTesterSelector, registerAfterLogin, roleToName } from '../../auth'
 import { alertAction } from '../../alerts'
+import { CellProps, Column } from 'react-table';
+import { Test, TestDispatch } from './reducers';
+
+type C = CellProps<Test>
 
 export default ()=>{
     document.title = "Tests | Horreum"
     const dispatch = useDispatch();
-    const columns = useMemo(()=>[
+    const thunkDispatch = useDispatch<TestDispatch>()
+    const columns: Column<Test>[] = useMemo(()=>[
         {
           Header:"Id",accessor:"id",
-          Cell: (arg) => {
+          Cell: (arg: C) => {
             const {cell: {value} } = arg;
             return (<NavLink to={`/test/${value}`}>{value}</NavLink>)
           }
         },
         {
           Header: "Access", accessor:"access",
-          Cell: (arg) => <AccessIcon access={arg.cell.value} />
+          Cell: (arg: C) => <AccessIcon access={arg.cell.value} />
         },
-        {Header:"Owner",accessor:"owner", Cell: (arg) => roleToName(arg.cell.value)},
-        {Header:"Name",accessor:"name", Cell: (arg) => (<NavLink to={`/test/${arg.row.original.id}`}>{ arg.cell.value }</NavLink>)},
+        {Header:"Owner",accessor:"owner", Cell: (arg: C) => roleToName(arg.cell.value)},
+        {Header:"Name",accessor:"name", Cell: (arg: C) => (<NavLink to={`/test/${arg.row.original.id}`}>{ arg.cell.value }</NavLink>)},
         {Header:"Description",accessor:"description"},
         {
           Header:"Run Count",accessor:"count",
-          Cell: (arg) => {
+          Cell: (arg: C) => {
             const {cell: {value, row: {index}}, data} = arg;
             return (<NavLink to={`/run/list/${data[index].id}`}>{value}&nbsp;<FolderOpenIcon /></NavLink>)
           }
@@ -59,18 +64,23 @@ export default ()=>{
           Header:"Actions",
           id:"actions",
           accessor: "id",
-          Cell: (arg) => {
+          Cell: (arg: C) => {
             return (
             <ActionMenu id={arg.cell.value}
                         access={arg.row.original.access}
                         owner={arg.row.original.owner}
-                        token={arg.row.original.token}
+                        token={arg.row.original.token || undefined}
                         tokenToLink={ (id, token) => "/test/" + id + "?token=" + token }
                         onTokenReset={ id => dispatch(resetToken(id)) }
                         onTokenDrop={ id => dispatch(dropToken(id)) }
-                        onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, owner, access)) }
+                        onAccessUpdate={ (id, owner, access) => thunkDispatch(updateAccess(id, owner, access)).catch(e => {
+                          dispatch(alertAction("UPDATE_TEST", "Failed to update test", e))
+                        }) }
                         description={ "test " + arg.row.original.name }
-                        onDelete={ id => dispatch(deleteTest(id)).catch(e => dispatch(alertAction("DELETE_TEST", "Failed to delete test", e))) }/>
+                        onDelete={ id => thunkDispatch(deleteTest(id)).catch(e => {
+                          dispatch(alertAction("DELETE_TEST", "Failed to delete test", e))
+                        }) }
+                        />
             )
           }
         }
@@ -95,7 +105,7 @@ export default ()=>{
             </CardHeader>
             }
             <CardBody>
-              <Table columns={columns} data={allRuns} isLoading={isLoading}/>
+              <Table columns={columns} data={allRuns || []} isLoading={isLoading}/>
             </CardBody>
           </Card>
         </PageSection>

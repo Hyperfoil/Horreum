@@ -193,12 +193,15 @@ public class SchemaService {
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
    public Response updateAccess(@PathParam("id") Integer id,
                                 @QueryParam("owner") String owner,
-                                @QueryParam("access") Access access) {
+                                @QueryParam("access") int access) {
+      if (access < Access.PUBLIC.ordinal() || access > Access.PRIVATE.ordinal()) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Access not within bounds").build();
+      }
       try (Connection connection = dataSource.getConnection();
            CloseMeJdbc h = sqlService.withRoles(connection, identity);
            PreparedStatement statement = connection.prepareStatement(CHANGE_ACCESS)) {
          statement.setString(1, owner);
-         statement.setInt(2, access.ordinal());
+         statement.setInt(2, access);
          statement.setInt(3, id);
          if (statement.executeUpdate() != 1) {
             return Response.serverError().entity("Access change failed (missing permissions?)").build();

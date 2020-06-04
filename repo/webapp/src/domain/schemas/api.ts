@@ -1,13 +1,14 @@
 import { fetchApi } from '../../services/api';
 import { Schema } from './reducers';
 import { Extractor } from '../../components/Accessors';
+import { Access } from '../../auth';
 const base = "/api/schema"
 const endPoints = {
     base: ()=>`${base}`,
     crud:  (id: number | string)=> `${base}/${id}/`,
     resetToken: (id: number) => `${base}/${id}/resetToken`,
     dropToken: (id: number) => `${base}/${id}/dropToken`,
-    updateAccess: (id: number, owner: string, access: string) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
+    updateAccess: (id: number, owner: string, access: Access) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
     extractor: () => `${base}/extractor`,
     extractorForSchema: (schemaId: number) => `${base}/extractor?schemaId=${schemaId}`,
 }
@@ -28,7 +29,7 @@ export const resetToken = (id: number) => fetchApi(endPoints.resetToken(id), nul
 
 export const dropToken = (id: number) => fetchApi(endPoints.dropToken(id), null, 'post');
 
-export const updateAccess = (id: number, owner: string, access: string) => {
+export const updateAccess = (id: number, owner: string, access: Access) => {
    // TODO: fetchival does not support form parameters, it tries to JSONify everything
    return fetchApi(endPoints.updateAccess(id, owner, access), null, 'post', {}, 'response')
 //                   "owner=" + encodeURIComponent(owner) + "&access=" + encodeURIComponent(access),
