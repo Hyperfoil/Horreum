@@ -51,9 +51,6 @@ public class SqlService {
 
    @Inject
    AgroalDataSource dataSource;
-   @Inject
-   @DataSource("timescale")
-   AgroalDataSource timescaleDB;
 
    @ConfigProperty(name = "repo.db.secret")
    String dbSecret;
@@ -64,13 +61,6 @@ public class SqlService {
 
    private ExecutorService abortExecutor = Executors.newSingleThreadExecutor();
    private Map<String, String> signedRoleCache = new ConcurrentHashMap<>();
-
-   @DenyAll
-   @GET
-   @Path("time")
-   public Json getTime(@QueryParam("q") String sql) {
-      return query(timescaleDB, sql);
-   }
 
    @DenyAll
    @GET
