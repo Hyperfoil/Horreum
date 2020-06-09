@@ -101,7 +101,7 @@ CREATE TABLE public.viewcomponent (
     headername character varying(255) NOT NULL,
     headerorder integer NOT NULL,
     render text,
-    view_id integer,
+    view_id integer
 );
 
 ALTER TABLE ONLY public.hook
