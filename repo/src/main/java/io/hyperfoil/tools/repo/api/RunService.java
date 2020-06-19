@@ -76,6 +76,8 @@ public class RunService {
             "FROM run, jsonb_path_query(run.data, ? ::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
+   // TODO: view_data is fetched even for vcid that does not belong to the view
+   // select vc.id from view join viewcomponent vc on vc.view_id = view.id where view.test_id = 12
    private static final String TEST_RUN_VIEW = "SELECT run.id, run.start, run.stop, run.testId, run.owner, (" +
          "    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) FROM run_schemas rs WHERE run.id = rs.runid GROUP BY schemaid" +
          ")::text as schemas, jsonb_object_agg(view_data.vcid, view_data.object) as view FROM run " +
@@ -684,7 +686,11 @@ public class RunService {
                   } else {
                      String[] accessors = c.accessors();
                      if (accessors.length == 1) {
-                        view.add(componentData.get(accessors[0]));
+                        String accessor = accessors[0];
+                        if (ViewComponent.isArray(accessors[0])) {
+                           accessor = accessor.substring(0, accessor.length() - 2);
+                        }
+                        view.add(componentData.get(accessor));
                      } else {
                         view.add(componentData);
                      }
