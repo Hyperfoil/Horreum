@@ -39,7 +39,7 @@ public class Run extends PanacheEntityBase {
    public Instant stop;
 
    @NotNull
-   public Integer testId;
+   public Integer testid;
 
    @NotNull
    @Type(type = "io.hyperfoil.tools.repo.entity.converter.JsonUserType")
@@ -54,4 +54,8 @@ public class Run extends PanacheEntityBase {
    @JsonbTypeSerializer(AccessSerializer.class)
    @JsonbTypeDeserializer(AccessSerializer.class)
    public Access access = Access.PUBLIC;
+
+   @NotNull
+   @Column(columnDefinition = "boolean default false")
+   public boolean trashed;
 }

@@ -12,16 +12,17 @@ import {
     ToolbarGroup,
     ToolbarItem,
     Tooltip,
+    Checkbox,
 } from '@patternfly/react-core';
 import {
     EditIcon,
+    TrashIcon,
     WarningTriangleIcon,
 } from '@patternfly/react-icons';
 import { NavLink } from 'react-router-dom';
 
-import { DateTime, Duration } from 'luxon';
-import moment from 'moment'
-import { formatDateTime, toEpochMillis } from '../../utils'
+import { Duration } from 'luxon';
+import { toEpochMillis } from '../../utils'
 
 import { byTest } from './actions';
 import * as selectors from './selectors';
@@ -34,6 +35,7 @@ import { get } from '../tests/selectors';
 import Table from '../../components/Table';
 import { CellProps, UseTableOptions, UseRowSelectInstanceProps, UseRowSelectRowProps, Column, UseSortByColumnOptions } from 'react-table';
 import { Run } from './reducers';
+import { ExecutionTime, Menu } from './components'
 
 type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row:  UseRowSelectRowProps<Run> }
 
@@ -88,21 +90,16 @@ const staticColumns: RunColumn[] = [
         accessor: "id",
         Cell: (arg: C) => {
             const { cell: { value } } = arg;
-            return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
+            return (<><NavLink to={`/run/${value}`}>{value}</NavLink>
+               { arg.row.original.trashed &&
+                  <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} /> }
+            </>)
         }
     }, {
         Header: "Executed",
         accessor: "id",
         id: "executed",
-        Cell: (arg: C) => {
-            const content = (<table style={{ width: "300px" }}><tbody>
-                                <tr><td>Started:</td><td>{formatDateTime(arg.row.original.start)}</td></tr>
-                                <tr><td>Finished:</td><td>{formatDateTime(arg.row.original.stop)}</td></tr>
-                             </tbody></table>)
-            return (<Tooltip isContentLeftAligned content={content}>
-                      <span>{moment(toEpochMillis(arg.row.original.stop)).fromNow()}</span>
-                    </Tooltip>)
-        }
+        Cell: (arg: C) => ExecutionTime(arg.row.original),
     }, {
         Header:"Duration",
         id: "duration",
@@ -122,8 +119,17 @@ const staticColumns: RunColumn[] = [
     }
 ]
 
+const menuColumn: RunColumn = {
+    Header:"Actions",
+    id: "actions",
+    accessor: "id",
+    Cell: (arg: CellProps<Run, number>) => Menu(arg.row.original)
+}
+
 export default () => {
-    const { testId } = useParams();
+    const { testId: stringTestId } = useParams();
+    const testId = parseInt(stringTestId)
+
     const test = useSelector(get(testId))
     const [columns, setColumns] = useState((test && test.defaultView) ? test.defaultView.components : [])
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
@@ -136,17 +142,19 @@ export default () => {
                  Cell: renderCell(col.render)
              })
         })
+        rtrn.push(menuColumn)
         return rtrn;
     }, [columns]);
 
     const dispatch = useDispatch();
-    const runs = useSelector(selectors.testRuns(testId));
+    const [ showTrashed, setShowTrashed ] = useState(false)
+    const runs = useSelector(selectors.testRuns(testId, showTrashed));
     useEffect(() => {
         dispatch(fetchTest(testId));
     }, [dispatch, testId])
     useEffect(() => {
-        dispatch(byTest(testId))
-    }, [dispatch])
+        dispatch(byTest(testId, showTrashed))
+    }, [dispatch, showTrashed])
     useEffect(() => {
         document.title = (test ? test.name : "Loading...") + " | Horreum"
         if (test && test.defaultView) {
@@ -179,8 +187,9 @@ export default () => {
         <PageSection>
             <Card>
                 <CardHeader>
-                    <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
-                        <ToolbarGroup>
+                    <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
+                             style={{ justifyContent: "space-between" }}>
+                        <ToolbarGroup style={{ flexGrow: 100 }}>
                             <ToolbarItem className="pf-u-mr-xl">{`Test: ${test && test.name || testId}`}</ToolbarItem>
                         </ToolbarGroup>
                         { test && test.compareUrl &&
@@ -194,6 +203,14 @@ export default () => {
                            </ToolbarItem>
                         </ToolbarGroup>
                         }
+                        <ToolbarGroup>
+                            <ToolbarItem>
+                                <Checkbox id="showTrashed" aria-label="show trashed runs"
+                                          label="Show trashed runs"
+                                          isChecked={ showTrashed }
+                                          onChange={ setShowTrashed } />
+                            </ToolbarItem>
+                        </ToolbarGroup>
                         <ToolbarGroup>
                             <NavLink to={ `/test/${testId}` } ><EditIcon /></NavLink>
                         </ToolbarGroup>

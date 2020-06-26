@@ -78,11 +78,12 @@ public class RunService {
          "WHERE keys.key LIKE CONCAT(?, '%');";
    // TODO: view_data is fetched even for vcid that does not belong to the view
    // select vc.id from view join viewcomponent vc on vc.view_id = view.id where view.test_id = 12
-   private static final String TEST_RUN_VIEW = "SELECT run.id, run.start, run.stop, run.testId, run.owner, (" +
+   private static final String TEST_RUN_VIEW = "SELECT run.id, run.start, run.stop, run.testid, run.owner, (" +
          "    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) FROM run_schemas rs WHERE run.id = rs.runid GROUP BY schemaid" +
-         ")::text as schemas, jsonb_object_agg(view_data.vcid, view_data.object) as view FROM run " +
+         ")::text as schemas, jsonb_object_agg(view_data.vcid, view_data.object) as view, run.trashed FROM run " +
          "JOIN view_data ON view_data.runid = run.id " +
-         "WHERE run.testid = ? GROUP BY run.id, run.start, run.stop, run.testId, run.owner";
+         "WHERE run.testid = ? ";
+   private static final String TEST_RUN_VIEW_GROUPING = " GROUP BY run.id, run.start, run.stop, run.testid, run.owner";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -226,7 +227,7 @@ public class RunService {
    @Path("test/{testId}")
    @Consumes(MediaType.APPLICATION_JSON)
    public Response addToTest(@PathParam("testId") Integer testId, Run run) {
-      run.testId = testId;
+      run.testid = testId;
       return add(run);
    }
 
@@ -280,7 +281,7 @@ public class RunService {
          }
 
          Run run = new Run();
-         run.testId = testEntity.id;
+         run.testid = testEntity.id;
          run.start = startInstant;
          run.stop = stopInstant;
          run.data = data;
@@ -348,9 +349,9 @@ public class RunService {
    }
 
    private Response addAuthenticated(Run run) {
-      Test test = Test.find("id", run.testId).firstResult();
+      Test test = Test.find("id", run.testid).firstResult();
       if (test == null) {
-         return Response.serverError().entity("failed to find test " + run.testId).build();
+         return Response.serverError().entity("failed to find test " + run.testid).build();
       }
 
       if (run.owner == null || run.access == null) {
@@ -484,10 +485,14 @@ public class RunService {
    public Response list(@QueryParam("limit") Integer limit,
                     @QueryParam("page") Integer page,
                     @QueryParam("sort") String sort,
-                    @QueryParam("direction") String direction) {
+                    @QueryParam("direction") String direction,
+                    @QueryParam("trashed") boolean trashed) {
       StringBuilder sql = new StringBuilder("select ")
-         .append("run.id,start,stop,testId,run.owner,run.access,run.token,test.name as testname ")
+         .append("run.id,start,stop,testId,run.owner,run.access,run.token,test.name as testname,run.trashed ")
          .append("from run inner join test on run.testId = test.id");
+      if (!trashed) {
+         sql.append(" AND NOT run.trashed");
+      }
       addPaging(sql, limit, page, sort, direction);
       try (Connection connection = dataSource.getConnection();
            CloseMeJdbc h = sqlService.withRoles(connection, identity);
@@ -659,9 +664,14 @@ public class RunService {
                             @QueryParam("limit") Integer limit,
                             @QueryParam("page") Integer page,
                             @QueryParam("sort") String sort,
-                            @QueryParam("direction") String direction) {
+                            @QueryParam("direction") String direction,
+                            @QueryParam("trashed") boolean trashed) {
       // TODO: this is combining EntityManager and JDBC access :-/
       StringBuilder sql = new StringBuilder(TEST_RUN_VIEW);
+      if (!trashed) {
+         sql.append(" AND NOT run.trashed ");
+      }
+      sql.append(TEST_RUN_VIEW_GROUPING);
       Test test;
       try (CloseMe h = sqlService.withRoles(em, identity)) {
          test = Test.find("id", testId).firstResult();
@@ -702,10 +712,11 @@ public class RunService {
                   .add("id", resultSet.getInt(1))
                   .add("start", resultSet.getTimestamp(2).getTime())
                   .add("stop", resultSet.getTimestamp(3).getTime())
-                  .add("testId", resultSet.getInt(4))
+                  .add("testid", resultSet.getInt(4))
                   .add("owner", resultSet.getString(5))
                   .add("schema", schemas == null ? null : Json.fromString(schemas))
-                  .add("view", view.build()).build());
+                  .add("view", view.build())
+                  .add("trashed", resultSet.getBoolean(8)).build());
          }
          return Response.ok(jsonResult.build()).build();
       } catch (SQLException e) {
@@ -867,5 +878,20 @@ public class RunService {
          addPaging(sql, limit, page, sort, direction);
       }
       return sql.toString();
+   }
+
+   @POST
+   @Path("{id}/trash")
+   @Transactional
+   public Response trash(@PathParam("id") Integer id, @QueryParam("isTrashed") Boolean isTrashed) {
+      try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Run run = Run.findById(id);
+         if (run == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+         }
+         run.trashed = isTrashed == null || isTrashed;
+         run.persistAndFlush();
+         return Response.ok().build();
+      }
    }
 }

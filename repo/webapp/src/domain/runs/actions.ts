@@ -1,7 +1,7 @@
 import { Dispatch } from 'react';
 import { Access } from '../../auth';
 import { Role } from '../../components/OwnerSelect';
-import { FilteredAction, LoadedAction, LoadingAction, LoadSuggestionsAction, Run, SelectRolesAction, SuggestAction, TestIdAction, UpdateAccessAction, UpdateTokenAction } from '../runs/reducers';
+import { FilteredAction, LoadedAction, LoadingAction, LoadSuggestionsAction, Run, SelectRolesAction, SuggestAction, TestIdAction, UpdateAccessAction, UpdateTokenAction, TrashAction } from '../runs/reducers';
 import * as actionTypes from './actionTypes';
 import * as api from './api';
 import { isFetchingSuggestions, suggestQuery } from './selectors';
@@ -24,17 +24,17 @@ export const get = (id: number, token?: string) => (dispatch: Dispatch<LoadedAct
       error => dispatch(loaded([]))
    )
 
-export const all = () => (dispatch: Dispatch<LoadingAction | LoadedAction>) => {
+export const all = (trashed?: boolean) => (dispatch: Dispatch<LoadingAction | LoadedAction>) => {
    dispatch({ type: actionTypes.LOADING })
-   api.all().then(
+   api.all(trashed).then(
       response => dispatch(loaded(response)),
       error => dispatch(loaded([]))
    )
 }
 
-export const byTest = (id: number) => (dispatch: Dispatch<LoadingAction | TestIdAction>) => {
+export const byTest = (id: number, trashed?: boolean) => (dispatch: Dispatch<LoadingAction | TestIdAction>) => {
    dispatch({ type: actionTypes.LOADING })
-   api.byTest(id).then(
+   api.byTest(id, trashed).then(
       response => dispatch(testId(id,response)),
       error => dispatch(testId(id, []))
    )
@@ -106,33 +106,49 @@ export const selectRoles = (selection: Role): SelectRolesAction => {
    }
 }
 
-export const resetToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>) => {
+export const resetToken = (id: number, testid: number) => (dispatch: Dispatch<UpdateTokenAction>) => {
    return api.resetToken(id).then(token => {
       dispatch({
          type: actionTypes.UPDATE_TOKEN,
-         id: id,
-         token: token,
+         id,
+         testid,
+         token,
       })
    })
 }
 
-export const dropToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>) => {
+export const dropToken = (id: number, testid: number) => (dispatch: Dispatch<UpdateTokenAction>) => {
    return api.dropToken(id).then(response => {
       dispatch({
          type: actionTypes.UPDATE_TOKEN,
-         id: id,
+         id,
+         testid,
          token: null,
       })
    })
 }
 
-export const updateAccess = (id: number, owner: string, access: Access) => (dispatch: Dispatch<UpdateAccessAction>) => {
+export const updateAccess = (id: number, testid: number, owner: string, access: Access) => (dispatch: Dispatch<UpdateAccessAction>) => {
    return api.updateAccess(id, owner, access).then(response => {
       dispatch({
          type: actionTypes.UPDATE_ACCESS,
-         id: id,
-         owner: owner,
-         access: access,
+         id,
+         testid,
+         owner,
+         access,
       })
    })
 }
+
+export const trash = (id: number, testid: number, isTrashed: boolean = true) => (dispatch: Dispatch<TrashAction>) =>
+   api.trash(id, isTrashed).then(
+      response => {
+         console.log(response)
+         dispatch({
+            type: actionTypes.TRASH,
+            id,
+            testid,
+            isTrashed,
+         })
+      }
+   )

@@ -4,6 +4,7 @@ import * as utils from '../../utils'
 import { Role, ONLY_MY_OWN } from '../../components/OwnerSelect'
 import Run from './Run';
 import { Access } from "../../auth"
+import { ThunkDispatch } from 'redux-thunk';
 
 export interface Run {
     id: number,
@@ -18,6 +19,7 @@ export interface Run {
     schema?: Map<string, number>
     // TODO - this could rather be a map<view_id, viewcomponent[]>
     view?: any[]
+    trashed: boolean,
 }
 
 export class RunsState {
@@ -69,19 +71,30 @@ export interface SelectRolesAction {
 export interface UpdateTokenAction {
     type: typeof actionTypes.UPDATE_TOKEN,
     id: number,
+    testid: number,
     token: string | null,
 }
 
 export interface UpdateAccessAction {
     type: typeof actionTypes.UPDATE_ACCESS,
     id: number,
+    testid: number,
     owner: string,
     access: Access,
 }
 
+export interface TrashAction {
+    type: typeof actionTypes.TRASH,
+    id: number,
+    testid: number,
+    isTrashed: boolean,
+}
+
 type RunsAction = LoadingAction | LoadedAction | TestIdAction | FilteredAction |
                   LoadSuggestionsAction |  SuggestAction | SelectRolesAction |
-                  UpdateTokenAction | UpdateAccessAction
+                  UpdateTokenAction | UpdateAccessAction | TrashAction
+
+export type RunsDispatch = ThunkDispatch<any, unknown, RunsAction>
 
 //Takes events and updates the state accordingly
 export const reducer = (state = new RunsState(), action: RunsAction) =>{
@@ -148,20 +161,35 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
             break
         }
         case actionTypes.UPDATE_TOKEN: {
-            let run = state.byId && state.byId.get(`${action.id}`);
-            if (run) {
-               state.byId = (state.byId || Map<string, Run>()).set(`${run.id}`, { ...run, token: action.token })
-            }
+            state = updateRun(state, action.id, action.testid, { token: action.token })
             break
         }
         case actionTypes.UPDATE_ACCESS: {
-            let run = state.byId && state.byId.get(`${action.id}`);
-            if (run) {
-                state.byId = (state.byId || Map<string, Run>()).set(`${run.id}`, { ...run, owner: action.owner, access: action.access })
-            }
+            state = updateRun(state, action.id, action.testid, { owner: action.owner, access: action.access })
+            break
+        }
+        case actionTypes.TRASH: {
+            state = updateRun(state, action.id, action.testid, { trashed: action.isTrashed })
             break
         }
         default:
     }
     return state;
+}
+
+function updateRun(state: RunsState, id: number, testid: number, patch: object) {
+    let run = state.byId?.get(`${id}`);
+    if (run) {
+        state.byId = (state.byId || Map<string, Run>()).set(`${run.id}`, { ...run, ...patch })
+    }
+    let testMap: Map<string, Run> | undefined = state.byTest?.get(testid)
+    if (testMap) {
+        const stringId = `${id}`
+        const current: Run | undefined = testMap.get(stringId)
+        if (current) {
+            testMap = testMap.set(stringId, { ...current, ...patch })
+        }
+        state.byTest = state.byTest?.set(testid, testMap)
+    }
+    return state
 }

@@ -137,7 +137,7 @@ public class HookService {
    @Transactional
    @ConsumeEvent(value="new/run", blocking = true)
    public void newRun(Run run) {
-      Integer testId = run.testId;
+      Integer testId = run.testid;
       tellHooks("new/run", testId, run);
    }
 

@@ -7,41 +7,42 @@ import {
     Card,
     CardHeader,
     CardBody,
+    Checkbox,
     PageSection,
     Radio,
     Spinner,
-    Tooltip
+    Tooltip,
 } from '@patternfly/react-core';
 import {
     FolderOpenIcon,
     HelpIcon,
     SearchIcon,
+    TrashIcon,
 } from '@patternfly/react-icons'
 import Autosuggest, { SuggestionsFetchRequestedParams, InputProps, ChangeEvent } from 'react-autosuggest';
 import './Autosuggest.css'
 
 import { Duration } from 'luxon';
-import moment from 'moment'
 import { NavLink } from 'react-router-dom';
 import { CellProps, Column } from 'react-table'
 
-import {all, filter, suggest, selectRoles, resetToken, dropToken, updateAccess } from './actions';
+import {all, filter, suggest, selectRoles } from './actions';
 import * as selectors from './selectors';
-import { isAuthenticatedSelector, rolesSelector, registerAfterLogin, roleToName, Access } from '../../auth'
-import { formatDateTime, toEpochMillis } from '../../utils'
+import { isAuthenticatedSelector, registerAfterLogin, roleToName } from '../../auth'
+import { toEpochMillis } from '../../utils'
 
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import OwnerSelect from '../../components/OwnerSelect';
-import ActionMenu from '../../components/ActionMenu';
 import { Run } from './reducers';
+import { ExecutionTime, Menu } from './components'
 
 type C = CellProps<Run>
 
 export default ()=>{
     document.title = "Runs | Horreum"
-    const runs = useSelector(selectors.filter)
-    const roles = useSelector(rolesSelector)
+    const [showTrashed, setShowTrashed] = useState(false)
+    const runs = useSelector(selectors.filter(showTrashed))
     const isAuthenticated = useSelector(isAuthenticatedSelector)
 
     const [filterQuery, setFilterQuery] = useState("")
@@ -57,7 +58,10 @@ export default ()=>{
           accessor:"id",
           Cell: (arg: C) => {
             const {cell: {value} } = arg;
-            return (<NavLink to={`/run/${value}`}>{value}</NavLink>)
+            return (<><NavLink to={`/run/${value}`}>{value}</NavLink>
+               { arg.row.original.trashed &&
+                  <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} /> }
+            </>)
             }
         }, {
           Header: "Access",
@@ -71,15 +75,7 @@ export default ()=>{
         {
           Header: "Executed",
           id: "executed",
-          Cell: (arg: C) => {
-            const content = (<table style={{ width: "300px" }}><tbody>
-                              <tr><td>Started:</td><td>{formatDateTime(arg.row.original.start)}</td></tr>
-                              <tr><td>Finished:</td><td>{formatDateTime(arg.row.original.stop)}</td></tr>
-                             </tbody></table>)
-            return (<Tooltip isContentLeftAligned content={content}>
-                        <span>{moment(toEpochMillis(arg.row.original.stop)).fromNow()}</span>
-                    </Tooltip>)
-          }
+          Cell: (arg: C) => ExecutionTime(arg.row.original)
         }, {
           Header:"Duration",
           id: "duration",
@@ -95,17 +91,7 @@ export default ()=>{
           Header:"Actions",
           id: "actions",
           accessor: "id",
-          Cell: (arg: CellProps<Run, number>) => {
-            return (
-             <ActionMenu id={arg.cell.value}
-                         owner={ arg.row.original.owner }
-                         access={ arg.row.original.access }
-                         token={ arg.row.original.token || undefined }
-                         tokenToLink={ (id, token) => "/run/" + id + "?token=" + token }
-                         onTokenReset={ id => dispatch(resetToken(id)) }
-                         onTokenDrop={ id => dispatch(dropToken(id)) }
-                         onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, owner, access)) } />
-          )}
+          Cell: (arg: CellProps<Run, number>) => Menu(arg.row.original)
         }
     ],[dispatch])
 
@@ -124,12 +110,12 @@ export default ()=>{
     const suggestions = useSelector(selectors.suggestions)
     const loadingDisplay = useSelector(selectors.isFetchingSuggestions) ? "inline-block" : "none"
     useEffect(()=>{
-        dispatch(all())
+        dispatch(all(showTrashed))
         dispatch(registerAfterLogin("reload_runs", () => {
            dispatch(all())
            runFilter(selectedRoles.key)
         }))
-    },[dispatch])
+    },[dispatch, showTrashed])
 
     const inputProps: InputProps<string> = {
        placeholder: "Enter search query",
@@ -255,6 +241,11 @@ export default ()=>{
                                  }} />
                  </div>
                  }
+                 <span style={{ width: "20px" }} />
+                 <Checkbox id="showTrashed" aria-label="show trashed runs"
+                           label="Show trashed runs"
+                           isChecked={ showTrashed }
+                           onChange={ setShowTrashed } />
               </div>
             </CardHeader>
             <CardBody>

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, ReactElement } from 'react'
 
 import { useSelector } from 'react-redux'
 
 import {
     Dropdown,
     DropdownItem,
+    DropdownItemProps,
     KebabToggle,
 } from '@patternfly/react-core'
 
@@ -14,13 +15,15 @@ import ShareLinkModal from './ShareLinkModal'
 import ChangeAccessModal from './ChangeAccessModal'
 import ConfirmDeleteModal from './ConfirmDeleteModal'
 
+export type DropdownItemProvider = (closeFunc: () => void) => ReactElement<DropdownItemProps, any>
+
 type ActionMenuProps = {
    id: number,
    owner: string,
    access: Access,
    token?: string,
    tokenToLink(id: number, token: string): string,
-   extraItems?: any[],
+   extraItems?: DropdownItemProvider[],
    onTokenReset(id: number): void,
    onTokenDrop(id: number): void,
    onAccessUpdate(id: number, owner: string, access: Access): void,
@@ -82,7 +85,7 @@ export default function ActionMenu({ id, owner, access, token, tokenToLink, extr
                        }}
                        isDisabled={!isOwner || !onDelete}
          >Delete</DropdownItem>,
-         ...(extraItems ? extraItems : [])
+         ...(extraItems ? extraItems.map(item => item(() => setMenuOpen(false))) : [])
          ]}
       />
       <ShareLinkModal isOpen={ shareLinkModalOpen }

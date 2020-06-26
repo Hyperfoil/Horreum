@@ -32,7 +32,8 @@ CREATE TABLE public.run (
     testid integer NOT NULL,
     owner text NOT NULL,
     access integer,
-    token text
+    token text,
+    trashed boolean default false NOT NULL
 );
 
 CREATE SEQUENCE public.run_id_seq

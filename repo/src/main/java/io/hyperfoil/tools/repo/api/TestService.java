@@ -36,7 +36,7 @@ public class TestService {
    private static final Logger log = Logger.getLogger(TestService.class);
 
    private static final String SUMMARY = "select test.id,test.name,test.description,count(run.id) as count," +
-         "test.owner,test.token,test.access from test left join run on run.testId = test.id group by test.id";
+         "test.owner,test.token,test.access from test left join run on run.testid = test.id group by test.id";
    private static final String UPDATE_TOKEN = "UPDATE test SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
 

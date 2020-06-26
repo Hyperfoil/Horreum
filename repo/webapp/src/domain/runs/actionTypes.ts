@@ -1,6 +1,6 @@
 export const LOADING = 'runs/LOADING'
 export const CREATE = 'runs/CREATE';
-export const DELETE = 'runs/DELETE';
+export const TRASH = 'runs/TRASH';
 export const UPDATE = 'runs/UPDATE';
 export const LOADED = 'runs/LOADED';
 export const TESTID = 'runs/TESTID';
