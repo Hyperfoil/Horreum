@@ -16,10 +16,9 @@ export const testRuns = (id: number, trashed: boolean) => (state: State) => {
     }
     let list = [...state.runs.byTest.get(id)?.values()].filter(run => trashed || !run.trashed)
     list.sort((a,b)=>a.id - b.id);
-    console.log(list)
     return list;
 }
-export const get = (id: string) => (state: State) =>{
+export const get = (id: number) => (state: State) =>{
     if (!state.runs.byId) {
         return false
     }

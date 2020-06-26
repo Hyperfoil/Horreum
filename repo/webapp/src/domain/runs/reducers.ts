@@ -24,9 +24,9 @@ export interface Run {
 
 export class RunsState {
     loading: boolean = false
-    byId?: Map<string, Run> = undefined
-    byTest?: Map<number, Map<string, Run>> = undefined
-    filteredIds: List<string> | null = null
+    byId?: Map<number, Run> = undefined
+    byTest?: Map<number, Map<number, Run>> = undefined
+    filteredIds: List<number> | null = null
     selectedRoles: Role = ONLY_MY_OWN
     suggestQuery: string[] = []
     suggestions: string[] = []
@@ -105,14 +105,14 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
         case actionTypes.LOADED: {
             state.loading = false
             if (!state.byId) {
-                state.byId = Map({})
+                state.byId = Map<number, Run>()
             }
             if ( !utils.isEmpty(action.runs) ) {
                 action.runs.forEach(run => {
                     if (run !== undefined) {
-                        const byId = state.byId as Map<string, Run>
-                        state.byId = byId.set(`${run.id}`, {
-                            ...(byId.get(`${run.id}`) || {}), ...run
+                        const byId = state.byId as Map<number, Run>
+                        state.byId = byId.set(run.id, {
+                            ...(byId.get(run.id) || {}), ...run
                         })
                     }
                 })
@@ -122,12 +122,12 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
         case actionTypes.TESTID: {
             state.loading = false
             const byTest = state.byTest || Map()
-            let testMap: Map<string, Run> = byTest.get(action.id, Map({}));
+            let testMap: Map<number, Run> = byTest.get(action.id, Map<number, Run>())
             if ( !utils.isEmpty(action.runs) ) {
                 action.runs.forEach(run => {
                     if ( run !== undefined ){
-                        testMap = testMap.set(`${run.id}`, {
-                            ...testMap.get(`${run.id}`),
+                        testMap = testMap.set(run.id, {
+                            ...testMap.get(run.id),
                             ...run
                         })
                     }
@@ -138,7 +138,7 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
         }
         case actionTypes.FILTERED: {
             // The run.ids in LOADED are converted to strings using the backtick notation for whatever reason
-            state.filteredIds = action.ids == null ? null : List(action.ids.map(String))
+            state.filteredIds = action.ids == null ? null : List(action.ids)
             break;
         }
         case actionTypes.LOAD_SUGGESTIONS: {
@@ -178,16 +178,15 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
 }
 
 function updateRun(state: RunsState, id: number, testid: number, patch: object) {
-    let run = state.byId?.get(`${id}`);
+    let run = state.byId?.get(id);
     if (run) {
-        state.byId = (state.byId || Map<string, Run>()).set(`${run.id}`, { ...run, ...patch })
+        state.byId = (state.byId || Map<number, Run>()).set(run.id, { ...run, ...patch })
     }
-    let testMap: Map<string, Run> | undefined = state.byTest?.get(testid)
+    let testMap: Map<number, Run> | undefined = state.byTest?.get(testid)
     if (testMap) {
-        const stringId = `${id}`
-        const current: Run | undefined = testMap.get(stringId)
+        const current: Run | undefined = testMap.get(id)
         if (current) {
-            testMap = testMap.set(stringId, { ...current, ...patch })
+            testMap = testMap.set(id, { ...current, ...patch })
         }
         state.byTest = state.byTest?.set(testid, testMap)
     }
