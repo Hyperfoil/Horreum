@@ -15,6 +15,7 @@ const endPoints = {
     dropToken: (runId: number) => `${base}/${runId}/dropToken`,
     updateAccess: (runId: number, owner: string, access: Access) => `${base}/${runId}/updateAccess?owner=${owner}&access=${access}`,
     trash: (runId: number, isTrashed: boolean) => `${base}/${runId}/trash?isTrashed=${isTrashed}`,
+    description: (runId: number) => `${base}/${runId}/description`
 }
 
 export const all = (trashed?: boolean) => {
@@ -47,3 +48,7 @@ export const updateAccess = (id: number, owner: string, access: Access) => {
 }
 
 export const trash = (id: number, isTrashed: boolean) => fetchApi(endPoints.trash(id, isTrashed), null, 'post', {}, 'text')
+
+export const updateDescription = (id: number, description: string) => {
+    return fetchApi(endPoints.description(id), description, 'post', { 'content-type' : 'text/plain' }, 'response')
+ }

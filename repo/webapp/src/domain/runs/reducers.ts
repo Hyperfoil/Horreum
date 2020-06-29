@@ -11,6 +11,7 @@ export interface Run {
     testid: number,
     start: number,
     stop: number,
+    description: string,
     owner: string,
     access: Access,
     token: string | null,
@@ -90,9 +91,17 @@ export interface TrashAction {
     isTrashed: boolean,
 }
 
+
+export interface UpdateDescriptionAction {
+    type: typeof actionTypes.UPDATE_DESCRIPTION,
+    id: number,
+    testid: number,
+    description: string,
+}
+
 type RunsAction = LoadingAction | LoadedAction | TestIdAction | FilteredAction |
                   LoadSuggestionsAction |  SuggestAction | SelectRolesAction |
-                  UpdateTokenAction | UpdateAccessAction | TrashAction
+                  UpdateTokenAction | UpdateAccessAction | TrashAction | UpdateDescriptionAction
 
 export type RunsDispatch = ThunkDispatch<any, unknown, RunsAction>
 
@@ -170,6 +179,10 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
         }
         case actionTypes.TRASH: {
             state = updateRun(state, action.id, action.testid, { trashed: action.isTrashed })
+            break
+        }
+        case actionTypes.UPDATE_DESCRIPTION: {
+            state = updateRun(state, action.id, action.testid, { description: action.description })
             break
         }
         default:

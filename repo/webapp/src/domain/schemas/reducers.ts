@@ -13,6 +13,7 @@ export interface Schema {
     testPath: string,
     startPath: string,
     stopPath: string,
+    descriptionPath: string,
     schema: object,
     owner: string,
     access: Access,

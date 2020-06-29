@@ -35,7 +35,7 @@ import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import OwnerSelect from '../../components/OwnerSelect';
 import { Run } from './reducers';
-import { ExecutionTime, Menu } from './components'
+import { Description, ExecutionTime, Menu } from './components'
 
 type C = CellProps<Run>
 
@@ -88,10 +88,17 @@ export default ()=>{
             return (<NavLink to={`/run/list/${value}`}>{arg.row.original.testname} <FolderOpenIcon /></NavLink>)
           }
         }, {
+          Header: "Description",
+          accessor: "description",
+          Cell: (arg: C) => {
+            const {cell: {value} } = arg;
+            return Description(value)
+          }
+        }, {
           Header:"Actions",
           id: "actions",
           accessor: "id",
-          Cell: (arg: CellProps<Run, number>) => Menu(arg.row.original)
+          Cell: (arg: C) => Menu(arg.row.original)
         }
     ],[dispatch])
 

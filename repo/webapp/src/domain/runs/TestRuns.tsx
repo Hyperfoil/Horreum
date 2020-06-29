@@ -35,7 +35,7 @@ import { get } from '../tests/selectors';
 import Table from '../../components/Table';
 import { CellProps, UseTableOptions, UseRowSelectInstanceProps, UseRowSelectRowProps, Column, UseSortByColumnOptions } from 'react-table';
 import { Run } from './reducers';
-import { ExecutionTime, Menu } from './components'
+import { Description, ExecutionTime, Menu } from './components'
 
 type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row:  UseRowSelectRowProps<Run> }
 
@@ -115,6 +115,13 @@ const staticColumns: RunColumn[] = [
             } else {
                return "--"
             }
+        }
+    }, {
+        Header: "Description",
+        accessor: "description",
+        Cell: (arg: C) => {
+            const {cell: {value} } = arg;
+            return Description(value)
         }
     }
 ]

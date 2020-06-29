@@ -61,6 +61,11 @@ public class Schema extends PanacheEntityBase {
     */
    public String stopPath;
 
+   /**
+    * JsonPath query selection for run description.
+    */
+   public String descriptionPath;
+
    @NotNull
    public String owner;
 

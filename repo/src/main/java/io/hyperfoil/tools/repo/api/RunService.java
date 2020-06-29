@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Path("/api/run")
@@ -80,7 +81,7 @@ public class RunService {
    // select vc.id from view join viewcomponent vc on vc.view_id = view.id where view.test_id = 12
    private static final String TEST_RUN_VIEW = "SELECT run.id, run.start, run.stop, run.testid, run.owner, (" +
          "    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) FROM run_schemas rs WHERE run.id = rs.runid GROUP BY schemaid" +
-         ")::text as schemas, jsonb_object_agg(view_data.vcid, view_data.object) as view, run.trashed FROM run " +
+         ")::text as schemas, jsonb_object_agg(view_data.vcid, view_data.object) as view, run.trashed, run.description FROM run " +
          "JOIN view_data ON view_data.runid = run.id " +
          "WHERE run.testid = ? ";
    private static final String TEST_RUN_VIEW_GROUPING = " GROUP BY run.id, run.start, run.stop, run.testid, run.owner";
@@ -241,6 +242,7 @@ public class RunService {
                                   @QueryParam("owner") String owner,
                                   @QueryParam("access") Access access,
                                   @QueryParam("schema") String schemaUri,
+                                  @QueryParam("description") String description,
                                   Json data) {
       if (data == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("No data!").build();
@@ -256,6 +258,7 @@ public class RunService {
          Object foundTest = findIfNotSet(test, data, schema == null ? null : schema.testPath);
          Object foundStart = findIfNotSet(start, data, schema == null ? null : schema.startPath);
          Object foundStop = findIfNotSet(stop, data, schema == null ? null : schema.stopPath);
+         Object foundDescription = findIfNotSet(description, data, schema == null ? null : schema.descriptionPath);
 
          String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
          if (testNameOrId == null || testNameOrId.isEmpty()) {
@@ -284,6 +287,7 @@ public class RunService {
          run.testid = testEntity.id;
          run.start = startInstant;
          run.stop = stopInstant;
+         run.description = foundDescription != null ? foundDescription.toString() : null;
          run.data = data;
          run.owner = owner;
          run.access = access;
@@ -488,7 +492,7 @@ public class RunService {
                     @QueryParam("direction") String direction,
                     @QueryParam("trashed") boolean trashed) {
       StringBuilder sql = new StringBuilder("select ")
-         .append("run.id,start,stop,testId,run.owner,run.access,run.token,test.name as testname,run.trashed ")
+         .append("run.id,start,stop,testId,run.owner,run.access,run.token,test.name as testname,run.trashed,run.description ")
          .append("from run inner join test on run.testId = test.id");
       if (!trashed) {
          sql.append(" AND NOT run.trashed");
@@ -716,7 +720,9 @@ public class RunService {
                   .add("owner", resultSet.getString(5))
                   .add("schema", schemas == null ? null : Json.fromString(schemas))
                   .add("view", view.build())
-                  .add("trashed", resultSet.getBoolean(8)).build());
+                  .add("trashed", resultSet.getBoolean(8))
+                  .add("description", resultSet.getString(9))
+                  .build());
          }
          return Response.ok(jsonResult.build()).build();
       } catch (SQLException e) {
@@ -880,16 +886,42 @@ public class RunService {
       return sql.toString();
    }
 
+   @RolesAllowed("tester")
    @POST
    @Path("{id}/trash")
    @Transactional
    public Response trash(@PathParam("id") Integer id, @QueryParam("isTrashed") Boolean isTrashed) {
+      return updateRun(id, run -> run.trashed = isTrashed == null || isTrashed);
+   }
+
+   @RolesAllowed("tester")
+   @POST
+   @Path("{id}/description")
+   @Consumes(MediaType.TEXT_PLAIN)
+   @Transactional
+   public Response updateDescription(@PathParam("id") Integer id, String description) {
+      // FIXME: fetchival stringifies the body into JSON string :-/
+      return updateRun(id, run -> run.description = destringify(description));
+   }
+
+   private static String destringify(String str) {
+      if (str == null || str.isEmpty()) {
+         return str;
+      }
+      if (str.charAt(0) == '"' && str.charAt(str.length() - 1) == '"') {
+         return str.substring(1, str.length() - 1);
+      } else {
+         return str;
+      }
+   }
+
+   private Response updateRun(Integer id, Consumer<Run> consumer) {
       try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
          Run run = Run.findById(id);
          if (run == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
          }
-         run.trashed = isTrashed == null || isTrashed;
+         consumer.accept(run);
          run.persistAndFlush();
          return Response.ok().build();
       }

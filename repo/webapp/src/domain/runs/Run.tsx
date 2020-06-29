@@ -29,6 +29,7 @@ import { HelpIcon } from '@patternfly/react-icons'
 import { toString } from '../../components/Editor';
 import { NavLink } from 'react-router-dom';
 import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams } from 'react-autosuggest'
+import { Description } from './components'
 
 export default () => {
     const { id: stringId } = useParams();
@@ -247,12 +248,14 @@ export default () => {
                                         <th>test</th>
                                         <th>start</th>
                                         <th>stop</th>
+                                        <th>description</th>
                                     </tr>
                                     <tr>
                                         <td>{run.id}</td>
                                         <td><NavLink to={`/test/${run.testid}`} >{run.testid}</NavLink></td>
                                         <td>{ formatDateTime(run.start) }</td>
                                         <td>{ formatDateTime(run.stop) }</td>
+                                        <td>{ Description(run.description) }</td>
                                     </tr>
                                 </tbody>
                             </table>

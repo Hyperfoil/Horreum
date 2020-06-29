@@ -1,7 +1,20 @@
 import { Dispatch } from 'react';
 import { Access } from '../../auth';
 import { Role } from '../../components/OwnerSelect';
-import { FilteredAction, LoadedAction, LoadingAction, LoadSuggestionsAction, Run, SelectRolesAction, SuggestAction, TestIdAction, UpdateAccessAction, UpdateTokenAction, TrashAction } from '../runs/reducers';
+import {
+   FilteredAction,
+   LoadedAction,
+   LoadingAction,
+   LoadSuggestionsAction,
+   Run,
+   SelectRolesAction,
+   SuggestAction,
+   TestIdAction,
+   UpdateAccessAction,
+   UpdateTokenAction,
+   TrashAction,
+   UpdateDescriptionAction,
+} from '../runs/reducers';
 import * as actionTypes from './actionTypes';
 import * as api from './api';
 import { isFetchingSuggestions, suggestQuery } from './selectors';
@@ -149,6 +162,20 @@ export const trash = (id: number, testid: number, isTrashed: boolean = true) => 
             id,
             testid,
             isTrashed,
+         })
+      }
+   )
+
+
+export const updateDescription = (id: number, testid: number, description: string) => (dispatch: Dispatch<UpdateDescriptionAction>) =>
+   api.updateDescription(id, description).then(
+      response => {
+         console.log(response)
+         dispatch({
+            type: actionTypes.UPDATE_DESCRIPTION,
+            id,
+            testid,
+            description,
          })
       }
    )

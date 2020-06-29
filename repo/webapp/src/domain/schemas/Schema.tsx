@@ -54,6 +54,7 @@ export default () => {
     const [testPath, setTestPath] = useState(schema?.testPath || "")
     const [startPath, setStartPath] = useState(schema?.startPath || "")
     const [stopPath, setStopPath] = useState(schema?.stopPath || "")
+    const [descriptionPath, setDescriptionPath] = useState(schema?.descriptionPath || "")
     const [editorSchema, setEditorSchema] = useState(toString(schema?.schema) || "{}")
 
     const dispatch = useDispatch();
@@ -219,6 +220,13 @@ export default () => {
                                                placeholder="e.g. $.stopTimestamp"
                                                isReadOnly={ !isTester } />
                                 </FormGroup>
+                                <FormGroup label="Description JSON path" fieldId="descriptionPath">
+                                    <TextInput id="descriptionPath"
+                                               value={descriptionPath || ""}
+                                               onChange={setDescriptionPath}
+                                               placeholder="e.g. $.description"
+                                               isReadOnly={ !isTester } />
+                                </FormGroup>
                                 <FormGroup label="Owner" fieldId="schemaOwner">
                                    { isTester ? (
                                       <OwnerSelect includeGeneral={false}
@@ -308,10 +316,11 @@ export default () => {
                                   uri: uri || "", // TODO require URI set?
                                   description,
                                   schema: JSON.parse(editor.current?.getValue() || "null"),
-                                  testPath: testPath,
-                                  startPath: startPath,
-                                  stopPath: stopPath,
-                                  access: access,
+                                  testPath,
+                                  startPath,
+                                  stopPath,
+                                  descriptionPath,
+                                  access,
                                   owner: owner || "__schema_created_by_user_without_role__", // TODO this shouldn't happen,
                                   token: null
                               }

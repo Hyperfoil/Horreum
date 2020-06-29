@@ -38,6 +38,8 @@ public class Run extends PanacheEntityBase {
    @JsonbTypeSerializer(InstantSerializer.class)
    public Instant stop;
 
+   public String description;
+
    @NotNull
    public Integer testid;
 

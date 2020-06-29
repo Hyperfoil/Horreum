@@ -1,17 +1,31 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
+    Button,
     DropdownItem,
+    Modal,
+    TextInput,
     Tooltip,
 } from '@patternfly/react-core';
 import moment from 'moment'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 
 import { Run, RunsDispatch } from './reducers';
-import { resetToken, dropToken, updateAccess, trash } from './actions';
+import { resetToken, dropToken, updateAccess, trash, updateDescription } from './actions';
 import ActionMenu, { DropdownItemProvider } from '../../components/ActionMenu';
 import { alertAction } from '../../alerts';
 import { formatDateTime, toEpochMillis } from '../../utils'
+import { isTesterSelector } from '../../auth'
 
+
+export function Description(description: string) {
+    return (<>
+        <span style={{
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+        }}>{description}</span>
+    </>)
+}
 
 export const ExecutionTime = (run: Run) =>
     (<Tooltip isContentLeftAligned content={
@@ -24,6 +38,7 @@ export const ExecutionTime = (run: Run) =>
     </Tooltip>)
 
 export function Menu(run: Run) {
+    const [updateDescriptionOpen, setUpdateDescriptionOpen] = useState(false)
     const dispatch = useDispatch()
     const thunkDispatch = useDispatch<RunsDispatch>()
 
@@ -43,16 +58,76 @@ export function Menu(run: Run) {
             e => dispatch(alertAction("RUN_TRASH", "Failed to trash run ID " + id, e))
         )
     }
-    return (
-     <ActionMenu id={run.id}
-                 owner={ run.owner }
-                 access={ run.access }
-                 token={ run.token || undefined }
-                 tokenToLink={ (id, token) => "/run/" + id + "?token=" + token }
-                 onTokenReset={ id => dispatch(resetToken(id, run.testid)) }
-                 onTokenDrop={ id => dispatch(dropToken(id, run.testid)) }
-                 onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, run.testid, owner, access)) }
-                 onDelete={ onDelete }
-                 extraItems={ extras }/>
-    )
+    const isTester = useSelector(isTesterSelector)
+    if (isTester) {
+        extras.push(closeMenuFunc => (
+            <DropdownItem key="updateDescription"
+                onClick={() => {
+                    closeMenuFunc()
+                    setUpdateDescriptionOpen(true)
+                }}
+            >Edit description</DropdownItem>
+        ))
+    }
+    return (<>
+        <ActionMenu
+            id={run.id}
+            owner={ run.owner }
+            access={ run.access }
+            token={ run.token || undefined }
+            tokenToLink={ (id, token) => "/run/" + id + "?token=" + token }
+            onTokenReset={ id => dispatch(resetToken(id, run.testid)) }
+            onTokenDrop={ id => dispatch(dropToken(id, run.testid)) }
+            onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, run.testid, owner, access)) }
+            onDelete={ onDelete }
+            extraItems={ extras }
+        />
+        <UpdateDescriptionModal
+            isOpen={updateDescriptionOpen}
+            onClose={() => setUpdateDescriptionOpen(false)}
+            run={run} />
+    </>)
 }
+
+type UpdateDescriptionModalProps = {
+    isOpen: boolean,
+    onClose(): void,
+    run: Run,
+ }
+
+ export function UpdateDescriptionModal({ isOpen, onClose, run} : UpdateDescriptionModalProps) {
+    const [ value, setValue ] = useState(run.description)
+    const [ updating, setUpdating ] = useState(false)
+    const dispatch = useDispatch()
+    const thunkDispatch = useDispatch<RunsDispatch>()
+
+    return (<Modal isSmall title="UpdateDescription"
+                   isOpen={isOpen}
+                   onClose={onClose}>
+       <TextInput
+                value={ value }
+                type="text"
+                id="description"
+                name="description"
+                onChange={setValue}
+                isReadOnly={updating}
+            />
+            <Button variant="primary" onClick={() => {
+                setUpdating(true)
+                thunkDispatch(updateDescription(run.id, run.testid, value)).catch(
+                    e => {
+                        setValue(run.description)
+                        dispatch(alertAction("RUN_UPDATE", "Failed to update description for run ID " + run.id, e))
+                    }
+                ).finally(() => {
+                    setUpdating(false)
+                    onClose();
+                })
+            }}>Save</Button>
+            <Button variant="secondary" onClick={() => {
+                setValue(run.description)
+                setUpdating(false)
+                onClose();
+            }}>Cancel</Button>
+    </Modal>)
+ }
