@@ -5,7 +5,7 @@ CREATE POLICY run_select ON run FOR SELECT
         access = 0
         OR (access = 1 AND has_role('viewer'))
         OR (access = 2 AND has_role(run.owner) AND has_role('viewer'))
-        OR token = current_setting('repo.token', true)
+        OR token = current_setting('horreum.token', true)
     );
 CREATE POLICY run_insert ON run FOR INSERT
     WITH CHECK (has_role(owner));
@@ -22,7 +22,7 @@ CREATE POLICY test_select ON test FOR SELECT
         access = 0
         OR (access = 1 AND has_role('viewer'))
         OR (access = 2 AND has_role(owner) AND has_role('viewer'))
-        OR token = current_setting('repo.token', true)
+        OR token = current_setting('horreum.token', true)
     );
 CREATE POLICY test_insert ON test FOR INSERT
     WITH CHECK (has_role(owner));
@@ -39,7 +39,7 @@ CREATE POLICY schema_select ON schema FOR SELECT
         access = 0
         OR (access = 1 AND has_role('viewer'))
         OR (access = 2 AND has_role(owner) AND has_role('viewer'))
-        OR token = current_setting('repo.token', true)
+        OR token = current_setting('horreum.token', true)
     );
 CREATE POLICY schema_insert ON schema FOR INSERT
     WITH CHECK (has_role(owner));
@@ -61,7 +61,7 @@ CREATE POLICY rs_select ON run_schemas FOR SELECT
         access = 0
         OR (access = 1 AND has_role('viewer'))
         OR (access = 2 AND has_role(run_schemas.owner) AND has_role('viewer'))
-        OR token = current_setting('repo.token', true)
+        OR token = current_setting('horreum.token', true)
     );
 CREATE POLICY rs_insert ON run_schemas FOR INSERT
     WITH CHECK (has_role(owner));
@@ -78,7 +78,7 @@ CREATE POLICY vd_select ON view_data FOR SELECT
         access = 0
         OR (access = 1 AND has_role('viewer'))
         OR (access = 2 AND has_role(view_data.owner) AND has_role('viewer'))
-        OR token = current_setting('repo.token', true)
+        OR token = current_setting('horreum.token', true)
     );
 CREATE POLICY vd_insert ON view_data FOR INSERT
    WITH CHECK (has_role(owner));

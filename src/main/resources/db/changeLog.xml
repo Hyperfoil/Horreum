@@ -8,7 +8,7 @@
                                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
     <!-- This should be overridden in production by a system property -->
-    <property name="repo.db.secret" value="secret"/>
+    <property name="horreum.db.secret" value="secret"/>
     <property name="quarkus.datasource.username" value="appuser" />
 
     <!-- Primary model -->
@@ -17,7 +17,7 @@
             <column name="passphrase" type="text" />
         </createTable>
         <insert tableName="dbsecret">
-            <column name="passphrase" value="${repo.db.secret}" />
+            <column name="passphrase" value="${horreum.db.secret}" />
         </insert>
         <createSequence sequenceName="hibernate_sequence" startValue="1" incrementBy="1" cacheSize="1" />
         <createTable tableName="hook">
@@ -416,7 +416,7 @@
             CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
         </sql>
         <createProcedure>
-            <!-- Verify that what user has in repo.userroles is correctly signed -->
+            <!-- Verify that what user has in horreum.userroles is correctly signed -->
             CREATE OR REPLACE FUNCTION has_role(owner TEXT) RETURNS boolean AS $$
             DECLARE
                 v_passphrase TEXT;
@@ -429,7 +429,7 @@
                 v_computed TEXT;
             BEGIN
                 SELECT passphrase INTO v_passphrase FROM dbsecret;
-                v_userroles := current_setting('repo.userroles', true);
+                v_userroles := current_setting('horreum.userroles', true);
 
                 IF v_userroles = '' OR v_userroles IS NULL THEN
                      RETURN 0;

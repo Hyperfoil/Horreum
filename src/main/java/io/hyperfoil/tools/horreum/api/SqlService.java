@@ -39,14 +39,14 @@ import org.jboss.logging.Logger;
 public class SqlService {
    private static final Logger log = Logger.getLogger(SqlService.class);
 
-   private static final String SET_ROLES = "SELECT set_config('repo.userroles', ?, false)";
-   private static final String SET_TOKEN = "SELECT set_config('repo.token', ?, false)";
+   private static final String SET_ROLES = "SELECT set_config('horreum.userroles', ?, false)";
+   private static final String SET_TOKEN = "SELECT set_config('horreum.token', ?, false)";
    private static final CloseMe NOOP = () -> {};
 
    @Inject
    AgroalDataSource dataSource;
 
-   @ConfigProperty(name = "repo.db.secret")
+   @ConfigProperty(name = "horreum.db.secret")
    String dbSecret;
    byte[] dbSecretBytes;
 

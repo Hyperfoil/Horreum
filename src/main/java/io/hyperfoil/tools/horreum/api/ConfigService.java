@@ -14,7 +14,7 @@ import io.hyperfoil.tools.yaup.json.Json;
 @PermitAll
 @Path("/api/config")
 public class ConfigService {
-   @ConfigProperty(name = "repo.keycloak.url")
+   @ConfigProperty(name = "horreum.keycloak.url")
    String keycloakUrl;
 
    @GET

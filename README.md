@@ -59,13 +59,13 @@ java.lang.NoClassDefFoundError: com/sun/jna/LastErrorException
 Security uses RBAC with authz and authn provided by Keycloak server, and heavily relies on row-level security (RLS) in the database.
 The should be two DB users (roles); `dbadmin` who has full access to the database, and `appuser` with limited access.
 `dbadmin` should set up DB structure - tables with RLS policies and grant RW access to all tables but `dbsecret` to `appuser`.
-When the application performs a database query, impersonating the authenticated user, it invokes `SET repo.userroles = '...'`
+When the application performs a database query, impersonating the authenticated user, it invokes `SET horreum.userroles = '...'`
 to declare all roles the user has based on information from Keycloak. RLS policies makes sure that the user cannot read or modify
 anything that does not belong to this user or is made available to him.
 
-As a precaution against bug leaving SQL-level access open the `repo.userroles` granting the permission are not set in plaintext;
+As a precaution against bug leaving SQL-level access open the `horreum.userroles` granting the permission are not set in plaintext;
 the format of the setting is `role1:seed1:hash1,role2:seed2:hash2,...` where the `hash` is SHA-256 of combination of role, seed
-and hidden passphrase. This passphrase is set in `application.properties` under key `repo.db.secret`, and in database as the only
+and hidden passphrase. This passphrase is set in `application.properties` under key `horreum.db.secret`, and in database as the only
 record in table `dbsecret`. The user `appuser` does not have access to that table, but the security-defined functions used
 in table policies can fetch it, compute the hash again and validate its correctness.    
 
@@ -75,7 +75,7 @@ We define 3 levels of access to each row:
 * private: available only to users who 'own' this data.
 
 In addition to these 3 levels, each row defines a random 'token': everyone who knows this token can read the record.
-This token should be reset any time the restriction level changes. On database level the token is set using `SET repo.token = ...`
+This token should be reset any time the restriction level changes. On database level the token is set using `SET horreum.token = ...`
 and the table policies allow read access when the token matches.
 
 It is assumed that the repo will host data for multiple teams; each user is a member of one or more teams.
