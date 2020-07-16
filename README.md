@@ -14,9 +14,7 @@ Note that this docker-compose script is intended for developer use; for producti
 
 ## Getting Started
 ```bash
-cd repo/webapp
-npm install
-cd ..
+cd webapp && npm install && cd ..
 ./mvnw compile quarkus:dev -Dui.dev
 ```
 
@@ -26,8 +24,8 @@ cd ..
 ```bash
 ./mvnw clean package -Dui
 ```
-This builds the webapp and adds it to the `repo-${version}-runner.jar`.
-Start the server with `java -jar repo-${version}-runner.jar` after docker is already running
+This builds the webapp and adds it to the `horreum-${version}-runner.jar`.
+Start the server with `java -jar horreum-${version}-runner.jar` after docker is already running
 
 ## Insecure mode
 

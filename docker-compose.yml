@@ -40,7 +40,7 @@ services:
           psql -f /etc/horreum/imports/permissions.sql
       fi
     volumes:
-    - ./repo/src/main/resources:/etc/horreum/imports:ro,z
+    - ./horreum/src/main/resources:/etc/horreum/imports:ro,z
   keycloak:
     depends_on:
     - postgres
@@ -63,7 +63,7 @@ services:
     ports:
     - 8180:8080
     volumes:
-    - ./repo/src/main/resources:/etc/keycloak/imports:ro,z
+    - ./src/main/resources:/etc/keycloak/imports:ro,z
   app-init:
     image: docker.io/dwdraju/alpine-curl-jq:latest
     restart: on-failure
