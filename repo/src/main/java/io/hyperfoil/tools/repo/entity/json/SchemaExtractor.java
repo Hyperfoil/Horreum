@@ -17,11 +17,11 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * Defines a mapping between {@link ViewComponent} through {@link ViewComponent#accessors} matching {@link #accessor}
  * and the {@link Schema}. Access is limited by access to the schema.
  */
-@Entity
+@Entity(name = "schemaextractor")
 public class SchemaExtractor extends PanacheEntityBase {
    @Id
    @GeneratedValue
-   private Long id;
+   private Integer id;
 
    @NotNull
    @ManyToOne(fetch = FetchType.LAZY)

@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.repo.entity.json;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.json.bind.annotation.JsonbTransient;
@@ -21,12 +20,12 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 /**
  * Security model: the access to view is limited by access to the referenced test.
  */
-@Entity
+@Entity(name = "view")
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = { "id", "name" }))
 public class View extends PanacheEntityBase {
    @Id
    @GeneratedValue
-   public Long id;
+   public Integer id;
 
    @NotNull
    public String name;

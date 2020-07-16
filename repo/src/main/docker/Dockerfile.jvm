@@ -21,9 +21,6 @@ ENV AB_ENABLED=jmx_exporter
 COPY target/lib/* /deployments/lib/
 COPY target/*-runner.jar /deployments/app.jar
 COPY src/main/resources/keycloak-horreum.json /deployments/imports/
-COPY src/main/resources/structure.sql /deployments/imports/
-COPY src/main/resources/auxiliary.sql /deployments/imports/
-COPY src/main/resources/policies.sql /deployments/imports/
 EXPOSE 8080
 
 # run with user 1001 and be prepared for be running in OpenShift too

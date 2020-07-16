@@ -1,0 +1,460 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+                                       http://www.liquibase.org/xml/ns/dbchangelog
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <!-- This should be overridden in production by a system property -->
+    <property name="repo.db.secret" value="secret"/>
+    <property name="quarkus.datasource.username" value="appuser" />
+
+    <!-- Primary model -->
+    <changeSet id="0" author="rvansa">
+        <createTable tableName="dbsecret">
+            <column name="passphrase" type="text" />
+        </createTable>
+        <insert tableName="dbsecret">
+            <column name="passphrase" value="${repo.db.secret}" />
+        </insert>
+        <createSequence sequenceName="hibernate_sequence" startValue="1" incrementBy="1" cacheSize="1" />
+        <createTable tableName="hook">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="active" type="boolean">
+                <constraints nullable="false" />
+            </column>
+            <column name="target" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="type" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="url" type="text">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="hook" columnNames="url, type, target" />
+        <createSequence sequenceName="hook_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
+        <createTable tableName="run">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="data" type="jsonb">
+                <constraints nullable="false" />
+            </column>
+            <column name="start" type="timestamp without time zone">
+                <constraints nullable="false" />
+            </column>
+            <column name="stop" type="timestamp without time zone">
+                <constraints nullable="false" />
+            </column>
+            <column name="description" type="text" />
+            <column name="testid" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="owner" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="access" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="token" type="text" />
+            <column name="trashed" type="boolean" defaultValue="false" />
+        </createTable>
+        <createSequence sequenceName="run_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
+        <createTable tableName="schema">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="uri" type="text">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="text" />
+            <column name="name" type="text">
+                <constraints nullable="false" unique="true" />
+            </column>
+            <column name="schema" type="jsonb" />
+            <column name="testpath" type="text" />
+            <column name="startpath" type="text" />
+            <column name="stoppath" type="text" />
+            <column name="descriptionpath" type="text" />
+            <column name="owner" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="token" type="text" />
+            <column name="access" type="integer">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <createSequence sequenceName="schema_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
+        <createTable tableName="schemaextractor">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="accessor" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="jsonpath" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="schema_id" type="integer">
+                <constraints nullable="false" foreignKeyName="fk_extractor_schema_id" references="schema(id)"/>
+            </column>
+        </createTable>
+        <createTable tableName="test">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="name" type="text">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="owner" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="token" type="text" />
+            <column name="access" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="defaultview_id" type="integer" />
+            <column name="compareUrl" type="text" />
+        </createTable>
+        <createSequence sequenceName="test_id_seq" startValue="10" incrementBy="1" cacheSize="1" />
+        <createTable tableName="view">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="test_id" type="integer">
+                <constraints nullable="false" foreignKeyName="fk_view_test_id" references="test(id)"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_test_view_id"
+                                 baseTableName="test" baseColumnNames="defaultview_id"
+                                 referencedTableName="view" referencedColumnNames="id" />
+        <createTable tableName="viewcomponent">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="accessors" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="headername" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="headerorder" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="render" type="text" />
+            <column name="view_id" type="integer">
+                <constraints nullable="false" foreignKeyName="fk_component_view_id" references="view(id)"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="viewcomponent" columnNames="view_id, headername" />
+        <sql>
+            GRANT USAGE ON SCHEMA public TO ${quarkus.datasource.username};
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE hook, run, schema, schemaextractor, test, view, viewcomponent TO ${quarkus.datasource.username};
+            GRANT ALL ON SEQUENCE hibernate_sequence, hook_id_seq, run_id_seq, schema_id_seq, test_id_seq TO ${quarkus.datasource.username};
+        </sql>
+    </changeSet>
+
+    <!-- Auto-updated read-only tables -->
+    <changeSet id="1" author="rvansa">
+        <createTable tableName="run_schemas">
+            <column name="runid" type="integer" />
+            <column name="testid" type="integer" />
+            <column name="uri" type="text" />
+            <column name="schemaid" type="integer" />
+            <column name="prefix" type="text" />
+            <column name="owner" type="text" />
+            <column name="access" type="integer" />
+            <column name="token" type="text" />
+        </createTable>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION before_run_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_schemas WHERE runid = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION before_run_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_schemas WHERE runid = OLD.id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION after_run_update_func() RETURNS TRIGGER AS $$
+            DECLARE
+                v_schema text;
+                v_schemaid integer;
+            BEGIN
+                FOR v_schema IN (SELECT jsonb_path_query(NEW.data, '$.\$schema'::jsonpath)#>>'{}') LOOP
+                    v_schemaid := (SELECT id FROM schema WHERE uri = v_schema);
+                    IF v_schemaid IS NOT NULL THEN
+                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid, owner, access, token)
+                        VALUES (NEW.id, NEW.testid, '$', v_schema, v_schemaid, NEW.owner, NEW.access, NEW.token);
+                    END IF;
+                END LOOP;
+                FOR v_schema IN (SELECT jsonb_path_query(NEW.data, '$.*.\$schema'::jsonpath)#>>'{}') LOOP
+                    v_schemaid := (SELECT id FROM schema WHERE uri = v_schema);
+                    IF v_schemaid IS NOT NULL THEN
+                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid, owner, access, token)
+                        VALUES (NEW.id, NEW.testid, '$.*', v_schema, v_schemaid, NEW.owner, NEW.access, NEW.token);
+                    END IF;
+                END LOOP;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION before_schema_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_schemas WHERE schemaid = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION before_schema_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_schemas WHERE schemaid = OLD.id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION after_schema_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH rs AS (
+                    SELECT id, owner, access, token, testid, '$' as prefix,
+                    jsonb_path_query(RUN.data, '$.\$schema'::jsonpath)#>>'{}' as uri
+                    FROM run
+                    UNION
+                    SELECT id, owner, access, token, testid, '$.*' as prefix,
+                    jsonb_path_query(RUN.data, '$.*.\$schema'::jsonpath)#>>'{}' as uri
+                    FROM run
+                )
+                INSERT INTO run_schemas
+                SELECT rs.id as runid, rs.testid, rs.uri, NEW.id as schemaid, prefix, owner, access, token
+                FROM rs WHERE rs.uri = NEW.uri;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createTable tableName="view_data">
+            <column name="vcid" type="integer" />
+            <column name="runid" type="integer" />
+            <column name="extractor_ids" type="int[]" />
+            <column name="owner" type="text" />
+            <column name="access" type="integer" />
+            <column name="token" type="text" />
+            <column name="object" type="jsonb" />
+        </createTable>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION vd_before_delete_run_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM view_data WHERE runid = OLD.runid;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION vd_after_insert_run_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH vcs AS (
+                    SELECT id, unnest(regexp_split_to_array(accessors, ';')) as aa
+                    FROM viewcomponent
+                )
+                INSERT INTO view_data
+                SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+                    jsonb_object_agg(se.accessor, (CASE
+                        WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+                        ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+                    END)) as object
+                FROM vcs
+                JOIN schemaextractor se ON se.accessor = replace(aa, '[]', '')
+                JOIN run_schemas rs ON rs.schemaid = se.schema_id
+                JOIN run on run.id = rs.runid
+                WHERE run.id = NEW.runid
+                GROUP BY runid, vcid, run.owner, run.access, run.token;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION vd_before_delete_extractor_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM view_data WHERE OLD.id = ANY(extractor_ids);
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION vd_before_update_extractor_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM view_data WHERE OLD.id = ANY(extractor_ids);
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION vd_after_update_extractor_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH vcs AS (
+                    SELECT id, unnest(regexp_split_to_array(accessors, ';')) as aa
+                    FROM viewcomponent
+                )
+                INSERT INTO view_data
+                SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+                    jsonb_object_agg(se.accessor, (CASE
+                        WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+                        ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+                    END)) as object
+                FROM vcs
+                JOIN schemaextractor se ON se.accessor = replace(aa, '[]', '')
+                JOIN run_schemas rs ON rs.schemaid = se.schema_id
+                JOIN run on run.id = rs.runid
+                WHERE se.id = NEW.id
+                GROUP BY runid, vcid, run.owner, run.access, run.token;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION vd_before_delete_vc_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM view_data WHERE vcid = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION vd_before_update_vc_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM view_data WHERE vcid = OLD.id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION vd_after_update_vc_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH vcs AS (
+                    SELECT id, unnest(regexp_split_to_array(accessors, ';')) as aa
+                    FROM viewcomponent
+                    WHERE id = NEW.id
+                )
+                INSERT INTO view_data
+                SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+                    jsonb_object_agg(se.accessor, (CASE
+                        WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+                        ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
+                    END)) as object
+                FROM vcs
+                JOIN schemaextractor se ON se.accessor = replace(aa, '[]', '')
+                JOIN run_schemas rs ON rs.schemaid = se.schema_id
+                JOIN run on run.id = rs.runid
+                GROUP BY runid, vcid, run.owner, run.access, run.token;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <!-- Triggers run with privileges of the user running the update = appuser -->
+        <sql>
+            GRANT select, insert, delete, update ON TABLE run_schemas, view_data TO ${quarkus.datasource.username};
+        </sql>
+        <sql>
+            CREATE TRIGGER before_run_delete BEFORE DELETE ON run FOR EACH ROW EXECUTE FUNCTION before_run_delete_func();
+            CREATE TRIGGER before_run_update BEFORE UPDATE ON run FOR EACH ROW EXECUTE FUNCTION before_run_update_func();
+            CREATE TRIGGER after_run_update AFTER INSERT OR UPDATE ON run FOR EACH ROW EXECUTE FUNCTION after_run_update_func();
+            CREATE TRIGGER before_schema_delete BEFORE DELETE ON schema FOR EACH ROW EXECUTE FUNCTION before_schema_delete_func();
+            CREATE TRIGGER before_schema_update BEFORE UPDATE OF uri ON schema FOR EACH ROW EXECUTE FUNCTION before_schema_update_func();
+            CREATE TRIGGER after_schema_update AFTER INSERT OR UPDATE OF uri ON schema FOR EACH ROW EXECUTE FUNCTION after_schema_update_func();
+
+            CREATE TRIGGER vd_before_delete BEFORE DELETE ON run_schemas FOR EACH ROW EXECUTE FUNCTION vd_before_delete_run_func();
+            CREATE TRIGGER vd_after_insert AFTER INSERT ON run_schemas FOR EACH ROW EXECUTE FUNCTION vd_after_insert_run_func();
+            CREATE TRIGGER vd_before_delete BEFORE DELETE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION vd_before_delete_extractor_func();
+            CREATE TRIGGER vd_before_update BEFORE UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION vd_before_update_extractor_func();
+            CREATE TRIGGER vd_after_update AFTER INSERT OR UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION vd_after_update_extractor_func();
+            CREATE TRIGGER vd_before_delete BEFORE DELETE ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_before_delete_vc_func();
+            CREATE TRIGGER vd_before_update BEFORE UPDATE OF id, accessors ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_before_update_vc_func();
+            CREATE TRIGGER vd_after_update AFTER INSERT OR UPDATE OF id, accessors ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_after_update_vc_func();
+        </sql>
+        <rollback>
+            DROP TRIGGER IF EXISTS before_run_delete ON run;
+            DROP TRIGGER IF EXISTS before_run_update ON run;
+            DROP TRIGGER IF EXISTS after_run_update ON run;
+            DROP TRIGGER IF EXISTS before_schema_delete ON run;
+            DROP TRIGGER IF EXISTS before_schema_update ON run;
+            DROP TRIGGER IF EXISTS after_schema_update ON run;
+
+            DROP TRIGGER IF EXISTS vd_before_delete ON run_schemas;
+            DROP TRIGGER IF EXISTS vd_after_insert ON run_schemas;
+            DROP TRIGGER IF EXISTS vd_before_delete ON schemaextractor;
+            DROP TRIGGER IF EXISTS vd_before_update ON schemaextractor;
+            DROP TRIGGER IF EXISTS vd_after_update ON schemaextractor;
+            DROP TRIGGER IF EXISTS vd_before_delete ON viewcomponent;
+            DROP TRIGGER IF EXISTS vd_before_update ON viewcomponent;
+            DROP TRIGGER IF EXISTS vd_after_update ON viewcomponent;
+        </rollback>
+    </changeSet>
+
+    <!-- Security constraints -->
+    <changeSet id="2" author="rvansa">
+        <sql>
+            <!-- Install pgcrypto plugin -->
+            CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+        </sql>
+        <createProcedure>
+            <!-- Verify that what user has in repo.userroles is correctly signed -->
+            CREATE OR REPLACE FUNCTION has_role(owner TEXT) RETURNS boolean AS $$
+            DECLARE
+                v_passphrase TEXT;
+                v_userroles TEXT;
+                v_role_salt_sign TEXT;
+                v_parts TEXT[];
+                v_role TEXT;
+                v_salt TEXT;
+                v_signature TEXT;
+                v_computed TEXT;
+            BEGIN
+                SELECT passphrase INTO v_passphrase FROM dbsecret;
+                v_userroles := current_setting('repo.userroles', true);
+
+                IF v_userroles = '' OR v_userroles IS NULL THEN
+                     RETURN 0;
+                END IF;
+
+                FOREACH v_role_salt_sign IN ARRAY regexp_split_to_array(v_userroles, ',')
+                LOOP
+                    v_parts := regexp_split_to_array(v_role_salt_sign, ':');
+                    v_role := v_parts[1];
+                    IF v_role = owner THEN
+                        v_salt := v_parts[2];
+                        v_signature := v_parts[3];
+                        v_computed := encode(digest(v_role || v_salt || v_passphrase, 'sha256'), 'base64');
+                        IF v_computed = v_signature THEN
+                            RETURN 1;
+                        ELSE
+                            RAISE EXCEPTION 'invalid role + salt + signature';
+                        END IF;
+                    END IF;
+                END LOOP;
+                RETURN 0;
+            END;
+            $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+        </createProcedure>
+        <sqlFile path="policies.sql" relativeToChangelogFile="true" />
+    </changeSet>
+</databaseChangeLog>
+

@@ -56,9 +56,6 @@ public class SqlService {
    String dbSecret;
    byte[] dbSecretBytes;
 
-   @ConfigProperty(name = "horreum.db.init.scripts")
-   Optional<String> initScripts;
-
    private ExecutorService abortExecutor = Executors.newSingleThreadExecutor();
    private Map<String, String> signedRoleCache = new ConcurrentHashMap<>();
 
@@ -72,49 +69,11 @@ public class SqlService {
    void init() {
       log.info("Initializing SqlService");
       dbSecretBytes = dbSecret.getBytes(StandardCharsets.UTF_8);
-      if (initScripts.isPresent()) {
-         for (String script : initScripts.get().split("[,;]")) {
-            loadScript(script);
-         }
-      }
    }
 
    @PreDestroy
    void destroy() {
       abortExecutor.shutdown();
-   }
-
-   private void loadScript(String script) {
-      try (InputStream stream = SqlService.class.getClassLoader().getResourceAsStream(script)) {
-         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-         String line;
-         StringBuilder query = new StringBuilder();
-         try (Connection connection = dataSource.getConnection()) {
-            while ((line = reader.readLine()) != null) {
-               line = line.trim();
-               if (line.equals("--;")) {
-                  if (query.length() > 0) {
-                     try (Statement statement = connection.createStatement()) {
-                        statement.execute(query.toString());
-                     } finally {
-                        query = new StringBuilder();
-                     }
-                  }
-               } else if (!line.startsWith("--") && !line.isEmpty()) {
-                  query.append("\n").append(line);
-               }
-            }
-            if (query.length() > 0) {
-               try (Statement statement = connection.createStatement()) {
-                  statement.execute(query.toString());
-               }
-            }
-         } catch (SQLException e) {
-            log.errorf(e, "Failed to execute DB script %s, query %s", script, query.toString());
-         }
-      } catch (IOException e) {
-         log.errorf(e, "Failed to load DB script %s", script);
-      }
    }
 
    private Json query(AgroalDataSource agroalDataSource, String sql) {

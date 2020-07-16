@@ -13,7 +13,7 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.time.Instant;
 
-@Entity
+@Entity(name = "run")
 @RegisterForReflection
 public class Run extends PanacheEntityBase {
 

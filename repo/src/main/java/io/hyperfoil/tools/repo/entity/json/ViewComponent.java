@@ -20,12 +20,12 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * Security model: view components are owned by {@link View} and this is owned by {@link Test}, therefore
  * we don't have to retain ownership info.
  */
-@Entity
+@Entity(name = "viewcomponent")
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = { "view_id", "headerName"}))
 public class ViewComponent extends PanacheEntityBase {
    @Id
    @GeneratedValue
-   public Long id;
+   public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)
    @JsonbTransient

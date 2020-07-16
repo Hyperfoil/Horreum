@@ -121,6 +121,7 @@ export default () => {
     const [access, setAccess] = useState<Access>(0)
     const [owner, setOwner] = useState(defaultRole)
     const [goBack, setGoBack] = useState(false)
+    useEffect(() => setOwner(defaultRole), [ defaultRole])
 
     const [activeTab, setActiveTab] = useState(0)
     const [extractors, setExtractors] = useState<Extractor[]>([])
@@ -134,8 +135,8 @@ export default () => {
         <React.Fragment>
             { goBack && <Redirect to='/schema' /> }
             <Card style={{ flexGrow: 1 }}>
-                { !schema && (<Bullseye><Spinner /></Bullseye>) }
-                { schema && (<>
+                { !schema && schemaId !== "_new" && (<Bullseye><Spinner /></Bullseye>) }
+                { (schema || schemaId === "_new") && (<>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
                         <ToolbarSection aria-label="form">

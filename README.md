@@ -42,7 +42,7 @@ The insecure mode also triggers generating some test data based on `src/main/res
 Note though that the `drop-and-create` mode also drops database permissions for the `appuser`;
 before starting with enforced security you need to run
 ```
-PGPASSWORD=secret psql -h 172.17.0.1 -U dbadmin -f src/main/resources/permissions.sql horreum
+PGPASSWORD=secret psql -h 172.17.0.1 -U dbadmin -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' horreum
 ``` 
 Alternatively you can just drop the database volume and start docker-compose from scratch.
 
