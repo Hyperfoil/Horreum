@@ -376,7 +376,7 @@ public class RunService {
       } catch (Exception e) {
          e.printStackTrace();
       }
-      eventBus.publish("new/run", run);
+      eventBus.publish("run/new", run);
       //run.persistAndFlush();
 
       StreamingOutput streamingOutput = outputStream -> {

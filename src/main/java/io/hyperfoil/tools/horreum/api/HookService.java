@@ -129,16 +129,16 @@ public class HookService {
    }
 
    @Transactional //Transactional is a workaround for #6059
-   @ConsumeEvent(value="new/test",blocking = true)
+   @ConsumeEvent(value="test/new",blocking = true)
    public void newTest(Test test) {
-      tellHooks("new/test", -1, test);
+      tellHooks("test/new", -1, test);
    }
 
    @Transactional
-   @ConsumeEvent(value="new/run", blocking = true)
+   @ConsumeEvent(value="run/new", blocking = true)
    public void newRun(Run run) {
       Integer testId = run.testid;
-      tellHooks("new/run", testId, run);
+      tellHooks("run/new", testId, run);
    }
 
    @RolesAllowed(Roles.ADMIN)

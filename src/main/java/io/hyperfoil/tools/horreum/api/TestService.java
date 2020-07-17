@@ -116,7 +116,7 @@ public class TestService {
          em.merge(test);
       } else {
          em.persist(test);
-         eventBus.publish("new/test", test);
+         eventBus.publish("test/new", test);
       }
    }
 

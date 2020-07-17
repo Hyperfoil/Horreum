@@ -50,8 +50,8 @@ INSERT INTO view (id,name,test_id) VALUES (2,'default',2);
 UPDATE test SET defaultview_id = 2 WHERE id = 2;
 INSERT INTO viewcomponent (id,accessors,headername,headerorder,render,view_id) VALUES (9,'runId','Run ID',0,NULL,2);
 
-INSERT INTO hook (id,url,type,target,active) VALUES (  0,'http://laptop:8080/api/log','new/test',  1,true);
-INSERT INTO hook (id,url,type,target,active) VALUES (  1,'http://laptop:8080/api/log','new/test', -1,false);
+INSERT INTO hook (id,url,type,target,active) VALUES (  0,'http://laptop:8080/api/log','test/new',  1,true);
+INSERT INTO hook (id,url,type,target,active) VALUES (  1,'http://laptop:8080/api/log','test/new', -1,false);
 
 ALTER SEQUENCE test_id_seq RESTART WITH 3;
 ALTER SEQUENCE schema_id_seq RESTART WITH 3;
