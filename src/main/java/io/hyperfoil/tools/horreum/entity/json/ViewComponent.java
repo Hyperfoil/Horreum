@@ -49,15 +49,6 @@ public class ViewComponent extends PanacheEntityBase {
     */
    public String render;
 
-   // TODO: eventually we could have syntax for min, max, sum...
-   public static boolean isArray(String accessor) {
-      return accessor.endsWith("[]");
-   }
-
-   public static String arrayName(String accessor) {
-      return accessor.substring(0, accessor.length() - 2);
-   }
-
    public String[] accessors() {
       return Stream.of(accessors.split("[,;] *")).map(String::trim).toArray(String[]::new);
    }

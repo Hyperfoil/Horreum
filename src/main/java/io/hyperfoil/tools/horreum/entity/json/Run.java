@@ -16,6 +16,8 @@ import java.time.Instant;
 @Entity(name = "run")
 @RegisterForReflection
 public class Run extends PanacheEntityBase {
+   public static final String EVENT_NEW = "run/new";
+   public static final String EVENT_TRASHED = "run/trashed";
 
    @Id
    @SequenceGenerator(

@@ -34,6 +34,15 @@ public class SchemaExtractor extends PanacheEntityBase {
    @NotNull
    public String jsonpath;
 
+   // TODO: eventually we could have syntax for min, max, sum...
+   public static boolean isArray(String accessor) {
+      return accessor.endsWith("[]");
+   }
+
+   public static String arrayName(String accessor) {
+      return accessor.substring(0, accessor.length() - 2);
+   }
+
    public static class SchemaToUri implements JsonbSerializer<Schema> {
       @Override
       public void serialize(Schema obj, JsonGenerator generator, SerializationContext ctx) {

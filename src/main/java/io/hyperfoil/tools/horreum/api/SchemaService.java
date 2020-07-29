@@ -299,7 +299,7 @@ public class SchemaService {
       String jsonpath = json.getString("jsonpath");
       boolean deleted = json.getBoolean("deleted");
 
-      if (accessor == null && newName != null) {
+      if ((accessor == null || accessor.isEmpty()) && newName != null && !newName.isEmpty()) {
          accessor = newName;
       }
       if (accessor == null || accessor.isEmpty() || schema == null || jsonpath == null) {

@@ -23,6 +23,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.lang.Exception;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -151,8 +152,13 @@ public class SqlService {
       if (identity.isAnonymous()) {
          return () -> {};
       }
+      Set<String> roles = identity.getRoles();
+      return withRoles(connection, roles);
+   }
+
+   CloseMeJdbc withRoles(Connection connection, Iterable<String> roles) throws SQLException {
       try {
-         String signedRoles = getSignedRoles(identity.getRoles());
+         String signedRoles = getSignedRoles(roles);
          try (PreparedStatement setRoles = connection.prepareStatement(SET_ROLES)) {
             setRoles.setString(1, signedRoles);
             setRoles.execute();

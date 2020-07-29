@@ -7,6 +7,7 @@ import io.hyperfoil.tools.horreum.entity.converter.JsonContext;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
+import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.yaup.HashedLists;
@@ -376,7 +377,7 @@ public class RunService {
       } catch (Exception e) {
          e.printStackTrace();
       }
-      eventBus.publish("run/new", run);
+      eventBus.publish(Run.EVENT_NEW, run);
       //run.persistAndFlush();
 
       StreamingOutput streamingOutput = outputStream -> {
@@ -701,8 +702,8 @@ public class RunService {
                      String[] accessors = c.accessors();
                      if (accessors.length == 1) {
                         String accessor = accessors[0];
-                        if (ViewComponent.isArray(accessors[0])) {
-                           accessor = accessor.substring(0, accessor.length() - 2);
+                        if (SchemaExtractor.isArray(accessors[0])) {
+                           accessor = SchemaExtractor.arrayName(accessor);
                         }
                         view.add(componentData.get(accessor));
                      } else {
@@ -891,7 +892,11 @@ public class RunService {
    @Path("{id}/trash")
    @Transactional
    public Response trash(@PathParam("id") Integer id, @QueryParam("isTrashed") Boolean isTrashed) {
-      return updateRun(id, run -> run.trashed = isTrashed == null || isTrashed);
+      Response response = updateRun(id, run -> run.trashed = isTrashed == null || isTrashed);
+      if (response.getStatus() == Response.Status.OK.getStatusCode()) {
+         eventBus.publish(Run.EVENT_TRASHED, id);
+      }
+      return response;
    }
 
    @RolesAllowed("tester")

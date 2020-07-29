@@ -70,6 +70,7 @@
         <version.maven-core>3.5.4</version.maven-core>
         <version.maven-plugin-annotations>3.5.1</version.maven-plugin-annotations>
 
+        <commons.math3.version>3.6.1</commons.math3.version>
         <compiler-plugin.version>3.8.1</compiler-plugin.version>
         <graalvm.version>19.3.1</graalvm.version>
         <maven.compiler.parameters>true</maven.compiler.parameters>
@@ -202,12 +203,23 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-undertow-websockets</artifactId>
-            <version>${quarkus.version}</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-oidc</artifactId>
-            <version>${quarkus.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-qute</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-mailer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>${commons.math3.version}</version>
         </dependency>
     </dependencies>
 

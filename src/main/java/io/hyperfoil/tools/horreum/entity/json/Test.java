@@ -12,6 +12,7 @@ import javax.validation.constraints.NotNull;
 @Entity(name="test")
 @RegisterForReflection
 public class Test extends PanacheEntityBase {
+   public static final String EVENT_NEW = "test/new";
 
    @Id
    @SequenceGenerator(
