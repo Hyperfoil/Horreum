@@ -12,7 +12,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * Settings for notification on each change if the user/team has certain {@link Watch}.
  * Each user/team can have multiple notifications.
  */
-@Entity
+@Entity(name = "notificationsettings")
 public class NotificationSettings extends PanacheEntityBase {
    @Id
    @GeneratedValue
@@ -39,6 +39,7 @@ public class NotificationSettings extends PanacheEntityBase {
     */
    public String data;
 
+   @NotNull
    @Column(columnDefinition = "boolean default false")
    public boolean disabled;
 }

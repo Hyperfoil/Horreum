@@ -17,7 +17,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * a change to faciliate correct testing of subsequent runs.
  * Eventually the change should be manually confirmed (approved) with an explanatory description.
  */
-@Entity
+@Entity(name = "change")
 public class Change extends PanacheEntityBase {
    public static final String EVENT_NEW = "change/new";
 
@@ -25,9 +25,11 @@ public class Change extends PanacheEntityBase {
    @GeneratedValue
    public int id;
 
+   @NotNull
    @ManyToOne
    public DataPoint dataPoint;
 
+   @NotNull
    @ManyToOne
    public Criterion criterion;
 

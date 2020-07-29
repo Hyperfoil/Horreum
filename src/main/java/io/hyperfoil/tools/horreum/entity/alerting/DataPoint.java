@@ -13,7 +13,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 /**
  * For each {@link Variable} a datapoint will be created for each run.
  */
-@Entity
+@Entity(name = "datapoint")
 public class DataPoint extends PanacheEntityBase {
    public static final String EVENT_NEW = "datapoint/new";
    @Id
@@ -26,6 +26,7 @@ public class DataPoint extends PanacheEntityBase {
    @NotNull
    public double value;
 
+   @NotNull
    @ManyToOne(fetch = FetchType.LAZY)
    public Variable variable;
 }

@@ -456,5 +456,143 @@
         </createProcedure>
         <sqlFile path="policies.sql" relativeToChangelogFile="true" />
     </changeSet>
+
+    <changeSet id="3" author="rvansa">
+        <createTable tableName="variable">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="testid" type="integer">
+                <!-- No foregin key constraint -->
+                <constraints nullable="false" />
+            </column>
+            <column name="accessors" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="calculation" type="text"/>
+        </createTable>
+        <createTable tableName="criterion">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="variable_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="maxwindow" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deviationfactor" type="double precision">
+                <constraints nullable="false"/>
+            </column>
+            <column name="confidence" type="double precision">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_criterion_variable_id"
+                                 baseTableName="criterion" baseColumnNames="variable_id"
+                                 referencedTableName="variable" referencedColumnNames="id" />
+        <createTable tableName="datapoint">
+            <column name="id" type="integer" autoIncrement="true">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="runid" type="integer">
+                <!-- No foreign key constraint -->
+                <constraints nullable="false" />
+            </column>
+            <column name="variable_id" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="value" type="double precision">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_datapoint_variable_id"
+                                 baseTableName="datapoint" baseColumnNames="variable_id"
+                                 referencedTableName="variable" referencedColumnNames="id" />
+        <createTable tableName="change">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="confirmed" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="criterion_id" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="datapoint_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_change_criterion_id"
+                                 baseTableName="change" baseColumnNames="criterion_id"
+                                 referencedTableName="criterion" referencedColumnNames="id" />
+        <addForeignKeyConstraint constraintName="fk_change_datapoint_id"
+                                 baseTableName="change" baseColumnNames="datapoint_id"
+                                 referencedTableName="datapoint" referencedColumnNames="id" />
+        <createTable tableName="watch">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="testid" type="integer">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="watch_users">
+            <column name="watch_id" type="integer"/>
+            <column name="users" type="text" />
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_watch_users"
+                                 baseTableName="watch_users" baseColumnNames="watch_id"
+                                 referencedTableName="watch" referencedColumnNames="id" />
+        <createTable tableName="watch_teams">
+            <column name="watch_id" type="integer"/>
+            <column name="teams" type="text" />
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_watch_teams"
+                                 baseTableName="watch_teams" baseColumnNames="watch_id"
+                                 referencedTableName="watch" referencedColumnNames="id" />
+        <createTable tableName="notificationsettings">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="disabled" type="boolean" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="isteam" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="method" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data" type="text" />
+        </createTable>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE change, criterion, datapoint, notificationsettings, variable, watch, watch_teams, watch_users TO ${quarkus.datasource.username};
+            <!-- In case of ALL policy the USING is applied on the inserted data as well -->
+            ALTER TABLE change ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE criterion ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE datapoint ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE notificationsettings ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE variable ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE watch ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE watch_teams ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE watch_users ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY change_policies ON change FOR ALL USING (has_role('horreum.alerting'));
+            CREATE POLICY criterion_policies ON criterion FOR ALL USING (has_role('horreum.alerting'));
+            CREATE POLICY datapoint_policies ON datapoint FOR ALL USING (has_role('horreum.alerting'));
+            CREATE POLICY notificationsettings_policies ON notificationsettings FOR ALL USING (has_role('horreum.alerting'));
+            CREATE POLICY variable_policies ON variable FOR ALL USING (has_role('horreum.alerting'));
+            CREATE POLICY watch_policies ON watch FOR ALL USING (has_role('horreum.alerting'));
+            CREATE POLICY watch_teams_policies ON watch_teams FOR ALL USING (has_role('horreum.alerting'));
+            CREATE POLICY watch_users_policies ON watch_users FOR ALL USING (has_role('horreum.alerting'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

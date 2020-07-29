@@ -22,6 +22,7 @@ public class Criterion extends PanacheEntityBase {
    @GeneratedValue
    public Integer id;
 
+   @NotNull
    @ManyToOne
    public Variable variable;
 
