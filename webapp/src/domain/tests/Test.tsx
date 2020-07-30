@@ -1,41 +1,27 @@
-import React, { useState, useEffect, useRef, RefObject } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
+    Bullseye,
     Button,
     Card,
-    CardHeader,
     CardBody,
     CardFooter,
-    Form,
     ActionGroup,
-    FormGroup,
     Spinner,
     Tab,
     Tabs,
-    TextArea,
-    TextInput,
-    Toolbar,
-    ToolbarSection,
-    Bullseye,
 } from '@patternfly/react-core';
 import { useHistory } from 'react-router-dom';
-import {
-    ArrowAltCircleDownIcon,
-    ArrowAltCircleUpIcon,
-    OutlinedTimesCircleIcon
-} from '@patternfly/react-icons';
-import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
+import { ValueGetter } from '../../components/Editor/monaco/Editor'
 
 import * as actions from './actions';
 import * as selectors from './selectors';
 
 import {
-    accessName,
     defaultRoleSelector,
     isTesterSelector,
-    roleToName,
     Access
 } from '../../auth'
 
@@ -44,17 +30,11 @@ import {
    constraintValidationFormatter,
 } from "../../alerts"
 
-import AccessIcon from '../../components/AccessIcon'
-import AccessChoice from '../../components/AccessChoice'
-import Accessors from '../../components/Accessors'
-import OwnerSelect from '../../components/OwnerSelect'
 import { View, Test, TestDispatch } from './reducers';
+import General from './General'
+import Views from './Views'
+import Variables from './Variables'
 
-function swap(array: any[], i1: number, i2: number) {
-   const temp = array[i1]
-   array[i1] = array[i2]
-   array[i2] = temp
-}
 
 export default () => {
     const { testId } = useParams();
@@ -88,160 +68,42 @@ export default () => {
     const [access, setAccess] = useState<Access>(0)
     const [owner, setOwner] = useState(defaultRole)
     const [view, setView] = useState<View>({ name: "default", components: []})
-
-    const renderRefs = useRef(new Array<ValueGetter | undefined>(view.components.length));
-    const updateRenders = () => view.components.forEach((c, i) => {
-         c.render = renderRefs.current[i]?.getValue()
-    })
+    const updateRendersRef = useRef<() => void>()
 
     const history = useHistory()
+
+    const [activeTab, setActiveTab] = useState<number | string>(0)
+    const saveHookRef = useRef<() => void>();
+
     return (
         // <PageSection>
         <React.Fragment>
             <Card style={{flexGrow:1}}>
                 { !test && (<Bullseye><Spinner /></Bullseye>) }
                 { test && (<>
-                <CardHeader>
-                    <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
-                        <ToolbarSection aria-label="form">
-                            <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
-                                <FormGroup label="Name" isRequired={true} fieldId="name" helperText="names must be unique" helperTextInvalid="Name must be unique and not empty">
-                                    <TextInput
-                                        value={name || ""}
-                                        isRequired
-                                        type="text"
-                                        id="name"
-                                        aria-describedby="name-helper"
-                                        name="name"
-                                        isReadOnly={!isTester}
-                                        // isValid={name !== null && name.trim().length > 0}
-                                        onChange={e => setName(e)}
-                                    />
-                                </FormGroup>
-                                <FormGroup label="Description" fieldId="description" helperText="" helperTextInvalid="">
-                                    <TextArea
-                                        value={description || ""}
-                                        type="text"
-                                        id="description"
-                                        aria-describedby="description-helper"
-                                        name="description"
-                                        readOnly={!isTester}
-                                        isValid={true}
-                                        onChange={e => setDescription(e)}
-                                    />
-                                </FormGroup>
-                                <FormGroup label="Owner" fieldId="testOwner">
-                                   { isTester ? (
-                                      <OwnerSelect includeGeneral={false}
-                                                   selection={roleToName(owner) || ""}
-                                                   onSelect={selection => setOwner(selection.key)} />
-                                   ) : (
-                                      <TextInput value={roleToName(owner) || ""} id="testOwner" isReadOnly />
-                                   )}
-                                </FormGroup>
-                                <FormGroup label="Access rights" fieldId="testAccess">
-                                   { isTester ? (
-                                      <AccessChoice checkedValue={access} onChange={setAccess} />
-                                   ) : (
-                                      <AccessIcon access={access} />
-                                   )}
-                                </FormGroup>
-                                <FormGroup label="Compare URL function"
-                                           fieldId="compareUrl"
-                                           helperText="This function receives an array of ids as first argument and auth token as second. It should return URL to comparator service.">
-                                    <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
-                                       <Editor value={ (test.compareUrl && test.compareUrl.toString()) || "" }
-                                            setValueGetter={e => { compareUrlEditor.current = e }}
-                                            options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
-                                    </div>
-                                </FormGroup>
-                            </Form>
-                        </ToolbarSection>
-                    </Toolbar>
-                </CardHeader>
                 <CardBody>
-                    { /* TODO: display more than default view */ }
-                    <Tabs>
-                        <Tab key="__default" eventKey={0} title="Default view"></Tab>
-                        <Tab key="__new" eventKey={1} title="+"></Tab>
+                    <Tabs activeKey={activeTab} onSelect={(e, index) => setActiveTab(index)}>
+                        <Tab key="general" eventKey={0} title="General">
+                            <General name={name}
+                                    onNameChange={setName}
+                                    description={description}
+                                    onDescriptionChange={setDescription}
+                                    access={access}
+                                    onAccessChange={setAccess}
+                                    owner={owner}
+                                    onOwnerChange={setOwner}
+                                    compareUrl={(test.compareUrl && test.compareUrl.toString()) || ""}
+                                    compareUrlEditorRef={compareUrlEditor} />
+                        </Tab>
+                        <Tab key="views" eventKey={1} title="Views">
+                            <Views view={view}
+                                onViewChange={setView}
+                                updateRendersRef={updateRendersRef} />
+                        </Tab>
+                        <Tab key="vars" eventKey={2} title="Regression variables">
+                            <Variables testId={testId} saveHookRef={saveHookRef}/>
+                        </Tab>
                     </Tabs>
-                    { (!view.components || view.components.length === 0) && "The view is not defined" }
-                    { view.components && view.components.map((c, i) => (
-                        <div style={{ display: "flex "}}>
-                           <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
-                               <FormGroup label="Header" fieldId="header">
-                                 <TextInput value={ c.headerName || "" } placeholder="e.g. 'Run duration'"
-                                            id="header"
-                                            onChange={ value => { c.headerName = value; setView({ ...view}) }}
-                                            isValid={ !!c.headerName && c.headerName.trim() !== "" }
-                                            isReadOnly={!isTester} />
-                               </FormGroup>
-                               <FormGroup label="Accessors" fieldId="accessor">
-                                 <Accessors
-                                            value={ (c.accessors && c.accessors.split(/[,;] */).map(a => a.trim()).filter(a => a.length !== 0)) || [] }
-                                            onChange={ value => { c.accessors = value.join(";"); setView({ ...view }) }}
-                                            isReadOnly={!isTester} />
-                               </FormGroup>
-                               <FormGroup label="Rendering" fieldId="rendering">
-                                 <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
-                                     <Editor value={ (c.render && c.render.toString()) || "" }
-                                             setValueGetter={e => { renderRefs.current[i] = e }}
-                                             options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
-                                 </div>
-                               </FormGroup>
-                           </Form>
-                           { isTester &&
-                           <div style={{ width: "40px", float: "right", display: "table-cell", position: "relative", marginBottom: "25px" }}>
-                               <Button style={{width: "100%", marginTop: "4px"}}
-                                       variant="plain"
-                                       isDisabled={ i === 0 }
-                                       onClick={ () => {
-                                          updateRenders()
-                                          swap(view.components, i - 1, i)
-                                          swap(renderRefs.current, i - 1, i)
-                                          c.headerOrder = i - 1;
-                                          view.components[i].headerOrder = i;
-                                          setView({ ...view })
-                               }} ><ArrowAltCircleUpIcon /></Button>
-                               <Button style={{width: "100%", position: "absolute", left: "0px", top: "38%"}}
-                                       variant="plain"
-                                       onClick={ () => {
-                                          view.components.splice(i, 1)
-                                          renderRefs.current.splice(i, 1)
-                                          view.components.forEach((c, i) => c.headerOrder = i)
-                                          setView({ ...view})
-                               }}><OutlinedTimesCircleIcon style={{color: "#a30000"}}/></Button>
-                               <Button style={{width: "100%", position: "absolute", left: "0px", bottom: "4px"}}
-                                       variant="plain"
-                                       isDisabled={ i === view.components.length - 1 }
-                                       onClick={ () => {
-                                          updateRenders()
-                                          swap(view.components, i + 1, i)
-                                          swap(renderRefs.current, i + 1, i)
-                                          c.headerOrder = i + 1;
-                                          view.components[i].headerOrder = i;
-                                          setView({ ...view})
-                               }} ><ArrowAltCircleDownIcon /></Button>
-                           </div>
-                           }
-                        </div>
-                    ))}
-                    { isTester &&
-                    <ActionGroup>
-                        <Button onClick={ () => {
-                           const components = view.components || []
-                           components.push({
-                               headerName: "",
-                               accessors: "",
-                               render: "",
-                               headerOrder: components.length
-                           })
-                           setView({ ...view, components })
-                           renderRefs.current.push(undefined)
-                        }} >Add component</Button>
-
-                    </ActionGroup>
-                    }
                 </CardBody>
                 { isTester &&
                 <CardFooter>
@@ -249,7 +111,9 @@ export default () => {
                        <Button
                            variant="primary"
                            onClick={e => {
-                               updateRenders()
+                               if (updateRendersRef.current) {
+                                   updateRendersRef.current()
+                               }
                                const newTest: Test = {
                                    id: testId !== "_new" ? parseInt(testId) : 0,
                                    name,
@@ -263,6 +127,9 @@ export default () => {
                                thunkDispatch(actions.sendTest(newTest)).then(() => history.goBack(), e => {
                                   dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", e, constraintValidationFormatter("the saved test")))
                                })
+                               if (saveHookRef.current) {
+                                  saveHookRef.current()
+                               }
                            }}
                        >Save</Button>
                        <Button className="pf-c-button pf-m-secondary" onClick={() => history.goBack()}>

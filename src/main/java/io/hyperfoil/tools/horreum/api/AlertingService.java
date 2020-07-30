@@ -16,18 +16,30 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.security.PermitAll;
+import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.sql.DataSource;
 import javax.transaction.Transactional;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.commons.math3.stat.inference.TTest;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 import org.jboss.logging.Logger;
+
+import com.google.errorprone.annotations.Var;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.Criterion;
@@ -36,11 +48,16 @@ import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.yaup.json.Json;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.panache.common.Sort;
+import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.eventbus.EventBus;
 
 @ApplicationScoped
+@Consumes({ MediaType.APPLICATION_JSON})
+@Produces(MediaType.APPLICATION_JSON)
+@Path("/api/alerting")
 public class AlertingService {
    private static final Logger log = Logger.getLogger(AlertingService.class);
 
@@ -67,6 +84,9 @@ public class AlertingService {
 
    @Inject
    EventBus eventBus;
+
+   @Inject
+   SecurityIdentity identity;
 
    @PostConstruct
    public void init() {
@@ -288,6 +308,49 @@ public class AlertingService {
                }
             }
          }
+      }
+   }
+
+   @PermitAll
+   @GET
+   @Path("variables")
+   public Response variables(@QueryParam("test") Integer testId) {
+      try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         if (testId != null) {
+            return Response.ok(Variable.list("testid", testId)).build();
+         } else {
+            return Response.ok(Variable.listAll()).build();
+         }
+      }
+   }
+
+   @RolesAllowed("tester")
+   @POST
+   @Path("variables")
+   public Response variables(@QueryParam("test") Integer testId, List<Variable> variables) {
+      if (testId == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing query param 'test'").build();
+      }
+      try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         List<Variable> currentVariables = Variable.list("testid", testId);
+         for (Variable current : currentVariables) {
+            Variable matching = variables.stream().filter(v -> current.id.equals(v.id)).findFirst().orElse(null);
+            if (matching == null) {
+               current.delete();
+            } else {
+               current.name = matching.name;
+               current.accessors = matching.accessors;
+               current.calculation = matching.calculation;
+               current.persist();
+            }
+         }
+         for (Variable variable : variables) {
+            if (currentVariables.stream().noneMatch(v -> v.id.equals(variable.id))) {
+               variable.testId = testId;
+               variable.persist(); // insert
+            }
+         }
+         return Response.ok().build();
       }
    }
 

@@ -584,11 +584,14 @@
             ALTER TABLE watch ENABLE ROW LEVEL SECURITY;
             ALTER TABLE watch_teams ENABLE ROW LEVEL SECURITY;
             ALTER TABLE watch_users ENABLE ROW LEVEL SECURITY;
+            <!-- TODO: run owner must be able to edit change -->
             CREATE POLICY change_policies ON change FOR ALL USING (has_role('horreum.alerting'));
+            <!-- TODO: test owner must be able to edit criteria and variables -->
             CREATE POLICY criterion_policies ON criterion FOR ALL USING (has_role('horreum.alerting'));
             CREATE POLICY datapoint_policies ON datapoint FOR ALL USING (has_role('horreum.alerting'));
             CREATE POLICY notificationsettings_policies ON notificationsettings FOR ALL USING (has_role('horreum.alerting'));
             CREATE POLICY variable_policies ON variable FOR ALL USING (has_role('horreum.alerting'));
+            <!-- TODO: everyone should be able to edit his own and his teams' watches and notificationsettings -->
             CREATE POLICY watch_policies ON watch FOR ALL USING (has_role('horreum.alerting'));
             CREATE POLICY watch_teams_policies ON watch_teams FOR ALL USING (has_role('horreum.alerting'));
             CREATE POLICY watch_users_policies ON watch_users FOR ALL USING (has_role('horreum.alerting'));
