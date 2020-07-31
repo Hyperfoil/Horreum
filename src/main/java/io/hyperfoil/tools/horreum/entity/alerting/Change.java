@@ -26,12 +26,8 @@ public class Change extends PanacheEntityBase {
    public int id;
 
    @NotNull
-   @ManyToOne
+   @OneToOne
    public DataPoint dataPoint;
-
-   @NotNull
-   @ManyToOne
-   public Criterion criterion;
 
    @NotNull
    public boolean confirmed;

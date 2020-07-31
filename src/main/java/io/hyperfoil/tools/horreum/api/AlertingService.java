@@ -39,16 +39,12 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 import org.jboss.logging.Logger;
 
-import com.google.errorprone.annotations.Var;
-
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.entity.alerting.Criterion;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.yaup.json.Json;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
@@ -98,11 +94,10 @@ public class AlertingService {
    public void onNewRun(Run run) {
       log.infof("Received new run ID %d", run.id);
       String firstLevelSchema = run.data.getString("$schema");
-      List<String> secondLevelSchemas = run.data.values().stream()
+      List<String> schemas = run.data.values().stream()
             .filter(Json.class::isInstance).map(Json.class::cast)
             .map(json -> json.getString("$schema")).filter(Objects::nonNull)
             .collect(Collectors.toList());
-      List<String> schemas = new ArrayList<>(secondLevelSchemas);
       if (firstLevelSchema != null) {
          schemas.add(firstLevelSchema);
       }
@@ -117,7 +112,7 @@ public class AlertingService {
       StringBuilder extractionQuery = new StringBuilder("SELECT 1");
       Map<Integer, VarInfo> vars = new HashMap<>();
       try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc closeMe = sqlService.withRoles(connection, roles)) {
+           @SuppressWarnings("unused") CloseMeJdbc closeMe = sqlService.withRoles(connection, roles)) {
 
          try (PreparedStatement setRun = connection.prepareStatement(UPLOAD_RUN)) {
             setRun.setString(1, run.data.toString());
@@ -163,6 +158,7 @@ public class AlertingService {
                ResultSet resultSet = extraction.executeQuery();
                if (!resultSet.next()) {
                   log.errorf("Run %d does not exist in the database!", run.id);
+                  //noinspection ReturnInsideFinallyBlock
                   return;
                }
                for (VarInfo var : vars.values()) {
@@ -243,7 +239,7 @@ public class AlertingService {
    @ConsumeEvent(value = Run.EVENT_TRASHED, blocking = true)
    public void onRunTrashed(Integer runId) {
       log.infof("Trashing datapoints for run %d", runId);
-      try (CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
          Query deleteChanges = em.createNativeQuery("DELETE FROM change WHERE datapoint_id IN (SELECT id FROM datapoint WHERE runid = ?)");
          deleteChanges.setParameter(1, runId).executeUpdate();
          DataPoint.delete("runid", runId);
@@ -254,58 +250,55 @@ public class AlertingService {
    @ConsumeEvent(value = DataPoint.EVENT_NEW, blocking = true)
    public void onNewDataPoint(DataPoint dataPoint) {
       log.infof("Processing new datapoint for run %d, variable %d", dataPoint.runId, dataPoint.variable.id);
-      try (CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
-         List<Criterion> criteria = Criterion.list("variable_id", dataPoint.variable.id);
-         for (Criterion criterion : criteria) {
-            Change lastChange = Change.find("criterion = ?1", SORT_BY_ID_DESCENDING, criterion).range(0, 0).firstResult();
-            List<DataPoint> dataPoints;
-            if (lastChange == null) {
-               dataPoints = DataPoint.find("variable", SORT_BY_ID_DESCENDING, criterion.variable).range(0, criterion.maxWindow).list();
-            } else {
-               dataPoints = DataPoint.find("variable = ?1 AND id >= ?2", SORT_BY_ID_DESCENDING, criterion.variable, lastChange.dataPoint.id)
-                     .range(0, criterion.maxWindow).list();
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
+         // The variable referenced by datapoint is a fake
+         Variable variable = Variable.findById(dataPoint.variable.id);
+         Change lastChange = Change.find("variable = ?1", SORT_BY_ID_DESCENDING, variable).range(0, 0).firstResult();
+         List<DataPoint> dataPoints;
+         if (lastChange == null) {
+            dataPoints = DataPoint.find("variable", SORT_BY_ID_DESCENDING, variable).range(0, variable.maxWindow).list();
+         } else {
+            dataPoints = DataPoint.find("variable = ?1 AND id >= ?2", SORT_BY_ID_DESCENDING, variable, lastChange.dataPoint.id)
+                  .range(0, variable.maxWindow).list();
+         }
+         // Last datapoint is already in the list
+         assert !dataPoints.isEmpty();
+         assert Math.abs(dataPoints.get(0).value - dataPoint.value) < 0.000001;
+         // From 1 result we cannot estimate stddev either, so it's not useful
+         if (dataPoints.size() <= 2) {
+            log.infof("Criterion %d has too few data (%d datapoints), skipping analysis", variable.id, dataPoints.size());
+            return;
+         }
+         SummaryStatistics statistics = new SummaryStatistics();
+         dataPoints.stream().skip(1).mapToDouble(dp -> dp.value).forEach(statistics::addValue);
+         double diff = Math.abs(statistics.getMean() - dataPoint.value);
+         if (diff > statistics.getStandardDeviation() * variable.deviationFactor) {
+            log.infof("Value %f exceeds %f +- %f x %f", dataPoint.value, statistics.getMean(), statistics.getStandardDeviation(), variable.deviationFactor);
+            Change change = new Change();
+            change.dataPoint = dataPoints.get(0);
+            change.description = "Last datapoint is out of deviation range";
+            em.persist(change);
+            eventBus.publish(Change.EVENT_NEW, change);
+         } else {
+            double lowestPValue = 1.0;
+            int changeIndex = -1;
+            // we want at least 2 values in each population
+            for (int i = 2; i <= dataPoints.size() - 2; ++i) {
+               double[] populationA = dataPoints.stream().limit(i).mapToDouble(dp -> dp.value).toArray();
+               double[] populationB = dataPoints.stream().skip(i).mapToDouble(dp -> dp.value).toArray();
+               final double pValue = new TTest().tTest(populationA, populationB);
+               if (pValue < lowestPValue && pValue < 1 - variable.confidence) {
+                  changeIndex = i;
+                  lowestPValue = pValue;
+               }
             }
-            // Last datapoint is already in the list
-            assert !dataPoints.isEmpty();
-            assert Math.abs(dataPoints.get(0).value - dataPoint.value) < 0.000001;
-            // From 1 result we cannot estimate stddev either, so it's not useful
-            if (dataPoints.size() <= 2) {
-               log.infof("Criterion %d has too few data (%d datapoints), skipping analysis", criterion.id, dataPoints.size());
-               continue;
-            }
-            SummaryStatistics statistics = new SummaryStatistics();
-            dataPoints.stream().skip(1).mapToDouble(dp -> dp.value).forEach(statistics::addValue);
-            double diff = Math.abs(statistics.getMean() - dataPoint.value);
-            if (diff > statistics.getStandardDeviation() * criterion.deviationFactor) {
-               log.infof("Value %f exceeds %f +- %f x %f", dataPoint.value, statistics.getMean(), statistics.getStandardDeviation(), criterion.deviationFactor);
+            if (changeIndex >= 0) {
                Change change = new Change();
-               change.dataPoint = dataPoints.get(0);
-               change.criterion = criterion;
-               change.description = "Last datapoint is out of deviation range";
+               change.dataPoint = dataPoints.get(changeIndex - 1);
+               change.description = String.format("Change detected with confidence %.3f%%", (1 - lowestPValue) * 100);
+               log.infof("T-test found likelihood of %f%% that there's a change at datapoint %d", lowestPValue * 100, change.dataPoint.id);
                em.persist(change);
                eventBus.publish(Change.EVENT_NEW, change);
-            } else {
-               double lowestPValue = 1.0;
-               int changeIndex = -1;
-               // we want at least 2 values in each population
-               for (int i = 2; i <= dataPoints.size() - 2; ++i) {
-                  double[] populationA = dataPoints.stream().limit(i).mapToDouble(dp -> dp.value).toArray();
-                  double[] populationB = dataPoints.stream().skip(i).mapToDouble(dp -> dp.value).toArray();
-                  final double pValue = new TTest().tTest(populationA, populationB);
-                  if (pValue < lowestPValue && pValue < 1 - criterion.confidence) {
-                     changeIndex = i;
-                     lowestPValue = pValue;
-                  }
-               }
-               if (changeIndex >= 0) {
-                  Change change = new Change();
-                  change.dataPoint = dataPoints.get(changeIndex - 1);
-                  change.criterion = criterion;
-                  change.description = String.format("Change detected with confidence %.3f%%", (1 - lowestPValue) * 100);
-                  log.infof("T-test found likelihood of %f%% that there's a change at datapoint %d", lowestPValue * 100, change.dataPoint.id);
-                  em.persist(change);
-                  eventBus.publish(Change.EVENT_NEW, change);
-               }
             }
          }
       }
@@ -315,7 +308,7 @@ public class AlertingService {
    @GET
    @Path("variables")
    public Response variables(@QueryParam("test") Integer testId) {
-      try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          if (testId != null) {
             return Response.ok(Variable.list("testid", testId)).build();
          } else {
@@ -327,11 +320,12 @@ public class AlertingService {
    @RolesAllowed("tester")
    @POST
    @Path("variables")
+   @Transactional
    public Response variables(@QueryParam("test") Integer testId, List<Variable> variables) {
       if (testId == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing query param 'test'").build();
       }
-      try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          List<Variable> currentVariables = Variable.list("testid", testId);
          for (Variable current : currentVariables) {
             Variable matching = variables.stream().filter(v -> current.id.equals(v.id)).findFirst().orElse(null);
@@ -341,15 +335,22 @@ public class AlertingService {
                current.name = matching.name;
                current.accessors = matching.accessors;
                current.calculation = matching.calculation;
+               current.maxWindow = matching.maxWindow <= 0 ? Integer.MAX_VALUE : matching.maxWindow;
+               current.deviationFactor = matching.deviationFactor;
+               current.confidence = matching.confidence;
                current.persist();
             }
          }
          for (Variable variable : variables) {
             if (currentVariables.stream().noneMatch(v -> v.id.equals(variable.id))) {
                variable.testId = testId;
+               variable.maxWindow = variable.maxWindow <= 0 ? Integer.MAX_VALUE : variable.maxWindow;
                variable.persist(); // insert
             }
          }
+         // TODO: We should probably recalculate all datapoints when accessors/calculation changes
+         // TODO: Unconfirmed changes should be deleted (and recomputed), too, but confirmed ones should persist
+         em.flush();
          return Response.ok().build();
       }
    }

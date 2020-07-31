@@ -6,4 +6,7 @@ export type Variable = {
     testid: number,
     accessors: string,
     calculation?: string,
+    maxWindow: number,
+    deviationFactor: number,
+    confidence: number,
 }

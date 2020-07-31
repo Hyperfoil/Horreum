@@ -53,8 +53,7 @@ INSERT INTO viewcomponent (id,accessors,headername,headerorder,render,view_id) V
 INSERT INTO schema (id, access, description, name, owner, schema, startpath, stoppath, testpath, token, uri) VALUES (3, 0, 'Hyperfoil''s all.json', 'Hyperfoil v2.0', 'dev-team', '{"$id": "http://hyperfoil.io/run-schema/v2.0", "type": "object", "$schema": "http://json-schema.org/draft-07/schema#" }', '$.info.startTime', '$.info.terminateTime', '$.info.benchmark', NULL, 'http://hyperfoil.io/run-schema/v2.0');
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (11,'runId', '.info.id',3);
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (12,'requestCount', '.stats[*].total.summary.requestCount',3);
-INSERT INTO variable (id,name,accessors,testid) VALUES (13,'Request count','requestCount',2);
-INSERT INTO criterion (id,confidence,deviationfactor,maxwindow,variable_id) VALUES (14, 0.95, 2.0, 30, 13);
+INSERT INTO variable (id,testid,name,accessors,confidence,deviationfactor,maxwindow) VALUES (13,2,'Request count','requestCount',0.95, 2.0, 30);
 
 INSERT INTO watch(id, testid) VALUES (15, 2);
 INSERT INTO watch_users(watch_id, users) VALUES (15, 'john');

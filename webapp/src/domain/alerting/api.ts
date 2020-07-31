@@ -12,5 +12,5 @@ export const variables = (testId: number) => {
 }
 
 export const updateVariables = (testId: number, variables: Variable[]) => {
-    return fetchApi(endPoints.variables(testId), variables, 'post')
+    return fetchApi(endPoints.variables(testId), variables, 'post', {}, 'response')
 }

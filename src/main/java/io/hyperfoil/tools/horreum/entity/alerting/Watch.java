@@ -11,7 +11,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * Records parties interested in new {@link Change changes} in given test.
- * It's not possible to subscribe to individual {@link Criterion}; all criteria are watched.
+ * It's not possible to subscribe to individual {@link Variable}; all variables are watched.
  */
 @Entity(name = "watch")
 public class Watch extends PanacheEntityBase {

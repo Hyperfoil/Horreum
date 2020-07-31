@@ -99,7 +99,6 @@ public class TestService {
    @Transactional
    public Response add(Test test){
       try (CloseMe h = sqlService.withRoles(em, identity)) {
-         System.out.println(AsciiArt.ANSI_RED + "add TEST " + AsciiArt.ANSI_RESET + test.id);
          if (test == null) {
             return Response.serverError().entity("test is null").build();
          }

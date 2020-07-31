@@ -27,14 +27,28 @@ type VariablesProps = {
     saveHookRef: MutableRefObject<(() => void) | undefined>
 }
 
+type VariableDisplay = {
+    maxWindowStr: string,
+    deviationFactorStr: string,
+    confidenceStr: string,
+} & Variable;
+
 export default ({ testId, saveHookRef }: VariablesProps) => {
-    const [variables, setVariables] = useState<Variable[] | undefined>()
+    const [variables, setVariables] = useState<VariableDisplay[] | undefined>()
     const calculations = new Array<ValueGetter | undefined>()
     const dispatch = useDispatch()
     useEffect(() => {
         api.variables(testId).then(
             response => {
-                setVariables(response)
+                setVariables(response.map((v: Variable) => {
+                    let vd: VariableDisplay = {
+                        ...v,
+                        maxWindowStr: String(v.maxWindow),
+                        deviationFactorStr: String(v.deviationFactor),
+                        confidenceStr: String(v.confidence),
+                    }
+                    return vd
+                }))
                 calculations.splice(0)
                 variables?.forEach(_ => calculations.push(undefined));
             },
@@ -57,7 +71,7 @@ export default ({ testId, saveHookRef }: VariablesProps) => {
                <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
                    <FormGroup label="Name" fieldId="name">
                      <TextInput value={ v.name || "" }
-                                id="namer"
+                                id="name"
                                 onChange={ value => {
                                     v.name = value
                                     setVariables([ ...variables])
@@ -77,6 +91,40 @@ export default ({ testId, saveHookRef }: VariablesProps) => {
                                  setValueGetter={e => { calculations[i] = e }}
                                  options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
                      </div>
+                   </FormGroup>
+                   { /* TODO: use sliders when Patternfly 4 has them */ }
+                   <FormGroup label="Max window" fieldId="maxWindow">
+                     <TextInput value={ v.maxWindowStr }
+                                id="maxWindow"
+                                onChange={ value => {
+                                    v.maxWindowStr = value
+                                    v.maxWindow = parseInt(value)
+                                    setVariables([ ...variables])
+                                }}
+                                isValid={ /^[0-9]+$/.test(v.maxWindowStr) }
+                                isReadOnly={!isTester} />
+                   </FormGroup>
+                   <FormGroup label="Deviation factor" fieldId="deviationFactor">
+                     <TextInput value={ v.deviationFactorStr }
+                                id="deviationFactor"
+                                onChange={ value => {
+                                    v.deviationFactorStr = value
+                                    v.deviationFactor = parseFloat(value)
+                                    setVariables([ ...variables])
+                                }}
+                                isValid={ /^[0-9]+(\.[0-9]+)?$/.test(v.deviationFactorStr) && v.deviationFactor > 0 }
+                                isReadOnly={!isTester} />
+                   </FormGroup>
+                   <FormGroup label="Confidence" fieldId="confidence">
+                     <TextInput value={ v.confidenceStr }
+                                id="confidence"
+                                onChange={ value => {
+                                    v.confidenceStr = value
+                                    v.confidence = parseFloat(value)
+                                    setVariables([ ...variables])
+                                }}
+                                isValid={ /^[0-9]+(\.[0-9]+)?$/.test(v.confidenceStr) && v.confidence > 0.5 && v.confidence < 1.0 }
+                                isReadOnly={!isTester} />
                    </FormGroup>
                </Form>
                { isTester &&
@@ -100,6 +148,12 @@ export default ({ testId, saveHookRef }: VariablesProps) => {
                    testid: testId,
                    name: "",
                    accessors: "",
+                   maxWindowStr: "",
+                   maxWindow: -1,
+                   deviationFactorStr: "2.0",
+                   deviationFactor: 2.0,
+                   confidenceStr: "0.95",
+                   confidence: 0.95,
                })
                calculations.push(undefined)
                setVariables([ ...variables])
