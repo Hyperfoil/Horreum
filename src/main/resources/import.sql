@@ -62,7 +62,7 @@ INSERT INTO change(id, confirmed, description, datapoint_id) VALUES (17, false, 
 INSERT INTO watch(id, testid) VALUES (18, 2);
 INSERT INTO watch_users(watch_id, users) VALUES (18, 'john');
 INSERT INTO watch_teams(watch_id, teams) VALUES (18, 'dev-team');
-INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (19, false, 'john', 'email', 'john@example.com');
+INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (19, false, 'user', 'email', 'john@example.com');
 INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (20, true, 'dev-team', 'IRC', 'irc.example.com/#dev-team');
 
 INSERT INTO hook (id,url,type,target,active) VALUES (  0,'http://laptop:8080/api/log','test/new',  1,true);

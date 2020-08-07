@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 
 import {
   Button,
@@ -13,11 +13,14 @@ import { CLEAR_ALERT } from './alerts'
 
 const INIT = "auth/INIT"
 const REGISTER_AFTER_LOGIN = "auth/REGISTER_AFTER_LOGIN"
+const STORE_PROFILE = "auth/STORE_PROFILE"
+const AFTER_LOGOUT = "auth/AFTER_LOGOUT"
 
 export type Access = 0 | 1 | 2
 
 export class AuthState {
   keycloak?: Keycloak.KeycloakInstance = undefined;
+  userProfile?: Keycloak.KeycloakProfile;
   initPromise?: Promise<boolean> = undefined;
   afterLogin: { name: string, func(): void }[] = [];
 }
@@ -36,7 +39,16 @@ interface RegisterAfterLoginAction {
    func(): void,
 }
 
-type AuthActions = InitAction | RegisterAfterLoginAction
+interface StoreProfileAction {
+   type: typeof STORE_PROFILE,
+   profile: Keycloak.KeycloakProfile,
+}
+
+interface AfterLogoutAction {
+   type: typeof AFTER_LOGOUT,
+}
+
+type AuthActions = InitAction | RegisterAfterLoginAction | StoreProfileAction | AfterLogoutAction
 
 export const reducer = (state = initialState, action: AuthActions) => {
    switch (action.type) {
@@ -50,6 +62,12 @@ export const reducer = (state = initialState, action: AuthActions) => {
          state.afterLogin = [...state.afterLogin.filter(({ name, func }) => name !== action.name),
                              { name: action.name, func: action.func }]
          break;
+      case STORE_PROFILE:
+         state.userProfile = action.profile
+         break
+      case AFTER_LOGOUT:
+         state.userProfile = undefined;
+         state.initPromise = undefined;
       default:
    }
    return state;
@@ -71,8 +89,12 @@ export const tokenSelector = (state: State) => {
    return state.auth.keycloak && state.auth.keycloak.token
 }
 
-export const roleToName = (role: string | null) => {
-   return role ? (role.charAt(0).toUpperCase() + role.slice(1, -5)) : null
+export const roleToName = (role?: string) => {
+   return role ? (role.charAt(0).toUpperCase() + role.slice(1, -5)) : undefined
+}
+
+export const userProfileSelector = (state: State) => {
+   return state.auth.userProfile
 }
 
 export const isAuthenticatedSelector = (state: State) => {
@@ -102,7 +124,7 @@ export const rolesSelector = (state: State): string[] => {
 
 export const defaultRoleSelector = (state: State) => {
    let teamRoles = rolesSelector(state).filter(r => r.endsWith("-team")).sort()
-   return teamRoles.length > 0 ? teamRoles[0] : null;
+   return teamRoles.length > 0 ? teamRoles[0] : undefined;
 }
 
 export const initKeycloak = (state: State) => {
@@ -125,6 +147,7 @@ export const initKeycloak = (state: State) => {
         (initPromise as Promise<boolean>).then(authenticated => {
           store.dispatch({type: CLEAR_ALERT })
           store.getState().auth.afterLogin.forEach(a => a.func())
+          keycloak.loadUserProfile().then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
         })
       }
       store.dispatch({ type: INIT, keycloak: keycloak, initPromise: initPromise })
@@ -138,11 +161,15 @@ export const TryLoginAgain = () => {
 
 export const LoginLogout = () => {
    const keycloak = useSelector(keycloakSelector)
+   const dispatch = useDispatch()
    if (!keycloak) {
       return (<></>)
    } else if (keycloak.authenticated) {
       return (
-         <Button onClick={ () => keycloak.logout() }>Log out</Button>
+         <Button onClick={ () => {
+            keycloak.logout()
+            dispatch({ type: AFTER_LOGOUT })
+         }}>Log out</Button>
       )
    } else {
       return (

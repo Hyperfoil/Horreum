@@ -39,6 +39,7 @@ export default ({ includeGeneral, selection, onSelect }: OwnerSelectProps) => {
       <Select
          variant={SelectVariant.single}
          aria-label="Select ownership role"
+         placeholderText="Select team..."
          onToggle={setExpanded}
          onSelect={(event, selection, isPlaceholder) => {
             setExpanded(false)

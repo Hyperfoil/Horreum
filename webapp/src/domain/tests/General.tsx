@@ -30,7 +30,7 @@ type GeneralProps = {
     onDescriptionChange(newDesc: string) : void,
     access: Access,
     onAccessChange(newAccess: Access): void,
-    owner: string | null,
+    owner?: string,
     onOwnerChange(newOwner: string): void,
     compareUrl: string,
     compareUrlEditorRef: MutableRefObject<ValueGetter | undefined>

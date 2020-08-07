@@ -83,22 +83,20 @@ export default () => {
                     aria-label="Select test"
                     onToggle={setTestMenuOpen}
                     isOpen={testMenuOpen}
-                    onSelect={(event, selection, isPlaceholder) => {
+                    placeholderText="Choose test..."
+                    onSelect={(event, selection) => {
                         setVariables([])
                         setDashboardUrl("")
-                        setSelectedTest(isPlaceholder ? undefined : selection as SelectedTest)
+                        setSelectedTest(selection as SelectedTest)
                         setTestMenuOpen(false)
                     }}
                     selections={selectedTest}
-                >
-                { [
-                    (<SelectOption key={-1} value="Choose test..." isPlaceholder={true} />),
-                      ...(allTests.map((test, i) => {
+                >{
+                allTests.map((test, i) => {
                           const value: SelectedTest = { id: test.id, toString: () => test.name }
                           return (<SelectOption key={i} value={value}/>)
-                      }))
-                ] }
-                </Select>
+                      })
+                }</Select>
                 { selectedTest && <>
                 <NavLink className="pf-c-button pf-m-primary"
                          to={ "/test/" + selectedTest.id + "#vars" }

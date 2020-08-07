@@ -22,6 +22,10 @@ import {
    isAdminSelector,
    LoginLogout,
 } from './auth'
+import {
+  UserProfileLink,
+  UserSettings
+} from './usersettings'
 
 import AllRuns from './domain/runs/AllRuns';
 import TestRuns from './domain/runs/TestRuns';
@@ -94,7 +98,10 @@ function Main() {
               </Nav>
             )}
             headerTools={(
-               <PageHeaderTools><LoginLogout /></PageHeaderTools>
+               <PageHeaderTools>
+                 <UserProfileLink />
+                 <LoginLogout />
+               </PageHeaderTools>
             )}
           />
         )}
@@ -115,6 +122,8 @@ function Main() {
             <Route path="/schema/:schemaId" component={Schema} />
 
             <Route exact path="/series" component={Series} />
+
+            <Route exact path="/usersettings" component={UserSettings} />
 
           </Switch>
         </Page>
