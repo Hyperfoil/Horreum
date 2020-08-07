@@ -14,7 +14,8 @@ type ConfirmDeleteModalProps = {
 }
 
 export default ({ isOpen, onClose, onDelete, description, extra }: ConfirmDeleteModalProps) => {
-   return (<Modal isSmall title="Confirm deletion"
+   return (<Modal variant="small"
+                  title="Confirm deletion"
                   isOpen={isOpen}
                   onClose={onClose}>
       <div>Do you really want to delete { description }?</div>

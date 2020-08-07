@@ -66,10 +66,9 @@ export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})
                 <Button key="save" variant={ButtonVariant.primary} onClick={checkSubmit}>Save</Button>,
                 <Button key="cancel" variant={ButtonVariant.link} onClick={(e)=>{setValid(allValid); onCancel();}}>Cancel</Button>
             ]}
-            isFooterLeftAligned={false}
         >
             <Form isHorizontal={true}>
-                <FormGroup label="Url" isValid={valid.url} isRequired={true} fieldId="url" helperText="url (with protocol) for POST callback" helperTextInvalid="url (with protocol) for POST callback">
+                <FormGroup label="Url" validated={valid.url ? "default" : "error"} isRequired={true} fieldId="url" helperText="url (with protocol) for POST callback" helperTextInvalid="url (with protocol) for POST callback">
                     <TextInput
                         value={url}
                         isRequired
@@ -77,11 +76,11 @@ export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})
                         id="url"
                         aria-describedby="url-helper"
                         name="url"
-                        isValid={valid.url}
+                        validated={valid.url ? "default" : "error"}
                         onChange={e=>setUrl(e)}
                     />
                 </FormGroup>
-                <FormGroup label="Event Type" isValid={valid.type} isRequired={true} fieldId="type" helperText="event type for callback" helperTextInvalid="event type for callback">
+                <FormGroup label="Event Type" validated={valid.type ? "default" : "error"} isRequired={true} fieldId="type" helperText="event type for callback" helperTextInvalid="event type for callback">
                     <FormSelect
                         id="type"
                         validated={"default"}
@@ -108,7 +107,7 @@ export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})
                         onChange={e=>setEventType(e)}
                     /> */}
                 </FormGroup>
-                <FormGroup label="Target" isValid={valid.target} isRequired={true} fieldId="target" helperText="event target id, -1 for ALL" helperTextInvalid="target is empty, -1, or a positive integer">
+                <FormGroup label="Target" validated={valid.target ? "default" : "error"} isRequired={true} fieldId="target" helperText="event target id, -1 for ALL" helperTextInvalid="target is empty, -1, or a positive integer">
                     <TextInput
                         value={target}
                         isRequired
@@ -116,7 +115,7 @@ export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})
                         id="type"
                         aria-describedby="target-helper"
                         name="target"
-                        isValid={valid.target}
+                        validated={valid.target ? "default" : "error"}
                         onChange={e=>setTarget(e)}
                     />
                 </FormGroup>

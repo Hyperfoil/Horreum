@@ -23,7 +23,8 @@ import {
     InputGroup,
     Popover,
     Toolbar,
-    ToolbarSection,
+    ToolbarContent,
+    ToolbarItem,
 } from '@patternfly/react-core';
 import { HelpIcon } from '@patternfly/react-icons'
 import { toString } from '../../components/Editor';
@@ -239,9 +240,10 @@ export default () => {
                 { !run && (<Bullseye><Spinner /></Bullseye>)}
                 { run && (<>
                 <CardHeader>
-                    <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
-                        <ToolbarSection aria-label="info">
-                            <table className="pf-c-table pf-m-compact">
+                    <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between", width: "100%" }}>
+                       <ToolbarContent style={{ width: "100%"}}>
+                        <ToolbarItem aria-label="info"  style={{ width: "100%"}}>
+                            <table className="pf-c-table pf-m-compact"  style={{ width: "100%"}}>
                                 <tbody>
                                     <tr>
                                         <th>id</th>
@@ -259,9 +261,9 @@ export default () => {
                                     </tr>
                                 </tbody>
                             </table>
-                        </ToolbarSection>
+                        </ToolbarItem>
 
-                        <ToolbarSection aria-label="search" style={{ marginTop: 0 }}>
+                        <ToolbarItem aria-label="search" style={{ marginTop: 0 }}>
                             <InputGroup>
                                 <Dropdown
                                     isOpen={pathTypeOpen}
@@ -318,7 +320,8 @@ export default () => {
                                              />
                                 <Button variant={ButtonVariant.control} onClick={runPathQuery}>Find</Button>
                             </InputGroup>
-                        </ToolbarSection>
+                        </ToolbarItem>
+                     </ToolbarContent>
                     </Toolbar>
                 </CardHeader>
                 <CardBody>

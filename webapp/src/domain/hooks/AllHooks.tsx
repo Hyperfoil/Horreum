@@ -9,7 +9,8 @@ import {
     CardBody,
     PageSection,
     Toolbar,
-    ToolbarSection,
+    ToolbarContent,
+    ToolbarItem,
 } from '@patternfly/react-core';
 import {
     OutlinedTimesCircleIcon,
@@ -63,9 +64,11 @@ export default ()=>{
           <Card>
             <CardHeader>
                 <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between"}}>
-                    <ToolbarSection aria-label="info">
-                    <Button variant="primary" onClick={e=>{ setOpen(true); }}><PlusIcon/> Add Hook</Button>
-                    </ToolbarSection>
+                    <ToolbarContent>
+                        <ToolbarItem aria-label="info">
+                            <Button variant="primary" onClick={e=>{ setOpen(true); }}><PlusIcon/> Add Hook</Button>
+                        </ToolbarItem>
+                    </ToolbarContent>
                 </Toolbar>
             </CardHeader>
             <CardBody>

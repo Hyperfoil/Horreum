@@ -7,7 +7,8 @@ import {
     TextArea,
     TextInput,
     Toolbar,
-    ToolbarSection,
+    ToolbarContent,
+    ToolbarItem,
 } from '@patternfly/react-core';
 
 import AccessIcon from '../../components/AccessIcon'
@@ -40,7 +41,8 @@ export default ({ name, onNameChange, description, onDescriptionChange, access, 
 
     return (
         <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
-            <ToolbarSection aria-label="form">
+          <ToolbarContent>
+            <ToolbarItem aria-label="form">
                 <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
                     <FormGroup label="Name" isRequired={true} fieldId="name" helperText="names must be unique" helperTextInvalid="Name must be unique and not empty">
                         <TextInput
@@ -51,7 +53,7 @@ export default ({ name, onNameChange, description, onDescriptionChange, access, 
                             aria-describedby="name-helper"
                             name="name"
                             isReadOnly={!isTester}
-                            isValid={name !== null && name.trim().length > 0}
+                            validated={name !== null && name.trim().length > 0 ? "default" : "error"}
                             onChange={onNameChange}
                         />
                     </FormGroup>
@@ -92,6 +94,7 @@ export default ({ name, onNameChange, description, onDescriptionChange, access, 
                         </div>
                     </FormGroup>
                 </Form>
-            </ToolbarSection>
+            </ToolbarItem>
+          </ToolbarContent>
         </Toolbar>);
 }

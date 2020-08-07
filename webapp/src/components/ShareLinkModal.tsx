@@ -18,7 +18,8 @@ type ShareLinkModalProps = {
 
 export default ({ isOpen, onClose, link, isOwner, onReset, onDrop }: ShareLinkModalProps) => {
    return (
-      <Modal isSmall title="Shareable link"
+      <Modal variant="small"
+             title="Shareable link"
              isOpen={ isOpen }
              onClose={ onClose } >
       { link ? (<>

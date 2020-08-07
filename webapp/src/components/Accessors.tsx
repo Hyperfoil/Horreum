@@ -80,11 +80,10 @@ export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly = false
    return (<>
       <Select variant="typeaheadmulti"
               aria-label="Select accessor"
-              ariaLabelTypeAhead="Select accessor"
               placeholderText="Select accessor"
               isCreatable={true}
               onCreateOption={onCreate}
-              isExpanded={isExpanded}
+              isOpen={isExpanded}
               onToggle={setExpanded}
               selections={selected}
               isDisabled={isReadOnly}
@@ -146,7 +145,7 @@ export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly = false
                           isRequired
                           id="extractor-accessor"
                           name="extractor-accessor"
-                          isValid={ created.accessor !== "" }
+                          validated={ created.accessor !== "" ? "default" : "error" }
                           onChange={ value => setCreated({ ...created, accessor: value})}
                 />
             </FormGroup>
@@ -160,7 +159,7 @@ export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly = false
                           isRequired
                           id="extractor-jsonpath"
                           name="extractor-jsonpath"
-                          isValid={ !!created.jsonpath && created.jsonpath !== "" && !created.jsonpath.startsWith("$") }
+                          validated={ !!created.jsonpath && created.jsonpath !== "" && !created.jsonpath.startsWith("$") ? "default" : "error" }
                           onChange={ value => setCreated({ ...created, jsonpath: value})}
               />
             </FormGroup>
@@ -181,7 +180,8 @@ export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly = false
             </ActionGroup>
          </Form>
       </Modal>
-      <Modal isSmall title="Select variant"
+      <Modal variant="small"
+             title="Select variant"
              isOpen={variantOpen}
              onClose={() => setVariantOpen(false)}>
          <Radio isChecked={variant === 0}

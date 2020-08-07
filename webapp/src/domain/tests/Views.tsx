@@ -52,13 +52,13 @@ export default ({ view, onViewChange, updateRendersRef }: ViewsProps) => {
         </Tabs>
         { (!view.components || view.components.length === 0) && "The view is not defined" }
         { view.components && view.components.map((c, i) => (
-            <div style={{ display: "flex "}}>
+            <div key={i} style={{ display: "flex "}}>
                <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
                    <FormGroup label="Header" fieldId="header">
                      <TextInput value={ c.headerName || "" } placeholder="e.g. 'Run duration'"
                                 id="header"
                                 onChange={ value => { c.headerName = value; onViewChange({ ...view}) }}
-                                isValid={ !!c.headerName && c.headerName.trim() !== "" }
+                                validated={ !!c.headerName && c.headerName.trim() !== "" ? "default" : "error" }
                                 isReadOnly={!isTester} />
                    </FormGroup>
                    <FormGroup label="Accessors" fieldId="accessor">

@@ -110,13 +110,13 @@ export default () => {
    const alerts = useSelector(alertsSelector)
    const dispatch = useDispatch()
    if (alerts.length === 0) {
-      return <>""</>
+      return <></>
    }
    return (<div style={{ position: "absolute", zIndex: 1000, width: "100%" }}>
       { alerts.map(alert => (
-         <Alert variant={ alert.variant || AlertVariant.warning }
+         <Alert variant={ alert.variant || "warning" }
                 title={ alert.title || "Title is missing" }
-                action={<AlertActionCloseButton onClose={() => {
+                actionClose={<AlertActionCloseButton onClose={() => {
                     dispatch({ type: CLEAR_ALERT, alert: { type: alert.type }})
                 }} />} >
             { alert.content }

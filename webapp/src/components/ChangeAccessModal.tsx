@@ -22,7 +22,8 @@ type ChangeAccessModalProps = {
 
 export default ({ isOpen, onClose, owner, onOwnerChange, access, onAccessChange, onUpdate }: ChangeAccessModalProps) => {
    return (
-      <Modal isSmall title="Change access rights"
+      <Modal variant="small"
+             title="Change access rights"
              isOpen={ isOpen }
              onClose={ onClose } >
          <div>

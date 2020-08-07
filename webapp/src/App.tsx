@@ -6,9 +6,9 @@ import {
   Nav,
   NavItem,
   NavList,
-  NavVariants,
   Page,
   PageHeader,
+  PageHeaderTools,
 } from '@patternfly/react-core';
 import { ConnectedRouter } from 'connected-react-router'
 import { NavLink } from 'react-router-dom';
@@ -35,6 +35,8 @@ import Schema from './domain/schemas/Schema';
 import AllHooks from './domain/hooks/AllHooks';
 import Alerts from './alerts'
 
+import Series from './domain/alerting/Series';
+
 class App extends Component {
   constructor(props: any) {
      super(props)
@@ -56,37 +58,43 @@ function Main() {
       <ConnectedRouter history={history}>
         <Page header={(
           <PageHeader
-            // showNavToggle={true}
             topNav={(
-              <Nav aria-label="Nav">
-                <NavList variant={NavVariants.horizontal}>
-                  <NavItem itemId={0} isActive={false}>
-                    <NavLink to="/test" activeClassName="pf-m-current">
+              <Nav aria-label="Nav" variant="horizontal">
+                <NavList>
+                  { /* TODO: fix links colors properly */ }
+                  <NavItem itemId={0}>
+                    <NavLink to="/test" style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)"}}>
                       Tests
                     </NavLink>
                   </NavItem>
-                  <NavItem itemId={0} isActive={false}>
-                    <NavLink to="/run" activeClassName="pf-m-current">
+                  <NavItem itemId={1}>
+                    <NavLink to="/run" style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)"}}>
                       Runs
                     </NavLink>
                   </NavItem>
                   { isAdmin &&
-                  <NavItem itemId={0} isActive={false}>
-                    <NavLink to="/hook" activeClassName="pf-m-current">
+                  <NavItem itemId={2}>
+                    <NavLink to="/hook" style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)"}}>
                       WebHooks
                     </NavLink>
                   </NavItem>
                   }
-                  <NavItem itemId={0} isActive={false}>
-                    <NavLink to="/schema" activeClassName="pf-m-current">
+                  <NavItem itemId={3}>
+                    <NavLink to="/schema" style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)"}}>
                       Schema
+                    </NavLink>
+                  </NavItem>
+
+                  <NavItem itemId={4}>
+                    <NavLink to="/series" style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)"}}>
+                      Series
                     </NavLink>
                   </NavItem>
                 </NavList>
               </Nav>
             )}
-            toolbar={(
-               <LoginLogout />
+            headerTools={(
+               <PageHeaderTools><LoginLogout /></PageHeaderTools>
             )}
           />
         )}
@@ -105,6 +113,8 @@ function Main() {
 
             <Route exact path="/schema" component={AllSchema} />
             <Route path="/schema/:schemaId" component={Schema} />
+
+            <Route exact path="/series" component={Series} />
 
           </Switch>
         </Page>

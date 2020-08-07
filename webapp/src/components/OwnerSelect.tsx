@@ -45,7 +45,7 @@ export default ({ includeGeneral, selection, onSelect }: OwnerSelectProps) => {
             onSelect(selection as Role)
          }}
          selections={selection}
-         isExpanded={expanded}
+         isOpen={expanded}
          isGrouped={includeGeneral}
          >
          {  includeGeneral ? [

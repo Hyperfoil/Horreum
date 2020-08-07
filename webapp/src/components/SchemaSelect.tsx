@@ -44,7 +44,7 @@ export default ({ value = "", onChange = (_: string) => {}, disabled = []}: Sche
    }, [value])
    return (
       <Select aria-label="Select schema"
-                    isExpanded={isExpanded}
+                    isOpen={isExpanded}
                     onToggle={setExpanded}
                     selections={selected || []}
                     onClear={ () => {

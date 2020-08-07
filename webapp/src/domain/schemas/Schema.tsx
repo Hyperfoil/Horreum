@@ -18,7 +18,8 @@ import {
     TextArea,
     TextInput,
     Toolbar,
-    ToolbarSection,
+    ToolbarContent,
+    ToolbarItem,
     Tooltip,
     Bullseye,
 } from '@patternfly/react-core';
@@ -139,7 +140,8 @@ export default () => {
                 { (schema || schemaId === "_new") && (<>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
-                        <ToolbarSection aria-label="form">
+                      <ToolbarContent>
+                        <ToolbarItem aria-label="form">
                             <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
                                 <FormGroup label="Name" isRequired={true} fieldId="schemaName" helperText="names must be unique" helperTextInvalid="Name must be unique and not empty">
                                     <TextInput
@@ -149,7 +151,7 @@ export default () => {
                                         id="schemaName"
                                         aria-describedby="name-helper"
                                         name="schemaName"
-                                        isValid={ (name && name !== "") || !isTester }
+                                        validated={ (name && name !== "") || !isTester ? "default" : "error"}
                                         isReadOnly={ !isTester }
                                         onChange={e => setName(e)}
                                     />
@@ -172,13 +174,13 @@ export default () => {
                                         id="schemaURI"
                                         name="schemaURI"
                                         isReadOnly={ !isTester }
-                                        isValid={(uri && uri !== "") || !isTester}
+                                        validated={(uri && uri !== "") || !isTester ? "default" : "error"}
                                         onChange={e => {
                                             setUri(e)
                                             checkUri(e)
                                         }}
                                         placeholder={ isTester ? "Click button to import" : "" }
-                                        style={{ width: "100%" }}
+                                        style={{ width: "1200px" }}
                                    />
                                    </div>
                                    { uriMatching ||
@@ -245,7 +247,8 @@ export default () => {
                                    )}
                                 </FormGroup>
                             </Form>
-                        </ToolbarSection>
+                        </ToolbarItem>
+                      </ToolbarContent>
                     </Toolbar>
                 </CardHeader>
                 <CardBody>
@@ -275,12 +278,12 @@ export default () => {
                               }}/>
                           </FormGroup>
                           <FormGroup label="JSON path" fieldId="jsonpath"
-                                     isValid={!e.jsonpath || !e.jsonpath.trim().startsWith("$")}
+                                     validated={!e.jsonpath || !e.jsonpath.trim().startsWith("$") ? "default" : "error"}
                                      helperTextInvalid="JSON path must not start with '$'">
                               <TextInput id="jsonpath"
                                          value={e.jsonpath}
                                          isReadOnly={!isTester}
-                                         isValid={!e.jsonpath || !e.jsonpath.trim().startsWith("$")}
+                                         validated={!e.jsonpath || !e.jsonpath.trim().startsWith("$") ? "default" : "error"}
                                          onChange={newValue => {
                                  e.jsonpath = newValue;
                                  e.changed = true

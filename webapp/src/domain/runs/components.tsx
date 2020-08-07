@@ -101,7 +101,8 @@ type UpdateDescriptionModalProps = {
     const dispatch = useDispatch()
     const thunkDispatch = useDispatch<RunsDispatch>()
 
-    return (<Modal isSmall title="UpdateDescription"
+    return (<Modal variant="small"
+                   title="UpdateDescription"
                    isOpen={isOpen}
                    onClose={onClose}>
        <TextInput
