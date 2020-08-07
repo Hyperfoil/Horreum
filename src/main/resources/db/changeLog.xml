@@ -491,6 +491,9 @@
                 <!-- No foreign key constraint -->
                 <constraints nullable="false" />
             </column>
+            <column name="timestamp" type="timestamp">
+                <constraints nullable="false" />
+            </column>
             <column name="variable_id" type="integer">
                 <constraints nullable="false" />
             </column>

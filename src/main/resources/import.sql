@@ -54,12 +54,16 @@ INSERT INTO schema (id, access, description, name, owner, schema, startpath, sto
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (11,'runId', '.info.id',3);
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (12,'requestCount', '.stats[*].total.summary.requestCount',3);
 INSERT INTO variable (id,testid,name,accessors,confidence,deviationfactor,maxwindow) VALUES (13,2,'Request count','requestCount',0.95, 2.0, 30);
+INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (14,13,1,'2020-07-28 12:00:54.678',185);
+INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (15,13,2,'2020-07-29 12:00:54.678',195);
+INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (16,13,3,'2020-07-30 12:00:54.678',205);
+INSERT INTO change(id, confirmed, description, datapoint_id) VALUES (17, false, 'Test annotation <a href="http://localhost:3000/" target="_parent">with a link</a>', 16);
 
-INSERT INTO watch(id, testid) VALUES (15, 2);
-INSERT INTO watch_users(watch_id, users) VALUES (15, 'john');
-INSERT INTO watch_teams(watch_id, teams) VALUES (15, 'dev-team');
-INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (16, false, 'john', 'email', 'john@example.com');
-INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (17, true, 'dev-team', 'IRC', 'irc.example.com/#dev-team');
+INSERT INTO watch(id, testid) VALUES (18, 2);
+INSERT INTO watch_users(watch_id, users) VALUES (18, 'john');
+INSERT INTO watch_teams(watch_id, teams) VALUES (18, 'dev-team');
+INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (19, false, 'john', 'email', 'john@example.com');
+INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (20, true, 'dev-team', 'IRC', 'irc.example.com/#dev-team');
 
 INSERT INTO hook (id,url,type,target,active) VALUES (  0,'http://laptop:8080/api/log','test/new',  1,true);
 INSERT INTO hook (id,url,type,target,active) VALUES (  1,'http://laptop:8080/api/log','test/new', -1,false);

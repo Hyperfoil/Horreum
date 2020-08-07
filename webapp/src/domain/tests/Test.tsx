@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from "react-router"
+import { useParams, useLocation } from "react-router"
+import { Location } from 'history'
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
@@ -35,9 +36,19 @@ import General from './General'
 import Views from './Views'
 import Variables from './Variables'
 
+function initialActiveTab(location: Location) {
+    if (location.hash.startsWith("#views")) {
+        return 1;
+    } else if (location.hash.startsWith("#vars")) {
+        return 2;
+    } else {
+        return 0;
+    }
+}
 
 export default () => {
     const { testId } = useParams();
+    const location = useLocation()
     const test = useSelector(selectors.get(testId))
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -72,15 +83,15 @@ export default () => {
 
     const history = useHistory()
 
-    const [activeTab, setActiveTab] = useState<number | string>(0)
-    const saveHookRef = useRef<() => void>();
+    const [activeTab, setActiveTab] = useState<number | string>(initialActiveTab(location))
+    const saveHookRef = useRef<() => Promise<void>>();
 
     return (
         // <PageSection>
         <React.Fragment>
             <Card style={{flexGrow:1}}>
-                { !test && (<Bullseye><Spinner /></Bullseye>) }
-                { test && (<>
+                { !test && testId !== "_new" && (<Bullseye><Spinner /></Bullseye>) }
+                { (test || testId === "_new") && (<>
                 <CardBody>
                     <Tabs activeKey={activeTab} onSelect={(e, index) => setActiveTab(index)}>
                         <Tab key="general" eventKey={0} title="General">
@@ -92,7 +103,7 @@ export default () => {
                                     onAccessChange={setAccess}
                                     owner={owner}
                                     onOwnerChange={setOwner}
-                                    compareUrl={(test.compareUrl && test.compareUrl.toString()) || ""}
+                                    compareUrl={(test && test.compareUrl && test?.compareUrl.toString()) || ""}
                                     compareUrlEditorRef={compareUrlEditor} />
                         </Tab>
                         <Tab key="views" eventKey={1} title="Views">
@@ -101,7 +112,7 @@ export default () => {
                                 updateRendersRef={updateRendersRef} />
                         </Tab>
                         <Tab key="vars" eventKey={2} title="Regression variables">
-                            <Variables testId={testId} saveHookRef={saveHookRef}/>
+                            <Variables testId={testId === "_new" ? 0 : testId} saveHookRef={saveHookRef}/>
                         </Tab>
                     </Tabs>
                 </CardBody>
@@ -124,12 +135,19 @@ export default () => {
                                    access: access,
                                    token: null,
                                }
-                               thunkDispatch(actions.sendTest(newTest)).then(() => history.goBack(), e => {
-                                  dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", e, constraintValidationFormatter("the saved test")))
-                               })
-                               if (saveHookRef.current) {
-                                  saveHookRef.current()
-                               }
+                               thunkDispatch(actions.sendTest(newTest)).then(
+                                  () => {
+                                     if (saveHookRef.current) {
+                                         return saveHookRef.current()
+                                     } else {
+                                         return Promise.resolve()
+                                     }
+                                  },
+                                  e => dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", e, constraintValidationFormatter("the saved test")))
+                               ).then(
+                                   () => history.goBack()
+                               )
+
                            }}
                        >Save</Button>
                        <Button className="pf-c-button pf-m-secondary" onClick={() => history.goBack()}>

@@ -24,7 +24,7 @@ import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 
 type VariablesProps = {
     testId: number
-    saveHookRef: MutableRefObject<(() => void) | undefined>
+    saveHookRef: MutableRefObject<(() => Promise<void>) | undefined>
 }
 
 type VariableDisplay = {
@@ -34,11 +34,14 @@ type VariableDisplay = {
 } & Variable;
 
 export default ({ testId, saveHookRef }: VariablesProps) => {
-    const [variables, setVariables] = useState<VariableDisplay[] | undefined>()
+    const [variables, setVariables] = useState<VariableDisplay[]>([])
     const calculations = new Array<ValueGetter | undefined>()
     const dispatch = useDispatch()
     useEffect(() => {
-        api.variables(testId).then(
+        if (!testId) {
+            return
+        }
+        api.fetchVariables(testId).then(
             response => {
                 setVariables(response.map((v: Variable) => {
                     let vd: VariableDisplay = {
@@ -56,18 +59,17 @@ export default ({ testId, saveHookRef }: VariablesProps) => {
         )
     }, [testId])
     const isTester = useSelector(isTesterSelector)
-    saveHookRef.current = () => {
-        if (variables) {
-            api.updateVariables(testId, variables).catch(
-                error => dispatch(alertAction("VARIABLE_UPDATE", "Failer to update regression variables", error))
-            )
+    saveHookRef.current = () => api.updateVariables(testId, variables).catch(
+        error => {
+            dispatch(alertAction("VARIABLE_UPDATE", "Failed to update regression variables", error))
+            return Promise.reject()
         }
-    }
+    )
 
     return (<>
         { !variables && <Bullseye />}
-        { variables?.map((v, i) => (
-            <div style={{ display: "flex "}}>
+        { variables?.map((v, i) => (<>
+            <div key={i} style={{ display: "flex "}}>
                <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
                    <FormGroup label="Name" fieldId="name">
                      <TextInput value={ v.name || "" }
@@ -76,7 +78,7 @@ export default ({ testId, saveHookRef }: VariablesProps) => {
                                     v.name = value
                                     setVariables([ ...variables])
                                 }}
-                                isValid={ !!v.name && v.name.trim() !== "" }
+                                validated={ !!v.name && v.name.trim() !== "" ? "default" : "error"}
                                 isReadOnly={!isTester} />
                    </FormGroup>
                    <FormGroup label="Accessors" fieldId="accessor">
@@ -101,7 +103,7 @@ export default ({ testId, saveHookRef }: VariablesProps) => {
                                     v.maxWindow = parseInt(value)
                                     setVariables([ ...variables])
                                 }}
-                                isValid={ /^[0-9]+$/.test(v.maxWindowStr) }
+                                validated={ /^[0-9]+$/.test(v.maxWindowStr) ? "default" : "error" }
                                 isReadOnly={!isTester} />
                    </FormGroup>
                    <FormGroup label="Deviation factor" fieldId="deviationFactor">
@@ -112,7 +114,7 @@ export default ({ testId, saveHookRef }: VariablesProps) => {
                                     v.deviationFactor = parseFloat(value)
                                     setVariables([ ...variables])
                                 }}
-                                isValid={ /^[0-9]+(\.[0-9]+)?$/.test(v.deviationFactorStr) && v.deviationFactor > 0 }
+                                validated={ /^[0-9]+(\.[0-9]+)?$/.test(v.deviationFactorStr) && v.deviationFactor > 0 ? "default" : "error" }
                                 isReadOnly={!isTester} />
                    </FormGroup>
                    <FormGroup label="Confidence" fieldId="confidence">
@@ -123,7 +125,7 @@ export default ({ testId, saveHookRef }: VariablesProps) => {
                                     v.confidence = parseFloat(value)
                                     setVariables([ ...variables])
                                 }}
-                                isValid={ /^[0-9]+(\.[0-9]+)?$/.test(v.confidenceStr) && v.confidence > 0.5 && v.confidence < 1.0 }
+                                validated={ /^[0-9]+(\.[0-9]+)?$/.test(v.confidenceStr) && v.confidence > 0.5 && v.confidence < 1.0 ? "default" : "error" }
                                 isReadOnly={!isTester} />
                    </FormGroup>
                </Form>
@@ -139,7 +141,7 @@ export default ({ testId, saveHookRef }: VariablesProps) => {
                </div>
                }
             </div>
-        ))}
+        </>))}
         { isTester &&
         <ActionGroup>
             <Button onClick={ () => {

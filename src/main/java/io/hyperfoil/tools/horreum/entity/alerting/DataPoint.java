@@ -1,5 +1,9 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
+import java.time.Instant;
+
+import javax.json.bind.annotation.JsonbTypeDeserializer;
+import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -8,6 +12,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
 
+import io.hyperfoil.tools.horreum.entity.converter.InstantSerializer;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -22,6 +27,12 @@ public class DataPoint extends PanacheEntityBase {
 
    @NotNull
    public int runId;
+
+   @NotNull
+   @Column(columnDefinition = "timestamp")
+   @JsonbTypeDeserializer(InstantSerializer.class)
+   @JsonbTypeSerializer(InstantSerializer.class)
+   public Instant timestamp;
 
    @NotNull
    public double value;

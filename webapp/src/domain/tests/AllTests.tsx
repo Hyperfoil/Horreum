@@ -85,7 +85,7 @@ export default ()=>{
           }
         }
     ], [dispatch])
-    const allRuns = useSelector(selectors.all);
+    const allTests = useSelector(selectors.all);
     useEffect(()=>{
         dispatch(fetchSummary())
         dispatch(registerAfterLogin("reload_tests", () => {
@@ -105,7 +105,7 @@ export default ()=>{
             </CardHeader>
             }
             <CardBody>
-              <Table columns={columns} data={allRuns || []} isLoading={isLoading}/>
+              <Table columns={columns} data={allTests || []} isLoading={isLoading}/>
             </CardBody>
           </Card>
         </PageSection>
