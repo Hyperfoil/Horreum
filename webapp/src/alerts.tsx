@@ -31,7 +31,7 @@ export interface ConstraintViolation {
    message: string,
 }
 
-interface AddAlertAction {
+export interface AddAlertAction {
    type: typeof ADD_ALERT,
    alert: Alert,
 }
@@ -69,7 +69,7 @@ export const constraintValidationFormatter = (object: any) => (e: any) => {
     }
  }
 
-export const alertAction = (type: string, title: string, e: any, ...errorFormatter: Function[]) => {
+export const alertAction = (type: string, title: string, e: any, ...errorFormatter: Function[]): AddAlertAction => {
    let formatted = undefined;
    for (const f of errorFormatter) {
       formatted = f.call(null, e);

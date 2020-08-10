@@ -1,8 +1,10 @@
 package io.hyperfoil.tools.horreum.api;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,6 +23,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
@@ -31,8 +34,10 @@ import org.jboss.logging.Logger;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
+import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
+import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
@@ -141,4 +146,126 @@ public class NotificationService {
       }
       return Response.ok().build();
    }
+
+   private static Set<String> merge(Set<String> set, String item) {
+      if (set == null) {
+         set = new HashSet<>();
+      }
+      set.add(item);
+      return set;
+   }
+
+   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @GET
+   @Path("/testwatch")
+   public Map<Integer, Set<String>> testwatch() {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         // TODO: do all of this in single obscure PSQL query
+         List<Watch> personal = Watch.list("?1 IN elements(users)", identity.getPrincipal().getName());
+         List<Watch> team = Watch.list("FROM watch w LEFT JOIN w.teams teams WHERE teams IN ?1", identity.getRoles());
+         Map<Integer, Set<String>> result = new HashMap<>();
+         personal.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, identity.getPrincipal().getName())));
+         team.forEach(w -> result.compute(w.testId, (i, set) -> {
+            Set<String> nset = new HashSet<>(w.teams);
+            nset.retainAll(identity.getRoles());
+            if (set != null) {
+               nset.addAll(set);
+            }
+            return nset;
+         }));
+         em.createQuery("SELECT id FROM test").getResultStream().forEach(id -> result.putIfAbsent((Integer) id, Collections.emptySet()));
+         return result;
+      }
+   }
+
+   private static List<String> add(List<String> list, String item) {
+      if (list == null) {
+         list = new ArrayList<>();
+      }
+      list.add(item);
+      return list;
+   }
+
+   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @POST
+   @Path("/testwatch/{testid}/add")
+   @Transactional
+   public Response addTestWatch(@PathParam("testid") Integer testId, String userOrTeam) {
+      if (testId == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing test id").build();
+      } else if (userOrTeam == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing user/team").build();
+      } else if (userOrTeam.startsWith("\"") && userOrTeam.endsWith("\"") && userOrTeam.length() > 2) {
+         userOrTeam = userOrTeam.substring(1, userOrTeam.length() - 1);
+      }
+      boolean isTeam = true;
+      if (userOrTeam.equals("__self") || userOrTeam.equals(identity.getPrincipal().getName())) {
+         userOrTeam = identity.getPrincipal().getName();
+         isTeam = false;
+      } else if (!userOrTeam.endsWith("-team")) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Wrong user/team: " + userOrTeam).build();
+      }
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Watch watch = Watch.find("testid", testId).firstResult();
+         if (watch == null) {
+            watch = new Watch();
+            watch.testId = testId;
+         }
+         if (isTeam) {
+            watch.teams = add(watch.teams, userOrTeam);
+         } else {
+            watch.users = add(watch.users, userOrTeam);
+         }
+         watch.persist();
+         return currentWatches(watch);
+      }
+   }
+
+   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @POST
+   @Path("/testwatch/{testid}/remove")
+   @Transactional
+   public Response removeTestWatch(@PathParam("testid") Integer testId, String who) {
+      if (testId == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing test id").build();
+      } else if (who == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing user/team").build();
+      } else if (who.startsWith("\"") && who.endsWith("\"") && who.length() > 2) {
+         who = who.substring(1, who.length() - 1);
+      }
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Watch watch = Watch.find("testid", testId).firstResult();
+         if (watch == null) {
+            return Response.ok("[]").build();
+         }
+         if (who.equals("__self") || who.equals(identity.getPrincipal().getName())) {
+            if (watch.users != null) {
+               watch.users.remove(identity.getPrincipal().getName());
+            }
+         } else if (who.endsWith("-team") && identity.getRoles().contains(who)) {
+            if (watch.teams != null) {
+               watch.teams.remove(who);
+            }
+         } else {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Wrong user/team: " + who).build();
+         }
+         watch.persist();
+         return currentWatches(watch);
+      }
+   }
+
+   private Response currentWatches(Watch watch) {
+      ArrayList<String> own = new ArrayList<>(identity.getRoles());
+      own.add(identity.getPrincipal().getName());
+      ArrayList<String> all = new ArrayList<>();
+      if (watch.teams != null) {
+         all.addAll(watch.teams);
+      }
+      if (watch.users != null) {
+         all.addAll(watch.users);
+      }
+      all.retainAll(own);
+      return Response.ok(all).build();
+   }
+
 }

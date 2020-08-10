@@ -1,8 +1,11 @@
 import * as api from './api';
 import * as actionTypes from './actionTypes';
 import { accessName, Access } from '../../auth'
-import { Test, LoadingAction, LoadedAction, UpdateTokenAction, UpdateAccessAction, DeleteAction } from './reducers';
+import { Test, LoadingAction, LoadedAction, UpdateTokenAction, UpdateAccessAction, DeleteAction, UpdateTestWatchAction } from './reducers';
 import { Dispatch } from 'react';
+import * as notifications from '../../usersettings'
+import { Map } from 'immutable';
+import { alertAction, AddAlertAction } from '../../alerts'
 
 const loaded = (tests: Test | Test[]): LoadedAction =>({
     type: actionTypes.LOADED,
@@ -55,3 +58,39 @@ export const deleteTest = (id: number) => (dispatch: Dispatch<DeleteAction>) =>
     api.deleteTest(id).then(
         () => dispatch({ type: actionTypes.DELETE, id })
     )
+
+export const fetchTestWatch = () => (dispatch: Dispatch<UpdateTestWatchAction>) =>
+    notifications.fetchTestWatch().then(
+        response => dispatch({
+            type: actionTypes.UPDATE_TEST_WATCH,
+            byId: Map(Object.entries(response).map(([key, value]) => [parseInt(key), value as string[]])) })
+)
+
+export const addTestWatch = (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
+    dispatch({
+        type: actionTypes.UPDATE_TEST_WATCH,
+        byId: Map([[id, undefined]])
+    })
+    notifications.addTestWatch(id, userOrTeam).then(
+        response => dispatch({
+            type: actionTypes.UPDATE_TEST_WATCH,
+            byId: Map([[id, response as string[]]])
+        }),
+        error => dispatch(alertAction("ADD_TEST_WATCH", "Failed to add test watch", error))
+    )
+}
+
+export const removeTestWatch = (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
+    console.log('remove')
+    dispatch({
+        type: actionTypes.UPDATE_TEST_WATCH,
+        byId: Map([[id, undefined]])
+    })
+    notifications.removeTestWatch(id, userOrTeam).then(
+        response => dispatch({
+            type: actionTypes.UPDATE_TEST_WATCH,
+            byId: Map([[id, response as string[]]])
+        }),
+        error => dispatch(alertAction("REMOVE_TEST_WATCH", "Failed to add test watch", error))
+    )
+}

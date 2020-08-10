@@ -26,11 +26,15 @@ export interface Test {
     token: string | null,
     defaultView: View,
     count?: number, // run count in AllTests
+    watching?: string[]
 }
 
 export class TestsState {
-    byId?: Map<string, Test> = undefined
+    byId?: Map<number, Test> = undefined
     loading: boolean = false
+    // we need to store watches independently as the information
+    // can arrive before the actual test list
+    watches: Map<number, string[] | undefined> = Map<number, string[] | undefined>()
 }
 
 export interface LoadingAction {
@@ -60,7 +64,12 @@ export interface UpdateAccessAction {
     access: Access,
 }
 
-export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction
+export interface UpdateTestWatchAction {
+    type: typeof actionTypes.UPDATE_TEST_WATCH,
+    byId: Map<number, string[] | undefined>,
+}
+
+export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction | UpdateTestWatchAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction>
 
@@ -72,37 +81,39 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
         case actionTypes.LOADED:
             state.loading = false
             if (!state.byId) {
-                state.byId = Map({})
+                state.byId = Map<number, Test>()
             }
             if (!utils.isEmpty(action.tests)) {
                 action.tests.forEach(test => {
                     if (test && test.id !== null && typeof test.id !== "undefined") {
-                        const byId = state.byId as Map<string, Test>
-                        state.byId = byId.set("t" + test.id, {
-                            ...(byId.get("t" + test.id, {})), ...test
+                        const byId = state.byId as Map<number, Test>
+                        state.byId = byId.set(test.id, {
+                            ...(byId.get(test.id, {})), ...test
                         })
                     }
                 })
             }
         break;
         case actionTypes.UPDATE_TOKEN: {
-            let test = state.byId?.get("t" + action.id)
+            let test = state.byId?.get(action.id)
             if (test) {
-               state.byId = (state.byId as Map<string, Test>).set("t" + action.id, { ...test, token: action.token })
+               state.byId = state.byId?.set(action.id, { ...test, token: action.token })
             }
         }
         break;
         case actionTypes.UPDATE_ACCESS: {
-            let test = state.byId?.get("t" + action.id)
+            let test = state.byId?.get(action.id)
             if (test) {
-               state.byId = (state.byId as Map<string, Test>).set("t" + action.id, { ...test, owner: action.owner, access: action.access })
+               state.byId = state.byId?.set(action.id, { ...test, owner: action.owner, access: action.access })
             }
         }
         break;
         case actionTypes.DELETE: {
-            if (state.byId) {
-               state.byId = (state.byId as Map<string, Test>).delete("t" + action.id)
-            }
+            state.byId = state.byId?.delete(action.id)
+        }
+        break;
+        case actionTypes.UPDATE_TEST_WATCH: {
+            state.watches = state.watches.merge(action.byId)
         }
         break;
         default:

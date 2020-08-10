@@ -42,6 +42,10 @@ const fetchMethods = () => fetchApi(`${base}/methods`, null, 'get')
 const fetchSettings = (name: string, isTeam: boolean) => fetchApi(`${base}/settings?name=${name}&team=${isTeam}`, null, 'get')
 const updateSettings = (name: string, isTeam: boolean, settings: Settings[]) => fetchApi(`${base}/settings?name=${name}&team=${isTeam}`, settings, 'post', {}, 'response')
 
+export const fetchTestWatch = () => fetchApi(`${base}/testwatch`, null, 'get')
+export const addTestWatch = (testId: number, userOrTeam: string) => fetchApi(`${base}/testwatch/${testId}/add`, userOrTeam, 'post')
+export const removeTestWatch = (testId: number, userOrTeam: string) => fetchApi(`${base}/testwatch/${testId}/remove`, userOrTeam, 'post')
+
 export const UserProfileLink = () => {
     const profile = useSelector(userProfileSelector)
     if (profile) {
