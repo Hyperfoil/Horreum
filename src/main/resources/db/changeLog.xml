@@ -121,7 +121,7 @@
                 <constraints nullable="false" />
             </column>
             <column name="defaultview_id" type="integer" />
-            <column name="compareUrl" type="text" />
+            <column name="compareurl" type="text" />
         </createTable>
         <createSequence sequenceName="test_id_seq" startValue="10" incrementBy="1" cacheSize="1" />
         <createTable tableName="view">
@@ -172,9 +172,6 @@
             <column name="uri" type="text" />
             <column name="schemaid" type="integer" />
             <column name="prefix" type="text" />
-            <column name="owner" type="text" />
-            <column name="access" type="integer" />
-            <column name="token" type="text" />
         </createTable>
         <createProcedure>
             CREATE OR REPLACE FUNCTION before_run_delete_func() RETURNS TRIGGER AS $$
@@ -201,15 +198,15 @@
                 FOR v_schema IN (SELECT jsonb_path_query(NEW.data, '$.\$schema'::jsonpath)#>>'{}') LOOP
                     v_schemaid := (SELECT id FROM schema WHERE uri = v_schema);
                     IF v_schemaid IS NOT NULL THEN
-                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid, owner, access, token)
-                        VALUES (NEW.id, NEW.testid, '$', v_schema, v_schemaid, NEW.owner, NEW.access, NEW.token);
+                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid)
+                        VALUES (NEW.id, NEW.testid, '$', v_schema, v_schemaid);
                     END IF;
                 END LOOP;
                 FOR v_schema IN (SELECT jsonb_path_query(NEW.data, '$.*.\$schema'::jsonpath)#>>'{}') LOOP
                     v_schemaid := (SELECT id FROM schema WHERE uri = v_schema);
                     IF v_schemaid IS NOT NULL THEN
-                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid, owner, access, token)
-                        VALUES (NEW.id, NEW.testid, '$.*', v_schema, v_schemaid, NEW.owner, NEW.access, NEW.token);
+                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid)
+                        VALUES (NEW.id, NEW.testid, '$.*', v_schema, v_schemaid);
                     END IF;
                 END LOOP;
                 RETURN NULL;
@@ -245,7 +242,7 @@
                     FROM run
                 )
                 INSERT INTO run_schemas
-                SELECT rs.id as runid, rs.testid, rs.uri, NEW.id as schemaid, prefix, owner, access, token
+                SELECT rs.id as runid, rs.testid, rs.uri, NEW.id as schemaid, prefix
                 FROM rs WHERE rs.uri = NEW.uri;
                 RETURN NULL;
             END;
@@ -255,9 +252,6 @@
             <column name="vcid" type="integer" />
             <column name="runid" type="integer" />
             <column name="extractor_ids" type="int[]" />
-            <column name="owner" type="text" />
-            <column name="access" type="integer" />
-            <column name="token" type="text" />
             <column name="object" type="jsonb" />
         </createTable>
         <createProcedure>
@@ -276,7 +270,7 @@
                     FROM viewcomponent
                 )
                 INSERT INTO view_data
-                SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+                SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids,
                     jsonb_object_agg(se.accessor, (CASE
                         WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
                         ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
@@ -286,7 +280,7 @@
                 JOIN run_schemas rs ON rs.schemaid = se.schema_id
                 JOIN run on run.id = rs.runid
                 WHERE run.id = NEW.runid
-                GROUP BY runid, vcid, run.owner, run.access, run.token;
+                GROUP BY runid, vcid;
                 RETURN NULL;
             END;
             $$ LANGUAGE plpgsql;
@@ -315,7 +309,7 @@
                     FROM viewcomponent
                 )
                 INSERT INTO view_data
-                SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+                SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids,
                     jsonb_object_agg(se.accessor, (CASE
                         WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
                         ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
@@ -325,7 +319,7 @@
                 JOIN run_schemas rs ON rs.schemaid = se.schema_id
                 JOIN run on run.id = rs.runid
                 WHERE se.id = NEW.id
-                GROUP BY runid, vcid, run.owner, run.access, run.token;
+                GROUP BY runid, vcid;
                 RETURN NULL;
             END;
             $$ LANGUAGE plpgsql;
@@ -355,7 +349,7 @@
                     WHERE id = NEW.id
                 )
                 INSERT INTO view_data
-                SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids, run.owner, run.access, run.token,
+                SELECT vcs.id as vcid, rs.runid, array_agg(se.id) as extractor_ids,
                     jsonb_object_agg(se.accessor, (CASE
                         WHEN aa like '%[]' THEN jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::jsonpath)
                         ELSE jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath)
@@ -364,7 +358,7 @@
                 JOIN schemaextractor se ON se.accessor = replace(aa, '[]', '')
                 JOIN run_schemas rs ON rs.schemaid = se.schema_id
                 JOIN run on run.id = rs.runid
-                GROUP BY runid, vcid, run.owner, run.access, run.token;
+                GROUP BY runid, vcid;
                 RETURN NULL;
             END;
             $$ LANGUAGE plpgsql;
@@ -454,6 +448,18 @@
             END;
             $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
         </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION can_view(access INTEGER, owner TEXT, token TEXT) RETURNS boolean AS $$
+            BEGIN
+                RETURN (
+                    access = 0
+                    OR (access = 1 AND has_role('viewer'))
+                    OR (access = 2 AND has_role(owner) AND has_role('viewer'))
+                    OR token = current_setting('horreum.token', true)
+                );
+            END;
+            $$ LANGUAGE plpgsql STABLE;
+        </createProcedure>
         <sqlFile path="policies.sql" relativeToChangelogFile="true" />
     </changeSet>
 
@@ -512,16 +518,10 @@
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="text"/>
-            <column name="variable_id" type="integer">
-                <constraints nullable="false" />
-            </column>
             <column name="datapoint_id" type="integer">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addForeignKeyConstraint constraintName="fk_change_variable_id"
-                                 baseTableName="change" baseColumnNames="variable_id"
-                                 referencedTableName="variable" referencedColumnNames="id" />
         <addForeignKeyConstraint constraintName="fk_change_datapoint_id"
                                  baseTableName="change" baseColumnNames="datapoint_id"
                                  referencedTableName="datapoint" referencedColumnNames="id" />
@@ -533,6 +533,7 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
+        <addUniqueConstraint tableName="watch" columnNames="testid"/>
         <createTable tableName="watch_users">
             <column name="watch_id" type="integer"/>
             <column name="users" type="text" />
@@ -575,16 +576,120 @@
             ALTER TABLE watch ENABLE ROW LEVEL SECURITY;
             ALTER TABLE watch_teams ENABLE ROW LEVEL SECURITY;
             ALTER TABLE watch_users ENABLE ROW LEVEL SECURITY;
-            <!-- TODO: run owner must be able to edit change -->
-            CREATE POLICY change_policies ON change FOR ALL USING (has_role('horreum.alerting'));
-            <!-- TODO: test owner must be able to edit criteria and variables -->
-            CREATE POLICY datapoint_policies ON datapoint FOR ALL USING (has_role('horreum.alerting'));
-            CREATE POLICY notificationsettings_policies ON notificationsettings FOR ALL USING (has_role('horreum.alerting'));
-            CREATE POLICY variable_policies ON variable FOR ALL USING (has_role('horreum.alerting'));
-            <!-- TODO: everyone should be able to edit his own and his teams' watches and notificationsettings -->
-            CREATE POLICY watch_policies ON watch FOR ALL USING (has_role('horreum.alerting'));
-            CREATE POLICY watch_teams_policies ON watch_teams FOR ALL USING (has_role('horreum.alerting'));
-            CREATE POLICY watch_users_policies ON watch_users FOR ALL USING (has_role('horreum.alerting'));
+            CREATE POLICY change_select ON change FOR SELECT
+                USING (has_role('horreum.alerting') OR exists(
+                    SELECT 1 FROM run
+                    JOIN datapoint dp ON run.id = dp.runid
+                    WHERE datapoint_id = dp.id AND can_view(run.access, run.owner, run.token)
+                ));
+            CREATE POLICY change_insert ON change FOR INSERT
+                WITH CHECK (has_role('horreum.alerting') OR exists(
+                    SELECT 1 FROM run
+                    JOIN datapoint dp ON run.id = dp.runid
+                    WHERE datapoint_id = dp.id AND has_role(run.owner)
+                ));
+            CREATE POLICY change_update ON change FOR UPDATE
+                USING (exists(
+                    SELECT 1 FROM run
+                    JOIN datapoint dp ON run.id = dp.runid
+                    WHERE datapoint_id = dp.id AND has_role(run.owner)
+                )) WITH CHECK (has_role('tester') AND exists(
+                    SELECT 1 FROM run
+                    JOIN datapoint dp ON run.id = dp.runid
+                    WHERE datapoint_id = dp.id AND has_role(run.owner)
+                ));
+            CREATE POLICY change_delete ON change FOR DELETE
+                USING (has_role('tester') AND exists(
+                    SELECT 1 FROM run
+                    JOIN datapoint dp ON run.id = dp.runid
+                    WHERE datapoint_id = dp.id AND has_role(run.owner)
+                ));
+            CREATE POLICY datapoint_select ON datapoint FOR SELECT
+                USING (has_role('horreum.alerting') OR exists(
+                    SELECT 1 FROM run
+                    WHERE run.id = runid AND can_view(run.access, run.owner, run.token)
+                ));
+            CREATE POLICY datapoint_insert ON datapoint FOR INSERT WITH CHECK (has_role('horreum.alerting'));
+            CREATE POLICY datapoint_update ON datapoint FOR UPDATE USING (has_role('horreum.alerting'));
+            CREATE POLICY datapoint_delete ON datapoint FOR DELETE USING (has_role('horreum.alerting'));
+            CREATE POLICY notificationsettings_policies ON notificationsettings FOR ALL
+                USING (has_role('horreum.alerting') OR has_role(name));
+            CREATE POLICY variable_select ON variable FOR SELECT
+                USING (has_role('horreum.alerting') OR exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = testid AND can_view(test.access, test.owner, test.token)
+                ));
+            CREATE POLICY variable_insert ON variable FOR INSERT
+                WITH CHECK (has_role('horreum.alerting') OR exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = testid AND has_role(test.owner)
+                ));
+            CREATE POLICY variable_update ON variable FOR UPDATE
+                USING (has_role('horreum.alerting') OR exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = testid AND has_role(test.owner)
+                ));
+            CREATE POLICY variable_delete ON variable FOR DELETE
+                USING (has_role('horreum.alerting') OR exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = testid AND has_role(test.owner)
+                ));
+            CREATE POLICY watch_select ON watch FOR SELECT USING (true);
+            CREATE POLICY watch_insert ON watch FOR INSERT WITH CHECK (true);
+            CREATE POLICY watch_update ON watch FOR UPDATE USING (has_role('horreum.alerting'));
+            CREATE POLICY watch_delete ON watch FOR DELETE USING (has_role('horreum.alerting'));
+            CREATE POLICY watch_teams_policies ON watch_teams FOR ALL USING (has_role('horreum.alerting') OR has_role(teams));
+            CREATE POLICY watch_users_policies ON watch_users FOR ALL USING (has_role('horreum.alerting') OR has_role(users));
+        </sql>
+    </changeSet>
+
+    <changeSet id="4" author="rvansa">
+        <createTable tableName="grafana_dashboard">
+            <column name="uid" type="text">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="testid" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="url" type="text">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <createTable tableName="grafana_dashboard_variable">
+            <column name="grafana_dashboard_uid" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="variables_id" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="variables_order" type="integer">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="grafana_dashboard_variable" columnNames="grafana_dashboard_uid, variables_order" />
+        <addUniqueConstraint tableName="grafana_dashboard_variable" columnNames="variables_order" />
+        <addForeignKeyConstraint baseTableName="grafana_dashboard_variable" baseColumnNames="grafana_dashboard_uid"
+                                 constraintName="fk_grafana_dashboard_uid"
+                                 referencedTableName="grafana_dashboard" referencedColumnNames="uid" />
+        <addForeignKeyConstraint baseTableName="grafana_dashboard_variable" baseColumnNames="variables_id"
+                                 constraintName="fk_grafana_dashboard_variables_id"
+                                 referencedTableName="variable" referencedColumnNames="id" />
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE grafana_dashboard, grafana_dashboard_variable TO ${quarkus.datasource.username};
+            ALTER TABLE grafana_dashboard ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE grafana_dashboard_variable ENABLE ROW LEVEL SECURITY;
+            <!-- Anyone who could view the test/dashboard can also create it -->
+            CREATE POLICY grafana_dashboard_policies ON grafana_dashboard FOR ALL
+                USING (exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = testid AND can_view(test.access, test.owner, test.token)
+               ));
+            CREATE POLICY grafana_dashboard_variable_policies ON grafana_dashboard_variable FOR ALL
+                USING (exists(
+                    SELECT 1 FROM test
+                    JOIN grafana_dashboard gd ON gd.uid = grafana_dashboard_uid
+                    WHERE test.id = gd.testid AND can_view(test.access, test.owner, test.token)
+                ));
         </sql>
     </changeSet>
 </databaseChangeLog>

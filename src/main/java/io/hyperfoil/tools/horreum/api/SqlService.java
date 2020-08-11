@@ -19,8 +19,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.lang.Exception;
 import java.util.Set;
@@ -152,7 +154,8 @@ public class SqlService {
       if (identity.isAnonymous()) {
          return () -> {};
       }
-      Set<String> roles = identity.getRoles();
+      List<String> roles = new ArrayList<>(identity.getRoles());
+      roles.add(identity.getPrincipal().getName());
       return withRoles(connection, roles);
    }
 
@@ -217,7 +220,9 @@ public class SqlService {
       }
       String signedRoles;
       try {
-         signedRoles = getSignedRoles(identity.getRoles());
+         List<String> roles = new ArrayList<>(identity.getRoles());
+         roles.add(identity.getPrincipal().getName());
+         signedRoles = getSignedRoles(roles);
       } catch (NoSuchAlgorithmException e) {
          throw new IllegalStateException(e);
       }

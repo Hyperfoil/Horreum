@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.api;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.security.PermitAll;
@@ -22,7 +21,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
@@ -34,9 +32,6 @@ import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.undertow.Undertow;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 
 /**
  * This service works as a backend for calls from Grafana (using
@@ -49,9 +44,6 @@ import io.undertow.server.HttpServerExchange;
 @Produces(MediaType.APPLICATION_JSON)
 public class GrafanaService {
    private static final Logger log = Logger.getLogger(GrafanaService.class);
-
-   @ConfigProperty(name = "horreum.url")
-   String horreumUrl;
 
    @Inject
    SqlService sqlService;
@@ -76,8 +68,7 @@ public class GrafanaService {
    @POST
    @Path("/search")
    public Object[] search(Target query) {
-      // TODO: use identity forwarded
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList("horreum.alerting"))) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          return Variable.<Variable>listAll().stream().map(v -> String.valueOf(v.id)).toArray();
       }
    }
@@ -86,14 +77,8 @@ public class GrafanaService {
    @POST
    @Path("/query")
    public Response query(@Context HttpServletRequest request, Query query) {
-      // TODO: let DB decide
-      if (!identity.getPrincipal().getName().equals("user")) {
-         log.infof("/query access forbidden to user %s", identity.getPrincipal().getName());
-         return Response.status(Response.Status.FORBIDDEN).build();
-      }
       List<TimeseriesTarget> result = new ArrayList<>();
-      // TODO: use identity forwarded
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList("horreum.alerting"))) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          for (Target target : query.targets) {
             if (target.type != null && !target.type.equals("timeseries")) {
                return Response.status(Response.Status.BAD_REQUEST).entity("Tables are not implemented").build();
@@ -148,11 +133,6 @@ public class GrafanaService {
    @POST
    @Path("/annotations")
    public Response annotations(AnnotationsQuery query) {
-      // TODO: let DB decide
-      if (!identity.getPrincipal().getName().equals("user")) {
-         log.infof("/annotations access forbidden to user %s", identity.getPrincipal().getName());
-         return Response.status(Response.Status.FORBIDDEN).build();
-      }
       // Note that annotations are per-dashboard, not per-panel:
       // https://github.com/grafana/grafana/issues/717
       List<AnnotationDefinition> annotations = new ArrayList<>();
@@ -161,7 +141,7 @@ public class GrafanaService {
          return Response.status(Response.Status.BAD_REQUEST).entity("Query must be variable ID").build();
       }
       // TODO: use identity forwarded
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList("horreum.alerting"))) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          Change.<Change>find("dataPoint.variable.id = ?1 AND dataPoint.timestamp >= ?2 AND dataPoint.timestamp <= ?3", variableId, query.range.from, query.range.to)
                .stream().forEach(change -> annotations.add(createAnnotation(change)));
       }
@@ -169,10 +149,8 @@ public class GrafanaService {
    }
 
    private AnnotationDefinition createAnnotation(Change change) {
-      StringBuilder content = new StringBuilder(change.description)
-            .append("<br>Confirmed: ").append(change.confirmed);
-//            .append("<br><a href=\"").append(horreumUrl).append("/change/").append(change.id).append("\" target=\"_parent\">Update</a>");
-      return new AnnotationDefinition("Change", content.toString(), false, change.dataPoint.timestamp.toEpochMilli(), 0, new String[0]);
+      String content = change.description + "<br>Confirmed: " + change.confirmed;
+      return new AnnotationDefinition("Change in run " + change.dataPoint.runId, content, false, change.dataPoint.timestamp.toEpochMilli(), 0, new String[0]);
    }
 
    @PermitAll
@@ -206,10 +184,6 @@ public class GrafanaService {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
          }
       }
-   }
-
-   public void reverseProxy() {
-//      Undertow.builder().addHttpListener(8081, "localhost").setHandler(ProxyHand)
    }
 
    public static class Query {

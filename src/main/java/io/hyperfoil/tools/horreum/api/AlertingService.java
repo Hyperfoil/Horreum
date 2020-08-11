@@ -58,7 +58,6 @@ import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
 import io.hyperfoil.tools.yaup.json.Json;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
@@ -125,7 +124,6 @@ public class AlertingService {
          schemas.add(firstLevelSchema);
       }
 
-      // TODO: we don't know the test owner, so we cannot impersonate it
       // In order to create datapoints we'll use the horreum.alerting ownership
       List<String> roles = Arrays.asList(run.owner, HORREUM_ALERTING);
 
