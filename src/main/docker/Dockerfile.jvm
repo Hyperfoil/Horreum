@@ -5,7 +5,7 @@ FROM fabric8/java-alpine-openjdk11-jre
 RUN apk add jq
 ENV JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ENV AB_ENABLED=jmx_exporter
-COPY target/lib/* /deployments/lib/
+# COPY target/lib/* /deployments/lib/
 COPY target/*-runner.jar /deployments/app.jar
 COPY src/main/resources/keycloak-horreum.json /deployments/imports/
 EXPOSE 8080
