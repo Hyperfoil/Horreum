@@ -46,8 +46,13 @@ function initialActiveTab(location: Location) {
     }
 }
 
+type Params = {
+    testId: string
+}
+
 export default () => {
-    const { testId } = useParams();
+    const params = useParams<Params>();
+    const testId: number = params.testId === "_new" ? 0 : parseInt(params.testId)
     const location = useLocation()
     const test = useSelector(selectors.get(testId))
     const [name, setName] = useState("");
@@ -56,7 +61,7 @@ export default () => {
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<TestDispatch>()
     useEffect(() => {
-        if (testId !== "_new") {
+        if (testId !== 0) {
             dispatch(actions.fetchTest(testId))
         }
     }, [dispatch, testId])
@@ -65,7 +70,7 @@ export default () => {
             return
         }
         setName(test.name);
-        document.title = (testId === "_new" ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
+        document.title = (testId === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
         setDescription(test.description);
         if (test.defaultView) {
             setView(test.defaultView)
@@ -85,13 +90,12 @@ export default () => {
 
     const [activeTab, setActiveTab] = useState<number | string>(initialActiveTab(location))
     const saveHookRef = useRef<() => Promise<void>>();
-
     return (
         // <PageSection>
         <React.Fragment>
             <Card style={{flexGrow:1}}>
-                { !test && testId !== "_new" && (<Bullseye><Spinner /></Bullseye>) }
-                { (test || testId === "_new") && (<>
+                { !test && testId !== 0 && (<Bullseye><Spinner /></Bullseye>) }
+                { (test || testId === 0) && (<>
                 <CardBody>
                     <Tabs activeKey={activeTab} onSelect={(e, index) => setActiveTab(index)}>
                         <Tab key="general" eventKey={0} title="General">
@@ -112,7 +116,7 @@ export default () => {
                                 updateRendersRef={updateRendersRef} />
                         </Tab>
                         <Tab key="vars" eventKey={2} title="Regression variables">
-                            <Variables testId={testId === "_new" ? 0 : testId} saveHookRef={saveHookRef}/>
+                            <Variables testId={testId} saveHookRef={saveHookRef}/>
                         </Tab>
                     </Tabs>
                 </CardBody>
@@ -126,7 +130,7 @@ export default () => {
                                    updateRendersRef.current()
                                }
                                const newTest: Test = {
-                                   id: testId !== "_new" ? parseInt(testId) : 0,
+                                   id: testId,
                                    name,
                                    description,
                                    compareUrl: compareUrlEditor.current?.getValue(),
