@@ -195,7 +195,7 @@ export default () => {
             <Card>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
-                             style={{ justifyContent: "space-between" }}>
+                             style={{ width: "100%", display: "flex" }}>
                         <ToolbarGroup style={{ flexGrow: 100 }}>
                             <ToolbarItem className="pf-u-mr-xl">{`Test: ${test && test.name || testId}`}</ToolbarItem>
                         </ToolbarGroup>
