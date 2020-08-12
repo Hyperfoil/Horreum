@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
-import { all as allTestsSelector } from '../tests/selectors'
-import { fetchSummary } from '../tests/actions'
-import { registerAfterLogin } from '../../auth'
+import {  useDispatch } from 'react-redux'
 import { fetchDashboard } from './api'
 import { Variable } from './types'
 import Changes from './Changes'
 import { alertAction } from '../../alerts'
+import TestSelect, { SelectedTest } from '../../components/TestSelect'
 
 import {
     Bullseye,
@@ -21,42 +19,17 @@ import {
     DataListCell,
     EmptyState,
     EmptyStateBody,
-    Select,
-    SelectVariant,
-    SelectOption,
-    SelectOptionObject,
     Title,
 } from '@patternfly/react-core';
 import { NavLink, useHistory } from 'react-router-dom';
-
-interface SelectedTest extends SelectOptionObject {
-    id: number
-}
 
 export default () => {
     const history = useHistory()
     const test = new URLSearchParams(history.location.search).get("test")
     const dispatch = useDispatch()
-    const [testMenuOpen, setTestMenuOpen] = useState(false)
     const [selectedTest, setSelectedTest] = useState<SelectedTest>()
     const [dashboardUrl, setDashboardUrl] = useState("")
     const [variables, setVariables] = useState<Variable[]>([])
-
-    const allTests = useSelector(allTestsSelector);
-    useEffect(() => {
-        dispatch(fetchSummary())
-        dispatch(registerAfterLogin("reload_tests", () => {
-          dispatch(fetchSummary())
-        }))
-    },[dispatch])
-    useEffect(() => {
-        if (test && allTests) {
-            const byParam = allTests.find(t => t.name === test)
-            if (byParam && test !== selectedTest?.toString()) {
-                setSelectedTest({ id: byParam.id, toString: () => byParam.name })
-            }
-        }
-    }, [test, allTests])
 
     useEffect(() => {
         if (!selectedTest) {
@@ -76,27 +49,17 @@ export default () => {
     return (
         <Card>
             <CardHeader>
-                { allTests && <div style={{ display: "flex" }}>
-                { /* TODO: change location bar on select to allow direct links*/ }
-                <Select
-                    variant={SelectVariant.single}
-                    aria-label="Select test"
-                    onToggle={setTestMenuOpen}
-                    isOpen={testMenuOpen}
+                { <div style={{ display: "flex" }}>
+                <TestSelect
                     placeholderText="Choose test..."
-                    onSelect={(event, selection) => {
+                    initialTestName={test || undefined}
+                    onSelect={selection => {
                         setVariables([])
                         setDashboardUrl("")
                         setSelectedTest(selection as SelectedTest)
-                        setTestMenuOpen(false)
                     }}
-                    selections={selectedTest}
-                >{
-                allTests.map((test, i) => {
-                          const value: SelectedTest = { id: test.id, toString: () => test.name }
-                          return (<SelectOption key={i} value={value}/>)
-                      })
-                }</Select>
+                    selection={selectedTest}
+                />
                 { selectedTest && <>
                 <NavLink className="pf-c-button pf-m-primary"
                          to={ "/test/" + selectedTest.id + "#vars" }
