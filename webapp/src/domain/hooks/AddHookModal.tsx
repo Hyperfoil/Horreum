@@ -10,8 +10,9 @@ import {
     TextInput,
 } from '@patternfly/react-core';
 import { Hook } from './reducers';
+import TestSelect, { SelectedTest } from '../../components/TestSelect'
 
-const eventTypes = ["new/test","new/run"]
+const eventTypes = ["test/new","run/new"]
 
 const isValidUrl = (string: string) => {
     try {
@@ -27,8 +28,9 @@ const allValid = { url: true, type: true, target: true }
 export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})=>{
 
     const [url,setUrl] = useState("");
-    const [eventType,setEventType] = useState(0)
-    const [target,setTarget] = useState("");
+    const [eventType,setEventType] = useState(eventTypes[0])
+    const allTests: SelectedTest = { id: -1, toString: () => "All tests" }
+    const [target,setTarget] = useState<SelectedTest>(allTests);
 
     const [valid,setValid] = useState(allValid)
 
@@ -36,7 +38,7 @@ export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})
         const rtrn = {
             url: isValidUrl(url),
             type: true,
-            target: target === "" || target === "-1" || /^\d*\.?\d*$/.test(target)
+            target: true,
         }
         setValid(rtrn)
         return rtrn.url && rtrn.type && rtrn.target
@@ -45,18 +47,16 @@ export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})
     const checkSubmit = ()=>{
         const isValid = validate();
         if(isValid){
-            const convertedType = isNaN(parseInt(target)) ? -1 : parseInt(target)
             const toSubmit: Hook = {
                 id: 0,
                 url: url.trim(),
-                type: eventTypes[eventType],
-                target : convertedType,
+                type: eventType,
+                target : target.id,
                 active: true
             }
             onSubmit(toSubmit)
         }
     }
-
     return (
         <Modal
             title="New Hook"
@@ -85,40 +85,27 @@ export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})
                         id="type"
                         validated={"default"}
                         value={eventType}
-                        onChange={(e)=>{ setEventType(parseInt(e)) }}
+                        onChange={ setEventType }
                         aria-label="Event Type"
                         >
                         {eventTypes.map((option, index)=>{
                             return (<FormSelectOption
-                                isDisabled={false}
                                 key={index}
-                                value={index}
-                                label={option}/>)
+                                value={option}
+                                label={option}  />)
                         })}
                     </FormSelect>
-                    {/* <TextInput
-                        value={eventType}
-                        isRequired
-                        type="text"
-                        id="type"
-                        aria-describedby="type-helper"
-                        name="type"
-                        isValid={valid.type}
-                        onChange={e=>setEventType(e)}
-                    /> */}
                 </FormGroup>
-                <FormGroup label="Target" validated={valid.target ? "default" : "error"} isRequired={true} fieldId="target" helperText="event target id, -1 for ALL" helperTextInvalid="target is empty, -1, or a positive integer">
-                    <TextInput
-                        value={target}
-                        isRequired
-                        type="text"
-                        id="type"
-                        aria-describedby="target-helper"
-                        name="target"
-                        validated={valid.target ? "default" : "error"}
-                        onChange={e=>setTarget(e)}
-                    />
-                </FormGroup>
+                {
+                    eventType === "run/new" &&
+                    <FormGroup label="Test" isRequired={true} helperText="Which tests should this hook fire on" fieldId="target">
+                        <TestSelect
+                            selection={target}
+                            onSelect={ setTarget }
+                            extraOptions={[ allTests ]}
+                            direction="up"/>
+                    </FormGroup>
+                }
             </Form>
 
 

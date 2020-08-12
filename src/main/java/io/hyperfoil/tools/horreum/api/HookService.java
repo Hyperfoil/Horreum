@@ -145,32 +145,23 @@ public class HookService {
    @POST
    @Transactional
    public Response add(Hook hook){
-      System.out.println("HOOKSERVER.add "+hook);
       if(hook == null){
          return Response.serverError().entity("hook is null").build();
       }
       try (CloseMe h = sqlService.withRoles(em, identity)) {
-         if (hook.id != null) {
-            em.merge(hook);
-         } else {
+         if (hook.id != null && hook.id <= 0) {
+            hook.id = null;
+         }
+         if (hook.id == null) {
             em.persist(hook);
+         } else {
+            em.merge(hook);
          }
          em.flush();
-         System.out.println("HOOKSERVER.add merge|persist "+hook.id+" "+hook.isPersistent());
          return Response.ok(hook).build();
       } catch (Exception e) {
-
-         Throwable root = e;
-//         Our favorite Object is not assignable to java/lang/Throwable
-//         HashSet<Throwable> seen = new HashSet<>();
-//         seen.add(root);
-//         while(root.getCause()!=null && !seen.contains(root.getCause())){
-//            root = root.getCause();
-//         }
          Json errorJson = new Json();
-         errorJson.set("message",root.getMessage());
-         System.out.println("HOOKSERVICE errorJson "+errorJson.toString(0));
-
+         errorJson.set("message", e.getMessage());
          return Response.serverError().entity(errorJson.toString(0)).build();
       }
    }
