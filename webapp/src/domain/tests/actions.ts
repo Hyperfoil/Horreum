@@ -81,7 +81,6 @@ export const addTestWatch = (id: number, userOrTeam: string) => (dispatch: Dispa
 }
 
 export const removeTestWatch = (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
-    console.log('remove')
     dispatch({
         type: actionTypes.UPDATE_TEST_WATCH,
         byId: Map([[id, undefined]])

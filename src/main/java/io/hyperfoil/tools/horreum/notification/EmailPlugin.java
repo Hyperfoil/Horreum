@@ -32,14 +32,14 @@ public class EmailPlugin implements NotificationPlugin {
 
    @Override
    public void notify(String testName, String name, String data, Change change) {
-      String subject = subjectPrefix + " Change in " + testName + "/" + change.dataPoint.variable.name;
+      String subject = subjectPrefix + " Change in " + testName + "/" + change.variable.name;
       String content = emailContent
             .data("name", name)
             .data("testName", testName)
             .data("baseUrl", baseUrl)
-            .data("testId", String.valueOf(change.dataPoint.variable.testId))
-            .data("variable", change.dataPoint.variable.name)
-            .data("runId", String.valueOf(change.dataPoint.runId))
+            .data("testId", String.valueOf(change.variable.testId))
+            .data("variable", change.variable.name)
+            .data("runId", String.valueOf(change.runId))
             .render();
       mailer.send(Mail.withHtml(data, subject, content));
    }

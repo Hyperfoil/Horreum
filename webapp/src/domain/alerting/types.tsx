@@ -30,5 +30,7 @@ export type Change = {
     id: number,
     confirmed: boolean,
     description: string,
-    dataPoint: DataPoint,
+    variable?: Variable,
+    runId: number,
+    timestamp: number,
 }

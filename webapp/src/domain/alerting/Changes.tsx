@@ -150,14 +150,12 @@ export default ({ varId } : ChangesProps) => {
             Cell: (arg: any) => arg.cell.value ? <CheckIcon /> : ""
         }, {
             Header: "Time",
-            id: "timestamp",
-            accessor: "dataPoint",
-            Cell: (arg: any) => formatDateTime(arg.cell.value.timestamp)
+            accessor: "timestamp",
+            Cell: (arg: any) => formatDateTime(arg.cell.value)
         }, {
             Header:"Run ID",
-            id: "runId",
-            accessor:"dataPoint",
-            Cell: (arg: any) => <NavLink to={ "/run/" + arg.cell.value.runId } >{ arg.cell.value.runId }</NavLink>
+            accessor:"runId",
+            Cell: (arg: any) => <NavLink to={ "/run/" + arg.cell.value } >{ arg.cell.value }</NavLink>
         }, {
             Header:"Description",
             accessor:"description",

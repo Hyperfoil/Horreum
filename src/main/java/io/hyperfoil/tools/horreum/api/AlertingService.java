@@ -14,9 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
@@ -24,6 +24,7 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.sql.DataSource;
+import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
@@ -61,6 +62,7 @@ import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
+import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
 @ApplicationScoped
@@ -80,7 +82,7 @@ public class AlertingService {
    //@formatter:on
    private static final String UPLOAD_RUN = "CREATE TEMPORARY TABLE current_run AS SELECT * FROM (VALUES (?::jsonb)) as t(data);";
    static final String HORREUM_ALERTING = "horreum.alerting";
-   private static final Sort SORT_BY_ID_DESCENDING = Sort.by("id", Sort.Direction.Descending);
+   private static final Sort SORT_BY_TIMESTAMP_DESCENDING = Sort.by("timestamp", Sort.Direction.Descending);
 
    @Inject
    SqlService sqlService;
@@ -106,15 +108,15 @@ public class AlertingService {
    @Inject
    TransactionManager tm;
 
-   @PostConstruct
-   public void init() {
-      log.info("Initialized AlertingService");
-   }
+   @Inject
+   Vertx vertx;
+
+   private Map<Integer, Integer> recalcProgress = new HashMap<>();
 
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
-      log.infof("Received new run ID %d", run.id);
+      log.infof("Received run ID %d", run.id);
       String firstLevelSchema = run.data.getString("$schema");
       List<String> schemas = run.data.values().stream()
             .filter(Json.class::isInstance).map(Json.class::cast)
@@ -276,17 +278,18 @@ public class AlertingService {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
          // The variable referenced by datapoint is a fake
          Variable variable = Variable.findById(dataPoint.variable.id);
-         Change lastChange = Change.find("variable = ?1", SORT_BY_ID_DESCENDING, variable).range(0, 0).firstResult();
+         Change lastChange = Change.find("variable = ?1", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, 0).firstResult();
          List<DataPoint> dataPoints;
          if (lastChange == null) {
-            dataPoints = DataPoint.find("variable", SORT_BY_ID_DESCENDING, variable).range(0, variable.maxWindow).list();
+            dataPoints = DataPoint.find("variable", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, variable.maxWindow).list();
          } else {
-            dataPoints = DataPoint.find("variable = ?1 AND id >= ?2", SORT_BY_ID_DESCENDING, variable, lastChange.dataPoint.id)
+            dataPoints = DataPoint.find("variable = ?1 AND runId >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.runId)
                   .range(0, variable.maxWindow).list();
          }
          // Last datapoint is already in the list
          assert !dataPoints.isEmpty();
-         assert Math.abs(dataPoints.get(0).value - dataPoint.value) < 0.000001;
+         DataPoint firstDatapoint = dataPoints.get(0);
+         assert Math.abs(firstDatapoint.value - dataPoint.value) < 0.000001;
          // From 1 result we cannot estimate stddev either, so it's not useful
          if (dataPoints.size() <= 2) {
             log.infof("Criterion %d has too few data (%d datapoints), skipping analysis", variable.id, dataPoints.size());
@@ -298,7 +301,9 @@ public class AlertingService {
          if (diff > statistics.getStandardDeviation() * variable.deviationFactor) {
             log.infof("Value %f exceeds %f +- %f x %f", dataPoint.value, statistics.getMean(), statistics.getStandardDeviation(), variable.deviationFactor);
             Change change = new Change();
-            change.dataPoint = dataPoints.get(0);
+            change.variable = firstDatapoint.variable;
+            change.timestamp = firstDatapoint.timestamp;
+            change.runId = firstDatapoint.runId;
             change.description = "Last datapoint is out of deviation range";
             em.persist(change);
             eventBus.publish(Change.EVENT_NEW, change);
@@ -317,9 +322,12 @@ public class AlertingService {
             }
             if (changeIndex >= 0) {
                Change change = new Change();
-               change.dataPoint = dataPoints.get(changeIndex - 1);
+               DataPoint dp = dataPoints.get(changeIndex - 1);
+               change.variable = dp.variable;
+               change.timestamp = dp.timestamp;
+               change.runId = dp.runId;
                change.description = String.format("Change detected with confidence %.3f%%", (1 - lowestPValue) * 100);
-               log.infof("T-test found likelihood of %f%% that there's a change at datapoint %d", lowestPValue * 100, change.dataPoint.id);
+               log.infof("T-test found likelihood of %f%% that there's a change at run ID %d", lowestPValue * 100, change.runId);
                em.persist(change);
                eventBus.publish(Change.EVENT_NEW, change);
             }
@@ -474,7 +482,7 @@ public class AlertingService {
             return Response.status(Response.Status.NOT_FOUND).entity("Variable " + varId + " not found").build();
          }
          // TODO: Avoid sending variable in each datapoint
-         return Response.ok(Change.list("dataPoint.variable", v)).build();
+         return Response.ok(Change.list("variable", v)).build();
       }
    }
 
@@ -504,6 +512,85 @@ public class AlertingService {
             return Response.status(Response.Status.NOT_FOUND).build();
          }
       }
+   }
+
+   private <T> T withTx(Supplier<T> supplier) {
+      try {
+         tm.begin();
+         try {
+            return supplier.get();
+         } catch (Exception e) {
+            tm.setRollbackOnly();
+            throw e;
+         } finally {
+            if (tm.getStatus() == Status.STATUS_ACTIVE) {
+               tm.commit();
+            } else {
+               tm.rollback();
+            }
+         }
+      } catch (Exception ex) {
+         log.error("Failed to run transaction", ex);
+      }
+      return null;
+   }
+
+   @RolesAllowed(Roles.TESTER)
+   @POST
+   @Path("recalculate")
+   public Response recalculate(@QueryParam("test") Integer testId) {
+      if (testId == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
+      }
+      SecurityIdentity identity = CachedSecurityIdentity.of(this.identity);
+
+      vertx.executeBlocking(promise -> {
+         List<Integer> runIds = withTx(() -> {
+            if (recalcProgress.putIfAbsent(testId, 0) != null) {
+               promise.complete();
+               return null;
+            }
+            try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+               @SuppressWarnings("unchecked")
+               List<Integer> ids = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, testId).getResultList();
+               DataPoint.delete("runId in ?1", ids);
+               Change.delete("runId in ?1 AND confirmed = false", ids);
+               return ids;
+            }
+         });
+         if (runIds != null) {
+            int completed = 0;
+            for (int runId : runIds) {
+               // Since the evaluation might take few moments and we're dealing potentially with thousands
+               // of runs we'll process each run in a separate transaction
+               withTx(() -> {
+                  try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+                     Run run = Run.findById(runId);
+                     onNewRun(run);
+                  }
+                  return null;
+               });
+               recalcProgress.put(testId, 100 * ++completed / runIds.size());
+            }
+         }
+         recalcProgress.remove(testId);
+         promise.complete();
+      }, result -> {});
+      return Response.ok().build();
+   }
+
+   @RolesAllowed(Roles.TESTER)
+   @GET
+   @Path("recalculate")
+   public Response recalculateProgress(@QueryParam("test") Integer testId) {
+      if (testId == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
+      }
+      Integer progress = recalcProgress.get(testId);
+      Json json = new Json(false);
+      json.add("percentage", progress == null ? 100 : progress);
+      json.add("done", progress == null);
+      return Response.ok(json).build();
    }
 
    private static class VarInfo {

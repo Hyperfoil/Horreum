@@ -82,7 +82,7 @@ public class NotificationService {
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
    public void onNewChange(Change change) {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(AlertingService.HORREUM_ALERTING))) {
-         Variable variable = change.dataPoint.variable;
+         Variable variable = change.variable;
          // TODO: breaks storage/alerting separation!
          Test test = Test.findById(variable.testId);
          // Test might be null when it's private

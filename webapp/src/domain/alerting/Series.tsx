@@ -40,7 +40,6 @@ export default () => {
         }
         history.replace(history.location.pathname + "?test=" + selectedTest)
         fetchDashboard(selectedTest.id).then(response => {
-            console.log(response)
             setDashboardUrl(response.url)
             setVariables(response.variables)
         }, error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error)))

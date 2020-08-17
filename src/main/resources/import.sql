@@ -57,7 +57,7 @@ INSERT INTO variable (id,testid,name,accessors,confidence,deviationfactor,maxwin
 INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (14,13,1,'2020-07-28 12:00:54.678',185);
 INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (15,13,2,'2020-07-29 12:00:54.678',195);
 INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (16,13,3,'2020-07-30 12:00:54.678',205);
-INSERT INTO change(id, confirmed, description, datapoint_id) VALUES (17, false, 'Test annotation <a href="http://localhost:3000/" target="_parent">with a link</a>', 16);
+INSERT INTO change(id, confirmed, description, variable_id, runid, timestamp) VALUES (17, false, 'Test annotation <a href="http://localhost:3000/" target="_parent">with a link</a>', 13, 3, '2020-07-30 12:00:54.678');
 
 INSERT INTO watch(id, testid) VALUES (18, 2);
 INSERT INTO watch_users(watch_id, users) VALUES (18, 'user');

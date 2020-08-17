@@ -518,13 +518,19 @@
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="text"/>
-            <column name="datapoint_id" type="integer">
+            <column name="variable_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="runid" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="timestamp">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addForeignKeyConstraint constraintName="fk_change_datapoint_id"
-                                 baseTableName="change" baseColumnNames="datapoint_id"
-                                 referencedTableName="datapoint" referencedColumnNames="id" />
+        <addForeignKeyConstraint constraintName="fk_change_variable_id"
+                                 baseTableName="change" baseColumnNames="variable_id"
+                                 referencedTableName="variable" referencedColumnNames="id" />
         <createTable tableName="watch">
             <column name="id" type="integer">
                 <constraints nullable="false" primaryKey="true"/>
@@ -579,30 +585,25 @@
             CREATE POLICY change_select ON change FOR SELECT
                 USING (has_role('horreum.alerting') OR exists(
                     SELECT 1 FROM run
-                    JOIN datapoint dp ON run.id = dp.runid
-                    WHERE datapoint_id = dp.id AND can_view(run.access, run.owner, run.token)
+                    WHERE run.id = runid AND can_view(run.access, run.owner, run.token)
                 ));
             CREATE POLICY change_insert ON change FOR INSERT
                 WITH CHECK (has_role('horreum.alerting') OR exists(
                     SELECT 1 FROM run
-                    JOIN datapoint dp ON run.id = dp.runid
-                    WHERE datapoint_id = dp.id AND has_role(run.owner)
+                    WHERE run.id = runid AND has_role(run.owner)
                 ));
             CREATE POLICY change_update ON change FOR UPDATE
                 USING (exists(
                     SELECT 1 FROM run
-                    JOIN datapoint dp ON run.id = dp.runid
-                    WHERE datapoint_id = dp.id AND has_role(run.owner)
+                    WHERE run.id = runid AND has_role(run.owner)
                 )) WITH CHECK (has_role('tester') AND exists(
                     SELECT 1 FROM run
-                    JOIN datapoint dp ON run.id = dp.runid
-                    WHERE datapoint_id = dp.id AND has_role(run.owner)
+                    WHERE run.id = runid AND has_role(run.owner)
                 ));
             CREATE POLICY change_delete ON change FOR DELETE
                 USING (has_role('tester') AND exists(
                     SELECT 1 FROM run
-                    JOIN datapoint dp ON run.id = dp.runid
-                    WHERE datapoint_id = dp.id AND has_role(run.owner)
+                    WHERE run.id = runid AND has_role(run.owner)
                 ));
             CREATE POLICY datapoint_select ON datapoint FOR SELECT
                 USING (has_role('horreum.alerting') OR exists(
@@ -611,7 +612,11 @@
                 ));
             CREATE POLICY datapoint_insert ON datapoint FOR INSERT WITH CHECK (has_role('horreum.alerting'));
             CREATE POLICY datapoint_update ON datapoint FOR UPDATE USING (has_role('horreum.alerting'));
-            CREATE POLICY datapoint_delete ON datapoint FOR DELETE USING (has_role('horreum.alerting'));
+            CREATE POLICY datapoint_delete ON datapoint FOR DELETE
+                USING (has_role('horreum.alerting') OR exists(
+                    SELECT 1 FROM run
+                    WHERE run.id = runid AND has_role(run.owner)
+                ));
             CREATE POLICY notificationsettings_policies ON notificationsettings FOR ALL
                 USING (has_role('horreum.alerting') OR has_role(name));
             CREATE POLICY variable_select ON variable FOR SELECT

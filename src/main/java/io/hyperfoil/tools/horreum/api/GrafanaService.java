@@ -142,7 +142,7 @@ public class GrafanaService {
       }
       // TODO: use identity forwarded
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Change.<Change>find("dataPoint.variable.id = ?1 AND dataPoint.timestamp >= ?2 AND dataPoint.timestamp <= ?3", variableId, query.range.from, query.range.to)
+         Change.<Change>find("variable.id = ?1 AND timestamp >= ?2 AND timestamp <= ?3", variableId, query.range.from, query.range.to)
                .stream().forEach(change -> annotations.add(createAnnotation(change)));
       }
       return Response.ok(annotations).build();
@@ -150,7 +150,7 @@ public class GrafanaService {
 
    private AnnotationDefinition createAnnotation(Change change) {
       String content = change.description + "<br>Confirmed: " + change.confirmed;
-      return new AnnotationDefinition("Change in run " + change.dataPoint.runId, content, false, change.dataPoint.timestamp.toEpochMilli(), 0, new String[0]);
+      return new AnnotationDefinition("Change in run " + change.runId, content, false, change.timestamp.toEpochMilli(), 0, new String[0]);
    }
 
    @PermitAll

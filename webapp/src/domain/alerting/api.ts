@@ -8,6 +8,7 @@ const endPoints = {
     dashboard: (testId: number) => `${base}/dashboard?test=${testId}`,
     changes: (varId: number) => `${base}/changes?var=${varId}`,
     change: (changeId: number) => `${base}/change/${changeId}`,
+    recalculate: (testId: number) => `${base}/recalculate?test=${testId}`
 }
 
 export const fetchVariables = (testId: number) => {
@@ -32,4 +33,12 @@ export const updateChange = (change: Change) => {
 
 export const deleteChange = (changeId: number) => {
     return fetchApi(endPoints.change(changeId), null, 'delete', {}, 'response')
+}
+
+export const recalculate = (testId: number) => {
+    return fetchApi(endPoints.recalculate(testId), null, 'post', {}, 'response')
+}
+
+export const recalculateProgress = (testId: number) => {
+    return fetchApi(endPoints.recalculate(testId), null, 'get')
 }

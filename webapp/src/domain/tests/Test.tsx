@@ -116,7 +116,7 @@ export default () => {
                                 updateRendersRef={updateRendersRef} />
                         </Tab>
                         <Tab key="vars" eventKey={2} title="Regression variables">
-                            <Variables testId={testId} saveHookRef={saveHookRef}/>
+                            <Variables testName={ test && test.name || ""} testId={testId} saveHookRef={saveHookRef}/>
                         </Tab>
                     </Tabs>
                 </CardBody>
