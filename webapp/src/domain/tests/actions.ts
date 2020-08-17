@@ -28,7 +28,10 @@ export const fetchTest = (id: number) => (dispatch: Dispatch<LoadedAction>) =>
 
 export const sendTest = (test: Test) => (dispatch: Dispatch<LoadedAction>) =>
     api.send(test).then(
-        response => dispatch(loaded(response))
+        response => {
+            dispatch(loaded(response))
+            return response
+        }
     )
 
 export const resetToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>) =>

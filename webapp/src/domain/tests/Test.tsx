@@ -89,7 +89,7 @@ export default () => {
     const history = useHistory()
 
     const [activeTab, setActiveTab] = useState<number | string>(initialActiveTab(location))
-    const saveHookRef = useRef<() => Promise<void>>();
+    const saveHookRef = useRef<(_: number) => Promise<void>>();
     return (
         // <PageSection>
         <React.Fragment>
@@ -140,9 +140,9 @@ export default () => {
                                    token: null,
                                }
                                thunkDispatch(actions.sendTest(newTest)).then(
-                                  () => {
+                                  response => {
                                      if (saveHookRef.current) {
-                                         return saveHookRef.current()
+                                         return saveHookRef.current(response.id)
                                      } else {
                                          return Promise.resolve()
                                      }

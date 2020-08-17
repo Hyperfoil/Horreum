@@ -30,7 +30,7 @@ import RecalculateModal from '../alerting/RecalculateModal'
 type VariablesProps = {
     testName: string,
     testId: number
-    saveHookRef: MutableRefObject<(() => Promise<void>) | undefined>
+    saveHookRef: MutableRefObject<((_: number) => Promise<void>) | undefined>
 }
 
 type VariableDisplay = {
@@ -137,7 +137,7 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
         )
     }, [testId])
     const isTester = useSelector(isTesterSelector)
-    saveHookRef.current = () => api.updateVariables(testId, variables).catch(
+    saveHookRef.current = updatedTestId => api.updateVariables(updatedTestId, variables).catch(
         error => {
             dispatch(alertAction("VARIABLE_UPDATE", "Failed to update regression variables", error))
             return Promise.reject()

@@ -109,12 +109,18 @@ public class TestService {
 
    void addAuthenticated(Test test) {
       Test existing = Test.find("name", test.name).firstResult();
+      if (test.id == 0) {
+         test.id = null;
+      }
       test.ensureLinked();
       if (existing != null) {
          test.copyIds(existing);
          em.merge(test);
       } else {
          em.persist(test);
+         if (test.defaultView != null) {
+            em.persist(test.defaultView);
+         }
          eventBus.publish(Test.EVENT_NEW, test);
       }
    }
