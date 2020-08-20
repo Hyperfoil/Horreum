@@ -16,6 +16,7 @@ import {
     DataListItemRow,
     DataListItemCells,
     DataListCell,
+    ExpandableSection,
     Form,
     FormGroup,
     Modal,
@@ -103,6 +104,7 @@ type VariableFormProps = {
 
 const VariableForm = ({ index, variables, setVariables, calculations, isTester }: VariableFormProps) => {
     const variable = variables[index]
+    const [isExpanded, setExpanded] = useState(false)
     return <Form
         isHorizontal={true}>
         <FormGroup label="Name" fieldId="name">
@@ -121,47 +123,51 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester }
                         onChange={ value => { variable.accessors = value.join(";"); }}
                         isReadOnly={!isTester} />
         </FormGroup>
-        <FormGroup label="Calculation" fieldId="calculation">
-            <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
-                <Editor value={ (variable.calculation && variable.calculation.toString()) || "" }
-                        setValueGetter={e => { calculations[index] = e }}
-                        options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
-            </div>
-        </FormGroup>
-        { /* TODO: use sliders when Patternfly 4 has them */ }
-        <FormGroup label="Max window" fieldId="maxWindow">
-            <TextInput value={ variable.maxWindowStr }
-                        id="maxWindow"
-                        onChange={ value => {
-                            variable.maxWindowStr = value
-                            variable.maxWindow = parseInt(value)
-                            setVariables([ ...variables])
-                        }}
-                        validated={ /^[0-9]+$/.test(variable.maxWindowStr) ? "default" : "error" }
-                        isReadOnly={!isTester} />
-        </FormGroup>
-        <FormGroup label="Deviation factor" fieldId="deviationFactor">
-            <TextInput value={ variable.deviationFactorStr }
-                        id="deviationFactor"
-                        onChange={ value => {
-                            variable.deviationFactorStr = value
-                            variable.deviationFactor = parseFloat(value)
-                            setVariables([ ...variables])
-                        }}
-                        validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.deviationFactorStr) && variable.deviationFactor > 0 ? "default" : "error" }
-                        isReadOnly={!isTester} />
-        </FormGroup>
-        <FormGroup label="Confidence" fieldId="confidence">
-            <TextInput value={ variable.confidenceStr }
-                        id="confidence"
-                        onChange={ value => {
-                            variable.confidenceStr = value
-                            variable.confidence = parseFloat(value)
-                            setVariables([ ...variables])
-                        }}
-                        validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.confidenceStr) && variable.confidence > 0.5 && variable.confidence < 1.0 ? "default" : "error" }
-                        isReadOnly={!isTester} />
-        </FormGroup>
+        <ExpandableSection toggleText={ isExpanded ? "Hide settings" : "Show advanced settings" }
+                           onToggle={setExpanded}
+                           isExpanded={isExpanded} >
+            <FormGroup label="Calculation" fieldId="calculation">
+                <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
+                    <Editor value={ (variable.calculation && variable.calculation.toString()) || "" }
+                            setValueGetter={e => { calculations[index] = e }}
+                            options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
+                </div>
+            </FormGroup>
+            { /* TODO: use sliders when Patternfly 4 has them */ }
+            <FormGroup label="Max window" fieldId="maxWindow">
+                <TextInput value={ variable.maxWindowStr }
+                            id="maxWindow"
+                            onChange={ value => {
+                                variable.maxWindowStr = value
+                                variable.maxWindow = parseInt(value)
+                                setVariables([ ...variables])
+                            }}
+                            validated={ /^[0-9]+$/.test(variable.maxWindowStr) ? "default" : "error" }
+                            isReadOnly={!isTester} />
+            </FormGroup>
+            <FormGroup label="Deviation factor" fieldId="deviationFactor">
+                <TextInput value={ variable.deviationFactorStr }
+                            id="deviationFactor"
+                            onChange={ value => {
+                                variable.deviationFactorStr = value
+                                variable.deviationFactor = parseFloat(value)
+                                setVariables([ ...variables])
+                            }}
+                            validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.deviationFactorStr) && variable.deviationFactor > 0 ? "default" : "error" }
+                            isReadOnly={!isTester} />
+            </FormGroup>
+            <FormGroup label="Confidence" fieldId="confidence">
+                <TextInput value={ variable.confidenceStr }
+                            id="confidence"
+                            onChange={ value => {
+                                variable.confidenceStr = value
+                                variable.confidence = parseFloat(value)
+                                setVariables([ ...variables])
+                            }}
+                            validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.confidenceStr) && variable.confidence > 0.5 && variable.confidence < 1.0 ? "default" : "error" }
+                            isReadOnly={!isTester} />
+            </FormGroup>
+        </ExpandableSection>
     </Form>
 }
 

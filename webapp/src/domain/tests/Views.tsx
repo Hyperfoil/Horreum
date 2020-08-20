@@ -69,11 +69,21 @@ export default ({ view, onViewChange, updateRendersRef, testOwner }: ViewsProps)
                                 isReadOnly={!isTester} />
                    </FormGroup>
                    <FormGroup label="Rendering" fieldId="rendering">
-                     <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
-                         <Editor value={ (c.render && c.render.toString()) || "" }
-                                 setValueGetter={e => { renderRefs.current[i] = e }}
-                                 options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
-                     </div>
+                      { !c.render || c.render === "" ? (
+                            <Button
+                                variant="link"
+                                onClick={() => {
+                                    c.render = "(value, run, token) => value"
+                                    onViewChange({ ...view })
+                                }}
+                            >Add render function...</Button>
+                        ) : (
+                            <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
+                                <Editor value={ (c.render && c.render.toString()) || "" }
+                                        setValueGetter={e => { renderRefs.current[i] = e }}
+                                        options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
+                            </div>)
+                      }
                    </FormGroup>
                </Form>
                { isTester &&
