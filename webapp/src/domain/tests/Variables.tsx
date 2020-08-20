@@ -18,6 +18,7 @@ import {
     DataListCell,
     Form,
     FormGroup,
+    Modal,
     Spinner,
     TextInput,
     Title,
@@ -26,6 +27,58 @@ import {
 import Accessors from '../../components/Accessors'
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 import RecalculateModal from '../alerting/RecalculateModal'
+import TestSelect, { SelectedTest } from '../../components/TestSelect'
+
+type TestSelectModalProps = {
+    isOpen: boolean,
+    onClose(): void
+    onConfirm(testId: number): Promise<any>
+}
+
+const TestSelectModal = ({isOpen, onClose, onConfirm}: TestSelectModalProps) => {
+    const [test, setTest] = useState<SelectedTest>()
+    const [working, setWorking] = useState(false)
+    return (<Modal
+        className="foobar"
+        variant="small"
+        title="Copy regression variables from..."
+        isOpen={isOpen}
+        onClose={ () => {
+            setTest(undefined)
+            onClose()
+        }}
+        actions={[
+            <Button
+                isDisabled={ !test || working }
+                onClick={ () => {
+                    setWorking(true)
+                    onConfirm(test?.id || -1).finally(() => {
+                        setTest(undefined)
+                        setWorking(false)
+                        onClose()
+                    })
+                }}
+            >Copy</Button>,
+            <Button
+                isDisabled={working}
+                variant="secondary"
+                onClick={ () => {
+                    setTest(undefined)
+                    onClose()
+                }}
+            >Cancel</Button>
+        ]}
+    >
+        { working && <Spinner /> }
+        { !working &&
+            <TestSelect
+                selection={test}
+                onSelect={setTest}
+                placeholderText="Select..."
+                direction="up" />
+        }
+    </Modal>)
+}
 
 type VariablesProps = {
     testName: string,
@@ -154,6 +207,7 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
     }
 
     const [recalculateOpen, setRecalculateOpen] = useState(false)
+    const [copyOpen, setCopyOpen ] = useState(false)
     return (<>
         <div style={{
             marginTop: "16px",
@@ -181,6 +235,9 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
                     calculations.current.push(undefined)
                     setVariables([ ...variables])
                 }}>Add variable</Button>
+                <Button variant="secondary"
+                    onClick={ () => setCopyOpen(true) }
+                >Copy...</Button>
                 <Button
                     variant="secondary"
                     onClick={ () => setRecalculateOpen(true) }
@@ -194,6 +251,25 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
             onClose={() => setRecalculateOpen(false)}
             testId={testId}
             />
+        <TestSelectModal
+            isOpen={copyOpen}
+            onClose={() => setCopyOpen(false) }
+            onConfirm={otherTestId => {
+                return api.fetchVariables(otherTestId).then(
+                    response => {
+                        setVariables([ ...variables, ...response.map((v: Variable) => ({
+                            ...v,
+                            id: -1,
+                            testid: testId,
+                            maxWindowStr: String(v.maxWindow),
+                            deviationFactorStr: String(v.deviationFactor),
+                            confidenceStr: String(v.confidence),
+                        }))])
+                        response.forEach((_: Variable) => calculations.current.push(undefined))
+                    },
+                    error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
+                )
+            }} />
         <DataList aria-label="List of variables">
             { variables?.map((_, i) => (
                 <DataListItem key={i} aria-labelledby="">

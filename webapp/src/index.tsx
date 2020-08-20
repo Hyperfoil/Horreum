@@ -5,8 +5,6 @@ import './index.css';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 
-
-import { DateTime, Duration } from 'luxon';
 import jsonpath from 'jsonpath';
 
 ReactDOM.render(<App />, document.getElementById('root'));

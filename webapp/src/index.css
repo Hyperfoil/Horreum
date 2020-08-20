@@ -5,28 +5,28 @@ body {
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-  body {
     font-size: 0.875rem;
-      font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-      font-weight: 400;
-      line-height: 1.43;
-      letter-spacing: 0.01071em;
+    font-weight: 400;
+    line-height: 1.43;
+    letter-spacing: 0.01071em;
+}
+#root{
+  height: 100%;
+}
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+@media print  {
+  #page-sidebar {
+    display: none !important;
   }
-  #root{
-    height: 100%;
+
+  .pf-c-page__main {
+    width: 842pt
   }
-  code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-      monospace;
-  }
-  @media print  {
-    #page-sidebar {
-      display: none !important;
-    }
-  
-    .pf-c-page__main {
-      width: 842pt
-    }
-  }
-  
+}
+
+.pf-c-modal-box__body {
+  /* This makes selects correctly display in modals */
+  overflow: visible !important
+}
