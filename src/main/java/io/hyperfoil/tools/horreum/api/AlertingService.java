@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -639,6 +640,18 @@ public class AlertingService {
       json.add("percentage", progress == null ? 100 : progress);
       json.add("done", progress == null);
       return Response.ok(json).build();
+   }
+
+   @RolesAllowed(Roles.ADMIN)
+   @POST
+   @Path("testNewChange")
+   public void testNewChange() {
+      Change c = new Change();
+      c.timestamp = Instant.now();
+      c.runId = 1;
+      c.variable = Variable.findAll().firstResult();
+      c.description = "Foobar";
+      eventBus.publish(Change.EVENT_NEW, c);
    }
 
    private static class VarInfo {
