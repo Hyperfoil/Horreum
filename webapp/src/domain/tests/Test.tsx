@@ -22,7 +22,7 @@ import * as selectors from './selectors';
 
 import {
     defaultRoleSelector,
-    isTesterSelector,
+    useTester,
     Access
 } from '../../auth'
 
@@ -55,8 +55,11 @@ export default () => {
     const testId: number = params.testId === "_new" ? 0 : parseInt(params.testId)
     const location = useLocation()
     const test = useSelector(selectors.get(testId))
+    const defaultRole = useSelector(defaultRoleSelector)
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+    const [access, setAccess] = useState<Access>(0)
+    const [owner, setOwner] = useState(testId == 0 ? defaultRole : undefined)
     const compareUrlEditor = useRef<ValueGetter>()
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<TestDispatch>()
@@ -72,17 +75,17 @@ export default () => {
         setName(test.name);
         document.title = (testId === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
         setDescription(test.description);
+        setOwner(test.owner)
         if (test.defaultView) {
             setView(test.defaultView)
         }
     }, [test])
-    const isTester = useSelector(isTesterSelector)
-    const defaultRole = useSelector(defaultRoleSelector)
+    const isTester = useTester(test ? test.owner : undefined)
     useEffect(() => {
-      setOwner(defaultRole)
+        if (!owner) {
+            setOwner(defaultRole)
+        }
     }, [defaultRole])
-    const [access, setAccess] = useState<Access>(0)
-    const [owner, setOwner] = useState(defaultRole)
     const [view, setView] = useState<View>({ name: "default", components: []})
     const updateRendersRef = useRef<() => void>()
 
@@ -113,10 +116,16 @@ export default () => {
                         <Tab key="views" eventKey={1} title="Views">
                             <Views view={view}
                                 onViewChange={setView}
-                                updateRendersRef={updateRendersRef} />
+                                updateRendersRef={updateRendersRef}
+                                testOwner={owner}/>
                         </Tab>
                         <Tab key="vars" eventKey={2} title="Regression variables">
-                            <Variables testName={ test && test.name || ""} testId={testId} saveHookRef={saveHookRef}/>
+                            <Variables
+                                testName={ test && test.name || ""}
+                                testId={testId}
+                                testOwner={ test ? test.owner : undefined }
+                                saveHookRef={saveHookRef}
+                            />
                         </Tab>
                     </Tabs>
                 </CardBody>

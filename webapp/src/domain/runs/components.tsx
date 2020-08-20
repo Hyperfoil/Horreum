@@ -14,7 +14,7 @@ import { resetToken, dropToken, updateAccess, trash, updateDescription } from '.
 import ActionMenu, { DropdownItemProvider } from '../../components/ActionMenu';
 import { alertAction } from '../../alerts';
 import { formatDateTime, toEpochMillis } from '../../utils'
-import { isTesterSelector } from '../../auth'
+import { useTester } from '../../auth'
 
 
 export function Description(description: string) {
@@ -58,7 +58,7 @@ export function Menu(run: Run) {
             e => dispatch(alertAction("RUN_TRASH", "Failed to trash run ID " + id, e))
         )
     }
-    const isTester = useSelector(isTesterSelector)
+    const isTester = useTester(run.owner)
     if (isTester) {
         extras.push(closeMenuFunc => (
             <DropdownItem key="updateDescription"

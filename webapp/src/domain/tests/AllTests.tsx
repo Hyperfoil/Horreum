@@ -39,7 +39,7 @@ import ActionMenu from '../../components/ActionMenu';
 
 import {
   isAuthenticatedSelector,
-  isTesterSelector,
+  useTester,
   registerAfterLogin,
   roleToName,
   rolesSelector,
@@ -180,7 +180,7 @@ export default ()=>{
       columns = [ watchingColumn, ...columns ]
     }
 
-    const isTester = useSelector(isTesterSelector)
+    const isTester = useTester()
     const isLoading = useSelector(selectors.isLoading)
     return (
         <PageSection>

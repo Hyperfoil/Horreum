@@ -17,7 +17,7 @@ import {
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 
 
-import { isTesterSelector } from '../../auth'
+import { useTester } from '../../auth'
 
 import Accessors from '../../components/Accessors'
 import { View } from './reducers';
@@ -32,10 +32,11 @@ type ViewsProps = {
     view: View,
     onViewChange(newView: View): void,
     updateRendersRef: MutableRefObject<(() => void) | undefined>
+    testOwner?: string,
 }
 
-export default ({ view, onViewChange, updateRendersRef }: ViewsProps) => {
-    const isTester = useSelector(isTesterSelector)
+export default ({ view, onViewChange, updateRendersRef, testOwner }: ViewsProps) => {
+    const isTester = useTester(testOwner)
     const renderRefs = useRef(new Array<ValueGetter | undefined>(view.components.length));
     const updateRenders = () => view.components.forEach((c, i) => {
          c.render = renderRefs.current[i]?.getValue()

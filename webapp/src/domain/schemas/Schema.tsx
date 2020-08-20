@@ -33,7 +33,7 @@ import jsonpath from 'jsonpath';
 import * as actions from './actions';
 import * as selectors from './selectors';
 import * as api from './api';
-import { accessName, isTesterSelector, defaultRoleSelector, roleToName, Access } from '../../auth'
+import { useTester, defaultRoleSelector, roleToName, Access } from '../../auth'
 import {
    alertAction,
    constraintValidationFormatter,
@@ -117,7 +117,7 @@ export default () => {
         }
     }
 
-    const isTester = useSelector(isTesterSelector)
+    const isTester = useTester(schema?.owner)
     const defaultRole = useSelector(defaultRoleSelector)
     const [access, setAccess] = useState<Access>(0)
     const [owner, setOwner] = useState(defaultRole)

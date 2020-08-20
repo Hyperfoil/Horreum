@@ -18,7 +18,7 @@ import OwnerSelect from '../../components/OwnerSelect'
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 
 import {
-    isTesterSelector,
+    useTester,
     roleToName,
     Access
 } from '../../auth'
@@ -37,7 +37,7 @@ type GeneralProps = {
  }
 
 export default ({ name, onNameChange, description, onDescriptionChange, access, onAccessChange, owner, onOwnerChange, compareUrl, compareUrlEditorRef }: GeneralProps) => {
-    const isTester = useSelector(isTesterSelector)
+    const isTester = useTester(owner)
 
     return (
         <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>

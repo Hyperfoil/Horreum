@@ -102,16 +102,6 @@ export const isAuthenticatedSelector = (state: State) => {
    return !!keycloak && keycloak.authenticated;
 }
 
-export const isUploaderSelector = (state: State) => {
-   let keycloak = state.auth.keycloak
-   return !!keycloak && keycloak.hasRealmRole("uploader")
-}
-
-export const isTesterSelector = (state: State) => {
-   let keycloak = state.auth.keycloak
-   return !!keycloak && keycloak.hasRealmRole("tester")
-}
-
 export const isAdminSelector = (state: State) => {
    let keycloak = state.auth.keycloak
    return !!keycloak && keycloak.hasRealmRole("admin")
@@ -120,6 +110,11 @@ export const isAdminSelector = (state: State) => {
 export const rolesSelector = (state: State): string[] => {
    let keycloak = state.auth.keycloak;
    return keycloak && keycloak.realmAccess ? keycloak.realmAccess.roles : []
+}
+
+export const useTester = (owner?: string) => {
+   const roles = useSelector(rolesSelector)
+   return roles.includes("tester") && (!owner || roles.includes(owner))
 }
 
 export const defaultRoleSelector = (state: State) => {

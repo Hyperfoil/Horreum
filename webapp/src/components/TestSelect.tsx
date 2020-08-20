@@ -15,6 +15,7 @@ import { registerAfterLogin } from '../auth'
 
 export interface SelectedTest extends SelectOptionObject {
     id: number,
+    owner?: string,
 }
 
 type TestSelectProps = {
@@ -56,6 +57,9 @@ export default ({ selection, onSelect, extraOptions, direction, placeholderText,
         placeholderText={placeholderText}
     >{ [
          ...(extraOptions ? extraOptions.map((option, i) => <SelectOption key={i} value={option}/>) : []),
-         ...(tests ? tests.map((test: Test, i: number) => <SelectOption key={i} value={ { id: test.id, toString: () => test.name } as SelectedTest} />) : [])
+         ...(tests ? tests.map((test: Test, i: number) => <SelectOption
+                key={i}
+                value={ { id: test.id, owner: test.owner, toString: () => test.name } as SelectedTest}
+         />) : [])
     ] }</Select>)
 }

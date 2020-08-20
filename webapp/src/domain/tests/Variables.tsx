@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, MutableRefObject } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { isTesterSelector } from '../../auth'
+import { useTester } from '../../auth'
 import { alertAction } from '../../alerts'
 import * as api from '../alerting/api'
 import { NavLink } from 'react-router-dom'
@@ -83,6 +83,7 @@ const TestSelectModal = ({isOpen, onClose, onConfirm}: TestSelectModalProps) => 
 type VariablesProps = {
     testName: string,
     testId: number
+    testOwner?: string,
     saveHookRef: MutableRefObject<((_: number) => Promise<void>) | undefined>
 }
 
@@ -96,11 +97,11 @@ type VariableFormProps = {
     index: number,
     variables: VariableDisplay[],
     setVariables(vs: VariableDisplay[]): void,
-    calculations:(ValueGetter | undefined)[]
+    calculations:(ValueGetter | undefined)[],
+    isTester: boolean,
 }
 
-const VariableForm = ({ index, variables, setVariables, calculations }: VariableFormProps) => {
-    const isTester = useSelector(isTesterSelector)
+const VariableForm = ({ index, variables, setVariables, calculations, isTester }: VariableFormProps) => {
     const variable = variables[index]
     return <Form
         isHorizontal={true}>
@@ -164,7 +165,7 @@ const VariableForm = ({ index, variables, setVariables, calculations }: Variable
     </Form>
 }
 
-export default ({ testName, testId, saveHookRef }: VariablesProps) => {
+export default ({ testName, testId, testOwner, saveHookRef }: VariablesProps) => {
     const [variables, setVariables] = useState<VariableDisplay[]>([])
     const calculations = useRef(new Array<ValueGetter | undefined>())
     const dispatch = useDispatch()
@@ -189,7 +190,7 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
         )
     }, [testId])
-    const isTester = useSelector(isTesterSelector)
+    const isTester = useTester(testOwner)
     saveHookRef.current = updatedTestId => {
         variables.forEach((v, i) => {
             v.calculation = calculations.current[i]?.getValue()
@@ -281,6 +282,7 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
                                     variables={variables}
                                     setVariables={setVariables}
                                     calculations={calculations.current}
+                                    isTester={isTester}
                                 />
                             </DataListCell>
                         ]} />

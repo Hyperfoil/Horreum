@@ -87,7 +87,7 @@ export default () => {
                             <DataListItemRow>
                                 <DataListItemCells dataListCells={[
                                     <DataListCell key="variable-name">
-                                        <Changes varId={v.id}/>
+                                        <Changes varId={v.id} testOwner={selectedTest.owner}/>
                                     </DataListCell>
                                 ]} />
                             </DataListItemRow>

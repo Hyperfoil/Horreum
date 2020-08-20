@@ -23,7 +23,7 @@ import { alertAction } from '../../alerts'
 import { formatDateTime } from '../../utils'
 import { Column, UseSortByColumnOptions } from 'react-table';
 import Table from '../../components/Table';
-import { isTesterSelector } from '../../auth'
+import { useTester } from '../../auth'
 
 
 type ChangeMenuProps = {
@@ -129,10 +129,11 @@ const ChangeModal = ({change, isOpen, onClose, onUpdate }: ChangeModalProps) => 
 }
 
 type ChangesProps = {
-    varId: number
+    varId: number,
+    testOwner?: string,
 }
 
-export default ({ varId } : ChangesProps) => {
+export default ({ varId, testOwner } : ChangesProps) => {
     const dispatch = useDispatch()
     const [isExpanded, setExpanded] = useState(false)
     const [changes, setChanges] = useState<Change[]>([])
@@ -142,7 +143,7 @@ export default ({ varId } : ChangesProps) => {
             error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
         )
     }, [varId])
-    const isTester = useSelector(isTesterSelector)
+    const isTester = useTester(testOwner)
     const columns: C[] = [
         {
             Header: "Confirmed",

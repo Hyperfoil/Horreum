@@ -98,22 +98,28 @@ public class TestService {
    @POST
    @Transactional
    public Response add(Test test){
+      if (!identity.hasRole(test.owner)) {
+         return Response.status(Response.Status.FORBIDDEN).entity("This user does not have the " + test.owner + " role!").build();
+      }
       try (CloseMe h = sqlService.withRoles(em, identity)) {
          if (test == null) {
             return Response.serverError().entity("test is null").build();
          }
-         addAuthenticated(test);
-         return Response.ok(test).build();
+         Response response = addAuthenticated(test);
+         return response == null ? Response.ok(test).build() : response;
       }
    }
 
-   void addAuthenticated(Test test) {
+   Response addAuthenticated(Test test) {
       Test existing = Test.find("name", test.name).firstResult();
       if (test.id == 0) {
          test.id = null;
       }
       test.ensureLinked();
       if (existing != null) {
+         if (!identity.hasRole(existing.owner)) {
+            return Response.status(Response.Status.FORBIDDEN).entity("This user does not have the " + existing.owner + " role!").build();
+         }
          test.copyIds(existing);
          em.merge(test);
       } else {
@@ -123,6 +129,7 @@ public class TestService {
          }
          eventBus.publish(Test.EVENT_NEW, test);
       }
+      return null;
    }
 
    public List<Test> all(){
