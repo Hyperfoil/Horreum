@@ -31,6 +31,7 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
+import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 
 /**
@@ -100,7 +101,8 @@ public class GrafanaService {
             TimeseriesTarget tt = new TimeseriesTarget();
             tt.target = testName + "/" + variableName;
             result.add(tt);
-            DataPoint.<DataPoint>find("variable_id = ?1 AND timestamp >= ?2 AND timestamp <= ?3", variableId, query.range.from, query.range.to)
+            DataPoint.<DataPoint>find("variable_id = ?1 AND timestamp >= ?2 AND timestamp <= ?3", Sort.ascending("timestamp"),
+                  variableId, query.range.from, query.range.to)
                   .stream().forEach(dp -> tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli() }));
          }
       }

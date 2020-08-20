@@ -68,6 +68,7 @@ const renderCell = (render: string | Function | undefined) => (arg: C) => {
             return rendered;
         }
     } catch (e) {
+        console.error(e)
         return "--"
     }
 }
@@ -97,7 +98,7 @@ const staticColumns: RunColumn[] = [
         }
     }, {
         Header: "Executed",
-        accessor: "id",
+        accessor: "start",
         id: "executed",
         Cell: (arg: C) => ExecutionTime(arg.row.original),
     }, {

@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import org.apache.commons.math3.stat.inference.TTest;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.jboss.logging.Logger;
 
@@ -76,6 +78,7 @@ public class AlertingService {
    private static final String LOOKUP_VARS =
          "WITH vars AS (" +
          "   SELECT id, calculation, unnest(regexp_split_to_array(accessors, ';')) as accessor FROM variable" +
+         "   WHERE testid = ?" +
          ") SELECT vars.id as vid, vars.calculation, vars.accessor, se.jsonpath, schema.uri  FROM vars " +
          "JOIN schemaextractor se ON se.accessor = replace(vars.accessor, '[]', '') " +
          "JOIN schema ON schema.id = se.schema_id WHERE schema.uri = ANY(?);";
@@ -143,7 +146,8 @@ public class AlertingService {
          } finally {
 
             try (PreparedStatement lookup = connection.prepareStatement(LOOKUP_VARS)) {
-               lookup.setArray(1, connection.createArrayOf("text", schemas.toArray()));
+               lookup.setInt(1, run.testid);
+               lookup.setArray(2, connection.createArrayOf("text", schemas.toArray()));
                ResultSet resultSet = lookup.executeQuery();
                Set<String> usedAccessors = new HashSet<>();
 
@@ -185,6 +189,9 @@ public class AlertingService {
                   return;
                }
                for (VarInfo var : vars.values()) {
+                  if (var.accessors.isEmpty()) {
+                     continue;
+                  }
                   DataPoint dataPoint = new DataPoint();
                   // TODO: faking the variable
                   Variable variable = new Variable();
@@ -196,7 +203,12 @@ public class AlertingService {
                      if (var.accessors.size() > 1) {
                         log.errorf("Variable %d has more than one accessor (%s) but no calculation function.", var.id, var.accessors);
                      }
-                     String value = resultSet.getString(var.accessors.get(0));
+                     String accessor = var.accessors.get(0);
+                     String value = resultSet.getString(accessor);
+                     if (value == null) {
+                        log.infof("Null value for %s in run %s, accessor %s - datapoint is not created", variable.name, run.id, accessor);
+                        continue;
+                     }
                      try {
                         dataPoint.value = Double.parseDouble(value);
                      } catch (NumberFormatException e) {
@@ -205,13 +217,17 @@ public class AlertingService {
                      }
                   } else {
                      StringBuilder code = new StringBuilder();
-                     code.append("const __obj = {\n");
-                     for (String accessor : var.accessors) {
-                        code.append(accessor).append(": ").append(resultSet.getString(accessor)).append(",\n");
+                     if (var.accessors.size() > 1) {
+                        code.append("const __obj = {\n");
+                        for (String accessor : var.accessors) {
+                           code.append(accessor).append(": ").append(resultSet.getString(accessor)).append(",\n");
+                        }
+                        code.append("};\n");
+                     } else {
+                        code.append("const __obj = ").append(resultSet.getString(var.accessors.get(0))).append(";\n");
                      }
-                     code.append("};\n");
                      code.append("const __func = ").append(var.calculation).append(";\n");
-                     code.append("return __func(__obj);");
+                     code.append("__func(__obj)");
                      Double value = execute(code.toString());
                      if (value == null) {
                         continue;
@@ -243,6 +259,15 @@ public class AlertingService {
       }
    }
 
+   private List<String> columns(ResultSet resultSet) throws SQLException {
+      List<String> columns = new ArrayList<>();
+      ResultSetMetaData metaData = resultSet.getMetaData();
+      for (int i = 1; i <= metaData.getColumnCount(); ++i) {
+         columns.add(metaData.getColumnName(i));
+      }
+      return columns;
+   }
+
    private Double execute(String jsCode) {
       try (Context context = Context.newBuilder(new String[]{ "js"}).build()) {
          context.enter();
@@ -250,10 +275,20 @@ public class AlertingService {
             Value value = context.eval("js", jsCode);
             if (value.isNumber()) {
                return value.asDouble();
+            } else if (value.isString()) {
+               try {
+                  return Double.parseDouble(value.asString());
+               } catch (NumberFormatException e) {
+                  log.warnf("Evaluation failed: Return value %s cannot be parsed into a number.", value);
+                  return null;
+               }
             } else {
-               log.errorf("Return value %s is not a floating-point number.", value);
+               log.warnf("Evaluation failed: Return value %s is not a number.", value);
                return null;
             }
+         } catch (PolyglotException e) {
+            log.warnf("Evaluation failed: '%s' Code:\n%s", e.getMessage(), jsCode);
+            return null;
          } finally {
             context.leave();
          }
@@ -374,6 +409,9 @@ public class AlertingService {
          }
          for (Variable variable : variables) {
             if (currentVariables.stream().noneMatch(v -> v.id.equals(variable.id))) {
+               if (variable.id <= 0) {
+                  variable.id = null;
+               }
                variable.testId = testId;
                variable.maxWindow = variable.maxWindow <= 0 ? Integer.MAX_VALUE : variable.maxWindow;
                variable.persist(); // insert
@@ -390,9 +428,13 @@ public class AlertingService {
                try {
                   dashboard.uid = grafana.searchDashboard(test.name).stream().findFirst().map(ds -> ds.uid).orElse(null);
                } catch (WebApplicationException e) {
-                  log.errorf("Cannot lookup Grafana dashboard for test %s", test.name);
-                  tm.setRollbackOnly();
-                  return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+                  if (e.getResponse().getStatus() == 404) {
+                     log.infof("Dashboard for test %s does not exist");
+                  } else {
+                     log.errorf(e, "Cannot lookup Grafana dashboard for test %s", test.name);
+                     tm.setRollbackOnly();
+                     return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+                  }
                }
             }
          } else {
@@ -416,7 +458,13 @@ public class AlertingService {
             GrafanaClient.GetDashboardResponse response = grafana.getDashboard(dashboard.uid);
             clientDashboard = response.dashboard;
          } catch (WebApplicationException e) {
-            log.errorf(e, "Failed to get existing dashboard with UID %s", dashboard.uid);
+            if (e.getResponse().getStatus() == 404) {
+               log.infof("Dashboard %s cannot be found, creating another", dashboard.uid);
+               dashboard.uid = null;
+               dashboard.url = null;
+            } else {
+               log.errorf(e, "Failed to get existing dashboard with UID %s", dashboard.uid);
+            }
          }
       }
       if (clientDashboard == null) {

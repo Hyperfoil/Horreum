@@ -113,7 +113,7 @@ const VariableForm = ({ index, variables, setVariables, calculations }: Variable
 
 export default ({ testName, testId, saveHookRef }: VariablesProps) => {
     const [variables, setVariables] = useState<VariableDisplay[]>([])
-    const calculations = new Array<ValueGetter | undefined>()
+    const calculations = useRef(new Array<ValueGetter | undefined>())
     const dispatch = useDispatch()
     useEffect(() => {
         if (!testId) {
@@ -130,19 +130,24 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
                     }
                     return vd
                 }))
-                calculations.splice(0)
-                variables?.forEach(_ => calculations.push(undefined));
+                calculations.current.splice(0)
+                response.forEach((_: any) => calculations.current.push(undefined));
             },
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
         )
     }, [testId])
     const isTester = useSelector(isTesterSelector)
-    saveHookRef.current = updatedTestId => api.updateVariables(updatedTestId, variables).catch(
-        error => {
-            dispatch(alertAction("VARIABLE_UPDATE", "Failed to update regression variables", error))
-            return Promise.reject()
-        }
-    )
+    saveHookRef.current = updatedTestId => {
+        variables.forEach((v, i) => {
+            v.calculation = calculations.current[i]?.getValue()
+        })
+        return api.updateVariables(updatedTestId, variables).catch(
+            error => {
+                dispatch(alertAction("VARIABLE_UPDATE", "Failed to update regression variables", error))
+                return Promise.reject()
+            }
+        )
+    }
 
     if (!variables) {
         return <Bullseye><Spinner /></Bullseye>
@@ -166,14 +171,14 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
                         testid: testId,
                         name: "",
                         accessors: "",
-                        maxWindowStr: "",
-                        maxWindow: -1,
+                        maxWindowStr: "0",
+                        maxWindow: 0,
                         deviationFactorStr: "2.0",
                         deviationFactor: 2.0,
                         confidenceStr: "0.95",
                         confidence: 0.95,
                     })
-                    calculations.push(undefined)
+                    calculations.current.push(undefined)
                     setVariables([ ...variables])
                 }}>Add variable</Button>
                 <Button
@@ -199,7 +204,7 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
                                     index={i}
                                     variables={variables}
                                     setVariables={setVariables}
-                                    calculations={calculations}
+                                    calculations={calculations.current}
                                 />
                             </DataListCell>
                         ]} />
@@ -217,7 +222,7 @@ export default ({ testName, testId, saveHookRef }: VariablesProps) => {
                                 variant="primary"
                                 onClick={() => {
                                     variables.splice(i, 1)
-                                    calculations.splice(i, 1)
+                                    calculations.current.splice(i, 1)
                                     setVariables([ ...variables ])
                                 }}
                             >Delete</Button>

@@ -82,8 +82,8 @@ public class RunService {
    // select vc.id from view join viewcomponent vc on vc.view_id = view.id where view.test_id = 12
    private static final String TEST_RUN_VIEW = "SELECT run.id, run.start, run.stop, run.testid, run.owner, (" +
          "    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) FROM run_schemas rs WHERE run.id = rs.runid GROUP BY schemaid" +
-         ")::text as schemas, jsonb_object_agg(view_data.vcid, view_data.object) as view, run.trashed, run.description FROM run " +
-         "JOIN view_data ON view_data.runid = run.id " +
+         ")::text as schemas, jsonb_object_agg(coalesce(view_data.vcid, 0), view_data.object) as view, run.trashed, run.description FROM run " +
+         "LEFT JOIN view_data ON view_data.runid = run.id " +
          "WHERE run.testid = ? ";
    private static final String TEST_RUN_VIEW_GROUPING = " GROUP BY run.id, run.start, run.stop, run.testid, run.owner";
    //@formatter:on
@@ -298,13 +298,13 @@ public class RunService {
    }
 
    private Object findIfNotSet(String value, Json data, String path) {
-      if (value != null) {
+      if (value != null && !value.isEmpty()) {
          if (value.startsWith("$.")) {
             return Json.find(data, value, null);
          } else {
             return value;
          }
-      } else if (path != null) {
+      } else if (path != null && !path.isEmpty()) {
          return Json.find(data, path, null);
       } else {
          return null;

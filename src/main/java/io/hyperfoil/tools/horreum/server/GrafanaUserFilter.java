@@ -40,17 +40,20 @@ public class GrafanaUserFilter extends HttpFilter {
    protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
       if (!(identity.getPrincipal() instanceof JWTCallerPrincipal)) {
          // ignore anonymous access
+         log.debug("Anonymouse access, ignoring.");
          chain.doFilter(req, res);
          return;
       }
       String email = ((JWTCallerPrincipal) identity.getPrincipal()).getClaim("email");
       if (email == null || email.isEmpty()) {
+         log.debug("Missing email, ignoring.");
          chain.doFilter(req, res);
          return;
       }
       if (req.getCookies() != null) {
          for (Cookie cookie : req.getCookies()) {
             if (cookie.getName().equals(GRAFANA_USER) && email.equals(cookie.getValue())) {
+               log.debugf("Already has cookie, ignoring.");
                chain.doFilter(req, res);
                return;
             }
@@ -59,6 +62,7 @@ public class GrafanaUserFilter extends HttpFilter {
       GrafanaClient.UserInfo userInfo = null;
       try {
           userInfo = grafana.lookupUser(email);
+          log.debugf("User %s exists!", email);
       } catch (WebApplicationException e) {
          if (e.getResponse().getStatus() == 404) {
             ThreadLocalRandom random = ThreadLocalRandom.current();
@@ -66,6 +70,7 @@ public class GrafanaUserFilter extends HttpFilter {
             userInfo = new GrafanaClient.UserInfo(email, email, email, password, 1);
             try {
                grafana.createUser(userInfo);
+               log.infof("Created Grafana user %s (%s)", userInfo.login, userInfo.email);
             } catch (WebApplicationException e2) {
                log.errorf(e2, "Failed to create user %s", email);
                userInfo = null;

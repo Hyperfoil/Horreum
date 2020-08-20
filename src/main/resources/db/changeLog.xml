@@ -672,7 +672,6 @@
             </column>
         </createTable>
         <addPrimaryKey tableName="grafana_dashboard_variable" columnNames="grafana_dashboard_uid, variables_order" />
-        <addUniqueConstraint tableName="grafana_dashboard_variable" columnNames="variables_order" />
         <addForeignKeyConstraint baseTableName="grafana_dashboard_variable" baseColumnNames="grafana_dashboard_uid"
                                  constraintName="fk_grafana_dashboard_uid"
                                  referencedTableName="grafana_dashboard" referencedColumnNames="uid" />
