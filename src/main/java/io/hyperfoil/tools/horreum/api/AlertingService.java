@@ -397,6 +397,7 @@ public class AlertingService {
          for (Variable current : currentVariables) {
             Variable matching = variables.stream().filter(v -> current.id.equals(v.id)).findFirst().orElse(null);
             if (matching == null) {
+               DataPoint.delete("variable_id", current.id);
                current.delete();
             } else {
                current.name = matching.name;
