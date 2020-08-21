@@ -16,6 +16,8 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.LockModeType;
+import javax.persistence.PersistenceException;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
@@ -29,10 +31,12 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
+import io.hyperfoil.tools.horreum.entity.alerting.UserInfo;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -53,7 +57,11 @@ public class NotificationService {
             "JOIN watch_users wu ON NOT ns.isteam AND ns.name = wu.users " +
             "UNION " +
             "SELECT ns.*, watch_id FROM notificationsettings ns " +
-            "JOIN watch_teams wt ON ns.isteam AND ns.name = wt.teams" +
+            "JOIN watch_teams wt ON ns.isteam AND ns.name = wt.teams " +
+            "UNION " +
+            "SELECT ns.*, watch_id FROM notificationsettings ns " +
+            "JOIN userinfo_teams ut ON ns.isteam AND ns.name = ut.team " +
+            "JOIN watch_users wu ON wu.users = ut.username " +
          ") SELECT method, data, name FROM ens JOIN watch ON ens.watch_id = watch.id WHERE testid = ?;";
    //@formatter:on
    public final Map<String, NotificationPlugin> plugins = new HashMap<>();
@@ -266,4 +274,25 @@ public class NotificationService {
       return Response.ok(all).build();
    }
 
+   public void cacheUserTeams(String username, Set<String> teams) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(AlertingService.HORREUM_ALERTING))) {
+         // Running this without pessimistic lock leads to duplicate inserts at the same time
+         UserInfo userInfo = UserInfo.findById(username, LockModeType.PESSIMISTIC_WRITE);
+         if (userInfo == null) {
+            userInfo = new UserInfo();
+            userInfo.username = username;
+         } else if (!teams.equals(userInfo.teams)) {
+            userInfo.teams = teams;
+         }
+         userInfo.persist();
+      } catch (PersistenceException e) {
+         if (e.getCause() instanceof ConstraintViolationException) {
+            // silently ignore
+            // note: alternative would be to define @SQLInsert with INSERT ... ON CONFLICT DO NOTHING
+            log.tracef(e, "Concurrent insertion of %s", username);
+         } else {
+            throw e;
+         }
+      }
+   }
 }

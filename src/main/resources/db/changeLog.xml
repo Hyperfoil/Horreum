@@ -696,5 +696,34 @@
                 ));
         </sql>
     </changeSet>
+    
+    <changeSet id="5" author="rvansa">
+        <createTable tableName="userinfo">
+            <column name="username" type="text">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+        </createTable>
+        <createTable tableName="userinfo_teams">
+            <column name="username" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="team" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_userinfo_username"
+                                 baseTableName="userinfo_teams" baseColumnNames="username"
+                                 referencedTableName="userinfo" referencedColumnNames="username" />
+        <addUniqueConstraint tableName="userinfo_teams" columnNames="username,team" />
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE userinfo, userinfo_teams TO ${quarkus.datasource.username};
+            ALTER TABLE userinfo ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE userinfo_teams ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY userinfo_policies ON userinfo FOR ALL
+                USING (has_role('horreum.alerting'));
+            CREATE POLICY userinfo_teams_policies ON userinfo_teams FOR ALL
+                USING (has_role('horreum.alerting'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
