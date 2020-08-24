@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, MutableRefObject } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState, useRef, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 
 import { useTester } from '../../auth'
 import { alertAction } from '../../alerts'
@@ -29,6 +29,7 @@ import Accessors from '../../components/Accessors'
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 import RecalculateModal from '../alerting/RecalculateModal'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
+import { TabFunctionsRef } from './Test'
 
 type TestSelectModalProps = {
     isOpen: boolean,
@@ -81,13 +82,6 @@ const TestSelectModal = ({isOpen, onClose, onConfirm}: TestSelectModalProps) => 
     </Modal>)
 }
 
-type VariablesProps = {
-    testName: string,
-    testId: number
-    testOwner?: string,
-    saveHookRef: MutableRefObject<((_: number) => Promise<void>) | undefined>
-}
-
 type VariableDisplay = {
     maxWindowStr: string,
     deviationFactorStr: string,
@@ -100,9 +94,10 @@ type VariableFormProps = {
     setVariables(vs: VariableDisplay[]): void,
     calculations:(ValueGetter | undefined)[],
     isTester: boolean,
+    onModified(modified: boolean): void,
 }
 
-const VariableForm = ({ index, variables, setVariables, calculations, isTester }: VariableFormProps) => {
+const VariableForm = ({ index, variables, setVariables, calculations, isTester, onModified }: VariableFormProps) => {
     const variable = variables[index]
     const [isExpanded, setExpanded] = useState(false)
     return <Form
@@ -113,6 +108,7 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester }
                         onChange={ value => {
                             variable.name = value
                             setVariables([ ...variables])
+                            onModified(true)
                         }}
                         validated={ !!variable.name && variable.name.trim() !== "" ? "default" : "error"}
                         isReadOnly={!isTester} />
@@ -120,7 +116,10 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester }
         <FormGroup label="Accessors" fieldId="accessor">
             <Accessors
                         value={ (variable.accessors && variable.accessors.split(/[,;] */).map(a => a.trim()).filter(a => a.length !== 0)) || [] }
-                        onChange={ value => { variable.accessors = value.join(";"); }}
+                        onChange={ value => {
+                            variable.accessors = value.join(";")
+                            onModified(true)
+                        }}
                         isReadOnly={!isTester} />
         </FormGroup>
         <ExpandableSection toggleText={ isExpanded ? "Hide settings" : "Show advanced settings" }
@@ -128,6 +127,7 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester }
                            isExpanded={isExpanded} >
             <FormGroup label="Calculation" fieldId="calculation">
                 <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
+                    { /* TODO: call onModified(true) */ }
                     <Editor value={ (variable.calculation && variable.calculation.toString()) || "" }
                             setValueGetter={e => { calculations[index] = e }}
                             options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
@@ -141,6 +141,7 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester }
                                 variable.maxWindowStr = value
                                 variable.maxWindow = parseInt(value)
                                 setVariables([ ...variables])
+                                onModified(true)
                             }}
                             validated={ /^[0-9]+$/.test(variable.maxWindowStr) ? "default" : "error" }
                             isReadOnly={!isTester} />
@@ -152,6 +153,7 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester }
                                 variable.deviationFactorStr = value
                                 variable.deviationFactor = parseFloat(value)
                                 setVariables([ ...variables])
+                                onModified(true)
                             }}
                             validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.deviationFactorStr) && variable.deviationFactor > 0 ? "default" : "error" }
                             isReadOnly={!isTester} />
@@ -163,6 +165,7 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester }
                                 variable.confidenceStr = value
                                 variable.confidence = parseFloat(value)
                                 setVariables([ ...variables])
+                                onModified(true)
                             }}
                             validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.confidenceStr) && variable.confidence > 0.5 && variable.confidence < 1.0 ? "default" : "error" }
                             isReadOnly={!isTester} />
@@ -171,10 +174,20 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester }
     </Form>
 }
 
-export default ({ testName, testId, testOwner, saveHookRef }: VariablesProps) => {
+type VariablesProps = {
+    testName: string,
+    testId: number
+    testOwner?: string,
+    funcsRef: TabFunctionsRef,
+    onModified(modified: boolean): void,
+}
+
+export default ({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) => {
     const [variables, setVariables] = useState<VariableDisplay[]>([])
     const calculations = useRef(new Array<ValueGetter | undefined>())
     const dispatch = useDispatch()
+    // dummy variable to cause reloading of variables
+    const [ reload, setReload ] = useState(0)
     useEffect(() => {
         if (!testId) {
             return
@@ -195,19 +208,27 @@ export default ({ testName, testId, testOwner, saveHookRef }: VariablesProps) =>
             },
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
         )
-    }, [testId])
+    }, [testId, reload])
     const isTester = useTester(testOwner)
-    saveHookRef.current = updatedTestId => {
-        variables.forEach((v, i) => {
-            v.calculation = calculations.current[i]?.getValue()
-        })
-        return api.updateVariables(updatedTestId, variables).catch(
-            error => {
-                dispatch(alertAction("VARIABLE_UPDATE", "Failed to update regression variables", error))
-                return Promise.reject()
-            }
-        )
+    funcsRef.current = {
+        save: () => {
+            variables.forEach((v, i) => {
+                v.calculation = calculations.current[i]?.getValue()
+            })
+            return api.updateVariables(testId, variables).catch(
+                error => {
+                    dispatch(alertAction("VARIABLE_UPDATE", "Failed to update regression variables", error))
+                    return Promise.reject()
+                }
+            )
+        },
+        reset: () => {
+            setVariables([])
+            calculations.current.splice(0)
+            setReload(reload + 1)
+        }
     }
+
 
     if (!variables) {
         return <Bullseye><Spinner /></Bullseye>
@@ -241,6 +262,7 @@ export default ({ testName, testId, testOwner, saveHookRef }: VariablesProps) =>
                     })
                     calculations.current.push(undefined)
                     setVariables([ ...variables])
+                    onModified(true)
                 }}>Add variable</Button>
                 <Button variant="secondary"
                     onClick={ () => setCopyOpen(true) }
@@ -289,6 +311,7 @@ export default ({ testName, testId, testOwner, saveHookRef }: VariablesProps) =>
                                     setVariables={setVariables}
                                     calculations={calculations.current}
                                     isTester={isTester}
+                                    onModified={onModified}
                                 />
                             </DataListCell>
                         ]} />
@@ -308,6 +331,7 @@ export default ({ testName, testId, testOwner, saveHookRef }: VariablesProps) =>
                                     variables.splice(i, 1)
                                     calculations.current.splice(i, 1)
                                     setVariables([ ...variables ])
+                                    onModified(true)
                                 }}
                             >Delete</Button>
                         </DataListAction>

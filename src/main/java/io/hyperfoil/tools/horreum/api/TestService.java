@@ -5,7 +5,6 @@ import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
-import io.hyperfoil.tools.yaup.AsciiArt;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -24,6 +23,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Collections;
 import java.util.List;
 
 import org.jboss.logging.Logger;
@@ -112,7 +112,7 @@ public class TestService {
 
    Response addAuthenticated(Test test) {
       Test existing = Test.find("name", test.name).firstResult();
-      if (test.id == 0) {
+      if (test.id <= 0) {
          test.id = null;
       }
       test.ensureLinked();
@@ -120,12 +120,23 @@ public class TestService {
          if (!identity.hasRole(existing.owner)) {
             return Response.status(Response.Status.FORBIDDEN).entity("This user does not have the " + existing.owner + " role!").build();
          }
+         // We're not updating view using this method
+         if (test.defaultView == null) {
+            test.defaultView = existing.defaultView;
+         }
          test.copyIds(existing);
          em.merge(test);
       } else {
          em.persist(test);
          if (test.defaultView != null) {
             em.persist(test.defaultView);
+         } else {
+            View view = new View();
+            view.name = "default";
+            view.components = Collections.emptyList();
+            view.test = test;
+            em.persist(view);
+            test.defaultView = view;
          }
          eventBus.publish(Test.EVENT_NEW, test);
       }
@@ -222,5 +233,32 @@ public class TestService {
          log.error("GET /id/resetToken failed", e);
          return Response.serverError().entity("Access change failed").build();
       }
+   }
+
+   @RolesAllowed("tester")
+   @POST
+   @Path("{testId}/view")
+   public Response updateView(@PathParam("testId") Integer testId, View view) {
+      if (testId == null || testId <= 0) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing test id").build();
+      }
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Test test = Test.findById(testId);
+         if (test == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+         }
+         view.ensureLinked();
+         view.test = test;
+         if (test.defaultView != null) {
+            view.copyIds(test.defaultView);
+         }
+         if (view.id == null) {
+            em.persist(view);
+         } else {
+            test.defaultView = em.merge(view);
+         }
+         test.persist();
+      }
+      return Response.noContent().build();
    }
 }

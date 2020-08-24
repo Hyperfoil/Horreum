@@ -1,37 +1,27 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useLocation } from "react-router"
+import React, { MutableRefObject, useState, useEffect, useRef } from 'react';
+import { useParams, useHistory } from "react-router"
 import { Location } from 'history'
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
+    ActionGroup,
     Bullseye,
     Button,
     Card,
     CardBody,
     CardFooter,
-    ActionGroup,
     Spinner,
     Tab,
     Tabs,
 } from '@patternfly/react-core';
-import { useHistory } from 'react-router-dom';
-import { ValueGetter } from '../../components/Editor/monaco/Editor'
 
 import * as actions from './actions';
 import * as selectors from './selectors';
 
-import {
-    defaultRoleSelector,
-    useTester,
-    Access
-} from '../../auth'
+import SaveChangesModal from '../../components/SaveChangesModal'
 
-import {
-   alertAction,
-   constraintValidationFormatter,
-} from "../../alerts"
-
-import { View, Test, TestDispatch } from './reducers';
+import { useTester } from '../../auth'
+import { infoActions } from '../../alerts'
 import General from './General'
 import Views from './Views'
 import Variables from './Variables'
@@ -50,128 +40,132 @@ type Params = {
     testId: string
 }
 
+export type TabFunctions = {
+    save(): Promise<any>,
+    reset(): void
+}
+
+export type TabFunctionsRef = MutableRefObject<TabFunctions | undefined>
+
 export default () => {
     const params = useParams<Params>();
-    const testId: number = params.testId === "_new" ? 0 : parseInt(params.testId)
-    const location = useLocation()
+    const [testId, setTestId] = useState(params.testId === "_new" ? 0 : parseInt(params.testId))
+    const history = useHistory()
     const test = useSelector(selectors.get(testId))
-    const defaultRole = useSelector(defaultRoleSelector)
-    const [name, setName] = useState("");
-    const [description, setDescription] = useState("");
-    const [access, setAccess] = useState<Access>(0)
-    const [owner, setOwner] = useState(testId == 0 ? defaultRole : undefined)
-    const compareUrlEditor = useRef<ValueGetter>()
+    const [modified, setModified] = useState(false)
+    const [confirmOpen, setConfirmOpen] = useState(false)
+    const generalFuncsRef = useRef<TabFunctions>()
+    const viewFuncsRef = useRef<TabFunctions>()
+    const variablesFuncsRef = useRef<TabFunctions>()
+    const funcRefs = [ generalFuncsRef, viewFuncsRef, variablesFuncsRef ]
+    const tabs = [ "general", "views", "vars"]
+    const gotoTab = (index: number) => {
+        setActiveTab(index)
+        setNextTab(index)
+        history.replace("/test/" + (testId === 0 ? "__new" : testId) + "#" + tabs[index] )
+    }
+
     const dispatch = useDispatch();
-    const thunkDispatch = useDispatch<TestDispatch>()
+
     useEffect(() => {
         if (testId !== 0) {
             dispatch(actions.fetchTest(testId))
         }
     }, [dispatch, testId])
+
     useEffect(() => {
-        if (!test) {
-            return
-        }
-        setName(test.name);
         document.title = (testId === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
-        setDescription(test.description);
-        setOwner(test.owner)
-        if (test.defaultView) {
-            setView(test.defaultView)
-        }
     }, [test])
     const isTester = useTester(test ? test.owner : undefined)
-    useEffect(() => {
-        if (!owner) {
-            setOwner(defaultRole)
+
+    const [saving, setSaving] = useState(false)
+    const [activeTab, setActiveTab] = useState<number>(initialActiveTab(history.location))
+    const [nextTab, setNextTab] = useState(0)
+    const save = () => {
+        const funcs = funcRefs[activeTab].current
+        if (funcs) {
+            setSaving(true)
+            return funcs.save().then(() => {
+                setModified(false)
+                gotoTab(nextTab)
+                const info = infoActions("SAVE", "Saved!", "Test was succesfully updated!")
+                dispatch(info.action)
+                window.setTimeout(() => dispatch(info.clear), 3000)
+            }).finally(() => setSaving(false))
+        } else {
+            return Promise.reject()
         }
-    }, [defaultRole])
-    const [view, setView] = useState<View>({ name: "default", components: []})
-    const updateRendersRef = useRef<() => void>()
+    }
 
-    const history = useHistory()
-
-    const [activeTab, setActiveTab] = useState<number | string>(initialActiveTab(location))
-    const saveHookRef = useRef<(_: number) => Promise<void>>();
-    return (
-        // <PageSection>
-        <React.Fragment>
+    return (<>
+            <SaveChangesModal
+                isOpen={confirmOpen}
+                onClose={ () => setConfirmOpen(false) }
+                onSave={ save }
+                onReset={ () => {
+                    const funcs = funcRefs[activeTab].current
+                    if (funcs) {
+                        funcs.reset()
+                    }
+                    gotoTab(nextTab)
+                    setModified(false)
+                }}
+            />
             <Card style={{flexGrow:1}}>
                 { !test && testId !== 0 && (<Bullseye><Spinner /></Bullseye>) }
                 { (test || testId === 0) && (<>
                 <CardBody>
-                    <Tabs activeKey={activeTab} onSelect={(e, index) => setActiveTab(index)}>
+                    <Tabs
+                        activeKey={activeTab}
+                        onSelect={(e, index) => {
+                            setNextTab(index as number)
+                            if (modified) {
+                                setConfirmOpen(true)
+                            } else {
+                                gotoTab(index as number)
+                            }
+                        }}
+                    >
                         <Tab key="general" eventKey={0} title="General">
-                            <General name={name}
-                                    onNameChange={setName}
-                                    description={description}
-                                    onDescriptionChange={setDescription}
-                                    access={access}
-                                    onAccessChange={setAccess}
-                                    owner={owner}
-                                    onOwnerChange={setOwner}
-                                    compareUrl={(test && test.compareUrl && test?.compareUrl.toString()) || ""}
-                                    compareUrlEditorRef={compareUrlEditor} />
+                            <General
+                                test={ test || undefined}
+                                onTestIdChange={ setTestId }
+                                onModified={ setModified }
+                                funcsRef={generalFuncsRef}/>
                         </Tab>
-                        <Tab key="views" eventKey={1} title="Views">
-                            <Views view={view}
-                                onViewChange={setView}
-                                updateRendersRef={updateRendersRef}
-                                testOwner={owner}/>
-                        </Tab>
-                        <Tab key="vars" eventKey={2} title="Regression variables">
-                            <Variables
-                                testName={ test && test.name || ""}
+                        <Tab key="views" eventKey={1} isHidden={ testId <= 0 } title="Views">
+                            <Views
                                 testId={testId}
+                                testView={(test ? test.defaultView : undefined) || { name: "default", components: []}}
+                                testOwner={test ? test.owner : undefined}
+                                onModified={ setModified }
+                                funcsRef={viewFuncsRef}
+                            />
+                        </Tab>
+                        <Tab key="vars" eventKey={2} isHidden={ testId <= 0 } title="Regression variables">
+                            <Variables
+                                testId={testId}
+                                testName={ test && test.name || ""}
                                 testOwner={ test ? test.owner : undefined }
-                                saveHookRef={saveHookRef}
+                                onModified={ setModified }
+                                funcsRef={variablesFuncsRef}
                             />
                         </Tab>
                     </Tabs>
                 </CardBody>
-                { isTester &&
-                <CardFooter>
-                   <ActionGroup style={{ marginTop: 0 }}>
-                       <Button
-                           variant="primary"
-                           onClick={e => {
-                               if (updateRendersRef.current) {
-                                   updateRendersRef.current()
-                               }
-                               const newTest: Test = {
-                                   id: testId,
-                                   name,
-                                   description,
-                                   compareUrl: compareUrlEditor.current?.getValue(),
-                                   defaultView: view,
-                                   owner: owner || "__test_created_without_a_role__",
-                                   access: access,
-                                   token: null,
-                               }
-                               thunkDispatch(actions.sendTest(newTest)).then(
-                                  response => {
-                                     if (saveHookRef.current) {
-                                         return saveHookRef.current(response.id)
-                                     } else {
-                                         return Promise.resolve()
-                                     }
-                                  },
-                                  e => dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", e, constraintValidationFormatter("the saved test")))
-                               ).then(
-                                   () => history.goBack()
-                               )
-
-                           }}
-                       >Save</Button>
-                       <Button className="pf-c-button pf-m-secondary" onClick={() => history.goBack()}>
-                           Cancel
-                       </Button>
-                   </ActionGroup>
-                </CardFooter>
-                }
                 </>)}
+                <CardFooter>
+                { isTester &&
+                    <ActionGroup style={{ marginTop: 0 }}>
+                        <Button
+                            variant="primary"
+                            isDisabled={saving}
+                            onClick={save}
+                        >{ saving ? "Saving..." : "Save" }</Button>
+                    </ActionGroup>
+                }
+                </CardFooter>
             </Card>
-        </React.Fragment>
-        // </PageSection>
+        </>
     )
 }

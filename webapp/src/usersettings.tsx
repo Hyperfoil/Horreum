@@ -36,6 +36,7 @@ import {
 } from '@patternfly/react-icons'
 
 import OwnerSelect from './components/OwnerSelect'
+import SaveChangesModal from './components/SaveChangesModal'
 
 const base = "/api/notifications"
 const fetchMethods = () => fetchApi(`${base}/methods`, null, 'get')
@@ -226,23 +227,13 @@ export const UserSettings = () => {
     return (
         <Card>
             <CardBody>
-                <Modal
-                    variant="small"
-                    title="Save changes?"
-                    description="Your changes haven't been saved."
-                    showClose={false}
+                <SaveChangesModal
                     isOpen={modalOpen}
-                >
-                    <Button variant="primary" onClick={ () => {
-                        if (saveFunction) {
-                            saveFunction().then(_ => {
+                    onClose={ () => setModalOpen(false) }
+                    onSave={ saveFunction && (() => saveFunction().then(_ => {
                                 setActiveTab(requestedTab)
-                            }).finally(() => setModalOpen(false))
-                        }
-                    }}>Save</Button>
-                    <Button variant="secondary" onClick={ () => setModalOpen(false) }>Cancel</Button>
-                    <Button variant="secondary" onClick={ () => {
-                        setModalOpen(false)
+                            })) }
+                    onReset={() => {
                         setActiveTab(requestedTab)
                         if (requestedTab === 0) {
                             setPersonal(undefined)
@@ -251,8 +242,8 @@ export const UserSettings = () => {
                             setTeam(undefined)
                             setSelectedTeam(undefined)
                         }
-                    }}>Ignore</Button>
-                </Modal>
+                    }}
+                />
                 <Tabs activeKey={activeTab} onSelect={(_, index) => {
                     if (!!saveFunction) {
                         setModalOpen(true)

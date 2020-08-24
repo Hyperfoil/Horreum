@@ -86,6 +86,25 @@ export const alertAction = (type: string, title: string, e: any, ...errorFormatt
    }
 }
 
+export function infoActions(type: string, title: string, message: string): { action: AddAlertAction, clear: ClearAlertAction } {
+   return {
+      action: {
+         type: ADD_ALERT,
+         alert: {
+            type, title,
+            content: message,
+            variant: AlertVariant.info,
+         }
+      },
+      clear: {
+         type: CLEAR_ALERT,
+         alert: {
+            type, title, content: undefined,
+         }
+      }
+   }
+}
+
 export const defaultFormatError = (e: any) => {
    if (!e) {
       return ""

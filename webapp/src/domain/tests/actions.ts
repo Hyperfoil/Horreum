@@ -1,7 +1,7 @@
 import * as api from './api';
 import * as actionTypes from './actionTypes';
 import { accessName, Access } from '../../auth'
-import { Test, LoadingAction, LoadedAction, UpdateTokenAction, UpdateAccessAction, DeleteAction, UpdateTestWatchAction } from './reducers';
+import { Test, View, LoadingAction, LoadedAction, UpdateTokenAction, UpdateAccessAction, DeleteAction, UpdateTestWatchAction, UpdateViewAction } from './reducers';
 import { Dispatch } from 'react';
 import * as notifications from '../../usersettings'
 import { Map } from 'immutable';
@@ -33,6 +33,18 @@ export const sendTest = (test: Test) => (dispatch: Dispatch<LoadedAction>) =>
             return response
         }
     )
+
+export const updateView = (testId: number, view: View) => (dispatch: Dispatch<UpdateViewAction>) => {
+    return api.updateView(testId, view).then(
+        response => {
+            dispatch({
+                type: actionTypes.UPDATE_VIEW,
+                testId, view
+            })
+            return response
+        }
+    )
+}
 
 export const resetToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>) =>
     api.resetToken(id).then(

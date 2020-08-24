@@ -60,8 +60,8 @@ public class NotificationService {
             "JOIN watch_teams wt ON ns.isteam AND ns.name = wt.teams " +
             "UNION " +
             "SELECT ns.*, watch_id FROM notificationsettings ns " +
-            "JOIN userinfo_teams ut ON ns.isteam AND ns.name = ut.team " +
-            "JOIN watch_users wu ON wu.users = ut.username " +
+            "JOIN userinfo_teams ut ON NOT ns.isteam AND ns.name = ut.username " +
+            "JOIN watch_teams wt ON wt.teams = ut.team " +
          ") SELECT method, data, name FROM ens JOIN watch ON ens.watch_id = watch.id WHERE testid = ?;";
    //@formatter:on
    public final Map<String, NotificationPlugin> plugins = new HashMap<>();
@@ -284,7 +284,7 @@ public class NotificationService {
          } else if (!teams.equals(userInfo.teams)) {
             userInfo.teams = teams;
          }
-         userInfo.persist();
+         userInfo.persistAndFlush();
       } catch (PersistenceException e) {
          if (e.getCause() instanceof ConstraintViolationException) {
             // silently ignore

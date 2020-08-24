@@ -24,7 +24,7 @@ export interface Test {
     owner: string,
     access: Access,
     token: string | null,
-    defaultView: View,
+    defaultView?: View,
     count?: number, // run count in AllTests
     watching?: string[]
 }
@@ -69,7 +69,13 @@ export interface UpdateTestWatchAction {
     byId: Map<number, string[] | undefined>,
 }
 
-export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction | UpdateTestWatchAction
+export interface UpdateViewAction {
+    type: typeof actionTypes.UPDATE_VIEW,
+    testId: number,
+    view: View,
+}
+
+export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction | UpdateTestWatchAction | UpdateViewAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction>
 
@@ -116,6 +122,12 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             state.watches = state.watches.merge(action.byId)
         }
         break;
+        case actionTypes.UPDATE_VIEW: {
+            let test = state.byId?.get(action.testId)
+            if (test) {
+               state.byId = state.byId?.set(action.testId, { ...test, defaultView: action.view })
+            }
+        }
         default:
     }
     return state;

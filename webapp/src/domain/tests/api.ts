@@ -1,5 +1,5 @@
 import { fetchApi } from '../../services/api';
-import { Test } from './reducers';
+import { Test, View } from './reducers';
 
 const base = "/api/test"
 const endPoints = {
@@ -13,8 +13,8 @@ const endPoints = {
     updateAccess: (id: number, owner: string, access: string) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
 }
 
-export const view = (id: number) => {
-    return fetchApi(endPoints.view(id),null,'get')
+export const updateView = (testId: number, view: View) => {
+    return fetchApi(endPoints.view(testId), view, 'post')
 }
 export const get = (id: number) => {
     return fetchApi(endPoints.crud(id),null,'get')

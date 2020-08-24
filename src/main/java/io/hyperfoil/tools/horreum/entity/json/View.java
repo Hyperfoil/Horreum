@@ -54,7 +54,10 @@ public class View extends PanacheEntityBase {
          for (ViewComponent c : components) {
             other.components.stream()
                   .filter(o -> o.headerName.equals(c.headerName))
-                  .findFirst().ifPresent(o -> c.id = o.id);
+                  .findFirst().ifPresent(o -> {
+                     c.id = o.id;
+                     c.view = o.view;
+                  });
          }
       }
    }
