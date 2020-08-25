@@ -20,6 +20,8 @@ import {
     Form,
     FormGroup,
     Modal,
+    Select,
+    SelectOption,
     Spinner,
     TextInput,
     Title,
@@ -30,6 +32,8 @@ import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 import RecalculateModal from '../alerting/RecalculateModal'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
 import { TabFunctionsRef } from './Test'
+
+const NO_LIMIT = "<no limit>"
 
 type TestSelectModalProps = {
     isOpen: boolean,
@@ -91,15 +95,17 @@ type VariableDisplay = {
 type VariableFormProps = {
     index: number,
     variables: VariableDisplay[],
-    setVariables(vs: VariableDisplay[]): void,
     calculations:(ValueGetter | undefined)[],
     isTester: boolean,
-    onModified(modified: boolean): void,
+    groups: string[],
+    setGroups(gs: string[]): void,
+    onChange(): void,
 }
 
-const VariableForm = ({ index, variables, setVariables, calculations, isTester, onModified }: VariableFormProps) => {
+const VariableForm = ({ index, variables, calculations, isTester, onChange, groups, setGroups }: VariableFormProps) => {
     const variable = variables[index]
     const [isExpanded, setExpanded] = useState(false)
+    const [groupOpen, setGroupOpen] = useState(false)
     return <Form
         isHorizontal={true}>
         <FormGroup label="Name" fieldId="name">
@@ -107,18 +113,46 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester, 
                         id="name"
                         onChange={ value => {
                             variable.name = value
-                            setVariables([ ...variables])
-                            onModified(true)
+                            onChange()
                         }}
                         validated={ !!variable.name && variable.name.trim() !== "" ? "default" : "error"}
                         isReadOnly={!isTester} />
+        </FormGroup>
+        <FormGroup label="Group" fieldId="group">
+            <Select
+                variant="typeahead"
+                typeAheadAriaLabel="Select group"
+                onToggle={setGroupOpen}
+                onSelect={(e, group, isPlaceholder) => {
+                    if (isPlaceholder) {
+                        variable.group = undefined
+                    } else {
+                        variable.group = group.toString()
+                    }
+                    setGroupOpen(false)
+                    onChange()
+                }}
+                onClear={() => {
+                    variable.group = undefined
+                    onChange()
+                }}
+                selections={variable.group}
+                isOpen={groupOpen}
+                placeholderText="-none-"
+                isCreatable={true}
+                onCreateOption={ option => {
+                    setGroups([ ...groups, option].sort())
+                }}
+            >
+                { groups.map((g, index) => <SelectOption key={index} value={g} />)}
+            </Select>
         </FormGroup>
         <FormGroup label="Accessors" fieldId="accessor">
             <Accessors
                         value={ (variable.accessors && variable.accessors.split(/[,;] */).map(a => a.trim()).filter(a => a.length !== 0)) || [] }
                         onChange={ value => {
                             variable.accessors = value.join(";")
-                            onModified(true)
+                            onChange()
                         }}
                         isReadOnly={!isTester} />
         </FormGroup>
@@ -139,11 +173,10 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester, 
                             id="maxWindow"
                             onChange={ value => {
                                 variable.maxWindowStr = value
-                                variable.maxWindow = parseInt(value)
-                                setVariables([ ...variables])
-                                onModified(true)
+                                variable.maxWindow = value === NO_LIMIT ? 0x7FFFFFFF : parseInt(value)
+                                onChange()
                             }}
-                            validated={ /^[0-9]+$/.test(variable.maxWindowStr) ? "default" : "error" }
+                            validated={ /^\([0-9]+\)|<no limit>$/.test(variable.maxWindowStr) ? "default" : "error" }
                             isReadOnly={!isTester} />
             </FormGroup>
             <FormGroup label="Deviation factor" fieldId="deviationFactor">
@@ -152,8 +185,7 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester, 
                             onChange={ value => {
                                 variable.deviationFactorStr = value
                                 variable.deviationFactor = parseFloat(value)
-                                setVariables([ ...variables])
-                                onModified(true)
+                                onChange()
                             }}
                             validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.deviationFactorStr) && variable.deviationFactor > 0 ? "default" : "error" }
                             isReadOnly={!isTester} />
@@ -164,8 +196,7 @@ const VariableForm = ({ index, variables, setVariables, calculations, isTester, 
                             onChange={ value => {
                                 variable.confidenceStr = value
                                 variable.confidence = parseFloat(value)
-                                setVariables([ ...variables])
-                                onModified(true)
+                                onChange()
                             }}
                             validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.confidenceStr) && variable.confidence > 0.5 && variable.confidence < 1.0 ? "default" : "error" }
                             isReadOnly={!isTester} />
@@ -184,6 +215,7 @@ type VariablesProps = {
 
 export default ({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) => {
     const [variables, setVariables] = useState<VariableDisplay[]>([])
+    const [groups, setGroups] = useState<string[]>([])
     const calculations = useRef(new Array<ValueGetter | undefined>())
     const dispatch = useDispatch()
     // dummy variable to cause reloading of variables
@@ -197,12 +229,23 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                 setVariables(response.map((v: Variable) => {
                     let vd: VariableDisplay = {
                         ...v,
-                        maxWindowStr: String(v.maxWindow),
+                        maxWindowStr: v.maxWindow === 0x7FFFFFFF ? NO_LIMIT : String(v.maxWindow),
                         deviationFactorStr: String(v.deviationFactor),
                         confidenceStr: String(v.confidence),
                     }
                     return vd
+                }).sort((v1: VariableDisplay, v2: VariableDisplay) => {
+                    if (v1.group == v2.group) {
+                        return v1.order - v2.order
+                    } else if (!v1.group) {
+                        return -1;
+                    } else if (!v2.group) {
+                        return 1;
+                    } else {
+                        return v1.group.localeCompare(v2.group)
+                    }
                 }))
+                setGroups([... new Set(variables.map(v => v.group).filter(g => !!g).map(g => g as string))].sort())
                 calculations.current.splice(0)
                 response.forEach((_: any) => calculations.current.push(undefined));
             },
@@ -214,6 +257,7 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
         save: () => {
             variables.forEach((v, i) => {
                 v.calculation = calculations.current[i]?.getValue()
+                v.order = i
             })
             return api.updateVariables(testId, variables).catch(
                 error => {
@@ -252,8 +296,9 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                         id: -1,
                         testid: testId,
                         name: "",
+                        order: variables.length,
                         accessors: "",
-                        maxWindowStr: "0",
+                        maxWindowStr: NO_LIMIT,
                         maxWindow: 0,
                         deviationFactorStr: "2.0",
                         deviationFactor: 2.0,
@@ -290,7 +335,7 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                             ...v,
                             id: -1,
                             testid: testId,
-                            maxWindowStr: String(v.maxWindow),
+                            maxWindowStr: v.maxWindow === 0x7FFFFFFF ? NO_LIMIT : String(v.maxWindow),
                             deviationFactorStr: String(v.deviationFactor),
                             confidenceStr: String(v.confidence),
                         }))])
@@ -308,10 +353,14 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                                 <VariableForm
                                     index={i}
                                     variables={variables}
-                                    setVariables={setVariables}
                                     calculations={calculations.current}
                                     isTester={isTester}
-                                    onModified={onModified}
+                                    onChange={() => {
+                                        setVariables([ ...variables ])
+                                        onModified(true)
+                                    }}
+                                    groups={groups}
+                                    setGroups={setGroups}
                                 />
                             </DataListCell>
                         ]} />

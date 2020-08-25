@@ -28,7 +28,6 @@ import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
 import io.quarkus.panache.common.Sort;
@@ -153,39 +152,6 @@ public class GrafanaService {
    private AnnotationDefinition createAnnotation(Change change) {
       String content = change.description + "<br>Confirmed: " + change.confirmed;
       return new AnnotationDefinition("Change in run " + change.runId, content, false, change.timestamp.toEpochMilli(), 0, new String[0]);
-   }
-
-   @PermitAll
-   @GET
-   @Path("dashboards")
-   public Response createDashboard(@QueryParam("testid") Integer testId) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Test test = Test.findById(testId);
-         Dashboard dashboard = new Dashboard();
-         dashboard.title = test.name;
-         int i = 0;
-         for (Variable v : Variable.<Variable>list("testId", testId)) {
-            dashboard.annotations.list.add(new Dashboard.Annotation(v.name, String.valueOf(v.id)));
-            Dashboard.Panel panel = new Dashboard.Panel(v.name, new Dashboard.GridPos(12 * (i % 2), 9 * (i / 2), 12, 9));
-            panel.targets.add(new Target(String.valueOf(v.id), "timeseries", "T" + i));
-            dashboard.panels.add(panel);
-            ++i;
-         }
-         try {
-            GrafanaClient.DashboardSummary response = grafana.createOrUpdateDashboard(new GrafanaClient.PostDashboardRequest(dashboard, false));
-            if (response == null) {
-               return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
-            } else {
-               return Response.ok(response.uid + ": " + response.url).build();
-            }
-         } catch (WebApplicationException e) {
-            if (e.getResponse().getStatus() == 412) {
-               return Response.status(Response.Status.BAD_REQUEST).entity("Dashboard already exists.").build();
-            }
-            log.error("Failed to create the dashboard", e);
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
-         }
-      }
    }
 
    public static class Query {

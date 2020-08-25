@@ -725,5 +725,16 @@
                 USING (has_role('horreum.alerting'));
         </sql>
     </changeSet>
+
+    <changeSet id="6" author="rvansa">
+        <addColumn tableName="variable">
+            <column name="group" type="text" />
+        </addColumn>
+        <addColumn tableName="variable">
+            <column name="order" type="integer" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
 

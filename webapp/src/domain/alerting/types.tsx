@@ -3,6 +3,8 @@ export {}
 export type Variable = {
     id: number,
     name: string,
+    group?: string,
+    order: number,
     testid: number,
     accessors: string,
     calculation?: string,

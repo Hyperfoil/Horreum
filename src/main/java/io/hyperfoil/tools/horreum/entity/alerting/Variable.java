@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -30,6 +31,13 @@ public class Variable extends PanacheEntityBase {
 
    @NotNull
    public String name;
+
+   @Column(name = "\"group\"")
+   public String group;
+
+   @Column(name = "\"order\"")
+   @NotNull
+   public int order;
 
    @NotNull
    public String accessors;

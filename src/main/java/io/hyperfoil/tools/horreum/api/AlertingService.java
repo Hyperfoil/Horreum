@@ -401,6 +401,8 @@ public class AlertingService {
                current.delete();
             } else {
                current.name = matching.name;
+               current.group = matching.group;
+               current.order = matching.order;
                current.accessors = matching.accessors;
                current.calculation = matching.calculation;
                current.maxWindow = matching.maxWindow <= 0 ? Integer.MAX_VALUE : matching.maxWindow;
@@ -477,13 +479,20 @@ public class AlertingService {
          clientDashboard.annotations.list.clear();
       }
       int i = 0;
+      Map<String, List<Variable>> byGroup = new HashMap<>();
       for (Variable variable : variables) {
          clientDashboard.annotations.list.add(new Dashboard.Annotation(variable.name, String.valueOf(variable.id)));
-         Dashboard.Panel panel = new Dashboard.Panel(variable.name, new Dashboard.GridPos(12 * (i % 2), 9 * (i / 2), 12, 9));
-         panel.targets.add(new Target(String.valueOf(variable.id), "timeseries", "T" + i));
+         dashboard.variables.add(variable);
+         byGroup.computeIfAbsent(variable.group == null || variable.group.isEmpty() ? "" : variable.group, g -> new ArrayList<>()).add(variable);
+      }
+      for (Map.Entry<String, List<Variable>> entry : byGroup.entrySet()) {
+         Dashboard.Panel panel = new Dashboard.Panel(entry.getKey(), new Dashboard.GridPos(12 * (i % 2), 9 * (i / 2), 12, 9));
+         for (Variable variable : entry.getValue()) {
+            panel.targets.add(new Target(String.valueOf(variable.id), "timeseries", "T" + i));
+         }
          clientDashboard.panels.add(panel);
          ++i;
-         dashboard.variables.add(variable);
+
       }
       try {
          GrafanaClient.DashboardSummary response = grafana.createOrUpdateDashboard(new GrafanaClient.PostDashboardRequest(clientDashboard, true));

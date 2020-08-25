@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux'
 import {
-    ActionGroup,
     Button,
     DataList,
     DataListAction,
@@ -15,11 +14,6 @@ import {
     Tabs,
     TextInput,
 } from '@patternfly/react-core';
-import {
-    ArrowAltCircleDownIcon,
-    ArrowAltCircleUpIcon,
-    OutlinedTimesCircleIcon
-} from '@patternfly/react-icons';
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 
 import { useTester } from '../../auth'
