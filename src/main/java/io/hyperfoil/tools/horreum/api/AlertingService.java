@@ -10,12 +10,14 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -54,6 +56,7 @@ import org.jboss.logging.Logger;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.GrafanaDashboard;
+import io.hyperfoil.tools.horreum.entity.alerting.GrafanaPanel;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
@@ -425,7 +428,7 @@ public class AlertingService {
          if (dashboard == null) {
             dashboard = new GrafanaDashboard();
             dashboard.testId = testId;
-            dashboard.variables = new ArrayList<>();
+            dashboard.panels = new ArrayList<>();
 
             Test test = Test.findById(testId);
             if (test != null) {
@@ -442,7 +445,7 @@ public class AlertingService {
                }
             }
          } else {
-            dashboard.variables.clear();
+            dashboard.panels.clear();
          }
 
          if (!createDashboard(testId, variables, dashboard)) {
@@ -479,15 +482,19 @@ public class AlertingService {
          clientDashboard.annotations.list.clear();
       }
       int i = 0;
-      Map<String, List<Variable>> byGroup = new HashMap<>();
+      Map<String, List<Variable>> byGroup = new TreeMap<>();
       for (Variable variable : variables) {
          clientDashboard.annotations.list.add(new Dashboard.Annotation(variable.name, String.valueOf(variable.id)));
-         dashboard.variables.add(variable);
          byGroup.computeIfAbsent(variable.group == null || variable.group.isEmpty() ? "" : variable.group, g -> new ArrayList<>()).add(variable);
       }
       for (Map.Entry<String, List<Variable>> entry : byGroup.entrySet()) {
+         entry.getValue().sort(Comparator.comparing(v -> v.order));
          Dashboard.Panel panel = new Dashboard.Panel(entry.getKey(), new Dashboard.GridPos(12 * (i % 2), 9 * (i / 2), 12, 9));
+         GrafanaPanel gpanel = new GrafanaPanel();
+         gpanel.variables = new ArrayList<>();
+         dashboard.panels.add(gpanel);
          for (Variable variable : entry.getValue()) {
+            gpanel.variables.add(variable);
             panel.targets.add(new Target(String.valueOf(variable.id), "timeseries", "T" + i));
          }
          clientDashboard.panels.add(panel);
@@ -522,7 +529,7 @@ public class AlertingService {
          if (dashboard == null) {
             dashboard = new GrafanaDashboard();
             dashboard.testId = testId;
-            dashboard.variables = new ArrayList<>();
+            dashboard.panels = new ArrayList<>();
             if (!createDashboard(testId, Variable.list("testid", testId), dashboard)) {
                return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Cannot update Grafana dashboard.").build();
             }

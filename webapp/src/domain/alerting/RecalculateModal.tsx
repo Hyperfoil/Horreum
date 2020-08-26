@@ -12,22 +12,26 @@ import { recalculate, recalculateProgress } from './api'
 import { alertAction } from '../../alerts'
 
 type RecalculateModalProps = {
+    title: string,
+    recalculate: string,
+    cancel: string,
+    message: string,
     isOpen: boolean,
     onClose(): void,
     testId: number,
 }
 
-export default ({ isOpen, onClose, testId } : RecalculateModalProps) => {
+export default (props : RecalculateModalProps) => {
     const [progress, setProgress] = useState(-1)
     const dispatch = useDispatch()
     const timer = useRef<number>()
     const fetchProgress = () => {
-        recalculateProgress(testId).then(
+        recalculateProgress(props.testId).then(
             response => {
                 if (response.done) {
                     setProgress(-1)
                     window.clearInterval(timer.current)
-                    onClose()
+                    props.onClose()
                 } else {
                     setProgress(response.percentage)
                 }
@@ -35,43 +39,43 @@ export default ({ isOpen, onClose, testId } : RecalculateModalProps) => {
             error => {
                 setProgress(-1)
                 window.clearInterval(timer.current)
-                onClose()
+                props.onClose()
                 dispatch(alertAction("RECALC_PROGRESS", "Cannot query recalculation progress", error))
             }
         )
     }
     return (<Modal
         variant="small"
-        title="Confirm recalculation"
-        isOpen={isOpen}
+        title={props.title}
+        isOpen={props.isOpen}
         onClose={() => {
             setProgress(-1)
-            onClose()
+            props.onClose()
         }}
         actions={ progress < 0 ? [
             <Button
                 variant="primary"
                 onClick={() => {
                     setProgress(0)
-                    recalculate(testId).then(
+                    recalculate(props.testId).then(
                         _ => {
                             timer.current = window.setInterval(fetchProgress, 1000)
                         },
                         error => {
                             setProgress(-1)
-                            onClose()
+                            props.onClose()
                             dispatch(alertAction("RECALCULATION", "Failed to start recalculation", error))
                         }
                     )
                 }}
-            >Confirm recalculation</Button>,
+            >{ props.recalculate }</Button>,
             <Button
                 variant="secondary"
-                onClick={ onClose }
-            >Cancel</Button>
+                onClick={ props.onClose }
+            >{ props.cancel }</Button>
         ] : []}
     >
-        { progress < 0 && "Really drop all datapoints, calculating new ones?" }
+        { progress < 0 && props.message }
         { progress >= 0 && <Progress value={progress} title="Recalculating..." measureLocation="inside" /> }
     </Modal>)
 }

@@ -92,10 +92,11 @@ type ViewsProps = {
 export default ({ testId, testView, testOwner, funcsRef, onModified }: ViewsProps) => {
     const isTester = useTester(testOwner)
     const renderRefs = useRef(new Array<ValueGetter | undefined>(testView.components.length));
-    const updateRenders = () => view.components.forEach((c, i) => {
-         c.render = renderRefs.current[i]?.getValue()
-    })
     const [view, setView] = useState(testView)
+    const updateRenders = () => view.components.forEach((_, i) => {
+        view.components[i].render = renderRefs.current[i]?.getValue()
+   })
+
 
     useEffect(() => {
         // Perform a deep copy of the view object to prevent modifying store
@@ -173,7 +174,6 @@ export default ({ testId, testView, testOwner, funcsRef, onModified }: ViewsProp
                                 onClick={ () => {
                                     updateRenders()
                                     swap(view.components, i - 1, i)
-                                    swap(renderRefs.current, i - 1, i)
                                     c.headerOrder = i - 1;
                                     view.components[i].headerOrder = i;
                                     setView({ ...view })
@@ -197,7 +197,6 @@ export default ({ testId, testView, testOwner, funcsRef, onModified }: ViewsProp
                                 onClick={ () => {
                                     updateRenders()
                                     swap(view.components, i + 1, i)
-                                    swap(renderRefs.current, i + 1, i)
                                     c.headerOrder = i + 1;
                                     view.components[i].headerOrder = i;
                                     setView({ ...view})

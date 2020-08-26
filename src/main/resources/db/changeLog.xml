@@ -736,5 +736,55 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="7" author="rvansa">
+        <dropTable tableName="grafana_dashboard_variable" />
+        <createTable tableName="grafana_panel">
+            <column name="id" type="integer">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="order" type="integer" />
+            <column name="grafana_dashboard_uid" type="text">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_grafana_panel_dashboard_uid"
+                                 baseTableName="grafana_panel" baseColumnNames="grafana_dashboard_uid"
+                                 referencedTableName="grafana_dashboard" referencedColumnNames="uid" />
+        <createTable tableName="grafana_panel_variable">
+            <column name="grafana_panel_id" type="integer" />
+            <column name="variables_id" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="variables_order" type="integer">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="grafana_panel_variable" columnNames="grafana_panel_id, variables_order" />
+        <addForeignKeyConstraint baseTableName="grafana_panel_variable" baseColumnNames="grafana_panel_id"
+                                 constraintName="fk_grafana_panel_id"
+                                 referencedTableName="grafana_panel" referencedColumnNames="id" />
+        <addForeignKeyConstraint baseTableName="grafana_panel_variable" baseColumnNames="variables_id"
+                                 constraintName="fk_grafana_panel_variables_id"
+                                 referencedTableName="variable" referencedColumnNames="id" />
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE grafana_panel, grafana_panel_variable TO ${quarkus.datasource.username};
+            ALTER TABLE grafana_panel ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE grafana_panel_variable ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY grafana_panel_policies ON grafana_panel FOR ALL
+                USING (exists(
+                    SELECT 1 FROM test
+                    JOIN grafana_dashboard gd ON gd.testid = test.id
+                    WHERE gd.uid = grafana_dashboard_uid AND can_view(test.access, test.owner, test.token)
+                ));
+            CREATE POLICY grafana_panel_variable_policies ON grafana_panel_variable FOR ALL
+                USING (exists(
+                    SELECT 1 FROM test
+                    JOIN grafana_dashboard gd ON gd.testid = test.id
+                    JOIN grafana_panel gp ON gp.grafana_dashboard_uid = gd.uid
+                    WHERE gp.id = grafana_panel_id AND can_view(test.access, test.owner, test.token)
+                ));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

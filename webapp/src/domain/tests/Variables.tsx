@@ -205,6 +205,12 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
     </Form>
 }
 
+function swap(array: any[], i1: number, i2: number) {
+    const temp = array[i1]
+    array[i1] = array[i2]
+    array[i2] = temp
+}
+
 type VariablesProps = {
     testName: string,
     testId: number
@@ -217,6 +223,7 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
     const [variables, setVariables] = useState<VariableDisplay[]>([])
     const [groups, setGroups] = useState<string[]>([])
     const calculations = useRef(new Array<ValueGetter | undefined>())
+    const [recalcConfirm, setRecalcConfirm] = useState<(_: any) => void>()
     const dispatch = useDispatch()
     // dummy variable to cause reloading of variables
     const [ reload, setReload ] = useState(0)
@@ -264,7 +271,15 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                     dispatch(alertAction("VARIABLE_UPDATE", "Failed to update regression variables", error))
                     return Promise.reject()
                 }
-            )
+            ).then(_ => {
+                return new Promise((resolve, reject) => {
+                    // we have to pass this using function, otherwise it would call the resolve function
+                    setRecalcConfirm(() => resolve)
+                })
+            }).then(_ => {
+                console.log("done")
+                Promise.resolve()
+            })
         },
         reset: () => {
             setVariables([])
@@ -277,7 +292,6 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
     if (!variables) {
         return <Bullseye><Spinner /></Bullseye>
     }
-
     const [recalculateOpen, setRecalculateOpen] = useState(false)
     const [copyOpen, setCopyOpen ] = useState(false)
     return (<>
@@ -321,9 +335,27 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
             </div>
         </div>
         <RecalculateModal
+            isOpen={!!recalcConfirm}
+            onClose={() => {
+                if (recalcConfirm) {
+                    recalcConfirm(false)
+                }
+                setRecalcConfirm(undefined)
+            }}
+            testId={testId}
+            title="Proceed with recalculation"
+            recalculate="Recalculate"
+            cancel="Skip"
+            message="Do you want to drop all datapoints and calculate new ones, based on the updated variables?"
+            />
+        <RecalculateModal
             isOpen={recalculateOpen}
             onClose={() => setRecalculateOpen(false)}
             testId={testId}
+            title="Confirm recalculation"
+            recalculate="Recalculate"
+            cancel="cancel"
+            message="Really drop all datapoints, calculating new ones?"
             />
         <TestSelectModal
             isOpen={copyOpen}
@@ -375,6 +407,20 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                             aria-label="Settings actions"
                             isPlainButtonAction>
                             <Button
+                                style={{ width: "51%" }}
+                                isDisabled={i === 0}
+                                variant="control"
+                                onClick={() => {
+                                    variables[i - 1].calculation = calculations.current[i - 1]?.getValue()
+                                    variables[i].calculation = calculations.current[i]?.getValue()
+                                    swap(variables, i - 1, i)
+                                    setVariables([ ...variables ])
+                                    onModified(true)
+                                    console.log(variables)
+                                }}
+                            >Move up</Button>
+                            <Button
+                                style={{ width: "51%" }}
                                 variant="primary"
                                 onClick={() => {
                                     variables.splice(i, 1)
@@ -383,6 +429,18 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                                     onModified(true)
                                 }}
                             >Delete</Button>
+                            <Button
+                                style={{ width: "51%" }}
+                                isDisabled={i === variables.length - 1}
+                                variant="control"
+                                onClick={() => {
+                                    variables[i + 1].calculation = calculations.current[i + 1]?.getValue()
+                                    variables[i].calculation = calculations.current[i]?.getValue()
+                                    swap(variables, i + 1, i)
+                                    setVariables([ ...variables ])
+                                    onModified(true)
+                                }}
+                            >Move down</Button>
                         </DataListAction>
                         }
                     </DataListItemRow>

@@ -13,11 +13,15 @@ export type Variable = {
     confidence: number,
 }
 
+export type Panel = {
+    variables: Variable[],
+}
+
 export type Dashboard = {
     testId: number,
     uid: string,
     url: string,
-    variables: Variable[],
+    panels: Panel[],
 }
 
 export type DataPoint = {

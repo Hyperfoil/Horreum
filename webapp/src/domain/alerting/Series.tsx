@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {  useDispatch } from 'react-redux'
 import { fetchDashboard } from './api'
-import { Variable } from './types'
+import { Variable, Panel } from './types'
 import Changes from './Changes'
 import { alertAction } from '../../alerts'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
@@ -29,7 +29,7 @@ export default () => {
     const dispatch = useDispatch()
     const [selectedTest, setSelectedTest] = useState<SelectedTest>()
     const [dashboardUrl, setDashboardUrl] = useState("")
-    const [variables, setVariables] = useState<Variable[]>([])
+    const [panels, setPanels] = useState<Panel[]>([])
 
     useEffect(() => {
         if (!selectedTest) {
@@ -41,7 +41,7 @@ export default () => {
         history.replace(history.location.pathname + "?test=" + selectedTest)
         fetchDashboard(selectedTest.id).then(response => {
             setDashboardUrl(response.url)
-            setVariables(response.variables)
+            setPanels(response.panels)
         }, error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error)))
     }, [selectedTest])
 
@@ -53,7 +53,7 @@ export default () => {
                     placeholderText="Choose test..."
                     initialTestName={test || undefined}
                     onSelect={selection => {
-                        setVariables([])
+                        setPanels([])
                         setDashboardUrl("")
                         setSelectedTest(selection as SelectedTest)
                     }}
@@ -70,7 +70,7 @@ export default () => {
                 </div>}
             </CardHeader>
             <CardBody>
-                { selectedTest && variables && variables.map((v, i) =>
+                { selectedTest && panels && panels.map((p, i) =>
                     <DataList aria-label="test variables">
                         <DataListItem key={i} aria-labelledby="variable-name">
                             { dashboardUrl &&
@@ -84,13 +84,14 @@ export default () => {
                                 ]} />
                             </DataListItemRow>
                             }
-                            <DataListItemRow>
+                            { p.variables.map(v => <DataListItemRow>
                                 <DataListItemCells dataListCells={[
                                     <DataListCell key="variable-name">
                                         <Changes varId={v.id} testOwner={selectedTest.owner}/>
                                     </DataListCell>
                                 ]} />
                             </DataListItemRow>
+                            )}
                         </DataListItem>
                     </DataList>
                 )}
@@ -102,7 +103,7 @@ export default () => {
                         </EmptyState>
                     </Bullseye>
                 }
-                { selectedTest && variables.length == 0 &&
+                { selectedTest && panels.length == 0 &&
                     <Bullseye>
                     <EmptyState>
                         <Title headingLevel="h2">Test { selectedTest.toString() } does not define any regression variables</Title>
@@ -113,8 +114,6 @@ export default () => {
                     </EmptyState>
                 </Bullseye>
                 }
-                { /* This is a workaround for Grafana not renewing the token */ }
-                { /* dashboardUrl && <iframe src={ logoutUrl(dashboardUrl) } style={{ width: "1px", height: "1px" }} /> */ }
             </CardBody>
         </Card>
     )

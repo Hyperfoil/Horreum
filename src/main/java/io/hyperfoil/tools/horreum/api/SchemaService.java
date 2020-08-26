@@ -303,7 +303,7 @@ public class SchemaService {
          accessor = newName;
       }
       if (accessor == null || accessor.isEmpty() || schema == null || jsonpath == null) {
-         return Response.status(Response.Status.BAD_REQUEST).build();
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing accessor/schema/jsonpath").build();
       }
       if (jsonpath.startsWith("$")) {
          jsonpath = jsonpath.substring(1);
