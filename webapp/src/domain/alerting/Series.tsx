@@ -87,7 +87,7 @@ export default () => {
                             { p.variables.map(v => <DataListItemRow>
                                 <DataListItemCells dataListCells={[
                                     <DataListCell key="variable-name">
-                                        <Changes varId={v.id} testOwner={selectedTest.owner}/>
+                                        <Changes varId={v.id} name={v.name} testOwner={selectedTest.owner}/>
                                     </DataListCell>
                                 ]} />
                             </DataListItemRow>

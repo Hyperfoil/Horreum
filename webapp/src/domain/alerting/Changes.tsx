@@ -130,10 +130,11 @@ const ChangeModal = ({change, isOpen, onClose, onUpdate }: ChangeModalProps) => 
 
 type ChangesProps = {
     varId: number,
+    name: string,
     testOwner?: string,
 }
 
-export default ({ varId, testOwner } : ChangesProps) => {
+export default ({ varId, name, testOwner } : ChangesProps) => {
     const dispatch = useDispatch()
     const [isExpanded, setExpanded] = useState(false)
     const [changes, setChanges] = useState<Change[]>([])
@@ -184,7 +185,7 @@ export default ({ varId, testOwner } : ChangesProps) => {
         })
     }
     return (
-        <ExpandableSection toggleText={ isExpanded ? "Hide changes" : "Show changes" }
+        <ExpandableSection toggleText={ isExpanded ? "Hide changes in " + name : "Show changes in " + name }
                            onToggle={setExpanded}
                            isExpanded={isExpanded} >
             <Table columns={columns} data={changes} />

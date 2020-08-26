@@ -88,17 +88,12 @@ public class GrafanaService {
                return Response.status(Response.Status.BAD_REQUEST).entity("Target must be variable ID").build();
             }
             Variable variable = Variable.findById(variableId);
-            String testName = "unknown", variableName = String.valueOf(variableId);
+            String variableName = String.valueOf(variableId);
             if (variable != null) {
                variableName = variable.name;
-               // TODO: breaking service separation
-               Test test = Test.findById(variable.testId);
-               if (test != null) {
-                  testName = test.name;
-               }
             }
             TimeseriesTarget tt = new TimeseriesTarget();
-            tt.target = testName + "/" + variableName;
+            tt.target = variableName;
             result.add(tt);
             DataPoint.<DataPoint>find("variable_id = ?1 AND timestamp >= ?2 AND timestamp <= ?3", Sort.ascending("timestamp"),
                   variableId, query.range.from, query.range.to)
@@ -150,8 +145,12 @@ public class GrafanaService {
    }
 
    private AnnotationDefinition createAnnotation(Change change) {
-      String content = change.description + "<br>Confirmed: " + change.confirmed;
-      return new AnnotationDefinition("Change in run " + change.runId, content, false, change.timestamp.toEpochMilli(), 0, new String[0]);
+      StringBuilder content = new StringBuilder("Variable: ").append(change.variable.name);
+      if (change.variable.group != null) {
+         content.append(" (group ").append(change.variable.group).append(")");
+      }
+      content.append("<br>").append(change.description).append("<br>Confirmed: ").append(change.confirmed);
+      return new AnnotationDefinition("Change in run " + change.runId, content.toString(), false, change.timestamp.toEpochMilli(), 0, new String[0]);
    }
 
    public static class Query {

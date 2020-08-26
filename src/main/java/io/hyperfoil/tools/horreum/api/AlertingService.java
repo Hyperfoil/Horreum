@@ -65,6 +65,7 @@ import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
 import io.hyperfoil.tools.yaup.json.Json;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
@@ -153,7 +154,7 @@ public class AlertingService {
                lookup.setInt(1, run.testid);
                lookup.setArray(2, connection.createArrayOf("text", schemas.toArray()));
                ResultSet resultSet = lookup.executeQuery();
-               Set<String> usedAccessors = new HashSet<>();
+               Map<String, String> usedAccessors = new HashMap<>();
 
                while (resultSet.next()) {
                   int id = resultSet.getInt(1);
@@ -167,8 +168,12 @@ public class AlertingService {
                   } else {
                      extractionQuery.append(", jsonb_path_query_first(data, '");
                   }
-                  while (!usedAccessors.add(accessor)) {
-                     log.warnf("Accessor %s used for multiple schemas", accessor);
+                  for (;;) {
+                     String prev = usedAccessors.putIfAbsent(accessor, schema);
+                     if (prev == null || prev.equals(schema)) {
+                        break;
+                     }
+                     log.warnf("Accessor %s used for multiple schemas: %s, %s", accessor, schema, prev);
                      accessor = accessor + "_";
                   }
                   if (schema.equals(firstLevelSchema)) {
@@ -205,7 +210,7 @@ public class AlertingService {
                   dataPoint.timestamp = run.start;
                   if (var.calculation == null || var.calculation.isEmpty()) {
                      if (var.accessors.size() > 1) {
-                        log.errorf("Variable %d has more than one accessor (%s) but no calculation function.", var.id, var.accessors);
+                        log.errorf("Variable %s has more than one accessor (%s) but no calculation function.", variable.name, var.accessors);
                      }
                      String accessor = var.accessors.get(0);
                      String value = resultSet.getString(accessor);
@@ -216,7 +221,7 @@ public class AlertingService {
                      try {
                         dataPoint.value = Double.parseDouble(value);
                      } catch (NumberFormatException e) {
-                        log.errorf(e, "Cannot turn %s into a floating-point value", value);
+                        log.errorf(e, "Cannot turn %s into a floating-point value for variable %s", value, variable.name);
                         continue;
                      }
                   } else {
@@ -224,15 +229,20 @@ public class AlertingService {
                      if (var.accessors.size() > 1) {
                         code.append("const __obj = {\n");
                         for (String accessor : var.accessors) {
-                           code.append(accessor).append(": ").append(resultSet.getString(accessor)).append(",\n");
+                           String value = resultSet.getString(accessor);
+                           code.append(accessor).append(": ");
+                           appendNumberOrString(code, value);
+                           code.append(",\n");
                         }
                         code.append("};\n");
                      } else {
-                        code.append("const __obj = ").append(resultSet.getString(var.accessors.get(0))).append(";\n");
+                        code.append("const __obj = ");
+                        appendNumberOrString(code, resultSet.getString(var.accessors.get(0)));
+                        code.append(";\n");
                      }
                      code.append("const __func = ").append(var.calculation).append(";\n");
                      code.append("__func(__obj)");
-                     Double value = execute(code.toString());
+                     Double value = execute(code.toString(), variable.name);
                      if (value == null) {
                         continue;
                      }
@@ -263,16 +273,16 @@ public class AlertingService {
       }
    }
 
-   private List<String> columns(ResultSet resultSet) throws SQLException {
-      List<String> columns = new ArrayList<>();
-      ResultSetMetaData metaData = resultSet.getMetaData();
-      for (int i = 1; i <= metaData.getColumnCount(); ++i) {
-         columns.add(metaData.getColumnName(i));
+   private void appendNumberOrString(StringBuilder code, String value) {
+      try {
+         Double.parseDouble(value);
+         code.append(value);
+      } catch (NumberFormatException e) {
+         code.append('"').append(value).append('"');
       }
-      return columns;
    }
 
-   private Double execute(String jsCode) {
+   private Double execute(String jsCode, String name) {
       try (Context context = Context.newBuilder(new String[]{ "js"}).build()) {
          context.enter();
          try {
@@ -286,6 +296,10 @@ public class AlertingService {
                   log.warnf("Evaluation failed: Return value %s cannot be parsed into a number.", value);
                   return null;
                }
+            } else if ("undefined".equals(value.toString())) {
+               // returning undefined is intentional, don't warn
+               log.infof("Result for variable %s is undefined, skipping.", name);
+               return null;
             } else {
                log.warnf("Evaluation failed: Return value %s is not a number.", value);
                return null;
@@ -318,13 +332,17 @@ public class AlertingService {
          // The variable referenced by datapoint is a fake
          Variable variable = Variable.findById(dataPoint.variable.id);
          Change lastChange = Change.find("variable = ?1", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, 0).firstResult();
-         List<DataPoint> dataPoints;
+         PanacheQuery<DataPoint> query;
          if (lastChange == null) {
-            dataPoints = DataPoint.find("variable", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, variable.maxWindow).list();
+            query = DataPoint.find("variable", SORT_BY_TIMESTAMP_DESCENDING, variable);
          } else {
-            dataPoints = DataPoint.find("variable = ?1 AND runId >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.runId)
-                  .range(0, variable.maxWindow).list();
+            query = DataPoint.find("variable = ?1 AND timestamp >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.timestamp);
          }
+         if (variable.maxWindow > 0 && variable.maxWindow != Integer.MAX_VALUE) {
+            query = query.range(0, variable.maxWindow);
+         }
+         List<DataPoint> dataPoints = query.list();
+
          // Last datapoint is already in the list
          assert !dataPoints.isEmpty();
          DataPoint firstDatapoint = dataPoints.get(0);
@@ -604,7 +622,7 @@ public class AlertingService {
    @RolesAllowed(Roles.TESTER)
    @POST
    @Path("recalculate")
-   public Response recalculate(@QueryParam("test") Integer testId) {
+   public Response recalculate(@QueryParam("test") Integer testId, @QueryParam("notify") boolean notify) {
       if (testId == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
       }

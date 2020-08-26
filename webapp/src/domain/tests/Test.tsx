@@ -80,7 +80,7 @@ export default () => {
 
     const [saving, setSaving] = useState(false)
     const [activeTab, setActiveTab] = useState<number>(initialActiveTab(history.location))
-    const [nextTab, setNextTab] = useState(0)
+    const [nextTab, setNextTab] = useState(activeTab)
     const save = () => {
         const funcs = funcRefs[activeTab].current
         if (funcs) {
