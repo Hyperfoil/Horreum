@@ -50,6 +50,9 @@ export default (props : RecalculateModalProps) => {
         isOpen={props.isOpen}
         onClose={() => {
             setProgress(-1)
+            if (timer.current) {
+                window.clearInterval(timer.current)
+            }
             props.onClose()
         }}
         actions={ progress < 0 ? [

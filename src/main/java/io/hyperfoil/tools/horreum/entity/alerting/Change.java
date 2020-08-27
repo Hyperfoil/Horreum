@@ -45,4 +45,22 @@ public class Change extends PanacheEntityBase {
    public boolean confirmed;
 
    public String description;
+
+   public static class Event {
+      public Change change;
+      public boolean notify;
+
+      public Event(Change change, boolean notify) {
+         this.change = change;
+         this.notify = notify;
+      }
+
+      @Override
+      public String toString() {
+         return "Change.Event{" +
+               "change=" + change +
+               ", notify=" + notify +
+               '}';
+      }
+   }
 }

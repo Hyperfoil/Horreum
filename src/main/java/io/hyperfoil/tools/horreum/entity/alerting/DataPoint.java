@@ -7,6 +7,8 @@ import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
@@ -22,8 +24,9 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 public class DataPoint extends PanacheEntityBase {
    public static final String EVENT_NEW = "datapoint/new";
    @Id
+   @GeneratedValue(strategy = GenerationType.AUTO)
    @Column(columnDefinition = "SERIAL")
-   public int id;
+   public Integer id;
 
    @NotNull
    public int runId;
@@ -40,4 +43,22 @@ public class DataPoint extends PanacheEntityBase {
    @NotNull
    @ManyToOne(fetch = FetchType.LAZY)
    public Variable variable;
+
+   public static class Event {
+      public DataPoint dataPoint;
+      public boolean notify;
+
+      public Event(DataPoint dataPoint, boolean notify) {
+         this.dataPoint = dataPoint;
+         this.notify = notify;
+      }
+
+      @Override
+      public String toString() {
+         return "DataPoint.Event{" +
+               "dataPoint=" + dataPoint +
+               ", notify=" + notify +
+               '}';
+      }
+   }
 }

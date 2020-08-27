@@ -88,9 +88,13 @@ public class NotificationService {
 
    @Transactional
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
-   public void onNewChange(Change change) {
+   public void onNewChange(Change.Event event) {
+      if (!event.notify) {
+         log.debug("Notification skipped");
+         return;
+      }
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(AlertingService.HORREUM_ALERTING))) {
-         Variable variable = change.variable;
+         Variable variable = event.change.variable;
          // TODO: breaks storage/alerting separation!
          Test test = Test.findById(variable.testId);
          // Test might be null when it's private
@@ -111,7 +115,7 @@ public class NotificationService {
             if (plugin == null) {
                log.errorf("Cannot notify %s; no plugin for method %s with data %s", name, method, data);
             } else {
-               plugin.notify(testName, name, data, change);
+               plugin.notify(testName, name, data, event.change);
             }
          }
       }

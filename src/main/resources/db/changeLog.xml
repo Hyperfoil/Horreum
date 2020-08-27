@@ -786,5 +786,11 @@
                 ));
         </sql>
     </changeSet>
+
+    <changeSet id="8" author="rvansa">
+        <sql>
+            GRANT ALL ON SEQUENCE datapoint_id_seq TO ${quarkus.datasource.username};
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

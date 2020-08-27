@@ -1,22 +1,13 @@
 package io.hyperfoil.tools.horreum.api;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -26,9 +17,11 @@ import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 import javax.persistence.Query;
-import javax.sql.DataSource;
+import javax.transaction.RollbackException;
 import javax.transaction.Status;
+import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
@@ -51,6 +44,7 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
+import org.hibernate.transform.AliasToEntityMapResultTransformer;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
@@ -82,13 +76,14 @@ public class AlertingService {
    //@formatter:off
    private static final String LOOKUP_VARS =
          "WITH vars AS (" +
-         "   SELECT id, calculation, unnest(regexp_split_to_array(accessors, ';')) as accessor FROM variable" +
+         "   SELECT id, calculation, unnest(string_to_array(accessors, ';')) as accessor FROM variable" +
          "   WHERE testid = ?" +
          ") SELECT vars.id as vid, vars.calculation, vars.accessor, se.jsonpath, schema.uri  FROM vars " +
          "JOIN schemaextractor se ON se.accessor = replace(vars.accessor, '[]', '') " +
-         "JOIN schema ON schema.id = se.schema_id WHERE schema.uri = ANY(?);";
+         "JOIN schema ON schema.id = se.schema_id WHERE schema.uri = ANY(string_to_array(?, ';'));";
    //@formatter:on
-   private static final String UPLOAD_RUN = "CREATE TEMPORARY TABLE current_run AS SELECT * FROM (VALUES (?::jsonb)) as t(data);";
+   // the :::: is used instead of :: as Hibernate converts four-dot into colon
+   private static final String UPLOAD_RUN = "CREATE TEMPORARY TABLE current_run AS SELECT * FROM (VALUES (?::::jsonb)) as t(data);";
    static final String HORREUM_ALERTING = "horreum.alerting";
    private static final Sort SORT_BY_TIMESTAMP_DESCENDING = Sort.by("timestamp", Sort.Direction.Descending);
 
@@ -97,9 +92,6 @@ public class AlertingService {
 
    @Inject
    EntityManager em;
-
-   @Inject
-   DataSource dataSource;
 
    @Inject
    EventBus eventBus;
@@ -124,6 +116,10 @@ public class AlertingService {
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
+      onNewRun(run, true);
+   }
+
+   private void onNewRun(Run run, boolean notify) {
       log.infof("Received run ID %d", run.id);
       String firstLevelSchema = run.data.getString("$schema");
       List<String> schemas = run.data.values().stream()
@@ -142,138 +138,144 @@ public class AlertingService {
       // We'll use the database as a library function
       StringBuilder extractionQuery = new StringBuilder("SELECT 1");
       Map<Integer, VarInfo> vars = new HashMap<>();
-      try (Connection connection = dataSource.getConnection();
-           @SuppressWarnings("unused") CloseMeJdbc closeMe = sqlService.withRoles(connection, roles)) {
+      List<DataPoint> newDataPoints = new ArrayList<>();
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, roles)) {
 
-         try (PreparedStatement setRun = connection.prepareStatement(UPLOAD_RUN)) {
-            setRun.setString(1, run.data.toString());
-            setRun.execute();
-         } finally {
+         Query setRun = em.createNativeQuery(UPLOAD_RUN);
+         setRun.setParameter(1, run.data.toString());
+         setRun.executeUpdate();
+         try {
+            Query lookup = em.createNativeQuery(LOOKUP_VARS);
+            lookup.setParameter(1, run.testid);
+            lookup.setParameter(2, String.join(";", schemas));
+            @SuppressWarnings("unchecked")
+            List<Object[]> varSelection = lookup.getResultList();
+            Map<String, String> usedAccessors = new HashMap<>();
 
-            try (PreparedStatement lookup = connection.prepareStatement(LOOKUP_VARS)) {
-               lookup.setInt(1, run.testid);
-               lookup.setArray(2, connection.createArrayOf("text", schemas.toArray()));
-               ResultSet resultSet = lookup.executeQuery();
-               Map<String, String> usedAccessors = new HashMap<>();
+            ACCESSOR_LOOP:
+            for (Object[] row : varSelection) {
+               int id = (Integer) row[0];
+               String calc = (String) row[1];
+               String accessor = (String) row[2];
+               String jsonpath = (String) row[3];
+               String schema = (String) row[4];
+               VarInfo var = vars.computeIfAbsent(id, i -> new VarInfo(i, calc));
 
-               while (resultSet.next()) {
-                  int id = resultSet.getInt(1);
-                  String calc = resultSet.getString(2);
-                  String accessor = resultSet.getString(3);
-                  String jsonpath = resultSet.getString(4);
-                  String schema = resultSet.getString(5);
-                  if (SchemaExtractor.isArray(accessor)) {
-                     extractionQuery.append(", jsonb_path_query_array(data, '");
-                     accessor = SchemaExtractor.arrayName(accessor);
-                  } else {
-                     extractionQuery.append(", jsonb_path_query_first(data, '");
-                  }
-                  for (;;) {
-                     String prev = usedAccessors.putIfAbsent(accessor, schema);
-                     if (prev == null || prev.equals(schema)) {
-                        break;
-                     }
-                     log.warnf("Accessor %s used for multiple schemas: %s, %s", accessor, schema, prev);
-                     accessor = accessor + "_";
-                  }
-                  if (schema.equals(firstLevelSchema)) {
-                     extractionQuery.append("$");
-                  } else {
-                     extractionQuery.append("$.*");
-                  }
-                  extractionQuery.append(jsonpath).append("'::jsonpath)#>>'{}' as ").append(accessor);
-                  VarInfo var = vars.computeIfAbsent(id, i -> new VarInfo(i, calc));
-                  var.accessors.add(accessor);
+               boolean isArray = SchemaExtractor.isArray(accessor);
+               if (isArray) {
+                  // we have to allow select both as first match and as an array, while keeping only one in the result
+                  accessor = SchemaExtractor.arrayName(accessor) + "___arr";
                }
-               resultSet.close();
+
+               for (; ; ) {
+                  String prev = usedAccessors.putIfAbsent(accessor, schema);
+                  if (prev == null) {
+                     break;
+                  } else if (prev.equals(schema)) {
+                     var.accessors.add(accessor);
+                     continue ACCESSOR_LOOP;
+                  }
+                  log.warnf("Accessor %s used for multiple schemas: %s, %s", accessor, schema, prev);
+                  accessor = accessor + "_";
+               }
+               if (isArray) {
+                  extractionQuery.append(", jsonb_path_query_array(data, '");
+               } else {
+                  extractionQuery.append(", jsonb_path_query_first(data, '");
+               }
+               if (schema.equals(firstLevelSchema)) {
+                  extractionQuery.append("$");
+               } else {
+                  extractionQuery.append("$.*");
+               }
+               // four colons to escape it for Hibernate
+               extractionQuery.append(jsonpath).append("'::::jsonpath)#>>'{}' as ").append(accessor);
+               var.accessors.add(accessor);
             }
             extractionQuery.append(" FROM current_run");
 
-            List<DataPoint> newDataPoints = new ArrayList<>();
-            try (PreparedStatement extraction = connection.prepareStatement(extractionQuery.toString())) {
-               ResultSet resultSet = extraction.executeQuery();
-               if (!resultSet.next()) {
-                  log.errorf("Run %d does not exist in the database!", run.id);
-                  //noinspection ReturnInsideFinallyBlock
-                  return;
+            Query extraction = em.createNativeQuery(extractionQuery.toString());
+            //noinspection deprecation
+            extraction.unwrap(org.hibernate.query.Query.class).setResultTransformer(AliasToEntityMapResultTransformer.INSTANCE);
+            Map<String, String> extracted;
+            try {
+               extracted = (Map<String, String>) extraction.getSingleResult();
+            } catch (NoResultException e) {
+               log.errorf("Run %d does not exist in the database!", run.id);
+               return;
+            }
+            for (VarInfo var : vars.values()) {
+               if (var.accessors.isEmpty()) {
+                  continue;
                }
-               for (VarInfo var : vars.values()) {
-                  if (var.accessors.isEmpty()) {
+               DataPoint dataPoint = new DataPoint();
+               // TODO: faking the variable
+               Variable variable = new Variable();
+               variable.id = var.id;
+               dataPoint.variable = variable;
+               dataPoint.runId = run.id;
+               dataPoint.timestamp = run.start;
+               if (var.calculation == null || var.calculation.isEmpty()) {
+                  if (var.accessors.size() > 1) {
+                     log.errorf("Variable %s has more than one accessor (%s) but no calculation function.", variable.name, var.accessors);
+                  }
+                  String accessor = var.accessors.get(0);
+                  String value = extracted.get(accessor.toLowerCase());
+                  if (value == null) {
+                     log.infof("Null value for %s in run %s, accessor %s - datapoint is not created", variable.name, run.id, accessor);
                      continue;
                   }
-                  DataPoint dataPoint = new DataPoint();
-                  // TODO: faking the variable
-                  Variable variable = new Variable();
-                  variable.id = var.id;
-                  dataPoint.variable = variable;
-                  dataPoint.runId = run.id;
-                  dataPoint.timestamp = run.start;
-                  if (var.calculation == null || var.calculation.isEmpty()) {
-                     if (var.accessors.size() > 1) {
-                        log.errorf("Variable %s has more than one accessor (%s) but no calculation function.", variable.name, var.accessors);
-                     }
-                     String accessor = var.accessors.get(0);
-                     String value = resultSet.getString(accessor);
-                     if (value == null) {
-                        log.infof("Null value for %s in run %s, accessor %s - datapoint is not created", variable.name, run.id, accessor);
-                        continue;
-                     }
-                     try {
-                        dataPoint.value = Double.parseDouble(value);
-                     } catch (NumberFormatException e) {
-                        log.errorf(e, "Cannot turn %s into a floating-point value for variable %s", value, variable.name);
-                        continue;
-                     }
-                  } else {
-                     StringBuilder code = new StringBuilder();
-                     if (var.accessors.size() > 1) {
-                        code.append("const __obj = {\n");
-                        for (String accessor : var.accessors) {
-                           String value = resultSet.getString(accessor);
-                           code.append(accessor).append(": ");
-                           appendNumberOrString(code, value);
-                           code.append(",\n");
-                        }
-                        code.append("};\n");
-                     } else {
-                        code.append("const __obj = ");
-                        appendNumberOrString(code, resultSet.getString(var.accessors.get(0)));
-                        code.append(";\n");
-                     }
-                     code.append("const __func = ").append(var.calculation).append(";\n");
-                     code.append("__func(__obj)");
-                     Double value = execute(code.toString(), variable.name);
-                     if (value == null) {
-                        continue;
-                     }
-                     dataPoint.value = value;
+                  try {
+                     dataPoint.value = Double.parseDouble(value);
+                  } catch (NumberFormatException e) {
+                     log.errorf(e, "Cannot turn %s into a floating-point value for variable %s", value, variable.name);
+                     continue;
                   }
-                  newDataPoints.add(dataPoint);
+               } else {
+                  StringBuilder code = new StringBuilder();
+                  if (var.accessors.size() > 1) {
+                     code.append("const __obj = {\n");
+                     for (String accessor : var.accessors) {
+                        String value = extracted.get(accessor.toLowerCase());
+                        if (accessor.endsWith("___arr")) {
+                           code.append(accessor, 0, accessor.length() - 6);
+                        } else {
+                           code.append(accessor);
+                        }
+                        code.append(": ");
+                        appendNumberOrString(code, value);
+                        code.append(",\n");
+                     }
+                     code.append("};\n");
+                  } else {
+                     code.append("const __obj = ");
+                     appendNumberOrString(code, extracted.get(var.accessors.get(0).toLowerCase()));
+                     code.append(";\n");
+                  }
+                  code.append("const __func = ").append(var.calculation).append(";\n");
+                  code.append("__func(__obj)");
+                  Double value = execute(code.toString(), variable.name);
+                  if (value == null) {
+                     continue;
+                  }
+                  dataPoint.value = value;
                }
-            } finally {
-               try (PreparedStatement dropRun = connection.prepareStatement("DROP TABLE current_run")) {
-                  dropRun.execute();
-               }
+               dataPoint.persist();
+               publishLater(DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
             }
-
-            // TODO: maybe do this through entity manager?
-            for (DataPoint dataPoint : newDataPoints) {
-               try (PreparedStatement insert = connection.prepareStatement("INSERT INTO datapoint (variable_id, runid, timestamp, value) VALUES (?, ?, ?, ?);")) {
-                  insert.setInt(1, dataPoint.variable.id);
-                  insert.setInt(2, dataPoint.runId);
-                  insert.setTimestamp(3, Timestamp.from(dataPoint.timestamp));
-                  insert.setDouble(4, dataPoint.value);
-                  insert.execute();
-               }
-               eventBus.publish(DataPoint.EVENT_NEW, dataPoint);
-            }
+         } catch (Throwable t) {
+            log.error("Fucked up", t);
+         } finally {
+            em.createNativeQuery("DROP TABLE current_run").executeUpdate();
          }
-      } catch (SQLException e) {
-         log.error("SQL commands failed", e);
       }
    }
 
    private void appendNumberOrString(StringBuilder code, String value) {
+      if (value == null) {
+         code.append("null");
+         return;
+      }
       try {
          Double.parseDouble(value);
          code.append(value);
@@ -296,6 +298,10 @@ public class AlertingService {
                   log.warnf("Evaluation failed: Return value %s cannot be parsed into a number.", value);
                   return null;
                }
+            } else if (value.isNull()) {
+               // returning null is intentional or the data does not exist, don't warn
+               log.infof("Result for variable %s is null, skipping.", name);
+               return null;
             } else if ("undefined".equals(value.toString())) {
                // returning undefined is intentional, don't warn
                log.infof("Result for variable %s is undefined, skipping.", name);
@@ -326,16 +332,25 @@ public class AlertingService {
 
    @Transactional
    @ConsumeEvent(value = DataPoint.EVENT_NEW, blocking = true)
-   public void onNewDataPoint(DataPoint dataPoint) {
-      log.infof("Processing new datapoint for run %d, variable %d", dataPoint.runId, dataPoint.variable.id);
+   public void onNewDataPoint(DataPoint.Event event) {
+      DataPoint dataPoint = event.dataPoint;
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
          // The variable referenced by datapoint is a fake
          Variable variable = Variable.findById(dataPoint.variable.id);
+         log.infof("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.runId,
+               dataPoint.variable.id, variable != null ? variable.name : "<unknown>", dataPoint.value);
          Change lastChange = Change.find("variable = ?1", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, 0).firstResult();
          PanacheQuery<DataPoint> query;
          if (lastChange == null) {
             query = DataPoint.find("variable", SORT_BY_TIMESTAMP_DESCENDING, variable);
          } else {
+            if (lastChange.timestamp.compareTo(dataPoint.timestamp) > 0) {
+               // We won't revision changes until next variable recalculation
+               log.infof("Ignoring datapoint %d from %s as there is a newer change %d from %s.",
+                     dataPoint.id, dataPoint.timestamp, lastChange.id, lastChange.timestamp);
+               return;
+            }
+            log.infof("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
             query = DataPoint.find("variable = ?1 AND timestamp >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.timestamp);
          }
          if (variable.maxWindow > 0 && variable.maxWindow != Integer.MAX_VALUE) {
@@ -344,9 +359,16 @@ public class AlertingService {
          List<DataPoint> dataPoints = query.list();
 
          // Last datapoint is already in the list
-         assert !dataPoints.isEmpty();
+         if (dataPoints.isEmpty()) {
+            log.error("The published datapoint should be already in the list");
+            return;
+         }
          DataPoint firstDatapoint = dataPoints.get(0);
-         assert Math.abs(firstDatapoint.value - dataPoint.value) < 0.000001;
+         if (!firstDatapoint.id.equals(dataPoint.id)) {
+            log.infof("Ignoring datapoint %d from %s as there's a newer datapoint %d from %s",
+                  dataPoint.id, dataPoint.timestamp, firstDatapoint.id, firstDatapoint.timestamp);
+            return;
+         }
          // From 1 result we cannot estimate stddev either, so it's not useful
          if (dataPoints.size() <= 2) {
             log.infof("Criterion %d has too few data (%d datapoints), skipping analysis", variable.id, dataPoints.size());
@@ -361,9 +383,10 @@ public class AlertingService {
             change.variable = firstDatapoint.variable;
             change.timestamp = firstDatapoint.timestamp;
             change.runId = firstDatapoint.runId;
-            change.description = "Last datapoint is out of deviation range";
+            change.description = "Last datapoint is out of deviation range: value=" +
+                  dataPoint.value + ", mean=" + statistics.getMean() + ", stddev=" + statistics.getStandardDeviation();
             em.persist(change);
-            eventBus.publish(Change.EVENT_NEW, change);
+            publishLater(Change.EVENT_NEW, new Change.Event(change, event.notify));
          } else {
             double lowestPValue = 1.0;
             int changeIndex = -1;
@@ -386,9 +409,30 @@ public class AlertingService {
                change.description = String.format("Change detected with confidence %.3f%%", (1 - lowestPValue) * 100);
                log.infof("T-test found likelihood of %f%% that there's a change at run ID %d", lowestPValue * 100, change.runId);
                em.persist(change);
-               eventBus.publish(Change.EVENT_NEW, change);
+               publishLater(Change.EVENT_NEW, new Change.Event(change, event.notify));
             }
          }
+      }
+   }
+
+   private void publishLater(String eventName, Object event) {
+      try {
+         tm.getTransaction().registerSynchronization(new Synchronization() {
+            @Override
+            public void beforeCompletion() {
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+               if (status == Status.STATUS_COMMITTED || status == Status.STATUS_COMMITTING) {
+                  eventBus.publish(eventName, event);
+               }
+            }
+         });
+      } catch (RollbackException e) {
+         log.debug("Not publishing the event as the transaction has been marked rollback-only");
+      } catch (SystemException e) {
+         log.errorf(e, "Failed to publish event %s: %s after transaction completion", eventName, event);
       }
    }
 
@@ -603,9 +647,10 @@ public class AlertingService {
          tm.begin();
          try {
             return supplier.get();
-         } catch (Exception e) {
+         } catch (Throwable t) {
+            log.error("Failure in transaction", t);
             tm.setRollbackOnly();
-            throw e;
+            throw t;
          } finally {
             if (tm.getStatus() == Status.STATUS_ACTIVE) {
                tm.commit();
@@ -636,7 +681,7 @@ public class AlertingService {
             }
             try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
                @SuppressWarnings("unchecked")
-               List<Integer> ids = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, testId).getResultList();
+               List<Integer> ids = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 order by start").setParameter(1, testId).getResultList();
                DataPoint.delete("runId in ?1", ids);
                Change.delete("runId in ?1 AND confirmed = false", ids);
                return ids;
@@ -650,7 +695,7 @@ public class AlertingService {
                withTx(() -> {
                   try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
                      Run run = Run.findById(runId);
-                     onNewRun(run);
+                     onNewRun(run, false);
                   }
                   return null;
                });
@@ -675,18 +720,6 @@ public class AlertingService {
       json.add("percentage", progress == null ? 100 : progress);
       json.add("done", progress == null);
       return Response.ok(json).build();
-   }
-
-   @RolesAllowed(Roles.ADMIN)
-   @POST
-   @Path("testNewChange")
-   public void testNewChange() {
-      Change c = new Change();
-      c.timestamp = Instant.now();
-      c.runId = 1;
-      c.variable = Variable.findAll().firstResult();
-      c.description = "Foobar";
-      eventBus.publish(Change.EVENT_NEW, c);
    }
 
    private static class VarInfo {
