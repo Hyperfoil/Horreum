@@ -4,6 +4,7 @@ import io.agroal.api.AgroalDataSource;
 import io.hyperfoil.tools.horreum.JsFetch;
 import io.hyperfoil.tools.horreum.JsProxyObject;
 import io.hyperfoil.tools.horreum.entity.converter.JsonContext;
+import io.hyperfoil.tools.horreum.entity.converter.JsonResultTransformer;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
@@ -28,6 +29,7 @@ import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -47,6 +49,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -69,9 +72,6 @@ public class RunService {
 
    private static final int WITH_THRESHOLD = 2;
 
-   private static final String FILTER_JSONPATH_EXISTS = "SELECT id FROM run WHERE jsonb_path_exists(data, ? ::jsonpath)";
-   private static final String FILTER_JSONPATH_EXISTS_WITH_ROLE = "SELECT id FROM run WHERE jsonb_path_exists(data, ? ::jsonpath) AND owner = ANY(?)";
-
    //@formatter:off
    private static final String FIND_AUTOCOMPLETE = "SELECT * FROM (" +
             "SELECT DISTINCT jsonb_object_keys(q) AS key " +
@@ -80,9 +80,9 @@ public class RunService {
          "WHERE keys.key LIKE CONCAT(?, '%');";
    // TODO: view_data is fetched even for vcid that does not belong to the view
    // select vc.id from view join viewcomponent vc on vc.view_id = view.id where view.test_id = 12
-   private static final String TEST_RUN_VIEW = "SELECT run.id, run.start, run.stop, run.testid, run.owner, (" +
+   private static final String TEST_RUN_VIEW = "SELECT run.id, run.start, run.stop, run.owner, (" +
          "    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) FROM run_schemas rs WHERE run.id = rs.runid GROUP BY schemaid" +
-         ")::text as schemas, jsonb_object_agg(coalesce(view_data.vcid, 0), view_data.object) as view, run.trashed, run.description FROM run " +
+         ")::::text as schemas, jsonb_object_agg(coalesce(view_data.vcid, 0), view_data.object)#>>'{}' as view, run.trashed, run.description FROM run " +
          "LEFT JOIN view_data ON view_data.runid = run.id " +
          "WHERE run.testid = ? ";
    private static final String TEST_RUN_VIEW_GROUPING = " GROUP BY run.id, run.start, run.stop, run.testid, run.owner";
@@ -464,49 +464,36 @@ public class RunService {
    }
 
    private void addPaging(StringBuilder sql, Integer limit, Integer page, String sort, String direction) {
+      addOrderBy(sql, sort, direction);
+      addLimitOffset(sql, limit, page);
+   }
+
+   private void addOrderBy(StringBuilder sql, String sort, String direction) {
       sort = sort == null || sort.trim().isEmpty() ? "start" : sort;
       direction = direction == null || direction.trim().isEmpty() ? "Ascending" : direction;
       if (sort != null) {
-         sql.append(" order by " + sort);
-         if (direction != null) {
-            if ("Ascending".equalsIgnoreCase(direction)) {
-               sql.append(" ASC");
-            } else {
-               sql.append(" DESC");
-            }
-         }
-      }
-      if (limit != null && limit > 0) {
-         sql.append(" limit " + limit);
-         if (page != null && page >= 0) {
-            sql.append(" offset " + (limit * page));
-         }
+         sql.append(" ORDER BY " + sort);
+         addDirection(sql, direction);
       }
    }
 
-   @PermitAll
-   @GET
-   @Path("list")
-   public Response list(@QueryParam("limit") Integer limit,
-                    @QueryParam("page") Integer page,
-                    @QueryParam("sort") String sort,
-                    @QueryParam("direction") String direction,
-                    @QueryParam("trashed") boolean trashed) {
-      StringBuilder sql = new StringBuilder("select ")
-         .append("run.id,start,stop,testId,run.owner,run.access,run.token,test.name as testname,run.trashed,run.description ")
-         .append("from run inner join test on run.testId = test.id");
-      if (!trashed) {
-         sql.append(" AND NOT run.trashed");
+   private void addDirection(StringBuilder sql, String direction) {
+      if (direction != null) {
+         if ("Ascending".equalsIgnoreCase(direction)) {
+            sql.append(" ASC");
+         } else {
+            sql.append(" DESC");
+         }
       }
-      addPaging(sql, limit, page, sort, direction);
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           Statement statement = connection.createStatement()){
-         statement.executeQuery(sql.toString());
-         return Response.ok(SqlService.fromResultSet(statement.getResultSet())).build();
-      } catch (SQLException e) {
-         log.error("/list failed", e);
-         return Response.serverError().entity(Json.fromThrowable(e)).build();
+      sql.append(" NULLS LAST");
+   }
+
+   private void addLimitOffset(StringBuilder sql, Integer limit, Integer page) {
+      if (limit != null && limit > 0) {
+         sql.append(" limit " + limit);
+         if (page != null && page >= 0) {
+            sql.append(" offset " + (limit * (page - 1)));
+         }
       }
    }
 
@@ -580,81 +567,93 @@ public class RunService {
 
    @PermitAll
    @GET
-   @Path("filter")
-   public Response filter(@QueryParam("query") String query,
-                          @QueryParam("matchAll") boolean matchAll,
-                          @QueryParam("roles") String roles) {
-      if ((query == null || query.isEmpty()) && !hasRolesParam(roles)) {
-         return Response.noContent().build();
-      }
-      query = query.trim();
-
-      try (Connection connection = dataSource.getConnection()) {
-         PreparedStatement statement = null;
-         try (CloseMeJdbc h = sqlService.withRoles(connection, identity)){
-            if (!identity.isAnonymous() && hasRolesParam(roles)) {
-               statement = connection.prepareStatement(FILTER_JSONPATH_EXISTS_WITH_ROLE);
-               Object[] actualRoles;
-               if (roles.equals("__my")) {
-                  actualRoles = identity.getRoles().toArray();
-               } else {
-                  actualRoles = new Object[]{ roles };
-               }
-               statement.setArray(2, connection.createArrayOf("text", actualRoles));
-            } else {
-               statement = connection.prepareStatement(FILTER_JSONPATH_EXISTS);
-            }
-
-            if (query == null || query.isEmpty()) {
-               statement.setString(1, "$");
-            } else if (query.startsWith("$")) {
-               statement.setString(1, query);
-            } else if (query.startsWith("@")) {
-               statement.setString(1, "$.** ? (" + query + ")");
-            } else {
-               Set<Integer> ids = null;
-               for (String s : query.split("([ \t\n,])|OR")) {
-                  if (s.isEmpty()) {
-                     continue;
-                  }
-                  statement.setString(1, "$.**." + s);
-                  ResultSet rs = statement.executeQuery();
-                  if (matchAll) {
-                     Set<Integer> keyIds = new HashSet<>();
-                     while (rs.next()) {
-                        keyIds.add(rs.getInt(1));
-                     }
-                     if (ids == null) {
-                        ids = keyIds;
-                     } else {
-                        ids.retainAll(keyIds);
-                     }
-                  } else {
-                     if (ids == null) {
-                        ids = new HashSet<>();
-                     }
-                     while (rs.next()) {
-                        ids.add(rs.getInt(1));
-                     }
-                  }
-               }
-               Json.ArrayBuilder array = Json.array();
-               ids.forEach(array::add);
-               return Response.ok(array.build()).build();
-            }
-            ResultSet rs = statement.executeQuery();
-            Json.ArrayBuilder array = Json.array();
-            while (rs.next()) {
-               array.add(rs.getInt(1));
-            }
-            return Response.ok(array.build()).build();
-         } finally {
-            if (statement != null) {
-               statement.close();
-            }
+   @Path("list")
+   public Response list(@QueryParam("query") String query,
+                        @QueryParam("matchAll") boolean matchAll,
+                        @QueryParam("roles") String roles,
+                        @QueryParam("trashed") boolean trashed,
+                        @QueryParam("limit") Integer limit,
+                        @QueryParam("page") Integer page,
+                        @QueryParam("sort") String sort,
+                        @QueryParam("direction") String direction) {
+      StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, run.owner, run.access, run.token, test.name as testname, run.trashed, run.description FROM run JOIN test on test.id = run.testId WHERE ");
+      String[] queryParts;
+      boolean whereStarted = false;
+      if (query == null || query.isEmpty()) {
+         queryParts = new String[0];
+      } else {
+         query = query.trim();
+         if (query.startsWith("$") || query.startsWith("@")) {
+            queryParts = new String[] { query };
+         } else {
+            queryParts = query.split("([ \t\n,]+)|\\bOR\\b");
          }
-      } catch (SQLException e) {
-         return Response.status(400).entity("Failed processing query '" + query + "':\n" + e.getLocalizedMessage()).build();
+         sql.append("(");
+         for (int i = 0; i < queryParts.length; ++i) {
+            if (i != 0) {
+               sql.append(matchAll ? " AND " : " OR ");
+            }
+            sql.append("jsonb_path_exists(data, ?").append(i + 1).append(" ::::jsonpath)");
+         }
+         sql.append(")");
+         whereStarted = true;
+      }
+
+      if (!identity.isAnonymous() && hasRolesParam(roles)) {
+         if (whereStarted) {
+            sql.append(" AND ");
+         }
+         sql.append(" run.owner = ANY(string_to_array(?").append(queryParts.length + 1).append(", ';')) AND (");
+         whereStarted = true;
+      }
+      if (!trashed) {
+         if (whereStarted) {
+            sql.append(" AND ");
+         }
+         sql.append(" trashed = false ");
+      }
+      addPaging(sql, limit, page, sort, direction);
+
+      Query sqlQuery = em.createNativeQuery(sql.toString());
+      for (int i = 0; i < queryParts.length; ++i) {
+         if (queryParts[i].startsWith("$")) {
+            sqlQuery.setParameter(i + 1, queryParts[i]);
+         } else if (queryParts[i].startsWith("@")) {
+            sqlQuery.setParameter(i + 1, "   $.** ? (" + queryParts[i] + ")");
+         } else {
+            sqlQuery.setParameter(i + 1, "$.**." + queryParts[i]);
+         }
+      }
+
+      if (!identity.isAnonymous() && hasRolesParam(roles)) {
+         String actualRoles;
+         if (roles.equals("__my")) {
+            actualRoles = String.join(";", identity.getRoles());
+         } else {
+            actualRoles = roles;
+         }
+         sqlQuery.setParameter(queryParts.length + 1, actualRoles);
+      }
+
+      sqlQuery.unwrap(org.hibernate.query.Query.class).setResultTransformer(JsonResultTransformer.INSTANCE);
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)){
+         Json runs = new Json(true);
+         sqlQuery.getResultList().forEach(runs::add);
+         Json result = new Json.MapBuilder()
+               // TODO: total does not consider the query but evaluating all the expressions would be expensive
+               .add("total", trashed ? Run.count() : Run.count("trashed = false"))
+               .add("runs", runs)
+               .build();
+         return Response.ok(result).build();
+      }
+   }
+
+   @PermitAll
+   @GET
+   @Path("count")
+   public long runCount() {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         return Run.count();
       }
    }
 
@@ -671,26 +670,32 @@ public class RunService {
                             @QueryParam("sort") String sort,
                             @QueryParam("direction") String direction,
                             @QueryParam("trashed") boolean trashed) {
-      // TODO: this is combining EntityManager and JDBC access :-/
       StringBuilder sql = new StringBuilder(TEST_RUN_VIEW);
       if (!trashed) {
          sql.append(" AND NOT run.trashed ");
       }
       sql.append(TEST_RUN_VIEW_GROUPING);
+      if (sort.startsWith("view_data:")) {
+         String accessor = sort.substring(sort.indexOf(':', 10) + 1);
+         sql.append(", view_data.object ORDER BY");
+         // prefer numeric sort
+         sql.append(" to_double(jsonb_path_query_first(view_data.object, '$.").append(accessor).append("')#>>'{}')");
+         addDirection(sql, direction);
+         sql.append(", jsonb_path_query_first(view_data.object, '$.").append(accessor).append("')#>>'{}'");
+         addDirection(sql, direction);
+      } else {
+         addOrderBy(sql, sort, direction);
+      }
+      addLimitOffset(sql, limit, page);
       Test test;
       try (CloseMe h = sqlService.withRoles(em, identity)) {
          test = Test.find("id", testId).firstResult();
-      }
-      // TODO: use parameters in paging
-      addPaging(sql, limit, page, sort, direction);
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           PreparedStatement statement = connection.prepareStatement(sql.toString())){
-         statement.setInt(1, testId);
-         ResultSet resultSet = SqlService.execute(statement);
-         Json.ArrayBuilder jsonResult = Json.array();
-         while (resultSet.next()) {
-            String viewString = resultSet.getString(7);
+         Query query = em.createNativeQuery(sql.toString());
+         query.setParameter(1, testId);
+         List<Object[]> resultList = query.getResultList();
+         Json.ArrayBuilder runs = Json.array();
+         for (Object[] row : resultList) {
+            String viewString = (String) row[5];
             Json unorderedView = viewString == null ? Json.map().build() : Json.fromString(viewString);
             Json.ArrayBuilder view = Json.array();
             if (test.defaultView != null) {
@@ -712,23 +717,24 @@ public class RunService {
                   }
                }
             }
-            String schemas = resultSet.getString(6);
-            jsonResult.add(Json.map()
-                  .add("id", resultSet.getInt(1))
-                  .add("start", resultSet.getTimestamp(2).getTime())
-                  .add("stop", resultSet.getTimestamp(3).getTime())
-                  .add("testid", resultSet.getInt(4))
-                  .add("owner", resultSet.getString(5))
+            String schemas = (String) row[4];
+            runs.add(Json.map()
+                  .add("id", row[0])
+                  .add("start", ((Timestamp) row[1]).getTime())
+                  .add("stop", ((Timestamp) row[2]).getTime())
+                  .add("testid", testId)
+                  .add("owner", row[3])
                   .add("schema", schemas == null ? null : Json.fromString(schemas))
                   .add("view", view.build())
-                  .add("trashed", resultSet.getBoolean(8))
-                  .add("description", resultSet.getString(9))
+                  .add("trashed", row[6])
+                  .add("description", row[7])
                   .build());
          }
-         return Response.ok(jsonResult.build()).build();
-      } catch (SQLException e) {
-         log.errorf(e, "GET /list/testId failed, query was:\n%s", sql.toString());
-         return Response.serverError().entity(Json.fromThrowable(e)).build();
+         Json response = new Json.MapBuilder()
+               .add("runs", runs.build())
+               .add("total", trashed ? Run.count("testid = ?1", testId) : Run.count("testid = ?1 AND trashed = false", testId))
+               .build();
+         return Response.ok(response).build();
       }
    }
 

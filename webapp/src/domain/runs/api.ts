@@ -1,25 +1,25 @@
 import { fetchApi } from '../../services/api';
 import { Access } from '../../auth';
+import { PaginationInfo } from '../../utils'
+
+function paginationParams(pagination: PaginationInfo) {
+    return `page=${pagination.page}&limit=${pagination.perPage}&sort=${pagination.sort}&direction=${pagination.direction}`
+}
 
 const base = "/api/run"
 const endPoints = {
 
     getRun: (runId: number, token?: string) => `${base}/${runId}${token ? '?token=' + token : ''}`,
     addRun: () => `${base}/`,
-    listAll: (trashed?: boolean) => `${base}/list?trashed=${!!trashed}`,
-    filter: (query: string, matchAll: boolean, roles: string) => `${base}/filter?query=${query}&matchAll=${matchAll}&roles=${roles}`,
+    list: (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) => `${base}/list?${paginationParams(pagination)}&query=${query}&matchAll=${matchAll}&roles=${roles}&trashed=${trashed}`,
     suggest: (query: string, roles: string) => `${base}/autocomplete?query=${query}&roles=${roles}`,
     js: (runId: number, token?: string) => `${base}/${runId}/js`,
-    listByTest: (testId: number, trashed?: boolean) => `${base}/list/${testId}?trashed=${!!trashed}`,
+    listByTest: (testId: number, pagination: PaginationInfo, trashed?: boolean) => `${base}/list/${testId}?${paginationParams(pagination)}&trashed=${!!trashed}`,
     resetToken: (runId: number) => `${base}/${runId}/resetToken`,
     dropToken: (runId: number) => `${base}/${runId}/dropToken`,
     updateAccess: (runId: number, owner: string, access: Access) => `${base}/${runId}/updateAccess?owner=${owner}&access=${access}`,
     trash: (runId: number, isTrashed: boolean) => `${base}/${runId}/trash?isTrashed=${isTrashed}`,
     description: (runId: number) => `${base}/${runId}/description`
-}
-
-export const all = (trashed?: boolean) => {
-    return fetchApi(endPoints.listAll(trashed),null,'get');
 }
 
 export const get = (id: number, token?: string, js?: any) => {
@@ -30,9 +30,9 @@ export const get = (id: number, token?: string, js?: any) => {
     }
 }
 
-export const byTest = (id: number, trashed?: boolean) => fetchApi(endPoints.listByTest(id, trashed), null, 'get');
+export const byTest = (id: number, pagination: PaginationInfo, trashed?: boolean) => fetchApi(endPoints.listByTest(id, pagination, trashed), null, 'get');
 
-export const filter = (query: string, matchAll: boolean, roles: string) => fetchApi(endPoints.filter(query, matchAll, roles),null,'get')
+export const list = (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) => fetchApi(endPoints.list(query, matchAll, roles, pagination, trashed),null,'get')
 
 export const suggest = (query: string, roles: string) => fetchApi(endPoints.suggest(query, roles), null, 'get');
 

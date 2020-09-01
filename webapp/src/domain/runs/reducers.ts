@@ -1,7 +1,7 @@
 import * as actionTypes from './actionTypes';
 import { List, Map } from 'immutable';
 import * as utils from '../../utils'
-import { Role, ONLY_MY_OWN } from '../../components/OwnerSelect'
+import { Role } from '../../components/OwnerSelect'
 import Run from './Run';
 import { Access } from "../../auth"
 import { ThunkDispatch } from 'redux-thunk';
@@ -27,8 +27,9 @@ export class RunsState {
     loading: boolean = false
     byId?: Map<number, Run> = undefined
     byTest?: Map<number, Map<number, Run>> = undefined
-    filteredIds: List<number> | null = null
-    selectedRoles: Role = ONLY_MY_OWN
+    currentPage: number[] = []
+    currentTotal: number = 0
+    selectedRoles?: Role = undefined
     suggestQuery: string[] = []
     suggestions: string[] = []
 }
@@ -40,17 +41,14 @@ export interface LoadingAction {
 export interface LoadedAction {
     type: typeof actionTypes.LOADED,
     runs: Run[],
+    total?: number,
 }
 
 export interface TestIdAction {
     type: typeof actionTypes.TESTID,
     id: number,
     runs: Run[],
-}
-
-export interface FilteredAction {
-    type: typeof actionTypes.FILTERED,
-    ids: number[] | null,
+    total: number,
 }
 
 export interface LoadSuggestionsAction {
@@ -91,7 +89,6 @@ export interface TrashAction {
     isTrashed: boolean,
 }
 
-
 export interface UpdateDescriptionAction {
     type: typeof actionTypes.UPDATE_DESCRIPTION,
     id: number,
@@ -99,7 +96,7 @@ export interface UpdateDescriptionAction {
     description: string,
 }
 
-type RunsAction = LoadingAction | LoadedAction | TestIdAction | FilteredAction |
+type RunsAction = LoadingAction | LoadedAction | TestIdAction |
                   LoadSuggestionsAction |  SuggestAction | SelectRolesAction |
                   UpdateTokenAction | UpdateAccessAction | TrashAction | UpdateDescriptionAction
 
@@ -126,6 +123,10 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
                     }
                 })
             }
+            state.currentPage = action.runs.map(run => run.id)
+            if (action.total) {
+                state.currentTotal = action.total
+            }
             break;
         }
         case actionTypes.TESTID: {
@@ -143,11 +144,8 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
                 })
             }
             state.byTest = byTest.set(action.id, testMap)
-            break;
-        }
-        case actionTypes.FILTERED: {
-            // The run.ids in LOADED are converted to strings using the backtick notation for whatever reason
-            state.filteredIds = action.ids == null ? null : List(action.ids)
+            state.currentPage = action.runs.map(run => run.id)
+            state.currentTotal = action.total;
             break;
         }
         case actionTypes.LOAD_SUGGESTIONS: {

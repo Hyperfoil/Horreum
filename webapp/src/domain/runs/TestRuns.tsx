@@ -8,6 +8,7 @@ import {
     CardHeader,
     CardBody,
     PageSection,
+    Pagination,
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
@@ -36,6 +37,7 @@ import Table from '../../components/Table';
 import { CellProps, UseTableOptions, UseRowSelectInstanceProps, UseRowSelectRowProps, Column, UseSortByColumnOptions } from 'react-table';
 import { Run } from './reducers';
 import { Description, ExecutionTime, Menu } from './components'
+import { Test } from '../tests/reducers'
 
 type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row:  UseRowSelectRowProps<Run> }
 
@@ -99,15 +101,15 @@ const staticColumns: RunColumn[] = [
     }, {
         Header: "Executed",
         accessor: "start",
-        id: "executed",
         Cell: (arg: C) => ExecutionTime(arg.row.original),
     }, {
         Header:"Duration",
-        id: "duration",
+        id: "(stop - start)",
         accessor: (run: Run) => Duration.fromMillis(toEpochMillis(run.stop) - toEpochMillis(run.start)).toFormat("hh:mm:ss.SSS")
     }, {
         Header: "Schema",
         accessor: "schema",
+        disableSortBy: true,
         Cell: (arg: C) => {
             const { cell: { value } } = arg;
             // LEFT JOIN results in schema.id == 0
@@ -131,7 +133,18 @@ const menuColumn: RunColumn = {
     Header:"Actions",
     id: "actions",
     accessor: "id",
+    disableSortBy: true,
     Cell: (arg: CellProps<Run, number>) => Menu(arg.row.original)
+}
+
+function hasNonTrivialAccessor(test: Test, vcIndex: number) {
+    if (!test.defaultView) {
+        return false;
+    }
+    const vc = test.defaultView.components[vcIndex]
+    return vc.accessors.indexOf("[]") >= 0 ||
+        vc.accessors.indexOf(";") >= 0 ||
+        vc.accessors.indexOf(",") >= 0
 }
 
 export default () => {
@@ -141,12 +154,21 @@ export default () => {
     const test = useSelector(get(testId))
     const [columns, setColumns] = useState((test && test.defaultView) ? test.defaultView.components : [])
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
+    const [page, setPage] = useState(1)
+    const [perPage, setPerPage] = useState(20)
+    const [sort, setSort] = useState("start")
+    const [direction, setDirection] = useState("descending")
+    const pagination = { page, perPage, sort, direction }
     const tableColumns = useMemo(() => {
         const rtrn = [ ...staticColumns ]
         columns.forEach((col, index) => {
              rtrn.push({
                  Header: col.headerName,
                  accessor: (run: Run) => run.view && run.view[index],
+                 // In general case we would have to calculate the final sortable cell value
+                 // in database, or fetch all runs and sort in server doing the rendering
+                 disableSortBy: (!!col.render && col.render !== "") || !test || hasNonTrivialAccessor(test, index),
+                 id: test ? "view_data:" + index + ":" + test.defaultView?.components[index].accessors : undefined,
                  Cell: renderCell(col.render)
              })
         })
@@ -156,13 +178,14 @@ export default () => {
 
     const dispatch = useDispatch();
     const [ showTrashed, setShowTrashed ] = useState(false)
-    const runs = useSelector(selectors.testRuns(testId, showTrashed));
+    const runs = useSelector(selectors.testRuns(testId, pagination, showTrashed));
+    const runCount = useSelector(selectors.count)
     useEffect(() => {
         dispatch(fetchTest(testId));
     }, [dispatch, testId])
     useEffect(() => {
-        dispatch(byTest(testId, showTrashed))
-    }, [dispatch, showTrashed])
+        dispatch(byTest(testId, pagination, showTrashed))
+    }, [dispatch, showTrashed, page, perPage, sort, direction])
     useEffect(() => {
         document.title = (test ? test.name : "Loading...") + " | Horreum"
         if (test && test.defaultView) {
@@ -223,15 +246,29 @@ export default () => {
                             <NavLink to={ `/test/${testId}` } ><EditIcon /></NavLink>
                         </ToolbarGroup>
                     </Toolbar>
+                    <Pagination
+                        itemCount={runCount}
+                        perPage={perPage}
+                        page={page}
+                        onSetPage={(e, p) => setPage(p)}
+                        onPerPageSelect={(e, pp) => setPerPage(pp)}
+                    />
                 </CardHeader>
                 <CardBody>
-                    <Table columns={tableColumns}
-                           data={runs || []}
-                           initialSortBy={[{id: "stop", desc: true}]}
-                           isLoading={isLoading}
-                           selected={selectedRows}
-                           onSelected={setSelectedRows}
-                           />
+                    <Table
+                        columns={tableColumns}
+                        data={runs || []}
+                        sortBy={[{id: sort, desc: direction === "descending"}]}
+                        onSortBy={ (order) => {
+                            if (order.length > 0 && order[0]) {
+                                setSort(order[0].id)
+                                setDirection(order[0].desc ? "descending" : "ascending")
+                            }
+                        }}
+                        isLoading={isLoading}
+                        selected={selectedRows}
+                        onSelected={setSelectedRows}
+                    />
                 </CardBody>
             </Card>
         </PageSection>

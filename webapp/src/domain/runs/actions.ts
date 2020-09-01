@@ -2,7 +2,6 @@ import { Dispatch } from 'react';
 import { Access } from '../../auth';
 import { Role } from '../../components/OwnerSelect';
 import {
-   FilteredAction,
    LoadedAction,
    LoadingAction,
    LoadSuggestionsAction,
@@ -19,55 +18,39 @@ import * as actionTypes from './actionTypes';
 import * as api from './api';
 import { isFetchingSuggestions, suggestQuery } from './selectors';
 import store from '../../store'
+import { PaginationInfo } from '../../utils'
 
-const loaded = (run: Run | Run[]): LoadedAction =>({
+const loaded = (run: Run | Run[], total?: number): LoadedAction =>({
     type: actionTypes.LOADED,
-    runs: Array.isArray(run) ? run : [run]
+    runs: Array.isArray(run) ? run : [run],
+    total,
 })
 
-const testId = (id: number, runs: Run[]): TestIdAction =>({
+const testId = (id: number, runs: Run[], total: number): TestIdAction =>({
     type: actionTypes.TESTID,
     id,
-    runs
+    runs,
+    total,
 })
 
 export const get = (id: number, token?: string) => (dispatch: Dispatch<LoadedAction>) =>
    api.get(id, token).then(
       response => dispatch(loaded(response)),
-      error => dispatch(loaded([]))
+      error => dispatch(loaded([], 0))
    )
 
-export const all = (trashed?: boolean) => (dispatch: Dispatch<LoadingAction | LoadedAction>) => {
+export const byTest = (id: number, pagination: PaginationInfo, trashed?: boolean) => (dispatch: Dispatch<LoadingAction | TestIdAction>) => {
    dispatch({ type: actionTypes.LOADING })
-   api.all(trashed).then(
-      response => dispatch(loaded(response)),
-      error => dispatch(loaded([]))
+   api.byTest(id, pagination, trashed).then(
+      response => dispatch(testId(id, response.runs, response.total)),
+      error => dispatch(testId(id, [], 0))
    )
 }
 
-export const byTest = (id: number, trashed?: boolean) => (dispatch: Dispatch<LoadingAction | TestIdAction>) => {
-   dispatch({ type: actionTypes.LOADING })
-   api.byTest(id, trashed).then(
-      response => dispatch(testId(id,response)),
-      error => dispatch(testId(id, []))
-   )
-}
-
-export const filter = (query: string, matchAll: boolean, roles: string, callback: (success: boolean) => void) => (dispatch: Dispatch<FilteredAction>) => {
-   if (query === "" && roles === "__all") {
-      dispatch({
-         type: actionTypes.FILTERED,
-         ids: null
-      })
-      callback(true)
-      return
-   }
-   api.filter(query, matchAll, roles)
+export const list = (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean, callback: (success: boolean) => void) => (dispatch: Dispatch<LoadedAction>) => {
+   api.list(query, matchAll, roles, pagination, trashed)
    .then(response => {
-      dispatch({
-         type: actionTypes.FILTERED,
-         ids: response
-      })
+      dispatch(loaded(response.runs, response.total))
       callback(true)
    }, e => callback(false))
 }
@@ -156,7 +139,6 @@ export const updateAccess = (id: number, testid: number, owner: string, access: 
 export const trash = (id: number, testid: number, isTrashed: boolean = true) => (dispatch: Dispatch<TrashAction>) =>
    api.trash(id, isTrashed).then(
       response => {
-         console.log(response)
          dispatch({
             type: actionTypes.TRASH,
             id,
@@ -170,7 +152,6 @@ export const trash = (id: number, testid: number, isTrashed: boolean = true) => 
 export const updateDescription = (id: number, testid: number, description: string) => (dispatch: Dispatch<UpdateDescriptionAction>) =>
    api.updateDescription(id, description).then(
       response => {
-         console.log(response)
          dispatch({
             type: actionTypes.UPDATE_DESCRIPTION,
             id,

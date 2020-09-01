@@ -792,5 +792,20 @@
             GRANT ALL ON SEQUENCE datapoint_id_seq TO ${quarkus.datasource.username};
         </sql>
     </changeSet>
+
+    <changeSet id="9" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION to_double(v_input text)
+            RETURNS double precision AS $$
+            BEGIN
+                BEGIN
+                    RETURN v_input::double precision;
+                EXCEPTION WHEN OTHERS THEN
+                    RETURN NULL;
+                END;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+    </changeSet>
 </databaseChangeLog>
 

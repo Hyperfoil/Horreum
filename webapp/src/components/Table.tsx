@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Spinner, Bullseye } from '@patternfly/react-core';
 import {
   useTable,
@@ -10,32 +10,39 @@ import {
   TableState,
   UseRowSelectRowProps,
   UseRowSelectState,
+  UseSortByState,
   UseSortByColumnProps,
 } from 'react-table'
 import clsx from 'clsx';
 
 // We need to pass the same empty list to prevent re-renders
 const NO_DATA: {}[] = []
+const NO_SORT: SortingRule<any>[] = []
 
 interface TableColumn<D extends object> extends ColumnInstance<D>, UseSortByColumnProps<D> {}
 
 type TableProps<D extends object> = {
   columns: Column<D>[],
   data: D[],
-  initialSortBy: SortingRule<D>[], //TODO
+  sortBy: SortingRule<D>[],
   isLoading: boolean,
   selected: Record<string, boolean>,
   onSelected(ids: Record<string, boolean>): void,
+  onSortBy?(order: SortingRule<D>[]): void,
 }
 
 // FIXME: Default values in parameters doesn't work: https://github.com/microsoft/TypeScript/issues/31247
 const defaultProps = {
-  initialSortBy: [],
+  sortBy: NO_SORT,
   isLoading: false,
   selected: NO_DATA,
   onSelected: () => {}
 }
-function Table<D extends object>({ columns, data, initialSortBy, isLoading, selected, onSelected }: TableProps<D>) {
+function Table<D extends object>({ columns, data, sortBy, isLoading, selected, onSelected, onSortBy }: TableProps<D>) {
+  const [ currentSortBy, setCurrentSortBy ] = useState(sortBy)
+  useEffect(() => {
+    setCurrentSortBy(sortBy)
+  }, [sortBy])
   const {
     getTableProps,
     getTableBodyProps,
@@ -48,7 +55,7 @@ function Table<D extends object>({ columns, data, initialSortBy, isLoading, sele
       columns,
       data: data || NO_DATA,
       initialState: {
-         sortBy: initialSortBy,
+         sortBy: currentSortBy,
          selectedRowIds: selected,
       } as TableState<D>,
     },
@@ -59,6 +66,13 @@ function Table<D extends object>({ columns, data, initialSortBy, isLoading, sele
   useEffect(()=>{
       onSelected(rsState.selectedRowIds)
   },[rsState.selectedRowIds])
+  const sortState = state as UseSortByState<D>
+  useEffect(()=>{
+      setCurrentSortBy(sortState.sortBy)
+      if (onSortBy && sortState.sortBy) {
+        onSortBy(sortState.sortBy)
+      }
+  },[sortState.sortBy])
   if (!data) {
      return (
         <Bullseye><Spinner /></Bullseye>

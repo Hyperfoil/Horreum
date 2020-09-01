@@ -277,7 +277,6 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                     setRecalcConfirm(() => resolve)
                 })
             }).then(_ => {
-                console.log("done")
                 Promise.resolve()
             })
         },
@@ -416,7 +415,6 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                                     swap(variables, i - 1, i)
                                     setVariables([ ...variables ])
                                     onModified(true)
-                                    console.log(variables)
                                 }}
                             >Move up</Button>
                             <Button

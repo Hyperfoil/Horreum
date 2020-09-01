@@ -9,6 +9,7 @@ import {
     CardBody,
     Checkbox,
     PageSection,
+    Pagination,
     Radio,
     Spinner,
     Tooltip,
@@ -26,14 +27,14 @@ import { Duration } from 'luxon';
 import { NavLink } from 'react-router-dom';
 import { CellProps, Column } from 'react-table'
 
-import {all, filter, suggest, selectRoles } from './actions';
+import { list, suggest, selectRoles } from './actions';
 import * as selectors from './selectors';
 import { isAuthenticatedSelector, registerAfterLogin, roleToName } from '../../auth'
 import { toEpochMillis } from '../../utils'
 
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
-import OwnerSelect from '../../components/OwnerSelect';
+import OwnerSelect, { ONLY_MY_OWN, SHOW_ALL } from '../../components/OwnerSelect';
 import { Run } from './reducers';
 import { Description, ExecutionTime, Menu } from './components'
 
@@ -42,8 +43,15 @@ type C = CellProps<Run>
 export default ()=>{
     document.title = "Runs | Horreum"
     const [showTrashed, setShowTrashed] = useState(false)
-    const runs = useSelector(selectors.filter(showTrashed))
+
     const isAuthenticated = useSelector(isAuthenticatedSelector)
+    const [page, setPage] = useState(1)
+    const [perPage, setPerPage] = useState(20)
+    const [sort, setSort] = useState("start")
+    const [direction, setDirection] = useState("descending")
+    const pagination = { page, perPage, sort, direction }
+    const runs = useSelector(selectors.filter(pagination))
+    const runCount = useSelector(selectors.count)
 
     const [filterQuery, setFilterQuery] = useState("")
     const [filterValid, setFilterValid] = useState(true)
@@ -74,11 +82,11 @@ export default ()=>{
         },
         {
           Header: "Executed",
-          id: "executed",
+          accessor:"start",
           Cell: (arg: C) => ExecutionTime(arg.row.original)
         }, {
           Header:"Duration",
-          id: "duration",
+          id: "(stop - start)",
           accessor: (v: Run) => Duration.fromMillis(toEpochMillis(v.stop) - toEpochMillis(v.start)).toFormat("hh:mm:ss.SSS")
         }, {
           Header: "Test",
@@ -98,15 +106,16 @@ export default ()=>{
           Header:"Actions",
           id: "actions",
           accessor: "id",
+          disableSortBy: true,
           Cell: (arg: C) => Menu(arg.row.original)
         }
     ],[dispatch])
 
-    const selectedRoles = useSelector(selectors.selectedRoles)
+    const selectedRoles = useSelector(selectors.selectedRoles) || isAuthenticated ? ONLY_MY_OWN : SHOW_ALL
 
     const runFilter = (roles: string) => {
        setFilterLoading(true)
-       dispatch(filter(filterQuery, matchAll, roles, success => {
+       dispatch(list(filterQuery, matchAll, roles, pagination, showTrashed, success => {
          setFilterLoading(false);
          setFilterValid(success);
        }))
@@ -117,12 +126,11 @@ export default ()=>{
     const suggestions = useSelector(selectors.suggestions)
     const loadingDisplay = useSelector(selectors.isFetchingSuggestions) ? "inline-block" : "none"
     useEffect(()=>{
-        dispatch(all(showTrashed))
+        runFilter(selectedRoles.key)
         dispatch(registerAfterLogin("reload_runs", () => {
-           dispatch(all())
            runFilter(selectedRoles.key)
         }))
-    },[dispatch, showTrashed])
+    },[dispatch, showTrashed, page, perPage, sort, direction])
 
     const inputProps: InputProps<string> = {
        placeholder: "Enter search query",
@@ -253,10 +261,28 @@ export default ()=>{
                            label="Show trashed runs"
                            isChecked={ showTrashed }
                            onChange={ setShowTrashed } />
+                 <div style={{ flexGrow: 1000 }}>{'\u00A0'}</div>
+                 <Pagination
+                    itemCount={runCount}
+                    perPage={perPage}
+                    page={page}
+                    onSetPage={(e, p) => setPage(p)}
+                    onPerPageSelect={(e, pp) => setPerPage(pp)}
+                 />
               </div>
             </CardHeader>
             <CardBody>
-              <Table columns={columns} data={runs || []} initialSortBy={[{id: "stop", desc: true}]} isLoading={ isLoading }/>
+              <Table
+                  columns={columns}
+                  data={runs || []}
+                  sortBy={[{id: sort, desc: direction === "descending" }]}
+                  onSortBy={ (order) => {
+                     if (order.length > 0 && order[0]) {
+                        setSort(order[0].id)
+                        setDirection(order[0].desc ? "descending" : "ascending")
+                     }
+                  }}
+                  isLoading={ isLoading }/>
             </CardBody>
           </Card>
         </PageSection>

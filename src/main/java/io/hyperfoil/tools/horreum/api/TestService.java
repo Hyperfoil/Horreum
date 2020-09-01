@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.api;
 
 import io.agroal.api.AgroalDataSource;
+import io.hyperfoil.tools.horreum.entity.converter.JsonResultTransformer;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
@@ -14,6 +15,7 @@ import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import javax.transaction.Transactional;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -166,13 +168,10 @@ public class TestService {
    @Path("summary")
    @GET
    public Response summary() {
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           PreparedStatement statement = connection.prepareStatement(SUMMARY)) {
-         return Response.ok(SqlService.fromResultSet(statement.executeQuery())).build();
-      } catch (SQLException e) {
-         log.error("Failed to fetch summary", e);
-         return Response.serverError().build();
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Query query = em.createNativeQuery(SUMMARY);
+         query.unwrap(org.hibernate.query.Query.class).setResultTransformer(JsonResultTransformer.INSTANCE);
+         return Response.ok(query.getResultList()).build();
       }
    }
 

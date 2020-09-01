@@ -1,41 +1,61 @@
 import { State } from '../../store'
+import { PaginationInfo } from '../../utils'
 
 export const isLoading = (state: State) => state.runs.loading
 
-export const all = (trashed: boolean) => (state: State) => {
-    if (!state.runs.byId) {
-        return false
+function compare(a: any, b: any, desc: boolean): number {
+    if (a === null) {
+        return -1;
+    } else if (b === null) {
+        return 1;
+    } else if (typeof a === "number" && typeof b === "number") {
+        return (Number(a) - Number(b)) * (desc ? -1 : 1)
+    } else {
+        const an = Number(a)
+        const bn = Number(b)
+        if (an === NaN || bn === NaN) {
+            return String(a).localeCompare(String(b)) * (desc ? -1 : 1)
+        } else {
+            return (an - bn) * (desc ? -1 : 1)
+        }
     }
-    let list = [...state.runs.byId.values()].filter(run => trashed || !run.trashed)
-    list.sort((a,b)=>a.start - b.start);
-    return list;
 }
-export const testRuns = (id: number, trashed: boolean) => (state: State) => {
+
+function sort(list: any[], pagination: PaginationInfo) {
+    const desc = pagination.direction === "descending"
+    if (pagination.sort.startsWith("view_data:")) {
+        const index = pagination.sort.substring(10, pagination.sort.indexOf(":", 10))
+        return list.sort((a, b) => compare(a.view[index], b.view[index], desc))
+    } else {
+        return list.sort((a, b) => compare(a[pagination.sort], b[pagination.sort], desc))
+    }
+}
+
+export const testRuns = (id: number, pagination: PaginationInfo, trashed: boolean) => (state: State) => {
     if (!state.runs.byTest) {
         return false
     }
-    let list = [...state.runs.byTest.get(id)?.values()].filter(run => trashed || !run.trashed)
-    list.sort((a,b)=>a.id - b.id);
-    return list;
+    let list = [...state.runs.byTest.get(id)?.values()].filter(run => state.runs.currentPage.includes(run.id))
+    return sort(list, pagination);
 }
+
 export const get = (id: number) => (state: State) =>{
     if (!state.runs.byId) {
         return false
     }
     return state.runs.byId.get(id) || false;
 }
-export const filter = (trashed: boolean) => (state: State) => {
-   const filteredIds = state.runs.filteredIds
-   if (filteredIds == null) {
-      return all(trashed)(state);
-   }
-   const byId = state.runs.byId
-   if (!byId) {
-      return false
-   }
-   let list = [...byId.filter((v, k) => filteredIds.includes(k)).values()].filter(run => trashed || !run.trashed)
-   list.sort((a,b)=>a.id - b.id);
-   return list;
+
+export const filter = (pagination: PaginationInfo) => (state: State) => {
+    const byId = state.runs.byId
+    if (!byId) {
+        return false
+    }
+    return sort([ ...byId.filter(run => state.runs.currentPage.includes(run.id)).values() ], pagination)
+}
+
+export const count = (state: State) => {
+    return state.runs.currentTotal;
 }
 
 export const isFetchingSuggestions = (state: State) => {
@@ -51,5 +71,5 @@ export const suggestQuery = (state: State) => {
 export const suggestions = (state: State) => state.runs.suggestions
 
 export const selectedRoles = (state: State) => {
-   return state.runs.selectedRoles;
+    return state.runs.selectedRoles;
 }
