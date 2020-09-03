@@ -248,18 +248,42 @@ public class RunService {
       if (data == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("No data!").build();
       }
+      Object foundTest = findIfNotSet(test, data);
+      Object foundStart = findIfNotSet(start, data);
+      Object foundStop = findIfNotSet(stop, data);
+      Object foundDescription = findIfNotSet(description, data);
+
       try (CloseMe h = sqlService.withRoles(em, identity)) {
          if (schemaUri == null || schemaUri.isEmpty()) {
             schemaUri = data.getString("$schema");
          } else {
             data.set("$schema", schemaUri);
          }
-         Schema schema = Schema.find("uri", schemaUri).firstResult();
-
-         Object foundTest = findIfNotSet(test, data, schema == null ? null : schema.testPath);
-         Object foundStart = findIfNotSet(start, data, schema == null ? null : schema.startPath);
-         Object foundStop = findIfNotSet(stop, data, schema == null ? null : schema.stopPath);
-         Object foundDescription = findIfNotSet(description, data, schema == null ? null : schema.descriptionPath);
+         if (schemaUri == null) {
+            for (Object value : data.values()) {
+               if (value instanceof Json) {
+                  Json json = (Json) value;
+                  String uri = json.getString("$schema");
+                  if (uri != null) {
+                     Schema schema = Schema.find("uri", uri).firstResult();
+                     if (schema != null) {
+                        foundTest = findIfNotSet(foundTest, json, schema.testPath);
+                        foundStart = findIfNotSet(foundStart, json, schema.startPath);
+                        foundStop = findIfNotSet(foundStop, json, schema.stopPath);
+                        foundDescription = findIfNotSet(foundDescription, json, schema.descriptionPath);
+                     }
+                  }
+               }
+            }
+         } else {
+            Schema schema = Schema.find("uri", schemaUri).firstResult();
+            if (schema != null) {
+               foundTest = findIfNotSet(foundTest, data, schema.testPath);
+               foundStart = findIfNotSet(foundStart, data, schema.startPath);
+               foundStop = findIfNotSet(foundStop, data, schema.stopPath);
+               foundDescription = findIfNotSet(foundDescription, data, schema.descriptionPath);
+            }
+         }
 
          String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
          if (testNameOrId == null || testNameOrId.isEmpty()) {
@@ -297,18 +321,23 @@ public class RunService {
       }
    }
 
-   private Object findIfNotSet(String value, Json data, String path) {
+   private Object findIfNotSet(String value, Json data) {
       if (value != null && !value.isEmpty()) {
          if (value.startsWith("$.")) {
             return Json.find(data, value, null);
          } else {
             return value;
          }
-      } else if (path != null && !path.isEmpty()) {
-         return Json.find(data, path, null);
       } else {
          return null;
       }
+   }
+
+   private Object findIfNotSet(Object current, Json json, String path) {
+      if (current == null && path != null) {
+         return Json.find(json, path);
+      }
+      return current;
    }
 
    private Instant toInstant(Object time) {
@@ -603,7 +632,7 @@ public class RunService {
          if (whereStarted) {
             sql.append(" AND ");
          }
-         sql.append(" run.owner = ANY(string_to_array(?").append(queryParts.length + 1).append(", ';')) AND (");
+         sql.append(" run.owner = ANY(string_to_array(?").append(queryParts.length + 1).append(", ';')) ");
          whereStarted = true;
       }
       if (!trashed) {
