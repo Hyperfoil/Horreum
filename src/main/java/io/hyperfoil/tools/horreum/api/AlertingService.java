@@ -370,12 +370,12 @@ public class AlertingService {
             return;
          }
          // From 1 result we cannot estimate stddev either, so it's not useful
-         if (dataPoints.size() <= 2) {
+         if (dataPoints.size() <= Math.max(2, variable.minWindow)) {
             log.infof("Criterion %d has too few data (%d datapoints), skipping analysis", variable.id, dataPoints.size());
             return;
          }
          SummaryStatistics statistics = new SummaryStatistics();
-         dataPoints.stream().skip(1).mapToDouble(dp -> dp.value).forEach(statistics::addValue);
+         dataPoints.stream().skip(1).mapToDouble(DataPoint::value).forEach(statistics::addValue);
          double diff = Math.abs(statistics.getMean() - dataPoint.value);
          if (diff > statistics.getStandardDeviation() * variable.deviationFactor) {
             log.infof("Value %f exceeds %f +- %f x %f", dataPoint.value, statistics.getMean(), statistics.getStandardDeviation(), variable.deviationFactor);
@@ -391,7 +391,7 @@ public class AlertingService {
             double lowestPValue = 1.0;
             int changeIndex = -1;
             // we want at least 2 values in each population
-            for (int i = 2; i <= dataPoints.size() - 2; ++i) {
+            for (int i = Math.max(2, variable.minWindow); i <= dataPoints.size() - Math.max(2, variable.minWindow); ++i) {
                double[] populationA = dataPoints.stream().limit(i).mapToDouble(dp -> dp.value).toArray();
                double[] populationB = dataPoints.stream().skip(i).mapToDouble(dp -> dp.value).toArray();
                final double pValue = new TTest().tTest(populationA, populationB);
@@ -406,8 +406,15 @@ public class AlertingService {
                change.variable = dp.variable;
                change.timestamp = dp.timestamp;
                change.runId = dp.runId;
-               change.description = String.format("Change detected with confidence %.3f%%", (1 - lowestPValue) * 100);
-               log.infof("T-test found likelihood of %f%% that there's a change at run ID %d", lowestPValue * 100, change.runId);
+               change.description = String.format("Change detected with confidence %.3f%%.\n", (1 - lowestPValue) * 100);
+               SummaryStatistics older = new SummaryStatistics(), newer = new SummaryStatistics();
+               dataPoints.stream().skip(changeIndex).mapToDouble(DataPoint::value).forEach(older::addValue);
+               dataPoints.stream().limit(changeIndex).mapToDouble(DataPoint::value).forEach(newer::addValue);
+
+               log.infof("T-test found likelihood of %f%% that there's a change at run ID %d", (1 - lowestPValue) * 100, change.runId);
+               log.infof("Older subset has mean %.2f and stddev %.2f.\n", older.getMean(), older.getStandardDeviation());
+               log.infof("Newer subset has mean %.2f and stddev %.2f.\n", newer.getMean(), newer.getStandardDeviation());
+               log.infof("Datapoints: %s", dataPoints.stream().map(d -> d.runId + ": " + d.value).collect(Collectors.toList()));
                em.persist(change);
                publishLater(Change.EVENT_NEW, new Change.Event(change, event.notify));
             }
@@ -470,6 +477,7 @@ public class AlertingService {
                current.order = matching.order;
                current.accessors = matching.accessors;
                current.calculation = matching.calculation;
+               current.minWindow = matching.minWindow;
                current.maxWindow = matching.maxWindow <= 0 ? Integer.MAX_VALUE : matching.maxWindow;
                current.deviationFactor = matching.deviationFactor;
                current.confidence = matching.confidence;

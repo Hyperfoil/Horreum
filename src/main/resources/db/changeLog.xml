@@ -807,5 +807,11 @@
             $$ LANGUAGE plpgsql;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="10" author="rvansa">
+        <addColumn tableName="variable">
+            <column name="minwindow" type="integer" defaultValue="0"></column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
 

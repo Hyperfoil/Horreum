@@ -8,6 +8,7 @@ export type Variable = {
     testid: number,
     accessors: string,
     calculation?: string,
+    minWindow: number,
     maxWindow: number,
     deviationFactor: number,
     confidence: number,

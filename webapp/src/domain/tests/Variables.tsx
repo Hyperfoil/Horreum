@@ -87,6 +87,7 @@ const TestSelectModal = ({isOpen, onClose, onConfirm}: TestSelectModalProps) => 
 }
 
 type VariableDisplay = {
+    minWindowStr: string,
     maxWindowStr: string,
     deviationFactorStr: string,
     confidenceStr: string,
@@ -168,7 +169,19 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
                 </div>
             </FormGroup>
             { /* TODO: use sliders when Patternfly 4 has them */ }
-            <FormGroup label="Max window" fieldId="maxWindow">
+            <FormGroup label="Min window" fieldId="minWindow" helperText="Minimum number of datapoints after last change to run tests against.">
+                <TextInput value={ variable.minWindowStr }
+                            id="minWindow"
+                            onChange={ value => {
+                                variable.minWindowStr = value
+                                variable.minWindow = parseInt(value)
+                                onChange()
+                            }}
+                            validated={ /^[0-9]+$/.test(variable.minWindowStr) ? "default" : "error" }
+                            isReadOnly={!isTester} />
+            </FormGroup>
+            { /* TODO: use sliders when Patternfly 4 has them */ }
+            <FormGroup label="Max window" fieldId="maxWindow" helperText="Limit the number of datapoints considered when testing for a change.">
                 <TextInput value={ variable.maxWindowStr }
                             id="maxWindow"
                             onChange={ value => {
@@ -176,7 +189,7 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
                                 variable.maxWindow = value === NO_LIMIT ? 0x7FFFFFFF : parseInt(value)
                                 onChange()
                             }}
-                            validated={ /^\([0-9]+\)|<no limit>$/.test(variable.maxWindowStr) ? "default" : "error" }
+                            validated={ /^[0-9]+$|^<no limit>$/.test(variable.maxWindowStr) ? "default" : "error" }
                             isReadOnly={!isTester} />
             </FormGroup>
             <FormGroup label="Deviation factor" fieldId="deviationFactor">
@@ -219,6 +232,18 @@ type VariablesProps = {
     onModified(modified: boolean): void,
 }
 
+function sortByOrder(v1: VariableDisplay, v2: VariableDisplay) {
+    if (v1.group == v2.group) {
+        return v1.order - v2.order
+    } else if (!v1.group) {
+        return -1;
+    } else if (!v2.group) {
+        return 1;
+    } else {
+        return v1.group.localeCompare(v2.group)
+    }
+}
+
 export default ({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) => {
     const [variables, setVariables] = useState<VariableDisplay[]>([])
     const [groups, setGroups] = useState<string[]>([])
@@ -236,22 +261,13 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                 setVariables(response.map((v: Variable) => {
                     let vd: VariableDisplay = {
                         ...v,
+                        minWindowStr: String(v.minWindow),
                         maxWindowStr: v.maxWindow === 0x7FFFFFFF ? NO_LIMIT : String(v.maxWindow),
                         deviationFactorStr: String(v.deviationFactor),
                         confidenceStr: String(v.confidence),
                     }
                     return vd
-                }).sort((v1: VariableDisplay, v2: VariableDisplay) => {
-                    if (v1.group == v2.group) {
-                        return v1.order - v2.order
-                    } else if (!v1.group) {
-                        return -1;
-                    } else if (!v2.group) {
-                        return 1;
-                    } else {
-                        return v1.group.localeCompare(v2.group)
-                    }
-                }))
+                }).sort(sortByOrder))
                 setGroups([... new Set(variables.map(v => v.group).filter(g => !!g).map(g => g as string))].sort())
                 calculations.current.splice(0)
                 response.forEach((_: any) => calculations.current.push(undefined));
@@ -311,6 +327,8 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                         name: "",
                         order: variables.length,
                         accessors: "",
+                        minWindowStr: "0",
+                        minWindow: 0,
                         maxWindowStr: NO_LIMIT,
                         maxWindow: 0,
                         deviationFactorStr: "2.0",
@@ -362,7 +380,7 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
             onConfirm={otherTestId => {
                 return api.fetchVariables(otherTestId).then(
                     response => {
-                        setVariables([ ...variables, ...response.map((v: Variable) => ({
+                        setVariables([ ...variables, ...response.sort(sortByOrder).map((v: Variable) => ({
                             ...v,
                             id: -1,
                             testid: testId,

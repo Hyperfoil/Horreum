@@ -40,6 +40,11 @@ public class DataPoint extends PanacheEntityBase {
    @NotNull
    public double value;
 
+   // for easier use in lambdas
+   public double value() {
+      return value;
+   }
+
    @NotNull
    @ManyToOne(fetch = FetchType.LAZY)
    public Variable variable;
