@@ -334,7 +334,7 @@ public class RunService {
    }
 
    private Object findIfNotSet(Object current, Json json, String path) {
-      if (current == null && path != null) {
+      if (current == null && path != null && !path.isEmpty()) {
          return Json.find(json, path);
       }
       return current;

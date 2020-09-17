@@ -114,7 +114,7 @@ public class TestService {
 
    Response addAuthenticated(Test test) {
       Test existing = Test.find("name", test.name).firstResult();
-      if (test.id <= 0) {
+      if (test.id != null && test.id <= 0) {
          test.id = null;
       }
       test.ensureLinked();
