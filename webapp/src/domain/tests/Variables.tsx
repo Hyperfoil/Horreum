@@ -33,8 +33,6 @@ import RecalculateModal from '../alerting/RecalculateModal'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
 import { TabFunctionsRef } from './Test'
 
-const NO_LIMIT = "<no limit>"
-
 type TestSelectModalProps = {
     isOpen: boolean,
     onClose(): void
@@ -87,10 +85,10 @@ const TestSelectModal = ({isOpen, onClose, onConfirm}: TestSelectModalProps) => 
 }
 
 type VariableDisplay = {
+    maxDifferenceLastDatapointStr: string,
     minWindowStr: string,
-    maxWindowStr: string,
-    deviationFactorStr: string,
-    confidenceStr: string,
+    maxDifferenceFloatingWindowStr: string,
+    floatingWindowStr: string,
 } & Variable;
 
 type VariableFormProps = {
@@ -169,6 +167,17 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
                 </div>
             </FormGroup>
             { /* TODO: use sliders when Patternfly 4 has them */ }
+            <FormGroup label="Max difference for last datapoint" fieldId="maxDifferenceLastDatapoint" helperText="Maximum difference between the last value and the mean of preceding values.">
+                <TextInput value={ variable.maxDifferenceLastDatapointStr }
+                            id="maxDifferenceLastDatapoint"
+                            onChange={ value => {
+                                variable.maxDifferenceLastDatapointStr = value
+                                variable.maxDifferenceLastDatapoint = parseInt(value)
+                                onChange()
+                            }}
+                            validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.maxDifferenceLastDatapointStr) ? "default" : "error" }
+                            isReadOnly={!isTester} />
+            </FormGroup>
             <FormGroup label="Min window" fieldId="minWindow" helperText="Minimum number of datapoints after last change to run tests against.">
                 <TextInput value={ variable.minWindowStr }
                             id="minWindow"
@@ -180,38 +189,27 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
                             validated={ /^[0-9]+$/.test(variable.minWindowStr) ? "default" : "error" }
                             isReadOnly={!isTester} />
             </FormGroup>
+            <FormGroup label="Max difference for floating window" fieldId="maxDifferenceFloatingWindow" helperText="Maximum difference between the mean of last N datapoints in the floating window and the mean of preceding values.">
+                <TextInput value={ variable.maxDifferenceFloatingWindowStr }
+                            id="maxDifferenceFloatingWindow"
+                            onChange={ value => {
+                                variable.maxDifferenceFloatingWindowStr = value
+                                variable.maxDifferenceFloatingWindow = parseInt(value)
+                                onChange()
+                            }}
+                            validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.maxDifferenceFloatingWindowStr) ? "default" : "error" }
+                            isReadOnly={!isTester} />
+            </FormGroup>
             { /* TODO: use sliders when Patternfly 4 has them */ }
-            <FormGroup label="Max window" fieldId="maxWindow" helperText="Limit the number of datapoints considered when testing for a change.">
-                <TextInput value={ variable.maxWindowStr }
+            <FormGroup label="Floating window size" fieldId="floatingWindow" helperText="Limit the number of datapoints considered when testing for a change.">
+                <TextInput value={ variable.floatingWindowStr }
                             id="maxWindow"
                             onChange={ value => {
-                                variable.maxWindowStr = value
-                                variable.maxWindow = value === NO_LIMIT ? 0x7FFFFFFF : parseInt(value)
+                                variable.floatingWindowStr = value
+                                variable.floatingWindow = parseInt(value)
                                 onChange()
                             }}
-                            validated={ /^[0-9]+$|^<no limit>$/.test(variable.maxWindowStr) ? "default" : "error" }
-                            isReadOnly={!isTester} />
-            </FormGroup>
-            <FormGroup label="Deviation factor" fieldId="deviationFactor">
-                <TextInput value={ variable.deviationFactorStr }
-                            id="deviationFactor"
-                            onChange={ value => {
-                                variable.deviationFactorStr = value
-                                variable.deviationFactor = parseFloat(value)
-                                onChange()
-                            }}
-                            validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.deviationFactorStr) && variable.deviationFactor > 0 ? "default" : "error" }
-                            isReadOnly={!isTester} />
-            </FormGroup>
-            <FormGroup label="Confidence" fieldId="confidence">
-                <TextInput value={ variable.confidenceStr }
-                            id="confidence"
-                            onChange={ value => {
-                                variable.confidenceStr = value
-                                variable.confidence = parseFloat(value)
-                                onChange()
-                            }}
-                            validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.confidenceStr) && variable.confidence > 0.5 && variable.confidence < 1.0 ? "default" : "error" }
+                            validated={ /^[0-9]+$/.test(variable.floatingWindowStr) ? "default" : "error" }
                             isReadOnly={!isTester} />
             </FormGroup>
         </ExpandableSection>
@@ -261,10 +259,10 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                 setVariables(response.map((v: Variable) => {
                     let vd: VariableDisplay = {
                         ...v,
+                        maxDifferenceLastDatapointStr: String(v.maxDifferenceLastDatapoint),
                         minWindowStr: String(v.minWindow),
-                        maxWindowStr: v.maxWindow === 0x7FFFFFFF ? NO_LIMIT : String(v.maxWindow),
-                        deviationFactorStr: String(v.deviationFactor),
-                        confidenceStr: String(v.confidence),
+                        maxDifferenceFloatingWindowStr: String(v.maxDifferenceFloatingWindow),
+                        floatingWindowStr: String(v.floatingWindow),
                     }
                     return vd
                 }).sort(sortByOrder))
@@ -327,14 +325,14 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                         name: "",
                         order: variables.length,
                         accessors: "",
-                        minWindowStr: "0",
-                        minWindow: 0,
-                        maxWindowStr: NO_LIMIT,
-                        maxWindow: 0,
-                        deviationFactorStr: "2.0",
-                        deviationFactor: 2.0,
-                        confidenceStr: "0.95",
-                        confidence: 0.95,
+                        maxDifferenceLastDatapointStr: "0.2",
+                        maxDifferenceLastDatapoint: 0.2,
+                        minWindowStr: "5",
+                        minWindow: 5,
+                        maxDifferenceFloatingWindowStr: "0.1",
+                        maxDifferenceFloatingWindow: 0.1,
+                        floatingWindowStr: "5",
+                        floatingWindow: 5,
                     })
                     calculations.current.push(undefined)
                     setVariables([ ...variables])
@@ -384,9 +382,10 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                             ...v,
                             id: -1,
                             testid: testId,
-                            maxWindowStr: v.maxWindow === 0x7FFFFFFF ? NO_LIMIT : String(v.maxWindow),
-                            deviationFactorStr: String(v.deviationFactor),
-                            confidenceStr: String(v.confidence),
+                            maxDifferenceLastDatapointStr: String(v.maxDifferenceLastDatapoint),
+                            minWindowStr: String(v.minWindow),
+                            maxDifferenceFloatingWindowStr: String(v.maxDifferenceFloatingWindow),
+                            floatingWindowStr: String(v.floatingWindow),
                         }))])
                         response.forEach((_: Variable) => calculations.current.push(undefined))
                     },

@@ -10,6 +10,8 @@ import {
     Form,
     FormGroup,
     Modal,
+    Tab,
+    Tabs,
     TextArea,
     Switch,
 } from '@patternfly/react-core';
@@ -18,7 +20,7 @@ import {
 } from '@patternfly/react-icons'
 import { NavLink } from 'react-router-dom'
 import * as api from './api'
-import { Change } from './types'
+import { Change, Variable } from './types'
 import { alertAction } from '../../alerts'
 import { formatDateTime } from '../../utils'
 import { Column, UseSortByColumnOptions } from 'react-table';
@@ -130,13 +132,11 @@ const ChangeModal = ({change, isOpen, onClose, onUpdate }: ChangeModalProps) => 
 
 type ChangesProps = {
     varId: number,
-    name: string,
     testOwner?: string,
 }
 
-export default ({ varId, name, testOwner } : ChangesProps) => {
+export const Changes = ({ varId, testOwner } : ChangesProps) => {
     const dispatch = useDispatch()
-    const [isExpanded, setExpanded] = useState(false)
     const [changes, setChanges] = useState<Change[]>([])
     useEffect(() => {
         api.fetchChanges(varId).then(
@@ -185,10 +185,35 @@ export default ({ varId, name, testOwner } : ChangesProps) => {
         })
     }
     return (
+        <Table columns={columns} data={changes} />
+    )
+}
+
+type ChangesTabsProps = {
+    variables: Variable[],
+    testOwner?: string,
+}
+
+export const ChangesTabs = ({ variables, testOwner } : ChangesTabsProps) => {
+    const [isExpanded, setExpanded] = useState(false)
+    const [activeTab, setActiveTab] = useState<number | string>(0)
+    const name = variables[0].group || variables[0].name;
+    return (
         <ExpandableSection toggleText={ isExpanded ? "Hide changes in " + name : "Show changes in " + name }
                            onToggle={setExpanded}
                            isExpanded={isExpanded} >
-            <Table columns={columns} data={changes} />
+            <Tabs
+                activeKey={activeTab}
+                onSelect={(e, index) => {
+                    setActiveTab(index)
+                }}
+            >
+            { variables.map((v, index) => (
+                <Tab key={ v.name } eventKey={index} title={ v.name }>
+                    <Changes varId={v.id} testOwner={testOwner} />
+                </Tab>)
+            ) }
+            </Tabs>
         </ExpandableSection>
     )
 }

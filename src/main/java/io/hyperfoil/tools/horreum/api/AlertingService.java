@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -38,7 +39,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-import org.apache.commons.math3.stat.inference.TTest;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.graalvm.polyglot.Context;
@@ -138,7 +138,6 @@ public class AlertingService {
       // We'll use the database as a library function
       StringBuilder extractionQuery = new StringBuilder("SELECT 1");
       Map<Integer, VarInfo> vars = new HashMap<>();
-      List<DataPoint> newDataPoints = new ArrayList<>();
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, roles)) {
 
          Query setRun = em.createNativeQuery(UPLOAD_RUN);
@@ -353,9 +352,6 @@ public class AlertingService {
             log.infof("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
             query = DataPoint.find("variable = ?1 AND timestamp >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.timestamp);
          }
-         if (variable.maxWindow > 0 && variable.maxWindow != Integer.MAX_VALUE) {
-            query = query.range(0, variable.maxWindow);
-         }
          List<DataPoint> dataPoints = query.list();
 
          // Last datapoint is already in the list
@@ -369,57 +365,78 @@ public class AlertingService {
                   dataPoint.id, dataPoint.timestamp, firstDatapoint.id, firstDatapoint.timestamp);
             return;
          }
-         // From 1 result we cannot estimate stddev either, so it's not useful
-         if (dataPoints.size() <= Math.max(2, variable.minWindow)) {
-            log.infof("Criterion %d has too few data (%d datapoints), skipping analysis", variable.id, dataPoints.size());
+         if (dataPoints.size() <= Math.max(1, variable.minWindow)) {
+            log.infof("Too few (%d) previous datapoints for variable %d, skipping analysis", dataPoints.size() - 1, variable.id);
             return;
          }
          SummaryStatistics statistics = new SummaryStatistics();
          dataPoints.stream().skip(1).mapToDouble(DataPoint::value).forEach(statistics::addValue);
-         double diff = Math.abs(statistics.getMean() - dataPoint.value);
-         if (diff > statistics.getStandardDeviation() * variable.deviationFactor) {
-            log.infof("Value %f exceeds %f +- %f x %f", dataPoint.value, statistics.getMean(), statistics.getStandardDeviation(), variable.deviationFactor);
+         double ratio = dataPoint.value/statistics.getMean();
+         if (ratio < 1 - variable.maxDifferenceLastDatapoint || ratio > 1 + variable.maxDifferenceLastDatapoint) {
+            log.infof("Value %f exceeds %f +- %f%% (based on %d datapoints stddev is %f)",
+                  dataPoint.value, statistics.getMean(),
+                  variable.maxDifferenceLastDatapoint, dataPoints.size() - 1, statistics.getStandardDeviation());
             Change change = new Change();
             change.variable = firstDatapoint.variable;
             change.timestamp = firstDatapoint.timestamp;
             change.runId = firstDatapoint.runId;
-            change.description = "Last datapoint is out of deviation range: value=" +
-                  dataPoint.value + ", mean=" + statistics.getMean() + ", stddev=" + statistics.getStandardDeviation();
+            change.description = "Last datapoint is out of range: value=" +
+                  dataPoint.value + ", mean=" + statistics.getMean() + ", count=" + statistics.getN() + " stddev=" + statistics.getStandardDeviation() +
+                  ", range=" + ((1 - variable.maxDifferenceLastDatapoint) * statistics.getMean()) +
+                  ".." + ((1 + variable.maxDifferenceLastDatapoint) * statistics.getMean());
             em.persist(change);
             publishLater(Change.EVENT_NEW, new Change.Event(change, event.notify));
-         } else {
-            double lowestPValue = 1.0;
-            int changeIndex = -1;
-            // we want at least 2 values in each population
-            for (int i = Math.max(2, variable.minWindow); i <= dataPoints.size() - Math.max(2, variable.minWindow); ++i) {
-               double[] populationA = dataPoints.stream().limit(i).mapToDouble(dp -> dp.value).toArray();
-               double[] populationB = dataPoints.stream().skip(i).mapToDouble(dp -> dp.value).toArray();
-               final double pValue = new TTest().tTest(populationA, populationB);
-               if (pValue < lowestPValue && pValue < 1 - variable.confidence) {
-                  changeIndex = i;
-                  lowestPValue = pValue;
+         } else if (dataPoints.size() >= 2 * variable.floatingWindow){
+            SummaryStatistics older = new SummaryStatistics(), window = new SummaryStatistics();
+            dataPoints.stream().skip(variable.floatingWindow).mapToDouble(dp -> dp.value).forEach(older::addValue);
+            dataPoints.stream().limit(variable.floatingWindow).mapToDouble(dp -> dp.value).forEach(window::addValue);
+
+            double floatingRatio = window.getMean() / older.getMean();
+            if (floatingRatio < 1 - variable.maxDifferenceFloatingWindow || floatingRatio > 1 + variable.maxDifferenceFloatingWindow) {
+               DataPoint dp = null;
+               // We cannot know which datapoint is first with the regression; as a heuristic approach
+               // we'll select first datapoint with value lower than mean (if this is a drop, e.g. throughput)
+               // or above the mean (if this is an increase, e.g. memory usage).
+               for (int i = variable.floatingWindow - 1; i >= 0; --i) {
+                  dp = dataPoints.get(i);
+                  if (floatingRatio < 1 && dp.value < older.getMean()) {
+                     break;
+                  } else if (floatingRatio > 1 && dp.value > older.getMean()) {
+                     break;
+                  }
                }
-            }
-            if (changeIndex >= 0) {
                Change change = new Change();
-               DataPoint dp = dataPoints.get(changeIndex - 1);
                change.variable = dp.variable;
                change.timestamp = dp.timestamp;
                change.runId = dp.runId;
-               change.description = String.format("Change detected with confidence %.3f%%.\n", (1 - lowestPValue) * 100);
-               SummaryStatistics older = new SummaryStatistics(), newer = new SummaryStatistics();
-               dataPoints.stream().skip(changeIndex).mapToDouble(DataPoint::value).forEach(older::addValue);
-               dataPoints.stream().limit(changeIndex).mapToDouble(DataPoint::value).forEach(newer::addValue);
+               change.description = String.format("Change detected in floating window, runs %d (%s) - %d (%s): mean %f (stddev %f), previous mean %f (stddev %f)",
+                     dataPoints.get(variable.floatingWindow - 1).runId, dataPoints.get(variable.floatingWindow - 1).timestamp,
+                     dataPoints.get(0).runId, dataPoints.get(0).timestamp,
+                     window.getMean(), window.getStandardDeviation(), older.getMean(), older.getStandardDeviation());
 
-               log.infof("T-test found likelihood of %f%% that there's a change at run ID %d", (1 - lowestPValue) * 100, change.runId);
-               log.infof("Older subset has mean %.2f and stddev %.2f.\n", older.getMean(), older.getStandardDeviation());
-               log.infof("Newer subset has mean %.2f and stddev %.2f.\n", newer.getMean(), newer.getStandardDeviation());
-               log.infof("Datapoints: %s", dataPoints.stream().map(d -> d.runId + ": " + d.value).collect(Collectors.toList()));
                em.persist(change);
+               log.info(change.description);
                publishLater(Change.EVENT_NEW, new Change.Event(change, event.notify));
             }
          }
       }
+   }
+
+   private double[] omitMinMax(DataPoint[] datapoints) {
+      DataPoint min = null;
+      DataPoint max = null;
+      for (DataPoint datapoint : datapoints) {
+         if (min == null || datapoint.value < min.value) {
+            min = datapoint;
+         }
+         if (max == null || datapoint.value > max.value) {
+            max = datapoint;
+         }
+      }
+      DataPoint finalMin = min;
+      DataPoint finalMax = max;
+      log.infof("From runs %s ignoring %d (%f) and %d (%f)", Stream.of(datapoints).map(dp -> dp.runId).collect(Collectors.toList()), min.runId, min.value, max.runId, max.value);
+      return Stream.of(datapoints).filter(dp -> dp != finalMin && dp != finalMax).mapToDouble(dp -> dp.value).toArray();
    }
 
    private void publishLater(String eventName, Object event) {
@@ -477,10 +494,9 @@ public class AlertingService {
                current.order = matching.order;
                current.accessors = matching.accessors;
                current.calculation = matching.calculation;
-               current.minWindow = matching.minWindow;
-               current.maxWindow = matching.maxWindow <= 0 ? Integer.MAX_VALUE : matching.maxWindow;
-               current.deviationFactor = matching.deviationFactor;
-               current.confidence = matching.confidence;
+               current.maxDifferenceLastDatapoint = matching.maxDifferenceLastDatapoint;
+               current.maxDifferenceFloatingWindow = matching.maxDifferenceFloatingWindow;
+               current.floatingWindow = matching.floatingWindow;
                current.persist();
             }
          }
@@ -490,7 +506,6 @@ public class AlertingService {
                   variable.id = null;
                }
                variable.testId = testId;
-               variable.maxWindow = variable.maxWindow <= 0 ? Integer.MAX_VALUE : variable.maxWindow;
                variable.persist(); // insert
             }
          }
@@ -521,8 +536,6 @@ public class AlertingService {
          if (!createDashboard(testId, variables, dashboard)) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Cannot update Grafana dashboard.").build();
          }
-         // TODO: We should probably recalculate all datapoints when accessors/calculation changes
-         // TODO: Unconfirmed changes should be deleted (and recomputed), too, but confirmed ones should persist
          em.flush();
          return Response.ok().build();
       }
@@ -687,7 +700,7 @@ public class AlertingService {
                promise.complete();
                return null;
             }
-            try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+            try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
                @SuppressWarnings("unchecked")
                List<Integer> ids = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 order by start").setParameter(1, testId).getResultList();
                DataPoint.delete("runId in ?1", ids);
@@ -701,7 +714,7 @@ public class AlertingService {
                // Since the evaluation might take few moments and we're dealing potentially with thousands
                // of runs we'll process each run in a separate transaction
                withTx(() -> {
-                  try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+                  try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
                      Run run = Run.findById(runId);
                      onNewRun(run, false);
                   }

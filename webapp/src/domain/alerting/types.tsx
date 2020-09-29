@@ -8,10 +8,10 @@ export type Variable = {
     testid: number,
     accessors: string,
     calculation?: string,
+    maxDifferenceLastDatapoint: number,
     minWindow: number,
-    maxWindow: number,
-    deviationFactor: number,
-    confidence: number,
+    maxDifferenceFloatingWindow: number,
+    floatingWindow: number,
 }
 
 export type Panel = {

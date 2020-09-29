@@ -44,14 +44,11 @@ public class Variable extends PanacheEntityBase {
 
    public String calculation;
 
-   public int minWindow;
+   public double maxDifferenceLastDatapoint = 0.2;
 
-   public int maxWindow;
+   public int minWindow = 5;
 
-   public double deviationFactor = 2.0;
+   public double maxDifferenceFloatingWindow = 0.1;
 
-   /**
-    * This is <code>1 - p-value</code> used in the Student's t-test.
-    */
-   public double confidence = 0.95;
+   public int floatingWindow = 7;
 }

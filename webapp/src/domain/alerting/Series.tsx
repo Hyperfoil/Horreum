@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import {  useDispatch } from 'react-redux'
 import { fetchDashboard } from './api'
-import { Variable, Panel } from './types'
-import Changes from './Changes'
+import { Panel } from './types'
+import { ChangesTabs } from './Changes'
 import { alertAction } from '../../alerts'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
 
@@ -84,14 +84,13 @@ export default () => {
                                 ]} />
                             </DataListItemRow>
                             }
-                            { p.variables.map(v => <DataListItemRow>
+                            <DataListItemRow>
                                 <DataListItemCells dataListCells={[
-                                    <DataListCell key="variable-name">
-                                        <Changes varId={v.id} name={v.name} testOwner={selectedTest.owner}/>
+                                    <DataListCell key="changes">
+                                        <ChangesTabs variables={p.variables} testOwner={selectedTest.owner}/>
                                     </DataListCell>
-                                ]} />
+                                ]}/>
                             </DataListItemRow>
-                            )}
                         </DataListItem>
                     </DataList>
                 )}

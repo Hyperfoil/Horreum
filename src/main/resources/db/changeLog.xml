@@ -813,5 +813,24 @@
             <column name="minwindow" type="integer" defaultValue="0"></column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="11" author="rvansa">
+        <dropColumn tableName="variable">
+            <column name="maxwindow" />
+            <column name="confidence" />
+            <column name="deviationfactor" />
+        </dropColumn>
+        <addColumn tableName="variable">
+            <column name="maxdifferencelastdatapoint" type="double precision" defaultValue="0.05">
+                <constraints nullable="false"/>
+            </column>
+            <column name="maxdifferencefloatingwindow" type="double precision" defaultValue="0.05">
+                <constraints nullable="false"/>
+            </column>
+            <column name="floatingwindow" type="integer" defaultValue="7">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
 
