@@ -975,5 +975,11 @@
             DROP TRIGGER IF EXISTS rt_after_update ON schemaextractor;
         </rollback>
     </changeSet>
+
+    <changeSet id="13" author="rvansa">
+        <addColumn tableName="grafana_dashboard">
+            <column name="tags" type="text" />
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {  useDispatch } from 'react-redux'
-import { fetchDashboard } from './api'
+import { fetchDashboard, fetchTags } from './api'
 import { Panel } from './types'
 import { ChangesTabs } from './Changes'
 import { alertAction } from '../../alerts'
@@ -19,9 +19,23 @@ import {
     DataListCell,
     EmptyState,
     EmptyStateBody,
+    Select,
+    SelectOption,
+    SelectOptionObject,
     Title,
 } from '@patternfly/react-core';
 import { NavLink, useHistory } from 'react-router-dom';
+
+function convertTags(tags: any): string {
+    let str = ""
+    for (const [key, value] of Object.entries(tags)) {
+        if (str !== "") {
+            str = str + ";"
+        }
+        str = str + key + ":" + value
+    }
+    return str
+}
 
 export default () => {
     const history = useHistory()
@@ -31,6 +45,15 @@ export default () => {
     const [dashboardUrl, setDashboardUrl] = useState("")
     const [panels, setPanels] = useState<Panel[]>([])
 
+    const [availableTags, setAvailableTags] = useState<any[]>()
+    const [currentTags, setCurrentTags] = useState<SelectOptionObject>()
+    const [tagMenuOpen, setTagMenuOpen] = useState(false)
+
+    const doFetchDashboard = (testId: number, tags?: string) => fetchDashboard(testId, tags).then(response => {
+        setDashboardUrl(response.url)
+        setPanels(response.panels)
+    }, error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error)))
+
     useEffect(() => {
         if (!selectedTest) {
             if (test) {
@@ -39,10 +62,13 @@ export default () => {
             return;
         }
         history.replace(history.location.pathname + "?test=" + selectedTest)
-        fetchDashboard(selectedTest.id).then(response => {
-            setDashboardUrl(response.url)
-            setPanels(response.panels)
-        }, error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error)))
+        fetchTags(selectedTest.id).then((response: string[]) => {
+            setAvailableTags(response)
+            setCurrentTags(undefined)
+            if (!response || response.length == 0) {
+                doFetchDashboard(selectedTest.id)
+            }
+        }, error => dispatch(alertAction("TAGS_FETCH", "Failed to fetch test tags", error)))
     }, [selectedTest])
 
     return (
@@ -59,6 +85,29 @@ export default () => {
                     }}
                     selection={selectedTest}
                 />
+                { selectedTest && availableTags && availableTags.length > 0 &&
+                <Select
+                    isOpen={tagMenuOpen}
+                    onToggle={ setTagMenuOpen }
+                    selections={currentTags}
+                    onSelect={(_, item) => {
+                        console.log(availableTags)
+                        console.log(item)
+                        setCurrentTags(item)
+                        setTagMenuOpen(false)
+                        doFetchDashboard(selectedTest.id, item.toString())
+                    }}
+                    placeholderText="Choose tags..."
+                >{ availableTags.map((tags: any, i: number) => {
+                    console.log("TAG")
+                    console.log(tags)
+                    console.log({ ...tags })
+                    return (<SelectOption
+                            key={i}
+                            value={ { ...tags, toString: () => convertTags(tags) } }
+                    />) })
+                }</Select>
+                }
                 { selectedTest && <>
                 <NavLink className="pf-c-button pf-m-primary"
                          to={ "/test/" + selectedTest.id + "#vars" }

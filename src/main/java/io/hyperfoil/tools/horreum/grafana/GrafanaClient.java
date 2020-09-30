@@ -5,6 +5,7 @@ import java.util.Base64;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -38,6 +39,11 @@ public interface GrafanaClient {
    @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationToken}")
    List<DashboardSummary> searchDashboard(@QueryParam("query") String name);
 
+   @DELETE
+   @Path("/api/dashboards/uid/{uid}")
+   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationToken}")
+   void deleteDashboard(@PathParam("uid") String uid);
+
    @GET
    @Path("/api/users/lookup")
    @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
@@ -57,7 +63,6 @@ public interface GrafanaClient {
       String adminPassword = ConfigProvider.getConfig().getValue("horreum.grafana.admin.password", String.class);
       return "Basic " + Base64.getEncoder().encodeToString(("admin:" + adminPassword).getBytes(StandardCharsets.UTF_8));
    }
-
 
    class UserSearch {
       public int totalCount;

@@ -3,11 +3,14 @@ package io.hyperfoil.tools.horreum.api;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -15,22 +18,14 @@ import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.eclipse.microprofile.rest.client.inject.RestClient;
-import org.jboss.logging.Logger;
-
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
-import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
-import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 
 /**
@@ -43,8 +38,6 @@ import io.quarkus.security.identity.SecurityIdentity;
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class GrafanaService {
-   private static final Logger log = Logger.getLogger(GrafanaService.class);
-
    @Inject
    SqlService sqlService;
 
@@ -53,9 +46,6 @@ public class GrafanaService {
 
    @Inject
    EntityManager em;
-
-   @Inject @RestClient
-   GrafanaClient grafana;
 
    @PermitAll
    @GET
@@ -83,7 +73,14 @@ public class GrafanaService {
             if (target.type != null && !target.type.equals("timeseries")) {
                return Response.status(Response.Status.BAD_REQUEST).entity("Tables are not implemented").build();
             }
-            int variableId = targetToVariableId(target.target);
+            String tq = target.target;
+            Map<String, String> tags = null;
+            int semicolon = tq.indexOf(';');
+            if (semicolon >= 0) {
+               tags = parseTags(tq, semicolon);
+               tq = tq.substring(0, semicolon);
+            }
+            int variableId = parseVariableId(tq);
             if (variableId < 0) {
                return Response.status(Response.Status.BAD_REQUEST).entity("Target must be variable ID").build();
             }
@@ -95,15 +92,56 @@ public class GrafanaService {
             TimeseriesTarget tt = new TimeseriesTarget();
             tt.target = variableName;
             result.add(tt);
-            DataPoint.<DataPoint>find("variable_id = ?1 AND timestamp >= ?2 AND timestamp <= ?3", Sort.ascending("timestamp"),
-                  variableId, query.range.from, query.range.to)
-                  .stream().forEach(dp -> tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli() }));
+
+            StringBuilder sql = new StringBuilder("SELECT datapoint.* FROM datapoint ");
+            if (tags != null) {
+               sql.append(" JOIN run_tags ON run_tags.runid = datapoint.runid ");
+            }
+            sql.append(" WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3 ");
+            addTagQuery(tags, sql);
+            sql.append(" ORDER BY timestamp ASC");
+            javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), DataPoint.class)
+                  .setParameter(1, variableId)
+                  .setParameter(2, query.range.from)
+                  .setParameter(3, query.range.to);
+            addTagValues(tags, nativeQuery);
+            for (DataPoint dp : (List<DataPoint>) nativeQuery.getResultList()) {
+               tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli() });
+            }
          }
       }
       return Response.ok(result).build();
    }
 
-   private int targetToVariableId(String target) {
+   private void addTagQuery(Map<String, String> tags, StringBuilder sql) {
+      if (tags != null) {
+         int counter = 4;
+         for (String tag : tags.keySet()) {
+            sql.append(" AND jsonb_path_query_first(run_tags.tags, '$.").append(tag).append("'::::jsonpath)#>>'{}' = ?").append(counter++);
+         }
+      }
+   }
+
+   private void addTagValues(Map<String, String> tags, javax.persistence.Query nativeQuery) {
+      if (tags != null) {
+         int counter = 4;
+         for (String value : tags.values()) {
+            nativeQuery.setParameter(counter++, value);
+         }
+      }
+   }
+
+   private Map<String, String> parseTags(String tq, int semicolon) {
+      Map<String, String> tags = new TreeMap<>();
+      for (String keyValue : tq.substring(semicolon + 1).split(";")) {
+         int colon = keyValue.indexOf(":");
+         if (colon < 0) continue;
+         tags.put(keyValue.substring(0, colon), keyValue.substring(colon + 1));
+      }
+      return tags;
+   }
+
+   private int parseVariableId(String target) {
       int variableId;
       try {
          variableId = Integer.parseInt(target);
@@ -132,14 +170,34 @@ public class GrafanaService {
       // Note that annotations are per-dashboard, not per-panel:
       // https://github.com/grafana/grafana/issues/717
       List<AnnotationDefinition> annotations = new ArrayList<>();
-      int variableId = targetToVariableId(query.annotation.query);
+      String tq = query.annotation.query;
+      Map<String, String> tags = null;
+      int semicolon = tq.indexOf(';');
+      if (semicolon >= 0) {
+         tags = parseTags(tq, semicolon);
+         tq = tq.substring(0, semicolon);
+      }
+      int variableId = parseVariableId(tq);
       if (variableId < 0) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Query must be variable ID").build();
       }
       // TODO: use identity forwarded
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Change.<Change>find("variable.id = ?1 AND timestamp >= ?2 AND timestamp <= ?3", variableId, query.range.from, query.range.to)
-               .stream().forEach(change -> annotations.add(createAnnotation(change)));
+         StringBuilder sql = new StringBuilder("SELECT change.* FROM change ");
+         if (tags != null) {
+            sql.append(" JOIN run_tags ON run_tags.runid = change.runid ");
+         }
+         sql.append(" WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3 ");
+         addTagQuery(tags, sql);
+         javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), Change.class)
+               .setParameter(1, variableId)
+               .setParameter(2, query.range.from)
+               .setParameter(3, query.range.to);
+         addTagValues(tags, nativeQuery);
+
+         for (Change change : (List<Change>) nativeQuery.getResultList()) {
+            annotations.add(createAnnotation(change));
+         }
       }
       return Response.ok(annotations).build();
    }

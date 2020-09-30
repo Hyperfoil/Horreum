@@ -25,6 +25,8 @@ public class GrafanaDashboard extends PanacheEntityBase {
    @NotNull
    public int testId;
 
+   public String tags;
+
    @NotNull
    public String url;
 

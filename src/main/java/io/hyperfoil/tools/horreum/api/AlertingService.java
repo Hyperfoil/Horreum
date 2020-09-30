@@ -509,33 +509,18 @@ public class AlertingService {
                variable.persist(); // insert
             }
          }
-         GrafanaDashboard dashboard = GrafanaDashboard.find("testId", testId).firstResult();
-         if (dashboard == null) {
-            dashboard = new GrafanaDashboard();
-            dashboard.testId = testId;
-            dashboard.panels = new ArrayList<>();
 
-            Test test = Test.findById(testId);
-            if (test != null) {
-               try {
-                  dashboard.uid = grafana.searchDashboard(test.name).stream().findFirst().map(ds -> ds.uid).orElse(null);
-               } catch (WebApplicationException e) {
-                  if (e.getResponse().getStatus() == 404) {
-                     log.infof("Dashboard for test %s does not exist");
-                  } else {
-                     log.errorf(e, "Cannot lookup Grafana dashboard for test %s", test.name);
-                     tm.setRollbackOnly();
-                     return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
-                  }
-               }
+         List<GrafanaDashboard> dashboards = GrafanaDashboard.find("testId", testId).list();
+         for (GrafanaDashboard dashboard : dashboards) {
+            try {
+               grafana.deleteDashboard(dashboard.uid);
+            } catch (WebApplicationException e) {
+               log.warnf(e, "Failed to delete dasboard %s", dashboard.uid);
             }
-         } else {
-            dashboard.panels.clear();
+            dashboard.panels.forEach(GrafanaPanel::delete);
+            dashboard.delete();
          }
 
-         if (!createDashboard(testId, variables, dashboard)) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Cannot update Grafana dashboard.").build();
-         }
          em.flush();
          return Response.ok().build();
       }
@@ -557,9 +542,11 @@ public class AlertingService {
             }
          }
       }
+      String tags = dashboard.tags == null ? "" : dashboard.tags;
       if (clientDashboard == null) {
          clientDashboard = new Dashboard();
-         clientDashboard.title = Test.<Test>findByIdOptional(testId).map(t -> t.name).orElse("Test " + testId);
+         clientDashboard.title = Test.<Test>findByIdOptional(testId).map(t -> t.name).orElse("Test " + testId)
+               + (dashboard.tags == null ? "" : ", " + dashboard.tags);
       } else {
          clientDashboard.panels.clear();
          clientDashboard.annotations.list.clear();
@@ -567,7 +554,7 @@ public class AlertingService {
       int i = 0;
       Map<String, List<Variable>> byGroup = new TreeMap<>();
       for (Variable variable : variables) {
-         clientDashboard.annotations.list.add(new Dashboard.Annotation(variable.name, String.valueOf(variable.id)));
+         clientDashboard.annotations.list.add(new Dashboard.Annotation(variable.name, variable.id + ";" + tags));
          byGroup.computeIfAbsent(variable.group == null || variable.group.isEmpty() ? "" : variable.group, g -> new ArrayList<>()).add(variable);
       }
       for (Map.Entry<String, List<Variable>> entry : byGroup.entrySet()) {
@@ -578,7 +565,7 @@ public class AlertingService {
          dashboard.panels.add(gpanel);
          for (Variable variable : entry.getValue()) {
             gpanel.variables.add(variable);
-            panel.targets.add(new Target(String.valueOf(variable.id), "timeseries", "T" + i));
+            panel.targets.add(new Target(variable.id + ";" + tags, "timeseries", "T" + i));
          }
          clientDashboard.panels.add(panel);
          ++i;
@@ -601,17 +588,40 @@ public class AlertingService {
 
    @PermitAll
    @GET
-   @Path("dashboard")
-   @Transactional
-   public Response dashboard(@QueryParam("test") Integer testId) throws SystemException {
+   @Path("tags")
+   public Response tags(@QueryParam("test") Integer testId) {
       if (testId == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
       }
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         GrafanaDashboard dashboard = GrafanaDashboard.find("testId", testId).firstResult();
+         Query tagComboQuery = em.createNativeQuery("SELECT tags::::text FROM run_tags JOIN run ON run_tags.runid = runid WHERE run.testid = ? GROUP BY tags");
+         Json result = new Json(true);
+         for (String tags : ((List<String>) tagComboQuery.setParameter(1, testId).getResultList())) {
+            result.add(Json.fromString(tags));
+         }
+         return Response.ok(result).build();
+      }
+   }
+
+   @PermitAll
+   @GET
+   @Path("dashboard")
+   @Transactional
+   public Response dashboard(@QueryParam("test") Integer testId, @QueryParam("tags") String tags) throws SystemException {
+      if (testId == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
+      }
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         GrafanaDashboard dashboard;
+         if (tags == null || tags.isEmpty()) {
+            dashboard = GrafanaDashboard.find("testId", testId).firstResult();
+         } else {
+            dashboard = GrafanaDashboard.find("testId = ?1 AND tags = ?2", testId, tags).firstResult();
+         }
          if (dashboard == null) {
             dashboard = new GrafanaDashboard();
             dashboard.testId = testId;
+            dashboard.tags = tags;
             dashboard.panels = new ArrayList<>();
             if (!createDashboard(testId, Variable.list("testid", testId), dashboard)) {
                return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Cannot update Grafana dashboard.").build();
