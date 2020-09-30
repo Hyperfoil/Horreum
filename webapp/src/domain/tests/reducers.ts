@@ -21,6 +21,7 @@ export interface Test {
     name: string,
     description: string,
     compareUrl: string | Function | undefined,
+    tags: string,
     owner: string,
     access: Access,
     token: string | null,

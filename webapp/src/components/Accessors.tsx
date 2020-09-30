@@ -46,9 +46,10 @@ type AccessorsProps = {
    value: string[],
    onChange(selectors: string[]): void,
    isReadOnly: boolean,
+   allowArray?: boolean,
 }
 
-export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly = false}: AccessorsProps) => {
+export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowArray}: AccessorsProps) => {
    const [created, setCreated] = useState<Extractor>({ accessor: ""})
    const onCreate = (newValue: string) => {
          setCreated({ accessor: newValue })
@@ -107,9 +108,11 @@ export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly = false
                     updated = [...selected.filter(o => o !== base), newSelected]
                  } else if (selected.includes(array)) {
                     updated = [...selected.filter(o => o !== array), newSelected]
-                 } else {
+                 } else if (allowArray === undefined || allowArray) {
                     openVariantModal(options.filter(o => o.accessor === newValue)[0])
                     return
+                 } else {
+                    updated = [...selected, newSelected]
                  }
                  setSelected(updated)
                  onChange(updated)

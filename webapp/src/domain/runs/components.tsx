@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import {
     Button,
+    Chip,
     DropdownItem,
     Modal,
     TextInput,
@@ -131,4 +132,14 @@ type UpdateDescriptionModalProps = {
                 onClose();
             }}>Cancel</Button>
     </Modal>)
+ }
+
+ export const RunTags = (tags: any) => {
+    if (!tags || tags === "") {
+        return null;
+    }
+    return Object.entries(tags).map(([key, tag]: any[]) => (
+        <Tooltip content={ key }>
+            <Chip key={ tag } isReadOnly>{ tag }</Chip>
+        </Tooltip>))
  }

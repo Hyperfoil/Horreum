@@ -14,6 +14,7 @@ import { alertAction, constraintValidationFormatter } from '../../alerts'
 
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
+import Accessors from '../../components/Accessors'
 import OwnerSelect from '../../components/OwnerSelect'
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 
@@ -42,17 +43,23 @@ export default ({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) =>
     const [access, setAccess] = useState<Access>(0)
     const [owner, setOwner] = useState(test && defaultRole || undefined)
     const [compareUrl, setCompareUrl] = useState("")
+    const [tags, setTags] = useState<string[]>([])
     const compareUrlEditor = useRef<ValueGetter>()
+
+    const updateState = (test?: Test) => {
+        setName(test ? test.name : "");
+        setDescription(test ? test.description : "");
+        setOwner(test ? test.owner : defaultRole)
+        setAccess(test ? test.access : 0)
+        setTags(test && test.tags ? test.tags.split(";").filter(t => t !== "") : []);
+        setCompareUrl(test && test.compareUrl && test.compareUrl.toString() || "")
+    }
 
     useEffect(() => {
         if (!test) {
             return
         }
-        setName(test.name);
-        setDescription(test.description);
-        setOwner(test.owner)
-        setAccess(test.access)
-        setCompareUrl(test && test.compareUrl && test.compareUrl.toString() || "")
+        updateState(test)
     }, [test])
     useEffect(() => {
         if (!owner) {
@@ -69,6 +76,7 @@ export default ({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) =>
                 name,
                 description,
                 compareUrl: compareUrlEditor.current?.getValue(),
+                tags: tags.join(";"),
                 owner: owner || "__test_created_without_a_role__",
                 access: access,
                 token: null,
@@ -81,20 +89,14 @@ export default ({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) =>
                 }
             )
         },
-        reset: () => {
-            setName(test ? test.name : "");
-            setDescription(test ? test.description : "");
-            setOwner(test ? test.owner : defaultRole)
-            setAccess(test ? test.access : 0)
-            setCompareUrl(test && test.compareUrl && test.compareUrl.toString() || "")
-        }
+        reset: () => updateState(test)
     }
 
     const isTester = useTester(owner)
 
     return (<>
         <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
-            <FormGroup label="Name" isRequired={true} fieldId="name" helperText="names must be unique" helperTextInvalid="Name must be unique and not empty">
+            <FormGroup label="Name" isRequired={true} fieldId="name" helperText="Test names must be unique" helperTextInvalid="Name must be unique and not empty">
                 <TextInput
                     value={name || ""}
                     isRequired
@@ -123,6 +125,16 @@ export default ({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) =>
                         onModified(true)
                     }}
                 />
+            </FormGroup>
+            <FormGroup label="Tags" fieldId="tags" helperText="Accessors that split runs into different categories.">
+                <Accessors
+                    value={ tags }
+                    onChange={ newTags => {
+                        setTags(newTags)
+                        onModified(true)
+                    }}
+                    isReadOnly={ !isTester }
+                    allowArray={ false } />
             </FormGroup>
             <FormGroup label="Owner" fieldId="testOwner">
             { isTester ? (

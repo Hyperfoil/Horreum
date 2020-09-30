@@ -36,7 +36,7 @@ import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import OwnerSelect, { ONLY_MY_OWN, SHOW_ALL } from '../../components/OwnerSelect';
 import { Run } from './reducers';
-import { Description, ExecutionTime, Menu } from './components'
+import { Description, ExecutionTime, Menu, RunTags } from './components'
 
 type C = CellProps<Run>
 
@@ -95,6 +95,11 @@ export default ()=>{
             const {cell: {value} } = arg;
             return (<NavLink to={`/run/list/${value}`}>{arg.row.original.testname} <FolderOpenIcon /></NavLink>)
           }
+        }, {
+          Header: "Tags",
+          accessor: "tags",
+          disableSortBy: true,
+          Cell: (arg: C) => RunTags(arg.cell.value)
         }, {
           Header: "Description",
           accessor: "description",

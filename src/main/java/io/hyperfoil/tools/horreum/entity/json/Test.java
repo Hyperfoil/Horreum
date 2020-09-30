@@ -31,6 +31,8 @@ public class Test extends PanacheEntityBase {
    @Column(name="description",unique = false)
    public String description;
 
+   public String tags;
+
    @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE })
    public View defaultView;
 

@@ -78,14 +78,6 @@ public class RunService {
             "FROM run, jsonb_path_query(run.data, ? ::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
-   // TODO: view_data is fetched even for vcid that does not belong to the view
-   // select vc.id from view join viewcomponent vc on vc.view_id = view.id where view.test_id = 12
-   private static final String TEST_RUN_VIEW = "SELECT run.id, run.start, run.stop, run.owner, (" +
-         "    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) FROM run_schemas rs WHERE run.id = rs.runid GROUP BY schemaid" +
-         ")::::text as schemas, jsonb_object_agg(coalesce(view_data.vcid, 0), view_data.object)#>>'{}' as view, run.trashed, run.description FROM run " +
-         "LEFT JOIN view_data ON view_data.runid = run.id " +
-         "WHERE run.testid = ? ";
-   private static final String TEST_RUN_VIEW_GROUPING = " GROUP BY run.id, run.start, run.stop, run.testid, run.owner";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -605,7 +597,10 @@ public class RunService {
                         @QueryParam("page") Integer page,
                         @QueryParam("sort") String sort,
                         @QueryParam("direction") String direction) {
-      StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, run.owner, run.access, run.token, test.name as testname, run.trashed, run.description FROM run JOIN test on test.id = run.testId WHERE ");
+      StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
+         .append("run.owner, run.access, run.token, ")
+         .append("test.name AS testname, run.trashed, run.description, run_tags.tags::::text AS tags ")
+         .append("FROM run JOIN test ON test.id = run.testId JOIN run_tags ON run_tags.runid = run.id WHERE ");
       String[] queryParts;
       boolean whereStarted = false;
       if (query == null || query.isEmpty()) {
@@ -668,6 +663,13 @@ public class RunService {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)){
          Json runs = new Json(true);
          sqlQuery.getResultList().forEach(runs::add);
+         runs.forEach(run -> {
+            Json jsrun = (Json) run;
+            String tags = jsrun.getString("tags");
+            if (tags != null && !tags.isEmpty()) {
+               jsrun.set("tags", Json.fromString(tags));
+            }
+         });
          Json result = new Json.MapBuilder()
                // TODO: total does not consider the query but evaluating all the expressions would be expensive
                .add("total", trashed ? Run.count() : Run.count("trashed = false"))
@@ -699,18 +701,27 @@ public class RunService {
                             @QueryParam("sort") String sort,
                             @QueryParam("direction") String direction,
                             @QueryParam("trashed") boolean trashed) {
-      StringBuilder sql = new StringBuilder(TEST_RUN_VIEW);
+      StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
+            .append("    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) AS schemas, rs.runid FROM run_schemas rs GROUP BY schemaid, rs.runid")
+            .append("), view_agg AS (")
+            .append("    SELECT jsonb_object_agg(coalesce(vd.vcid, 0), vd.object) AS view, vd.runid FROM view_data vd GROUP BY vd.runid")
+            .append(") SELECT run.id, run.start, run.stop, run.owner, schema_agg.schemas::::text AS schemas, view_agg.view#>>'{}' AS view, ")
+            .append("run.trashed, run.description, run_tags.tags::::text FROM run ")
+            .append("LEFT JOIN schema_agg ON schema_agg.runid = run.id ")
+            .append("LEFT JOIN view_agg ON view_agg.runid = run.id ")
+            .append("LEFT JOIN run_tags ON run_tags.runid = run.id ")
+            .append("WHERE run.testid = ? ");
       if (!trashed) {
          sql.append(" AND NOT run.trashed ");
       }
-      sql.append(TEST_RUN_VIEW_GROUPING);
       if (sort.startsWith("view_data:")) {
          String accessor = sort.substring(sort.indexOf(':', 10) + 1);
-         sql.append(", view_data.object ORDER BY");
+         sql.append(" ORDER BY");
+         // TODO: use view ID in the sort format rather than wildcards below
          // prefer numeric sort
-         sql.append(" to_double(jsonb_path_query_first(view_data.object, '$.").append(accessor).append("')#>>'{}')");
+         sql.append(" to_double(jsonb_path_query_first(view_agg.view, '$.*.").append(accessor).append("')#>>'{}')");
          addDirection(sql, direction);
-         sql.append(", jsonb_path_query_first(view_data.object, '$.").append(accessor).append("')#>>'{}'");
+         sql.append(", jsonb_path_query_first(view_agg.view, '$.*.").append(accessor).append("')#>>'{}'");
          addDirection(sql, direction);
       } else {
          addOrderBy(sql, sort, direction);
@@ -747,6 +758,7 @@ public class RunService {
                }
             }
             String schemas = (String) row[4];
+            String tags = (String) row[8];
             runs.add(Json.map()
                   .add("id", row[0])
                   .add("start", ((Timestamp) row[1]).getTime())
@@ -757,6 +769,7 @@ public class RunService {
                   .add("view", view.build())
                   .add("trashed", row[6])
                   .add("description", row[7])
+                  .add("tags", tags == null ? null : Json.fromString(tags))
                   .build());
          }
          Json response = new Json.MapBuilder()

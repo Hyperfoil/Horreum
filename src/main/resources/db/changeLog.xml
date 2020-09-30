@@ -832,5 +832,148 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="12" author="rvansa">
+        <addColumn tableName="test">
+            <column name="tags" type="text" />
+        </addColumn>
+        <createTable tableName="run_tags">
+            <column name="runid" type="integer">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="tags" type="jsonb" />
+            <column name="extractor_ids" type="jsonb" />
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_run_tags_runid"
+                                 baseTableName="run_tags" baseColumnNames="runid"
+                                 referencedTableName="run" referencedColumnNames="id" />
+        <sql>
+            GRANT select, insert, delete ON TABLE run_tags TO ${quarkus.datasource.username};
+        </sql>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_before_delete_test_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_tags WHERE runid IN (SELECT id FROM run WHERE testid = OLD.id);
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_before_update_test_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_tags WHERE runid IN (SELECT id FROM run WHERE testid = OLD.id);
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_before_delete_run_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_tags WHERE runid = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <!-- We piggy-back on run_schemas -->
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_after_insert_run_schemas_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH test_tags AS (
+                    SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor FROM test
+                ), tags AS (
+                    SELECT rs.runid, se.id as extractor_id, se.accessor, jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath) AS value
+                        FROM schemaextractor se
+                        JOIN test_tags ON se.accessor = test_tags.accessor
+                        JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id
+                        JOIN run ON run.id = rs.runid
+                        WHERE rs.runid = NEW.runid
+                )
+                INSERT INTO run_tags
+                    SELECT tags.runid, jsonb_object_agg(tags.accessor, tags.value) AS tags, jsonb_agg(tags.extractor_id) AS extractor_ids FROM tags GROUP BY runid;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_after_insert_test_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH test_tags AS (
+                    SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor FROM test
+                ), tags AS (
+                    SELECT rs.runid, se.id AS extractor_id, se.accessor, jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath) AS value
+                    FROM schemaextractor se
+                    JOIN test_tags ON se.accessor = test_tags.accessor
+                    JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id
+                    JOIN run ON run.id = rs.runid
+                    WHERE rs.testid = NEW.id
+                )
+                INSERT INTO run_tags
+                    SELECT tags.runid, jsonb_object_agg(tags.accessor, tags.value) AS tags, jsonb_agg(tags.extractor_id) AS extractor_ids FROM tags GROUP BY runid;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_before_delete_extractor_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_tags WHERE OLD.id = ANY(extractor_ids);
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_before_update_extractor_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_tags WHERE OLD.id = ANY(extractor_ids);
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_after_update_extractor_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH test_tags AS (
+                    SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor FROM test
+                ), matching_runs AS (
+                    SELECT runid
+                    FROM schemaextractor se
+                    JOIN test_tags ON se.accessor = test_tags.accessor
+                    JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id
+                    WHERE se.id = NEW.id
+                ), tags AS (
+                    SELECT rs.runid, se.id AS extractor_id, se.accessor, jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath) AS value
+                    FROM schemaextractor se
+                    JOIN test_tags ON se.accessor = test_tags.accessor
+                    JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id
+                    JOIN run ON run.id = rs.runid
+                    WHERE run.id = ANY(SELECT runid FROM matching_runs)
+                )
+                INSERT INTO run_tags
+                    SELECT tags.runid, jsonb_object_agg(tags.accessor, tags.value) AS tags, jsonb_agg(tags.extractor_id) AS extractor_ids FROM tags GROUP BY runid;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE TRIGGER rt_before_delete BEFORE DELETE ON test FOR EACH ROW EXECUTE FUNCTION rt_before_delete_test_func();
+            CREATE TRIGGER rt_before_update BEFORE UPDATE ON test FOR EACH ROW EXECUTE FUNCTION rt_before_update_test_func();
+            CREATE TRIGGER rt_after_insert AFTER INSERT OR UPDATE ON test FOR EACH ROW EXECUTE FUNCTION rt_after_insert_test_func();
+            CREATE TRIGGER rt_before_delete BEFORE DELETE ON run FOR EACH ROW EXECUTE FUNCTION rt_before_delete_run_func();
+            CREATE TRIGGER rt_after_insert AFTER INSERT ON run_schemas FOR EACH ROW EXECUTE FUNCTION rt_after_insert_run_schemas_func();
+            CREATE TRIGGER rt_before_delete BEFORE DELETE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_delete_extractor_func();
+            CREATE TRIGGER rt_before_update BEFORE UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_delete_extractor_func();
+            CREATE TRIGGER rt_after_update AFTER INSERT OR UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_after_update_extractor_func();
+        </sql>
+        <rollback>
+            DROP TRIGGER IF EXISTS rt_before_delete ON test;
+            DROP TRIGGER IF EXISTS rt_before_update ON test;
+            DROP TRIGGER IF EXISTS rt_after_insert ON test;
+            DROP TRIGGER IF EXISTS rt_before_delete ON run;
+            DROP TRIGGER IF EXISTS rt_after_insert ON run_schemas;
+            DROP TRIGGER IF EXISTS rt_before_delete ON schemaextractor;
+            DROP TRIGGER IF EXISTS rt_before_update ON schemaextractor;
+            DROP TRIGGER IF EXISTS rt_after_update ON schemaextractor;
+        </rollback>
+    </changeSet>
 </databaseChangeLog>
 
