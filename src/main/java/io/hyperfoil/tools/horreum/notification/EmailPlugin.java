@@ -31,11 +31,12 @@ public class EmailPlugin implements NotificationPlugin {
    }
 
    @Override
-   public void notify(String testName, String name, String data, Change change) {
+   public void notify(String testName, String tags, String name, String data, Change change) {
       String subject = subjectPrefix + " Change in " + testName + "/" + change.variable.name;
       String content = emailContent
             .data("name", name)
             .data("testName", testName)
+            .data("tags", tags)
             .data("baseUrl", baseUrl)
             .data("testId", String.valueOf(change.variable.testId))
             .data("variable", change.variable.name)

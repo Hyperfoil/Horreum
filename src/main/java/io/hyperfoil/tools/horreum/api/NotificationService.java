@@ -41,6 +41,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
+import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 
@@ -99,7 +100,19 @@ public class NotificationService {
          Test test = Test.findById(variable.testId);
          // Test might be null when it's private
          String testName = test == null ? "unknown" : test.name;
-         log.infof("Received new change in test %d (%s), variable %d (%s)", variable.testId, testName, variable.id, variable.name);
+         log.infof("Received new change in test %d (%s), run %d, variable %d (%s)", variable.testId, testName, event.change.runId, variable.id, variable.name);
+
+         StringBuilder sb = new StringBuilder();
+         Json tagsObject = Json.fromString(String.valueOf(em.createNativeQuery("SELECT tags::::text FROM run_tags WHERE runid = ?")
+               .setParameter(1, event.change.runId)
+               .getSingleResult()));
+         tagsObject.forEach((key, value) -> {
+            if (sb.length() != 0) {
+               sb.append(';');
+            }
+            sb.append(key).append(':').append(value);
+         });
+         String tags = sb.toString();
 
          @SuppressWarnings("unchecked")
          List<Object[]> results = em.createNativeQuery(GET_NOTIFICATIONS)
@@ -115,7 +128,7 @@ public class NotificationService {
             if (plugin == null) {
                log.errorf("Cannot notify %s; no plugin for method %s with data %s", name, method, data);
             } else {
-               plugin.notify(testName, name, data, event.change);
+               plugin.notify(testName, tags, name, data, event.change);
             }
          }
       }
