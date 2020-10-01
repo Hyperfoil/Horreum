@@ -39,7 +39,9 @@ function convertTags(tags: any): string {
 
 export default () => {
     const history = useHistory()
-    const test = new URLSearchParams(history.location.search).get("test")
+    const params = new URLSearchParams(history.location.search)
+    const test = params.get("test")
+    const tags = params.get("tags")
     const dispatch = useDispatch()
     const [selectedTest, setSelectedTest] = useState<SelectedTest>()
     const [dashboardUrl, setDashboardUrl] = useState("")
@@ -56,20 +58,28 @@ export default () => {
 
     useEffect(() => {
         if (!selectedTest) {
-            if (test) {
-                history.replace(history.location.pathname)
-            }
             return;
         }
-        history.replace(history.location.pathname + "?test=" + selectedTest)
-        fetchTags(selectedTest.id).then((response: string[]) => {
+        if (!tags) {
+            history.replace(history.location.pathname + "?test=" + selectedTest)
+        }
+        fetchTags(selectedTest.id).then((response: any[]) => {
             setAvailableTags(response)
-            setCurrentTags(undefined)
+            const paramTags = tags && response.find(t => convertTags(t) === tags)
+            setCurrentTags(paramTags && { ...paramTags, toString: () => convertTags(paramTags) } || undefined)
             if (!response || response.length == 0) {
                 doFetchDashboard(selectedTest.id)
             }
         }, error => dispatch(alertAction("TAGS_FETCH", "Failed to fetch test tags", error)))
     }, [selectedTest])
+    useEffect(() => {
+        if (currentTags) {
+            history.replace(history.location.pathname + "?test=" + selectedTest + "&tags=" + currentTags)
+            if (selectedTest) {
+                doFetchDashboard(selectedTest.id, currentTags.toString())
+            }
+        }
+    }, [currentTags])
 
     return (
         <Card>
@@ -95,13 +105,9 @@ export default () => {
                         console.log(item)
                         setCurrentTags(item)
                         setTagMenuOpen(false)
-                        doFetchDashboard(selectedTest.id, item.toString())
                     }}
                     placeholderText="Choose tags..."
                 >{ availableTags.map((tags: any, i: number) => {
-                    console.log("TAG")
-                    console.log(tags)
-                    console.log({ ...tags })
                     return (<SelectOption
                             key={i}
                             value={ { ...tags, toString: () => convertTags(tags) } }
