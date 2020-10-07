@@ -132,11 +132,17 @@ public class GrafanaService {
    }
 
    private Map<String, String> parseTags(String tq, int semicolon) {
+      if (semicolon == tq.length() - 1) {
+         return null;
+      }
       Map<String, String> tags = new TreeMap<>();
       for (String keyValue : tq.substring(semicolon + 1).split(";")) {
          int colon = keyValue.indexOf(":");
          if (colon < 0) continue;
          tags.put(keyValue.substring(0, colon), keyValue.substring(colon + 1));
+      }
+      if (tags.isEmpty()) {
+         return null;
       }
       return tags;
    }

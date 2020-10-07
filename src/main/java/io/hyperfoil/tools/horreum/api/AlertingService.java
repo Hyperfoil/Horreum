@@ -263,7 +263,7 @@ public class AlertingService {
                publishLater(DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
             }
          } catch (Throwable t) {
-            log.error("Fucked up", t);
+            log.error("Failed to create new datapoints", t);
          } finally {
             em.createNativeQuery("DROP TABLE current_run").executeUpdate();
          }
@@ -555,7 +555,7 @@ public class AlertingService {
       Map<String, List<Variable>> byGroup = new TreeMap<>();
       for (Variable variable : variables) {
          clientDashboard.annotations.list.add(new Dashboard.Annotation(variable.name, variable.id + ";" + tags));
-         byGroup.computeIfAbsent(variable.group == null || variable.group.isEmpty() ? "" : variable.group, g -> new ArrayList<>()).add(variable);
+         byGroup.computeIfAbsent(variable.group == null || variable.group.isEmpty() ? variable.name : variable.group, g -> new ArrayList<>()).add(variable);
       }
       for (Map.Entry<String, List<Variable>> entry : byGroup.entrySet()) {
          entry.getValue().sort(Comparator.comparing(v -> v.order));
@@ -594,7 +594,7 @@ public class AlertingService {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
       }
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Query tagComboQuery = em.createNativeQuery("SELECT tags::::text FROM run_tags JOIN run ON run_tags.runid = runid WHERE run.testid = ? GROUP BY tags");
+         Query tagComboQuery = em.createNativeQuery("SELECT tags::::text FROM run_tags JOIN run ON run_tags.runid = run.id WHERE run.testid = ? GROUP BY tags");
          Json result = new Json(true);
          for (String tags : ((List<String>) tagComboQuery.setParameter(1, testId).getResultList())) {
             result.add(Json.fromString(tags));
@@ -614,7 +614,7 @@ public class AlertingService {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          GrafanaDashboard dashboard;
          if (tags == null || tags.isEmpty()) {
-            dashboard = GrafanaDashboard.find("testId", testId).firstResult();
+            dashboard = GrafanaDashboard.find("testId = ?1 AND (tags IS NULL OR tags = '')", testId).firstResult();
          } else {
             dashboard = GrafanaDashboard.find("testId = ?1 AND tags = ?2", testId, tags).firstResult();
          }

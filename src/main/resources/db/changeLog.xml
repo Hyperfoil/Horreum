@@ -981,5 +981,82 @@
             <column name="tags" type="text" />
         </addColumn>
     </changeSet>
+
+    <changeSet id="14" author="rvansa">
+        <dropColumn tableName="run_tags" columnName="extractor_ids" />
+        <addColumn tableName="run_tags">
+            <column name="extractor_ids" type="int[]" />
+        </addColumn>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_after_insert_run_schemas_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH test_tags AS (
+                    SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor FROM test
+                ), tags AS (
+                    SELECT rs.runid, se.id as extractor_id, se.accessor, jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath) AS value
+                    FROM schemaextractor se
+                    JOIN test_tags ON se.accessor = test_tags.accessor
+                    JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id
+                    JOIN run ON run.id = rs.runid
+                    WHERE rs.runid = NEW.runid
+                )
+                INSERT INTO run_tags
+                    SELECT tags.runid, jsonb_object_agg(tags.accessor, tags.value) AS tags, array_agg(tags.extractor_id) AS extractor_ids FROM tags GROUP BY runid;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_after_insert_test_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH test_tags AS (
+                    SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor FROM test
+                ), tags AS (
+                    SELECT rs.runid, se.id AS extractor_id, se.accessor, jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath) AS value
+                    FROM schemaextractor se
+                    JOIN test_tags ON se.accessor = test_tags.accessor
+                    JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id
+                    JOIN run ON run.id = rs.runid
+                    WHERE rs.testid = NEW.id
+                )
+                INSERT INTO run_tags
+                    SELECT tags.runid, jsonb_object_agg(tags.accessor, tags.value) AS tags, array_agg(tags.extractor_id) AS extractor_ids FROM tags GROUP BY runid;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_after_update_extractor_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH test_tags AS (
+                    SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor FROM test
+                ), matching_runs AS (
+                    SELECT runid
+                    FROM schemaextractor se
+                    JOIN test_tags ON se.accessor = test_tags.accessor
+                    JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id
+                    WHERE se.id = NEW.id
+                ), tags AS (
+                    SELECT rs.runid, se.id AS extractor_id, se.accessor, jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::jsonpath) AS value
+                    FROM schemaextractor se
+                    JOIN test_tags ON se.accessor = test_tags.accessor
+                    JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id
+                    JOIN run ON run.id = rs.runid
+                    WHERE run.id = ANY(SELECT runid FROM matching_runs)
+                )
+                INSERT INTO run_tags
+                    SELECT tags.runid, jsonb_object_agg(tags.accessor, tags.value) AS tags, array_agg(tags.extractor_id) AS extractor_ids FROM tags GROUP BY runid;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+    </changeSet>
+
+    <changeSet id="15" author="rvansa">
+        <sql>
+            DROP TRIGGER rt_before_update ON schemaextractor;
+            CREATE TRIGGER rt_before_update BEFORE UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_update_extractor_func();
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
