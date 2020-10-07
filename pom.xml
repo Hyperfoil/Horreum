@@ -192,6 +192,10 @@
             <artifactId>quarkus-liquibase</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-container-image-jib</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-core</artifactId>
             <version>${vertx.version}</version>
@@ -262,7 +266,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <uberJar>true</uberJar>
+<!--                    <uberJar>true</uberJar>-->
                 </configuration>
             </plugin>
             <plugin>
