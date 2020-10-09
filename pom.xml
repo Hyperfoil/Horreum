@@ -79,7 +79,7 @@
         <quarkus.version>1.8.2.Final</quarkus.version>
         <surefire-plugin.version>2.22.0</surefire-plugin.version>
         <vertx.version>3.9.3</vertx.version>
-        <yaup.version>0.5</yaup.version>
+        <yaup.version>0.8.2</yaup.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
     </properties>
