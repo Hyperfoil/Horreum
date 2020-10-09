@@ -15,7 +15,21 @@ CREATE TRIGGER vd_after_update AFTER INSERT OR UPDATE ON schemaextractor FOR EAC
 CREATE TRIGGER vd_before_delete BEFORE DELETE ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_before_delete_vc_func();
 CREATE TRIGGER vd_before_update BEFORE UPDATE OF id, accessors ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_before_update_vc_func();
 CREATE TRIGGER vd_after_update AFTER INSERT OR UPDATE OF id, accessors ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_after_update_vc_func();
+
+CREATE TRIGGER rt_before_delete BEFORE DELETE ON test FOR EACH ROW EXECUTE FUNCTION rt_before_delete_test_func();
+CREATE TRIGGER rt_before_update BEFORE UPDATE ON test FOR EACH ROW EXECUTE FUNCTION rt_before_update_test_func();
+CREATE TRIGGER rt_after_insert AFTER INSERT OR UPDATE ON test FOR EACH ROW EXECUTE FUNCTION rt_after_insert_test_func();
+CREATE TRIGGER rt_before_delete BEFORE DELETE ON run FOR EACH ROW EXECUTE FUNCTION rt_before_delete_run_func();
+CREATE TRIGGER rt_before_delete BEFORE DELETE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_delete_extractor_func();
+CREATE TRIGGER rt_before_update BEFORE UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_update_extractor_func();
+CREATE TRIGGER rt_after_update AFTER INSERT OR UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_after_update_extractor_func();
+CREATE TRIGGER rt_before_insert BEFORE INSERT ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_insert_extractor_func();
 -- End of triggers
+
+-- Since the derived tables are not dropped we need to drop the data to prevent collisions/duplicate rows
+TRUNCATE TABLE run_tags;
+TRUNCATE TABLE run_schemas;
+TRUNCATE TABLE view_data;
 
 INSERT INTO schema (id,name,uri,owner,access) VALUES (1,'SPECjEnterprise2010','urn:spec:jenterprise2010','dev-team',0);
 INSERT INTO test (id,name,description,defaultview_id,owner,access) VALUES (1,'SPECjEnterprise2010','spec.org 2010 enterprise benchmark',NULL,'perf-team',0);
@@ -46,8 +60,8 @@ INSERT INTO public.run (id, access, data, owner, start, stop, description, testi
 INSERT INTO public.run (id, access, data, owner, start, stop, testid, token) VALUES (3, 0, '{ "all.json": {"tags": [ "foo" ], "job": "otherjob", "info": {"id": "0002", "errors": [], "benchmark": "single-request", "cancelled": false, "startTime": 1580906854462, "description": null, "terminateTime": 1580906854678}, "$schema": "http://hyperfoil.io/run-schema/0.6"}, "other.json": { "$schema": "someother" }}', 'dev-team', '2020-04-06 12:00:54.462', '2020-04-06 12:00:54.678', 2, NULL);
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (9,'runId', '.info.id',2);
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (10,'benchmark', '.info.benchmark',2);
-INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (13,'tags','.tags',2)
-INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (14,'job','.job',2)
+INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (13,'tags','.tags',2);
+INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (14,'job','.job',2);
 INSERT INTO view (id,name,test_id) VALUES (2,'default',2);
 UPDATE test SET defaultview_id = 2 WHERE id = 2;
 INSERT INTO viewcomponent (id,accessors,headername,headerorder,render,view_id) VALUES (9,'runId','Run ID',0,NULL,2);
@@ -55,7 +69,7 @@ INSERT INTO viewcomponent (id,accessors,headername,headerorder,render,view_id) V
 INSERT INTO schema (id, access, description, name, owner, schema, startpath, stoppath, testpath, token, uri) VALUES (3, 0, 'Hyperfoil''s all.json', 'Hyperfoil v2.0', 'dev-team', '{"$id": "http://hyperfoil.io/run-schema/v2.0", "type": "object", "$schema": "http://json-schema.org/draft-07/schema#" }', '$.info.startTime', '$.info.terminateTime', '$.info.benchmark', NULL, 'http://hyperfoil.io/run-schema/v2.0');
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (11,'runId', '.info.id',3);
 INSERT INTO schemaextractor (id,accessor,jsonpath,schema_id) VALUES (12,'requestCount', '.stats[*].total.summary.requestCount',3);
-INSERT INTO variable (id,testid,name,"order",accessors,confidence,deviationfactor,maxwindow) VALUES (13,2,'Request count',0,'requestCount',0.95, 2.0, 30);
+INSERT INTO variable (id,testid,name,"order",accessors,maxdifferencelastdatapoint,maxdifferencefloatingwindow,floatingwindow,minwindow) VALUES (13,2,'Request count',0,'requestCount',0.2, 0.1, 5, 5);
 INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (14,13,1,'2020-07-28 12:00:54.678',185);
 INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (15,13,2,'2020-07-29 12:00:54.678',195);
 INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (16,13,3,'2020-07-30 12:00:54.678',205);

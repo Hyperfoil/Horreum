@@ -1058,5 +1058,19 @@
             CREATE TRIGGER rt_before_update BEFORE UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_update_extractor_func();
         </sql>
     </changeSet>
+
+    <changeSet id="16" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_before_insert_extractor_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_tags WHERE runid IN (SELECT runid FROM run_schemas WHERE run_schemas.schemaid = NEW.schema_id);
+            RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE TRIGGER rt_before_insert BEFORE INSERT ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_insert_extractor_func();
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
