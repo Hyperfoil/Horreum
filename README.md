@@ -1,16 +1,25 @@
 # Hyperfoil Horreum
-A Proof of Concept service for storing performance data in postgres.
-Expect breaking changes around every turn.
+A service for storing performance data. Curently under early development.
+
+Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io).
 
 ## Prerequisites
 We have prepared a Docker-compose script to set up PosgreSQL database, Keycloak and create some example users. Therefore you can simply run
 ```bash
-docker-compose up
+docker-compose up -d
 ```              
 and after a few moments everything should be up and ready. You can later configure Keycloak on [localhost:8180](http://localhost:8180) using credentials `admin`/`secret`.
 The `horreum` realm already has some roles (`dev-team`) and single user with credentials `user`/`secret` you can use once you start up Horreum.
 
-Note that this docker-compose script is intended for developer use; for production, check out [Horreum operator](https://github.com/Hyperfoil/horreum-operator).                                                                                       
+Note that this docker-compose script is intended for developer use; for production, check out [Horreum operator](https://github.com/Hyperfoil/horreum-operator).
+
+If you are using Podman (and podman-compose) rather than Docker, please use
+
+```bash
+podman-compose -f podman-compose.yaml -d 
+```                                     
+
+Due to subtleties in Podman's rootless network configuration it's not possible to use `docker-compose.yaml`.                                                   
 
 ## Getting Started
 ```bash
@@ -43,16 +52,6 @@ before starting with enforced security you need to run
 PGPASSWORD=secret psql -h 172.17.0.1 -U dbadmin -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' horreum
 ``` 
 Alternatively you can just drop the database volume and start docker-compose from scratch.
-
-## native mode
-###does not work~
-```bash
-./mvnw package -Pnative -Dui
-```
-This _should_ build the native image but it fails
-```
-java.lang.NoClassDefFoundError: com/sun/jna/LastErrorException
-```
 
 ## Security
 

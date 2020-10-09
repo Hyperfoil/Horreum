@@ -19,7 +19,7 @@ services:
     image: docker.io/postgres:12
     restart: on-failure
     environment:
-    - PGHOST=172.17.0.1
+    - PGHOST=postgres
     - PGPORT=5432
     - PGDATABASE=horreum
     - PGUSER=dbadmin
@@ -50,11 +50,12 @@ services:
     - -Dkeycloak.migration.file=/etc/keycloak/imports/keycloak-horreum.json
     - -Dkeycloak.migration.strategy=IGNORE_EXISTING
     - -Djboss.socket.binding.port-offset=100
+    - -Djboss.bind.address=127.0.0.1
     environment:
     - KEYCLOAK_USER=admin
     - KEYCLOAK_PASSWORD=secret
     - DB_VENDOR=postgres
-    - DB_ADDR=172.17.0.1
+    - DB_ADDR=postgres
     - DB_PORT=5432
     - DB_DATABASE=keycloak
     - DB_USER=keycloak
@@ -72,6 +73,8 @@ services:
     - bash
     - -x
     - /etc/horreum/cwd/app-init.sh
+    environment:
+    - CONTAINER_RUNTIME=podman
     volumes:
     - ./:/etc/horreum/cwd:rw,z
     - horreum_grafana:/etc/grafana
@@ -92,11 +95,12 @@ services:
     - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
     - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
     - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://localhost:8180/auth/realms/horreum/protocol/openid-connect/auth
-    - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/token
-    - GF_AUTH_GENERIC_OAUTH_API_URL=http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/userinfo
+    - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://keycloak:8180/auth/realms/horreum/protocol/openid-connect/token
+    - GF_AUTH_GENERIC_OAUTH_API_URL=http://keycloak:8180/auth/realms/horreum/protocol/openid-connect/userinfo
     - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=false
     ports:
     - 4040:3000
+    user: "0:0"
     volumes:
     - horreum_grafana:/var/lib/grafana
     - ./:/etc/grafana/cwd/:ro,z
