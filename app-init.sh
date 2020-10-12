@@ -7,9 +7,11 @@ if [ "$CONTAINER_RUNTIME" = "podman" ]; then
   echo "QUARKUS_OIDC_AUTH_SERVER_URL=http://127.0.0.1:8180/auth/realms/horreum" >> /etc/horreum/cwd/.env
   KEYCLOAK_HOST=127.0.0.1
   GRAFANA_ADMIN_URL=admin:admin@127.0.0.1:3000
+  HORREUM_URL=http://127.0.0.1:8080
 else
   KEYCLOAK_HOST=172.17.0.1
   GRAFANA_ADMIN_URL=admin:admin@172.17.0.1:4040
+  HORREUM_URL=http://172.17.0.1:8080
 fi
 
 
@@ -51,7 +53,7 @@ USER_ID=$(curl -s $KEYCLOAK_BASEURL/users -H "$AUTH" | jq -r '.[] | select(.user
 curl -s $KEYCLOAK_BASEURL/users/$USER_ID/role-mappings/realm -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_UPLOADER_ID'","name":"dev-uploader"},{"id":"'$TEAM_TESTER_ID'","name":"dev-tester"},{"id":"'$ADMIN_ID'","name":"admin"}]'
 
 # Install datasource in Grafana
-while ! curl -s $GRAFANA_ADMIN_URL/api/datasources -H 'content-type: application/json' -d '{"name":"Horreum","type":"simpod-json-datasource","access":"proxy","url":"http://172.17.0.1:8080/api/grafana","basicAuth":false,"withCredentials":false,"isDefault":true,"jsonData":{"oauthPassThru":true},"readOnly":false}'; do sleep 5; done;
+while ! curl -s $GRAFANA_ADMIN_URL/api/datasources -H 'content-type: application/json' -d '{"name":"Horreum","type":"simpod-json-datasource","access":"proxy","url":"'$HORREUM_URL'/api/grafana","basicAuth":false,"withCredentials":false,"isDefault":true,"jsonData":{"oauthPassThru":true},"readOnly":false}'; do sleep 5; done;
 
 # Obtain Grafana API KEY
 # First drop key if it already exists

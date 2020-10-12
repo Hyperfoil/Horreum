@@ -1,6 +1,9 @@
 const proxy = require('http-proxy-middleware')
 
 module.exports = function(app){
-    app.use(proxy('/api',{target: 'http://localhost:8080/'}))
-    app.use(proxy('/ws', {target: 'ws://localhost:8080/',ws:true}))
+    const useHttps = process.env.HTTPS
+    console.log(useHttps)
+    const port = useHttps ? 8443 : 8080
+    app.use(proxy('/api',{target: (useHttps ? 'https': 'http') + '://localhost:' + port + '/', secure: false}))
+    app.use(proxy('/ws', {target: 'ws://localhost:' + port + '/',ws:true}))
 }
