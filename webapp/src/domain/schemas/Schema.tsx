@@ -39,7 +39,7 @@ import {
    constraintValidationFormatter,
 } from "../../alerts"
 
-import { fromEditor, toString } from '../../components/Editor';
+import { toString } from '../../components/Editor';
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
@@ -47,9 +47,13 @@ import OwnerSelect from '../../components/OwnerSelect'
 import { Extractor } from '../../components/Accessors';
 import { Schema } from './reducers';
 
+type SchemaParams = {
+    schemaId: string,
+}
+
 export default () => {
-    const { schemaId } = useParams();
-    const schema = useSelector(selectors.getById(schemaId))
+    const { schemaId } = useParams<SchemaParams>();
+    const schema = useSelector(selectors.getById(Number.parseInt(schemaId)))
     const [name, setName] = useState("")
     const [description, setDescription] = useState("");
     const [testPath, setTestPath] = useState(schema?.testPath || "")
@@ -61,7 +65,7 @@ export default () => {
     const dispatch = useDispatch();
     useEffect(() => {
         if (schemaId !== "_new") {
-            dispatch(actions.getById(schemaId))
+            dispatch(actions.getById(Number.parseInt(schemaId)))
         }
     }, [dispatch, schemaId])
     useEffect(() => {
@@ -127,7 +131,7 @@ export default () => {
     const [activeTab, setActiveTab] = useState(0)
     const [extractors, setExtractors] = useState<Extractor[]>([])
     useEffect(() => {
-        api.listExtractors(schemaId).then(result => setExtractors(result.map((e: Extractor) => {
+        api.listExtractors(Number.parseInt(schemaId)).then(result => setExtractors(result.map((e: Extractor) => {
             e.newName = e.accessor
             return e
         }).sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))))
