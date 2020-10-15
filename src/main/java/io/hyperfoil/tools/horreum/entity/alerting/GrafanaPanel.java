@@ -6,7 +6,7 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
+import javax.persistence.ManyToMany;
 import javax.persistence.OrderColumn;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -17,7 +17,9 @@ public class GrafanaPanel extends PanacheEntityBase {
    @GeneratedValue
    public Integer id;
 
-   @OneToMany(fetch = FetchType.EAGER)
+   public String name;
+
+   @ManyToMany(fetch = FetchType.EAGER)
    @OrderColumn
    public List<Variable> variables;
 }

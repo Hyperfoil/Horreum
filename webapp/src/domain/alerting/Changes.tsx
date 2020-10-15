@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import React, { useState, useEffect, useRef } from 'react'
+import { useDispatch } from 'react-redux'
 import {
     ActionGroup,
     Button,
@@ -133,9 +133,10 @@ const ChangeModal = ({change, isOpen, onClose, onUpdate }: ChangeModalProps) => 
 type ChangesProps = {
     varId: number,
     testOwner?: string,
+    selectedChangeId?: number,
 }
 
-export const Changes = ({ varId, testOwner } : ChangesProps) => {
+export const Changes = ({ varId, testOwner, selectedChangeId } : ChangesProps) => {
     const dispatch = useDispatch()
     const [changes, setChanges] = useState<Change[]>([])
     useEffect(() => {
@@ -149,7 +150,7 @@ export const Changes = ({ varId, testOwner } : ChangesProps) => {
         {
             Header: "Confirmed",
             accessor: "confirmed",
-            Cell: (arg: any) => arg.cell.value ? <CheckIcon /> : ""
+            Cell: (arg: any) => arg.cell.value ? <CheckIcon id={ "change_" + arg.row.original.id } /> : ""
         }, {
             Header: "Time",
             accessor: "timestamp",
@@ -169,8 +170,8 @@ export const Changes = ({ varId, testOwner } : ChangesProps) => {
             Header: "",
             accessor: "id",
             disableSortBy: true,
-            Cell: (arg: any) => (
-                <ChangeMenu
+            Cell: (arg: any) => {
+                return (<ChangeMenu
                     change={ arg.row.original }
                     onDelete={ changeId => api.deleteChange(changeId).then(
                         _ => setChanges(changes.filter(c => c.id !== changeId)),
@@ -181,22 +182,33 @@ export const Changes = ({ varId, testOwner } : ChangesProps) => {
                         error => dispatch(alertAction("CHANGE_UPDATE", "Failed to update change " + change.id, error))
                     ) }
                 />
-            )
+            )}
         })
     }
+    // TODO: this doesn't work, table won't get updated when selected changes
+    const selected = { [changes.findIndex(c => c.id == selectedChangeId)]: true }
     return (
-        <Table columns={columns} data={changes} />
+        <Table columns={columns} data={changes} selected={selected}/>
     )
 }
 
 type ChangesTabsProps = {
     variables: Variable[],
     testOwner?: string,
+    selectedChangeId?: number,
+    selectedVariableId?: number,
 }
 
-export const ChangesTabs = ({ variables, testOwner } : ChangesTabsProps) => {
+export const ChangesTabs = ({ variables, testOwner, selectedChangeId, selectedVariableId } : ChangesTabsProps) => {
     const [isExpanded, setExpanded] = useState(false)
     const [activeTab, setActiveTab] = useState<number | string>(0)
+    useEffect(() => {
+        const index = variables.findIndex(v => v.id === selectedVariableId)
+        if (index >= 0) {
+            setExpanded(true)
+            setActiveTab(index)
+        }
+    }, [selectedVariableId])
     const name = variables[0].group || variables[0].name;
     return (
         <ExpandableSection toggleText={ isExpanded ? "Hide changes in " + name : "Show changes in " + name }
@@ -210,7 +222,7 @@ export const ChangesTabs = ({ variables, testOwner } : ChangesTabsProps) => {
             >
             { variables.map((v, index) => (
                 <Tab key={ v.name } eventKey={index} title={ v.name }>
-                    <Changes varId={v.id} testOwner={testOwner} />
+                    <Changes varId={v.id} testOwner={testOwner} selectedChangeId={selectedChangeId} />
                 </Tab>)
             ) }
             </Tabs>

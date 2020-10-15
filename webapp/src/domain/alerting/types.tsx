@@ -15,6 +15,7 @@ export type Variable = {
 }
 
 export type Panel = {
+    name: string,
     variables: Variable[],
 }
 

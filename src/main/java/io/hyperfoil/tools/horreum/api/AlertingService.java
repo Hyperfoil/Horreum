@@ -561,6 +561,7 @@ public class AlertingService {
          entry.getValue().sort(Comparator.comparing(v -> v.order));
          Dashboard.Panel panel = new Dashboard.Panel(entry.getKey(), new Dashboard.GridPos(12 * (i % 2), 9 * (i / 2), 12, 9));
          GrafanaPanel gpanel = new GrafanaPanel();
+         gpanel.name = entry.getKey();
          gpanel.variables = new ArrayList<>();
          dashboard.panels.add(gpanel);
          for (Variable variable : entry.getValue()) {

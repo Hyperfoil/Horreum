@@ -91,6 +91,7 @@ public class GrafanaService {
             }
             TimeseriesTarget tt = new TimeseriesTarget();
             tt.target = variableName;
+            tt.variableId = variableId;
             result.add(tt);
 
             StringBuilder sql = new StringBuilder("SELECT datapoint.* FROM datapoint ");
@@ -106,7 +107,7 @@ public class GrafanaService {
                   .setParameter(3, query.range.to);
             addTagValues(tags, nativeQuery);
             for (DataPoint dp : (List<DataPoint>) nativeQuery.getResultList()) {
-               tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli() });
+               tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli(), /* non-standard! */ dp.runId });
             }
          }
       }
@@ -214,7 +215,8 @@ public class GrafanaService {
          content.append(" (group ").append(change.variable.group).append(")");
       }
       content.append("<br>").append(change.description).append("<br>Confirmed: ").append(change.confirmed);
-      return new AnnotationDefinition("Change in run " + change.runId, content.toString(), false, change.timestamp.toEpochMilli(), 0, new String[0]);
+      return new AnnotationDefinition("Change in run " + change.runId, content.toString(), false,
+            change.timestamp.toEpochMilli(), 0, new String[0], change.id, change.variable.id, change.runId);
    }
 
    public static class Query {
@@ -230,6 +232,8 @@ public class GrafanaService {
    public static class TimeseriesTarget {
       public String target;
       public List<Number[]> datapoints = new ArrayList<>();
+      // custom fields Grafana does not understand
+      public int variableId;
    }
 
    public static class AnnotationsQuery {
@@ -252,14 +256,21 @@ public class GrafanaService {
       public long time;
       public long timeEnd;
       public String[] tags;
+      // custom fields Grafana does not understand
+      public int changeId;
+      public int variableId;
+      public int runId;
 
-      public AnnotationDefinition(String title, String text, boolean isRegion, long time, long timeEnd, String[] tags) {
+      public AnnotationDefinition(String title, String text, boolean isRegion, long time, long timeEnd, String[] tags, int changeId, int variableId, int runId) {
          this.title = title;
          this.text = text;
          this.isRegion = isRegion;
          this.time = time;
          this.timeEnd = timeEnd;
          this.tags = tags;
+         this.changeId = changeId;
+         this.variableId = variableId;
+         this.runId = runId;
       }
    }
 

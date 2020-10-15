@@ -1086,5 +1086,11 @@
             CREATE TRIGGER rt_before_delete BEFORE DELETE ON run_schemas FOR EACH ROW EXECUTE FUNCTION rt_before_delete_run_schemas_func();
         </sql>
     </changeSet>
+
+    <changeSet id="18" author="rvansa">
+        <addColumn tableName="grafana_panel">
+            <column name="name" type="text" />
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
 
