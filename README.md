@@ -91,7 +91,16 @@ Bot accounts that only upload data do not need read access that is represented b
 needs to update a run it needs this role, though (this role is not sufficient to delete anything, though; that requires the `tester` role).   
 Similar to that testers should get a `engineers-tester` role which is a composite role, including `engineers-team`, `tester` and `viewer`.
 
-     
+## Running in dev mode over HTTPS
 
+By default the local setup uses plain HTTP. If you need to test HTTPS, run the docker-compose/podman-compose as usual (in this setup the other containers won't be secured) and then run:
+```bash
+./enable-https.sh
+```      
+This script will amend `.env` file with few extra variables and configure Keycloak to redirect to secured ports. Then you can run
+```bash
+HTTPS=true mvn compile quarkus:dev -Dui.dev
+```
+as usual - the `HTTPS=true` will use secured connections on the live-reload proxy on port 3000.
 
-
+When you want to revert back to plain HTTP, run `./disable-https.sh` and drop the `HTTPS=true` env var.
