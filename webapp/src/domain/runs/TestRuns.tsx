@@ -150,7 +150,7 @@ function hasNonTrivialAccessor(test: Test, vcIndex: number) {
 }
 
 export default () => {
-    const { testId: stringTestId } = useParams();
+    const { testId: stringTestId } = useParams<any>();
     const testId = parseInt(stringTestId)
 
     const test = useSelector(get(testId))
