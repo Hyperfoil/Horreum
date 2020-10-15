@@ -9,7 +9,7 @@ import Keycloak from "keycloak-js"
 
 import store, { State } from './store'
 import { fetchApi } from './services/api';
-import { CLEAR_ALERT } from './alerts'
+import { alertAction, CLEAR_ALERT } from './alerts'
 
 const INIT = "auth/INIT"
 const REGISTER_AFTER_LOGIN = "auth/REGISTER_AFTER_LOGIN"
@@ -142,7 +142,13 @@ export const initKeycloak = (state: State) => {
         (initPromise as Promise<boolean>).then(authenticated => {
           store.dispatch({type: CLEAR_ALERT })
           store.getState().auth.afterLogin.forEach(a => a.func())
-          keycloak.loadUserProfile().then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
+          console.log("AUTH")
+          console.log(authenticated)
+          if (authenticated) {
+            keycloak.loadUserProfile()
+               .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
+               .catch(error => store.dispatch(alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error)))
+          }
         })
       }
       store.dispatch({ type: INIT, keycloak: keycloak, initPromise: initPromise })
