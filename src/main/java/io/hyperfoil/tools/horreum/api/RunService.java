@@ -38,9 +38,9 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -388,25 +388,17 @@ public class RunService {
 
       try {
          if (run.id == null) {
-             em.persist(run);
-             em.flush();
-//            run.persistAndFlush(); //currently appears to be a bug in Panache where validation fails
+            em.persist(run);
          } else {
             em.merge(run);
          }
-         //run.persistAndFlush();
+         em.flush();
       } catch (Exception e) {
-         e.printStackTrace();
+         log.error("Failed to persist run.", e);
       }
       eventBus.publish(Run.EVENT_NEW, run);
-      //run.persistAndFlush();
 
-      StreamingOutput streamingOutput = outputStream -> {
-         outputStream.write(run.id);
-         outputStream.flush();
-      };
-      return Response.ok(streamingOutput).build();
-      //return Response.ok(run.id).build();
+      return Response.ok(String.valueOf(run.id)).header(HttpHeaders.LOCATION, "/run/" + run.id).build();
    }
 
    @DenyAll
