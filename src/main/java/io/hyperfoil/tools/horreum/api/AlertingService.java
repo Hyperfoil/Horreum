@@ -188,7 +188,7 @@ public class AlertingService {
                   extractionQuery.append("$.*");
                }
                // four colons to escape it for Hibernate
-               extractionQuery.append(jsonpath).append("'::::jsonpath)#>>'{}' as ").append(accessor);
+               extractionQuery.append(jsonpath).append("'::::jsonpath)::::text as ").append(accessor);
                var.accessors.add(accessor);
             }
             extractionQuery.append(" FROM current_run");
@@ -242,13 +242,13 @@ public class AlertingService {
                            code.append(accessor);
                         }
                         code.append(": ");
-                        appendNumberOrString(code, value);
+                        appendValue(code, value);
                         code.append(",\n");
                      }
                      code.append("};\n");
                   } else {
                      code.append("const __obj = ");
-                     appendNumberOrString(code, extracted.get(var.accessors.get(0).toLowerCase()));
+                     appendValue(code, extracted.get(var.accessors.get(0).toLowerCase()));
                      code.append(";\n");
                   }
                   code.append("const __func = ").append(var.calculation).append(";\n");
@@ -270,17 +270,26 @@ public class AlertingService {
       }
    }
 
-   private void appendNumberOrString(StringBuilder code, String value) {
+   private void appendValue(StringBuilder code, String value) {
       if (value == null) {
          code.append("null");
          return;
       }
-      try {
-         Double.parseDouble(value);
-         code.append(value);
-      } catch (NumberFormatException e) {
-         code.append('"').append(value).append('"');
+      if (value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"') {
+         String maybeNumber = value.substring(1, value.length() - 1);
+         try {
+            code.append(Integer.parseInt(maybeNumber));
+            return;
+         } catch (NumberFormatException e1) {
+               try {
+               code.append(Double.parseDouble(maybeNumber));
+               return;
+            } catch (NumberFormatException e2) {
+                // ignore
+            }
+         }
       }
+      code.append(value);
    }
 
    private Double execute(String jsCode, String name) {
