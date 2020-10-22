@@ -242,6 +242,25 @@ function sortByOrder(v1: VariableDisplay, v2: VariableDisplay) {
     }
 }
 
+type ActionsProps = {
+    isTester: boolean,
+    testName: string,
+    onAdd(): void,
+    onCopy(): void,
+    onRecalculate(): void,
+}
+
+const Actions = (props: ActionsProps) => {
+    return (<div>
+        { props.isTester && <>
+            <Button onClick={props.onAdd}>Add variable</Button>
+            <Button variant="secondary" onClick={ props.onCopy }>Copy...</Button>
+            <Button variant="secondary" onClick={ props.onRecalculate }>Recalculate</Button>
+        </>}
+        <NavLink className="pf-c-button pf-m-secondary" to={ "/series?test=" + props.testName }>Go to series</NavLink>
+    </div>)
+}
+
 export default ({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) => {
     const [variables, setVariables] = useState<VariableDisplay[]>([])
     const [groups, setGroups] = useState<string[]>([])
@@ -309,6 +328,26 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
     }
     const [recalculateOpen, setRecalculateOpen] = useState(false)
     const [copyOpen, setCopyOpen ] = useState(false)
+    const addVariable = () => {
+        variables?.push({
+            id: -1,
+            testid: testId,
+            name: "",
+            order: variables.length,
+            accessors: "",
+            maxDifferenceLastDatapointStr: "0.2",
+            maxDifferenceLastDatapoint: 0.2,
+            minWindowStr: "5",
+            minWindow: 5,
+            maxDifferenceFloatingWindowStr: "0.1",
+            maxDifferenceFloatingWindow: 0.1,
+            floatingWindowStr: "5",
+            floatingWindow: 5
+        })
+        calculations.current.push(undefined)
+        setVariables([ ...variables])
+        onModified(true)
+    }
     return (<>
         <div style={{
             marginTop: "16px",
@@ -318,38 +357,13 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
             justifyContent: "space-between",
         }} >
             <Title headingLevel="h3">Variables</Title>
-            <div>
-            { isTester && <>
-                <Button onClick={ () => {
-                    variables?.push({
-                        id: -1,
-                        testid: testId,
-                        name: "",
-                        order: variables.length,
-                        accessors: "",
-                        maxDifferenceLastDatapointStr: "0.2",
-                        maxDifferenceLastDatapoint: 0.2,
-                        minWindowStr: "5",
-                        minWindow: 5,
-                        maxDifferenceFloatingWindowStr: "0.1",
-                        maxDifferenceFloatingWindow: 0.1,
-                        floatingWindowStr: "5",
-                        floatingWindow: 5,
-                    })
-                    calculations.current.push(undefined)
-                    setVariables([ ...variables])
-                    onModified(true)
-                }}>Add variable</Button>
-                <Button variant="secondary"
-                    onClick={ () => setCopyOpen(true) }
-                >Copy...</Button>
-                <Button
-                    variant="secondary"
-                    onClick={ () => setRecalculateOpen(true) }
-                >Recalculate</Button>
-            </>}
-            <NavLink className="pf-c-button pf-m-secondary" to={ "/series?test=" + testName }>Go to series</NavLink>
-            </div>
+            <Actions
+                isTester={isTester}
+                testName={testName}
+                onAdd={ addVariable }
+                onCopy={() => setCopyOpen(true)}
+                onRecalculate={() => setRecalculateOpen(true) }
+            />
         </div>
         <RecalculateModal
             isOpen={!!recalcConfirm}
@@ -464,5 +478,14 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                 </DataListItem>
             ))}
         </DataList>
+        <div style={{ textAlign: "right", marginTop: "16px"}} >
+            <Actions
+                isTester={isTester}
+                testName={testName}
+                onAdd={ addVariable }
+                onCopy={() => setCopyOpen(true)}
+                onRecalculate={() => setRecalculateOpen(true) }
+            />
+        </div>
     </>)
 }
