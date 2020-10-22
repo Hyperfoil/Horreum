@@ -178,6 +178,8 @@ export default () => {
                                 setPanels([])
                                 setDashboardUrl("")
                                 setSelectedTest(selection as SelectedTest)
+                                setCurrentTags(undefined)
+                                history.replace(history.location.pathname + "?test=" + selection)
                             }}
                             selection={selectedTest}
                         />
