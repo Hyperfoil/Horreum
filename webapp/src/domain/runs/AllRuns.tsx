@@ -7,6 +7,7 @@ import {
     Card,
     CardHeader,
     CardBody,
+    CardFooter,
     Checkbox,
     PageSection,
     Pagination,
@@ -289,6 +290,15 @@ export default ()=>{
                   }}
                   isLoading={ isLoading }/>
             </CardBody>
+            <CardFooter style={{ textAlign: "right" }}>
+               <Pagination
+                    itemCount={runCount}
+                    perPage={perPage}
+                    page={page}
+                    onSetPage={(e, p) => setPage(p)}
+                    onPerPageSelect={(e, pp) => setPerPage(pp)}
+                 />
+            </CardFooter>
           </Card>
         </PageSection>
     )
