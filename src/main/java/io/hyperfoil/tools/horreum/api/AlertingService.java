@@ -604,7 +604,7 @@ public class AlertingService {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
       }
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Query tagComboQuery = em.createNativeQuery("SELECT tags::::text FROM run_tags JOIN run ON run_tags.runid = run.id WHERE run.testid = ? GROUP BY tags");
+         Query tagComboQuery = em.createNativeQuery("SELECT tags::::text FROM run LEFT JOIN run_tags ON run_tags.runid = run.id WHERE run.testid = ? GROUP BY tags");
          Json result = new Json(true);
          for (String tags : ((List<String>) tagComboQuery.setParameter(1, testId).getResultList())) {
             result.add(Json.fromString(tags));

@@ -28,6 +28,9 @@ import {
 import { NavLink, useHistory } from 'react-router-dom';
 
 function convertTags(tags: any): string {
+    if (!tags) {
+        return "<no tags>"
+    }
     let str = ""
     for (let [key, value] of Object.entries(tags)) {
         if (str !== "") {
@@ -148,7 +151,7 @@ export default () => {
             setAvailableTags(response)
             const paramTags = tags && response.find(t => convertTags(t) === tags)
             setCurrentTags(paramTags && { ...paramTags, toString: () => convertTags(paramTags) } || undefined)
-            if (!response || response.length == 0) {
+            if (!response || response.length === 0 || response[0] === null) {
                 doFetchDashboard(selectedTest.id)
             }
         }, error => dispatch(alertAction("TAGS_FETCH", "Failed to fetch test tags", error)))
@@ -178,7 +181,7 @@ export default () => {
                             }}
                             selection={selectedTest}
                         />
-                        { selectedTest && availableTags && availableTags.length > 0 &&
+                        { selectedTest && availableTags && availableTags.length > 0 && availableTags[0] != null &&
                         <Select
                             isOpen={tagMenuOpen}
                             onToggle={ setTagMenuOpen }

@@ -82,6 +82,7 @@ public class RunService {
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE run SET owner = ?, access = ? WHERE id = ?";
+   private static final Json EMPTY_ARRAY = new Json(true);
 
    @Inject
    EntityManager em;
@@ -592,7 +593,7 @@ public class RunService {
       StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
          .append("run.owner, run.access, run.token, ")
          .append("test.name AS testname, run.trashed, run.description, run_tags.tags::::text AS tags ")
-         .append("FROM run JOIN test ON test.id = run.testId JOIN run_tags ON run_tags.runid = run.id WHERE ");
+         .append("FROM run JOIN test ON test.id = run.testId LEFT JOIN run_tags ON run_tags.runid = run.id WHERE ");
       String[] queryParts;
       boolean whereStarted = false;
       if (query == null || query.isEmpty()) {
@@ -657,9 +658,12 @@ public class RunService {
          sqlQuery.getResultList().forEach(runs::add);
          runs.forEach(run -> {
             Json jsrun = (Json) run;
-            String tags = jsrun.getString("tags");
+            Object tagsOrNull = jsrun.get("tags");
+            String tags = tagsOrNull == null ? null : tagsOrNull.toString();
             if (tags != null && !tags.isEmpty()) {
                jsrun.set("tags", Json.fromString(tags));
+            } else {
+               jsrun.set("tags", EMPTY_ARRAY);
             }
          });
          Json result = new Json.MapBuilder()
