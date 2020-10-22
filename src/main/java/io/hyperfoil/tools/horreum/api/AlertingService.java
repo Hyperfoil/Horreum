@@ -224,8 +224,10 @@ public class AlertingService {
                      log.infof("Null value for %s in run %s, accessor %s - datapoint is not created", variable.name, run.id, accessor);
                      continue;
                   }
+                  String maybeNumber = value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"' ?
+                        value.substring(1, value.length() - 1) : value;
                   try {
-                     dataPoint.value = Double.parseDouble(value);
+                     dataPoint.value = Double.parseDouble(maybeNumber);
                   } catch (NumberFormatException e) {
                      log.errorf(e, "Cannot turn %s into a floating-point value for variable %s", value, variable.name);
                      continue;
