@@ -5,6 +5,7 @@ import { addOrUpdateExtractor, listExtractors } from '../domain/schemas/api'
 import SchemaSelect from './SchemaSelect'
 
 import { alertAction } from "../alerts"
+import { testJsonPath } from "../domain/schemas/api"
 
 import {
    ActionGroup,
@@ -32,6 +33,13 @@ function baseName(name: string) {
    return name.endsWith("[]") ? name.substring(0, name.length - 2) : name
 }
 
+export type ValidationResult = {
+   valid: boolean,
+   reason: string,
+   errorCode: number,
+   sqlState: string,
+}
+
 export interface Extractor {
    accessor: string,
    schema?: string,
@@ -40,6 +48,9 @@ export interface Extractor {
    newName?: string,
    deleted?: boolean,
    changed?: boolean,
+   // temprary fields
+   validationTimer?: any,
+   validationResult?: ValidationResult,
 }
 
 type AccessorsProps = {
@@ -157,13 +168,32 @@ export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowA
                              disabled={ disabledSchemas }
                              onChange={ value => { setCreated({ ...created, schema: value })}} />
             </FormGroup>
-            <FormGroup label="JSON path" isRequired={true} fieldId="extractor-jsonpath">
+            <FormGroup
+               label="JSON path"
+               isRequired={true}
+               fieldId="extractor-jsonpath"
+               validated={ !(created.jsonpath && created.jsonpath.trim().startsWith("$")) && (!created.validationResult || created.validationResult.valid) ? "default" : "error"}
+               helperTextInvalid={ created.jsonpath && created.jsonpath.trim().startsWith("$") ? "JSON path must not start with '$'" : (created.validationResult?.reason || "")  }
+            >
                <TextInput value={ created?.jsonpath || "" }
                           isRequired
                           id="extractor-jsonpath"
                           name="extractor-jsonpath"
-                          validated={ !!created.jsonpath && created.jsonpath !== "" && !created.jsonpath.startsWith("$") ? "default" : "error" }
-                          onChange={ value => setCreated({ ...created, jsonpath: value})}
+                          onChange={ value => {
+                              if (created.validationTimer) {
+                                 clearTimeout(created.validationTimer)
+                              }
+                              created.validationTimer = window.setTimeout(() => {
+                                 if (created.jsonpath) {
+                                    testJsonPath(value).then(result => {
+                                       created.validationResult = result
+                                       setCreated({ ...created })
+                                    })
+                                 }
+                              }, 1000)
+                              created.jsonpath = value
+                              setCreated({ ...created })
+                          }}
               />
             </FormGroup>
             <ActionGroup>

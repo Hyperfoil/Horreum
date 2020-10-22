@@ -11,6 +11,7 @@ const endPoints = {
     updateAccess: (id: number, owner: string, access: Access) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
     extractor: () => `${base}/extractor`,
     extractorForSchema: (schemaId: number) => `${base}/extractor?schemaId=${schemaId}`,
+    testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${jsonpath}`
 }
 export const all = ()=>{
     return fetchApi(endPoints.base(),null,'get');
@@ -43,3 +44,5 @@ export const listExtractors = (schemaId?: number) => {
 export const addOrUpdateExtractor = (extractor: Extractor) => fetchApi(endPoints.extractor(), extractor, 'post')
 
 export const deleteSchema = (id: number) => fetchApi(endPoints.crud(id), null, 'delete')
+
+export const testJsonPath = (jsonpath: string) => fetchApi(endPoints.testJsonPath(jsonpath), null, 'get')

@@ -8,12 +8,14 @@ import io.quarkus.security.identity.SecurityIdentity;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.security.DenyAll;
+import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -25,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.lang.Exception;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,6 +56,32 @@ public class SqlService {
 
    private ExecutorService abortExecutor = Executors.newSingleThreadExecutor();
    private Map<String, String> signedRoleCache = new ConcurrentHashMap<>();
+
+   @GET
+   @PermitAll
+   @Path("testjsonpath")
+   public Response testJsonPath(@QueryParam("query") String jsonpath) {
+      if (jsonpath == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("No query").build();
+      }
+      try (Connection connection = dataSource.getConnection();
+           PreparedStatement statement = connection.prepareStatement("SELECT jsonb_path_query_first('{}', ('$' || ?)::jsonpath)")) {
+         statement.setString(1, jsonpath);
+         Json result = new Json(false);
+         try {
+            statement.execute();
+            result.add("valid", true);
+         } catch (SQLException ee) {
+            result.add("valid", false);
+            result.add("reason", ee.getMessage());
+            result.add("errorCode", ee.getErrorCode());
+            result.add("sqlState", ee.getSQLState());
+         }
+         return Response.ok(result).build();
+      } catch (SQLException e) {
+         return Response.serverError().entity("Cannot connect to DB.").build();
+      }
+   }
 
    @DenyAll
    @GET

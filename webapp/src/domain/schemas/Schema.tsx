@@ -44,7 +44,7 @@ import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import OwnerSelect from '../../components/OwnerSelect'
-import { Extractor } from '../../components/Accessors';
+import { Extractor, ValidationResult } from '../../components/Accessors';
 import { Schema } from './reducers';
 
 type SchemaParams = {
@@ -282,8 +282,8 @@ export default () => {
                               }}/>
                           </FormGroup>
                           <FormGroup label="JSON path" fieldId="jsonpath"
-                                     validated={!e.jsonpath || !e.jsonpath.trim().startsWith("$") ? "default" : "error"}
-                                     helperTextInvalid="JSON path must not start with '$'">
+                                     validated={ !(e.jsonpath && e.jsonpath.trim().startsWith("$")) && (!e.validationResult || e.validationResult.valid) ? "default" : "error"}
+                                     helperTextInvalid={ e.jsonpath && e.jsonpath.trim().startsWith("$") ? "JSON path must not start with '$'" : (e.validationResult?.reason || "")  }>
                               <TextInput id="jsonpath"
                                          value={e.jsonpath}
                                          isReadOnly={!isTester}
@@ -291,7 +291,19 @@ export default () => {
                                          onChange={newValue => {
                                  e.jsonpath = newValue;
                                  e.changed = true
+                                 e.validationResult = undefined
                                  setExtractors([...extractors])
+                                 if (e.validationTimer) {
+                                    clearTimeout(e.validationTimer)
+                                 }
+                                 e.validationTimer = window.setTimeout(() => {
+                                    if (e.jsonpath) {
+                                        api.testJsonPath(e.jsonpath).then(result => {
+                                            e.validationResult = result
+                                            setExtractors([...extractors])
+                                        })
+                                    }
+                                 }, 1000)
                               }}/>
                           </FormGroup>
                           { isTester &&
