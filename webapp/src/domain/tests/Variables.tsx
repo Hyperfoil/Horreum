@@ -266,7 +266,9 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                     }
                     return vd
                 }).sort(sortByOrder))
-                setGroups([... new Set(variables.map(v => v.group).filter(g => !!g).map(g => g as string))].sort())
+                const groupNames = new Set<string>(response.map((v: Variable) => v.group)
+                    .filter((g: string | undefined) => !!g).map((g: string) => g))
+                setGroups([... groupNames].sort())
                 calculations.current.splice(0)
                 response.forEach((_: any) => calculations.current.push(undefined));
             },
