@@ -142,8 +142,6 @@ export const initKeycloak = (state: State) => {
         (initPromise as Promise<boolean>).then(authenticated => {
           store.dispatch({type: CLEAR_ALERT })
           store.getState().auth.afterLogin.forEach(a => a.func())
-          console.log("AUTH")
-          console.log(authenticated)
           if (authenticated) {
             keycloak.loadUserProfile()
                .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
