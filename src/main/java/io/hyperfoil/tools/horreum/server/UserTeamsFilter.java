@@ -60,7 +60,8 @@ public class UserTeamsFilter extends HttpFilter {
          }
       }
       ns.cacheUserTeams(identity.getPrincipal().getName(), teams);
-      res.addCookie(new Cookie(TEAMS, String.join(",", teams)));
+      // Cookie API does not allow to set SameSite attribute
+      res.setHeader("Set-Cookie", TEAMS + "=" + String.join(",", teams) + "; SameSite=Lax");
       chain.doFilter(req, res);
    }
 }

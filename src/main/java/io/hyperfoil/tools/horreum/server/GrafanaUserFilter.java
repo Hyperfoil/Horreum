@@ -80,7 +80,10 @@ public class GrafanaUserFilter extends HttpFilter {
          }
       }
       if (userInfo != null) {
-         res.addCookie(new Cookie(GRAFANA_USER, email));
+
+         // Cookie API does not allow to set SameSite attribute
+         // res.addCookie(new Cookie(GRAFANA_USER, email));
+         res.addHeader("Set-Cookie", GRAFANA_USER + "=" + email + "; SameSite=Lax");
       }
       chain.doFilter(req, res);
    }
