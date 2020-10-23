@@ -49,6 +49,7 @@ export default ({ selection, onSelect, extraOptions, direction, placeholderText,
         isOpen={open}
         onToggle={ setOpen }
         selections={selection}
+        menuAppendTo="parent"
         onSelect={(_, item) => {
             onSelect(item as SelectedTest)
             setOpen(false)

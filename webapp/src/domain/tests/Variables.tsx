@@ -36,52 +36,130 @@ import { TabFunctionsRef } from './Test'
 type TestSelectModalProps = {
     isOpen: boolean,
     onClose(): void
-    onConfirm(testId: number): Promise<any>
+    onConfirm(testId: number, group: string | undefined): Promise<any>
 }
 
-const TestSelectModal = ({isOpen, onClose, onConfirm}: TestSelectModalProps) => {
+const CopyVarsModal = ({isOpen, onClose, onConfirm}: TestSelectModalProps) => {
     const [test, setTest] = useState<SelectedTest>()
     const [working, setWorking] = useState(false)
+    const [selectGroupOpen, setSelectGroupOpen] = useState(false)
+    const [groups, setGroups] = useState<string[]>([])
+    const [group, setGroup] = useState<string>()
+    const reset = () => {
+        setTest(undefined)
+        setWorking(false)
+        setGroups([])
+        setGroup(undefined)
+        onClose()
+    }
     return (<Modal
         className="foobar"
         variant="small"
         title="Copy regression variables from..."
         isOpen={isOpen}
-        onClose={ () => {
-            setTest(undefined)
-            onClose()
-        }}
+        onClose={ reset }
         actions={[
             <Button
                 isDisabled={ !test || working }
                 onClick={ () => {
                     setWorking(true)
-                    onConfirm(test?.id || -1).finally(() => {
-                        setTest(undefined)
-                        setWorking(false)
-                        onClose()
-                    })
+                    onConfirm(test?.id || -1, group === "<all groups>" ? undefined : group).finally(reset)
                 }}
             >Copy</Button>,
             <Button
                 isDisabled={working}
                 variant="secondary"
-                onClick={ () => {
-                    setTest(undefined)
-                    onClose()
-                }}
+                onClick={ reset }
             >Cancel</Button>
         ]}
     >
         { working && <Spinner /> }
-        { !working &&
+        { !working && <>
             <TestSelect
                 selection={test}
-                onSelect={setTest}
+                onSelect={t => {
+                    setTest(t)
+                    setGroups([])
+                    api.fetchVariables(t.id)
+                        .then(response => setGroups(groupNames(response)))
+                }}
                 placeholderText="Select..."
                 direction="up" />
-        }
+            { test && groups.length > 0 &&
+                <Select
+                    isOpen={selectGroupOpen}
+                    onToggle={setSelectGroupOpen}
+                    selections={group}
+                    onSelect={(_, item) => {
+                        setGroup(item as string)
+                        setSelectGroupOpen(false)
+                    }}
+                    >
+                { [
+                    (<SelectOption key={"all"} value="<all groups>" />),
+                    ...groups.map(group => <SelectOption key={group} value={group} />)
+                ] }
+                </Select>
+            }
+        </>}
     </Modal>)
+}
+
+type RenameGroupModalProps = {
+    isOpen: boolean,
+    groups: string[],
+    onRename(from: string, to: string): void,
+    onClose(): void,
+}
+
+const RenameGroupModal = (props: RenameGroupModalProps) => {
+    const [from, setFrom] = useState<string>()
+    const [to, setTo] = useState<string>()
+    const [selectOpen, setSelectOpen] = useState(false)
+    return (
+        <Modal
+            variant="small"
+            title="Rename group"
+            isOpen={props.isOpen}
+            onClose={props.onClose}
+            actions={[
+                <Button
+                    isDisabled={ !from || !to }
+                    onClick={() => {
+                    props.onRename(from as string, to as string)
+                    props.onClose()
+                }}
+                >Rename</Button>,
+                <Button variant="secondary" onClick={() => {
+                    props.onClose()
+                }}>Cancel</Button>
+            ]}
+        >
+           <Form>
+               <FormGroup label="Existing group" fieldId="from">
+                    <Select
+                        placeholderText="Select group..."
+                        isOpen={selectOpen}
+                        onToggle={setSelectOpen}
+                        selections={from}
+                        onSelect={(_, item) => {
+                            setFrom(item as string)
+                            setSelectOpen(false)
+                        }}
+                        >
+                    { props.groups.map(group => <SelectOption key={group} value={group} />) }
+                    </Select>
+               </FormGroup>
+               <FormGroup label="New group name" fieldId="to">
+                    <TextInput
+                        value={ to }
+                        id="to"
+                        onChange={ setTo }
+                    />
+               </FormGroup>
+            </Form>
+        </Modal>
+    )
 }
 
 type VariableDisplay = {
@@ -245,8 +323,10 @@ function sortByOrder(v1: VariableDisplay, v2: VariableDisplay) {
 type ActionsProps = {
     isTester: boolean,
     testName: string,
+    canRename: boolean,
     onAdd(): void,
     onCopy(): void,
+    onRenameGroup(): void,
     onRecalculate(): void,
 }
 
@@ -255,10 +335,16 @@ const Actions = (props: ActionsProps) => {
         { props.isTester && <>
             <Button onClick={props.onAdd}>Add variable</Button>
             <Button variant="secondary" onClick={ props.onCopy }>Copy...</Button>
+            <Button variant="secondary" onClick={ props.onRenameGroup } isDisabled={ props.canRename }>Rename group...</Button>
             <Button variant="secondary" onClick={ props.onRecalculate }>Recalculate</Button>
         </>}
         <NavLink className="pf-c-button pf-m-secondary" to={ "/series?test=" + props.testName }>Go to series</NavLink>
     </div>)
+}
+
+function groupNames(vars: Variable[]) {
+    return  [ ...new Set<string>(vars.map(v => v.group)
+        .filter(g => !!g).map(g => g as string))].sort();
 }
 
 export default ({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) => {
@@ -285,9 +371,8 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                     }
                     return vd
                 }).sort(sortByOrder))
-                const groupNames = new Set<string>(response.map((v: Variable) => v.group)
-                    .filter((g: string | undefined) => !!g).map((g: string) => g))
-                setGroups([... groupNames].sort())
+
+                setGroups(groupNames(response))
                 calculations.current.splice(0)
                 response.forEach((_: any) => calculations.current.push(undefined));
             },
@@ -348,6 +433,8 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
         setVariables([ ...variables])
         onModified(true)
     }
+
+    const [renameGroupOpen, setRenameGroupOpen] = useState(false)
     return (<>
         <div style={{
             marginTop: "16px",
@@ -360,11 +447,27 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
             <Actions
                 isTester={isTester}
                 testName={testName}
+                canRename={!groups || groups.length === 0}
                 onAdd={ addVariable }
                 onCopy={() => setCopyOpen(true)}
+                onRenameGroup={ () => setRenameGroupOpen(true) }
                 onRecalculate={() => setRecalculateOpen(true) }
             />
         </div>
+        <RenameGroupModal
+            isOpen={renameGroupOpen}
+            groups={groups}
+            onClose={() => setRenameGroupOpen(false)}
+            onRename={(from, to) => {
+                variables.forEach(v => {
+                    if (v.group === from) {
+                        v.group = to;
+                    }
+                })
+                setVariables([... variables])
+                setGroups([ ...groups.map(g => g === from ? to : g) ])
+            }}
+        />
         <RecalculateModal
             isOpen={!!recalcConfirm}
             onClose={() => {
@@ -388,13 +491,14 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
             cancel="cancel"
             message="Really drop all datapoints, calculating new ones?"
             />
-        <TestSelectModal
+        <CopyVarsModal
             isOpen={copyOpen}
             onClose={() => setCopyOpen(false) }
-            onConfirm={otherTestId => {
+            onConfirm={(otherTestId, group) => {
                 return api.fetchVariables(otherTestId).then(
                     response => {
-                        setVariables([ ...variables, ...response.sort(sortByOrder).map((v: Variable) => ({
+                        const copied = group ? response.filter((v: Variable) => v.group === group) : response
+                        setVariables([ ...variables, ...copied.sort(sortByOrder).map((v: Variable) => ({
                             ...v,
                             id: -1,
                             testid: testId,
@@ -482,8 +586,10 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
             <Actions
                 isTester={isTester}
                 testName={testName}
+                canRename={!groups || groups.length === 0}
                 onAdd={ addVariable }
                 onCopy={() => setCopyOpen(true)}
+                onRenameGroup={ () => setRenameGroupOpen(true) }
                 onRecalculate={() => setRecalculateOpen(true) }
             />
         </div>
