@@ -16,8 +16,10 @@ Note that this docker-compose script is intended for developer use; for producti
 If you are using Podman (and podman-compose) rather than Docker, please use
 
 ```bash
-podman-compose -f podman-compose.yaml -d 
+podman-compose -f podman-compose.yml up -d 
 ```                                     
+
+> :warning: **If postgres fails to start**: clear any cached data in the postgresl container mounted volume `podman volume inspect Horreum_horreum_pg12  | jq -r '.[0].Mountpoint'`
 
 Due to subtleties in Podman's rootless network configuration it's not possible to use `docker-compose.yaml`.                                                   
 
@@ -29,6 +31,7 @@ cd webapp && npm install && cd ..
 
 `localhost:3000` to access the create-react-app live code server and `localhost:8080` to access the quarkus development server.
 
+> :warning: *If npm install fails*: please try clearing the node module cache `npm cache clean`
 ## Creating jar
 ```bash
 ./mvnw clean package -Dui

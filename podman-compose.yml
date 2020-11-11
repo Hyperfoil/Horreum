@@ -51,6 +51,7 @@ services:
     - -Dkeycloak.migration.strategy=IGNORE_EXISTING
     - -Djboss.socket.binding.port-offset=100
     - -Djboss.bind.address=127.0.0.1
+    - -Djboss.bind.address.private=127.0.0.1
     environment:
     - KEYCLOAK_USER=admin
     - KEYCLOAK_PASSWORD=secret
