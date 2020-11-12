@@ -1,13 +1,9 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
-import io.hyperfoil.tools.horreum.entity.converter.AccessSerializer;
 import io.hyperfoil.tools.yaup.json.Json;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.annotations.Type;
 
-import javax.json.bind.annotation.JsonbTypeDeserializer;
-import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -24,7 +20,7 @@ import javax.validation.constraints.NotNull;
       name = "schema",
       uniqueConstraints = @UniqueConstraint(columnNames = {"owner", "uri"})
 )
-public class Schema extends PanacheEntityBase {
+public class Schema extends ProtectedBaseEntity {
 
    @Id
    @SequenceGenerator(
@@ -66,13 +62,4 @@ public class Schema extends PanacheEntityBase {
     */
    public String descriptionPath;
 
-   @NotNull
-   public String owner;
-
-   public String token;
-
-   @NotNull
-   @JsonbTypeSerializer(AccessSerializer.class)
-   @JsonbTypeDeserializer(AccessSerializer.class)
-   public Access access;
 }
