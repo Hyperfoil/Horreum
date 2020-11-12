@@ -10,6 +10,7 @@ import { HooksState, reducer as hookReducer} from './domain/hooks/reducers'
 import { SchemasState, reducer as schemaReducer} from './domain/schemas/reducers'
 import { AuthState, reducer as authReducer} from './auth'
 import { Alert, reducer as alertReducer } from './alerts'
+import {enableDevMode} from "./utils";
 
 export const history = createBrowserHistory();
 
@@ -35,6 +36,7 @@ const enhancer = compose(
     applyMiddleware(
         thunk,
     ),
+    enableDevMode(),
 )
 const store = createStore(
     appReducers,

@@ -47,3 +47,11 @@ export type PaginationInfo = {
    sort: string,
    direction: string,
 }
+
+export function enableDevMode() {
+   if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+      return (window as any).__REDUX_DEVTOOLS_EXTENSION__ && (window as any).__REDUX_DEVTOOLS_EXTENSION__();
+   } else {
+      return;
+   }
+}
