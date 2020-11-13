@@ -3,14 +3,8 @@ package io.hyperfoil.tools.horreum.entity.json;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.SequenceGenerator;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
+import javax.json.bind.annotation.JsonbTransient;
+import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
 @Entity
@@ -48,4 +42,8 @@ public class Hook extends PanacheEntityBase {
 
    @NotNull
    public boolean active;
+
+   @ManyToOne(fetch = FetchType.LAZY)
+   @JsonbTransient
+   public Test test;
 }
