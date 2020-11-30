@@ -110,7 +110,7 @@ public class TestService {
    }
 
    Response addAuthenticated(Test test) {
-      Test existing = Test.find("name", test.name).firstResult();
+      Test existing = Test.find("id", test.id).firstResult();
       if (test.id != null && test.id <= 0) {
          test.id = null;
       }
