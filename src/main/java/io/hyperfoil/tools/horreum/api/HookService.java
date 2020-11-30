@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.api;
 
 import io.hyperfoil.tools.horreum.JsonAdapter;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
+import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -19,6 +20,7 @@ import io.vertx.reactivex.ext.web.client.WebClient;
 import org.jboss.logging.Logger;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -227,4 +229,16 @@ public class HookService {
       }
    }
 
+   @RolesAllowed(Roles.ADMIN)
+   @GET
+   @Path("test/{id}")
+   public List<Hook> variables(@PathParam("id") Integer testId) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         if (testId != null) {
+            return Hook.list("target", testId);
+         } else {
+            return Variable.listAll();
+         }
+      }
+   }
 }

@@ -1,5 +1,6 @@
 import { fetchApi } from '../../services/api';
 import { Test, View } from './reducers';
+import {Hook} from "../hooks/reducers";
 
 const base = "/api/test"
 const endPoints = {
@@ -7,6 +8,7 @@ const endPoints = {
     crud: (id: number)=>`${base}/${id}`,
     schema: (id: number)=>`${base}/${id}/schema`,
     view: (id: number)=>`${base}/${id}/view`,
+    hook: (id: number)=>`${base}/${id}/hook`,
     summary: ()=>`${base}/summary`,
     resetToken: (id: number) => `${base}/${id}/resetToken`,
     dropToken: (id: number) => `${base}/${id}/dropToken`,
@@ -15,6 +17,9 @@ const endPoints = {
 
 export const updateView = (testId: number, view: View) => {
     return fetchApi(endPoints.view(testId), view, 'post')
+}
+export const updateHook = (testId: number, hook: Hook) => {
+    return fetchApi(endPoints.hook(testId), hook, 'post')
 }
 export const get = (id: number) => {
     return fetchApi(endPoints.crud(id),null,'get')

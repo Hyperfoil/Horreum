@@ -1093,12 +1093,5 @@
         </addColumn>
     </changeSet>
 
-    <changeSet id="17" author="johara">
-        <addColumn tableName="hook">
-            <column name="test_id" type="integer">
-                <constraints nullable="true" foreignKeyName="fk_view_test_id" references="test(id)"/>
-            </column>
-        </addColumn>
-    </changeSet>
 </databaseChangeLog>
 

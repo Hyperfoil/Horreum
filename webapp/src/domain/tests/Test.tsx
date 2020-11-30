@@ -9,7 +9,7 @@ import {
     Button,
     Card,
     CardBody,
-    CardFooter,
+    CardFooter, Grid,
     Spinner,
     Tab,
     Tabs,
@@ -25,12 +25,16 @@ import { infoActions } from '../../alerts'
 import General from './General'
 import Views from './Views'
 import Variables from './Variables'
+import Hooks from "./Hooks";
+// import Hooks from "./Hooks";
 
 function initialActiveTab(location: Location) {
     if (location.hash.startsWith("#views")) {
         return 1;
     } else if (location.hash.startsWith("#vars")) {
         return 2;
+    } else if (location.hash.startsWith("#hooks")) {
+        return 3;
     } else {
         return 0;
     }
@@ -57,8 +61,9 @@ export default () => {
     const generalFuncsRef = useRef<TabFunctions>()
     const viewFuncsRef = useRef<TabFunctions>()
     const variablesFuncsRef = useRef<TabFunctions>()
-    const funcRefs = [ generalFuncsRef, viewFuncsRef, variablesFuncsRef ]
-    const tabs = [ "general", "views", "vars"]
+    const hooksFuncsRef = useRef<TabFunctions>()
+    const funcRefs = [ generalFuncsRef, viewFuncsRef, variablesFuncsRef, hooksFuncsRef ]
+    const tabs = [ "general", "views", "vars", "hooks"]
     const gotoTab = (index: number) => {
         setActiveTab(index)
         setNextTab(index)
@@ -148,7 +153,15 @@ export default () => {
                                 testName={ test && test.name || ""}
                                 testOwner={ test ? test.owner : undefined }
                                 onModified={ setModified }
-                                funcsRef={variablesFuncsRef}
+                                funcsRef={ variablesFuncsRef }
+                            />
+                        </Tab>
+                         <Tab key="hooks" eventKey={3} isHidden={ testId <= 0 } title="Webhooks">
+                            <Hooks
+                                testId={testId}
+                                testOwner={test ? test.owner : undefined}
+                                onModified={ setModified }
+                                funcsRef={ hooksFuncsRef }
                             />
                         </Tab>
                     </Tabs>

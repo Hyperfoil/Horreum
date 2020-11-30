@@ -270,13 +270,17 @@ public class TestService {
          if (test == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
          }
-//         hook.ensureLinked();
-         hook.test = test;
+         hook.target = testId;
 
          if (hook.id == null) {
             em.persist(hook);
          } else {
-            em.merge(hook);
+            if (!hook.active) {
+               Hook toDelete = em.find(Hook.class, hook.id);
+               em.remove(toDelete);
+            } else {
+               em.merge(hook);
+            }
          }
          test.persist();
       }

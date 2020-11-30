@@ -43,7 +43,4 @@ public class Hook extends PanacheEntityBase {
    @NotNull
    public boolean active;
 
-   @ManyToOne(fetch = FetchType.LAZY)
-   @JsonbTransient
-   public Test test;
 }

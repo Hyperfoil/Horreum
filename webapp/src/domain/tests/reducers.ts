@@ -3,6 +3,7 @@ import {Map} from 'immutable';
 import * as utils from "../../utils";
 import { Access } from "../../auth"
 import { ThunkDispatch } from 'redux-thunk';
+import {Hook} from "../hooks/reducers";
 
 export interface ViewComponent {
     headerName: string,
@@ -76,7 +77,13 @@ export interface UpdateViewAction {
     view: View,
 }
 
-export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction | UpdateTestWatchAction | UpdateViewAction
+export interface UpdateHookAction {
+    type: typeof actionTypes.UPDATE_HOOK,
+    testId: number,
+    hook: Hook,
+}
+
+export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction | UpdateTestWatchAction | UpdateViewAction | UpdateHookAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction>
 
@@ -128,6 +135,10 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             if (test) {
                state.byId = state.byId?.set(action.testId, { ...test, defaultView: action.view })
             }
+        }
+        break;
+        case actionTypes.UPDATE_HOOK: {
+            //TODO: define state changes
         }
         default:
     }
