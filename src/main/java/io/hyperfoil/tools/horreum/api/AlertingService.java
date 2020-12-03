@@ -38,6 +38,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.hyperfoil.tools.yaup.StringUtil;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -188,7 +189,7 @@ public class AlertingService {
                   extractionQuery.append("$.*");
                }
                // four colons to escape it for Hibernate
-               extractionQuery.append(jsonpath).append("'::::jsonpath)::::text as ").append(accessor);
+               extractionQuery.append(jsonpath).append("'::::jsonpath)::::text as ").append(StringUtil.quote(accessor, "\""));
                var.accessors.add(accessor);
             }
             extractionQuery.append(" FROM current_run");
