@@ -148,10 +148,8 @@ public class HookService {
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
    public void newChange(Change.Event changeEvent) {
       Integer runId = changeEvent.change.runId;
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
-         Run run =  Run.find("id", runId).firstResult();
-         tellHooks(Change.EVENT_NEW, run.testid, changeEvent.change);
-      }
+      Run run =  Run.find("id", runId).firstResult();
+      tellHooks(Change.EVENT_NEW, run.testid, changeEvent.change);
    }
 
    @RolesAllowed(Roles.ADMIN)
