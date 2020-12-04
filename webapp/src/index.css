@@ -30,3 +30,7 @@ code {
   /* This makes selects correctly display in modals */
   overflow: visible !important
 }
+
+.pf-c-tab-content {
+    margin: 20px !important;
+}

@@ -103,15 +103,18 @@ public class NotificationService {
          log.infof("Received new change in test %d (%s), run %d, variable %d (%s)", variable.testId, testName, event.change.runId, variable.id, variable.name);
 
          StringBuilder sb = new StringBuilder();
-         Json tagsObject = Json.fromString(String.valueOf(em.createNativeQuery("SELECT tags::::text FROM run_tags WHERE runid = ?")
-               .setParameter(1, event.change.runId)
-               .getSingleResult()));
-         tagsObject.forEach((key, value) -> {
-            if (sb.length() != 0) {
-               sb.append(';');
-            }
-            sb.append(key).append(':').append(value);
-         });
+         List<Object> tagsList = em.createNativeQuery("SELECT tags::::text FROM run_tags WHERE runid = ?")
+                 .setParameter(1, event.change.runId)
+                 .getResultList();
+         if( tagsList.size() > 0) {
+            Json tagsObject = Json.fromString(String.valueOf(tagsList.stream().findFirst().get()));
+            tagsObject.forEach((key, value) -> {
+               if (sb.length() != 0) {
+                  sb.append(';');
+               }
+               sb.append(key).append(':').append(value);
+            });
+         }
          String tags = sb.toString();
 
          @SuppressWarnings("unchecked")

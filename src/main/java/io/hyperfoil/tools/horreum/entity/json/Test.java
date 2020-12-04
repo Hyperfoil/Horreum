@@ -1,17 +1,20 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
-import io.hyperfoil.tools.horreum.entity.converter.AccessSerializer;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
-import javax.json.bind.annotation.JsonbTypeDeserializer;
-import javax.json.bind.annotation.JsonbTypeSerializer;
-import javax.persistence.*;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.SequenceGenerator;
 import javax.validation.constraints.NotNull;
 
 @Entity(name="test")
 @RegisterForReflection
-public class Test extends PanacheEntityBase {
+public class Test extends ProtectedBaseEntity {
    public static final String EVENT_NEW = "test/new";
 
    @Id
@@ -35,16 +38,6 @@ public class Test extends PanacheEntityBase {
 
    @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE })
    public View defaultView;
-
-   @NotNull
-   public String owner;
-
-   public String token;
-
-   @NotNull
-   @JsonbTypeSerializer(AccessSerializer.class)
-   @JsonbTypeDeserializer(AccessSerializer.class)
-   public Access access = Access.PUBLIC;
 
    public String compareUrl;
 

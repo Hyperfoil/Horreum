@@ -79,7 +79,7 @@ function Main() {
                   { isAdmin &&
                   <NavItem itemId={2}>
                     <NavLink to="/hook" style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)"}}>
-                      WebHooks
+                      Global WebHooks
                     </NavLink>
                   </NavItem>
                   }

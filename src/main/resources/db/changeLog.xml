@@ -1092,5 +1092,6 @@
             <column name="name" type="text" />
         </addColumn>
     </changeSet>
+
 </databaseChangeLog>
 

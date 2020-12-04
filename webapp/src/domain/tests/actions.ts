@@ -1,11 +1,23 @@
 import * as api from './api';
 import * as actionTypes from './actionTypes';
 import { accessName, Access } from '../../auth'
-import { Test, View, LoadingAction, LoadedAction, UpdateTokenAction, UpdateAccessAction, DeleteAction, UpdateTestWatchAction, UpdateViewAction } from './reducers';
+import {
+    Test,
+    View,
+    LoadingAction,
+    LoadedAction,
+    UpdateTokenAction,
+    UpdateAccessAction,
+    DeleteAction,
+    UpdateTestWatchAction,
+    UpdateViewAction,
+    UpdateHookAction,
+} from './reducers';
 import { Dispatch } from 'react';
 import * as notifications from '../../usersettings'
 import { Map } from 'immutable';
 import { alertAction, AddAlertAction } from '../../alerts'
+import {Hook} from "../hooks/reducers";
 
 const loaded = (tests: Test | Test[]): LoadedAction =>({
     type: actionTypes.LOADED,
@@ -44,6 +56,25 @@ export const updateView = (testId: number, view: View) => (dispatch: Dispatch<Up
             return response
         }
     )
+}
+
+export const updateHooks = (testId: number, testWebHooks: Hook[]) => (dispatch: Dispatch<UpdateHookAction>) => {
+
+    const promises: any[] = [] ;
+
+    testWebHooks.forEach( hook => {
+        promises.push( api.updateHook(testId, hook).then(
+            response => {
+                dispatch({
+                    type: actionTypes.UPDATE_HOOK,
+                    testId, hook
+                })
+                return response
+            }
+        )
+    )
+    })
+    return Promise.all(promises);
 }
 
 export const resetToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>) =>

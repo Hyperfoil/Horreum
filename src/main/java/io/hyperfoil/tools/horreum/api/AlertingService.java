@@ -38,6 +38,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.hyperfoil.tools.yaup.StringUtil;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -188,7 +189,7 @@ public class AlertingService {
                   extractionQuery.append("$.*");
                }
                // four colons to escape it for Hibernate
-               extractionQuery.append(jsonpath).append("'::::jsonpath)::::text as ").append(accessor);
+               extractionQuery.append(jsonpath).append("'::::jsonpath)::::text as ").append(StringUtil.quote(accessor, "\""));
                var.accessors.add(accessor);
             }
             extractionQuery.append(" FROM current_run");
@@ -474,12 +475,12 @@ public class AlertingService {
    @PermitAll
    @GET
    @Path("variables")
-   public Response variables(@QueryParam("test") Integer testId) {
+   public List<Variable> variables(@QueryParam("test") Integer testId) {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          if (testId != null) {
-            return Response.ok(Variable.list("testid", testId)).build();
+            return Variable.list("testid", testId);
          } else {
-            return Response.ok(Variable.listAll()).build();
+            return Variable.listAll();
          }
       }
    }

@@ -2,10 +2,7 @@ package io.hyperfoil.tools.horreum.api;
 
 import io.agroal.api.AgroalDataSource;
 import io.hyperfoil.tools.horreum.entity.converter.JsonResultTransformer;
-import io.hyperfoil.tools.horreum.entity.json.Access;
-import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.entity.json.View;
-import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
+import io.hyperfoil.tools.horreum.entity.json.*;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -113,7 +110,7 @@ public class TestService {
    }
 
    Response addAuthenticated(Test test) {
-      Test existing = Test.find("name", test.name).firstResult();
+      Test existing = Test.find("id", test.id).firstResult();
       if (test.id != null && test.id <= 0) {
          test.id = null;
       }
@@ -255,6 +252,35 @@ public class TestService {
             em.persist(view);
          } else {
             test.defaultView = em.merge(view);
+         }
+         test.persist();
+      }
+      return Response.noContent().build();
+   }
+
+   @RolesAllowed("tester")
+   @POST
+   @Path("{testId}/hook")
+   public Response updateHook(@PathParam("testId") Integer testId, Hook hook) {
+      if (testId == null || testId <= 0) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing test id").build();
+      }
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Test test = Test.findById(testId);
+         if (test == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+         }
+         hook.target = testId;
+
+         if (hook.id == null) {
+            em.persist(hook);
+         } else {
+            if (!hook.active) {
+               Hook toDelete = em.find(Hook.class, hook.id);
+               em.remove(toDelete);
+            } else {
+               em.merge(hook);
+            }
          }
          test.persist();
       }

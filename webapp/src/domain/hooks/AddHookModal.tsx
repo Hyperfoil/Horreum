@@ -12,7 +12,7 @@ import {
 import { Hook } from './reducers';
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
 
-const eventTypes = ["test/new","run/new"]
+export const eventTypes = ["test/new","run/new","change/new"]
 
 const isValidUrl = (string: string) => {
     try {
@@ -97,7 +97,7 @@ export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})
                     </FormSelect>
                 </FormGroup>
                 {
-                    eventType === "run/new" &&
+                    ( eventType === "run/new"  || eventType ===  "change/new" ) &&
                     <FormGroup label="Test" isRequired={true} helperText="Which tests should this hook fire on" fieldId="target">
                         <TestSelect
                             selection={target}

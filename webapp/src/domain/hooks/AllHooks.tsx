@@ -10,7 +10,7 @@ import {
     PageSection,
     Toolbar,
     ToolbarContent,
-    ToolbarItem,
+    ToolbarItem, Alert,
 } from '@patternfly/react-core';
 import {
     OutlinedTimesCircleIcon,
@@ -82,6 +82,7 @@ export default ()=>{
     },[dispatch, isAdmin])
     return (
         <PageSection>
+            <Alert variant="info" title="These Webhooks are global webhooks.  For individual test webhooks, please configure in the Test definition" />
           <AddHookModal isOpen={isOpen} onCancel={()=>setOpen(false)} onSubmit={(v)=>{setOpen(false); dispatch(add(v)); }} />
           <Card>
             <CardHeader>
