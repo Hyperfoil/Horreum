@@ -11,8 +11,7 @@ import {
 } from '@patternfly/react-core';
 import { Hook } from './reducers';
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
-
-export const eventTypes = ["test/new","run/new","change/new"]
+import {globalEventTypes} from "../hooks/AllHooks";
 
 const isValidUrl = (string: string) => {
     try {
@@ -28,7 +27,7 @@ const allValid = { url: true, type: true, target: true }
 export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})=>{
 
     const [url,setUrl] = useState("");
-    const [eventType,setEventType] = useState(eventTypes[0])
+    const [eventType,setEventType] = useState(globalEventTypes[0])
     const allTests: SelectedTest = { id: -1, toString: () => "All tests" }
     const [target,setTarget] = useState<SelectedTest>(allTests);
 
@@ -88,7 +87,7 @@ export default ({isOpen=false,onCancel=()=>{}, onSubmit=(validation: Hook)=>{}})
                         onChange={ setEventType }
                         aria-label="Event Type"
                         >
-                        {eventTypes.map((option, index)=>{
+                        {globalEventTypes.map((option, index)=>{
                             return (<FormSelectOption
                                 key={index}
                                 value={option}

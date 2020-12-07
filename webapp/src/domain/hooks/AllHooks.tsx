@@ -29,6 +29,8 @@ import AddHookModal from './AddHookModal';
 import { Column } from 'react-table';
 import { Hook } from './reducers';
 
+export const globalEventTypes = ["test/new","run/new","change/new"]
+export const testHookEventTypes = ["run/new","change/new"]
 
 export default ()=>{
     document.title = "WebHooks | Horreum"

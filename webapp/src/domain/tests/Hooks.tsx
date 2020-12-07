@@ -23,14 +23,9 @@ import { Hook } from "../hooks/reducers";
 import { TabFunctionsRef } from './Test'
 import {updateHooks} from './actions'
 import { ValueGetter } from '../../components/Editor/monaco/Editor'
-import {eventTypes} from "../hooks/AddHookModal";
 import * as api from "../hooks/api";
+import {testHookEventTypes} from "../hooks/AllHooks";
 
-function swap(array: any[], i1: number, i2: number) {
-    const temp = array[i1]
-    array[i1] = array[i2]
-    array[i2] = temp
-}
 
 type HookComponentFormProps = {
     c: Hook,
@@ -67,7 +62,7 @@ const HookComponentForm = ({ c, onChange, isTester } : HookComponentFormProps) =
                     }}
                     aria-label="Event Type"
                 >
-                    {eventTypes.map((option, index)=>{
+                    {testHookEventTypes.map((option, index)=>{
                         return (<FormSelectOption
                             key={index}
                             value={option}
@@ -100,7 +95,7 @@ export default ({ testId, testOwner, funcsRef, onModified }: HooksProps) => {
         api.fetchHooks(testId).then(
             response => {
                 setTestWebHooks(response.map((h: Hook) => {
-                    let hd: Hook = {
+                    let hd = {
                         ...h,
                         id: Number(h.id),
                         url: String(h.url),
@@ -148,7 +143,7 @@ export default ({ testId, testOwner, funcsRef, onModified }: HooksProps) => {
                 const newWebHook:Hook = {
                     id: 0,
                     url: "",
-                    type: eventTypes[0],
+                    type: testHookEventTypes[0],
                     target: testId,
                     active: true,
                 }
