@@ -38,6 +38,8 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.hyperfoil.tools.horreum.regression.RegressionModel;
+import io.hyperfoil.tools.horreum.regression.StatisticalVarianceRegressionModel;
 import io.hyperfoil.tools.yaup.StringUtil;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -366,71 +368,14 @@ public class AlertingService {
          }
          List<DataPoint> dataPoints = query.list();
 
-         // Last datapoint is already in the list
-         if (dataPoints.isEmpty()) {
-            log.error("The published datapoint should be already in the list");
-            return;
-         }
-         DataPoint firstDatapoint = dataPoints.get(0);
-         if (!firstDatapoint.id.equals(dataPoint.id)) {
-            log.infof("Ignoring datapoint %d from %s as there's a newer datapoint %d from %s",
-                  dataPoint.id, dataPoint.timestamp, firstDatapoint.id, firstDatapoint.timestamp);
-            return;
-         }
-         if (dataPoints.size() <= Math.max(1, variable.minWindow)) {
-            log.infof("Too few (%d) previous datapoints for variable %d, skipping analysis", dataPoints.size() - 1, variable.id);
-            return;
-         }
-         SummaryStatistics statistics = new SummaryStatistics();
-         dataPoints.stream().skip(1).mapToDouble(DataPoint::value).forEach(statistics::addValue);
-         double ratio = dataPoint.value/statistics.getMean();
-         if (ratio < 1 - variable.maxDifferenceLastDatapoint || ratio > 1 + variable.maxDifferenceLastDatapoint) {
-            log.infof("Value %f exceeds %f +- %f%% (based on %d datapoints stddev is %f)",
-                  dataPoint.value, statistics.getMean(),
-                  variable.maxDifferenceLastDatapoint, dataPoints.size() - 1, statistics.getStandardDeviation());
-            Change change = new Change();
-            change.variable = firstDatapoint.variable;
-            change.timestamp = firstDatapoint.timestamp;
-            change.runId = firstDatapoint.runId;
-            change.description = "Last datapoint is out of range: value=" +
-                  dataPoint.value + ", mean=" + statistics.getMean() + ", count=" + statistics.getN() + " stddev=" + statistics.getStandardDeviation() +
-                  ", range=" + ((1 - variable.maxDifferenceLastDatapoint) * statistics.getMean()) +
-                  ".." + ((1 + variable.maxDifferenceLastDatapoint) * statistics.getMean());
+         RegressionModel regressionModel = new StatisticalVarianceRegressionModel();
+
+         regressionModel.analyze(dataPoint, dataPoints, change -> {
             em.persist(change);
             publishLater(Change.EVENT_NEW, new Change.Event(change, event.notify));
-         } else if (dataPoints.size() >= 2 * variable.floatingWindow){
-            SummaryStatistics older = new SummaryStatistics(), window = new SummaryStatistics();
-            dataPoints.stream().skip(variable.floatingWindow).mapToDouble(dp -> dp.value).forEach(older::addValue);
-            dataPoints.stream().limit(variable.floatingWindow).mapToDouble(dp -> dp.value).forEach(window::addValue);
+         });
 
-            double floatingRatio = window.getMean() / older.getMean();
-            if (floatingRatio < 1 - variable.maxDifferenceFloatingWindow || floatingRatio > 1 + variable.maxDifferenceFloatingWindow) {
-               DataPoint dp = null;
-               // We cannot know which datapoint is first with the regression; as a heuristic approach
-               // we'll select first datapoint with value lower than mean (if this is a drop, e.g. throughput)
-               // or above the mean (if this is an increase, e.g. memory usage).
-               for (int i = variable.floatingWindow - 1; i >= 0; --i) {
-                  dp = dataPoints.get(i);
-                  if (floatingRatio < 1 && dp.value < older.getMean()) {
-                     break;
-                  } else if (floatingRatio > 1 && dp.value > older.getMean()) {
-                     break;
-                  }
-               }
-               Change change = new Change();
-               change.variable = dp.variable;
-               change.timestamp = dp.timestamp;
-               change.runId = dp.runId;
-               change.description = String.format("Change detected in floating window, runs %d (%s) - %d (%s): mean %f (stddev %f), previous mean %f (stddev %f)",
-                     dataPoints.get(variable.floatingWindow - 1).runId, dataPoints.get(variable.floatingWindow - 1).timestamp,
-                     dataPoints.get(0).runId, dataPoints.get(0).timestamp,
-                     window.getMean(), window.getStandardDeviation(), older.getMean(), older.getStandardDeviation());
 
-               em.persist(change);
-               log.info(change.description);
-               publishLater(Change.EVENT_NEW, new Change.Event(change, event.notify));
-            }
-         }
       }
    }
 
