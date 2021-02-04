@@ -31,6 +31,13 @@ cd webapp && npm install && cd ..
 
 `localhost:3000` to access the create-react-app live code server and `localhost:8080` to access the quarkus development server.
 
+Alternatively you can build Horreum image and run it (assuming that you've started the docker-compose/podman-compose infrastructure):
+
+```bash
+./mvnw package -Dui -Dquarkus.container-image.build
+podman run --rm --name horreum_app --env-file .env --network=host -p 8080:8080 quay.io/hyperfoil/horreum
+```
+
 > :warning: *If npm install fails*: please try clearing the node module cache `npm cache clean`
 ## Creating jar
 ```bash
