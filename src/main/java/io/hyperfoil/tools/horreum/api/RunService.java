@@ -698,7 +698,7 @@ public class RunService {
                             @QueryParam("direction") String direction,
                             @QueryParam("trashed") boolean trashed) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
-            .append("    SELECT DISTINCT ON(schemaid) jsonb_object_agg(schemaid, uri) AS schemas, rs.runid FROM run_schemas rs GROUP BY schemaid, rs.runid")
+            .append("    SELECT jsonb_object_agg(schemaid, uri) AS schemas, rs.runid FROM run_schemas rs GROUP BY schemaid, rs.runid")
             .append("), view_agg AS (")
             .append("    SELECT jsonb_object_agg(coalesce(vd.vcid, 0), vd.object) AS view, vd.runid FROM view_data vd GROUP BY vd.runid")
             .append(") SELECT run.id, run.start, run.stop, run.owner, schema_agg.schemas::::text AS schemas, view_agg.view#>>'{}' AS view, ")
