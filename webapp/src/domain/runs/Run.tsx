@@ -33,7 +33,7 @@ import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams }
 import { Description } from './components'
 
 export default () => {
-    const { id: stringId } = useParams();
+    const { id: stringId } = useParams<any>();
     const id = parseInt(stringId)
     const run = useSelector(selectors.get(id));
     const [data, setData] = useState(run ? toString(run.data) : "{}")

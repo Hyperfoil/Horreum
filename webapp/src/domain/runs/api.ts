@@ -50,5 +50,5 @@ export const updateAccess = (id: number, owner: string, access: Access) => {
 export const trash = (id: number, isTrashed: boolean) => fetchApi(endPoints.trash(id, isTrashed), null, 'post', {}, 'text')
 
 export const updateDescription = (id: number, description: string) => {
-    return fetchApi(endPoints.description(id), description, 'post', { 'content-type' : 'text/plain' }, 'response')
+    return fetchApi(endPoints.description(id), description, 'post', { 'Content-Type' : 'text/plain' }, 'response')
  }

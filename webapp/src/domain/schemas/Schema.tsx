@@ -131,10 +131,12 @@ export default () => {
     const [activeTab, setActiveTab] = useState(0)
     const [extractors, setExtractors] = useState<Extractor[]>([])
     useEffect(() => {
-        api.listExtractors(Number.parseInt(schemaId)).then(result => setExtractors(result.map((e: Extractor) => {
-            e.newName = e.accessor
-            return e
-        }).sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))))
+        if (schemaId !== "_new") {
+            api.listExtractors(Number.parseInt(schemaId)).then(result => setExtractors(result.map((e: Extractor) => {
+                e.newName = e.accessor
+                return e
+            }).sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))))
+        }
     }, [schemaId])
     return (
         <React.Fragment>
@@ -317,13 +319,17 @@ export default () => {
                           }
                        </Form>
                     </>))}
-                    { activeTab === 1 && isTester &&
-                       <Button onClick={() => {
-                           if (uri) {
+                    { activeTab === 1 && isTester && <>
+
+                       <Button
+                          isDisabled={!uri}
+                          onClick={() => {
+                             if (uri) {
                                setExtractors([...extractors, { accessor: "", schema: uri }])
-                           }
-                       }} >Add extractor</Button>
-                    }
+                             }
+                          }} >Add extractor</Button>
+                       { !uri && <><br /><span style={{ color: "red"}}>Please define an URI first.</span></> }
+                    </> }
                 </CardBody>
                 { isTester &&
                 <CardFooter>
