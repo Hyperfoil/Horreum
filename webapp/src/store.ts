@@ -1,5 +1,5 @@
 import {createBrowserHistory} from 'history'
-import { createStore, combineReducers, compose, applyMiddleware } from 'redux';
+import { createStore, combineReducers, compose, applyMiddleware, StoreEnhancer } from 'redux';
 import {connectRouter} from 'connected-react-router'
 import thunk from 'redux-thunk';
 //import { persistStore, autoRehydrate } from 'redux-persist';
@@ -10,7 +10,6 @@ import { HooksState, reducer as hookReducer} from './domain/hooks/reducers'
 import { SchemasState, reducer as schemaReducer} from './domain/schemas/reducers'
 import { AuthState, reducer as authReducer} from './auth'
 import { Alert, reducer as alertReducer } from './alerts'
-import {enableDevMode} from "./utils";
 
 export const history = createBrowserHistory();
 
@@ -42,5 +41,13 @@ const store = createStore(
     appReducers,
     enhancer,
 )
+
+export function enableDevMode(): StoreEnhancer {
+    if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+       return (window as any).__REDUX_DEVTOOLS_EXTENSION__ && (window as any).__REDUX_DEVTOOLS_EXTENSION__();
+    } else {
+       return creator => creator;
+    }
+ }
 
 export default store;
