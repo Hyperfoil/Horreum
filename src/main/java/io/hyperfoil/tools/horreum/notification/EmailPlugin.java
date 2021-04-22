@@ -11,6 +11,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
+import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
 import io.quarkus.qute.api.ResourcePath;
 
@@ -22,10 +23,10 @@ public class EmailPlugin implements NotificationPlugin {
    @ConfigProperty(name = "horreum.mail.subject.prefix", defaultValue = "[Horreum]")
    String subjectPrefix;
 
-   @ResourcePath("change_notification_email")
+   @Location("change_notification_email")
    Template changeNotificationEmail;
 
-   @ResourcePath("missing_run_notification_email")
+   @Location("missing_run_notification_email")
    Template missingRunNotificationEmail;
 
    @Inject

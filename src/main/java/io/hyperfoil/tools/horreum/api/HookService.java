@@ -13,14 +13,13 @@ import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.http.HttpVersion;
 import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.reactivex.core.buffer.Buffer;
-import io.vertx.reactivex.ext.web.client.HttpResponse;
-import io.vertx.reactivex.ext.web.client.WebClient;
+import io.vertx.mutiny.core.Vertx;
+import io.vertx.mutiny.core.buffer.Buffer;
+import io.vertx.mutiny.ext.web.client.WebClient;
 
 import org.jboss.logging.Logger;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -71,7 +70,7 @@ public class HookService {
    EntityManager em;
 
    @Inject
-   io.vertx.reactivex.core.Vertx reactiveVertx;
+   Vertx reactiveVertx;
 
    WebClient http1xClient;
 
@@ -113,18 +112,15 @@ public class HookService {
             int port = url.getPort() >= 0 ? url.getPort() : url.getDefaultPort();
             http1xClient.post(port, url.getHost(), url.getFile())
                   .putHeader("Content-Type", "application/json")
-                  .sendBuffer(Buffer.buffer(json), ar -> {
-                     if (ar.succeeded()) {
-                        HttpResponse<Buffer> response = ar.result();
+                  .sendBuffer(Buffer.buffer(json))
+                  .onFailure().invoke(cause -> log.errorf(cause, "Failed to notify hook %s", url))
+                  .subscribe().with(response -> {
                         if (response.statusCode() < 400) {
                            log.debugf("Successfully(%d) notified hook: %s", response.statusCode(), url);
                         } else {
                            log.errorf("Failed to notify hook %s, response %d: ", url, response.statusCode(), response.bodyAsString());
                         }
-                     } else {
-                        log.errorf(ar.cause(), "Failed to notify hook %s", url);
-                     }
-                  });
+                     });
          } catch (Exception e) {
             log.errorf(e, "Failed to invoke hook to %s", hook.url);
          }
