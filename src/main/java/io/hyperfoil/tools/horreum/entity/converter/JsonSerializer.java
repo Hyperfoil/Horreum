@@ -39,6 +39,9 @@ public class JsonSerializer implements JsonbSerializer<Json>, JsonbDeserializer<
                key=null;
                break;
             case END_OBJECT:
+               if (rtrn.isEmpty()) {
+                  return new Json(false);
+               }
             case END_ARRAY:
                return rtrn;
                //break;

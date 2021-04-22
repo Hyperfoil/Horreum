@@ -5,6 +5,7 @@ import { Panel } from './types'
 import { ChangesTabs } from './Changes'
 import { alertAction } from '../../alerts'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
+import TagsSelect from '../../components/TagsSelect'
 import PanelChart from './PanelChart'
 
 import {
@@ -26,24 +27,6 @@ import {
     Title,
 } from '@patternfly/react-core';
 import { NavLink, useHistory } from 'react-router-dom';
-
-function convertTags(tags: any): string {
-    if (!tags) {
-        return "<no tags>"
-    }
-    let str = ""
-    for (let [key, value] of Object.entries(tags)) {
-        if (str !== "") {
-            str = str + ";"
-        }
-        if (typeof value === "object") {
-            // Use the same format as Postgres
-            value = JSON.stringify(value).replaceAll(",", ", ").replaceAll(":", ": ");
-        }
-        str = str + key + ":" + value
-    }
-    return str
-}
 
 type TimespanSelectProps = {
     onChange(span: number): void,
@@ -125,12 +108,9 @@ export default () => {
     const tags = params.get("tags")
     const dispatch = useDispatch()
     const [selectedTest, setSelectedTest] = useState<SelectedTest>()
+    const [currentTags, setCurrentTags] = useState<SelectOptionObject>()
     const [dashboardUrl, setDashboardUrl] = useState("")
     const [panels, setPanels] = useState<Panel[]>([])
-
-    const [availableTags, setAvailableTags] = useState<any[]>()
-    const [currentTags, setCurrentTags] = useState<SelectOptionObject>()
-    const [tagMenuOpen, setTagMenuOpen] = useState(false)
 
     const [timespan, setTimespan] = useState(31 * 86400)
     const [lineType, setLineType] = useState("linear")
@@ -139,6 +119,11 @@ export default () => {
         setDashboardUrl(response.url)
         setPanels(response.panels)
     }, error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error)))
+    useEffect(() => {
+        if (selectedTest) {
+            doFetchDashboard(selectedTest.id)
+        }
+    }, [selectedTest])
 
     useEffect(() => {
         if (!selectedTest) {
@@ -147,14 +132,6 @@ export default () => {
         if (!tags) {
             history.replace(history.location.pathname + "?test=" + selectedTest)
         }
-        fetchTags(selectedTest.id).then((response: any[]) => {
-            setAvailableTags(response)
-            const paramTags = tags && response.find(t => convertTags(t) === tags)
-            setCurrentTags(paramTags && { ...paramTags, toString: () => convertTags(paramTags) } || undefined)
-            if (!response || response.length === 0 || response[0] === null) {
-                doFetchDashboard(selectedTest.id)
-            }
-        }, error => dispatch(alertAction("TAGS_FETCH", "Failed to fetch test tags", error)))
     }, [selectedTest])
     useEffect(() => {
         if (currentTags) {
@@ -183,23 +160,14 @@ export default () => {
                             }}
                             selection={selectedTest}
                         />
-                        { selectedTest && availableTags && availableTags.length > 0 && availableTags[0] != null &&
-                        <Select
-                            isOpen={tagMenuOpen}
-                            onToggle={ setTagMenuOpen }
-                            selections={currentTags}
-                            onSelect={(_, item) => {
-                                setCurrentTags(item)
-                                setTagMenuOpen(false)
-                            }}
-                            placeholderText="Choose tags..."
-                        >{ availableTags.map((tags: any, i: number) => {
-                            return (<SelectOption
-                                    key={i}
-                                    value={ { ...tags, toString: () => convertTags(tags) } }
-                            />) })
-                        }</Select>
-                        }
+                        { selectedTest &&
+                        <TagsSelect
+                            testId={ selectedTest?.id }
+                            initialTags={ tags || undefined }
+                            selection={ currentTags }
+                            onSelect={ setCurrentTags }
+                            showIfNoTags={false}
+                        /> }
                         { selectedTest && <>
                         <NavLink className="pf-c-button pf-m-primary"
                                 to={ "/test/" + selectedTest.id + "#vars" }

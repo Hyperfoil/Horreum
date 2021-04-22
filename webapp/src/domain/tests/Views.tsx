@@ -60,14 +60,14 @@ const ViewComponentForm = ({ c, onChange, isTester, setRenderGetter } : ViewComp
                         isReadOnly={!isTester} />
             </FormGroup>
             <FormGroup label="Rendering" fieldId="rendering">
-                { !c.render || c.render === "" ? (
+                { !c.render || c.render === "" ? (isTester ?
                     <Button
                         variant="link"
                         onClick={() => {
                             c.render = "(value, run, token) => value"
                             onChange()
                         }}
-                    >Add render function...</Button>
+                    >Add render function...</Button> : "No render function"
                 ) : (
                     <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
                         { /* TODO: call onModified(true) */ }

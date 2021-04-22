@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
@@ -40,6 +41,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.UserInfo;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -102,39 +104,51 @@ public class NotificationService {
          String testName = test == null ? "unknown" : test.name;
          log.infof("Received new change in test %d (%s), run %d, variable %d (%s)", variable.testId, testName, event.change.runId, variable.id, variable.name);
 
-         StringBuilder sb = new StringBuilder();
-         List<Object> tagsList = em.createNativeQuery("SELECT tags::::text FROM run_tags WHERE runid = ?")
+         @SuppressWarnings("rawtypes")
+         List tagsList = em.createNativeQuery("SELECT tags::::text FROM run_tags WHERE runid = ?")
                  .setParameter(1, event.change.runId)
                  .getResultList();
-         if( tagsList.size() > 0) {
-            Json tagsObject = Json.fromString(String.valueOf(tagsList.stream().findFirst().get()));
-            tagsObject.forEach((key, value) -> {
-               if (sb.length() != 0) {
-                  sb.append(';');
-               }
-               sb.append(key).append(':').append(value);
-            });
+         String tags;
+         if (tagsList.size() > 0) {
+            Object tagsResult = tagsList.stream().findFirst().get();
+            tags = tagsToString(Json.fromString(String.valueOf(tagsResult)));
+         } else {
+            tags = "";
          }
-         String tags = sb.toString();
 
-         @SuppressWarnings("unchecked")
-         List<Object[]> results = em.createNativeQuery(GET_NOTIFICATIONS)
-               .setParameter(1, variable.testId).getResultList();
-         for (Object[] pair : results) {
-            if (pair.length != 3) {
-               log.errorf("Unexpected result %s", Arrays.toString(pair));
-            }
-            String method = String.valueOf(pair[0]);
-            String data = String.valueOf(pair[1]);
-            String name = String.valueOf(pair[2]);
-            NotificationPlugin plugin = plugins.get(method);
-            if (plugin == null) {
-               log.errorf("Cannot notify %s; no plugin for method %s with data %s", name, method, data);
-            } else {
-               plugin.notify(testName, tags, name, data, event.change);
-            }
+         notifyAll(variable.testId, n -> n.notifyChange(testName, tags, event.change));
+      }
+   }
+
+   private void notifyAll(int testId, Consumer<Notification> consumer) {
+      @SuppressWarnings("unchecked")
+      List<Object[]> results = em.createNativeQuery(GET_NOTIFICATIONS)
+            .setParameter(1, testId).getResultList();
+      for (Object[] pair : results) {
+         if (pair.length != 3) {
+            log.errorf("Unexpected result %s", Arrays.toString(pair));
+         }
+         String method = String.valueOf(pair[0]);
+         String data = String.valueOf(pair[1]);
+         String userName = String.valueOf(pair[2]);
+         NotificationPlugin plugin = plugins.get(method);
+         if (plugin == null) {
+            log.errorf("Cannot notify %s; no plugin for method %s with data %s", userName, method, data);
+         } else {
+            consumer.accept(plugin.create(userName, data));
          }
       }
+   }
+
+   private static String tagsToString(Json tagsObject) {
+      StringBuilder sb = new StringBuilder();
+      tagsObject.forEach((key, value) -> {
+         if (sb.length() != 0) {
+            sb.append(';');
+         }
+         sb.append(key).append(':').append(value);
+      });
+      return sb.toString();
    }
 
    @PermitAll
@@ -314,5 +328,12 @@ public class NotificationService {
             throw e;
          }
       }
+   }
+
+   // must be called with sqlService.withRole
+   void notifyMissingRun(int testId, Json tagsJson, long maxStaleness, int runId, long runTimestamp) {
+      String tags = tagsToString(tagsJson);
+      Test test = Test.findById(testId);
+      notifyAll(testId, n -> n.notifyMissingRun(test.name, testId, tags, maxStaleness, runId, runTimestamp));
    }
 }

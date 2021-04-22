@@ -227,7 +227,7 @@ public class HookService {
       }
    }
 
-   @RolesAllowed(Roles.ADMIN)
+//   @RolesAllowed(Roles.ADMIN)
    @GET
    @Path("test/{id}")
    public List<Hook> variables(@PathParam("id") Integer testId) {

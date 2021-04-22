@@ -1093,5 +1093,61 @@
         </addColumn>
     </changeSet>
 
+    <changeSet id="19" author="rvansa">
+        <createTable tableName="test_stalenesssettings">
+            <column name="test_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="maxstaleness" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tags" type="jsonb" />
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_ss_test_id"
+             baseTableName="test_stalenesssettings" baseColumnNames="test_id"
+             referencedTableName="test" referencedColumnNames="id" />
+        <createTable tableName="lastmissingrunnotification">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="lastnotification" type="timestamp without time zone"/>
+            <column name="tags" type="jsonb"/>
+            <column name="testid" type="integer">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>
+            GRANT select, insert, delete ON TABLE test_stalenesssettings TO ${quarkus.datasource.username};
+            GRANT select, insert, delete ON TABLE lastmissingrunnotification TO ${quarkus.datasource.username};
+            ALTER TABLE test_stalenesssettings ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY ss_select ON test_stalenesssettings FOR SELECT
+                USING (exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = test_id AND can_view(test.access, test.owner, test.token)
+            ));
+            CREATE POLICY ss_insert ON test_stalenesssettings FOR INSERT
+                WITH CHECK (exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = test_id AND has_role(test.owner)
+            ));
+            CREATE POLICY ss_update ON test_stalenesssettings FOR UPDATE
+                USING (exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = test_id AND has_role(test.owner)
+                )) WITH CHECK (has_role('tester') AND exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = test_id AND has_role(test.owner)
+                ));
+            CREATE POLICY ss_delete ON test_stalenesssettings FOR DELETE
+                USING (has_role('tester') AND exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = test_id AND has_role(test.owner)
+            ));
+            ALTER TABLE lastmissingrunnotification ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY lmrn_all ON lastmissingrunnotification FOR ALL
+                USING (has_role('horreum.alerting'));
+        </sql>
+    </changeSet>
+
 </databaseChangeLog>
 

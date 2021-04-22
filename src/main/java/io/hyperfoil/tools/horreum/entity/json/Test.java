@@ -1,10 +1,15 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
+import java.util.Collection;
+
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -40,6 +45,10 @@ public class Test extends ProtectedBaseEntity {
    public View defaultView;
 
    public String compareUrl;
+
+   @ElementCollection
+   @CollectionTable(name = "test_stalenesssettings")
+   public Collection<StalenessSettings> stalenessSettings;
 
    public void ensureLinked() {
       if (defaultView != null) {

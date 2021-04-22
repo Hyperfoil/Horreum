@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.api;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,10 +39,11 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.hyperfoil.tools.horreum.entity.alerting.LastMissingRunNotification;
 import io.hyperfoil.tools.horreum.regression.RegressionModel;
 import io.hyperfoil.tools.horreum.regression.StatisticalVarianceRegressionModel;
 import io.hyperfoil.tools.yaup.StringUtil;
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.graalvm.polyglot.Context;
@@ -64,6 +66,7 @@ import io.hyperfoil.tools.horreum.grafana.Target;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
+import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Vertx;
@@ -84,11 +87,27 @@ public class AlertingService {
          ") SELECT vars.id as vid, vars.calculation, vars.accessor, se.jsonpath, schema.uri  FROM vars " +
          "JOIN schemaextractor se ON se.accessor = replace(vars.accessor, '[]', '') " +
          "JOIN schema ON schema.id = se.schema_id WHERE schema.uri = ANY(string_to_array(?, ';'));";
+
+   private static final String LOOKUP_STALE =
+         "WITH last_run AS (" +
+         "   SELECT DISTINCT ON (run.testid, run_tags.tags) run.id, run.testid, " +
+         "      EXTRACT(EPOCH FROM run.start) * 1000 AS timestamp, run_tags.tags FROM run " +
+         "   JOIN run_tags ON run_tags.runid = run.id " +
+         "   ORDER BY run.testid, run_tags.tags, run.start DESC " +
+         ") SELECT last_run.testid, last_run.tags::::text, last_run.id, last_run.timestamp, ts.maxStaleness FROM last_run " +
+         "JOIN test_stalenesssettings ts ON last_run.testid = ts.test_id AND " +
+         "     (ts.tags IS NULL OR ts.tags @> last_run.tags AND last_run.tags @> ts.tags) " +
+         "LEFT JOIN lastmissingrunnotification lmrn ON last_run.testid = lmrn.testid " +
+         "   AND lmrn.tags @> last_run.tags AND last_run.tags @> lmrn.tags " +
+         "WHERE timestamp < EXTRACT(EPOCH FROM current_timestamp) * 1000 - ts.maxstaleness " +
+         "   AND (lmrn.lastnotification IS NULL OR " +
+         "       (EXTRACT(EPOCH FROM current_timestamp) - EXTRACT(EPOCH FROM lmrn.lastnotification))* 1000 > ts.maxstaleness)";
    //@formatter:on
    // the :::: is used instead of :: as Hibernate converts four-dot into colon
    private static final String UPLOAD_RUN = "CREATE TEMPORARY TABLE current_run AS SELECT * FROM (VALUES (?::::jsonb)) as t(data);";
    static final String HORREUM_ALERTING = "horreum.alerting";
    private static final Sort SORT_BY_TIMESTAMP_DESCENDING = Sort.by("timestamp", Sort.Direction.Descending);
+
 
    @Inject
    SqlService sqlService;
@@ -113,6 +132,9 @@ public class AlertingService {
 
    @Inject
    Vertx vertx;
+
+   @Inject
+   NotificationService notificationService;
 
    private Map<Integer, Integer> recalcProgress = new HashMap<>();
 
@@ -709,6 +731,33 @@ public class AlertingService {
       json.add("percentage", progress == null ? 100 : progress);
       json.add("done", progress == null);
       return Response.ok(json).build();
+   }
+
+   @Transactional
+   @Scheduled(every = "{horreum.alerting.missing.runs.check}")
+   public void checkRuns() {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
+         @SuppressWarnings("unchecked")
+         List<Object[]> results = em.createNativeQuery(LOOKUP_STALE).getResultList();
+         for (Object[] row : results) {
+            int testId = ((Number) row[0]).intValue();
+            Json tags = Json.fromString(String.valueOf(row[1]));
+            int runId = ((Number) row[2]).intValue();
+            long lastRunTimestamp = ((Number) row[3]).longValue();
+            long maxStaleness = ((Number) row[4]).longValue();
+            notificationService.notifyMissingRun(testId, tags, maxStaleness, runId, lastRunTimestamp);
+            LastMissingRunNotification last = LastMissingRunNotification.find("testid = ?1 AND tags = ?2", testId, tags).firstResult();
+            if (last == null) {
+               last = new LastMissingRunNotification();
+               last.testId = testId;
+               last.tags = tags;
+               last.lastNotification = Instant.now();
+            } else {
+               last.lastNotification = Instant.now();
+            }
+            last.persist();
+         }
+      }
    }
 
    private static class VarInfo {

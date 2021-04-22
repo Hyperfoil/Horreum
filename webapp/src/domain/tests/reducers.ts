@@ -17,6 +17,11 @@ export interface View {
     components: ViewComponent[]
 }
 
+export interface StalenessSettings {
+    tags: any,
+    maxStaleness?: number,
+}
+
 export interface Test {
     id: number,
     name: string,
@@ -28,7 +33,8 @@ export interface Test {
     token: string | null,
     defaultView?: View,
     count?: number, // run count in AllTests
-    watching?: string[]
+    watching?: string[],
+    stalenessSettings?: StalenessSettings[]
 }
 
 export class TestsState {
@@ -140,6 +146,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
         case actionTypes.UPDATE_HOOK: {
             //TODO: define state changes
         }
+        break
         default:
     }
     return state;

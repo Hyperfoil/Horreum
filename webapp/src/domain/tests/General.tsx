@@ -5,20 +5,23 @@ import {
     Button,
     Form,
     FormGroup, Grid, GridItem,
+    Text,
     TextArea,
     TextInput,
 } from '@patternfly/react-core';
 
 import {sendTest} from './actions';
+import { durationToMillis, millisToDuration } from '../../utils'
 import {alertAction, constraintValidationFormatter} from '../../alerts'
 
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import Accessors from '../../components/Accessors'
 import OwnerSelect from '../../components/OwnerSelect'
+import TagsSelect, { convertTags } from '../../components/TagsSelect'
 import Editor, {ValueGetter} from '../../components/Editor/monaco/Editor'
 
-import {Test, TestDispatch} from './reducers';
+import {Test, TestDispatch, StalenessSettings} from './reducers';
 
 import {
     useTester,
@@ -36,6 +39,10 @@ type GeneralProps = {
     funcsRef: TabFunctionsRef
 }
 
+type StalenessSettingsDisplay = {
+    maxStalenessStr: string
+} & StalenessSettings
+
 export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
     const defaultRole = useSelector(defaultRoleSelector)
     const [name, setName] = useState("");
@@ -45,6 +52,8 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
     const [compareUrl, setCompareUrl] = useState("")
     const [tags, setTags] = useState<string[]>([])
     const compareUrlEditor = useRef<ValueGetter>()
+    const [stalenessSettings, setStalenessSettings] = useState<StalenessSettingsDisplay[]>([])
+    const [newStalenessTags, setNewStalenessTags] = useState<any>()
 
     const updateState = (test?: Test) => {
         setName(test ? test.name : "");
@@ -53,6 +62,9 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
         setAccess(test ? test.access : 0)
         setTags(test && test.tags ? test.tags.split(";").filter(t => t !== "") : []);
         setCompareUrl(test && test.compareUrl && test.compareUrl.toString() || "")
+        setStalenessSettings(test?.stalenessSettings?.map(ss => ({ ...ss,
+            maxStalenessStr: ss.maxStaleness ? millisToDuration(ss.maxStaleness) : ""
+        })) || [])
     }
 
     useEffect(() => {
@@ -71,6 +83,10 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
     const dispatch = useDispatch()
     funcsRef.current = {
         save: () => {
+            if (stalenessSettings.some(ss => !ss.maxStaleness || ss.maxStaleness <= 0)) {
+                dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", "Invalid max staleness."))
+                return Promise.reject()
+            }
             const newTest: Test = {
                 id: test?.id || 0,
                 name,
@@ -80,6 +96,7 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
                 owner: owner || "__test_created_without_a_role__",
                 access: access,
                 token: null,
+                stalenessSettings,
             }
             return thunkDispatch(sendTest(newTest)).then(
                 response => onTestIdChange(response.id),
@@ -176,13 +193,14 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
                        fieldId="compareUrl"
                        helperText="This function receives an array of ids as first argument and auth token as second. It should return URL to comparator service.">
                 {compareUrl === "" ? (
-                    <Button
+                    isTester ? (<Button
                         variant="link"
                         onClick={() => {
                             setCompareUrl("(ids, token) => 'http://example.com/compare?ids=' + ids.join(',')")
                             onModified(true)
                         }}
                     >Add compare function...</Button>
+                    ) : "Compare function is not defined"
                 ) : (
                     <div style={{minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto"}}>
                         { /* TODO: call onModified(true) */}
@@ -197,6 +215,78 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
                                     readOnly: !isTester
                                 }}/>
                     </div>)
+                }
+            </FormGroup>
+            <FormGroup
+                label="Missing runs notifications"
+                fieldId="missingRuns">
+                { stalenessSettings.length === 0 && "No watchdogs defined." }
+                <Grid hasGutter>
+                    { stalenessSettings.map((settings, i) => (<React.Fragment key={i}>
+                        <GridItem span={5}>
+                            <FormGroup
+                                label="Tags"
+                                fieldId="tags">
+                                <span style={{ position: 'relative', top: '12px' }}>{ (!settings.tags || Object.keys(settings.tags).length === 0) ? "<all tags>" : convertTags(settings.tags) }</span>
+                            </FormGroup>
+                        </GridItem>
+                        <GridItem span={6}>
+                            <FormGroup
+                                label="Max staleness"
+                                helperText="e.g. 1d 2h 3m 4s"
+                                fieldId="maxStaleness">
+                                <TextInput
+                                    value={ settings.maxStalenessStr }
+                                    isRequired
+                                    type="text"
+                                    id="maxStaleness"
+                                    isReadOnly={!isTester}
+                                    validated={ settings.maxStaleness !== undefined ? "default" : "error"}
+                                    onChange={value => {
+                                        const newSettings = [ ...stalenessSettings ]
+                                        newSettings[i].maxStalenessStr = value
+                                        newSettings[i].maxStaleness = durationToMillis(value)
+                                        setStalenessSettings(newSettings)
+                                    }}
+                                />
+                            </FormGroup>
+                        </GridItem>
+                        <GridItem span={1}>
+                            <Button onClick={() => {
+                                stalenessSettings.splice(i, 1)
+                                setStalenessSettings([ ...stalenessSettings ])
+                            }}>Delete</Button>
+                        </GridItem>
+                    </React.Fragment>)) }
+                </Grid>
+                { isTester &&
+                    <div style={{ display: "flex" }}>
+                        <TagsSelect
+                                    testId={ test?.id }
+                                    tagFilter={ tags => !stalenessSettings.some(ss => convertTags(ss.tags) === convertTags(tags)) }
+                                    selection={ newStalenessTags }
+                                    onSelect={ setNewStalenessTags }
+                                    addAllTagsOption={ true }
+                                    showIfNoTags={true}
+                                />
+                        <Button
+                            isDisabled={ !newStalenessTags }
+                            onClick={() => {
+                                let copy = { ...newStalenessTags }
+                                delete copy.toString
+                                // we can't use null for the extended SelectOption so we use {}
+                                // but the database expects null for 'all tags option'
+                                if (Object.keys(copy).length === 0) {
+                                    copy = null;
+                                }
+                                setStalenessSettings(stalenessSettings.concat({
+                                    tags: copy,
+                                    maxStaleness: 0,
+                                    maxStalenessStr: ""
+                                }))
+                                setNewStalenessTags(undefined)
+                            }}>Add missing run watchdog...</Button>
+                    </div>
                 }
             </FormGroup>
         </Form>

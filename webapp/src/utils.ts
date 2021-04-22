@@ -41,6 +41,52 @@ export function toEpochMillis(timestamp: any): number {
    }
 }
 
+export function durationToMillis(duration: string): number | undefined {
+   const original = duration;
+   if (duration.length == 0) {
+      return undefined
+   }
+   duration = duration.replaceAll(',', ' ').trim().toLowerCase()
+   let value = 0
+   let failed = false
+   const units = [ 's', 'm', 'h', 'd']
+   const multiplier = [ 1000, 60_000, 3600_000, 86_400_000]
+   units.forEach((u, i) => {
+      if (duration.endsWith(u)) {
+         duration = duration.substring(0, duration.length - 1).trimEnd()
+         const lastSpace = duration.lastIndexOf(' ');
+         const num = parseInt(duration.substring(lastSpace + 1))
+         if (num === NaN) {
+            // console.error("Cannot parse '" + u + "' from " + original)
+            failed = true
+            return
+         }
+         value += num * multiplier[i];
+         duration = duration.substring(0, lastSpace).trimEnd()
+      }
+   });
+   if (failed || duration.length > 0) {
+      // console.error("Cannot parse '" + original + "', residuum is '" + duration + "'")
+      return undefined
+   }
+   return value
+}
+
+export function millisToDuration(duration: number): string {
+   let text = ""
+   const units = [ 'd', 'h', 'm', 's']
+   const multiplier = [ 86_400_000, 3600_000, 60_000, 1000 ]
+   multiplier.forEach((m, i) => {
+      if (duration >= m) {
+         const num = Math.trunc(duration / m)
+         text += num + units[i] + ' '
+         duration -= num * m
+      }
+   })
+   // ignore ms
+   return text
+}
+
 export type PaginationInfo = {
    page: number,
    perPage: number,

@@ -68,6 +68,7 @@ export const reducer = (state = initialState, action: AuthActions) => {
       case AFTER_LOGOUT:
          state.userProfile = undefined;
          state.initPromise = undefined;
+         break
       default:
    }
    return state;

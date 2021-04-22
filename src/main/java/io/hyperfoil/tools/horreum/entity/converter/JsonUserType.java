@@ -26,11 +26,13 @@ public class JsonUserType implements UserType {
    }
 
    @Override
-   public boolean equals(Object o, Object o1) throws HibernateException {
-      if(o == null || o1 == null){
+   public boolean equals(Object o1, Object o2) throws HibernateException {
+      if (o1 == o2) {
+         return true;
+      } else if (o1 == null || o2 == null){
          return false;
       }
-      return o.equals(o1);
+      return o1.equals(o2);
    }
 
    @Override

@@ -260,10 +260,14 @@ public class SqlService {
       Query setRoles = em.createNativeQuery(SET_ROLES);
       setRoles.setParameter(1, signedRoles);
       setRoles.getSingleResult(); // ignored
+      log.info("Got security roles " + signedRoles);
       return () -> {
+         em.flush();
+         log.info("Flushed entity manager");
          Query unsetRoles = em.createNativeQuery(SET_ROLES);
          unsetRoles.setParameter(1, "");
          unsetRoles.getSingleResult(); // ignored
+         log.info("Dropped security roles");
       };
    }
 
@@ -275,6 +279,8 @@ public class SqlService {
          setToken.setParameter(1, token);
          setToken.getSingleResult();
          return () -> {
+            em.flush();
+            log.info("Flushed entity manager");
             Query unsetToken = em.createNativeQuery(SET_TOKEN);
             unsetToken.setParameter(1, "");
             unsetToken.getSingleResult();
