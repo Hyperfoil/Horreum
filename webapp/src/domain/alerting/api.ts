@@ -9,7 +9,10 @@ const endPoints = {
     dashboard: (testId: number, tags?: string) => `${base}/dashboard?test=${testId}&tags=${tags || ""}`,
     changes: (varId: number) => `${base}/changes?var=${varId}`,
     change: (changeId: number) => `${base}/change/${changeId}`,
-    recalculate: (testId: number) => `${base}/recalculate?test=${testId}`
+    recalculate: (testId: number, debug: boolean, from?: number, to?: number) =>
+        `${base}/recalculate?test=${testId}&debug=${debug}${ from ? "&from=" + from : ""}${to ? "&to=" + to : ""}`,
+    log: (testId: number, page?: number, limit?: number) => `${base}/log/${testId}?page=${page ? page : 0}&limit=${limit ? limit : 25}`,
+    logCount: (testId: number) => `${base}/log/${testId}/count`,
 }
 
 export const fetchVariables = (testId: number) => {
@@ -40,10 +43,18 @@ export const deleteChange = (changeId: number) => {
     return fetchApi(endPoints.change(changeId), null, 'delete', {}, 'response')
 }
 
-export const recalculate = (testId: number) => {
-    return fetchApi(endPoints.recalculate(testId), null, 'post', {}, 'response')
+export const recalculate = (testId: number, debug: boolean, fromTimestamp?: number, toTimestamp?: number) => {
+    return fetchApi(endPoints.recalculate(testId, debug, fromTimestamp, toTimestamp), null, 'post', {}, 'response')
 }
 
 export const recalculateProgress = (testId: number) => {
-    return fetchApi(endPoints.recalculate(testId), null, 'get')
+    return fetchApi(endPoints.recalculate(testId, false), null, 'get')
+}
+
+export const fetchLog = (testId: number, page?: number, limit?: number) => {
+    return fetchApi(endPoints.log(testId, page, limit), null, 'get')
+}
+
+export const getLogCount = (testId: number) => {
+    return fetchApi(endPoints.logCount(testId), null, 'get')
 }

@@ -1,0 +1,4 @@
+.forceOverflowY {
+    overflow-y: auto !important;
+    height: 70vh;
+}

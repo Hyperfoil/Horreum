@@ -72,7 +72,7 @@
 
         <commons.math3.version>3.6.1</commons.math3.version>
         <compiler-plugin.version>3.8.1</compiler-plugin.version>
-        <graalvm.version>20.2.0</graalvm.version>
+        <graalvm.version>21.0.0</graalvm.version>
         <maven.compiler.parameters>true</maven.compiler.parameters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -142,6 +142,16 @@
             <groupId>io.hyperfoil.tools</groupId>
             <artifactId>yaup</artifactId>
             <version>${yaup.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.graalvm.sdk</groupId>
+                    <artifactId>graal-sdk</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.graalvm.js</groupId>
+                    <artifactId>js</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>

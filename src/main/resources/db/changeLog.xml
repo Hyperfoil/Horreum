@@ -1148,6 +1148,36 @@
                 USING (has_role('horreum.alerting'));
         </sql>
     </changeSet>
+    <changeSet id="20" author="rvansa">
+        <createTable tableName="calculationlog">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="level" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="timestamp" type="timestamp without time zone">
+                <constraints nullable="false" />
+            </column>
+            <column name="testid" type="integer" />
+            <column name="runid" type="integer" />
+            <column name="message" type="text">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <sql>
+            GRANT select, insert, delete ON TABLE calculationlog TO ${quarkus.datasource.username};
+            ALTER TABLE calculationlog ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY cl_all ON calculationlog FOR ALL
+                USING (has_role('horreum.alerting') OR (exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = testid AND has_role(test.owner)
+                ) AND exists(
+                    SELECT 1 FROM run
+                    WHERE run.id = runid AND has_role(run.owner)
+                )));
+        </sql>
+    </changeSet>
 
 </databaseChangeLog>
 

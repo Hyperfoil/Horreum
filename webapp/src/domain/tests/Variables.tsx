@@ -31,6 +31,7 @@ import Accessors from '../../components/Accessors'
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 import RecalculateModal from '../alerting/RecalculateModal'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
+import CalculationLogModal from './CalculationLogModal'
 import { TabFunctionsRef } from './Test'
 
 type TestSelectModalProps = {
@@ -328,6 +329,7 @@ type ActionsProps = {
     onCopy(): void,
     onRenameGroup(): void,
     onRecalculate(): void,
+    onShowLog(): void,
 }
 
 const Actions = (props: ActionsProps) => {
@@ -337,6 +339,7 @@ const Actions = (props: ActionsProps) => {
             <Button variant="secondary" onClick={ props.onCopy }>Copy...</Button>
             <Button variant="secondary" onClick={ props.onRenameGroup } isDisabled={ props.canRename }>Rename group...</Button>
             <Button variant="secondary" onClick={ props.onRecalculate }>Recalculate</Button>
+            <Button variant="secondary" onClick={ props.onShowLog }>Show log</Button>
         </>}
         <NavLink className="pf-c-button pf-m-secondary" to={ "/series?test=" + props.testName }>Go to series</NavLink>
     </div>)
@@ -435,6 +438,7 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
     }
 
     const [renameGroupOpen, setRenameGroupOpen] = useState(false)
+    const [isLogOpen, setLogOpen] = useState(false)
     return (<>
         <div style={{
             marginTop: "16px",
@@ -451,7 +455,8 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                 onAdd={ addVariable }
                 onCopy={() => setCopyOpen(true)}
                 onRenameGroup={ () => setRenameGroupOpen(true) }
-                onRecalculate={() => setRecalculateOpen(true) }
+                onRecalculate={ () => setRecalculateOpen(true) }
+                onShowLog={ () => setLogOpen(true) }
             />
         </div>
         <RenameGroupModal
@@ -512,6 +517,11 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                     error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
                 )
             }} />
+        <CalculationLogModal
+            isOpen={isLogOpen}
+            onClose={ () => setLogOpen(false) }
+            testId={testId}
+            />
         <DataList aria-label="List of variables">
             { variables?.map((_, i) => (
                 <DataListItem key={i} aria-labelledby="">
@@ -591,6 +601,7 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                 onCopy={() => setCopyOpen(true)}
                 onRenameGroup={ () => setRenameGroupOpen(true) }
                 onRecalculate={() => setRecalculateOpen(true) }
+                onShowLog={ () => setLogOpen(true) }
             />
         </div>
     </>)

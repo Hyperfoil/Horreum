@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.api;
 
+import java.io.ByteArrayOutputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +12,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Supplier;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -29,6 +32,7 @@ import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -39,6 +43,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.alerting.LastMissingRunNotification;
 import io.hyperfoil.tools.horreum.regression.RegressionModel;
 import io.hyperfoil.tools.horreum.regression.StatisticalVarianceRegressionModel;
@@ -65,6 +70,7 @@ import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -82,9 +88,9 @@ public class AlertingService {
    //@formatter:off
    private static final String LOOKUP_VARS =
          "WITH vars AS (" +
-         "   SELECT id, calculation, unnest(string_to_array(accessors, ';')) as accessor FROM variable" +
+         "   SELECT id, name, calculation, unnest(string_to_array(accessors, ';')) as accessor FROM variable" +
          "   WHERE testid = ?" +
-         ") SELECT vars.id as vid, vars.calculation, vars.accessor, se.jsonpath, schema.uri  FROM vars " +
+         ") SELECT vars.id as vid, vars.name as name, vars.calculation, vars.accessor, se.jsonpath, schema.uri  FROM vars " +
          "JOIN schemaextractor se ON se.accessor = replace(vars.accessor, '[]', '') " +
          "JOIN schema ON schema.id = se.schema_id WHERE schema.uri = ANY(string_to_array(?, ';'));";
 
@@ -141,10 +147,10 @@ public class AlertingService {
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
-      onNewRun(run, true);
+      onNewRun(run, true, false);
    }
 
-   private void onNewRun(Run run, boolean notify) {
+   private void onNewRun(Run run, boolean notify, boolean debug) {
       log.infof("Received run ID %d", run.id);
       String firstLevelSchema = run.data.getString("$schema");
       List<String> schemas = run.data.values().stream()
@@ -179,11 +185,12 @@ public class AlertingService {
             ACCESSOR_LOOP:
             for (Object[] row : varSelection) {
                int id = (Integer) row[0];
-               String calc = (String) row[1];
-               String accessor = (String) row[2];
-               String jsonpath = (String) row[3];
-               String schema = (String) row[4];
-               VarInfo var = vars.computeIfAbsent(id, i -> new VarInfo(i, calc));
+               String name = (String) row[1];
+               String calc = (String) row[2];
+               String accessor = (String) row[3];
+               String jsonpath = (String) row[4];
+               String schema = (String) row[5];
+               VarInfo var = vars.computeIfAbsent(id, i -> new VarInfo(i, name, calc));
 
                boolean isArray = SchemaExtractor.isArray(accessor);
                if (isArray) {
@@ -223,7 +230,10 @@ public class AlertingService {
             extraction.unwrap(org.hibernate.query.Query.class).setResultTransformer(AliasToEntityMapResultTransformer.INSTANCE);
             Map<String, String> extracted;
             try {
-               extracted = (Map<String, String>) extraction.getSingleResult();
+               //noinspection unchecked
+               extracted = ((Map<String, Object>) extraction.getSingleResult()).entrySet().stream()
+                     .filter(e -> e.getValue() instanceof String)
+                     .collect(Collectors.toMap(e -> e.getKey().toLowerCase(), e -> String.valueOf(e.getValue())));
             } catch (NoResultException e) {
                log.errorf("Run %d does not exist in the database!", run.id);
                return;
@@ -239,14 +249,18 @@ public class AlertingService {
                dataPoint.variable = variable;
                dataPoint.runId = run.id;
                dataPoint.timestamp = run.start;
+               if (debug) {
+                  String data = extracted.isEmpty() ? "<no data>" : extracted.entrySet().stream().map(e -> (e.getKey() + " -> " + e.getValue())).collect(Collectors.joining("\n"));
+                  logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Variable %s fetches values for these accessors:<pre>%s</pre>", var.name, data);
+               }
                if (var.calculation == null || var.calculation.isEmpty()) {
                   if (var.accessors.size() > 1) {
-                     log.errorf("Variable %s has more than one accessor (%s) but no calculation function.", variable.name, var.accessors);
+                     logCalculationMessage(run.testid, run.id, CalculationLog.WARN, "Variable %s has more than one accessor (%s) but no calculation function.", var.name, var.accessors);
                   }
                   String accessor = var.accessors.get(0);
                   String value = extracted.get(accessor.toLowerCase());
                   if (value == null) {
-                     log.infof("Null value for %s in run %s, accessor %s - datapoint is not created", variable.name, run.id, accessor);
+                     logCalculationMessage(run.testid, run.id, CalculationLog.INFO, "Null value for variable %s, accessor %s - datapoint is not created", var.name, accessor);
                      continue;
                   }
                   String maybeNumber = value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"' ?
@@ -254,7 +268,7 @@ public class AlertingService {
                   try {
                      dataPoint.value = Double.parseDouble(maybeNumber);
                   } catch (NumberFormatException e) {
-                     log.errorf(e, "Cannot turn %s into a floating-point value for variable %s", value, variable.name);
+                     logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Cannot turn %s into a floating-point value for variable %s: %s", value, var.name, e.getMessage());
                      continue;
                   }
                } else {
@@ -280,7 +294,10 @@ public class AlertingService {
                   }
                   code.append("const __func = ").append(var.calculation).append(";\n");
                   code.append("__func(__obj)");
-                  Double value = execute(code.toString(), variable.name);
+                  if (debug) {
+                     logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Variable %s, <pre>%s</pre>" , var.name, code.toString());
+                  }
+                  Double value = execute(run.testid, run.id, code.toString(), var.name);
                   if (value == null) {
                      continue;
                   }
@@ -295,6 +312,10 @@ public class AlertingService {
             em.createNativeQuery("DROP TABLE current_run").executeUpdate();
          }
       }
+   }
+
+   private void logCalculationMessage(int testId, int runId, int level, String format, Object... args) {
+      new CalculationLog(testId, runId, level, String.format(format, args)).persist();
    }
 
    private void appendValue(StringBuilder code, String value) {
@@ -319,8 +340,9 @@ public class AlertingService {
       code.append(value);
    }
 
-   private Double execute(String jsCode, String name) {
-      try (Context context = Context.newBuilder(new String[]{ "js"}).build()) {
+   private Double execute(int testId, int runId, String jsCode, String name) {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      try (Context context = Context.newBuilder("js").out(out).err(out).build()) {
          context.enter();
          try {
             Value value = context.eval("js", jsCode);
@@ -330,27 +352,60 @@ public class AlertingService {
                try {
                   return Double.parseDouble(value.asString());
                } catch (NumberFormatException e) {
-                  log.warnf("Evaluation failed: Return value %s cannot be parsed into a number.", value);
+                  logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation for variable %s failed: Return value %s cannot be parsed into a number.", name, value);
                   return null;
                }
             } else if (value.isNull()) {
                // returning null is intentional or the data does not exist, don't warn
-               log.infof("Result for variable %s is null, skipping.", name);
+               logCalculationMessage(testId, runId, CalculationLog.INFO, "Result for variable %s is null, skipping.", name);
                return null;
             } else if ("undefined".equals(value.toString())) {
                // returning undefined is intentional, don't warn
-               log.infof("Result for variable %s is undefined, skipping.", name);
+               logCalculationMessage(testId, runId, CalculationLog.INFO, "Result for variable %s is undefined, skipping.", name);
                return null;
             } else {
-               log.warnf("Evaluation failed: Return value %s is not a number.", value);
+               logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation for variable %s failed: Return value %s is not a number.", name, value);
                return null;
             }
          } catch (PolyglotException e) {
-            log.warnf("Evaluation failed: '%s' Code:\n%s", e.getMessage(), jsCode);
+            logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation for variable %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
             return null;
          } finally {
+            if (out.size() > 0) {
+               logCalculationMessage(testId, runId, CalculationLog.DEBUG, "Output while calculating variable %s: <pre>%s</pre>", name, out.toString());
+            }
             context.leave();
          }
+      }
+   }
+
+   @RolesAllowed(Roles.TESTER)
+   @GET
+   @Path("log/{testId}")
+   public List<CalculationLog> getCalculationLog(@PathParam("testId") Integer testId,
+                                                 @QueryParam("page") Integer page,
+                                                 @QueryParam("limit") Integer limit) {
+      if (testId == null) {
+         return Collections.emptyList();
+      }
+      if (page == null) {
+         page = 0;
+      }
+      if (limit == null) {
+         limit = 25;
+      }
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         return CalculationLog.find("testId = ?1", Sort.descending("timestamp"), testId).page(Page.of(page, limit)).list();
+      }
+   }
+
+   @RolesAllowed(Roles.TESTER)
+   @GET
+   @Path("log/{testId}/count")
+   public long getLogCount(@PathParam("testId") Integer testId) {
+      if (testId == null) return -1;
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         return CalculationLog.count("testId = ?1", testId);
       }
    }
 
@@ -678,7 +733,8 @@ public class AlertingService {
    @RolesAllowed(Roles.TESTER)
    @POST
    @Path("recalculate")
-   public Response recalculate(@QueryParam("test") Integer testId, @QueryParam("notify") boolean notify) {
+   public Response recalculate(@QueryParam("test") Integer testId, @QueryParam("notify") boolean notify,
+                               @QueryParam("debug") boolean debug, @QueryParam("from") Long from, @QueryParam("to") Long to) {
       if (testId == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
       }
@@ -691,8 +747,12 @@ public class AlertingService {
                return null;
             }
             try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+               Query query = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) ORDER BY start")
+                     .setParameter(1, testId)
+                     .setParameter(2, from == null ? Long.MIN_VALUE : from)
+                     .setParameter(3, to == null ? Long.MAX_VALUE : to);
                @SuppressWarnings("unchecked")
-               List<Integer> ids = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 order by start").setParameter(1, testId).getResultList();
+               List<Integer> ids = query.getResultList();
                DataPoint.delete("runId in ?1", ids);
                Change.delete("runId in ?1 AND confirmed = false", ids);
                return ids;
@@ -706,7 +766,7 @@ public class AlertingService {
                withTx(() -> {
                   try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
                      Run run = Run.findById(runId);
-                     onNewRun(run, false);
+                     onNewRun(run, false, debug);
                   }
                   return null;
                });
@@ -762,11 +822,13 @@ public class AlertingService {
 
    private static class VarInfo {
       final int id;
+      final String name;
       final String calculation;
       final List<String> accessors = new ArrayList<>();
 
-      private VarInfo(int id, String calculation) {
+      private VarInfo(int id, String name, String calculation) {
          this.id = id;
+         this.name = name;
          this.calculation = calculation;
       }
    }
