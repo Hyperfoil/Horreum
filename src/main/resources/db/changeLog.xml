@@ -1178,6 +1178,12 @@
                 )));
         </sql>
     </changeSet>
-
+    <changeSet id="21" author="rvansa">
+        <sql>
+            GRANT update ON TABLE test_stalenesssettings TO ${quarkus.datasource.username};
+            GRANT update ON TABLE lastmissingrunnotification TO ${quarkus.datasource.username};
+            GRANT update ON TABLE calculationlog TO ${quarkus.datasource.username};
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
