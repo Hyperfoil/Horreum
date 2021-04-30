@@ -105,11 +105,13 @@ export const deleteTest = (id: number) => (dispatch: Dispatch<DeleteAction>) =>
         () => dispatch({ type: actionTypes.DELETE, id })
     )
 
-export const fetchTestWatch = () => (dispatch: Dispatch<UpdateTestWatchAction>) =>
+export const fetchTestWatch = () => (dispatch: Dispatch<UpdateTestWatchAction| AddAlertAction>) =>
     notifications.fetchTestWatch().then(
         response => dispatch({
             type: actionTypes.UPDATE_TEST_WATCH,
-            byId: Map(Object.entries(response).map(([key, value]) => [parseInt(key), value as string[]])) })
+            byId: Map(Object.entries(response).map(([key, value]) => [parseInt(key), value as string[]]))
+        }),
+        error => dispatch(alertAction("FETCH_TEST_WATCH", "Failed to fetch test watch", error))
 )
 
 export const addTestWatch = (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {

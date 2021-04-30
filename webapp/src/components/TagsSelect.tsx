@@ -40,47 +40,58 @@ type TagsSelectProps = {
     direction?: "up" | "down",
     showIfNoTags?: boolean,
     addAllTagsOption?: boolean,
+    onTagsLoaded?(tags: any[] | undefined): void,
 }
 
-export default ({ testId, disabled, initialTags, tagFilter, selection, onSelect, direction, showIfNoTags, addAllTagsOption } : TagsSelectProps) => {
+export default (props: TagsSelectProps) => {
     const [open, setOpen] = useState(false)
     const [availableTags, setAvailableTags] = useState<any[]>([])
 
     const dispatch = useDispatch()
     useEffect(() => {
-        if (!testId) {
+        if (props.onTagsLoaded) props.onTagsLoaded(undefined)
+        if (!props.testId) {
             return;
         }
-        fetchTags(testId).then((response: any[]) => {
+        fetchTags(props.testId).then((response: any[]) => {
             setAvailableTags(response)
-            const tagsString = initialTags && response.find(t => convertTags(t) === initialTags)
-            onSelect(tagsString && { ...tagsString, toString: () => convertTags(tagsString) } || undefined)
+            let tags: any = undefined
+            if (props.initialTags) {
+                tags = response.find(t => convertTags(t) === props.initialTags)
+            } else if (response.length === 1) {
+                tags = response[0]
+            }
+            props.onSelect(tags && { ...tags, toString: () => convertTags(tags) } || undefined)
+            if (props.onTagsLoaded) {
+                props.onTagsLoaded(response)
+            }
         }, error => dispatch(alertAction("TAGS_FETCH", "Failed to fetch test tags", error)))
-    }, [testId])
+    }, [props.testId])
     let options = []
     let hasAllTags = false
-    if (addAllTagsOption && (!tagFilter || tagFilter({}))) {
+    if (props.addAllTagsOption && (!props.tagFilter || props.tagFilter({}))) {
         options.push({ toString: () => "<all tags>" })
         hasAllTags = true
     }
-    const filtered = tagFilter ? availableTags.filter(tagFilter) : availableTags;
-    filtered.map(tags => ({ ...tags, toString: () => convertTags(tags) }))
+    const filtered = props.tagFilter ? availableTags.filter(props.tagFilter) : availableTags;
+    filtered.map(t => ({ ...t, toString: () => convertTags(t) }))
         .forEach(o => options.push(o))
 
     const empty = (!filtered || filtered.length == 0) && !hasAllTags
-    if (empty && !showIfNoTags) {
+    if (empty && !props.showIfNoTags) {
         return <></>
     }
     return (<Select
-            isDisabled={disabled || empty}
+            isDisabled={props.disabled || empty}
             isOpen={open}
             onToggle={ setOpen }
-            selections={selection}
+            selections={props.selection}
             onSelect={(_, item) => {
-                onSelect(item)
+                props.onSelect(item)
                 setOpen(false)
             }}
-            direction={direction}
+            direction={props.direction}
+            menuAppendTo="parent"
             placeholderText="Choose tags..."
         >
             { options.map((tags: any, i: number) => (<SelectOption key={i} value={ tags } />)) }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import {  useDispatch } from 'react-redux'
-import { fetchDashboard, fetchTags } from './api'
+import { fetchDashboard } from './api'
 import { Panel } from './types'
 import { ChangesTabs } from './Changes'
 import { alertAction } from '../../alerts'
@@ -9,7 +9,6 @@ import TagsSelect from '../../components/TagsSelect'
 import PanelChart from './PanelChart'
 
 import {
-    Bullseye,
     Button,
     Card,
     CardBody,
@@ -111,6 +110,7 @@ export default () => {
     const [currentTags, setCurrentTags] = useState<SelectOptionObject>()
     const [dashboardUrl, setDashboardUrl] = useState("")
     const [panels, setPanels] = useState<Panel[]>([])
+    const [requiresTags, setRequiresTags] = useState(false)
 
     const [timespan, setTimespan] = useState(31 * 86400)
     const [lineType, setLineType] = useState("linear")
@@ -166,7 +166,9 @@ export default () => {
                             initialTags={ tags || undefined }
                             selection={ currentTags }
                             onSelect={ setCurrentTags }
+                            tagFilter={ t => !!t }
                             showIfNoTags={false}
+                            onTagsLoaded={ tags => setRequiresTags(!!tags && tags.length > 1) }
                         /> }
                         { selectedTest && <>
                         <NavLink className="pf-c-button pf-m-primary"
@@ -184,7 +186,12 @@ export default () => {
                 </div>}
             </CardHeader>
             <CardBody>
-                { selectedTest && panels && panels.map((p, i) =>
+                { selectedTest && requiresTags && !currentTags &&
+                    <EmptyState>
+                        <EmptyStateBody>Please select tags filtering test runs.</EmptyStateBody>
+                    </EmptyState>
+                }
+                { selectedTest && (!requiresTags || currentTags) && panels && panels.map((p, i) =>
                     <DataList key={i} aria-label="test variables">
                         <DataListItem aria-labelledby="variable-name">
                             { dashboardUrl &&
@@ -230,15 +237,12 @@ export default () => {
                     </DataList>
                 )}
                 { !selectedTest &&
-                    <Bullseye>
-                        <EmptyState>
-                            <Title headingLevel="h2">No test selected</Title>
-                            <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
-                        </EmptyState>
-                    </Bullseye>
+                    <EmptyState>
+                        <Title headingLevel="h2">No test selected</Title>
+                        <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
+                    </EmptyState>
                 }
                 { selectedTest && panels.length == 0 &&
-                    <Bullseye>
                     <EmptyState>
                         <Title headingLevel="h2">Test { selectedTest.toString() } does not define any regression variables</Title>
                         <NavLink
@@ -246,7 +250,6 @@ export default () => {
                             to={ "/test/" + selectedTest.id + "#vars" }
                         >Define regression variables</NavLink>
                     </EmptyState>
-                </Bullseye>
                 }
             </CardBody>
         </Card>
