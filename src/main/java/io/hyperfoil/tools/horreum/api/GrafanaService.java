@@ -4,13 +4,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import javax.persistence.Query;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -77,7 +75,7 @@ public class GrafanaService {
             Map<String, String> tags = null;
             int semicolon = tq.indexOf(';');
             if (semicolon >= 0) {
-               tags = parseTags(tq, semicolon);
+               tags = Tags.parseTags(tq.substring(semicolon + 1));
                tq = tq.substring(0, semicolon);
             }
             int variableId = parseVariableId(tq);
@@ -99,53 +97,19 @@ public class GrafanaService {
                sql.append(" JOIN run_tags ON run_tags.runid = datapoint.runid ");
             }
             sql.append(" WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3 ");
-            addTagQuery(tags, sql);
+            Tags.addTagQuery(tags, sql, 4);
             sql.append(" ORDER BY timestamp ASC");
             javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), DataPoint.class)
                   .setParameter(1, variableId)
                   .setParameter(2, query.range.from)
                   .setParameter(3, query.range.to);
-            addTagValues(tags, nativeQuery);
+            Tags.addTagValues(tags, nativeQuery, 4);
             for (DataPoint dp : (List<DataPoint>) nativeQuery.getResultList()) {
                tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli(), /* non-standard! */ dp.runId });
             }
          }
       }
       return Response.ok(result).build();
-   }
-
-   private void addTagQuery(Map<String, String> tags, StringBuilder sql) {
-      if (tags != null) {
-         int counter = 4;
-         for (String tag : tags.keySet()) {
-            sql.append(" AND jsonb_path_query_first(run_tags.tags, '$.").append(tag).append("'::::jsonpath)#>>'{}' = ?").append(counter++);
-         }
-      }
-   }
-
-   private void addTagValues(Map<String, String> tags, javax.persistence.Query nativeQuery) {
-      if (tags != null) {
-         int counter = 4;
-         for (String value : tags.values()) {
-            nativeQuery.setParameter(counter++, value);
-         }
-      }
-   }
-
-   private Map<String, String> parseTags(String tq, int semicolon) {
-      if (semicolon == tq.length() - 1) {
-         return null;
-      }
-      Map<String, String> tags = new TreeMap<>();
-      for (String keyValue : tq.substring(semicolon + 1).split(";")) {
-         int colon = keyValue.indexOf(":");
-         if (colon < 0) continue;
-         tags.put(keyValue.substring(0, colon), keyValue.substring(colon + 1));
-      }
-      if (tags.isEmpty()) {
-         return null;
-      }
-      return tags;
    }
 
    private int parseVariableId(String target) {
@@ -181,7 +145,7 @@ public class GrafanaService {
       Map<String, String> tags = null;
       int semicolon = tq.indexOf(';');
       if (semicolon >= 0) {
-         tags = parseTags(tq, semicolon);
+         tags = Tags.parseTags(tq.substring(semicolon + 1));
          tq = tq.substring(0, semicolon);
       }
       int variableId = parseVariableId(tq);
@@ -195,12 +159,12 @@ public class GrafanaService {
             sql.append(" JOIN run_tags ON run_tags.runid = change.runid ");
          }
          sql.append(" WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3 ");
-         addTagQuery(tags, sql);
+         Tags.addTagQuery(tags, sql, 4);
          javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), Change.class)
                .setParameter(1, variableId)
                .setParameter(2, query.range.from)
                .setParameter(3, query.range.to);
-         addTagValues(tags, nativeQuery);
+         Tags.addTagValues(tags, nativeQuery, 4);
 
          for (Change change : (List<Change>) nativeQuery.getResultList()) {
             annotations.add(createAnnotation(change));

@@ -10,6 +10,7 @@ import {
     CardFooter,
     PageSection,
     Pagination,
+    SelectOptionObject,
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
@@ -35,6 +36,7 @@ import { fetchTest } from '../tests/actions';
 import { get } from '../tests/selectors';
 
 import Table from '../../components/Table';
+import TagsSelect from '../../components/TagsSelect'
 import { CellProps, UseTableOptions, UseRowSelectInstanceProps, UseRowSelectRowProps, Column, UseSortByColumnOptions } from 'react-table';
 import { Run } from './reducers';
 import { Description, ExecutionTime, Menu, RunTags } from './components'
@@ -161,6 +163,7 @@ export default () => {
     const [perPage, setPerPage] = useState(20)
     const [sort, setSort] = useState("start")
     const [direction, setDirection] = useState("descending")
+    const [tags, setTags] = useState<SelectOptionObject>()
     const pagination = { page, perPage, sort, direction }
     const tableColumns = useMemo(() => {
         const rtrn = [ ...staticColumns ]
@@ -187,8 +190,8 @@ export default () => {
         dispatch(fetchTest(testId));
     }, [dispatch, testId])
     useEffect(() => {
-        dispatch(byTest(testId, pagination, showTrashed))
-    }, [dispatch, showTrashed, page, perPage, sort, direction])
+        dispatch(byTest(testId, pagination, showTrashed, tags && tags.toString() || ""))
+    }, [dispatch, showTrashed, page, perPage, sort, direction, tags])
     useEffect(() => {
         document.title = (test ? test.name : "Loading...") + " | Horreum"
         if (test && test.defaultView) {
@@ -222,9 +225,9 @@ export default () => {
             <Card>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
-                             style={{ width: "100%", display: "flex" }}>
+                             style={{ width: "70%", display: "flex" }}>
                         <ToolbarGroup style={{ flexGrow: 100 }}>
-                            <ToolbarItem className="pf-u-mr-xl">{`Test: ${test && test.name || testId}`}</ToolbarItem>
+                            <ToolbarItem className="pf-u-mr-xl">{`Test: ${test && test.name || testId}`} <NavLink to={ `/test/${testId}` } ><EditIcon /></NavLink></ToolbarItem>
                         </ToolbarGroup>
                         { test && test.compareUrl &&
                         <ToolbarGroup>
@@ -239,14 +242,19 @@ export default () => {
                         }
                         <ToolbarGroup>
                             <ToolbarItem>
+                                <TagsSelect
+                                    testId={testId}
+                                    selection={tags}
+                                    onSelect={setTags}
+                                    addAllTagsOption={true}
+                                />
+                            </ToolbarItem>
+                            <ToolbarItem>
                                 <Checkbox id="showTrashed" aria-label="show trashed runs"
                                           label="Show trashed runs"
                                           isChecked={ showTrashed }
                                           onChange={ setShowTrashed } />
                             </ToolbarItem>
-                        </ToolbarGroup>
-                        <ToolbarGroup>
-                            <NavLink to={ `/test/${testId}` } ><EditIcon /></NavLink>
                         </ToolbarGroup>
                     </Toolbar>
                     <Pagination

@@ -696,7 +696,9 @@ public class RunService {
                             @QueryParam("page") Integer page,
                             @QueryParam("sort") String sort,
                             @QueryParam("direction") String direction,
-                            @QueryParam("trashed") boolean trashed) {
+                            @QueryParam("trashed") boolean trashed,
+                            @QueryParam("tags") String tags
+   ) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
             .append("    SELECT jsonb_object_agg(schemaid, uri) AS schemas, rs.runid FROM run_schemas rs GROUP BY schemaid, rs.runid")
             .append("), view_agg AS (")
@@ -706,9 +708,13 @@ public class RunService {
             .append("LEFT JOIN schema_agg ON schema_agg.runid = run.id ")
             .append("LEFT JOIN view_agg ON view_agg.runid = run.id ")
             .append("LEFT JOIN run_tags ON run_tags.runid = run.id ")
-            .append("WHERE run.testid = ? ");
+            .append("WHERE run.testid = ?1 ");
       if (!trashed) {
          sql.append(" AND NOT run.trashed ");
+      }
+      Map<String, String> tagsMap = Tags.parseTags(tags);
+      if (tagsMap != null) {
+         Tags.addTagQuery(tagsMap, sql, 2);
       }
       if (sort.startsWith("view_data:")) {
          String accessor = sort.substring(sort.indexOf(':', 10) + 1);
@@ -728,6 +734,8 @@ public class RunService {
          test = Test.find("id", testId).firstResult();
          Query query = em.createNativeQuery(sql.toString());
          query.setParameter(1, testId);
+         Tags.addTagValues(tagsMap, query, 2);
+         @SuppressWarnings("unchecked")
          List<Object[]> resultList = query.getResultList();
          Json.ArrayBuilder runs = Json.array();
          for (Object[] row : resultList) {
@@ -754,7 +762,7 @@ public class RunService {
                }
             }
             String schemas = (String) row[4];
-            String tags = (String) row[8];
+            String runTags = (String) row[8];
             runs.add(Json.map()
                   .add("id", row[0])
                   .add("start", ((Timestamp) row[1]).getTime())
@@ -765,7 +773,7 @@ public class RunService {
                   .add("view", view.build())
                   .add("trashed", row[6])
                   .add("description", row[7])
-                  .add("tags", tags == null ? null : Json.fromString(tags))
+                  .add("tags", runTags == null ? null : Json.fromString(runTags))
                   .build());
          }
          Json response = new Json.MapBuilder()

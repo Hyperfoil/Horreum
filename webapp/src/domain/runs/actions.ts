@@ -26,7 +26,7 @@ const loaded = (run: Run | Run[], total?: number): LoadedAction =>({
     total,
 })
 
-const testId = (id: number, runs: Run[], total: number): TestIdAction =>({
+const testId = (id: number, runs: Run[], total: number, tags: string): TestIdAction =>({
     type: actionTypes.TESTID,
     id,
     runs,
@@ -39,11 +39,11 @@ export const get = (id: number, token?: string) => (dispatch: Dispatch<LoadedAct
       error => dispatch(loaded([], 0))
    )
 
-export const byTest = (id: number, pagination: PaginationInfo, trashed?: boolean) => (dispatch: Dispatch<LoadingAction | TestIdAction>) => {
+export const byTest = (id: number, pagination: PaginationInfo, trashed: boolean, tags: string) => (dispatch: Dispatch<LoadingAction | TestIdAction>) => {
    dispatch({ type: actionTypes.LOADING })
-   api.byTest(id, pagination, trashed).then(
-      response => dispatch(testId(id, response.runs, response.total)),
-      error => dispatch(testId(id, [], 0))
+   api.byTest(id, pagination, trashed, tags).then(
+      response => dispatch(testId(id, response.runs, response.total, tags)),
+      error => dispatch(testId(id, [], 0, ""))
    )
 }
 
