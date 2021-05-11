@@ -158,9 +158,9 @@
         </createTable>
         <addUniqueConstraint tableName="viewcomponent" columnNames="view_id, headername" />
         <sql>
-            GRANT USAGE ON SCHEMA public TO ${quarkus.datasource.username};
-            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE hook, run, schema, schemaextractor, test, view, viewcomponent TO ${quarkus.datasource.username};
-            GRANT ALL ON SEQUENCE hibernate_sequence, hook_id_seq, run_id_seq, schema_id_seq, test_id_seq TO ${quarkus.datasource.username};
+            GRANT USAGE ON SCHEMA public TO "${quarkus.datasource.username}";
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE hook, run, schema, schemaextractor, test, view, viewcomponent TO "${quarkus.datasource.username}";
+            GRANT ALL ON SEQUENCE hibernate_sequence, hook_id_seq, run_id_seq, schema_id_seq, test_id_seq TO "${quarkus.datasource.username}";
         </sql>
     </changeSet>
 
@@ -365,7 +365,7 @@
         </createProcedure>
         <!-- Triggers run with privileges of the user running the update = appuser -->
         <sql>
-            GRANT select, insert, delete, update ON TABLE run_schemas, view_data TO ${quarkus.datasource.username};
+            GRANT select, insert, delete, update ON TABLE run_schemas, view_data TO "${quarkus.datasource.username}";
         </sql>
         <sql>
             CREATE TRIGGER before_run_delete BEFORE DELETE ON run FOR EACH ROW EXECUTE FUNCTION before_run_delete_func();
@@ -573,7 +573,7 @@
             <column name="data" type="text" />
         </createTable>
         <sql>
-            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE change, datapoint, notificationsettings, variable, watch, watch_teams, watch_users TO ${quarkus.datasource.username};
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE change, datapoint, notificationsettings, variable, watch, watch_teams, watch_users TO "${quarkus.datasource.username}";
             <!-- In case of ALL policy the USING is applied on the inserted data as well -->
             ALTER TABLE change ENABLE ROW LEVEL SECURITY;
             ALTER TABLE datapoint ENABLE ROW LEVEL SECURITY;
@@ -679,7 +679,7 @@
                                  constraintName="fk_grafana_dashboard_variables_id"
                                  referencedTableName="variable" referencedColumnNames="id" />
         <sql>
-            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE grafana_dashboard, grafana_dashboard_variable TO ${quarkus.datasource.username};
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE grafana_dashboard, grafana_dashboard_variable TO "${quarkus.datasource.username}";
             ALTER TABLE grafana_dashboard ENABLE ROW LEVEL SECURITY;
             ALTER TABLE grafana_dashboard_variable ENABLE ROW LEVEL SECURITY;
             <!-- Anyone who could view the test/dashboard can also create it -->
@@ -716,7 +716,7 @@
                                  referencedTableName="userinfo" referencedColumnNames="username" />
         <addUniqueConstraint tableName="userinfo_teams" columnNames="username,team" />
         <sql>
-            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE userinfo, userinfo_teams TO ${quarkus.datasource.username};
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE userinfo, userinfo_teams TO "${quarkus.datasource.username}";
             ALTER TABLE userinfo ENABLE ROW LEVEL SECURITY;
             ALTER TABLE userinfo_teams ENABLE ROW LEVEL SECURITY;
             CREATE POLICY userinfo_policies ON userinfo FOR ALL
@@ -768,7 +768,7 @@
                                  constraintName="fk_grafana_panel_variables_id"
                                  referencedTableName="variable" referencedColumnNames="id" />
         <sql>
-            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE grafana_panel, grafana_panel_variable TO ${quarkus.datasource.username};
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE grafana_panel, grafana_panel_variable TO "${quarkus.datasource.username}";
             ALTER TABLE grafana_panel ENABLE ROW LEVEL SECURITY;
             ALTER TABLE grafana_panel_variable ENABLE ROW LEVEL SECURITY;
             CREATE POLICY grafana_panel_policies ON grafana_panel FOR ALL
@@ -789,7 +789,7 @@
 
     <changeSet id="8" author="rvansa">
         <sql>
-            GRANT ALL ON SEQUENCE datapoint_id_seq TO ${quarkus.datasource.username};
+            GRANT ALL ON SEQUENCE datapoint_id_seq TO "${quarkus.datasource.username}";
         </sql>
     </changeSet>
 
@@ -848,7 +848,7 @@
                                  baseTableName="run_tags" baseColumnNames="runid"
                                  referencedTableName="run" referencedColumnNames="id" />
         <sql>
-            GRANT select, insert, delete ON TABLE run_tags TO ${quarkus.datasource.username};
+            GRANT select, insert, delete ON TABLE run_tags TO "${quarkus.datasource.username}";
         </sql>
         <createProcedure>
             CREATE OR REPLACE FUNCTION rt_before_delete_test_func() RETURNS TRIGGER AS $$
@@ -1117,8 +1117,8 @@
             </column>
         </createTable>
         <sql>
-            GRANT select, insert, delete ON TABLE test_stalenesssettings TO ${quarkus.datasource.username};
-            GRANT select, insert, delete ON TABLE lastmissingrunnotification TO ${quarkus.datasource.username};
+            GRANT select, insert, delete ON TABLE test_stalenesssettings TO "${quarkus.datasource.username}";
+            GRANT select, insert, delete ON TABLE lastmissingrunnotification TO "${quarkus.datasource.username}";
             ALTER TABLE test_stalenesssettings ENABLE ROW LEVEL SECURITY;
             CREATE POLICY ss_select ON test_stalenesssettings FOR SELECT
                 USING (exists(
@@ -1166,7 +1166,7 @@
             </column>
         </createTable>
         <sql>
-            GRANT select, insert, delete ON TABLE calculationlog TO ${quarkus.datasource.username};
+            GRANT select, insert, delete ON TABLE calculationlog TO "${quarkus.datasource.username}";
             ALTER TABLE calculationlog ENABLE ROW LEVEL SECURITY;
             CREATE POLICY cl_all ON calculationlog FOR ALL
                 USING (has_role('horreum.alerting') OR (exists(
@@ -1180,9 +1180,9 @@
     </changeSet>
     <changeSet id="21" author="rvansa">
         <sql>
-            GRANT update ON TABLE test_stalenesssettings TO ${quarkus.datasource.username};
-            GRANT update ON TABLE lastmissingrunnotification TO ${quarkus.datasource.username};
-            GRANT update ON TABLE calculationlog TO ${quarkus.datasource.username};
+            GRANT update ON TABLE test_stalenesssettings TO "${quarkus.datasource.username}";
+            GRANT update ON TABLE lastmissingrunnotification TO "${quarkus.datasource.username}";
+            GRANT update ON TABLE calculationlog TO "${quarkus.datasource.username}";
         </sql>
     </changeSet>
 </databaseChangeLog>
