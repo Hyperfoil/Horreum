@@ -130,7 +130,7 @@ public class AlertingService {
    @Inject @RestClient
    GrafanaClient grafana;
 
-   @ConfigProperty(name = "horreum.grafana/mp-rest/url")
+   @ConfigProperty(name = "horreum.grafana.url")
    String grafanaBaseUrl;
 
    @Inject

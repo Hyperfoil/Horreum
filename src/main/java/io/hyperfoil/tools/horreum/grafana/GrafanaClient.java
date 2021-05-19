@@ -60,8 +60,9 @@ public interface GrafanaClient {
 
    // Grafana does not support authorization for user management, so we need to fall back to basic auth
    default String authorizationBasic() {
+      String adminUser = ConfigProvider.getConfig().getValue("horreum.grafana.admin.user", String.class);
       String adminPassword = ConfigProvider.getConfig().getValue("horreum.grafana.admin.password", String.class);
-      return "Basic " + Base64.getEncoder().encodeToString(("admin:" + adminPassword).getBytes(StandardCharsets.UTF_8));
+      return "Basic " + Base64.getEncoder().encodeToString((adminUser + ":" + adminPassword).getBytes(StandardCharsets.UTF_8));
    }
 
    class UserSearch {
