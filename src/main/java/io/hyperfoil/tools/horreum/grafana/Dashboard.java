@@ -10,6 +10,7 @@ public class Dashboard {
    public TimeRange time = new TimeRange();
    public Annotations annotations = new Annotations();
    public List<Panel> panels = new ArrayList<>();
+   public List<String> tags = new ArrayList<>();
 
    public static class Annotations {
       public List<Annotation> list = new ArrayList<>();
@@ -34,7 +35,7 @@ public class Dashboard {
       public String title;
       public String type = "graph";
       public String renderer = "flot";
-      public String dataSource = "Horreum";
+      public String datasource = "Horreum";
       public GridPos gridPos;
       public List<Target> targets = new ArrayList<>();
 

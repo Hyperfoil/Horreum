@@ -4,6 +4,7 @@ public class Target {
    public String target;
    public String type;
    public String refId;
+   public String data = "";
 
    public Target() {
    }

@@ -41,27 +41,34 @@ public class UserTeamsFilter extends HttpFilter {
          return;
       }
       Set<String> teams = identity.getRoles().stream().filter(r -> r.endsWith("-team")).collect(Collectors.toSet());
+      String username = identity.getPrincipal().getName();
       if (req.getCookies() != null) {
          OUTER: for (Cookie cookie : req.getCookies()) {
             if (cookie.getName().equals(TEAMS)) {
-               String[] cookieTeams = cookie.getValue().split(",");
+               int userEndIndex = cookie.getValue().indexOf('!');
+               if (userEndIndex < 0 || !cookie.getValue().substring(0, userEndIndex).equals(username)) {
+                  // cookie belongs to another user
+                  break;
+               }
+               String[] cookieTeams = cookie.getValue().substring(userEndIndex + 1).split("\\+");
                if (cookieTeams.length == teams.size()) {
                   for (String team : cookieTeams) {
                      if (!teams.contains(team)) {
-                        cookie.setMaxAge(0);
                         break OUTER;
                      }
                   }
+                  // teams in cookie match identity
+                  chain.doFilter(req, res);
+                  return;
+               } else {
+                  break; // OUTER
                }
-               // teams in cookie match identity
-               chain.doFilter(req, res);
-               return;
             }
          }
       }
-      ns.cacheUserTeams(identity.getPrincipal().getName(), teams);
+      ns.cacheUserTeams(username, teams);
       // Cookie API does not allow to set SameSite attribute
-      res.setHeader("Set-Cookie", TEAMS + "=" + String.join(",", teams) + "; SameSite=Lax");
+      res.setHeader("Set-Cookie", TEAMS + "=" + username + "!" + String.join("+", teams) + ";path=/;SameSite=Lax");
       chain.doFilter(req, res);
    }
 }

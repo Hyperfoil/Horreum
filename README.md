@@ -16,12 +16,13 @@ Note that this docker-compose script is intended for developer use; for producti
 If you are using Podman (and podman-compose) rather than Docker, please use
 
 ```bash
-podman-compose -f podman-compose.yml up -d 
+podman-compose -f podman-compose.yml -t hostnet up -d 
 ```                                     
 
 > :warning: **If postgres fails to start**: clear any cached data in the postgresl container mounted volume `podman volume inspect Horreum_horreum_pg12  | jq -r '.[0].Mountpoint'`
 
-Due to subtleties in Podman's rootless network configuration it's not possible to use `docker-compose.yaml`.                                                   
+Due to subtleties in Podman's rootless network configuration it's not possible to use `docker-compose.yaml`
+and we have to use host networking - otherwise Grafana wouldn't be able to connect to Horreum.                                                   
 
 ## Getting Started
 ```bash

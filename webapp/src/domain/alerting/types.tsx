@@ -19,6 +19,7 @@ export type Panel = {
     variables: Variable[],
 }
 
+// Maps to AlertingService.DashboardInfo
 export type Dashboard = {
     testId: number,
     uid: string,

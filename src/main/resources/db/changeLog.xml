@@ -1185,5 +1185,10 @@
             GRANT update ON TABLE calculationlog TO "${quarkus.datasource.username}";
         </sql>
     </changeSet>
+    <changeSet id="22" author="rvansa">
+        <dropTable tableName="grafana_panel_variable"/>
+        <dropTable tableName="grafana_panel"/>
+        <dropTable tableName="grafana_dashboard"/>
+    </changeSet>
 </databaseChangeLog>
 

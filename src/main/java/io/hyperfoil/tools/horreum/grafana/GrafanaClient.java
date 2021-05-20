@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.grafana;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -19,6 +20,8 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.rest.client.annotation.ClientHeaderParam;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 @RegisterRestClient(configKey = "horreum.grafana")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
@@ -26,22 +29,22 @@ public interface GrafanaClient {
 
    @POST
    @Path("/api/dashboards/db")
-   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationToken}")
+   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
    DashboardSummary createOrUpdateDashboard(PostDashboardRequest request);
 
    @GET
    @Path("/api/dashboards/uid/{uid}")
-   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationToken}")
+   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
    GetDashboardResponse getDashboard(@PathParam("uid") String uid);
 
    @GET
    @Path("/api/search")
-   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationToken}")
-   List<DashboardSummary> searchDashboard(@QueryParam("query") String name);
+   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
+   List<DashboardSummary> searchDashboard(@QueryParam("query") String name, @QueryParam("tag") String tag);
 
    @DELETE
    @Path("/api/dashboards/uid/{uid}")
-   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationToken}")
+   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
    void deleteDashboard(@PathParam("uid") String uid);
 
    @GET
@@ -54,9 +57,21 @@ public interface GrafanaClient {
    @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
    void createUser(UserInfo user);
 
-   default String authorizationToken() {
-      return "Bearer " + ConfigProvider.getConfig().getValue("horreum.grafana.api.key", String.class);
-   }
+   @GET
+   @Path("/api/datasources")
+   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
+   List<Datasource> listDatasources();
+
+   @POST
+   @Path("/api/datasources")
+   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
+   @ClientHeaderParam(name = HttpHeaders.CONTENT_TYPE, value = "application/json")
+   void addDatasource(Datasource datasource);
+
+   @DELETE
+   @Path("/api/datasources/{id}")
+   @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
+   void deleteDatasource(@PathParam("id") long id);
 
    // Grafana does not support authorization for user management, so we need to fall back to basic auth
    default String authorizationBasic() {
@@ -111,7 +126,24 @@ public interface GrafanaClient {
    }
 
    class GetDashboardResponse {
+      public GetDashboardResponseMeta meta;
       public Dashboard dashboard;
    }
 
+   class GetDashboardResponseMeta {
+      public String url;
+   }
+
+   class Datasource {
+      @JsonInclude(JsonInclude.Include.NON_NULL)
+      public Long id;
+      public String name = "Horreum";
+      public String type = "simpod-json-datasource";
+      public String access = "proxy";
+      public String url;
+      public boolean basicAuth = false;
+      public boolean withCredentials = false;
+      public boolean isDefault = true;
+      public Map<String, Object> jsonData = Map.of("oauthPassThru", true, "readOnly", false);
+   }
 }

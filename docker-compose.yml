@@ -1,7 +1,6 @@
 version: '3.1'
 volumes:
   horreum_pg12: {}
-  horreum_grafana: {}
 services:
   postgres:
     image: docker.io/postgres:12
@@ -43,16 +42,12 @@ services:
     depends_on:
     - postgres
     image: docker.io/jboss/keycloak:latest
-    command:
-    - -Dkeycloak.profile.feature.upload_scripts=enabled
-    - -Dkeycloak.migration.action=import
-    - -Dkeycloak.migration.provider=singleFile
-    - -Dkeycloak.migration.file=/etc/keycloak/imports/keycloak-horreum.json
-    - -Dkeycloak.migration.strategy=IGNORE_EXISTING
-    - -Djboss.socket.binding.port-offset=100
+    entrypoint: /cwd/keycloak.sh
     environment:
     - KEYCLOAK_USER=admin
     - KEYCLOAK_PASSWORD=secret
+    - KEYCLOAK_LOGLEVEL=debug
+    - ROOT_LOGLEVEL=INFO
     - DB_VENDOR=postgres
     - DB_ADDR=172.17.0.1
     - DB_PORT=5432
@@ -63,6 +58,7 @@ services:
     - 8180:8180
     volumes:
     - ./src/main/resources:/etc/keycloak/imports:ro,z
+    - ./:/cwd:rw,z
   app-init:
     depends_on:
     - keycloak
@@ -71,18 +67,18 @@ services:
     command:
     - bash
     - -x
-    - /etc/horreum/cwd/app-init.sh
+    - /cwd/app-init.sh
     volumes:
-    - ./:/etc/horreum/cwd:rw,z
-    - horreum_grafana:/etc/grafana
+    - ./:/cwd:rw,z
   grafana:
     depends_on:
     - keycloak
     - app-init
     image: grafana/grafana
-    entrypoint: /etc/grafana/cwd/grafana.sh
+    entrypoint: /cwd/grafana.sh
     environment:
     - GF_INSTALL_PLUGINS=simpod-json-datasource
+    - GF_LOG_LEVEL=debug
     - GF_SERVER_ROOT_URL=http://localhost:4040/
     - GF_USERS_DEFAULT_THEME=light
     - GF_SECURITY_ALLOW_EMBEDDING=true
@@ -98,5 +94,4 @@ services:
     ports:
     - 4040:3000
     volumes:
-    - horreum_grafana:/var/lib/grafana
-    - ./:/etc/grafana/cwd/:ro,z
+    - ./:/cwd/:ro,z

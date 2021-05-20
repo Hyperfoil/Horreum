@@ -12,6 +12,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -44,16 +45,22 @@ public class GrafanaUserFilter extends HttpFilter {
          chain.doFilter(req, res);
          return;
       }
-      String email = ((JWTCallerPrincipal) identity.getPrincipal()).getClaim("email");
+      JWTCallerPrincipal principal = (JWTCallerPrincipal) identity.getPrincipal();
+      String email = principal.getClaim("email");
       if (email == null || email.isEmpty()) {
-         log.debug("Missing email, ignoring.");
-         chain.doFilter(req, res);
-         return;
+         String username = principal.getName();
+         if (username == null) {
+            log.debug("Missing email and username, ignoring.");
+            chain.doFilter(req, res);
+            return;
+         } else {
+            email = username + "@horreum";
+         }
       }
       if (req.getCookies() != null) {
          for (Cookie cookie : req.getCookies()) {
             if (cookie.getName().equals(GRAFANA_USER) && email.equals(cookie.getValue())) {
-               log.debugf("Already has cookie, ignoring.");
+               log.debugf("%s already has cookie, ignoring.", email);
                chain.doFilter(req, res);
                return;
             }
@@ -78,12 +85,16 @@ public class GrafanaUserFilter extends HttpFilter {
          } else {
             log.errorf(e, "Failed to fetch user %s", email);
          }
+      } catch (ProcessingException e) {
+         log.debug("Grafana client failed with exception, ignoring.", e);
+         chain.doFilter(req, res);
+         return;
       }
       if (userInfo != null) {
-
          // Cookie API does not allow to set SameSite attribute
          // res.addCookie(new Cookie(GRAFANA_USER, email));
-         res.addHeader("Set-Cookie", GRAFANA_USER + "=" + email + "; SameSite=Lax");
+         // The cookie is to expire in 1 minute to handle Grafana restarts
+         res.addHeader("Set-Cookie", GRAFANA_USER + "=" + email + ";max-age=60;path=/;SameSite=Lax");
       }
       chain.doFilter(req, res);
    }

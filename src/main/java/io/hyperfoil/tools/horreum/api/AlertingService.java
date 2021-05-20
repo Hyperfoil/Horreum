@@ -12,11 +12,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Supplier;
-import java.util.logging.Handler;
-import java.util.logging.LogRecord;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
@@ -32,11 +31,11 @@ import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
@@ -59,8 +58,6 @@ import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
-import io.hyperfoil.tools.horreum.entity.alerting.GrafanaDashboard;
-import io.hyperfoil.tools.horreum.entity.alerting.GrafanaPanel;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
@@ -114,7 +111,6 @@ public class AlertingService {
    static final String HORREUM_ALERTING = "horreum.alerting";
    private static final Sort SORT_BY_TIMESTAMP_DESCENDING = Sort.by("timestamp", Sort.Direction.Descending);
 
-
    @Inject
    SqlService sqlService;
 
@@ -133,6 +129,9 @@ public class AlertingService {
    @ConfigProperty(name = "horreum.grafana.url")
    String grafanaBaseUrl;
 
+   @ConfigProperty(name = "horreum.internal.url")
+   String internalUrl;
+
    @Inject
    TransactionManager tm;
 
@@ -148,6 +147,37 @@ public class AlertingService {
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
       onNewRun(run, true, false);
+   }
+
+   @PostConstruct
+   void init() {
+      vertx.setTimer(1, this::setupGrafanaDatasource);
+   }
+
+   private void setupGrafanaDatasource(long timerId) {
+      String url = internalUrl + "/api/grafana";
+      try {
+         boolean create = true;
+         for (GrafanaClient.Datasource ds : grafana.listDatasources()) {
+            if (ds.name.equals("Horreum")) {
+               if (!url.equals(ds.url) && ds.id != null) {
+                  log.infof("Deleting Grafana datasource %d: has URL %s, expected %s", ds.id, ds.url, url);
+                  grafana.deleteDatasource(ds.id);
+               } else {
+                  create = false;
+               }
+            }
+         }
+         if (create) {
+            GrafanaClient.Datasource newDatasource = new GrafanaClient.Datasource();
+            newDatasource.url = url;
+            grafana.addDatasource(newDatasource);
+         }
+         vertx.setTimer(60000, this::setupGrafanaDatasource);
+      } catch (ProcessingException | WebApplicationException e) {
+         log.warn("Cannot set up datasource, retry in 5 seconds.", e);
+         vertx.setTimer(5000, this::setupGrafanaDatasource);
+      }
    }
 
    private void onNewRun(Run run, boolean notify, boolean debug) {
@@ -511,7 +541,7 @@ public class AlertingService {
    @POST
    @Path("variables")
    @Transactional
-   public Response variables(@QueryParam("test") Integer testId, List<Variable> variables) throws SystemException {
+   public Response variables(@QueryParam("test") Integer testId, List<Variable> variables) {
       if (testId == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing query param 'test'").build();
       }
@@ -544,15 +574,12 @@ public class AlertingService {
             }
          }
 
-         List<GrafanaDashboard> dashboards = GrafanaDashboard.find("testId", testId).list();
-         for (GrafanaDashboard dashboard : dashboards) {
-            try {
+         try {
+            for (var dashboard : grafana.searchDashboard("", "testId=" + testId)) {
                grafana.deleteDashboard(dashboard.uid);
-            } catch (WebApplicationException e) {
-               log.warnf(e, "Failed to delete dasboard %s", dashboard.uid);
             }
-            dashboard.panels.forEach(GrafanaPanel::delete);
-            dashboard.delete();
+         } catch (ProcessingException | WebApplicationException e) {
+            log.warnf(e, "Failed to delete dasboards for test %d", testId);
          }
 
          em.flush();
@@ -560,65 +587,61 @@ public class AlertingService {
       }
    }
 
-   private boolean createDashboard(int testId, List<Variable> variables, GrafanaDashboard dashboard) throws SystemException {
-      Dashboard clientDashboard = null;
-      if (dashboard.uid != null) {
-         try {
-            GrafanaClient.GetDashboardResponse response = grafana.getDashboard(dashboard.uid);
-            clientDashboard = response.dashboard;
-         } catch (WebApplicationException e) {
-            if (e.getResponse().getStatus() == 404) {
-               log.infof("Dashboard %s cannot be found, creating another", dashboard.uid);
-               dashboard.uid = null;
-               dashboard.url = null;
-            } else {
-               log.errorf(e, "Failed to get existing dashboard with UID %s", dashboard.uid);
-            }
+   private GrafanaClient.GetDashboardResponse findDashboard(int testId, String tags) {
+      try {
+         List<GrafanaClient.DashboardSummary> list = grafana.searchDashboard("", testId + ":" + tags);
+         if (list.isEmpty()) {
+            return null;
+         } else {
+            return grafana.getDashboard(list.get(0).uid);
          }
+      } catch (ProcessingException | WebApplicationException e) {
+         log.debugf(e, "Error looking up dashboard for test %d, tags %s", testId, tags);
+         return null;
       }
-      String tags = dashboard.tags == null ? "" : dashboard.tags;
-      if (clientDashboard == null) {
-         clientDashboard = new Dashboard();
-         clientDashboard.title = Test.<Test>findByIdOptional(testId).map(t -> t.name).orElse("Test " + testId)
-               + (dashboard.tags == null ? "" : ", " + dashboard.tags);
-      } else {
-         clientDashboard.panels.clear();
-         clientDashboard.annotations.list.clear();
-      }
+   }
+
+   private DashboardInfo createDashboard(int testId, String tags, List<Variable> variables) throws SystemException {
+      DashboardInfo info = new DashboardInfo();
+      info.testId = testId;
+      Dashboard dashboard = new Dashboard();
+      dashboard.title = Test.<Test>findByIdOptional(testId).map(t -> t.name).orElse("Test " + testId)
+            + (tags.isEmpty() ? "" : ", " + tags);
+      dashboard.tags.add(testId + ";" + tags);
+      dashboard.tags.add("testId=" + testId);
       int i = 0;
-      Map<String, List<Variable>> byGroup = new TreeMap<>();
+      Map<String, List<Variable>> byGroup = groupedVariables(variables);
       for (Variable variable : variables) {
-         clientDashboard.annotations.list.add(new Dashboard.Annotation(variable.name, variable.id + ";" + tags));
-         byGroup.computeIfAbsent(variable.group == null || variable.group.isEmpty() ? variable.name : variable.group, g -> new ArrayList<>()).add(variable);
+         dashboard.annotations.list.add(new Dashboard.Annotation(variable.name, variable.id + ";" + tags));
       }
       for (Map.Entry<String, List<Variable>> entry : byGroup.entrySet()) {
          entry.getValue().sort(Comparator.comparing(v -> v.order));
          Dashboard.Panel panel = new Dashboard.Panel(entry.getKey(), new Dashboard.GridPos(12 * (i % 2), 9 * (i / 2), 12, 9));
-         GrafanaPanel gpanel = new GrafanaPanel();
-         gpanel.name = entry.getKey();
-         gpanel.variables = new ArrayList<>();
-         dashboard.panels.add(gpanel);
+         info.panels.add(new PanelInfo(entry.getKey(), entry.getValue()));
          for (Variable variable : entry.getValue()) {
-            gpanel.variables.add(variable);
             panel.targets.add(new Target(variable.id + ";" + tags, "timeseries", "T" + i));
          }
-         clientDashboard.panels.add(panel);
+         dashboard.panels.add(panel);
          ++i;
-
       }
       try {
-         GrafanaClient.DashboardSummary response = grafana.createOrUpdateDashboard(new GrafanaClient.PostDashboardRequest(clientDashboard, true));
-         if (response != null) {
-            dashboard.uid = response.uid;
-            dashboard.url = grafanaBaseUrl + response.url;
-         }
+         GrafanaClient.DashboardSummary response = grafana.createOrUpdateDashboard(new GrafanaClient.PostDashboardRequest(dashboard, true));
+         info.uid = response.uid;
+         info.url = grafanaBaseUrl + response.url;
+         return info;
       } catch (WebApplicationException e) {
-         log.errorf(e, "Failed to create/update dashboard %s", clientDashboard.uid);
+         log.errorf(e, "Failed to create/update dashboard %s", dashboard.uid);
          tm.setRollbackOnly();
-         return false;
+         return null;
       }
-      dashboard.persist();
-      return true;
+   }
+
+   private Map<String, List<Variable>> groupedVariables(List<Variable> variables) {
+      Map<String, List<Variable>> byGroup = new TreeMap<>();
+      for (Variable variable : variables) {
+         byGroup.computeIfAbsent(variable.group == null || variable.group.isEmpty() ? variable.name : variable.group, g -> new ArrayList<>()).add(variable);
+      }
+      return byGroup;
    }
 
    @PermitAll
@@ -631,6 +654,7 @@ public class AlertingService {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          Query tagComboQuery = em.createNativeQuery("SELECT tags::::text FROM run LEFT JOIN run_tags ON run_tags.runid = run.id WHERE run.testid = ? GROUP BY tags");
          Json result = new Json(true);
+         //noinspection unchecked
          for (String tags : ((List<String>) tagComboQuery.setParameter(1, testId).getResultList())) {
             result.add(Json.fromString(tags));
          }
@@ -646,20 +670,25 @@ public class AlertingService {
       if (testId == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
       }
+      if (tags == null) {
+         tags = "";
+      }
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         GrafanaDashboard dashboard;
-         if (tags == null || tags.isEmpty()) {
-            dashboard = GrafanaDashboard.find("testId = ?1 AND (tags IS NULL OR tags = '')", testId).firstResult();
-         } else {
-            dashboard = GrafanaDashboard.find("testId = ?1 AND tags = ?2", testId, tags).firstResult();
-         }
-         if (dashboard == null) {
-            dashboard = new GrafanaDashboard();
-            dashboard.testId = testId;
-            dashboard.tags = tags;
-            dashboard.panels = new ArrayList<>();
-            if (!createDashboard(testId, Variable.list("testid", testId), dashboard)) {
+         GrafanaClient.GetDashboardResponse response = findDashboard(testId, tags);
+         List<Variable> variables = Variable.list("testid", testId);
+         DashboardInfo dashboard;
+         if (response == null) {
+            dashboard = createDashboard(testId, tags, variables);
+            if (dashboard == null) {
                return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Cannot update Grafana dashboard.").build();
+            }
+         } else {
+            dashboard = new DashboardInfo();
+            dashboard.testId = testId;
+            dashboard.uid = response.dashboard.uid;
+            dashboard.url = response.meta.url;
+            for (var entry : groupedVariables(variables).entrySet()) {
+               dashboard.panels.add(new PanelInfo(entry.getKey(), entry.getValue()));
             }
          }
          return Response.ok(dashboard).build();
@@ -817,6 +846,26 @@ public class AlertingService {
             }
             last.persist();
          }
+      }
+   }
+
+   public static class DashboardInfo {
+      public int testId;
+      public String uid;
+      public String url;
+      public List<PanelInfo> panels = new ArrayList<>();
+   }
+
+   public static class PanelInfo {
+      public String name;
+      public List<Variable> variables;
+
+      public PanelInfo() {
+      }
+
+      public PanelInfo(String name, List<Variable> variables) {
+         this.name = name;
+         this.variables = variables;
       }
    }
 

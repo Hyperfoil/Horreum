@@ -39,6 +39,7 @@ package-lock.json
 
 # Quarkus .env
 .env
+.grafana
 
 # dependencies
 /webapp/node_modules
