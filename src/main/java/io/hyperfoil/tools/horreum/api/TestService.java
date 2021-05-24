@@ -60,11 +60,14 @@ public class TestService {
    @Transactional
    public void delete(@PathParam("id") Integer id){
       try (CloseMe h = sqlService.withRoles(em, identity)){
+         Test test = Test.findById(id);
+         test.defaultView = null;
+         em.merge(test);
          View.find("test_id", id).stream().forEach(view -> {
             ViewComponent.delete("view_id", ((View) view).id);
             view.delete();
          });
-         Test.find("id", id).firstResult().delete();
+         test.delete();
       }
    }
 

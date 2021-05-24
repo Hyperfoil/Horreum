@@ -41,7 +41,7 @@ public class Test extends ProtectedBaseEntity {
 
    public String tags;
 
-   @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE })
+   @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE }, orphanRemoval = true)
    public View defaultView;
 
    public String compareUrl;

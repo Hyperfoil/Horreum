@@ -15,10 +15,11 @@ public class AccessSerializer implements JsonbDeserializer<Access>, JsonbSeriali
    private static final Access[] VALUES = Access.values();
    @Override
    public Access deserialize(JsonParser parser, DeserializationContext ctx, Type rtType) {
-      if (parser.isIntegralNumber()) {
-         return VALUES[parser.getInt()];
-      } else {
-         return Access.valueOf(parser.getString());
+      String str = parser.getString();
+      try {
+         return VALUES[Integer.parseInt(str)];
+      } catch (NumberFormatException e) {
+         return Access.valueOf(str);
       }
    }
 

@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -127,7 +128,7 @@ public class AlertingService {
    GrafanaClient grafana;
 
    @ConfigProperty(name = "horreum.grafana.url")
-   String grafanaBaseUrl;
+   Optional<String> grafanaBaseUrl;
 
    @ConfigProperty(name = "horreum.internal.url")
    String internalUrl;
@@ -151,7 +152,9 @@ public class AlertingService {
 
    @PostConstruct
    void init() {
-      vertx.setTimer(1, this::setupGrafanaDatasource);
+      if (grafanaBaseUrl.isPresent()) {
+         vertx.setTimer(1, this::setupGrafanaDatasource);
+      }
    }
 
    private void setupGrafanaDatasource(long timerId) {
@@ -627,7 +630,7 @@ public class AlertingService {
       try {
          GrafanaClient.DashboardSummary response = grafana.createOrUpdateDashboard(new GrafanaClient.PostDashboardRequest(dashboard, true));
          info.uid = response.uid;
-         info.url = grafanaBaseUrl + response.url;
+         info.url = grafanaBaseUrl.get() + response.url;
          return info;
       } catch (WebApplicationException e) {
          log.errorf(e, "Failed to create/update dashboard %s", dashboard.uid);

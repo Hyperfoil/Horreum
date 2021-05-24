@@ -49,6 +49,15 @@ public class ViewComponent extends PanacheEntityBase {
     */
    public String render;
 
+   public ViewComponent() {
+   }
+
+   public ViewComponent(String headerName, String accessors, String render) {
+      this.headerName = headerName;
+      this.accessors = accessors;
+      this.render = render;
+   }
+
    public String[] accessors() {
       return Stream.of(accessors.split("[,;] *")).map(String::trim).toArray(String[]::new);
    }
