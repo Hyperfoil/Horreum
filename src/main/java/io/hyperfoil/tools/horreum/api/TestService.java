@@ -33,10 +33,16 @@ import org.jboss.logging.Logger;
 public class TestService {
    private static final Logger log = Logger.getLogger(TestService.class);
 
-   private static final String SUMMARY = "select test.id,test.name,test.description,count(run.id) as count," +
-         "test.owner,test.token,test.access from test left join run on run.testid = test.id group by test.id";
+   //@formatter:off
+   private static final String SUMMARY =
+         "SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.token,test.access " +
+         "FROM test LEFT JOIN run ON run.testid = test.id " +
+         "WHERE run.trashed = false OR run.trashed IS NULL " +
+         "GROUP BY test.id";
+   //@formatter:on
    private static final String UPDATE_TOKEN = "UPDATE test SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
+   private static final String TRASH_RUNS = "UPDATE run SET trashed = true WHERE testid = ?";
 
 
    @Inject
@@ -61,6 +67,9 @@ public class TestService {
    public void delete(@PathParam("id") Integer id){
       try (CloseMe h = sqlService.withRoles(em, identity)){
          Test test = Test.findById(id);
+         if (test == null) {
+            throw new WebApplicationException("No test with id " + id, 404);
+         }
          test.defaultView = null;
          em.merge(test);
          View.find("test_id", id).stream().forEach(view -> {
@@ -68,6 +77,7 @@ public class TestService {
             view.delete();
          });
          test.delete();
+         em.createNativeQuery(TRASH_RUNS).setParameter(1, test.id).executeUpdate();
       }
    }
 

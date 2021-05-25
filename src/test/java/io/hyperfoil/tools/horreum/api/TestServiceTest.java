@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.api;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,7 +77,9 @@ public class TestServiceTest {
       try (CloseMe ignored = sqlService.withRoles(em, Arrays.asList(TESTER_ROLES))) {
          assertNull(Test.findById(response.id));
          // There's no constraint between runs and tests; therefore the run is not deleted
-         assertNotNull(Run.findById(runId));
+         Run run = Run.findById(runId);
+         assertNotNull(run);
+         assertTrue(run.trashed);
       }
    }
 

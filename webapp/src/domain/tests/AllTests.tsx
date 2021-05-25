@@ -36,6 +36,7 @@ import * as selectors from './selectors';
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import ActionMenu from '../../components/ActionMenu';
+import ConfirmTestDeleteModal from './ConfirmTestDeleteModal'
 
 import {
   isAuthenticatedSelector,
@@ -155,9 +156,19 @@ export default ()=>{
                           dispatch(alertAction("UPDATE_TEST", "Failed to update test", e))
                         }) }
                         description={ "test " + arg.row.original.name }
-                        onDelete={ id => thunkDispatch(deleteTest(id)).catch(e => {
-                          dispatch(alertAction("DELETE_TEST", "Failed to delete test", e))
-                        }) }
+                        onDelete={ id => {
+                          thunkDispatch(deleteTest(id)).catch(e => {
+                                dispatch(alertAction("DELETE_TEST", "Failed to delete test", e))
+                          })
+                        }}
+                        deleteConfirmModal={ (id, _, isOpen, onClose, onDelete) => (
+                          <ConfirmTestDeleteModal
+                            isOpen={ isOpen }
+                            onClose={ onClose }
+                            onDelete={ onDelete }
+                            testId={ id }
+                            testName={ arg.row.original.name }
+                          />)}
                         />
             )
           }

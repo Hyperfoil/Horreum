@@ -678,9 +678,18 @@ public class RunService {
    @PermitAll
    @GET
    @Path("count")
-   public long runCount() {
+   public Response runCount(@QueryParam("testId") Integer testId) {
+      if (testId == null) {
+         return Response.status(400).entity("Missing testId query param.").build();
+      }
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         return Run.count();
+         long total = Run.count();
+         long active = Run.count("trashed = false");
+         return Response.ok(new Json.MapBuilder()
+               .add("total", total )
+               .add("active", active)
+               .add("trashed", total - active)
+               .build()).build();
       }
    }
 

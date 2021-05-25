@@ -22,7 +22,7 @@ export default ({ isOpen, onClose, onDelete, description, extra }: ConfirmDelete
       { extra }
       <br />
       <div>
-         <Button variant="primary" onClick={ onDelete }>Delete</Button>
+         <Button variant="danger" onClick={ onDelete }>Delete</Button>
          <Button variant="secondary" onClick={ onClose }>Cancel</Button>
       </div>
    </Modal>)

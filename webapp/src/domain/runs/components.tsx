@@ -73,6 +73,7 @@ export function Menu(run: Run) {
     return (<>
         <ActionMenu
             id={run.id}
+            description={ "run " + run.id }
             owner={ run.owner }
             access={ run.access }
             token={ run.token || undefined }

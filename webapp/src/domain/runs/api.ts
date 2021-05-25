@@ -19,7 +19,8 @@ const endPoints = {
     dropToken: (runId: number) => `${base}/${runId}/dropToken`,
     updateAccess: (runId: number, owner: string, access: Access) => `${base}/${runId}/updateAccess?owner=${owner}&access=${access}`,
     trash: (runId: number, isTrashed: boolean) => `${base}/${runId}/trash?isTrashed=${isTrashed}`,
-    description: (runId: number) => `${base}/${runId}/description`
+    description: (runId: number) => `${base}/${runId}/description`,
+    count: (testId: number) => `${base}/count?testId=${testId}`,
 }
 
 export const get = (id: number, token?: string, js?: any) => {
@@ -51,4 +52,12 @@ export const trash = (id: number, isTrashed: boolean) => fetchApi(endPoints.tras
 
 export const updateDescription = (id: number, description: string) => {
     return fetchApi(endPoints.description(id), description, 'post', { 'Content-Type' : 'text/plain' }, 'response')
- }
+}
+
+export type RunCount = {
+    active: number,
+    trashed: number,
+    total: number,
+}
+
+export const runCount = (testId: number): Promise<RunCount> => fetchApi(endPoints.count(testId), null, 'get')

@@ -17,6 +17,10 @@ import ConfirmDeleteModal from './ConfirmDeleteModal'
 
 export type DropdownItemProvider = (closeFunc: () => void) => ReactElement<DropdownItemProps, any>
 
+interface DeleteConfirmModal {
+   (id: number, description: string, isOpen: boolean, onClose: () => void, onDelete: () => void): any
+}
+
 type ActionMenuProps = {
    id: number,
    owner: string,
@@ -27,11 +31,12 @@ type ActionMenuProps = {
    onTokenReset(id: number): void,
    onTokenDrop(id: number): void,
    onAccessUpdate(id: number, owner: string, access: Access): void,
-   description?: string,
+   description: string,
    onDelete?(id: number): void,
+   deleteConfirmModal?: DeleteConfirmModal,
 }
 
-export default function ActionMenu({ id, owner, access, token, tokenToLink, extraItems, onTokenReset, onTokenDrop, onAccessUpdate, description, onDelete }: ActionMenuProps) {
+export default function ActionMenu(props: ActionMenuProps) {
    const [menuOpen, setMenuOpen] = useState(false)
 
    const roles = useSelector(rolesSelector)
@@ -39,25 +44,29 @@ export default function ActionMenu({ id, owner, access, token, tokenToLink, extr
    const [shareLinkModalOpen, setShareLinkModalOpen] = useState(false)
 
    const [changeAccessModalOpen, setChangeAccessModalOpen] = useState(false)
-   const [newAccess, setNewAccess] = useState(access)
-   const [newOwner, setNewOwner] = useState(owner)
+   const [newAccess, setNewAccess] = useState(props.access)
+   const [newOwner, setNewOwner] = useState(props.owner)
 
    const [confirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false)
 
    useEffect(() => {
-      setNewOwner(owner)
-   }, [owner])
+      setNewOwner(props.owner)
+   }, [props.owner])
    useEffect(() => {
-      setNewAccess(access)
-   }, [access])
+      setNewAccess(props.access)
+   }, [props.access])
 
-   const isOwner = roles && roles.includes(owner)
+   const isOwner = roles && roles.includes(props.owner)
 
    const onChangeAccessClose = () => {
-      setNewOwner(owner)
-      setNewAccess(access)
+      setNewOwner(props.owner)
+      setNewAccess(props.access)
       setChangeAccessModalOpen(false)
    }
+
+   const deleteConfirmModal = props.deleteConfirmModal || ((id, description, isOpen, onClose, onDelete) => (
+      <ConfirmDeleteModal isOpen={isOpen} onClose={onClose} onDelete={onDelete} description={description}/>)
+   )
 
    return (<>
       <Dropdown
@@ -66,7 +75,7 @@ export default function ActionMenu({ id, owner, access, token, tokenToLink, extr
                 isPlain
                 dropdownItems={[
          <DropdownItem key="link"
-                       isDisabled={ access === 0 || (!token && !isOwner)}
+                       isDisabled={ props.access === 0 || (!props.token && !isOwner)}
                        onClick={() => {
                            setMenuOpen(false)
                            setShareLinkModalOpen(true)
@@ -83,17 +92,17 @@ export default function ActionMenu({ id, owner, access, token, tokenToLink, extr
                            setMenuOpen(false)
                            setConfirmDeleteModalOpen(true)
                        }}
-                       isDisabled={!isOwner || !onDelete}
+                       isDisabled={!isOwner || !props.onDelete}
          >Delete</DropdownItem>,
-         ...(extraItems ? extraItems.map(item => item(() => setMenuOpen(false))) : [])
+         ...(props.extraItems ? props.extraItems.map(item => item(() => setMenuOpen(false))) : [])
          ]}
       />
       <ShareLinkModal isOpen={ shareLinkModalOpen }
                       onClose={ () => setShareLinkModalOpen(false) }
                       isOwner={ isOwner }
-                      link={ token ? tokenToLink(id, token) : ""}
-                      onReset={ () => onTokenReset(id) }
-                      onDrop={ () => onTokenDrop(id) } />
+                      link={ props.token ? props.tokenToLink(props.id, props.token) : ""}
+                      onReset={ () => props.onTokenReset(props.id) }
+                      onDrop={ () => props.onTokenDrop(props.id) } />
       <ChangeAccessModal isOpen={ changeAccessModalOpen }
                          onClose={ onChangeAccessClose }
                          owner={ newOwner }
@@ -101,17 +110,18 @@ export default function ActionMenu({ id, owner, access, token, tokenToLink, extr
                          access={ newAccess }
                          onAccessChange={ setNewAccess }
                          onUpdate={ () => {
-                            onAccessUpdate(id, newOwner, newAccess)
+                           props.onAccessUpdate(props.id, newOwner, newAccess)
                             onChangeAccessClose()
                          }} />
-      <ConfirmDeleteModal isOpen={ confirmDeleteModalOpen }
-                          onClose={ () => setConfirmDeleteModalOpen(false) }
-                          onDelete={ () => {
+      { deleteConfirmModal(props.id,
+                           props.description,
+                           confirmDeleteModalOpen, () => setConfirmDeleteModalOpen(false),
+                           () => {
                               setConfirmDeleteModalOpen(false)
-                              if (onDelete) {
-                                 onDelete(id)
+                              if (props.onDelete) {
+                                 props.onDelete(props.id)
                               }
-                          }}
-                          description={ description || "" } />
+                           }) }
+
    </>)
 }
