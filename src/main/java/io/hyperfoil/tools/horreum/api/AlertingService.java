@@ -99,11 +99,13 @@ public class AlertingService {
          "   JOIN run_tags ON run_tags.runid = run.id " +
          "   ORDER BY run.testid, run_tags.tags, run.start DESC " +
          ") SELECT last_run.testid, last_run.tags::::text, last_run.id, last_run.timestamp, ts.maxStaleness FROM last_run " +
+         "JOIN test ON test.id = last_run.testid " +
          "JOIN test_stalenesssettings ts ON last_run.testid = ts.test_id AND " +
          "     (ts.tags IS NULL OR ts.tags @> last_run.tags AND last_run.tags @> ts.tags) " +
          "LEFT JOIN lastmissingrunnotification lmrn ON last_run.testid = lmrn.testid " +
          "   AND lmrn.tags @> last_run.tags AND last_run.tags @> lmrn.tags " +
-         "WHERE timestamp < EXTRACT(EPOCH FROM current_timestamp) * 1000 - ts.maxstaleness " +
+         "WHERE test.notificationsenabled = true " +
+         "   AND timestamp < EXTRACT(EPOCH FROM current_timestamp) * 1000 - ts.maxstaleness " +
          "   AND (lmrn.lastnotification IS NULL OR " +
          "       (EXTRACT(EPOCH FROM current_timestamp) - EXTRACT(EPOCH FROM lmrn.lastnotification))* 1000 > ts.maxstaleness)";
    //@formatter:on
@@ -147,7 +149,14 @@ public class AlertingService {
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
-      onNewRun(run, true, false);
+      boolean showNotifications;
+      try (CloseMe closeMe = sqlService.withRoles(em, Collections.singleton(HORREUM_ALERTING))) {
+         showNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
+               .setParameter(1, run.testid).getSingleResult();
+      } catch (NoResultException e) {
+         showNotifications = true;
+      }
+      onNewRun(run, showNotifications, false);
    }
 
    @PostConstruct
@@ -569,7 +578,7 @@ public class AlertingService {
          }
          for (Variable variable : variables) {
             if (currentVariables.stream().noneMatch(v -> v.id.equals(variable.id))) {
-               if (variable.id <= 0) {
+               if (variable.id == null || variable.id <= 0) {
                   variable.id = null;
                }
                variable.testId = testId;
@@ -577,12 +586,14 @@ public class AlertingService {
             }
          }
 
-         try {
-            for (var dashboard : grafana.searchDashboard("", "testId=" + testId)) {
-               grafana.deleteDashboard(dashboard.uid);
+         if (grafanaBaseUrl.isPresent()) {
+            try {
+               for (var dashboard : grafana.searchDashboard("", "testId=" + testId)) {
+                  grafana.deleteDashboard(dashboard.uid);
+               }
+            } catch (ProcessingException | WebApplicationException e) {
+               log.warnf(e, "Failed to delete dasboards for test %d", testId);
             }
-         } catch (ProcessingException | WebApplicationException e) {
-            log.warnf(e, "Failed to delete dasboards for test %d", testId);
          }
 
          em.flush();

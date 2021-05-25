@@ -41,6 +41,7 @@ public class TestService {
          "GROUP BY test.id";
    //@formatter:on
    private static final String UPDATE_TOKEN = "UPDATE test SET token = ? WHERE id = ?";
+   private static final String UPDATE_NOTIFICATIONS = "UPDATE test SET notificationsenabled = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
    private static final String TRASH_RUNS = "UPDATE run SET trashed = true WHERE testid = ?";
 
@@ -114,9 +115,6 @@ public class TestService {
          return Response.status(Response.Status.FORBIDDEN).entity("This user does not have the " + test.owner + " role!").build();
       }
       try (CloseMe h = sqlService.withRoles(em, identity)) {
-         if (test == null) {
-            return Response.serverError().entity("test is null").build();
-         }
          Response response = addAuthenticated(test);
          return response == null ? Response.ok(test).build() : response;
       }
@@ -126,6 +124,9 @@ public class TestService {
       Test existing = Test.find("id", test.id).firstResult();
       if (test.id != null && test.id <= 0) {
          test.id = null;
+      }
+      if (test.notificationsEnabled == null) {
+         test.notificationsEnabled = true;
       }
       test.ensureLinked();
       if (existing != null) {
@@ -269,6 +270,24 @@ public class TestService {
          test.persist();
       }
       return Response.noContent().build();
+   }
+
+   @RolesAllowed("tester")
+   @POST
+   @Consumes // any
+   @Path("{id}/notifications")
+   public Response updateAccess(@PathParam("id") Integer id,
+                                @QueryParam("enabled") boolean enabled) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Query query = em.createNativeQuery(UPDATE_NOTIFICATIONS)
+               .setParameter(1, enabled)
+               .setParameter(2, id);
+         if (query.executeUpdate() != 1) {
+            return Response.serverError().entity("Access change failed (missing permissions?)").build();
+         } else {
+            return Response.status(Response.Status.NO_CONTENT).build();
+         }
+      }
    }
 
    @RolesAllowed("tester")

@@ -50,6 +50,10 @@ public class Test extends ProtectedBaseEntity {
    @CollectionTable(name = "test_stalenesssettings")
    public Collection<StalenessSettings> stalenessSettings;
 
+   @NotNull
+   @Column(columnDefinition = "boolean default true")
+   public Boolean notificationsEnabled;
+
    public void ensureLinked() {
       if (defaultView != null) {
          defaultView.test = this;

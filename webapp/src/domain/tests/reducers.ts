@@ -34,6 +34,7 @@ export interface Test {
     defaultView?: View,
     count?: number, // run count in AllTests
     watching?: string[],
+    notificationsEnabled: boolean,
     stalenessSettings?: StalenessSettings[]
 }
 

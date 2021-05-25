@@ -1190,5 +1190,26 @@
         <dropTable tableName="grafana_panel"/>
         <dropTable tableName="grafana_dashboard"/>
     </changeSet>
+
+    <changeSet id="23" author="rvansa">
+        <addColumn tableName="test">
+            <column name="notificationsenabled" type="boolean" defaultValue="true">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION can_view(access INTEGER, owner TEXT, token TEXT) RETURNS boolean AS $$
+            BEGIN
+                RETURN (
+                    access = 0
+                    OR (access = 1 AND has_role('viewer'))
+                    OR (access = 2 AND has_role(owner) AND has_role('viewer'))
+                    OR token = current_setting('horreum.token', true)
+                    OR has_role('horreum.alerting')
+                );
+            END;
+            $$ LANGUAGE plpgsql STABLE;
+        </createProcedure>
+    </changeSet>
 </databaseChangeLog>
 

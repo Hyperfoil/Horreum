@@ -5,7 +5,7 @@ import {
     Button,
     Form,
     FormGroup, Grid, GridItem,
-    Text,
+    Switch,
     TextArea,
     TextInput,
 } from '@patternfly/react-core';
@@ -50,6 +50,7 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
     const [access, setAccess] = useState<Access>(0)
     const [owner, setOwner] = useState(test && defaultRole || undefined)
     const [compareUrl, setCompareUrl] = useState("")
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true)
     const [tags, setTags] = useState<string[]>([])
     const compareUrlEditor = useRef<ValueGetter>()
     const [stalenessSettings, setStalenessSettings] = useState<StalenessSettingsDisplay[]>([])
@@ -62,6 +63,7 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
         setAccess(test ? test.access : 0)
         setTags(test && test.tags ? test.tags.split(";").filter(t => t !== "") : []);
         setCompareUrl(test && test.compareUrl && test.compareUrl.toString() || "")
+        setNotificationsEnabled(!test || test.notificationsEnabled)
         setStalenessSettings(test?.stalenessSettings?.map(ss => ({ ...ss,
             maxStalenessStr: ss.maxStaleness ? millisToDuration(ss.maxStaleness) : ""
         })) || [])
@@ -92,6 +94,7 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
                 name,
                 description,
                 compareUrl: compareUrlEditor.current?.getValue(),
+                notificationsEnabled,
                 tags: tags.join(";"),
                 owner: owner || "__test_created_without_a_role__",
                 access: access,
@@ -216,6 +219,22 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
                                 }}/>
                     </div>)
                 }
+            </FormGroup>
+            <FormGroup
+                label="Notifications"
+                fieldId="notifications"
+            >
+                <Switch
+                    id="notifications-switch"
+                    label="Notifications are enabled"
+                    labelOff="Notifications are disabled"
+                    isDisabled={!isTester}
+                    isChecked={notificationsEnabled}
+                    onChange={(value) => {
+                        setNotificationsEnabled(value)
+                        onModified(true)
+                    }}
+                />
             </FormGroup>
             <FormGroup
                 label="Missing runs notifications"
