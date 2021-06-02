@@ -1,6 +1,11 @@
+import { ThunkDispatch } from 'redux-thunk';
+
 import * as actionTypes from './actionTypes';
 import {Map} from 'immutable';
 import * as utils from "../../utils";
+
+export const globalEventTypes = ["test/new","run/new","change/new"]
+export const testHookEventTypes = ["run/new","change/new"]
 
 export interface Hook {
     id: number,
@@ -8,6 +13,11 @@ export interface Hook {
     type: string,
     target: number,
     active: boolean,
+}
+
+export interface AllowedHookPrefix {
+    id: number,
+    prefix: string,
 }
 
 export class HooksState {
@@ -25,6 +35,7 @@ export interface DeleteAction {
 }
 
 type HooksAction = LoadedAction | DeleteAction
+export type HooksDispatch = ThunkDispatch<any, unknown, HooksAction>
 
 export const reducer = (state = new HooksState(), action : HooksAction) =>{
     switch(action.type) {

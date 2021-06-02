@@ -156,7 +156,7 @@ export default () => {
                                 funcsRef={ variablesFuncsRef }
                             />
                         </Tab>
-                         <Tab key="hooks" eventKey={3} isHidden={ testId <= 0 } title="Webhooks">
+                         <Tab key="hooks" eventKey={3} isHidden={ testId <= 0 || !isTester } title="Webhooks">
                             <Hooks
                                 testId={testId}
                                 testOwner={test ? test.owner : undefined}

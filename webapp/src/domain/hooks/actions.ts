@@ -14,24 +14,24 @@ const removed = (id: number): DeleteAction => ({
     id
 })
 
-export const get = (id: number) => (dispatch: Dispatch<LoadedAction>) =>
-    api.get(id).then(
+export const getHook = (id: number) => (dispatch: Dispatch<LoadedAction>) =>
+    api.getHook(id).then(
         response => dispatch(loaded(response)),
         error => dispatch(loaded([]))
     )
 
-export const add = (payload: Hook) => (dispatch: Dispatch<LoadedAction>) =>
-    api.add(payload).then(
+export const addHook = (payload: Hook) => (dispatch: Dispatch<LoadedAction>) =>
+    api.addHook(payload).then(
         response => dispatch(loaded(response)),
         rejected => {}
     )
 
-export const all = () => (dispatch: Dispatch<LoadedAction>) =>
-    api.all().then(
+export const allHooks = () => (dispatch: Dispatch<LoadedAction>) =>
+    api.allHooks().then(
         response => dispatch(loaded(response))
     )
 
-export const remove = (id: number) => (dispatch: Dispatch<DeleteAction>) =>
-    api.remove(id).then(
+export const removeHook = (id: number) => (dispatch: Dispatch<DeleteAction>) =>
+    api.removeHook(id).then(
         response => dispatch(removed(id))
     )

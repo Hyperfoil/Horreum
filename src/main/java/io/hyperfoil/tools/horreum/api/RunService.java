@@ -967,18 +967,7 @@ public class RunService {
    @Transactional
    public Response updateDescription(@PathParam("id") Integer id, String description) {
       // FIXME: fetchival stringifies the body into JSON string :-/
-      return updateRun(id, run -> run.description = destringify(description));
-   }
-
-   private static String destringify(String str) {
-      if (str == null || str.isEmpty()) {
-         return str;
-      }
-      if (str.charAt(0) == '"' && str.charAt(str.length() - 1) == '"') {
-         return str.substring(1, str.length() - 1);
-      } else {
-         return str;
-      }
+      return updateRun(id, run -> run.description = Util.destringify(description));
    }
 
    private Response updateRun(Integer id, Consumer<Run> consumer) {

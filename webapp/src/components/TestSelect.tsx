@@ -24,10 +24,11 @@ type TestSelectProps = {
     extraOptions?: SelectedTest[],
     direction?: "up" | "down",
     placeholderText?: string,
-    initialTestName?: string
+    initialTestName?: string,
+    isDisabled?: boolean,
 }
 
-export default ({ selection, onSelect, extraOptions, direction, placeholderText, initialTestName } : TestSelectProps) => {
+export default ({ selection, onSelect, extraOptions, direction, placeholderText, initialTestName, isDisabled } : TestSelectProps) => {
     const [open, setOpen] = useState(false)
     const tests = useSelector(all)
     const dispatch = useDispatch()
@@ -56,6 +57,7 @@ export default ({ selection, onSelect, extraOptions, direction, placeholderText,
         }}
         direction={direction}
         placeholderText={placeholderText}
+        isDisabled={ isDisabled }
     >{ [
          ...(extraOptions ? extraOptions.map((option, i) => <SelectOption key={i} value={option}/>) : []),
          ...(tests ? tests.map((test: Test, i: number) => <SelectOption

@@ -1211,5 +1211,33 @@
             $$ LANGUAGE plpgsql STABLE;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="24" author="rvansa">
+        <createTable tableName="allowedhookprefix">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="prefix" type="text">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <!-- Only admin and test owners can both view and modify webhooks. -->
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE allowedhookprefix TO "${quarkus.datasource.username}";
+            ALTER TABLE allowedhookprefix ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY prefix_select ON allowedhookprefix FOR SELECT USING(true);
+            CREATE POLICY prefix_insert ON allowedhookprefix FOR INSERT WITH CHECK (has_role('admin'));
+            CREATE POLICY prefix_update ON allowedhookprefix FOR UPDATE USING (has_role('admin'));
+            CREATE POLICY prefix_delete ON allowedhookprefix FOR DELETE USING (has_role('admin'));
+
+            ALTER TABLE hook ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY hook_policies ON hook
+                USING (has_role('admin') OR exists(
+                    SELECT 1 FROM test WHERE (type = 'change/new' OR type = 'run/new') AND target = test.id AND can_view(test.access, test.owner, test.token)
+                ));
+            CREATE POLICY hook_write_check ON hook
+                WITH CHECK (exists(SELECT 1 FROM allowedhookprefix ahp WHERE left(url, length(ahp.prefix)) = ahp.prefix));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

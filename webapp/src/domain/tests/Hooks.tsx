@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux'
 import {
+    Alert,
+    AlertVariant,
     Button,
     DataList,
     DataListAction,
@@ -10,9 +12,9 @@ import {
     DataListCell,
     Form,
     FormGroup,
-    Tab,
-    Tabs,
-    TextInput, FormSelect, FormSelectOption, Title,
+    FormSelect,
+    FormSelectOption,
+    Title,
 } from '@patternfly/react-core';
 
 import { useTester } from '../../auth'
@@ -24,7 +26,8 @@ import { TabFunctionsRef } from './Test'
 import {updateHooks} from './actions'
 import { ValueGetter } from '../../components/Editor/monaco/Editor'
 import * as api from "../hooks/api";
-import {testHookEventTypes} from "../hooks/AllHooks";
+import { testHookEventTypes } from "../hooks/reducers";
+import HookUrlSelector from '../../components/HookUrlSelector'
 
 
 type HookComponentFormProps = {
@@ -33,23 +36,20 @@ type HookComponentFormProps = {
     isTester: boolean,
 }
 
-
-
 const HookComponentForm = ({ c, onChange, isTester } : HookComponentFormProps) => {
     const [eventType,setEventType] = useState(c.type)
 
     return (
         <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
-            <FormGroup label="Webhook URL" fieldId="url">
-                <TextInput value={ c.url || "" } placeholder="e.g. 'http://myserver/api/hook'"
-                           id="header"
-                           onChange={ value => {
-                               c.url = value
-                               onChange()
-                           }}
-                           validated={ !!c.url  && c.url.trim() !== "" ? "default" : "error" }
-                           isReadOnly={!isTester} />
-            </FormGroup>
+            <HookUrlSelector
+                active={ isTester }
+                value={ c.url || "" }
+                setValue={ value => {
+                    c.url = value;
+                    onChange()
+                }}
+                isReadOnly={ !isTester }
+            />
             <FormGroup label="Event Type" fieldId="event-type">
                 <FormSelect
                     id="type"
@@ -87,9 +87,10 @@ export default ({ testId, testOwner, funcsRef, onModified }: HooksProps) => {
     const [testWebHooks, setTestWebHooks] = useState<Hook[]>([])
     const isTester = useTester(testOwner)
     const renderRefs = useRef(new Array<ValueGetter | undefined>(testWebHooks.length));
+    const hasDuplicates = new Set(testWebHooks.map(h => h.type + "_" + h.url )).size != testWebHooks.length
 
     useEffect(() => {
-        if (!testId) {
+        if (!testId || !isTester) {
             return
         }
         api.fetchHooks(testId).then(
@@ -105,14 +106,10 @@ export default ({ testId, testOwner, funcsRef, onModified }: HooksProps) => {
                     }
                     return hd
                 }))
-
-                // setGroups(groupNames(response))
-                // calculations.current.splice(0)
-                // response.forEach((_: any) => calculations.current.push(undefined));
             },
             error => dispatch(alertAction("HOOK_FETCH", "Failed to fetch webhooks", error))
         )
-    }, [testId])
+    }, [testId, isTester])
 
 
     const dispatch = useDispatch()
@@ -131,6 +128,12 @@ export default ({ testId, testOwner, funcsRef, onModified }: HooksProps) => {
     }
 
     return (<>
+        { hasDuplicates && <Alert
+            variant={ AlertVariant.warning }
+            title="Some webhooks contain duplicates"
+        >
+            Some webooks contain duplicate combinations of URLs and event types. Please correct these.
+         </Alert> }
         <div style={{
             marginTop: "16px",
             marginBottom: "16px",

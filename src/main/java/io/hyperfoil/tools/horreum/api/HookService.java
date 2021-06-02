@@ -2,10 +2,12 @@ package io.hyperfoil.tools.horreum.api;
 
 import io.hyperfoil.tools.horreum.JsonAdapter;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
+import io.hyperfoil.tools.horreum.entity.json.AllowedHookPrefix;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.yaup.json.Json;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -19,6 +21,7 @@ import io.vertx.mutiny.ext.web.client.WebClient;
 import org.jboss.logging.Logger;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -36,6 +39,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URL;
@@ -44,6 +48,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Path("/api/hook")
 @Consumes({MediaType.APPLICATION_JSON})
@@ -147,7 +152,7 @@ public class HookService {
       tellHooks(Change.EVENT_NEW, run.testid, changeEvent.change);
    }
 
-   @RolesAllowed(Roles.ADMIN)
+   @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
    @POST
    @Transactional
    public Response add(Hook hook){
@@ -172,7 +177,7 @@ public class HookService {
       }
    }
 
-   @RolesAllowed(Roles.ADMIN)
+   @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
    @GET
    @Path("{id}")
    public Hook get(@PathParam("id")Integer id){
@@ -181,7 +186,7 @@ public class HookService {
       }
    }
 
-   @RolesAllowed(Roles.ADMIN)
+   @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
    @DELETE
    @Path("{id}")
    @Transactional
@@ -222,7 +227,7 @@ public class HookService {
       }
    }
 
-//   @RolesAllowed(Roles.ADMIN)
+   @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
    @GET
    @Path("test/{id}")
    public List<Hook> hooks(@PathParam("id") Integer testId) {
@@ -230,8 +235,40 @@ public class HookService {
          if (testId != null) {
             return Hook.list("target", testId);
          } else {
-            return Hook.listAll();
+            throw new WebApplicationException("No test ID set.", 400);
          }
+      }
+   }
+
+   @PermitAll
+   @GET
+   @Path("prefixes")
+   public List<AllowedHookPrefix> allowedPrefixes() {
+      return AllowedHookPrefix.listAll();
+   }
+
+   @RolesAllowed(Roles.ADMIN)
+   @Consumes("text/plain")
+   @POST
+   @Path("prefixes")
+   @Transactional
+   public AllowedHookPrefix addPrefix(String prefix) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         AllowedHookPrefix p = new AllowedHookPrefix();
+         // FIXME: fetchival stringifies the body into JSON string :-/
+         p.prefix = Util.destringify(prefix);
+         em.persist(p);
+         return p;
+      }
+   }
+
+   @RolesAllowed(Roles.ADMIN)
+   @DELETE
+   @Path("prefixes/{id}")
+   @Transactional
+   public void deletePrefix(@PathParam("id") Long id) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         AllowedHookPrefix.delete("id", id);
       }
    }
 }
