@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.api;
 
-import io.agroal.api.AgroalDataSource;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
@@ -30,10 +29,6 @@ import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -93,9 +88,6 @@ public class SchemaService {
    SqlService sqlService;
 
    @Inject
-   AgroalDataSource dataSource;
-
-   @Inject
    SecurityIdentity identity;
 
    @PermitAll
@@ -103,8 +95,8 @@ public class SchemaService {
    @Path("{id}")
    @Produces(MediaType.APPLICATION_JSON)
    public Schema getSchema(@PathParam("id") int id, @QueryParam("token") String token){
-      try (CloseMe h1 = sqlService.withRoles(em, identity);
-           CloseMe h2 = sqlService.withToken(em, token)) {
+      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
+           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
          return Schema.find("id", id).firstResult();
       }
    }
@@ -113,7 +105,7 @@ public class SchemaService {
    @POST
    @Transactional
    public Response add(Schema schema){
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          Schema byName = Schema.find("name", schema.name).firstResult();
          if (byName != null) {
             if (Objects.equals(schema.id, byName.id)) {
@@ -140,7 +132,7 @@ public class SchemaService {
                             @QueryParam("page") Integer page,
                             @QueryParam("sort") String sort,
                             @QueryParam("direction") @DefaultValue("Ascending") Sort.Direction direction){
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          if (sort == null || sort.isEmpty()) {
             sort = "name";
          }
@@ -167,23 +159,15 @@ public class SchemaService {
    }
 
    private Response updateToken(Integer id, String token) {
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           PreparedStatement statement = connection.prepareStatement(UPDATE_TOKEN)) {
-         if (token != null) {
-            statement.setString(1, token);
-         } else {
-            statement.setNull(1, Types.VARCHAR);
-         }
-         statement.setInt(2, id);
-         if (statement.executeUpdate() != 1) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Query query = em.createNativeQuery(UPDATE_TOKEN);
+         query.setParameter(1, token);
+         query.setParameter(2, id);
+         if (query.executeUpdate() != 1) {
             return Response.serverError().entity("Token reset failed (missing permissions?)").build();
          } else {
             return (token != null ? Response.ok(token) : Response.noContent()).build();
          }
-      } catch (SQLException e) {
-         log.error("GET /id/resetToken failed", e);
-         return Response.serverError().entity("Token reset failed").build();
       }
    }
 
@@ -197,20 +181,16 @@ public class SchemaService {
       if (access < Access.PUBLIC.ordinal() || access > Access.PRIVATE.ordinal()) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Access not within bounds").build();
       }
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           PreparedStatement statement = connection.prepareStatement(CHANGE_ACCESS)) {
-         statement.setString(1, owner);
-         statement.setInt(2, access);
-         statement.setInt(3, id);
-         if (statement.executeUpdate() != 1) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Query query = em.createNativeQuery(CHANGE_ACCESS);
+         query.setParameter(1, owner);
+         query.setParameter(2, access);
+         query.setParameter(3, id);
+         if (query.executeUpdate() != 1) {
             return Response.serverError().entity("Access change failed (missing permissions?)").build();
          } else {
             return Response.accepted().build();
          }
-      } catch (SQLException e) {
-         log.error("GET /id/resetToken failed", e);
-         return Response.serverError().entity("Access change failed").build();
       }
    }
 
@@ -224,6 +204,7 @@ public class SchemaService {
       }
       Query fetchSchemas = em.createNativeQuery(FETCH_SCHEMAS_RECURSIVE, Schema.class);
       fetchSchemas.setParameter(1, schemaUri);
+      @SuppressWarnings("unchecked")
       Map<String, Schema> schemas = ((Stream<Schema>) fetchSchemas.getResultStream())
             .collect(Collectors.toMap(s -> s.uri, Function.identity()));
       Schema rootSchema = schemas.get(schemaUri);
@@ -260,9 +241,7 @@ public class SchemaService {
          }
          if (validationMessage.getDetails() != null) {
             entry.set("details", new Json(false));
-            validationMessage.getDetails().forEach((k, v) -> {
-               entry.getJson("details").set(k, v);
-            });
+            validationMessage.getDetails().forEach((k, v) -> entry.getJson("details").set(k, v));
          }
          rtrn.add(entry);
       });
@@ -274,7 +253,7 @@ public class SchemaService {
    @Path("extractor")
    @Produces(MediaType.APPLICATION_JSON)
    public List<SchemaExtractor> listExtractors(@QueryParam("schemaId") Integer schema) {
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          if (schema == null) {
             return SchemaExtractor.<SchemaExtractor>findAll().stream().collect(Collectors.toList());
          } else {
@@ -308,7 +287,7 @@ public class SchemaService {
       if (jsonpath.startsWith("$")) {
          jsonpath = jsonpath.substring(1);
       }
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          Schema persistedSchema = Schema.find("uri", schema).firstResult();
          if (persistedSchema == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity("Missing schema " + schema).build();

@@ -7,7 +7,6 @@ import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.yaup.json.Json;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -43,12 +42,10 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Path("/api/hook")
 @Consumes({MediaType.APPLICATION_JSON})
@@ -91,7 +88,7 @@ public class HookService {
 
    private void tellHooks(String type, int testId, Object value){
       List<Hook> hooks;
-      try (CloseMe h = sqlService.withRoles(em, Arrays.asList("admin"))) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singletonList("admin"))) {
          hooks = getEventHooks(type, testId);
       }
       JsonbConfig jsonbConfig = new JsonbConfig();
@@ -159,7 +156,7 @@ public class HookService {
       if(hook == null){
          return Response.serverError().entity("hook is null").build();
       }
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          if (hook.id != null && hook.id <= 0) {
             hook.id = null;
          }
@@ -181,7 +178,7 @@ public class HookService {
    @GET
    @Path("{id}")
    public Hook get(@PathParam("id")Integer id){
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          return Hook.find("id", id).firstResult();
       }
    }
@@ -191,7 +188,7 @@ public class HookService {
    @Path("{id}")
    @Transactional
    public void delete(@PathParam("id")Integer id){
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          Hook.find("id", id).firstResult().delete();
       }
    }
@@ -218,7 +215,7 @@ public class HookService {
                           @QueryParam("page") Integer page,
                           @QueryParam("sort") @DefaultValue("url") String sort,
                           @QueryParam("direction") @DefaultValue("Ascending") Sort.Direction direction){
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          if (limit != null && page != null) {
             return Hook.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
          } else {

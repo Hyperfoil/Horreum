@@ -1,17 +1,15 @@
 package io.hyperfoil.tools.horreum.api;
 
-import io.agroal.api.AgroalDataSource;
 import io.hyperfoil.tools.yaup.StringUtil;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.security.identity.SecurityIdentity;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.annotation.security.DenyAll;
 import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -26,14 +24,12 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.lang.Exception;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.hibernate.JDBCException;
 import org.jboss.logging.Logger;
 
 @Path("/api/sql")
@@ -48,14 +44,13 @@ public class SqlService {
    private static final CloseMe NOOP = () -> {};
 
    @Inject
-   AgroalDataSource dataSource;
+   EntityManager em;
 
    @ConfigProperty(name = "horreum.db.secret")
    String dbSecret;
    byte[] dbSecretBytes;
 
-   private ExecutorService abortExecutor = Executors.newSingleThreadExecutor();
-   private Map<String, String> signedRoleCache = new ConcurrentHashMap<>();
+   private final Map<String, String> signedRoleCache = new ConcurrentHashMap<>();
 
    @GET
    @PermitAll
@@ -64,59 +59,31 @@ public class SqlService {
       if (jsonpath == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("No query").build();
       }
-      try (Connection connection = dataSource.getConnection();
-           PreparedStatement statement = connection.prepareStatement("SELECT jsonb_path_query_first('{}', ('$' || ?)::jsonpath)")) {
-         statement.setString(1, jsonpath);
-         Json result = new Json(false);
-         try {
-            statement.execute();
-            result.add("valid", true);
-         } catch (SQLException ee) {
-            result.add("valid", false);
-            result.add("reason", ee.getMessage());
-            result.add("errorCode", ee.getErrorCode());
-            result.add("sqlState", ee.getSQLState());
+      Query query = em.createNativeQuery("SELECT jsonb_path_query_first('{}', ('$' || ?)::::jsonpath)::::text");
+      query.setParameter(1, jsonpath);
+      Json result = new Json(false);
+      try {
+         query.getSingleResult();
+         result.add("valid", true);
+      } catch (PersistenceException pe) {
+         result.add("valid", false);
+         if (pe.getCause() instanceof JDBCException) {
+            JDBCException je = (JDBCException) pe.getCause();
+            result.add("errorCode", je.getErrorCode());
+            result.add("sqlState", je.getSQLState());
+            result.add("reason", je.getSQLException().getMessage());
+            result.add("sql", je.getSQL());
+         } else {
+            result.add("reason", pe.getMessage());
          }
-         return Response.ok(result).build();
-      } catch (SQLException e) {
-         return Response.serverError().entity("Cannot connect to DB.").build();
       }
-   }
-
-   @DenyAll
-   @GET
-   public Json get(@QueryParam("q") String sql) {
-      return query(dataSource, sql);
+      return Response.ok(result).build();
    }
 
    @PostConstruct
    void init() {
       log.info("Initializing SqlService");
       dbSecretBytes = dbSecret.getBytes(StandardCharsets.UTF_8);
-   }
-
-   @PreDestroy
-   void destroy() {
-      abortExecutor.shutdown();
-   }
-
-   private Json query(AgroalDataSource agroalDataSource, String sql) {
-      System.out.println("SqlService.sql " + sql);
-      if (sql == null || sql.trim().isEmpty()) {
-         return new Json(true);
-      }
-      try (Connection connection = agroalDataSource.getConnection()) {
-         try (Statement statement = connection.createStatement()) {
-            statement.execute(sql);
-            try (ResultSet resultSet = statement.getResultSet()) {
-               Json json = fromResultSet(resultSet);
-               return json;
-            }
-         }
-      } catch (Exception e) {
-         e.printStackTrace();
-         return Json.fromThrowable(e);
-      }
    }
 
    public static Json fromResultSet(ResultSet resultSet) throws SQLException {
@@ -172,39 +139,7 @@ public class SqlService {
          case Types.BOOLEAN:
             return resultSet.getBoolean(column);
          default:
-            String def = StringUtil.removeQuotes(resultSet.getString(column));
-            return def;
-      }
-   }
-
-   CloseMeJdbc withRoles(Connection connection, SecurityIdentity identity) throws SQLException {
-      if (identity.isAnonymous()) {
-         return () -> {};
-      }
-      List<String> roles = new ArrayList<>(identity.getRoles());
-      roles.add(identity.getPrincipal().getName());
-      return withRoles(connection, roles);
-   }
-
-   CloseMeJdbc withRoles(Connection connection, Iterable<String> roles) throws SQLException {
-      try {
-         String signedRoles = getSignedRoles(roles);
-         try (PreparedStatement setRoles = connection.prepareStatement(SET_ROLES)) {
-            setRoles.setString(1, signedRoles);
-            setRoles.execute();
-         }
-         return () -> {
-            try (PreparedStatement setRoles = connection.prepareStatement(SET_ROLES)){
-               setRoles.setString(1, "");
-               setRoles.execute();
-            } catch (SQLException e) {
-               // The connection is compromised
-               connection.abort(abortExecutor);
-               throw e;
-            }
-         };
-      } catch (NoSuchAlgorithmException e) {
-         throw new IllegalStateException(e);
+            return StringUtil.removeQuotes(resultSet.getString(column));
       }
    }
 

@@ -150,7 +150,7 @@ public class AlertingService {
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
       boolean showNotifications;
-      try (CloseMe closeMe = sqlService.withRoles(em, Collections.singleton(HORREUM_ALERTING))) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singleton(HORREUM_ALERTING))) {
          showNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
                .setParameter(1, run.testid).getSingleResult();
       } catch (NoResultException e) {
@@ -166,7 +166,7 @@ public class AlertingService {
       }
    }
 
-   private void setupGrafanaDatasource(long timerId) {
+   private void setupGrafanaDatasource(@SuppressWarnings("unused") long timerId) {
       String url = internalUrl + "/api/grafana";
       try {
          boolean create = true;
@@ -496,23 +496,6 @@ public class AlertingService {
 
 
       }
-   }
-
-   private double[] omitMinMax(DataPoint[] datapoints) {
-      DataPoint min = null;
-      DataPoint max = null;
-      for (DataPoint datapoint : datapoints) {
-         if (min == null || datapoint.value < min.value) {
-            min = datapoint;
-         }
-         if (max == null || datapoint.value > max.value) {
-            max = datapoint;
-         }
-      }
-      DataPoint finalMin = min;
-      DataPoint finalMax = max;
-      log.infof("From runs %s ignoring %d (%f) and %d (%f)", Stream.of(datapoints).map(dp -> dp.runId).collect(Collectors.toList()), min.runId, min.value, max.runId, max.value);
-      return Stream.of(datapoints).filter(dp -> dp != finalMin && dp != finalMax).mapToDouble(dp -> dp.value).toArray();
    }
 
    private void publishLater(String eventName, Object event) {
@@ -873,9 +856,6 @@ public class AlertingService {
    public static class PanelInfo {
       public String name;
       public List<Variable> variables;
-
-      public PanelInfo() {
-      }
 
       public PanelInfo(String name, List<Variable> variables) {
          this.name = name;

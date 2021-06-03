@@ -104,6 +104,7 @@ public class GrafanaService {
                   .setParameter(2, query.range.from)
                   .setParameter(3, query.range.to);
             Tags.addTagValues(tags, nativeQuery, 4);
+            //noinspection unchecked
             for (DataPoint dp : (List<DataPoint>) nativeQuery.getResultList()) {
                tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli(), /* non-standard! */ dp.runId });
             }
@@ -166,6 +167,7 @@ public class GrafanaService {
                .setParameter(3, query.range.to);
          Tags.addTagValues(tags, nativeQuery, 4);
 
+         //noinspection unchecked
          for (Change change : (List<Change>) nativeQuery.getResultList()) {
             annotations.add(createAnnotation(change));
          }

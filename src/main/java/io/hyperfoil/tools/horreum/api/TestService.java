@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.api;
 
-import io.agroal.api.AgroalDataSource;
 import io.hyperfoil.tools.horreum.entity.converter.JsonResultTransformer;
 import io.hyperfoil.tools.horreum.entity.json.*;
 import io.quarkus.panache.common.Page;
@@ -18,21 +17,13 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
 import java.util.Collections;
 import java.util.List;
-
-import org.jboss.logging.Logger;
 
 @Path("/api/test")
 @Consumes({MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 public class TestService {
-   private static final Logger log = Logger.getLogger(TestService.class);
-
    //@formatter:off
    private static final String SUMMARY =
          "SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.token,test.access " +
@@ -58,15 +49,12 @@ public class TestService {
    @Inject
    SecurityIdentity identity;
 
-   @Inject
-   AgroalDataSource dataSource;
-
    @RolesAllowed(Roles.TESTER)
    @DELETE
    @Path("{id}")
    @Transactional
    public void delete(@PathParam("id") Integer id){
-      try (CloseMe h = sqlService.withRoles(em, identity)){
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)){
          Test test = Test.findById(id);
          if (test == null) {
             throw new WebApplicationException("No test with id " + id, 404);
@@ -86,8 +74,8 @@ public class TestService {
    @GET
    @Path("{id}")
    public Test get(@PathParam("id") Integer id, @QueryParam("token") String token){
-      try (CloseMe h1 = sqlService.withRoles(em, identity);
-           CloseMe h2 = sqlService.withToken(em, token)) {
+      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
+           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
          return Test.find("id", id).firstResult();
       }
    }
@@ -102,11 +90,6 @@ public class TestService {
       }
    }
 
-   public Test getByName(String name){
-      Test existing = Test.find("name", name).firstResult();
-      return existing;
-   }
-
    @RolesAllowed(Roles.TESTER)
    @POST
    @Transactional
@@ -114,7 +97,7 @@ public class TestService {
       if (!identity.hasRole(test.owner)) {
          return Response.status(Response.Status.FORBIDDEN).entity("This user does not have the " + test.owner + " role!").build();
       }
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          Response response = addAuthenticated(test);
          return response == null ? Response.ok(test).build() : response;
       }
@@ -166,7 +149,7 @@ public class TestService {
                           @QueryParam("page") Integer page,
                           @QueryParam("sort") @DefaultValue("name") String sort,
                           @QueryParam("direction") @DefaultValue("Ascending") Sort.Direction direction){
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          if (limit != null && page != null) {
             return Test.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
          } else {
@@ -181,6 +164,7 @@ public class TestService {
    public Response summary() {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          Query query = em.createNativeQuery(SUMMARY);
+         //noinspection deprecation
          query.unwrap(org.hibernate.query.Query.class).setResultTransformer(JsonResultTransformer.INSTANCE);
          return Response.ok(query.getResultList()).build();
       }
@@ -201,23 +185,15 @@ public class TestService {
    }
 
    private Response updateToken(Integer id, String token) {
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           PreparedStatement statement = connection.prepareStatement(UPDATE_TOKEN)) {
-         if (token != null) {
-            statement.setString(1, token);
-         } else {
-            statement.setNull(1, Types.VARCHAR);
-         }
-         statement.setInt(2, id);
-         if (statement.executeUpdate() != 1) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Query query = em.createNativeQuery(UPDATE_TOKEN);
+         query.setParameter(1, token);
+         query.setParameter(2, id);
+         if (query.executeUpdate() != 1) {
             return Response.serverError().entity("Token reset failed (missing permissions?)").build();
          } else {
             return (token != null ? Response.ok(token) : Response.noContent()).build();
          }
-      } catch (SQLException e) {
-         log.error("GET /id/resetToken failed", e);
-         return Response.serverError().entity("Token reset failed").build();
       }
    }
 
@@ -228,20 +204,16 @@ public class TestService {
    public Response updateAccess(@PathParam("id") Integer id,
                                 @QueryParam("owner") String owner,
                                 @QueryParam("access") Access access) {
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           PreparedStatement statement = connection.prepareStatement(CHANGE_ACCESS)) {
-         statement.setString(1, owner);
-         statement.setInt(2, access.ordinal());
-         statement.setInt(3, id);
-         if (statement.executeUpdate() != 1) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Query query = em.createNativeQuery(CHANGE_ACCESS);
+         query.setParameter(1, owner);
+         query.setParameter(2, access.ordinal());
+         query.setParameter(3, id);
+         if (query.executeUpdate() != 1) {
             return Response.serverError().entity("Access change failed (missing permissions?)").build();
          } else {
             return Response.accepted().build();
          }
-      } catch (SQLException e) {
-         log.error("GET /id/resetToken failed", e);
-         return Response.serverError().entity("Access change failed").build();
       }
    }
 

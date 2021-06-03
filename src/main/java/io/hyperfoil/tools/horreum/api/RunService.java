@@ -1,9 +1,5 @@
 package io.hyperfoil.tools.horreum.api;
 
-import io.agroal.api.AgroalDataSource;
-import io.hyperfoil.tools.horreum.JsFetch;
-import io.hyperfoil.tools.horreum.JsProxyObject;
-import io.hyperfoil.tools.horreum.entity.converter.JsonContext;
 import io.hyperfoil.tools.horreum.entity.converter.JsonResultTransformer;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Run;
@@ -11,24 +7,17 @@ import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
-import io.hyperfoil.tools.yaup.HashedLists;
-import io.hyperfoil.tools.yaup.StringUtil;
 import io.hyperfoil.tools.yaup.json.Json;
-import io.hyperfoil.tools.yaup.json.ValueConverter;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.eventbus.EventBus;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jboss.logging.Logger;
 
-import javax.annotation.security.DenyAll;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
+import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
@@ -41,36 +30,18 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 @Path("/api/run")
 @Consumes({MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 public class RunService {
    private static final Logger log = Logger.getLogger(RunService.class);
-
-   private static final int WITH_THRESHOLD = 2;
 
    //@formatter:off
    private static final String FIND_AUTOCOMPLETE = "SELECT * FROM (" +
@@ -102,31 +73,23 @@ public class RunService {
    @Inject
    SchemaService schemaService;
 
-   @Inject
-   AgroalDataSource dataSource;
-
    private Run findRun(@PathParam("id") Integer id, @QueryParam("token") String token) {
-      try (CloseMe h1 = sqlService.withRoles(em, identity);
-           CloseMe h2 = sqlService.withToken(em, token)) {
+      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
+           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
          return Run.find("id", id).firstResult();
       }
    }
 
    private Response runQuery(String query, Integer id, String token) {
-      try (CloseMe h1 = sqlService.withRoles(em, identity);
-           CloseMe h2 = sqlService.withToken(em, token);
-           Connection connection = dataSource.getConnection();
-           PreparedStatement statement = connection.prepareStatement(query)) {
-         statement.setInt(1, id);
-         ResultSet rs = SqlService.execute(statement);
-         if (rs.next()) {
-            return Response.ok(rs.getString(1)).build();
-         } else {
+      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
+           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
+         Query q = em.createNativeQuery(query);
+         q.setParameter(1, id);
+         try {
+            return Response.ok(q.getSingleResult()).build();
+         } catch (NoResultException e) {
             return Response.status(Response.Status.NOT_FOUND).build();
          }
-      } catch (SQLException e) {
-         log.error("Failed to read the run", e);
-         return Response.serverError().build();
       }
    }
 
@@ -160,23 +123,15 @@ public class RunService {
    }
 
    private Response updateToken(Integer id, String token) {
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           PreparedStatement statement = connection.prepareStatement(UPDATE_TOKEN)) {
-         if (token != null) {
-            statement.setString(1, token);
-         } else {
-            statement.setNull(1, Types.VARCHAR);
-         }
-         statement.setInt(2, id);
-         if (statement.executeUpdate() != 1) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Query query = em.createNativeQuery(UPDATE_TOKEN);
+         query.setParameter(1, token);
+         query.setParameter(2, id);
+         if (query.executeUpdate() != 1) {
             return Response.serverError().entity("Token reset failed (missing permissions?)").build();
          } else {
             return (token != null ? Response.ok(token) : Response.noContent()).build();
          }
-      } catch (SQLException e) {
-         log.error("GET /id/resetToken failed", e);
-         return Response.serverError().entity("Token reset failed").build();
       }
    }
 
@@ -187,20 +142,16 @@ public class RunService {
    public Response updateAccess(@PathParam("id") Integer id,
                                 @QueryParam("owner") String owner,
                                 @QueryParam("access") Access access) {
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           PreparedStatement statement = connection.prepareStatement(CHANGE_ACCESS)) {
-         statement.setString(1, owner);
-         statement.setInt(2, access.ordinal());
-         statement.setInt(3, id);
-         if (statement.executeUpdate() != 1) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Query query = em.createNativeQuery(CHANGE_ACCESS);
+         query.setParameter(1, owner);
+         query.setParameter(2, access.ordinal());
+         query.setParameter(3, id);
+         if (query.executeUpdate() != 1) {
             return Response.serverError().entity("Access change failed (missing permissions?)").build();
          } else {
             return Response.accepted().build();
          }
-      } catch (SQLException e) {
-         log.error("GET /id/resetToken failed", e);
-         return Response.serverError().entity("Access change failed").build();
       }
    }
 
@@ -211,8 +162,7 @@ public class RunService {
                             @QueryParam("token") String token) {
       Run found = findRun(id, token);
       if (found != null) {
-         Json response = Json.typeStructure(found.data);
-         return response;
+         return Json.typeStructure(found.data);
       }
       return new Json(false);
    }
@@ -246,7 +196,7 @@ public class RunService {
       Object foundStop = findIfNotSet(stop, data);
       Object foundDescription = findIfNotSet(description, data);
 
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          if (schemaUri == null || schemaUri.isEmpty()) {
             schemaUri = data.getString("$schema");
          } else {
@@ -370,7 +320,7 @@ public class RunService {
    @Consumes(MediaType.APPLICATION_JSON)
    @Transactional
    public Response add(Run run) {
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          return addAuthenticated(run);
       }
    }
@@ -402,81 +352,6 @@ public class RunService {
       return Response.ok(String.valueOf(run.id)).header(HttpHeaders.LOCATION, "/run/" + run.id).build();
    }
 
-   @DenyAll
-   @Deprecated
-   @POST
-   @Path("{id}/js")
-   public Json jsAction(@PathParam("id") Integer id, @QueryParam("token") String token, String body) {
-      Json rtrn = new Json();
-
-      try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
-         context.getBindings("js").putMember("_http", new JsFetch());
-         Source fetchSource = Source.newBuilder("js", "fetch = async (url,options)=>{ return new Promise(async (resolve)=>{ const resp = _http.jsApply(url,options); resolve(resp); } );}", "fakeFetch").build();
-         context.eval(fetchSource);
-
-         Source asyncSource = Source.newBuilder("js", "const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor; print('AsyncFunction',AsyncFunction);", "asyncfunction").build();
-
-         context.eval(asyncSource);
-
-         context.eval(org.graalvm.polyglot.Source.newBuilder("js", new BufferedReader(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("jsonpath.js"))).lines()
-            .parallel().collect(Collectors.joining("\n")), "jsonpath.js").build());
-         context.eval(org.graalvm.polyglot.Source.newBuilder("js", new BufferedReader(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("luxon.min.js"))).lines()
-            .parallel().collect(Collectors.joining("\n")), "luxon.js").build());
-
-         Value jsonPath = context.getBindings("js").getMember("jsonpath");
-         Value dateTime = context.getBindings("js").getMember("luxon").getMember("DateTime");
-         Value fetch = context.getBindings("js").getMember("fetch");
-
-         Value factory = context.eval("js", "new Function('jsonpath','DateTime','fetch','return '+" + StringUtil.quote(body) + ")");
-         Value fn = factory.execute(jsonPath, dateTime, fetch);
-
-         Run run = findRun(id, token);
-
-
-         JsonContext jsonContext = new JsonContext();
-
-         Json runJson = Json.fromString(jsonContext.getContext(Run.class).toJson(run));
-         Value returned = fn.execute(new JsProxyObject(runJson), jsonPath, dateTime);
-
-
-         if (returned.toString().startsWith("Promise{[")) {//hack to check if the function returned a promise
-            List<Value> resolved = new ArrayList<>();
-            List<Value> rejected = new ArrayList<>();
-            returned.invokeMember("then", new ProxyExecutable() {
-               @Override
-               public Object execute(Value... arguments) {
-                  resolved.addAll(Arrays.asList(arguments));
-                  return arguments;
-               }
-            }, new ProxyExecutable() {
-               @Override
-               public Object execute(Value... arguments) {
-                  rejected.addAll(Arrays.asList(arguments));
-                  return arguments;
-               }
-            });
-            if (rejected.size() > 0) {
-               returned = rejected.get(0);
-            } else if (resolved.size() == 1) {
-               returned = resolved.get(0);
-            }
-         }
-
-         Object converted = ValueConverter.convert(returned);
-         String convertedStr = ValueConverter.asString(converted);
-         if (!convertedStr.isEmpty()) {
-            rtrn.add(converted);
-         }
-      } catch (IOException e) {
-         e.printStackTrace();
-         return Json.fromThrowable(e);
-      } catch (PolyglotException e) {
-         e.printStackTrace();
-         return Json.fromThrowable(e);
-      }
-      return rtrn;
-   }
-
    private void addPaging(StringBuilder sql, Integer limit, Integer page, String sort, String direction) {
       addOrderBy(sql, sort, direction);
       addLimitOffset(sql, limit, page);
@@ -485,28 +360,22 @@ public class RunService {
    private void addOrderBy(StringBuilder sql, String sort, String direction) {
       sort = sort == null || sort.trim().isEmpty() ? "start" : sort;
       direction = direction == null || direction.trim().isEmpty() ? "Ascending" : direction;
-      if (sort != null) {
-         sql.append(" ORDER BY " + sort);
-         addDirection(sql, direction);
-      }
+      sql.append(" ORDER BY ").append(sort);
+      addDirection(sql, direction);
    }
 
    private void addDirection(StringBuilder sql, String direction) {
       if (direction != null) {
-         if ("Ascending".equalsIgnoreCase(direction)) {
-            sql.append(" ASC");
-         } else {
-            sql.append(" DESC");
-         }
+         sql.append("Ascending".equalsIgnoreCase(direction) ? " ASC" : " DESC");
       }
       sql.append(" NULLS LAST");
    }
 
    private void addLimitOffset(StringBuilder sql, Integer limit, Integer page) {
       if (limit != null && limit > 0) {
-         sql.append(" limit " + limit);
+         sql.append(" limit ").append(limit);
          if (page != null && page >= 0) {
-            sql.append(" offset " + (limit * (page - 1)));
+            sql.append(" offset ").append(limit * (page - 1));
          }
       }
    }
@@ -559,22 +428,22 @@ public class RunService {
       if (!jsonpath.startsWith("$")) {
          jsonpath = "$.**." + jsonpath;
       }
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           PreparedStatement findAutocomplete = connection.prepareStatement(FIND_AUTOCOMPLETE)) {
-         findAutocomplete.setString(1, jsonpath);
-         findAutocomplete.setString(2, incomplete);
-         ResultSet rs = findAutocomplete.executeQuery();
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Query findAutocomplete = em.createNativeQuery(FIND_AUTOCOMPLETE);
+         findAutocomplete.setParameter(1, jsonpath);
+         findAutocomplete.setParameter(2, incomplete);
+         @SuppressWarnings("unchecked")
+         List<Object[]> results = findAutocomplete.getResultList();
          Json.ArrayBuilder array = Json.array();
-         while (rs.next()) {
-            String option = rs.getString(1);
+         for (Object[] row : results) {
+            String option = (String) row[0];
             if (!option.matches("^[a-zA-Z0-9_-]*$")) {
                option = "\"" + option + "\"";
             }
             array.add(option);
          }
          return Response.ok(array.build()).build();
-      } catch (SQLException e) {
+      } catch (PersistenceException e) {
          return Response.status(400).entity("Failed processing query '" + query + "':\n" + e.getLocalizedMessage()).build();
       }
    }
@@ -652,9 +521,11 @@ public class RunService {
          sqlQuery.setParameter(queryParts.length + 1, actualRoles);
       }
 
+      //noinspection deprecation
       sqlQuery.unwrap(org.hibernate.query.Query.class).setResultTransformer(JsonResultTransformer.INSTANCE);
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)){
          Json runs = new Json(true);
+         //noinspection unchecked
          sqlQuery.getResultList().forEach(runs::add);
          runs.forEach(run -> {
             Json jsrun = (Json) run;
@@ -739,7 +610,7 @@ public class RunService {
       }
       addLimitOffset(sql, limit, page);
       Test test;
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          test = Test.find("id", testId).firstResult();
          Query query = em.createNativeQuery(sql.toString());
          query.setParameter(1, testId);
@@ -793,161 +664,6 @@ public class RunService {
       }
    }
 
-   @Deprecated
-   @PermitAll
-   @POST
-   @Path("list/{testId}/")
-   public Response testList(@PathParam("testId") Integer testId,
-                            @QueryParam("limit") Integer limit,
-                            @QueryParam("page") Integer page,
-                            @QueryParam("sort") String sort,
-                            @QueryParam("direction") String direction,
-                            Json options) {
-      try (CloseMe h = sqlService.withRoles(em, identity)) {
-         Test test = Test.find("id", testId).firstResult();
-         if (test == null) {
-            return Response.serverError().entity("failed to find test " + testId).build();
-         }
-         if (options == null || options.isEmpty()) {
-            return Response.serverError().entity("could not read post body as json").build();
-         }
-      }
-      String sql = getTestListQuery(testId, limit, page, sort, direction, options);
-      try (Connection connection = dataSource.getConnection();
-           CloseMeJdbc h = sqlService.withRoles(connection, identity);
-           Statement statement = connection.createStatement()){
-         return Response.ok(SqlService.fromResultSet(statement.executeQuery(sql))).build();
-      } catch (SQLException e) {
-         log.error("POST /list/testId failed", e);
-         return Response.serverError().entity(Json.fromThrowable(e)).build();
-      }
-   }
-
-   private String getTestListQuery(Integer testId, Integer limit, Integer page, String sort, String direction, Json options) {
-      StringBuilder sql = new StringBuilder();
-
-      if (options.has("map") && options.get("map") instanceof Json) {
-
-         Json map = options.getJson("map");
-         System.out.println("RunService.testList map="+map.toString(2));
-         List<String> jsonpaths = map.values().stream().map(Object::toString).filter(v -> v.startsWith("$.")).collect(Collectors.toList());
-         HashedLists grouped = StringUtil.groupCommonPrefixes(jsonpaths, (a, b) -> {
-            String prefix = a.substring(0, StringUtil.commonPrefixLength(a, b));
-            System.out.println("startingPrefix="+prefix);
-            if (prefix.length() == 0) {
-               return 0;
-            }
-            //TODO shorten prefix if there are an odd number of ( or [
-            //TODO this unnecessarily shortens .**.JAVA_OPTS, need to identify when prefix ends with a full key
-            if (prefix.contains(".")) {
-               if(!a.endsWith(prefix) && !b.endsWith(prefix)) {
-                  prefix = prefix.substring(0, prefix.lastIndexOf("."));
-               }
-            }
-            if (prefix.endsWith(".**")){
-               System.out.println("trim off .**");
-               prefix = prefix.substring(0,prefix.length()-".**".length());
-            }
-            System.out.println("prefix="+prefix);
-            return prefix.length();
-         });
-         Set<String> keys = new HashSet<>(grouped.keys());
-         keys.forEach(key -> {
-            List<String> list = grouped.get(key);
-            if (list.size() < WITH_THRESHOLD) {
-               grouped.removeAll(key);
-            } else if (key.equalsIgnoreCase("$.")) {
-               grouped.removeAll(key);
-            }
-         });
-         if (!grouped.isEmpty()) {
-            //create a WITH MATERIALIZED
-            Map<String, String> pathToPrefix = new HashMap();
-            Map<String, String> pathToGroup = new HashMap<>();
-            keys = grouped.keys();
-            sql.append("WITH jpgroup AS MATERIALIZED ( select id,start,stop,data,testId");
-            AtomicInteger counter = new AtomicInteger(0);
-            for (String key : keys) {
-               sql.append(",");
-               sql.append("jsonb_path_query_first(data,").append(StringUtil.quote(key, "'")).append(") as g").append(counter.get());
-
-               List<String> paths = grouped.get(key);
-               for (String path : paths) {
-                  pathToGroup.putIfAbsent(path, "g" + counter.get());
-                  pathToPrefix.putIfAbsent(path, key);
-               }
-               counter.incrementAndGet();
-            }
-            sql.append(" from run where testId = ").append(testId);
-            addPaging(sql, limit, page, sort, direction);
-            sql.append(") select id");//end with
-            map.forEach((key, value) -> {
-               sql.append(", ");
-               if (value.toString().startsWith("$.")) {
-                  String path = value.toString();
-                  if (pathToGroup.containsKey(path)) {
-                     String group = pathToGroup.get(path);
-                     String prefix = pathToPrefix.get(path);
-                     String fixedPath = "$" + path.substring(prefix.length());
-
-                     sql.append("jsonb_path_query_first(").append(group).append(",");
-                     sql.append(StringUtil.quote(fixedPath, "'"));
-                     sql.append(") as ");
-                     sql.append(key);
-                  } else {
-                     sql.append("jsonb_path_query_first(data,");
-                     sql.append(StringUtil.quote(value.toString(), "'"));
-                     sql.append(") as ");
-                     sql.append(key);
-                  }
-               } else {
-                  if (key.equals(value)) {
-                     sql.append(key);
-                  } else {
-                     sql.append(value);
-                     sql.append(" as ");
-                     sql.append(key);
-                  }
-
-               }
-            });
-            sql.append(" from jpgroup");
-         } else {
-            sql.append("select id");
-            map.forEach((key, value) -> {
-               sql.append(", ");//always needed because we always select id
-               if (value.toString().startsWith("$.")) {
-                  sql.append("jsonb_path_query_first(data,");
-                  sql.append(StringUtil.quote(value.toString(), "'"));
-                  sql.append(") as ");
-                  sql.append(key);
-               } else if (value.toString().contains(("jsonb_"))){
-                  sql.append(value.toString());
-                  sql.append(" as ");
-                  sql.append(key);
-               }else {
-
-                  sql.append(key);
-               }
-            });
-            sql.append(" from run where testId = ").append(testId);
-            if (options.has("contains") && options.get("contains") instanceof Json) {
-               sql.append(" and data @> ");
-               sql.append(StringUtil.quote(options.getJson("contains").toString(0), "'"));
-            }
-            addPaging(sql, limit, page, sort, direction);
-         }
-      } else {
-         sql.append("select id,start,stop,testId from run where testId = ").append(testId);
-         if (options.has("contains") && options.get("contains") instanceof Json) {
-            sql.append(" and data @> ");
-            sql.append(StringUtil.quote(options.getJson("contains").toString(0), "'"));
-         }
-         addPaging(sql, limit, page, sort, direction);
-      }
-      return sql.toString();
-   }
-
    @RolesAllowed("tester")
    @POST
    @Path("{id}/trash")
@@ -971,7 +687,7 @@ public class RunService {
    }
 
    private Response updateRun(Integer id, Consumer<Run> consumer) {
-      try (CloseMe closeMe = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          Run run = Run.findById(id);
          if (run == null) {
             return Response.status(Response.Status.NOT_FOUND).build();

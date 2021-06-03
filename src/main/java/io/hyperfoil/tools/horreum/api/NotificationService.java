@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
@@ -213,7 +214,9 @@ public class NotificationService {
             }
             return nset;
          }));
-         em.createQuery("SELECT id FROM test").getResultStream().forEach(id -> result.putIfAbsent((Integer) id, Collections.emptySet()));
+         @SuppressWarnings("unchecked")
+         Stream<Integer> results = em.createQuery("SELECT id FROM test").getResultStream();
+         results.forEach(id -> result.putIfAbsent(id, Collections.emptySet()));
          return result;
       }
    }
