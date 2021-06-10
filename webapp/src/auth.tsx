@@ -115,7 +115,7 @@ export const rolesSelector = (state: State): string[] => {
 
 export const useTester = (owner?: string) => {
    const roles = useSelector(rolesSelector)
-   return roles.includes("tester") && (!owner || roles.includes(owner))
+   return roles.includes("tester") && (!owner || roles.includes(owner.slice(0, -4) + "tester"))
 }
 
 export const defaultRoleSelector = (state: State) => {

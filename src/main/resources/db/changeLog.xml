@@ -1239,5 +1239,334 @@
                 WITH CHECK (exists(SELECT 1 FROM allowedhookprefix ahp WHERE left(url, length(ahp.prefix)) = ahp.prefix));
         </sql>
     </changeSet>
+
+    <changeSet id="25" author="rvansa">
+        <createTable tableName="test_token">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="test_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="permissions" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="description" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_token_test_id"
+                                 baseTableName="test_token" baseColumnNames="test_id"
+                                 referencedTableName="test" referencedColumnNames="id" />
+        <sql>
+            DROP POLICY view_select ON view;
+            DROP POLICY vc_select ON viewcomponent;
+            DROP POLICY variable_select ON variable;
+            DROP POLICY ss_select ON test_stalenesssettings;
+            DROP POLICY hook_policies ON hook;
+            DROP POLICY test_select ON TEST;
+        </sql>
+        <dropColumn tableName="test" columnName="token" />
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION has_role2(owner TEXT, type TEXT) RETURNS boolean AS $$
+            BEGIN
+                RETURN (right(owner, 4) = 'team' AND has_role(left(owner, -4) || type));
+            END;
+            $$ LANGUAGE plpgsql STABLE;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION can_view2(access INTEGER, owner TEXT) RETURNS boolean AS $$
+            BEGIN
+                RETURN (
+                    access = 0
+                    OR (access = 1 AND has_role('viewer'))
+                    OR (access = 2 AND has_role(owner) AND has_role('viewer'))
+                );
+            END;
+            $$ LANGUAGE plpgsql STABLE;
+        </createProcedure>
+        <createProcedure>
+            -- this function is a security definer and as such avoids regular policies on test_token
+            CREATE OR REPLACE FUNCTION has_read_token(testid INTEGER) RETURNS boolean AS $$
+            BEGIN
+                RETURN (exists(
+                    SELECT 1 FROM test_token
+                    WHERE test_id = testid AND (permissions &amp; 1) != 0 AND value = current_setting('horreum.token', true)
+                ));
+            END;
+            $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+        </createProcedure>
+        <createProcedure>
+            -- this function is a security definer and as such avoids regular policies on test_token
+            CREATE OR REPLACE FUNCTION has_modify_token(testid INTEGER) RETURNS boolean AS $$
+            BEGIN
+                RETURN (exists(
+                    SELECT 1 FROM test_token
+                    WHERE test_id = testid AND (permissions &amp; 2) != 0 AND value = current_setting('horreum.token', true)
+                ));
+            END;
+            $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+        </createProcedure>
+        <createProcedure>
+            -- this function is a security definer and as such avoids regular policies on test_token
+            CREATE OR REPLACE FUNCTION has_upload_token(testid INTEGER) RETURNS boolean AS $$
+            BEGIN
+                RETURN (exists(
+                    SELECT 1 FROM test_token
+                    WHERE test_id = testid AND (permissions &amp; 4) != 0 AND value = current_setting('horreum.token', true)
+                ));
+            END;
+            $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+        </createProcedure>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE test_token TO "${quarkus.datasource.username}";
+            ALTER TABLE test_token ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY token_policy ON test_token
+                USING (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester'));
+        </sql>
+        <sql>
+            -- run_select unchanged
+            DROP POLICY run_insert ON run;
+            CREATE POLICY run_insert ON run FOR INSERT
+                WITH CHECK (has_role2(owner, 'uploader') OR has_upload_token(testid));
+            DROP POLICY run_update ON run;
+            CREATE POLICY run_update ON run FOR UPDATE
+                USING (has_role2(owner, 'tester'));
+            DROP POLICY run_delete ON run;
+            -- Testers update runs' trashed flag but never really delete these
+            CREATE POLICY run_delete ON run FOR DELETE
+                USING (has_role('horreum.system'));
+        </sql>
+        <sql>
+            CREATE POLICY test_select ON test FOR SELECT
+                USING (can_view2(access, owner) OR has_read_token(id));
+            DROP POLICY test_insert ON test;
+            CREATE POLICY test_insert ON test FOR INSERT
+                WITH CHECK (has_role2(owner, 'tester'));
+            DROP POLICY test_update ON test;
+            CREATE POLICY test_update ON test FOR UPDATE
+                USING (has_role2(owner, 'tester') OR has_modify_token(id));
+            DROP POLICY test_delete ON test;
+            CREATE POLICY test_delete ON test FOR DELETE
+                USING (has_role2(owner, 'tester') OR has_modify_token(id));
+        </sql>
+        <sql>
+            -- schema_select unchanged
+            DROP POLICY schema_insert ON schema;
+            CREATE POLICY schema_insert ON schema FOR INSERT
+                WITH CHECK (has_role2(owner, 'tester'));
+            DROP POLICY schema_update ON schema;
+            CREATE POLICY schema_update ON schema FOR UPDATE
+                USING (has_role2(owner, 'tester'));
+            DROP POLICY schema_delete ON schema;
+            CREATE POLICY schema_delete ON schema FOR DELETE
+                USING (has_role2(owner, 'tester'));
+        </sql>
+        <sql>
+            DROP POLICY hook_policy ON hook;
+            CREATE POLICY hook_policy ON hook
+                USING (has_role('admin') OR (
+                    (type = 'change/new' OR type = 'run/new')
+                    AND (
+                        has_role2((SELECT owner FROM test WHERE test.id = target), 'tester')
+                        OR has_modify_token(target)
+                    )
+                ));
+            DROP POLICY hook_write_check ON hook;
+            CREATE POLICY hook_write_check ON hook AS RESTRICTIVE
+                WITH CHECK (exists(SELECT 1 FROM allowedhookprefix ahp WHERE left(url, length(ahp.prefix)) = ahp.prefix));
+        </sql>
+        <sql>
+            -- se_select unchanged
+            DROP POLICY se_insert ON schemaextractor;
+            CREATE POLICY se_insert ON schemaextractor FOR INSERT
+                WITH CHECK (has_role2((SELECT owner FROM schema WHERE schema.id = schema_id), 'tester'));
+            DROP POLICY se_update ON schemaextractor;
+            CREATE POLICY se_update ON schemaextractor FOR UPDATE
+                USING (has_role2((SELECT owner FROM schema WHERE schema.id = schema_id), 'tester'));
+            DROP POLICY se_delete ON schemaextractor;
+            CREATE POLICY se_delete ON schemaextractor FOR DELETE
+                USING (has_role2((SELECT owner FROM schema WHERE schema.id = schema_id), 'tester'));
+        </sql>
+        <sql>
+            CREATE POLICY view_select ON view FOR SELECT
+                USING (exists(
+                    SELECT 1 FROM test WHERE test.id = test_id AND can_view2(test.access, test.owner)
+                ) OR has_read_token(test_id));
+            DROP POLICY view_insert ON view;
+            CREATE POLICY view_insert ON view FOR INSERT
+                WITH CHECK (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester') OR has_modify_token(test_id));
+            DROP POLICY view_update ON view;
+            CREATE POLICY view_update ON view FOR UPDATE
+                USING (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester') OR has_modify_token(test_id));
+            DROP POLICY view_delete ON view;
+            CREATE POLICY view_delete ON view FOR DELETE
+                USING (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester') OR has_modify_token(test_id));
+        </sql>
+        <sql>
+            CREATE POLICY vc_select ON viewcomponent FOR SELECT
+                USING (exists(
+                    SELECT 1 FROM test
+                    JOIN view ON view.test_id = test.id
+                    WHERE view.id = view_id AND (can_view2(test.access, test.owner) OR has_read_token(test.id))
+                ));
+            DROP POLICY vc_insert ON viewcomponent;
+            CREATE POLICY vc_insert ON viewcomponent FOR INSERT
+                WITH CHECK (exists(
+                    SELECT 1 FROM test
+                    JOIN view ON view.test_id = test.id
+                    WHERE view.id = view_id AND (has_role2(test.owner, 'tester') OR has_modify_token(test.id))
+                ));
+            DROP POLICY vc_update ON viewcomponent;
+            CREATE POLICY vc_update ON viewcomponent FOR UPDATE
+                USING (exists(
+                    SELECT 1 FROM test
+                    JOIN view ON view.test_id = test.id
+                    WHERE view.id = view_id AND (has_role2(test.owner, 'tester') OR has_modify_token(test.id))
+                ));
+            DROP POLICY vc_delete ON viewcomponent;
+            CREATE POLICY vc_delete ON viewcomponent FOR DELETE
+                USING (exists(
+                    SELECT 1 FROM test
+                    JOIN view ON view.test_id = test.id
+                    WHERE view.id = view_id AND (has_role2(test.owner, 'tester') OR has_modify_token(test.id))
+                ));
+        </sql>
+        <sql>
+            -- rs_select unchanged
+            DROP POLICY rs_insert ON run_schemas;
+            CREATE POLICY rs_insert ON run_schemas FOR INSERT
+                WITH CHECK (
+                    has_role2((SELECT owner FROM run WHERE run.id = runid), 'uploader')
+                    OR has_upload_token(testid)
+                    OR has_role2((SELECT owner FROM schema WHERE schema.id = schemaid), 'tester')
+                );
+            -- This policy is here to prevent rogue records. However since the schema owner has access
+            -- it can claim that certain run is using his schema even if it is not.
+            CREATE POLICY rs_insert_validate ON run_schemas AS RESTRICTIVE FOR INSERT
+                WITH CHECK (exists(SELECT 1 FROM run WHERE run.id = runid AND run.testid = testid));
+            DROP POLICY rs_update ON run_schemas;
+            -- run_schemas are never updated, just dropped and inserted
+            DROP POLICY rs_delete ON run_schemas;
+            -- both run update and schema update/delete should drop the row; privilege to any of those is sufficient to remove the record
+            -- though deleting a schema with matching rows isn
+            -- horreum.system can delete the run
+            CREATE POLICY rs_delete ON run_schemas FOR DELETE
+                USING (
+                    has_role('horreum.system')
+                    OR has_role2((SELECT owner FROM run WHERE run.id = runid), 'tester')
+                    OR has_role2((SELECT owner FROM schema WHERE schema.id = schemaid), 'tester')
+                );
+        </sql>
+        <sql>
+            -- vd_select unchanged
+            DROP POLICY vd_insert ON view_data;
+            CREATE POLICY vd_insert ON view_data FOR INSERT
+                WITH CHECK (exists(
+                    SELECT 1 FROM run
+                    JOIN test ON test.id = run.testid
+                    WHERE run.id = runid AND (has_role2(run.owner, 'uploader') OR has_role2(test.owner, 'tester') OR has_upload_token(test.id))
+                ) OR exists (
+                    SELECT 1 FROM schema
+                    JOIN schemaextractor se ON se.schema_id = schema.id
+                    WHERE se.id = ANY(extractor_ids) AND has_role2(schema.owner, 'tester')
+                ));
+            DROP POLICY vd_update ON view_data;
+            -- view_data is never updated
+            DROP POLICY vd_delete ON view_data;
+            CREATE POLICY vd_delete ON view_data FOR DELETE
+                USING (has_role('horreum.system') OR exists(
+                    SELECT 1 FROM run
+                    JOIN test ON test.id = run.testid
+                    WHERE run.id = runid AND (has_role2(run.owner, 'tester') OR has_role2(test.owner, 'tester'))
+                ) OR exists(
+                    SELECT 1 FROM schema
+                    JOIN schemaextractor se ON se.schema_id = schema.id
+                    WHERE se.id = ANY(extractor_ids) AND has_role2(schema.owner, 'tester')
+                ));
+        </sql>
+        <sql>
+            -- change_select unchanged
+            DROP POLICY change_insert ON change;
+            -- only alerting can create changes
+            CREATE POLICY change_insert ON change FOR INSERT
+                WITH CHECK (has_role('horreum.alerting'));
+            DROP POLICY change_update ON change;
+            CREATE POLICY change_update ON change FOR UPDATE
+                USING (has_role2((SELECT owner FROM run WHERE run.id = runid), 'tester'));
+            DROP POLICY change_delete ON change;
+            CREATE POLICY change_delete ON change FOR DELETE
+                USING (has_role2((SELECT owner FROM run WHERE run.id = runid), 'tester'));
+        </sql>
+        <sql>
+            -- The user deletes datapoints when changing test variables
+            DROP POLICY datapoint_delete ON datapoint;
+            CREATE POLICY datapoint_delete ON datapoint FOR DELETE
+                USING (has_role('horreum.alerting') OR has_role2((SELECT owner FROM run WHERE run.id = runid), 'tester'));
+        </sql>
+        <sql>
+            CREATE POLICY variable_access ON variable USING (has_role('horreum.alerting'));
+            CREATE POLICY variable_select ON variable FOR SELECT
+                USING (
+                    exists(SELECT 1 FROM test WHERE test.id = testid AND can_view2(test.access, test.owner))
+                    OR has_read_token(testid)
+                );
+            DROP POLICY variable_insert ON variable;
+            CREATE POLICY variable_insert ON variable FOR INSERT
+                WITH CHECK (
+                    has_role2((SELECT owner FROM test WHERE test.id = testid), 'tester')
+                    OR has_modify_token(testid)
+                );
+            DROP POLICY variable_update ON variable;
+            CREATE POLICY variable_update ON variable FOR UPDATE
+                USING (
+                    has_role2((SELECT owner FROM test WHERE test.id = testid), 'tester')
+                    OR has_modify_token(testid)
+                );
+            DROP POLICY variable_delete ON variable;
+            CREATE POLICY variable_delete ON variable FOR DELETE
+                USING (
+                    has_role2((SELECT owner FROM test WHERE test.id = testid), 'tester')
+                    OR has_modify_token(testid)
+                );
+        </sql>
+        <sql>
+            CREATE POLICY ss_select ON test_stalenesssettings FOR SELECT
+                USING (
+                    exists(SELECT 1 FROM test WHERE test.id = test_id AND can_view2(test.access, test.owner))
+                    OR has_read_token(test_id)
+                );
+            DROP POLICY ss_insert ON test_stalenesssettings;
+            CREATE POLICY ss_insert ON test_stalenesssettings FOR INSERT
+                WITH CHECK (
+                    has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester')
+                    OR has_modify_token(test_id)
+                );
+            DROP POLICY ss_update ON test_stalenesssettings;
+            CREATE POLICY ss_update ON test_stalenesssettings FOR UPDATE
+                USING (
+                    has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester')
+                    OR has_modify_token(test_id)
+                );
+            DROP POLICY ss_delete ON test_stalenesssettings;
+            CREATE POLICY ss_delete ON test_stalenesssettings FOR DELETE
+                USING (
+                    has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester')
+                    OR has_modify_token(test_id)
+                );
+        </sql>
+        <sql>
+            DROP POLICY cl_all ON calculationlog;
+            CREATE POLICY cl_all_alerting ON calculationlog USING (has_role('horreum.alerting'));
+            CREATE POLICY cl_all ON calculationlog FOR ALL
+                USING ((
+                    (has_role2((SELECT owner FROM test WHERE test.id = testid), 'tester')
+                    OR has_modify_token(testid))
+                ) AND has_role2((SELECT owner FROM run WHERE run.id = runid), 'tester'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

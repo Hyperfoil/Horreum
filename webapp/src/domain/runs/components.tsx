@@ -8,11 +8,17 @@ import {
     Tooltip,
 } from '@patternfly/react-core';
 import moment from 'moment'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 
 import { Run, RunsDispatch } from './reducers';
 import { resetToken, dropToken, updateAccess, trash, updateDescription } from './actions';
-import ActionMenu, { DropdownItemProvider } from '../../components/ActionMenu';
+import ActionMenu, {
+    ActionMenuProps,
+    MenuItem,
+    useShareLink,
+    useChangeAccess,
+    useDelete,
+} from '../../components/ActionMenu';
 import { alertAction } from '../../alerts';
 import { formatDateTime, toEpochMillis } from '../../utils'
 import { useTester } from '../../auth'
@@ -38,57 +44,84 @@ export const ExecutionTime = (run: Run) =>
         <span>{moment(toEpochMillis(run.stop)).fromNow()}</span>
     </Tooltip>)
 
-export function Menu(run: Run) {
+
+function useRestore(run: Run): MenuItem<Run> {
+    const dispatch = useDispatch()
+    const thunkDispatch = useDispatch<RunsDispatch>()
+    return [ (props: ActionMenuProps, isOwner: boolean, close: () => void, run: Run) => {
+        return ({
+            item:
+                <DropdownItem key="restore"
+                    onClick={() => {
+                        close()
+                        thunkDispatch(trash(run.id, run.testid, false)).catch(
+                            e => dispatch(alertAction("RUN_TRASH", "Failed to restore run ID " + run.id, e))
+                        )
+                    }}
+                >Restore</DropdownItem>,
+            modal:
+                <></>
+        })
+    }, run]
+}
+
+function useUpdateDescription(run: Run): MenuItem<Run> {
     const [updateDescriptionOpen, setUpdateDescriptionOpen] = useState(false)
+    return [ (props: ActionMenuProps, isOwner: boolean, close: () => void, run: Run) => {
+        return ({
+            item:
+                <DropdownItem key="updateDescription"
+                    onClick={() => {
+                        close()
+                        setUpdateDescriptionOpen(true)
+                    }}
+                >Edit description</DropdownItem>,
+            modal:
+                <UpdateDescriptionModal
+                    isOpen={updateDescriptionOpen}
+                    onClose={() => setUpdateDescriptionOpen(false)}
+                    run={run} />
+        })
+    }, run ]
+}
+
+export function Menu(run: Run) {
     const dispatch = useDispatch()
     const thunkDispatch = useDispatch<RunsDispatch>()
 
-    let onDelete = undefined
-    const extras: DropdownItemProvider[] = [];
-    if (run.trashed) {
-        extras.push(closeMenuFunc => (
-            <DropdownItem key="restore"
-                onClick={() => thunkDispatch(trash(run.id, run.testid, false)).then(
-                    _ => { closeMenuFunc() },
-                    e => dispatch(alertAction("RUN_TRASH", "Failed to restore run ID " + run.id, e))
-                )}
-            >Restore</DropdownItem>
-        ))
-    } else {
-        onDelete = (id: number) => thunkDispatch(trash(id, run.testid)).catch(
+    const shareLink = useShareLink({
+        token: run.token || undefined,
+        tokenToLink: (id, token) => "/run/" + id + "?token=" + token,
+        onTokenReset: id => dispatch(resetToken(id, run.testid)),
+        onTokenDrop: id => dispatch(dropToken(id, run.testid)),
+    })
+    const changeAccess = useChangeAccess({
+        onAccessUpdate: (id, owner, access) => dispatch(updateAccess(id, run.testid, owner, access)),
+    })
+    const del = useDelete({
+        onDelete: id => thunkDispatch(trash(id, run.testid)).catch(
             e => dispatch(alertAction("RUN_TRASH", "Failed to trash run ID " + id, e))
         )
-    }
+    })
+    const restore = useRestore(run)
+    let menuItems: MenuItem<any>[] = [ shareLink, changeAccess ]
+    menuItems.push(run.trashed ? restore : del)
+
     const isTester = useTester(run.owner)
+    const updateDescription = useUpdateDescription(run)
     if (isTester) {
-        extras.push(closeMenuFunc => (
-            <DropdownItem key="updateDescription"
-                onClick={() => {
-                    closeMenuFunc()
-                    setUpdateDescriptionOpen(true)
-                }}
-            >Edit description</DropdownItem>
-        ))
+        menuItems.push(updateDescription)
     }
-    return (<>
+
+    return (
         <ActionMenu
             id={run.id}
             description={ "run " + run.id }
             owner={ run.owner }
             access={ run.access }
-            token={ run.token || undefined }
-            tokenToLink={ (id, token) => "/run/" + id + "?token=" + token }
-            onTokenReset={ id => dispatch(resetToken(id, run.testid)) }
-            onTokenDrop={ id => dispatch(dropToken(id, run.testid)) }
-            onAccessUpdate={ (id, owner, access) => dispatch(updateAccess(id, run.testid, owner, access)) }
-            onDelete={ onDelete }
-            extraItems={ extras }
+            items={ menuItems }
         />
-        <UpdateDescriptionModal
-            isOpen={updateDescriptionOpen}
-            onClose={() => setUpdateDescriptionOpen(false)}
-            run={run} />
-    </>)
+    )
 }
 
 type UpdateDescriptionModalProps = {

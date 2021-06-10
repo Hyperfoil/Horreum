@@ -14,10 +14,7 @@ import {sendTest} from './actions';
 import { durationToMillis, millisToDuration } from '../../utils'
 import {alertAction, constraintValidationFormatter} from '../../alerts'
 
-import AccessIcon from '../../components/AccessIcon'
-import AccessChoice from '../../components/AccessChoice'
 import Accessors from '../../components/Accessors'
-import OwnerSelect from '../../components/OwnerSelect'
 import TagsSelect, { convertTags } from '../../components/TagsSelect'
 import Editor, {ValueGetter} from '../../components/Editor/monaco/Editor'
 
@@ -25,8 +22,6 @@ import {Test, TestDispatch, StalenessSettings} from './reducers';
 
 import {
     useTester,
-    roleToName,
-    Access,
     defaultRoleSelector
 } from '../../auth'
 
@@ -47,8 +42,6 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
     const defaultRole = useSelector(defaultRoleSelector)
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [access, setAccess] = useState<Access>(0)
-    const [owner, setOwner] = useState(test && defaultRole || undefined)
     const [compareUrl, setCompareUrl] = useState("")
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
     const [tags, setTags] = useState<string[]>([])
@@ -59,8 +52,6 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
     const updateState = (test?: Test) => {
         setName(test ? test.name : "");
         setDescription(test ? test.description : "");
-        setOwner(test ? test.owner : defaultRole)
-        setAccess(test ? test.access : 0)
         setTags(test && test.tags ? test.tags.split(";").filter(t => t !== "") : []);
         setCompareUrl(test && test.compareUrl && test.compareUrl.toString() || "")
         setNotificationsEnabled(!test || test.notificationsEnabled)
@@ -75,11 +66,7 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
         }
         updateState(test)
     }, [test])
-    useEffect(() => {
-        if (!owner) {
-            setOwner(defaultRole)
-        }
-    }, [defaultRole])
+
 
     const thunkDispatch = useDispatch<TestDispatch>()
     const dispatch = useDispatch()
@@ -96,9 +83,9 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
                 compareUrl: compareUrlEditor.current?.getValue(),
                 notificationsEnabled,
                 tags: tags.join(";"),
-                owner: owner || "__test_created_without_a_role__",
-                access: access,
-                token: null,
+                owner: defaultRole || "__test_created_without_a_role__",
+                access: 2,
+                tokens: [],
                 stalenessSettings,
             }
             return thunkDispatch(sendTest(newTest)).then(
@@ -112,74 +99,41 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
         reset: () => updateState(test)
     }
 
-    const isTester = useTester(owner)
+    const isTester = useTester(test?.owner)
 
     return (<>
         <Form isHorizontal={true} style={{gridGap: "2px", width: "100%", paddingRight: "8px"}}>
-            <Grid hasGutter>
-                <GridItem span={6}>
-                    <FormGroup label="Name" isRequired={true} fieldId="name" helperText="Test names must be unique"
-                               helperTextInvalid="Name must be unique and not empty">
-                        <TextInput
-                            value={name || ""}
-                            isRequired
-                            type="text"
-                            id="name"
-                            aria-describedby="name-helper"
-                            name="name"
-                            isReadOnly={!isTester}
-                            validated={name !== null && name.trim().length > 0 ? "default" : "error"}
-                            onChange={n => {
-                                setName(n)
-                                onModified(true)
-                            }}
-                        />
-                    </FormGroup>
-                    <FormGroup label="Description" fieldId="description" helperText="" helperTextInvalid="">
-                        <TextArea
-                            value={description || ""}
-                            type="text"
-                            id="description"
-                            aria-describedby="description-helper"
-                            name="description"
-                            readOnly={!isTester}
-                            onChange={desc => {
-                                setDescription(desc)
-                                onModified(true)
-                            }}
-                        />
-                    </FormGroup>
-
-
-                </GridItem>
-                <GridItem span={6}>
-                    <h2>Permissions</h2>
-                    <FormGroup label="Owner" fieldId="testOwner">
-                        {isTester ? (
-                            <OwnerSelect includeGeneral={false}
-                                         selection={roleToName(owner) || ""}
-                                         onSelect={selection => {
-                                             setOwner(selection.key)
-                                             onModified(true)
-                                         }}/>
-                        ) : (
-                            <TextInput value={roleToName(owner) || ""} id="testOwner" isReadOnly/>
-                        )}
-                    </FormGroup>
-                    <FormGroup label="Access rights" fieldId="testAccess">
-                        {isTester ? (
-                            <AccessChoice checkedValue={access} onChange={a => {
-                                setAccess(a)
-                                onModified(true)
-                            }}/>
-                        ) : (
-                            <AccessIcon access={access}/>
-                        )}
-                    </FormGroup>
-
-
-                </GridItem>
-            </Grid>
+            <FormGroup label="Name" isRequired={true} fieldId="name" helperText="Test names must be unique"
+                        helperTextInvalid="Name must be unique and not empty">
+                <TextInput
+                    value={name || ""}
+                    isRequired
+                    type="text"
+                    id="name"
+                    aria-describedby="name-helper"
+                    name="name"
+                    isReadOnly={!isTester}
+                    validated={name !== null && name.trim().length > 0 ? "default" : "error"}
+                    onChange={n => {
+                        setName(n)
+                        onModified(true)
+                    }}
+                />
+            </FormGroup>
+            <FormGroup label="Description" fieldId="description" helperText="" helperTextInvalid="">
+                <TextArea
+                    value={description || ""}
+                    type="text"
+                    id="description"
+                    aria-describedby="description-helper"
+                    name="description"
+                    readOnly={!isTester}
+                    onChange={desc => {
+                        setDescription(desc)
+                        onModified(true)
+                    }}
+                />
+            </FormGroup>
 
             <FormGroup label="Tags" fieldId="tags"
                        helperText="Accessors that split runs into different categories.">

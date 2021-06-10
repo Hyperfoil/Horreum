@@ -612,6 +612,9 @@ public class RunService {
       Test test;
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          test = Test.find("id", testId).firstResult();
+         if (test == null) {
+            return Response.status(404).entity("Cannot find test ID " + testId).build();
+         }
          Query query = em.createNativeQuery(sql.toString());
          query.setParameter(1, testId);
          Tags.addTagValues(tagsMap, query, 2);

@@ -6,12 +6,13 @@ import {
     View,
     LoadingAction,
     LoadedAction,
-    UpdateTokenAction,
     UpdateAccessAction,
     DeleteAction,
     UpdateTestWatchAction,
     UpdateViewAction,
     UpdateHookAction,
+    UpdateTokensAction,
+    RevokeTokenAction,
 } from './reducers';
 import { Dispatch } from 'react';
 import * as notifications from '../../usersettings'
@@ -77,21 +78,21 @@ export const updateHooks = (testId: number, testWebHooks: Hook[]) => (dispatch: 
     return Promise.all(promises);
 }
 
-export const resetToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>) =>
-    api.resetToken(id).then(
-        token => dispatch({
-            type: actionTypes.UPDATE_TOKEN,
-            id: id,
-            token: token,
-        })
+export const addToken = (testId: number, value: string, description: string, permissions: number) => (dispatch: Dispatch<UpdateTokensAction>) =>
+    api.addToken(testId, value, description, permissions).then(
+        () => api.tokens(testId).then(
+            tokens => dispatch({
+                type: actionTypes.UPDATE_TOKENS,
+                testId, tokens
+            })
+        )
     )
 
-export const dropToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>) =>
-    api.dropToken(id).then(
+export const revokeToken = (testId: number, tokenId: number) => (dispatch: Dispatch<RevokeTokenAction>) =>
+    api.revokeToken(testId, tokenId).then(
         () => dispatch({
-               type: actionTypes.UPDATE_TOKEN,
-               id: id,
-               token: null,
+            type: actionTypes.REVOKE_TOKEN,
+            testId, tokenId,
         })
     )
 

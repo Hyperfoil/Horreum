@@ -10,8 +10,9 @@ const endPoints = {
     view: (id: number)=>`${base}/${id}/view`,
     hook: (id: number)=>`${base}/${id}/hook`,
     summary: ()=>`${base}/summary`,
-    resetToken: (id: number) => `${base}/${id}/resetToken`,
-    dropToken: (id: number) => `${base}/${id}/dropToken`,
+    tokens: (id: number) => `${base}/${id}/tokens`,
+    addToken: (id: number) => `${base}/${id}/addToken`,
+    revokeToken: (testId: number, tokenId: number) => `${base}/${testId}/revokeToken/${tokenId}`,
     updateAccess: (id: number, owner: string, access: string) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
 }
 
@@ -31,9 +32,13 @@ export const send = (test: Test) => {
     return fetchApi(endPoints.base(),test,'post')
 }
 
-export const resetToken = (id: number) => fetchApi(endPoints.resetToken(id), null, 'post', {}, 'text');
+export const tokens = (id: number) => fetchApi(endPoints.tokens(id), null, 'get')
 
-export const dropToken = (id: number) => fetchApi(endPoints.dropToken(id), null, 'post');
+export const addToken = (id: number, value: string, description: string, permissions: number) => fetchApi(endPoints.addToken(id), {
+        value, description, permissions
+    }, 'post');
+
+export const revokeToken = (testId: number, tokenId: number) => fetchApi(endPoints.revokeToken(testId, tokenId), null, 'post', {}, 'response');
 
 export const updateAccess = (id: number, owner: string, access: string) => {
    // TODO: fetchival does not support form parameters, it tries to JSONify everything

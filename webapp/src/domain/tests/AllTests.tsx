@@ -23,8 +23,6 @@ import {
 
 import {
    fetchSummary,
-   resetToken,
-   dropToken,
    updateAccess,
    deleteTest,
    fetchTestWatch,
@@ -35,7 +33,7 @@ import * as selectors from './selectors';
 
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
-import ActionMenu from '../../components/ActionMenu';
+import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from '../../components/ActionMenu';
 import ConfirmTestDeleteModal from './ConfirmTestDeleteModal'
 
 import {
@@ -49,6 +47,8 @@ import {
 import { alertAction } from '../../alerts'
 import { CellProps, Column, UseSortByColumnOptions } from 'react-table';
 import { Test, TestDispatch } from './reducers';
+import { tokenToString } from 'typescript';
+import { Access } from '../../auth'
 
 type WatchDropdownProps = {
   id: number,
@@ -105,6 +105,44 @@ const WatchDropdown = ({ id, watching } : WatchDropdownProps) => {
 type C = CellProps<Test>
 type Col = Column<Test> & UseSortByColumnOptions<Test>
 
+type DeleteConfig = {
+  name: string,
+}
+
+function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
+  const [confirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false)
+  const dispatch = useDispatch();
+  const thunkDispatch = useDispatch<TestDispatch>()
+  return [ (props: ActionMenuProps, isOwner: boolean, close: () => void, config: DeleteConfig) => {
+    return {
+      item:
+        <DropdownItem
+            key="delete"
+            onClick={() => {
+              close()
+              setConfirmDeleteModalOpen(true)
+            }}
+            isDisabled={!isOwner}
+        >
+            Delete
+        </DropdownItem>,
+      modal:
+        <ConfirmTestDeleteModal
+            key="delete"
+            isOpen={ confirmDeleteModalOpen }
+            onClose={ () => setConfirmDeleteModalOpen(false) }
+            onDelete={ () => {
+              thunkDispatch(deleteTest(props.id)).catch(e => {
+                dispatch(alertAction("DELETE_TEST", "Failed to delete test", e))
+              })
+            }}
+            testId={ props.id }
+            testName={ config.name }
+        />
+    }
+  }, config]
+}
+
 export default ()=>{
     document.title = "Tests | Horreum"
     const dispatch = useDispatch();
@@ -144,32 +182,24 @@ export default ()=>{
           id:"actions",
           accessor: "id",
           Cell: (arg: C) => {
+            const changeAccess = useChangeAccess({
+              onAccessUpdate: (id: number, owner: string, access: Access) => {
+                thunkDispatch(updateAccess(id, owner, access)).catch(e => {
+                  dispatch(alertAction("UPDATE_TEST", "Failed to update test", e))
+                })
+              }
+            })
+            const del = useDelete({
+              name: arg.row.original.name
+            })
             return (
-            <ActionMenu id={arg.cell.value}
-                        access={arg.row.original.access}
-                        owner={arg.row.original.owner}
-                        token={arg.row.original.token || undefined}
-                        tokenToLink={ (id, token) => "/test/" + id + "?token=" + token }
-                        onTokenReset={ id => dispatch(resetToken(id)) }
-                        onTokenDrop={ id => dispatch(dropToken(id)) }
-                        onAccessUpdate={ (id, owner, access) => thunkDispatch(updateAccess(id, owner, access)).catch(e => {
-                          dispatch(alertAction("UPDATE_TEST", "Failed to update test", e))
-                        }) }
-                        description={ "test " + arg.row.original.name }
-                        onDelete={ id => {
-                          thunkDispatch(deleteTest(id)).catch(e => {
-                                dispatch(alertAction("DELETE_TEST", "Failed to delete test", e))
-                          })
-                        }}
-                        deleteConfirmModal={ (id, _, isOpen, onClose, onDelete) => (
-                          <ConfirmTestDeleteModal
-                            isOpen={ isOpen }
-                            onClose={ onClose }
-                            onDelete={ onDelete }
-                            testId={ id }
-                            testName={ arg.row.original.name }
-                          />)}
-                        />
+            <ActionMenu
+              id={arg.cell.value}
+              access={arg.row.original.access}
+              owner={arg.row.original.owner}
+              description={ "test " + arg.row.original.name }
+              items={[ changeAccess, del ]}
+            />
             )
           }
         }

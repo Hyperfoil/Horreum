@@ -5,6 +5,12 @@ import { Access } from "../../auth"
 import { ThunkDispatch } from 'redux-thunk';
 import {Hook} from "../hooks/reducers";
 
+export interface Token {
+    id: number,
+    description: string,
+    permissions: number,
+}
+
 export interface ViewComponent {
     headerName: string,
     accessors: string,
@@ -30,7 +36,7 @@ export interface Test {
     tags: string,
     owner: string,
     access: Access,
-    token: string | null,
+    tokens: Token[],
     defaultView?: View,
     count?: number, // run count in AllTests
     watching?: string[],
@@ -60,12 +66,6 @@ export interface DeleteAction {
     id: number,
 }
 
-export interface UpdateTokenAction {
-    type: typeof actionTypes.UPDATE_TOKEN,
-    id: number,
-    token: string | null,
-}
-
 export interface UpdateAccessAction {
     type: typeof actionTypes.UPDATE_ACCESS,
     id: number,
@@ -90,7 +90,19 @@ export interface UpdateHookAction {
     hook: Hook,
 }
 
-export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction | UpdateTestWatchAction | UpdateViewAction | UpdateHookAction
+export interface UpdateTokensAction {
+    type: typeof actionTypes.UPDATE_TOKENS,
+    testId: number,
+    tokens: Token[],
+}
+
+export interface RevokeTokenAction {
+    type: typeof actionTypes.REVOKE_TOKEN,
+    testId: number,
+    tokenId: number,
+}
+
+export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateAccessAction | UpdateTestWatchAction | UpdateViewAction | UpdateHookAction | UpdateTokensAction | RevokeTokenAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction>
 
@@ -115,13 +127,6 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
                 })
             }
         break;
-        case actionTypes.UPDATE_TOKEN: {
-            let test = state.byId?.get(action.id)
-            if (test) {
-               state.byId = state.byId?.set(action.id, { ...test, token: action.token })
-            }
-        }
-        break;
         case actionTypes.UPDATE_ACCESS: {
             let test = state.byId?.get(action.id)
             if (test) {
@@ -141,6 +146,20 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             let test = state.byId?.get(action.testId)
             if (test) {
                state.byId = state.byId?.set(action.testId, { ...test, defaultView: action.view })
+            }
+        }
+        break;
+        case actionTypes.UPDATE_TOKENS: {
+            let test = state.byId?.get(action.testId)
+            if (test) {
+               state.byId = state.byId?.set(action.testId, { ...test, tokens: action.tokens })
+            }
+        }
+        break;
+        case actionTypes.REVOKE_TOKEN: {
+            let test = state.byId?.get(action.testId)
+            if (test) {
+                state.byId = state.byId?.set(action.testId, { ...test, tokens: test.tokens.filter(t => t.id != action.tokenId ) })
             }
         }
         break;

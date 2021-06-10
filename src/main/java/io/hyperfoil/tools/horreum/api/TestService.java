@@ -17,8 +17,12 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+
+import org.hibernate.Hibernate;
 
 @Path("/api/test")
 @Consumes({MediaType.APPLICATION_JSON})
@@ -26,12 +30,11 @@ import java.util.List;
 public class TestService {
    //@formatter:off
    private static final String SUMMARY =
-         "SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.token,test.access " +
+         "SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.access " +
          "FROM test LEFT JOIN run ON run.testid = test.id " +
          "WHERE run.trashed = false OR run.trashed IS NULL " +
          "GROUP BY test.id";
    //@formatter:on
-   private static final String UPDATE_TOKEN = "UPDATE test SET token = ? WHERE id = ?";
    private static final String UPDATE_NOTIFICATIONS = "UPDATE test SET notificationsenabled = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
    private static final String TRASH_RUNS = "UPDATE run SET trashed = true WHERE testid = ?";
@@ -76,10 +79,11 @@ public class TestService {
    public Test get(@PathParam("id") Integer id, @QueryParam("token") String token){
       try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
            @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         return Test.find("id", id).firstResult();
+         Test test = Test.find("id", id).firstResult();
+         Hibernate.initialize(test.tokens);
+         return test;
       }
    }
-
 
    public Test getByNameOrId(String input){
       if (input.matches("-?\\d+")) {
@@ -172,29 +176,45 @@ public class TestService {
 
    @RolesAllowed("tester")
    @POST
-   @Path("{id}/resetToken")
-   public Response resetToken(@PathParam("id") Integer id) {
-      return updateToken(id, Tokens.generateToken());
+   @Path("{id}/addToken")
+   @Transactional
+   public Response addToken(@PathParam("id") Integer testId, TestToken token) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Test test = Test.findById(testId);
+         if (test == null) {
+            return Response.status(404).build();
+         }
+         token.test = test;
+         test.tokens.add(token);
+         test.persistAndFlush();
+      }
+      return Response.ok(token.id).build();
+   }
+
+   @RolesAllowed("tester")
+   @GET
+   @Path("{id}/tokens")
+   public Collection<TestToken> tokens(@PathParam("id") Integer testId) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Test t = Test.findById(testId);
+         return t.tokens;
+      }
    }
 
    @RolesAllowed("tester")
    @POST
-   @Path("{id}/dropToken")
-   public Response dropToken(@PathParam("id") Integer id) {
-      return updateToken(id, null);
-   }
-
-   private Response updateToken(Integer id, String token) {
+   @Path("{id}/revokeToken/{tokenId}")
+   @Transactional
+   public Response dropToken(@PathParam("id") Integer testId, @PathParam("tokenId") Integer tokenId) {
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Query query = em.createNativeQuery(UPDATE_TOKEN);
-         query.setParameter(1, token);
-         query.setParameter(2, id);
-         if (query.executeUpdate() != 1) {
-            return Response.serverError().entity("Token reset failed (missing permissions?)").build();
-         } else {
-            return (token != null ? Response.ok(token) : Response.noContent()).build();
+         Test test = Test.findById(testId);
+         if (test == null) {
+            return Response.status(404).build();
          }
+         test.tokens.removeIf(t -> Objects.equals(t.id, tokenId));
+         test.persist();
       }
+      return Response.noContent().build();
    }
 
    @RolesAllowed("tester")

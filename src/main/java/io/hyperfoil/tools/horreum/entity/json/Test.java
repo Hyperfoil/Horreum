@@ -2,24 +2,28 @@ package io.hyperfoil.tools.horreum.entity.json;
 
 import java.util.Collection;
 
+import io.hyperfoil.tools.horreum.entity.converter.AccessSerializer;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
+import javax.json.bind.annotation.JsonbTypeDeserializer;
+import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.validation.constraints.NotNull;
 
 @Entity(name="test")
 @RegisterForReflection
-public class Test extends ProtectedBaseEntity {
+public class Test extends PanacheEntityBase {
    public static final String EVENT_NEW = "test/new";
 
    @Id
@@ -38,6 +42,17 @@ public class Test extends ProtectedBaseEntity {
 
    @Column(name="description",unique = false)
    public String description;
+
+   @NotNull
+   public String owner;
+
+   @NotNull
+   @JsonbTypeSerializer(AccessSerializer.class)
+   @JsonbTypeDeserializer(AccessSerializer.class)
+   public Access access = Access.PUBLIC;
+
+   @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
+   public Collection<TestToken> tokens;
 
    public String tags;
 

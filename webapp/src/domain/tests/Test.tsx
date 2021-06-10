@@ -26,18 +26,13 @@ import General from './General'
 import Views from './Views'
 import Variables from './Variables'
 import Hooks from "./Hooks";
-// import Hooks from "./Hooks";
+import Access from "./Access";
+
+const tabs = [ "#general", "#access", "#views", "#vars", "#hooks"];
+
 
 function initialActiveTab(location: Location) {
-    if (location.hash.startsWith("#views")) {
-        return 1;
-    } else if (location.hash.startsWith("#vars")) {
-        return 2;
-    } else if (location.hash.startsWith("#hooks")) {
-        return 3;
-    } else {
-        return 0;
-    }
+    return Math.max(0, tabs.findIndex((fragment, index) => location.hash.startsWith(fragment)));
 }
 
 type Params = {
@@ -59,15 +54,15 @@ export default () => {
     const [modified, setModified] = useState(false)
     const [confirmOpen, setConfirmOpen] = useState(false)
     const generalFuncsRef = useRef<TabFunctions>()
+    const accessFuncsRef = useRef<TabFunctions>()
     const viewFuncsRef = useRef<TabFunctions>()
     const variablesFuncsRef = useRef<TabFunctions>()
     const hooksFuncsRef = useRef<TabFunctions>()
-    const funcRefs = [ generalFuncsRef, viewFuncsRef, variablesFuncsRef, hooksFuncsRef ]
-    const tabs = [ "general", "views", "vars", "hooks"]
+    const funcRefs = [ generalFuncsRef, accessFuncsRef, viewFuncsRef, variablesFuncsRef, hooksFuncsRef ]
     const gotoTab = (index: number) => {
         setActiveTab(index)
         setNextTab(index)
-        history.replace("/test/" + (testId === 0 ? "__new" : testId) + "#" + tabs[index] )
+        history.replace("/test/" + (testId === 0 ? "__new" : testId) + tabs[index] )
     }
 
     const dispatch = useDispatch();
@@ -138,7 +133,14 @@ export default () => {
                                 onModified={ setModified }
                                 funcsRef={generalFuncsRef}/>
                         </Tab>
-                        <Tab key="views" eventKey={1} isHidden={ testId <= 0 } title="Views">
+                        <Tab key="access" eventKey={1} title="Access">
+                            <Access
+                                test={ test || undefined }
+                                onModified={ setModified}
+                                funcsRef={accessFuncsRef}
+                                />
+                        </Tab>
+                        <Tab key="views" eventKey={2} isHidden={ testId <= 0 } title="Views">
                             <Views
                                 testId={testId}
                                 testView={(test ? test.defaultView : undefined) || { name: "default", components: []}}
@@ -147,7 +149,7 @@ export default () => {
                                 funcsRef={viewFuncsRef}
                             />
                         </Tab>
-                        <Tab key="vars" eventKey={2} isHidden={ testId <= 0 } title="Regression variables">
+                        <Tab key="vars" eventKey={3} isHidden={ testId <= 0 } title="Regression variables">
                             <Variables
                                 testId={testId}
                                 testName={ test && test.name || ""}
@@ -156,7 +158,7 @@ export default () => {
                                 funcsRef={ variablesFuncsRef }
                             />
                         </Tab>
-                         <Tab key="hooks" eventKey={3} isHidden={ testId <= 0 || !isTester } title="Webhooks">
+                         <Tab key="hooks" eventKey={4} isHidden={ testId <= 0 || !isTester } title="Webhooks">
                             <Hooks
                                 testId={testId}
                                 testOwner={test ? test.owner : undefined}
