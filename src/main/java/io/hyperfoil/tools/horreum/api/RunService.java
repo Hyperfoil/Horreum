@@ -35,6 +35,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 @Path("/api/run")
@@ -98,7 +99,7 @@ public class RunService {
    @Path("{id}")
    public Response getRun(@PathParam("id") Integer id,
                           @QueryParam("token") String token) {
-      return runQuery("SELECT row_to_json(run) from run where id = ?", id, token);
+      return runQuery("SELECT row_to_json(run)::::text from run where id = ?", id, token);
    }
 
    @PermitAll
@@ -167,13 +168,31 @@ public class RunService {
       return new Json(false);
    }
 
-   @RolesAllowed(Roles.UPLOADER)
+   @PermitAll // all because of possible token-based upload
    @POST
-   @Path("test/{testId}")
+   @Path("test/{test}")
    @Consumes(MediaType.APPLICATION_JSON)
-   public Response addToTest(@PathParam("testId") Integer testId, Run run) {
-      run.testid = testId;
-      return add(run);
+   @Transactional
+   public Response add(@PathParam("test") String testNameOrId,
+                       @QueryParam("owner") String owner,
+                       @QueryParam("access") Access access,
+                       @QueryParam("token") String token,
+                       Run run) {
+      if (owner != null) {
+         run.owner = owner;
+      }
+      if (access != null) {
+         run.access = access;
+      }
+      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
+           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
+         Test test = getOrCreateTest(testNameOrId, run.owner, run.access);
+         if (test == null) {
+            return Response.serverError().entity("Failed to find test " + testNameOrId).build();
+         }
+         run.testid = test.id;
+         return addAuthenticated(run, test);
+      }
    }
 
    @RolesAllowed(Roles.UPLOADER)
@@ -187,6 +206,7 @@ public class RunService {
                                   @QueryParam("access") Access access,
                                   @QueryParam("schema") String schemaUri,
                                   @QueryParam("description") String description,
+                                  @QueryParam("token") String token,
                                   Json data) {
       if (data == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("No data!").build();
@@ -196,7 +216,8 @@ public class RunService {
       Object foundStop = findIfNotSet(stop, data);
       Object foundDescription = findIfNotSet(description, data);
 
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
+           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
          if (schemaUri == null || schemaUri.isEmpty()) {
             schemaUri = data.getString("$schema");
          } else {
@@ -260,7 +281,7 @@ public class RunService {
          run.owner = owner;
          run.access = access;
 
-         return addAuthenticated(run);
+         return addAuthenticated(run, testEntity);
       }
    }
 
@@ -315,25 +336,13 @@ public class RunService {
       return testEntity;
    }
 
-   @RolesAllowed(Roles.UPLOADER)
-   @POST
-   @Consumes(MediaType.APPLICATION_JSON)
-   @Transactional
-   public Response add(Run run) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         return addAuthenticated(run);
-      }
-   }
-
-   private Response addAuthenticated(Run run) {
-      Test test = Test.find("id", run.testid).firstResult();
-      if (test == null) {
-         return Response.serverError().entity("failed to find test " + run.testid).build();
-      }
+   private Response addAuthenticated(Run run, Test test) {
+      // Id will be always generated anew
+      run.id = null;
 
       if (run.owner == null || run.access == null) {
          return Response.status(400).entity("Missing access info (owner and access)").build();
-      } else if (!identity.getRoles().contains(run.owner)) {
+      } else if (!Objects.equals(test.owner, run.owner) && !identity.getRoles().contains(run.owner)) {
          return Response.status(400).entity("This user does not have permissions to upload run for owner=" + run.owner).build();
       }
 

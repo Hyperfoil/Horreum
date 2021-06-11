@@ -81,7 +81,7 @@ function AddTokenModal(props: AddTokenModalProps) {
                 <Button
                     key="save"
                     variant={ButtonVariant.primary}
-                    isDisabled={ isSaving }
+                    isDisabled={ isSaving || permissions === 0 || description === "" }
                     onClick={() => {
                         setSaving(true)
                         props.onSubmit(value, description, permissions).finally(onClose)
@@ -123,11 +123,11 @@ function AddTokenModal(props: AddTokenModalProps) {
                     fieldId=""
                 >
                     <Checkbox id="read" label="Read" isChecked={ (permissions & 1) !== 0}
-                        onChange={ checked => { setPermissions((permissions & ~1) | (checked ? 1 : 0))}}/>
+                        onChange={ checked => { setPermissions((permissions & ~5) | (checked ? 1 : 0))}}/>
                     <Checkbox id="modify" label="Modify" isChecked={ (permissions & 2) !== 0}
                         onChange={ checked => { setPermissions((permissions & ~2) | (checked ? 2 : 0))}}/>
                     <Checkbox id="upload" label="Upload" isChecked={ (permissions & 4) !== 0}
-                        onChange={ checked => { setPermissions((permissions & ~4) | (checked ? 4 : 0))}}/>
+                        onChange={ checked => { setPermissions((permissions & ~4) | (checked ? 5 : 0))}}/>
                 </FormGroup>
             </Form>
         </Modal>
@@ -209,7 +209,7 @@ function Access(props: AccessProps) {
             </div> }
             <DataList aria-label="List of tokens">
                 <DataListItem aria-labelledby="simple-item1">
-                    { props.test?.tokens.map((t, i) => <DataListItemRow key={i}>
+                    { (props.test?.tokens || []).map((t, i) => <DataListItemRow key={i}>
                         <DataListItemCells
                             dataListCells={[
                                 <DataListCell key="description">

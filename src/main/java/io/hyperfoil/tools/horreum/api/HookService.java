@@ -119,7 +119,7 @@ public class HookService {
                         if (response.statusCode() < 400) {
                            log.debugf("Successfully(%d) notified hook: %s", response.statusCode(), url);
                         } else {
-                           log.errorf("Failed to notify hook %s, response %d: ", url, response.statusCode(), response.bodyAsString());
+                           log.errorf("Failed to notify hook %s, response %d: %s", url, response.statusCode(), response.bodyAsString());
                         }
                      });
          } catch (Exception e) {

@@ -9,7 +9,7 @@ import {
     Button,
     Card,
     CardBody,
-    CardFooter, Grid,
+    CardFooter,
     Spinner,
     Tab,
     Tabs,
@@ -17,6 +17,7 @@ import {
 
 import * as actions from './actions';
 import * as selectors from './selectors';
+import { TestDispatch } from './reducers'
 
 import SaveChangesModal from '../../components/SaveChangesModal'
 
@@ -59,6 +60,7 @@ export default () => {
     const variablesFuncsRef = useRef<TabFunctions>()
     const hooksFuncsRef = useRef<TabFunctions>()
     const funcRefs = [ generalFuncsRef, accessFuncsRef, viewFuncsRef, variablesFuncsRef, hooksFuncsRef ]
+    const [ loaded, setLoaded ] = useState(false)
     const gotoTab = (index: number) => {
         setActiveTab(index)
         setNextTab(index)
@@ -66,10 +68,12 @@ export default () => {
     }
 
     const dispatch = useDispatch();
+    const thunkDispatch = useDispatch<TestDispatch>()
 
     useEffect(() => {
         if (testId !== 0) {
-            dispatch(actions.fetchTest(testId))
+            setLoaded(false)
+            thunkDispatch(actions.fetchTest(testId)).finally(() => setLoaded(true))
         }
     }, [dispatch, testId])
 
@@ -112,7 +116,7 @@ export default () => {
                 }}
             />
             <Card style={{flexGrow:1}}>
-                { !test && testId !== 0 && (<Bullseye><Spinner /></Bullseye>) }
+                { !loaded && testId !== 0 && (<Bullseye><Spinner /></Bullseye>) }
                 { (test || testId === 0) && (<>
                 <CardBody>
                     <Tabs

@@ -33,10 +33,14 @@ export const fetchSummary = () => (dispatch: Dispatch<LoadingAction | LoadedActi
     )
 }
 
-export const fetchTest = (id: number) => (dispatch: Dispatch<LoadedAction>) =>
+export const fetchTest = (id: number) => (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
     api.get(id).then(
         response => dispatch(loaded(response)),
-        error => dispatch(loaded([]))
+        error => {
+            dispatch(loaded([]))
+            dispatch(alertAction("FETCH_TEST", "Failed to fetch test; the test may not exist or you don't have sufficient permissions to access it.", error))
+            return error
+        }
     )
 
 export const sendTest = (test: Test) => (dispatch: Dispatch<LoadedAction>) =>

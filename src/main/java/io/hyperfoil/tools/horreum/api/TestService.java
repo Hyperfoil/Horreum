@@ -80,6 +80,9 @@ public class TestService {
       try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
            @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
          Test test = Test.find("id", id).firstResult();
+         if (test == null) {
+            throw new WebApplicationException(404);
+         }
          Hibernate.initialize(test.tokens);
          return test;
       }
@@ -179,6 +182,9 @@ public class TestService {
    @Path("{id}/addToken")
    @Transactional
    public Response addToken(@PathParam("id") Integer testId, TestToken token) {
+      if (token.hasUpload() && !token.hasRead()) {
+         return Response.status(400).entity("Upload permission requires read permission as well.").build();
+      }
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          Test test = Test.findById(testId);
          if (test == null) {

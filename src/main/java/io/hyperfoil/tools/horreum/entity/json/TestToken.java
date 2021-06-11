@@ -56,4 +56,16 @@ public class TestToken {
    public String getValue() {
       return null;
    }
+
+   public boolean hasRead() {
+      return (permissions & READ) != 0;
+   }
+
+   public boolean hasModify() {
+      return (permissions & MODIFY) != 0;
+   }
+
+   public boolean hasUpload() {
+      return (permissions & UPLOAD) != 0;
+   }
 }
