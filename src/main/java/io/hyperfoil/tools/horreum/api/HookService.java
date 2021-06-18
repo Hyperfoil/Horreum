@@ -11,12 +11,15 @@ import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpVersion;
+import io.vertx.core.http.RequestOptions;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.WebClient;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import javax.annotation.PostConstruct;
@@ -73,16 +76,23 @@ public class HookService {
    @Inject
    Vertx reactiveVertx;
 
+   @ConfigProperty(name = "horreum.hook.tls.insecure", defaultValue = "false")
+   boolean insecureTls;
+
    WebClient http1xClient;
 
    @PostConstruct()
    public void postConstruct(){
       int maxConnections = getIntFromEnv("MAX_CONNECTIONS", 20);
       WebClientOptions options = new WebClientOptions()
-         .setFollowRedirects(true)
+         .setFollowRedirects(false)
          .setMaxPoolSize(maxConnections)
          .setConnectTimeout(2_000) // only wait 2s
          .setKeepAlive(false);
+      if (insecureTls) {
+         options.setVerifyHost(false);
+         options.setTrustAll(true);
+      }
       http1xClient = WebClient.create(reactiveVertx, new WebClientOptions(options).setProtocolVersion(HttpVersion.HTTP_1_1));
    }
 
@@ -110,18 +120,22 @@ public class HookService {
             }
             replacedUrl.append(input.substring(lastMatch));
             URL url = new URL(replacedUrl.toString());
-            int port = url.getPort() >= 0 ? url.getPort() : url.getDefaultPort();
-            http1xClient.post(port, url.getHost(), url.getFile())
+            RequestOptions options = new RequestOptions()
+                  .setHost(url.getHost())
+                  .setPort(url.getPort() >= 0 ? url.getPort() : url.getDefaultPort())
+                  .setURI(url.getFile())
+                  .setSsl("https".equals(url.getProtocol().toLowerCase()));
+            http1xClient.request(HttpMethod.POST, options)
                   .putHeader("Content-Type", "application/json")
                   .sendBuffer(Buffer.buffer(json))
-                  .onFailure().invoke(cause -> log.errorf(cause, "Failed to notify hook %s", url))
                   .subscribe().with(response -> {
                         if (response.statusCode() < 400) {
                            log.debugf("Successfully(%d) notified hook: %s", response.statusCode(), url);
                         } else {
                            log.errorf("Failed to notify hook %s, response %d: %s", url, response.statusCode(), response.bodyAsString());
                         }
-                     });
+                     },
+                     cause -> log.errorf(cause, "Failed to notify hook %s", url));
          } catch (Exception e) {
             log.errorf(e, "Failed to invoke hook to %s", hook.url);
          }

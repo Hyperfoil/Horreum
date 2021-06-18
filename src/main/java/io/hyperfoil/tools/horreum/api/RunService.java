@@ -195,7 +195,7 @@ public class RunService {
       }
    }
 
-   @RolesAllowed(Roles.UPLOADER)
+   @PermitAll // all because of possible token-based upload
    @POST
    @Path("data")
    @Transactional
