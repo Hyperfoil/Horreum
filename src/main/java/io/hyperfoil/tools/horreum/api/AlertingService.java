@@ -14,7 +14,6 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
@@ -144,7 +143,7 @@ public class AlertingService {
    @Inject
    NotificationService notificationService;
 
-   private Map<Integer, Integer> recalcProgress = new HashMap<>();
+   private final Map<Integer, Integer> recalcProgress = new HashMap<>();
 
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
@@ -268,12 +267,13 @@ public class AlertingService {
             extractionQuery.append(" FROM current_run");
 
             Query extraction = em.createNativeQuery(extractionQuery.toString());
-            //noinspection deprecation
-            extraction.unwrap(org.hibernate.query.Query.class).setResultTransformer(AliasToEntityMapResultTransformer.INSTANCE);
+
+            SqlService.setResultTransformer(extraction, AliasToEntityMapResultTransformer.INSTANCE);
             Map<String, String> extracted;
             try {
-               //noinspection unchecked
-               extracted = ((Map<String, Object>) extraction.getSingleResult()).entrySet().stream()
+               @SuppressWarnings("unchecked")
+               Map<String, Object> result = (Map<String, Object>) extraction.getSingleResult();
+               extracted = result.entrySet().stream()
                      .filter(e -> e.getValue() instanceof String)
                      .collect(Collectors.toMap(e -> e.getKey().toLowerCase(), e -> String.valueOf(e.getValue())));
             } catch (NoResultException e) {
@@ -651,8 +651,8 @@ public class AlertingService {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          Query tagComboQuery = em.createNativeQuery("SELECT tags::::text FROM run LEFT JOIN run_tags ON run_tags.runid = run.id WHERE run.testid = ? GROUP BY tags");
          Json result = new Json(true);
-         //noinspection unchecked
-         for (String tags : ((List<String>) tagComboQuery.setParameter(1, testId).getResultList())) {
+         @SuppressWarnings("unchecked") List<String> tagList = tagComboQuery.setParameter(1, testId).getResultList();
+         for (String tags : tagList) {
             result.add(Json.fromString(tags));
          }
          return Response.ok(result).build();
@@ -837,10 +837,8 @@ public class AlertingService {
                last = new LastMissingRunNotification();
                last.testId = testId;
                last.tags = tags;
-               last.lastNotification = Instant.now();
-            } else {
-               last.lastNotification = Instant.now();
             }
+            last.lastNotification = Instant.now();
             last.persist();
          }
       }

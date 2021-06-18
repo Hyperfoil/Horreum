@@ -530,12 +530,12 @@ public class RunService {
          sqlQuery.setParameter(queryParts.length + 1, actualRoles);
       }
 
-      //noinspection deprecation
-      sqlQuery.unwrap(org.hibernate.query.Query.class).setResultTransformer(JsonResultTransformer.INSTANCE);
+      SqlService.setResultTransformer(sqlQuery, JsonResultTransformer.INSTANCE);
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)){
          Json runs = new Json(true);
-         //noinspection unchecked
-         sqlQuery.getResultList().forEach(runs::add);
+         @SuppressWarnings("unchecked")
+         List<Json> list = sqlQuery.getResultList();
+         list.forEach(runs::add);
          runs.forEach(run -> {
             Json jsrun = (Json) run;
             Object tagsOrNull = jsrun.get("tags");

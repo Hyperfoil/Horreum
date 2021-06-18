@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.hibernate.JDBCException;
+import org.hibernate.transform.ResultTransformer;
 import org.jboss.logging.Logger;
 
 @Path("/api/sql")
@@ -51,6 +52,11 @@ public class SqlService {
    byte[] dbSecretBytes;
 
    private final Map<String, String> signedRoleCache = new ConcurrentHashMap<>();
+
+   @SuppressWarnings("deprecation")
+   public static void setResultTransformer(Query query, ResultTransformer transformer) {
+      query.unwrap(org.hibernate.query.Query.class).setResultTransformer(transformer);
+   }
 
    @GET
    @PermitAll

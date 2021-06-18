@@ -171,8 +171,7 @@ public class TestService {
    public Response summary() {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          Query query = em.createNativeQuery(SUMMARY);
-         //noinspection deprecation
-         query.unwrap(org.hibernate.query.Query.class).setResultTransformer(JsonResultTransformer.INSTANCE);
+         SqlService.setResultTransformer(query, JsonResultTransformer.INSTANCE);
          return Response.ok(query.getResultList()).build();
       }
    }
