@@ -15,7 +15,12 @@ public class JsonResultTransformer implements ResultTransformer {
    public Object transformTuple(Object[] tuple, String[] aliases) {
       Json json = new Json(false);
       for (int i = 0; i < aliases.length; ++i) {
-         json.add(aliases[i], tuple[i]);
+         Object value = tuple[i];
+         if (value == null || value instanceof Number || value instanceof Boolean) {
+            json.add(aliases[i], value);
+         } else {
+            json.add(aliases[i], value.toString());
+         }
       }
       return json;
    }
