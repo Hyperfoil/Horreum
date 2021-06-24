@@ -166,6 +166,13 @@ public class AlertingService {
    }
 
    private void setupGrafanaDatasource(@SuppressWarnings("unused") long timerId) {
+      vertx.executeBlocking(promise -> {
+         setupGrafanaDatasource();
+         promise.complete();
+      }, false, null);
+   }
+
+   private void setupGrafanaDatasource() {
       String url = internalUrl + "/api/grafana";
       try {
          boolean create = true;
