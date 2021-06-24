@@ -96,7 +96,9 @@ export function Menu(run: Run) {
         onTokenDrop: id => dispatch(dropToken(id, run.testid)),
     })
     const changeAccess = useChangeAccess({
-        onAccessUpdate: (id, owner, access) => dispatch(updateAccess(id, run.testid, owner, access)),
+        onAccessUpdate: (id, owner, access) => thunkDispatch(updateAccess(id, run.testid, owner, access)).catch(
+            e => dispatch(alertAction("UPDATE_RUN_ACCESS", "Failed to update run access", e))
+        ),
     })
     const del = useDelete({
         onDelete: id => thunkDispatch(trash(id, run.testid)).catch(

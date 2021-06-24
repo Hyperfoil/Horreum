@@ -280,8 +280,15 @@ public class RunService {
          run.data = data;
          run.owner = owner;
          run.access = access;
+         // Some triggered functions in the database need to be able to read the just-inserted run
+         // otherwise RLS policies will fail. That's why we reuse the token for the test and later wipe it out.
+         run.token = token;
 
-         return addAuthenticated(run, testEntity);
+         Response response = addAuthenticated(run, testEntity);
+         if (token != null && response.getStatus() < 300) {
+            // TODO: remove the token
+         }
+         return response;
       }
    }
 
@@ -592,7 +599,7 @@ public class RunService {
             .append("    SELECT jsonb_object_agg(schemaid, uri) AS schemas, rs.runid FROM run_schemas rs GROUP BY schemaid, rs.runid")
             .append("), view_agg AS (")
             .append("    SELECT jsonb_object_agg(coalesce(vd.vcid, 0), vd.object) AS view, vd.runid FROM view_data vd GROUP BY vd.runid")
-            .append(") SELECT run.id, run.start, run.stop, run.owner, schema_agg.schemas::::text AS schemas, view_agg.view#>>'{}' AS view, ")
+            .append(") SELECT run.id, run.start, run.stop, run.access, run.owner, schema_agg.schemas::::text AS schemas, view_agg.view#>>'{}' AS view, ")
             .append("run.trashed, run.description, run_tags.tags::::text FROM run ")
             .append("LEFT JOIN schema_agg ON schema_agg.runid = run.id ")
             .append("LEFT JOIN view_agg ON view_agg.runid = run.id ")
@@ -631,7 +638,7 @@ public class RunService {
          List<Object[]> resultList = query.getResultList();
          Json.ArrayBuilder runs = Json.array();
          for (Object[] row : resultList) {
-            String viewString = (String) row[5];
+            String viewString = (String) row[6];
             Json unorderedView = viewString == null ? Json.map().build() : Json.fromString(viewString);
             Json.ArrayBuilder view = Json.array();
             if (test.defaultView != null) {
@@ -653,18 +660,19 @@ public class RunService {
                   }
                }
             }
-            String schemas = (String) row[4];
-            String runTags = (String) row[8];
+            String schemas = (String) row[5];
+            String runTags = (String) row[9];
             runs.add(Json.map()
                   .add("id", row[0])
                   .add("start", ((Timestamp) row[1]).getTime())
                   .add("stop", ((Timestamp) row[2]).getTime())
                   .add("testid", testId)
-                  .add("owner", row[3])
+                  .add("access", row[3])
+                  .add("owner", row[4])
                   .add("schema", schemas == null ? null : Json.fromString(schemas))
                   .add("view", view.build())
-                  .add("trashed", row[6])
-                  .add("description", row[7])
+                  .add("trashed", row[7])
+                  .add("description", row[8])
                   .add("tags", runTags == null ? null : Json.fromString(runTags))
                   .build());
          }

@@ -29,12 +29,13 @@ import { toEpochMillis } from '../../utils'
 
 import { byTest } from './actions';
 import * as selectors from './selectors';
-import { tokenSelector } from '../../auth'
+import { tokenSelector, roleToName } from '../../auth'
 import { alertAction } from '../../alerts'
 
 import { fetchTest } from '../tests/actions';
 import { get } from '../tests/selectors';
 
+import AccessIcon from '../../components/AccessIcon'
 import Table from '../../components/Table';
 import TagsSelect from '../../components/TagsSelect'
 import { CellProps, UseTableOptions, UseRowSelectInstanceProps, UseRowSelectRowProps, Column, UseSortByColumnOptions } from 'react-table';
@@ -101,6 +102,14 @@ const staticColumns: RunColumn[] = [
                   <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} /> }
             </>)
         }
+    }, {
+        Header: "Access",
+        accessor: "access",
+        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />
+    }, {
+        Header: "Owner",
+        accessor:"owner",
+        Cell: (arg: C) => roleToName(arg.cell.value)
     }, {
         Header: "Executed",
         accessor: "start",

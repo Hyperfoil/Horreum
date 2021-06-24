@@ -1,14 +1,14 @@
 import { fetchApi } from '../../services/api';
 import { Schema } from './reducers';
 import { Extractor } from '../../components/Accessors';
-import { Access } from '../../auth';
+import { Access, accessName } from '../../auth';
 const base = "/api/schema"
 const endPoints = {
     base: ()=>`${base}`,
     crud:  (id: number | string)=> `${base}/${id}/`,
     resetToken: (id: number) => `${base}/${id}/resetToken`,
     dropToken: (id: number) => `${base}/${id}/dropToken`,
-    updateAccess: (id: number, owner: string, access: Access) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
+    updateAccess: (id: number, owner: string, access: Access) => `${base}/${id}/updateAccess?owner=${owner}&access=${accessName(access)}`,
     extractor: () => `${base}/extractor`,
     extractorForSchema: (schemaId: number) => `${base}/extractor?schemaId=${schemaId}`,
     testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${jsonpath}`

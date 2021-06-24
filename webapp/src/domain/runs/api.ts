@@ -1,5 +1,5 @@
 import { fetchApi } from '../../services/api';
-import { Access } from '../../auth';
+import { Access, accessName } from '../../auth';
 import { PaginationInfo } from '../../utils'
 
 function paginationParams(pagination: PaginationInfo) {
@@ -17,7 +17,7 @@ const endPoints = {
     listByTest: (testId: number, pagination: PaginationInfo, trashed: boolean, tags: string) => `${base}/list/${testId}?${paginationParams(pagination)}&trashed=${!!trashed}&tags=${tags}`,
     resetToken: (runId: number) => `${base}/${runId}/resetToken`,
     dropToken: (runId: number) => `${base}/${runId}/dropToken`,
-    updateAccess: (runId: number, owner: string, access: Access) => `${base}/${runId}/updateAccess?owner=${owner}&access=${access}`,
+    updateAccess: (runId: number, owner: string, access: Access) => `${base}/${runId}/updateAccess?owner=${owner}&access=${accessName(access)}`,
     trash: (runId: number, isTrashed: boolean) => `${base}/${runId}/trash?isTrashed=${isTrashed}`,
     description: (runId: number) => `${base}/${runId}/description`,
     count: (testId: number) => `${base}/count?testId=${testId}`,
