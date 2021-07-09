@@ -321,13 +321,15 @@ public class SchemaService {
    @Path("{id}")
    @Transactional
    public Response delete(@PathParam("id") Integer id){
-      Schema schema = Schema.find("id", id).firstResult();
-      if (schema == null){
-         return Response.status(Response.Status.NOT_FOUND).build();
-      } else {
-         SchemaExtractor.delete("schema_id", id);
-         schema.delete();
-         return Response.noContent().build();
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Schema schema = Schema.find("id", id).firstResult();
+         if (schema == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+         } else {
+            SchemaExtractor.delete("schema_id", id);
+            schema.delete();
+            return Response.noContent().build();
+         }
       }
    }
 }
