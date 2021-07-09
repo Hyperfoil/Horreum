@@ -476,7 +476,7 @@ public class AlertingService {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
          // The variable referenced by datapoint is a fake
          Variable variable = Variable.findById(dataPoint.variable.id);
-         log.infof("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.runId,
+         log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.runId,
                dataPoint.variable.id, variable != null ? variable.name : "<unknown>", dataPoint.value);
          Change lastChange = Change.find("variable = ?1", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, 0).firstResult();
          PanacheQuery<DataPoint> query;
@@ -485,11 +485,11 @@ public class AlertingService {
          } else {
             if (lastChange.timestamp.compareTo(dataPoint.timestamp) > 0) {
                // We won't revision changes until next variable recalculation
-               log.infof("Ignoring datapoint %d from %s as there is a newer change %d from %s.",
+               log.debugf("Ignoring datapoint %d from %s as there is a newer change %d from %s.",
                      dataPoint.id, dataPoint.timestamp, lastChange.id, lastChange.timestamp);
                return;
             }
-            log.infof("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
+            log.debugf("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
             query = DataPoint.find("variable = ?1 AND timestamp >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.timestamp);
          }
          List<DataPoint> dataPoints = query.list();
@@ -500,8 +500,6 @@ public class AlertingService {
             em.persist(change);
             publishLater(Change.EVENT_NEW, new Change.Event(change, event.notify));
          });
-
-
       }
    }
 

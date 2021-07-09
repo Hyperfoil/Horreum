@@ -25,19 +25,19 @@ public class StatisticalVarianceRegressionModel implements RegressionModel{
 
         DataPoint firstDatapoint = previousDataPoints.get(0);
         if (!firstDatapoint.id.equals(dataPoint.id)) {
-            log.infof("Ignoring datapoint %d from %s as there's a newer datapoint %d from %s",
+            log.debugf("Ignoring datapoint %d from %s as there's a newer datapoint %d from %s",
                     dataPoint.id, dataPoint.timestamp, firstDatapoint.id, firstDatapoint.timestamp);
             return;
         }
         if (previousDataPoints.size() <= Math.max(1, variable.minWindow)) {
-            log.infof("Too few (%d) previous datapoints for variable %d, skipping analysis", previousDataPoints.size() - 1, variable.id);
+            log.debugf("Too few (%d) previous datapoints for variable %d, skipping analysis", previousDataPoints.size() - 1, variable.id);
             return;
         }
         SummaryStatistics statistics = new SummaryStatistics();
         previousDataPoints.stream().skip(1).mapToDouble(DataPoint::value).forEach(statistics::addValue);
         double ratio = dataPoint.value/statistics.getMean();
         if (ratio < 1 - variable.maxDifferenceLastDatapoint || ratio > 1 + variable.maxDifferenceLastDatapoint) {
-            log.infof("Value %f exceeds %f +- %f%% (based on %d datapoints stddev is %f)",
+            log.debugf("Value %f exceeds %f +- %f%% (based on %d datapoints stddev is %f)",
                     dataPoint.value, statistics.getMean(),
                     variable.maxDifferenceLastDatapoint, previousDataPoints.size() - 1, statistics.getStandardDeviation());
             Change change = new Change();
@@ -77,7 +77,7 @@ public class StatisticalVarianceRegressionModel implements RegressionModel{
                         previousDataPoints.get(0).runId, previousDataPoints.get(0).timestamp,
                         window.getMean(), window.getStandardDeviation(), older.getMean(), older.getStandardDeviation());
 
-                log.info(change.description);
+                log.debug(change.description);
                 regressionCallback.accept(change);
             }
         }
