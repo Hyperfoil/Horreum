@@ -46,7 +46,7 @@ services:
     environment:
     - KEYCLOAK_USER=admin
     - KEYCLOAK_PASSWORD=secret
-    - KEYCLOAK_LOGLEVEL=debug
+    - KEYCLOAK_LOGLEVEL=DEBUG
     - ROOT_LOGLEVEL=INFO
     - DB_VENDOR=postgres
     - DB_ADDR=172.17.0.1

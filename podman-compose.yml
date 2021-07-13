@@ -54,6 +54,7 @@ services:
     - DB_DATABASE=keycloak
     - DB_USER=keycloak
     - DB_PASSWORD=secret
+    - CONTAINER_RUNTIME=podman
     ports:
     - 8180:8180
     volumes:
