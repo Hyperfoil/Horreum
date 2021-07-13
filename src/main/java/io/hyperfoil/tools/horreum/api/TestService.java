@@ -31,8 +31,7 @@ public class TestService {
    //@formatter:off
    private static final String SUMMARY =
          "SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.access " +
-         "FROM test LEFT JOIN run ON run.testid = test.id " +
-         "WHERE run.trashed = false OR run.trashed IS NULL " +
+         "FROM test LEFT JOIN run ON run.testid = test.id AND run.trashed = false OR run.trashed IS NULL " +
          "GROUP BY test.id";
    //@formatter:on
    private static final String UPDATE_NOTIFICATIONS = "UPDATE test SET notificationsenabled = ? WHERE id = ?";
@@ -141,6 +140,7 @@ public class TestService {
             em.persist(view);
             test.defaultView = view;
          }
+         em.flush();
          eventBus.publish(Test.EVENT_NEW, test);
       }
       return null;

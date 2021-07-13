@@ -333,12 +333,17 @@ public class RunService {
    private Test getOrCreateTest(String testNameOrId, String owner, Access access) {
       Test testEntity = testService.getByNameOrId(testNameOrId);
       if (testEntity == null && !testNameOrId.matches("-?\\d+")) {
+         log.infof("Creating new test %s with owner %s and access %s", testNameOrId, owner, access);
          testEntity = new Test();
          testEntity.name = testNameOrId;
          testEntity.description = "created by data upload";
          testEntity.owner = owner;
          testEntity.access = access;
-         testService.addAuthenticated(testEntity);
+         try {
+            testService.addAuthenticated(testEntity);
+         } catch (PersistenceException e) {
+            log.error("Failed to create new test.", e);
+         }
       }
       return testEntity;
    }
@@ -362,6 +367,7 @@ public class RunService {
          em.flush();
       } catch (Exception e) {
          log.error("Failed to persist run.", e);
+         return Response.serverError().entity("Failed to persist run").build();
       }
       eventBus.publish(Run.EVENT_NEW, run);
 
@@ -570,8 +576,8 @@ public class RunService {
          return Response.status(400).entity("Missing testId query param.").build();
       }
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         long total = Run.count();
-         long active = Run.count("trashed = false");
+         long total = Run.count("testid = ?1", testId);
+         long active = Run.count("testid = ?1 AND trashed = false", testId);
          return Response.ok(new Json.MapBuilder()
                .add("total", total )
                .add("active", active)

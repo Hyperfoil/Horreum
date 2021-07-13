@@ -41,7 +41,7 @@ function ConfirmTestDeleteModal(props: ConfirmTestDeleteModalProps) {
                 <Button
                     key="Delete"
                     variant={ButtonVariant.danger}
-                    isDisabled={ validationResult !== "success" }
+                    isDisabled={ !runs || (validationResult !== "success" && runs.active > 0) }
                     onClick={() => {
                         props.onDelete()
                         setRunsToDelete("")
