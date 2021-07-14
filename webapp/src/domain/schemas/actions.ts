@@ -1,10 +1,9 @@
 import * as api from './api';
 import * as actionTypes from './actionTypes';
-import { accessName, Access } from '../../auth'
+import { Access } from '../../auth'
 import { Schema, DeleteAction, LoadedAction, UpdateTokenAction, UpdateAccessAction } from './reducers';
 import { Dispatch } from 'react';
-import { ThunkDispatch, ThunkAction } from 'redux-thunk';
-import { Action } from 'redux';
+import { ThunkDispatch } from 'redux-thunk';
 
 const loaded = (schema: Schema | Schema[]): LoadedAction => ({
    type: actionTypes.LOADED,
@@ -14,7 +13,10 @@ const loaded = (schema: Schema | Schema[]): LoadedAction => ({
 export const getById = (id: number) => (dispatch: Dispatch<LoadedAction>) =>
     api.getById(id).then(
        response => dispatch(loaded(response)),
-       error => dispatch(loaded([]))
+       error => {
+          dispatch(loaded([]))
+          throw error;
+       }
     )
 
 // TODO: unused, remove me?

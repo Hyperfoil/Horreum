@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from "react-router"
-import { useSelector } from 'react-redux'
-import { useDispatch } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
+
 import {
     Alert,
     Button,
@@ -33,7 +33,7 @@ import jsonpath from 'jsonpath';
 import * as actions from './actions';
 import * as selectors from './selectors';
 import * as api from './api';
-import { useTester, defaultRoleSelector, roleToName, Access } from '../../auth'
+import { Access, defaultRoleSelector, rolesSelector, roleToName, useTester } from '../../auth'
 import {
    alertAction,
    constraintValidationFormatter,
@@ -44,8 +44,8 @@ import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import OwnerSelect from '../../components/OwnerSelect'
-import { Extractor, ValidationResult } from '../../components/Accessors';
-import { Schema } from './reducers';
+import { Extractor } from '../../components/Accessors';
+import { Schema, SchemaDispatch } from './reducers';
 
 type SchemaParams = {
     schemaId: string,
@@ -54,6 +54,7 @@ type SchemaParams = {
 export default () => {
     const { schemaId } = useParams<SchemaParams>();
     const schema = useSelector(selectors.getById(Number.parseInt(schemaId)))
+    const [loading, setLoading] = useState(true)
     const [name, setName] = useState("")
     const [description, setDescription] = useState("");
     const [testPath, setTestPath] = useState(schema?.testPath || "")
@@ -63,13 +64,20 @@ export default () => {
     const [editorSchema, setEditorSchema] = useState(schema?.schema ? toString(schema.schema) : undefined)
 
     const dispatch = useDispatch();
+    const thunkDispatch = useDispatch<SchemaDispatch>()
+    const roles = useSelector(rolesSelector)
     useEffect(() => {
         if (schemaId !== "_new") {
-            dispatch(actions.getById(Number.parseInt(schemaId)))
+            setLoading(true)
+            thunkDispatch(actions.getById(Number.parseInt(schemaId))).catch(e => {
+                dispatch(alertAction("FAILED_LOADING_SCHEMA", "Failed loading schema " + schemaId, e))
+            }).finally(() => setLoading(false))
+        } else {
+            setLoading(false)
         }
-    }, [dispatch, schemaId])
+    }, [dispatch, thunkDispatch, schemaId, roles])
     useEffect(() => {
-        document.title = (schemaId === "_new" ? "New schema" : schema?.name)  + " | Horreum"
+        document.title = (schemaId === "_new" ? "New schema" : schema?.name || "(unknown schema)")  + " | Horreum"
         setName(schema?.name || "");
         setDescription(schema?.description || "")
         setUri(schema?.uri || "")
@@ -142,8 +150,8 @@ export default () => {
         <React.Fragment>
             { goBack && <Redirect to='/schema' /> }
             <Card style={{ flexGrow: 1 }}>
-                { !schema && schemaId !== "_new" && (<Bullseye><Spinner /></Bullseye>) }
-                { (schema || schemaId === "_new") && (<>
+                { loading && (<Bullseye><Spinner /></Bullseye>) }
+                { !loading && (<>
                 <CardHeader>
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md" style={{ justifyContent: "space-between" }}>
                       <ToolbarContent>

@@ -23,6 +23,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -37,6 +38,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.hibernate.Hibernate;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -97,7 +99,11 @@ public class SchemaService {
    public Schema getSchema(@PathParam("id") int id, @QueryParam("token") String token){
       try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
            @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         return Schema.find("id", id).firstResult();
+         Schema schema = Schema.find("id", id).firstResult();
+         if (schema == null) {
+            throw new WebApplicationException(404);
+         }
+         return schema;
       }
    }
 
@@ -254,11 +260,14 @@ public class SchemaService {
    @Produces(MediaType.APPLICATION_JSON)
    public List<SchemaExtractor> listExtractors(@QueryParam("schemaId") Integer schema) {
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         List<SchemaExtractor> extractors;
          if (schema == null) {
-            return SchemaExtractor.<SchemaExtractor>findAll().stream().collect(Collectors.toList());
+            extractors = SchemaExtractor.<SchemaExtractor>findAll().stream().collect(Collectors.toList());
          } else {
-            return SchemaExtractor.<SchemaExtractor>find("schema_id", schema).stream().collect(Collectors.toList());
+            extractors = SchemaExtractor.<SchemaExtractor>find("schema_id", schema).stream().collect(Collectors.toList());
          }
+         extractors.forEach(e -> Hibernate.initialize(e.schema));
+         return extractors;
       }
    }
 
