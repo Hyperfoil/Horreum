@@ -24,6 +24,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -47,9 +48,15 @@ public class SqlService {
    @Inject
    EntityManager em;
 
+   @Inject
+   SecurityIdentity identity;
+
    @ConfigProperty(name = "horreum.db.secret")
    String dbSecret;
    byte[] dbSecretBytes;
+
+   @ConfigProperty(name = "horreum.debug")
+   Optional<Boolean> debug;
 
    private final Map<String, String> signedRoleCache = new ConcurrentHashMap<>();
 
@@ -170,6 +177,26 @@ public class SqlService {
          sb.append(signedRole);
       }
       return sb.toString();
+   }
+
+   @PermitAll
+   @Path("roles")
+   @GET
+   @Produces("text/plain")
+   public String roles() {
+      if (!debug.orElse(false)) {
+         throw new WebApplicationException(404);
+      }
+      if (identity.isAnonymous()) {
+         return "<anonymous>";
+      }
+      List<String> roles = new ArrayList<>(identity.getRoles());
+      roles.add(identity.getPrincipal().getName());
+      try {
+         return SET_ROLES.replace("?", '\'' + getSignedRoles(roles) + '\'');
+      } catch (NoSuchAlgorithmException e) {
+         return "<error>";
+      }
    }
 
    CloseMe withRoles(EntityManager em, Iterable<String> roles) {
