@@ -260,7 +260,14 @@ export default () => {
                 <CardBody>
                     <Tabs>
                        <Tab key="schema" eventKey={0} title="JSON schema" style={{ height: "100%" }} onClick={ () => setActiveTab(0) }/>
-                       <Tab key="extractors" eventKey={1} title="Schema extractors" onClick={ () => setActiveTab(1) }/>
+                       <Tab key="extractors" eventKey={1} title="Schema extractors" onClick={ () => {
+                           /* When we switch tab the editor gets unmounted; getValue() would return empty string */
+                           const value = editor.current?.getValue()
+                           if (value) {
+                              setEditorSchema(value);
+                           }
+                           setActiveTab(1)
+                        } }/>
                     </Tabs>
                     { activeTab === 0 &&
                     <div style={{ height: "600px" }}>
@@ -287,7 +294,7 @@ export default () => {
                                      validated={ !(e.jsonpath && e.jsonpath.trim().startsWith("$")) && (!e.validationResult || e.validationResult.valid) ? "default" : "error"}
                                      helperTextInvalid={ e.jsonpath && e.jsonpath.trim().startsWith("$") ? "JSON path must not start with '$'" : (e.validationResult?.reason || "")  }>
                               <TextInput id="jsonpath"
-                                         value={e.jsonpath}
+                                         value={e.jsonpath || ""}
                                          isReadOnly={!isTester}
                                          validated={!e.jsonpath || !e.jsonpath.trim().startsWith("$") ? "default" : "error"}
                                          onChange={newValue => {
@@ -336,12 +343,18 @@ export default () => {
                   <ActionGroup style={{ marginTop: 0 }}>
                       <Button variant="primary"
                           onClick={e => {
+                              let savedSchema;
+                              if (activeTab == 0) {
+                                 savedSchema = editor.current?.getValue() || "{}"
+                              } else {
+                                 savedSchema = editorSchema;
+                              }
                               let newSchema: Schema = {
                                   id: schemaId !== "_new" ? parseInt(schemaId) : 0,
                                   name,
                                   uri: uri || "", // TODO require URI set?
                                   description,
-                                  schema: JSON.parse(editor.current?.getValue() || "null"),
+                                  schema: JSON.parse(savedSchema),
                                   testPath,
                                   startPath,
                                   stopPath,
