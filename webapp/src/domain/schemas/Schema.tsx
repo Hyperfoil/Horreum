@@ -60,7 +60,7 @@ export default () => {
     const [startPath, setStartPath] = useState(schema?.startPath || "")
     const [stopPath, setStopPath] = useState(schema?.stopPath || "")
     const [descriptionPath, setDescriptionPath] = useState(schema?.descriptionPath || "")
-    const [editorSchema, setEditorSchema] = useState(toString(schema?.schema) || "{}")
+    const [editorSchema, setEditorSchema] = useState(schema?.schema ? toString(schema.schema) : undefined)
 
     const dispatch = useDispatch();
     useEffect(() => {
@@ -82,7 +82,7 @@ export default () => {
         if (schema && schema.access) {
             setAccess(schema.access)
         }
-        setEditorSchema(toString(schema?.schema) || "{}")
+        setEditorSchema(schema?.schema ? toString(schema.schema) : undefined)
     }, [schema])
      // TODO editor types
     const editor = useRef<ValueGetter>();
@@ -165,7 +165,7 @@ export default () => {
                                 <FormGroup label="URI" isRequired={true} fieldId="schemaURI" helperTextInvalid="Must provide a valid URI">
                                    <>
                                    <div style={{ display: "flex" }}>
-                                   { (!uri || uri === "") && isTester &&
+                                   { (!uri || uri === "") && isTester && editor.current?.getValue() &&
                                    <Tooltip content={"Import URI from the schema"}>
                                       <Button variant="control"
                                               style={{ float: "left" }}
@@ -269,15 +269,27 @@ export default () => {
                            setActiveTab(1)
                         } }/>
                     </Tabs>
-                    { activeTab === 0 &&
-                    <div style={{ height: "600px" }}>
-                       <Editor
-                         value={editorSchema || "{}"}
-                         setValueGetter={e => { editor.current = e }}
-                         options={{ mode: "application/ld+json" }}
-                       />
-                    </div>
-                    }
+                    { activeTab === 0 && <>
+                        { editorSchema &&
+                            <div style={{ height: "600px" }}>
+                                <Editor
+                                    value={editorSchema}
+                                    setValueGetter={e => { editor.current = e }}
+                                    options={{ mode: "application/ld+json" }}
+                                />
+                            </div>
+                        }
+                        { !editorSchema && <>
+                            This schema does not have a validation JSON schema defined.<br />
+                            <Button onClick={ () => {
+                                setEditorSchema(JSON.stringify({
+                                    "$id": uri,
+                                    "$schema": "http://json-schema.org/draft-07/schema#",
+                                    "type": "object"
+                                }, undefined, 2))
+                            }}>Add validation schema</Button>
+                        </>}
+                    </>}
                     { activeTab === 1 && extractors.filter((e: Extractor) => !e.deleted).map((e: Extractor) => (<>
                        <Form isHorizontal={true} style={{ gridGap: "2px", marginBottom: "10px", paddingRight: "40px", position: "relative" }}>
                           <FormGroup label="Accessor" fieldId="accessor">
@@ -345,7 +357,7 @@ export default () => {
                           onClick={e => {
                               let savedSchema;
                               if (activeTab == 0) {
-                                 savedSchema = editor.current?.getValue() || "{}"
+                                 savedSchema = editor.current?.getValue()
                               } else {
                                  savedSchema = editorSchema;
                               }
@@ -354,7 +366,7 @@ export default () => {
                                   name,
                                   uri: uri || "", // TODO require URI set?
                                   description,
-                                  schema: JSON.parse(savedSchema),
+                                  schema: savedSchema ? JSON.parse(savedSchema) : null,
                                   testPath,
                                   startPath,
                                   stopPath,
@@ -364,7 +376,7 @@ export default () => {
                                   token: null
                               }
                               actions.add(newSchema)(dispatch)
-                                     .then(() => Promise.all(extractors.filter(e => e.changed || e.deleted).map(e => api.addOrUpdateExtractor(e))))
+                                     .then(() => Promise.all(extractors.filter(e => e.changed || (e.deleted && e.accessor !== "")).map(e => api.addOrUpdateExtractor(e))))
                                      .then(() => setGoBack(true))
                                      .catch(e => {
                                         dispatch(alertAction("SAVE_SCHEMA", "Failed to save the schema", e, constraintValidationFormatter("the saved schema")))
