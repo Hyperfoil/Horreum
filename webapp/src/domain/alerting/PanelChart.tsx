@@ -4,14 +4,11 @@ import { AutoSizer } from 'react-virtualized';
 import {
     CartesianGrid,
     Legend,
-    LegendPayload,
     Line,
     LineChart,
-    LineType,
     ReferenceDot,
     ReferenceLine,
     Tooltip,
-    TooltipProps,
     XAxis,
     YAxis,
 } from 'recharts';
@@ -54,16 +51,16 @@ type PanelProps = {
 
 const colors = [ "#4caf50", "#FF0000", "#CC0066", "#0066FF", "#42a5f5", "#f1c40f"]
 
-export default (props: PanelProps) => {
+export default function PanelChart(props: PanelProps) {
     const now = useMemo(() => Date.now(), [])
     const [domain, setDomain] = useState<[number, number]>([now - props.timespan * 1000, now])
-    const [legend, setLegend] = useState<LegendPayload[]>()
+    const [legend, setLegend] = useState<any[]>() // Payload is not exported
     const [lines, setLines] = useState<any[]>()
     const [datapoints, setDatapoints] = useState<TimeseriesTarget[]>()
     const [annotations, setAnnotations] = useState<Annotation[]>()
     useEffect(() => {
         setDomain([now - props.timespan * 1000, now])
-    }, [props.timespan])
+    }, [props.timespan, now])
     useEffect(() => {
         fetchDatapoints(props.variables, props.tags, domain[0], domain[1]).then(response => {
             setLegend(response.map((tt, i) => ({
@@ -74,7 +71,7 @@ export default (props: PanelProps) => {
             })))
             setLines(response.map((tt, i) => (
                 <Line
-                    type={props.lineType as LineType}
+                    type={props.lineType as any} // should be CurveType but can't import that
                     dot={false}
                     key={tt.target}
                     dataKey={tt.target}
@@ -83,7 +80,7 @@ export default (props: PanelProps) => {
                 />)))
             setDatapoints(response)
         })
-    }, [domain, props.variables, props.tags])
+    }, [domain, props.variables, props.tags, props.lineType])
     useEffect(() => {
         fetchAllAnnotations(props.variables, props.tags, domain[0] as number, domain[1] as number).then(setAnnotations)
     }, [domain, props.variables, props.tags])
@@ -105,6 +102,7 @@ export default (props: PanelProps) => {
         })
         return [...series.values()].sort((a, b) => a.timestamp - b.timestamp)
     }, [datapoints])
+    const onChangeSelected = props.onChangeSelected
     const changes = useMemo(() => annotations?.map(a => {
         let value = undefined
         const tt = a.variableId && datapoints?.find(t => t.variableId === a.variableId)
@@ -123,7 +121,7 @@ export default (props: PanelProps) => {
                 stroke="red"
                 fill="red"
                 fillOpacity={0.3}
-                onClick={ () => props.onChangeSelected(a.changeId || 0, a.variableId || 0, a.runId || 0)}
+                onClick={ () => onChangeSelected(a.changeId || 0, a.variableId || 0, a.runId || 0)}
             />)
         } else {
             return (<ReferenceLine
@@ -133,7 +131,7 @@ export default (props: PanelProps) => {
                 ifOverflow="extendDomain"
             />)
         }
-    }) || [], [annotations, datapoints]);
+    }) || [], [annotations, datapoints, onChangeSelected]);
     return (<>
         <h2 style={{ width: "100%", textAlign: "center"}}>{ props.title }</h2>
         <div style={{ display: "flex", width: "100%"}}>
@@ -146,7 +144,7 @@ export default (props: PanelProps) => {
                 }}
             >&#8810;</Button>
             <div style={{ width: "100%", height: 450 }}>
-                { chartData.length == 0 && <EmptyState><Title headingLevel="h3">No datapoints in this range</Title></EmptyState>}
+                { chartData.length === 0 && <EmptyState><Title headingLevel="h3">No datapoints in this range</Title></EmptyState>}
                 { chartData.length > 0 &&
                 <AutoSizer disableHeight={true}>{({ height, width }) => (
                     <LineChart
@@ -176,7 +174,7 @@ export default (props: PanelProps) => {
                             domain={['dataMin', 'dataMax']}
                         />
                         <Legend iconType="line" payload={legend} align="left" />
-                        <Tooltip content={({active, payload, label}: TooltipProps) => {
+                        <Tooltip content={({active, payload, label}) => {
                             if (!active) {
                                 return null
                             }

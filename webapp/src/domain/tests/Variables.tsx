@@ -310,7 +310,7 @@ type VariablesProps = {
 }
 
 function sortByOrder(v1: VariableDisplay, v2: VariableDisplay) {
-    if (v1.group == v2.group) {
+    if (v1.group === v2.group) {
         return v1.order - v2.order
     } else if (!v1.group) {
         return -1;
@@ -350,7 +350,7 @@ function groupNames(vars: Variable[]) {
         .filter(g => !!g).map(g => g as string))].sort();
 }
 
-export default ({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) => {
+export default function Variables({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) {
     const [variables, setVariables] = useState<VariableDisplay[]>([])
     const [groups, setGroups] = useState<string[]>([])
     const calculations = useRef(new Array<ValueGetter | undefined>())
@@ -381,7 +381,7 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
             },
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
         )
-    }, [testId, reload])
+    }, [testId, reload, dispatch])
     const isTester = useTester(testOwner)
     funcsRef.current = {
         save: () => {
@@ -410,10 +410,6 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
         }
     }
 
-
-    if (!variables) {
-        return <Bullseye><Spinner /></Bullseye>
-    }
     const [recalculateOpen, setRecalculateOpen] = useState(false)
     const [copyOpen, setCopyOpen ] = useState(false)
     const addVariable = () => {
@@ -439,6 +435,9 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
 
     const [renameGroupOpen, setRenameGroupOpen] = useState(false)
     const [isLogOpen, setLogOpen] = useState(false)
+    if (!variables) {
+        return <Bullseye><Spinner /></Bullseye>
+    }
     return (<>
         <div style={{
             marginTop: "16px",
@@ -469,7 +468,7 @@ export default ({ testName, testId, testOwner, onModified, funcsRef }: Variables
                         v.group = to;
                     }
                 })
-                setVariables([... variables])
+                setVariables([ ...variables ])
                 setGroups([ ...groups.map(g => g === from ? to : g) ])
             }}
         />

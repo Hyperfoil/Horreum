@@ -5,7 +5,6 @@ import {
   useSortBy,
   useRowSelect,
   Column,
-  ColumnInstance,
   SortingRule,
   TableState,
   UseRowSelectRowProps,
@@ -18,8 +17,6 @@ import clsx from 'clsx';
 // We need to pass the same empty list to prevent re-renders
 const NO_DATA: {}[] = []
 const NO_SORT: SortingRule<any>[] = []
-
-interface TableColumn<D extends object> extends ColumnInstance<D>, UseSortByColumnProps<D> {}
 
 type TableProps<D extends object> = {
   columns: Column<D>[],
@@ -65,14 +62,14 @@ function Table<D extends object>({ columns, data, sortBy, isLoading, selected, o
   const rsState = state as UseRowSelectState<D>;
   useEffect(()=>{
       onSelected(rsState.selectedRowIds)
-  },[rsState.selectedRowIds])
+  }, [ rsState.selectedRowIds, onSelected ])
   const sortState = state as UseSortByState<D>
   useEffect(()=>{
       setCurrentSortBy(sortState.sortBy)
       if (onSortBy && sortState.sortBy) {
         onSortBy(sortState.sortBy)
       }
-  },[sortState.sortBy])
+  }, [ sortState.sortBy, onSortBy ])
   if (!data) {
      return (
         <Bullseye><Spinner /></Bullseye>

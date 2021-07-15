@@ -42,8 +42,7 @@ export function toEpochMillis(timestamp: any): number {
 }
 
 export function durationToMillis(duration: string): number | undefined {
-   const original = duration;
-   if (duration.length == 0) {
+   if (duration.length === 0) {
       return undefined
    }
    duration = duration.replaceAll(',', ' ').trim().toLowerCase()
@@ -56,7 +55,7 @@ export function durationToMillis(duration: string): number | undefined {
          duration = duration.substring(0, duration.length - 1).trimEnd()
          const lastSpace = duration.lastIndexOf(' ');
          const num = parseInt(duration.substring(lastSpace + 1))
-         if (num === NaN) {
+         if (isNaN(num)) {
             // console.error("Cannot parse '" + u + "' from " + original)
             failed = true
             return

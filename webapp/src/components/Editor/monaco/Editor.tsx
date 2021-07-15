@@ -1,29 +1,22 @@
 import React, {useRef} from 'react';
 
-import Editor, {Monaco, monaco as getMonaco, EditorProps, EditorDidMount} from '@monaco-editor/react';
+import MonacoEditor, {useMonaco, OnMount} from '@monaco-editor/react';
 import { editor } from 'monaco-editor/esm/vs/editor/editor.api';
-
-let monaco: Monaco;
-
-getMonaco
-  .init()
-  .then(_monaco => {
-    monaco = _monaco;
-      /* here is the instance of monaco, so you can use the `monaco.languages` or whatever you want */
-  })
-  .catch(error => console.error('An error occurred during initialization of Monaco: ', error));
 
 export type ValueGetter = {
     getValue(): string | undefined
 }
 
-export default ({value = "{}", language="json", setValueGetter = (_: ValueGetter) => {}, options = {} }) => {
-
+export default function Editor({value = "{}", language="json", setValueGetter = (_: ValueGetter) => {}, options = {} }) {
+    const monaco = useMonaco()
     const valueGetter = useRef<() => string>();
 
-    const editorDidMount: EditorDidMount = (getEditorValue: () => string, editor: editor.IStandaloneCodeEditor) => {
-        valueGetter.current = getEditorValue;
+    const onMount: OnMount = (editor: editor.IStandaloneCodeEditor) => {
+        valueGetter.current = () => editor.getValue();
         setValueGetter({ getValue: () => valueGetter.current ? valueGetter.current() : undefined });
+        if (!monaco) {
+            return
+        }
         editor.addAction({
             id: 'my-unique-id',
             label: 'my label',
@@ -41,15 +34,15 @@ export default ({value = "{}", language="json", setValueGetter = (_: ValueGetter
     }
 
     return (
-        <Editor
+        <MonacoEditor
             value={value}
             language="json"
-            theme="dark" //light | dark
+            theme="vs-dark"
             options={{
                 //renderLineHighlight : 'none',
                 ...options
             }}
-            editorDidMount={editorDidMount}
+            onMount={onMount}
         />
     )
 }

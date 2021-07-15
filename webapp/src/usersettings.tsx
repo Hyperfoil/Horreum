@@ -21,7 +21,6 @@ import {
     EmptyState,
     Form,
     FormGroup,
-    Modal,
     Select,
     SelectOption,
     Spinner,
@@ -185,7 +184,7 @@ const SettingsList = ({ title, data, methods, onUpdate, modified, saving, onSave
 
 const EMPTY = { id: -1, method: "", data: "", disabled: false }
 
-export const UserSettings = () => {
+export function UserSettings() {
     const dispatch = useDispatch()
     const profile = useSelector(userProfileSelector)
     const [methods, setMethods] = useState<string[]>([])
@@ -204,7 +203,7 @@ export const UserSettings = () => {
             )
         }
     }
-    useEffect(loadPersonal, [profile])
+    useEffect(loadPersonal, [profile, dispatch])
     const [activeTab, setActiveTab] = useState<number | string>(0)
     const [requestedTab, setRequestedTab] = useState<number | string>(0)
     const [modalOpen, setModalOpen] = useState(false)

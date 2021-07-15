@@ -47,7 +47,7 @@ export type TabFunctions = {
 
 export type TabFunctionsRef = MutableRefObject<TabFunctions | undefined>
 
-export default () => {
+export default function Test() {
     const params = useParams<Params>();
     const [testId, setTestId] = useState(params.testId === "_new" ? 0 : parseInt(params.testId))
     const history = useHistory()
@@ -75,11 +75,11 @@ export default () => {
             setLoaded(false)
             thunkDispatch(actions.fetchTest(testId)).finally(() => setLoaded(true))
         }
-    }, [dispatch, testId])
+    }, [dispatch, thunkDispatch, testId])
 
     useEffect(() => {
         document.title = (testId === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
-    }, [test])
+    }, [test, testId])
     const isTester = useTester(test ? test.owner : undefined)
 
     const [saving, setSaving] = useState(false)
@@ -156,7 +156,7 @@ export default () => {
                         <Tab key="vars" eventKey={3} isHidden={ testId <= 0 } title="Regression variables">
                             <Variables
                                 testId={testId}
-                                testName={ test && test.name || ""}
+                                testName={ (test && test.name) || ""}
                                 testOwner={ test ? test.owner : undefined }
                                 onModified={ setModified }
                                 funcsRef={ variablesFuncsRef }

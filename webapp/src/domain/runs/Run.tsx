@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from "react-router"
 import { useSelector, useDispatch } from 'react-redux'
-import { DateTime } from 'luxon';
 import { Spinner, Bullseye } from '@patternfly/react-core';
 import jsonpath from 'jsonpath';
 
@@ -32,7 +31,7 @@ import { NavLink } from 'react-router-dom';
 import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams } from 'react-autosuggest'
 import { Description } from './components'
 
-export default () => {
+export default function Run() {
     const { id: stringId } = useParams<any>();
     const id = parseInt(stringId)
     const run = useSelector(selectors.get(id));
@@ -329,7 +328,10 @@ export default () => {
                     { run.data &&
                     <Editor
                         value={data}
-                        options={{ mode: "application/ld+json" }}
+                        options={{
+                           mode: "application/ld+json",
+                           readOnly: true,
+                        }}
                     />
                     }
                 </CardBody>

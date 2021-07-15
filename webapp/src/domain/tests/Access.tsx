@@ -34,7 +34,7 @@ import {
 } from '../../alerts'
 
 import { addToken, revokeToken, updateAccess } from './actions';
-import { Test, TestDispatch, Token } from './reducers'
+import { Test, TestDispatch } from './reducers'
 
 import {TabFunctionsRef} from './Test'
 

@@ -159,7 +159,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
         case actionTypes.REVOKE_TOKEN: {
             let test = state.byId?.get(action.testId)
             if (test) {
-                state.byId = state.byId?.set(action.testId, { ...test, tokens: test.tokens.filter(t => t.id != action.tokenId ) })
+                state.byId = state.byId?.set(action.testId, { ...test, tokens: test.tokens.filter(t => t.id !== action.tokenId ) })
             }
         }
         break;

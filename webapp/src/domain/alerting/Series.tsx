@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {  useDispatch } from 'react-redux'
 import { fetchDashboard } from './api'
 import { Panel } from './types'
@@ -100,7 +100,7 @@ const LineTypeSelect = (props: LineTypeSelectProps) => {
     </Select>)
 }
 
-export default () => {
+export default function Series() {
     const history = useHistory()
     const params = new URLSearchParams(history.location.search)
     const test = params.get("test")
@@ -115,15 +115,17 @@ export default () => {
     const [timespan, setTimespan] = useState(31 * 86400)
     const [lineType, setLineType] = useState("linear")
 
-    const doFetchDashboard = (testId: number, tags?: string) => fetchDashboard(testId, tags).then(response => {
-        setDashboardUrl(response.url)
-        setPanels(response.panels)
-    }, error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error)))
+    const doFetchDashboard = useCallback((testId: number, tags?: string) =>
+        fetchDashboard(testId, tags).then(response => {
+            setDashboardUrl(response.url)
+            setPanels(response.panels)
+        }, error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error)))
+    , [dispatch])
     useEffect(() => {
         if (selectedTest) {
             doFetchDashboard(selectedTest.id)
         }
-    }, [selectedTest])
+    }, [selectedTest, doFetchDashboard])
 
     useEffect(() => {
         if (!selectedTest) {
@@ -132,7 +134,7 @@ export default () => {
         if (!tags) {
             history.replace(history.location.pathname + "?test=" + selectedTest)
         }
-    }, [selectedTest])
+    }, [selectedTest, history, tags])
     useEffect(() => {
         if (currentTags) {
             history.replace(history.location.pathname + "?test=" + selectedTest + "&tags=" + currentTags)
@@ -140,9 +142,10 @@ export default () => {
                 doFetchDashboard(selectedTest.id, currentTags.toString())
             }
         }
-    }, [currentTags])
+    }, [currentTags, doFetchDashboard, history, selectedTest])
     const [selectedChange, setSelectedChange] = useState<number>()
     const [selectedVariable, setSelectedVariable] = useState<number>()
+    const onTagsLoaded = useCallback(tags => setRequiresTags(!!tags && tags.length > 1), [])
     return (
         <Card>
             <CardHeader>
@@ -168,7 +171,7 @@ export default () => {
                             onSelect={ setCurrentTags }
                             tagFilter={ t => !!t }
                             showIfNoTags={false}
-                            onTagsLoaded={ tags => setRequiresTags(!!tags && tags.length > 1) }
+                            onTagsLoaded={ onTagsLoaded  }
                         /> }
                         { selectedTest && <>
                         <NavLink className="pf-c-button pf-m-primary"
@@ -242,7 +245,7 @@ export default () => {
                         <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
                     </EmptyState>
                 }
-                { selectedTest && panels.length == 0 &&
+                { selectedTest && panels.length === 0 &&
                     <EmptyState>
                         <Title headingLevel="h2">Test { selectedTest.toString() } does not define any regression variables</Title>
                         <NavLink

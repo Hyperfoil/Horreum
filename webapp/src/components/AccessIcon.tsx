@@ -4,7 +4,7 @@ import {
    LockedIcon,
 } from '@patternfly/react-icons'
 
-export default ({access}: { access: number | string}) => {
+export default function AccessIcon({access}: { access: number | string}) {
    var color;
    var text;
    switch (access) {

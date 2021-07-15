@@ -161,7 +161,7 @@ function hasNonTrivialAccessor(test: Test, vcIndex: number) {
         vc.accessors.indexOf(",") >= 0
 }
 
-export default () => {
+export default function TestRuns() {
     const { testId: stringTestId } = useParams<any>();
     const testId = parseInt(stringTestId)
 
@@ -173,7 +173,7 @@ export default () => {
     const [sort, setSort] = useState("start")
     const [direction, setDirection] = useState("descending")
     const [tags, setTags] = useState<SelectOptionObject>()
-    const pagination = { page, perPage, sort, direction }
+    const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction ])
     const tableColumns = useMemo(() => {
         const rtrn = [ ...staticColumns ]
         columns.forEach((col, index) => {
@@ -189,7 +189,7 @@ export default () => {
         })
         rtrn.push(menuColumn)
         return rtrn;
-    }, [columns]);
+    }, [columns, test]);
 
     const dispatch = useDispatch();
     const [ showTrashed, setShowTrashed ] = useState(false)
@@ -199,8 +199,8 @@ export default () => {
         dispatch(fetchTest(testId));
     }, [dispatch, testId])
     useEffect(() => {
-        dispatch(byTest(testId, pagination, showTrashed, tags && tags.toString() || ""))
-    }, [dispatch, showTrashed, page, perPage, sort, direction, tags])
+        dispatch(byTest(testId, pagination, showTrashed, tags?.toString() || ""))
+    }, [dispatch, showTrashed, page, perPage, sort, direction, tags, pagination, testId])
     useEffect(() => {
         document.title = (test ? test.name : "Loading...") + " | Horreum"
         if (test && test.defaultView) {
@@ -209,25 +209,26 @@ export default () => {
     }, [test])
     const isLoading = useSelector(selectors.isLoading)
 
+    const compareUrl = test ? test?.compareUrl : undefined
     const [actualCompareUrl, compareError] = useMemo(() => {
-       if ( test && test.compareUrl && typeof test.compareUrl === "function" ) {
+       if ( compareUrl && typeof compareUrl === "function" ) {
           try {
              const rows = Object.keys(selectedRows).map(id => runs ? runs[parseInt(id)].id : [])
              if (rows.length >= 2) {
-                return [test.compareUrl(rows), undefined]
+                return [compareUrl(rows), undefined]
              }
           } catch (e) {
              return [undefined, e]
           }
        }
        return [undefined, undefined]
-    }, [test ? test.compareUrl : undefined, runs, selectedRows])
+    }, [compareUrl, runs, selectedRows])
     const hasError = !!compareError
     useEffect(() => {
        if (compareError) {
           dispatch(alertAction("COMPARE_FAILURE", "Compare function failed", compareError))
        }
-    }, [hasError])
+    }, [hasError, compareError, dispatch])
 
     return (
         <PageSection>
@@ -236,7 +237,7 @@ export default () => {
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
                              style={{ width: "70%", display: "flex" }}>
                         <ToolbarGroup style={{ flexGrow: 100 }}>
-                            <ToolbarItem className="pf-u-mr-xl">{`Test: ${test && test.name || testId}`} <NavLink to={ `/test/${testId}` } ><EditIcon /></NavLink></ToolbarItem>
+                            <ToolbarItem className="pf-u-mr-xl">{`Test: ${(test && test.name) || testId}`} <NavLink to={ `/test/${testId}` } ><EditIcon /></NavLink></ToolbarItem>
                         </ToolbarGroup>
                         { test && test.compareUrl &&
                         <ToolbarGroup>

@@ -1,6 +1,5 @@
 import React from 'react';
 import fetchival from 'fetchival';
-import apiConfig from './config';
 import store from "../../store"
 import { alertAction, ADD_ALERT } from "../../alerts"
 import { TryLoginAgain } from "../../auth"
@@ -37,6 +36,7 @@ const deserialize = (input: any): any =>{
     }else if (typeof input === "string"){
         if (input.includes("=>") || input.startsWith("function ")) {
             try {
+               // eslint-disable-next-line
                return new Function("return "+input)();
             } catch (e) {
                console.warn("Error deserializing " + input)
@@ -66,7 +66,7 @@ export const fetchApi = (endPoint: string, payload: any = {}, method: string = '
       if (keycloak != null && keycloak.token != null) {
          authHeaders.Authorization = "Bearer " + keycloak.token;
       }
-      return fetchival(`${apiConfig.url}${endPoint}`, {
+      return fetchival(endPoint, {
          headers: { ...authHeaders, ...headers },
          responseAs: responseAs,
       })[method.toLowerCase()](serialized)

@@ -43,30 +43,34 @@ type TagsSelectProps = {
     onTagsLoaded?(tags: any[] | undefined): void,
 }
 
-export default (props: TagsSelectProps) => {
+export default function TagsSelect(props: TagsSelectProps) {
     const [open, setOpen] = useState(false)
     const [availableTags, setAvailableTags] = useState<any[]>([])
 
     const dispatch = useDispatch()
+    const testId = props.testId
+    const onTagsLoaded = props.onTagsLoaded
+    const initialTags = props.initialTags
+    const onSelect = props.onSelect
     useEffect(() => {
-        if (props.onTagsLoaded) props.onTagsLoaded(undefined)
-        if (!props.testId) {
+        if (onTagsLoaded) onTagsLoaded(undefined)
+        if (!testId) {
             return;
         }
-        fetchTags(props.testId).then((response: any[]) => {
+        fetchTags(testId).then((response: any[]) => {
             setAvailableTags(response)
             let tags: any = undefined
-            if (props.initialTags) {
-                tags = response.find(t => convertTags(t) === props.initialTags)
+            if (initialTags) {
+                tags = response.find(t => convertTags(t) === initialTags)
             } else if (response.length === 1) {
                 tags = response[0]
             }
-            props.onSelect(tags && { ...tags, toString: () => convertTags(tags) } || undefined)
-            if (props.onTagsLoaded) {
-                props.onTagsLoaded(response)
+            onSelect((tags && { ...tags, toString: () => convertTags(tags) }) || undefined)
+            if (onTagsLoaded) {
+                onTagsLoaded(response)
             }
         }, error => dispatch(alertAction("TAGS_FETCH", "Failed to fetch test tags", error)))
-    }, [props.testId])
+    }, [testId, onTagsLoaded, initialTags, onSelect, dispatch])
     let options = []
     let hasAllTags = false
     if (props.addAllTagsOption && (!props.tagFilter || props.tagFilter({}))) {
@@ -77,7 +81,7 @@ export default (props: TagsSelectProps) => {
     filtered.map(t => ({ ...t, toString: () => convertTags(t) }))
         .forEach(o => options.push(o))
 
-    const empty = (!filtered || filtered.length == 0) && !hasAllTags
+    const empty = (!filtered || filtered.length === 0) && !hasAllTags
     if (empty && !props.showIfNoTags) {
         return <></>
     }

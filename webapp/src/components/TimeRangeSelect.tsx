@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import {
     Select,
@@ -18,17 +18,19 @@ export type TimeRange = {
 
 function TimeRangeSelect(props: TimeRangeSelectProps) {
     const [isOpen, setOpen] = useState(false)
-    const options: TimeRange[] = [
+    const options: TimeRange[] = useMemo(() => [
         { toString: () => "all" },
         { from: Date.now() - 31 * 86_400_000, to: undefined, toString: () => "last month"},
         { from: Date.now() - 7 * 86_400_000, to: undefined, toString: () => "last week"},
         { from: Date.now() - 86_400_000, to: undefined, toString: () => "last 24 hours"},
-    ]
+    ], [])
+    const selection = props.selection
+    const onSelect = props.onSelect
     useEffect(() => {
-        if (!props.selection) {
-            props.onSelect(options[0])
+        if (!selection) {
+            onSelect(options[0])
         }
-    }, [])
+    }, [options, selection, onSelect])
     return (<Select
         onToggle={setOpen}
         onSelect={(e, selection) => {

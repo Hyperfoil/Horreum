@@ -13,7 +13,7 @@ function compare(a: any, b: any, desc: boolean): number {
     } else {
         const an = Number(a)
         const bn = Number(b)
-        if (an === NaN || bn === NaN) {
+        if (isNaN(an) || isNaN(bn)) {
             return String(a).localeCompare(String(b)) * (desc ? -1 : 1)
         } else {
             return (an - bn) * (desc ? -1 : 1)

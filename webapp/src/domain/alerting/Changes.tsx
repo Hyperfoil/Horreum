@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import {
     ActionGroup,
@@ -144,7 +144,7 @@ export const Changes = ({ varId, testOwner, selectedChangeId } : ChangesProps) =
             response => setChanges(response),
             error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
         )
-    }, [varId])
+    }, [varId, dispatch])
     const isTester = useTester(testOwner)
     const columns: C[] = [
         {
@@ -186,7 +186,7 @@ export const Changes = ({ varId, testOwner, selectedChangeId } : ChangesProps) =
         })
     }
     // TODO: this doesn't work, table won't get updated when selected changes
-    const selected = { [changes.findIndex(c => c.id == selectedChangeId)]: true }
+    const selected = { [changes.findIndex(c => c.id === selectedChangeId)]: true }
     return (
         <Table columns={columns} data={changes} selected={selected}/>
     )
@@ -208,7 +208,7 @@ export const ChangesTabs = ({ variables, testOwner, selectedChangeId, selectedVa
             setExpanded(true)
             setActiveTab(index)
         }
-    }, [selectedVariableId])
+    }, [selectedVariableId, variables])
     const name = variables[0].group || variables[0].name;
     return (
         <ExpandableSection toggleText={ isExpanded ? "Hide changes in " + name : "Show changes in " + name }

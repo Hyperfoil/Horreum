@@ -1,4 +1,4 @@
-import React, { useEffect, useState, MutableRefObject } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
 
 import {
@@ -34,7 +34,7 @@ type HookUrlSelectorProps = {
     extraCheck?(value: string): string | boolean
 }
 
-function HookUrlSelector(props: HookUrlSelectorProps) {
+export default function HookUrlSelector(props: HookUrlSelectorProps) {
     const dispatch = useDispatch();
     const [prefixes, setPrefixes] = useState<AllowedHookPrefix[]>([{ id: -1, prefix: ""}])
     useEffect(() => {
@@ -110,5 +110,3 @@ function HookUrlSelector(props: HookUrlSelectorProps) {
         </FormGroup>
     )
 }
-
-export default HookUrlSelector;

@@ -89,7 +89,7 @@ type ViewsProps = {
     onModified(modified: boolean): void,
 }
 
-export default ({ testId, testView, testOwner, funcsRef, onModified }: ViewsProps) => {
+export default function Views({ testId, testView, testOwner, funcsRef, onModified }: ViewsProps) {
     const isTester = useTester(testOwner)
     const renderRefs = useRef(new Array<ValueGetter | undefined>(testView.components.length));
     const [view, setView] = useState(testView)

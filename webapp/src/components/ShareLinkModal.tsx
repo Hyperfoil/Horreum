@@ -16,7 +16,7 @@ type ShareLinkModalProps = {
    onDrop(): void,
 }
 
-export default ({ isOpen, onClose, link, isOwner, onReset, onDrop }: ShareLinkModalProps) => {
+export default function ShareLinkModal({ isOpen, onClose, link, isOwner, onReset, onDrop }: ShareLinkModalProps) {
    return (
       <Modal variant="small"
              title="Shareable link"

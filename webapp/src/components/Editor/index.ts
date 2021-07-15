@@ -46,6 +46,7 @@ export const toString = (obj: any, left = 0, step = 2): string => {
 export const fromEditor = (str?: string) => {
     try {
         if (isString(str)) {
+            // eslint-disable-next-line
             const factory = new Function("return " + str)
             const newValue = factory()
             return newValue

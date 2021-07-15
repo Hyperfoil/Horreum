@@ -13,7 +13,7 @@ type ConfirmDeleteModalProps = {
    extra?: string
 }
 
-export default ({ isOpen, onClose, onDelete, description, extra }: ConfirmDeleteModalProps) => {
+export default function ConfirmDeleteModal({ isOpen, onClose, onDelete, description, extra }: ConfirmDeleteModalProps) {
    return (<Modal variant="small"
                   title="Confirm deletion"
                   isOpen={isOpen}

@@ -20,7 +20,7 @@ type ChangeAccessModalProps = {
   onUpdate(): void,
 }
 
-export default ({ isOpen, onClose, owner, onOwnerChange, access, onAccessChange, onUpdate }: ChangeAccessModalProps) => {
+export default function ChangeAccessModal({ isOpen, onClose, owner, onOwnerChange, access, onAccessChange, onUpdate }: ChangeAccessModalProps) {
    return (
       <Modal variant="small"
              title="Change access rights"

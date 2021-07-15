@@ -47,7 +47,6 @@ import {
 import { alertAction } from '../../alerts'
 import { CellProps, Column, UseSortByColumnOptions } from 'react-table';
 import { Test, TestDispatch } from './reducers';
-import { tokenToString } from 'typescript';
 import { Access } from '../../auth'
 
 type WatchDropdownProps = {
@@ -143,7 +142,7 @@ function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
   }, config]
 }
 
-export default ()=>{
+export default function AllTests() {
     document.title = "Tests | Horreum"
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<TestDispatch>()
@@ -203,7 +202,7 @@ export default ()=>{
             )
           }
         }
-    ], [dispatch])
+    ], [dispatch, thunkDispatch])
     const allTests = useSelector(selectors.all);
     useEffect(()=>{
         dispatch(fetchSummary())

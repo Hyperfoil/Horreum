@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useDispatch } from 'react-redux'
 
 import { addOrUpdateExtractor, listExtractors } from '../domain/schemas/api'
@@ -60,7 +60,7 @@ type AccessorsProps = {
    allowArray?: boolean,
 }
 
-export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowArray}: AccessorsProps) => {
+export default function Accessors({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowArray}: AccessorsProps) {
    const [created, setCreated] = useState<Extractor>({ accessor: ""})
    const onCreate = (newValue: string) => {
          setCreated({ accessor: newValue })
@@ -71,6 +71,7 @@ export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowA
    const [isExpanded, setExpanded] = useState(false)
    const [options, setOptions] = useState(value.map(v => ({ accessor: v })))
    const [selected, setSelected] = useState(value)
+   const onSchemaChange = useCallback(value => { setCreated(c => ({ ...c, schema: value }))}, [])
    useEffect(() => {
       listExtractors().then((response: Extractor[]) => {
          setOptions(response)
@@ -166,7 +167,7 @@ export default ({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowA
             <FormGroup label="Schema" isRequired={true} fieldId="extractor-schema" >
                <SchemaSelect value={ created.schema || "" }
                              disabled={ disabledSchemas }
-                             onChange={ value => { setCreated({ ...created, schema: value })}} />
+                             onChange={ onSchemaChange } />
             </FormGroup>
             <FormGroup
                label="JSON path"

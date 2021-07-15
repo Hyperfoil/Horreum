@@ -14,7 +14,7 @@ type AccessChoiceProps = {
    onChange(access: Access): void,
 }
 
-export default ({checkedValue, onChange}: AccessChoiceProps) => {
+export default function AccessChoice({checkedValue, onChange}: AccessChoiceProps) {
    return (<>
       <Radio id="access-0" name="PUBLIC"
              isChecked={checkedValue === 0}

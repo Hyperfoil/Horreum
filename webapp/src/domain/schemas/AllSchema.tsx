@@ -16,7 +16,6 @@ import { alertAction } from '../../alerts'
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import ActionMenu, {
-    MenuItem,
     useShareLink,
     useChangeAccess,
     useDelete,
@@ -26,7 +25,7 @@ import { Schema, SchemaDispatch } from './reducers';
 
 type C = CellProps<Schema>
 
-export default () => {
+export default function AllSchema() {
     document.title = "Schemas | Horreum"
     const thunkDispatch = useDispatch<SchemaDispatch>()
     const dispatch = useDispatch()
@@ -82,7 +81,7 @@ export default () => {
                 )
             }
         }
-    ], [dispatch])
+    ], [dispatch, thunkDispatch])
     const list = useSelector(selectors.all);
     useEffect(() => {
         dispatch(actions.all())

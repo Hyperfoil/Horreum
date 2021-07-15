@@ -14,7 +14,7 @@ type SaveChangesModalProps = {
     onReset(): void,
 }
 
-export default ({ isOpen, onClose, onSave, onReset} : SaveChangesModalProps) => {
+export default function SaveChangesModal({ isOpen, onClose, onSave, onReset} : SaveChangesModalProps) {
     const [saving, setSaving] = useState(false)
     return (
     <Modal

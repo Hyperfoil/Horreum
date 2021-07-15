@@ -25,7 +25,7 @@ type RecalculateModalProps = {
     testId: number,
 }
 
-export default (props : RecalculateModalProps) => {
+export default function RecalculateModal(props : RecalculateModalProps) {
     const [progress, setProgress] = useState(-1)
     const dispatch = useDispatch()
     const [debug, setDebug] = useState(false)

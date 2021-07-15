@@ -28,7 +28,7 @@ import AddHookModal from './AddHookModal';
 import { Column } from 'react-table';
 import { Hook, HooksDispatch } from './reducers';
 
-function HookList() {
+export default function HookList() {
     const dispatch = useDispatch<HooksDispatch>();
     const tests = useSelector(allTests)
     useEffect(() => {
@@ -48,7 +48,7 @@ function HookList() {
                     if (arg.cell.value === -1) {
                         return "All tests"
                     }
-                    const test = tests.find(t => t.id == arg.cell.value)
+                    const test = tests.find(t => t.id === arg.cell.value)
                     return test ? test.name : "Unknown test";
                 } else {
                     return "";
@@ -101,5 +101,3 @@ function HookList() {
           </Card>
     </>)
 }
-
-export default HookList

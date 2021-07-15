@@ -3,7 +3,7 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux'
 
 import {
-  Alert,
+  Alert as PatternflyAlert,
   AlertActionCloseButton,
   AlertVariant,
 } from '@patternfly/react-core';
@@ -125,7 +125,7 @@ export const defaultFormatError = (e: any) => {
 
 const alertsSelector = (state: State) => state.alerts
 
-export default () => {
+function Alerts() {
    const alerts = useSelector(alertsSelector)
    const dispatch = useDispatch()
    if (alerts.length === 0) {
@@ -133,13 +133,15 @@ export default () => {
    }
    return (<div style={{ position: "absolute", zIndex: 1000, width: "100%" }}>
       { alerts.map(alert => (
-         <Alert variant={ alert.variant || "warning" }
+         <PatternflyAlert variant={ alert.variant || "warning" }
                 title={ alert.title || "Title is missing" }
                 actionClose={<AlertActionCloseButton onClose={() => {
                     dispatch({ type: CLEAR_ALERT, alert: { type: alert.type }})
                 }} />} >
             { alert.content }
-         </Alert>
+         </PatternflyAlert>
       ))}
       </div>)
 }
+
+export default Alerts

@@ -41,7 +41,7 @@ import { Description, ExecutionTime, Menu, RunTags } from './components'
 
 type C = CellProps<Run>
 
-export default ()=>{
+export default function AllRuns() {
     document.title = "Runs | Horreum"
     const [showTrashed, setShowTrashed] = useState(false)
 
@@ -50,7 +50,7 @@ export default ()=>{
     const [perPage, setPerPage] = useState(20)
     const [sort, setSort] = useState("start")
     const [direction, setDirection] = useState("descending")
-    const pagination = { page, perPage, sort, direction }
+    const pagination = useMemo(() => ({ page, perPage, sort, direction }), [ page, perPage, sort, direction ])
     const runs = useSelector(selectors.filter(pagination))
     const runCount = useSelector(selectors.count)
 
@@ -115,17 +115,17 @@ export default ()=>{
           disableSortBy: true,
           Cell: (arg: C) => Menu(arg.row.original)
         }
-    ],[dispatch])
+    ],[])
 
     const selectedRoles = useSelector(selectors.selectedRoles) || isAuthenticated ? ONLY_MY_OWN : SHOW_ALL
 
-    const runFilter = (roles: string) => {
+    const runFilter = useMemo(() => (roles: string) => {
        setFilterLoading(true)
        dispatch(list(filterQuery, matchAll, roles, pagination, showTrashed, success => {
          setFilterLoading(false);
          setFilterValid(success);
        }))
-    };
+    }, [ filterQuery, matchAll, pagination, showTrashed, dispatch ])
     const handleMatchAll = (checked: boolean, evt: React.ChangeEvent<any>) => {
        if (checked) setMatchAll(evt.target.value === "true")
     }
@@ -136,7 +136,7 @@ export default ()=>{
         dispatch(registerAfterLogin("reload_runs", () => {
            runFilter(selectedRoles.key)
         }))
-    },[dispatch, showTrashed, page, perPage, sort, direction])
+    },[dispatch, showTrashed, page, perPage, sort, direction, selectedRoles.key, runFilter ])
 
     const inputProps: InputProps<string> = {
        placeholder: "Enter search query",
@@ -217,7 +217,7 @@ export default ()=>{
                                     return value;
                                  }}
                                  renderSuggestion={v => <div>{v}</div>}
-                                 renderInputComponent={ (inputProps: InputProps<string>) => (
+                                 renderInputComponent={ inputProps => (
                                     <input {...inputProps as any}
                                            {... (filterLoading ? { readOnly : true } : {}) }
                                            className="pf-c-form-control"

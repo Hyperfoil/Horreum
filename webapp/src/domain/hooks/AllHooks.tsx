@@ -7,7 +7,7 @@ import {
 import PrefixList from './PrefixList'
 import HookList from './HookList'
 
-export default ()=>{
+export default function AllHooks() {
     document.title = "WebHooks | Horreum"
 
     return (

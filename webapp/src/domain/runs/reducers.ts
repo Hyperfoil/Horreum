@@ -1,8 +1,7 @@
 import * as actionTypes from './actionTypes';
-import { List, Map } from 'immutable';
+import { Map } from 'immutable';
 import * as utils from '../../utils'
 import { Role } from '../../components/OwnerSelect'
-import Run from './Run';
 import { Access } from "../../auth"
 import { ThunkDispatch } from 'redux-thunk';
 
@@ -132,7 +131,7 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
         }
         case actionTypes.TESTID: {
             state.loading = false
-            const byTest = state.byTest || Map()
+            const byTest = state.byTest || Map<number, Map<number, Run>>()
             let testMap: Map<number, Run> = byTest.get(action.id, Map<number, Run>())
             if ( !utils.isEmpty(action.runs) ) {
                 action.runs.forEach(run => {

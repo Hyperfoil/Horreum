@@ -28,7 +28,7 @@ type TestSelectProps = {
     isDisabled?: boolean,
 }
 
-export default ({ selection, onSelect, extraOptions, direction, placeholderText, initialTestName, isDisabled } : TestSelectProps) => {
+export default function TestSelect({ selection, onSelect, extraOptions, direction, placeholderText, initialTestName, isDisabled } : TestSelectProps) {
     const [open, setOpen] = useState(false)
     const tests = useSelector(all)
     const dispatch = useDispatch()
@@ -37,7 +37,7 @@ export default ({ selection, onSelect, extraOptions, direction, placeholderText,
         dispatch(registerAfterLogin("reload_tests", () => {
             dispatch(fetchSummary())
         }))
-    }, [])
+    }, [dispatch])
     useEffect(() => {
         if (initialTestName && tests) {
             const initialTest = tests.find(t => t.name === initialTestName)
@@ -45,7 +45,7 @@ export default ({ selection, onSelect, extraOptions, direction, placeholderText,
                 onSelect({ id: initialTest.id, toString: () => initialTest.name })
             }
         }
-    }, [initialTestName, tests]);
+    }, [initialTestName, tests, onSelect, selection]);
     return (<Select
         isOpen={open}
         onToggle={ setOpen }

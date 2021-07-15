@@ -25,7 +25,7 @@ type OwnerSelectProps = {
    onSelect(selection: Role): void
 }
 
-export default ({ includeGeneral, selection, onSelect }: OwnerSelectProps) => {
+export default function OwnerSelect({ includeGeneral, selection, onSelect }: OwnerSelectProps) {
    const roles = useSelector(rolesSelector)
    const rolesAsSelectOptions = () => {
       return (roles ? roles.filter(role => role.endsWith("-team"))

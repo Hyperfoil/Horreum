@@ -48,7 +48,7 @@ const level = [
     <ExclamationCircleIcon style={{ fill: "var(--pf-global--danger-color--100)" }}  />,
 ]
 
-function CalculationLogModal(props: CalculationLogModalProps) {
+export default function CalculationLogModal(props: CalculationLogModalProps) {
     const [count, setCount] = useState(0)
     const [page, setPage] = useState(0)
     const [limit, setLimit] = useState(25)
@@ -61,7 +61,7 @@ function CalculationLogModal(props: CalculationLogModalProps) {
                 error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
             )
         }
-    }, [props.isOpen])
+    }, [props.isOpen, props.testId, dispatch])
     useEffect(() => {
         if (props.isOpen) {
             fetchLog(props.testId, page, limit).then(
@@ -74,7 +74,7 @@ function CalculationLogModal(props: CalculationLogModalProps) {
                 error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
             )
         }
-    }, [page, limit, props.isOpen])
+    }, [page, limit, props.isOpen, props.testId, dispatch])
     return (
     <Modal
         isOpen={props.isOpen}
@@ -82,7 +82,7 @@ function CalculationLogModal(props: CalculationLogModalProps) {
         title="Calculation log events"
         showClose={true}
     >
-        { count == 0 && <EmptyState>
+        { count === 0 && <EmptyState>
             <Title headingLevel="h4" size="lg">No logs</Title>
             <EmptyStateBody>
                 This test did not generate any logs. You can press 'Recalculate' to trigger recalculation of datapoints.
@@ -110,5 +110,3 @@ function CalculationLogModal(props: CalculationLogModalProps) {
         </> }
     </Modal>)
 }
-
-export default CalculationLogModal

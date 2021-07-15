@@ -83,12 +83,14 @@ type HooksProps = {
     onModified(modified: boolean): void,
 }
 
-export default ({ testId, testOwner, funcsRef, onModified }: HooksProps) => {
+export default function Hooks({ testId, testOwner, funcsRef, onModified }: HooksProps) {
     const [testWebHooks, setTestWebHooks] = useState<Hook[]>([])
     const isTester = useTester(testOwner)
     const renderRefs = useRef(new Array<ValueGetter | undefined>(testWebHooks.length));
-    const hasDuplicates = new Set(testWebHooks.map(h => h.type + "_" + h.url )).size != testWebHooks.length
+    const hasDuplicates = new Set(testWebHooks.map(h => h.type + "_" + h.url )).size !== testWebHooks.length
 
+    const dispatch = useDispatch()
+    const thunkDispatch = useDispatch<TestDispatch>()
     useEffect(() => {
         if (!testId || !isTester) {
             return
@@ -109,11 +111,8 @@ export default ({ testId, testOwner, funcsRef, onModified }: HooksProps) => {
             },
             error => dispatch(alertAction("HOOK_FETCH", "Failed to fetch webhooks", error))
         )
-    }, [testId, isTester])
+    }, [testId, isTester, dispatch])
 
-
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<TestDispatch>()
     funcsRef.current = {
         save: () => thunkDispatch(updateHooks(testId, testWebHooks)).catch(
             error => {

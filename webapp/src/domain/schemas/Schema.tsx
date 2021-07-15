@@ -45,13 +45,13 @@ import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import OwnerSelect from '../../components/OwnerSelect'
 import { Extractor } from '../../components/Accessors';
-import { Schema, SchemaDispatch } from './reducers';
+import { SchemaDispatch } from './reducers';
 
 type SchemaParams = {
     schemaId: string,
 }
 
-export default () => {
+export default function Schema() {
     const { schemaId } = useParams<SchemaParams>();
     const schema = useSelector(selectors.getById(Number.parseInt(schemaId)))
     const [loading, setLoading] = useState(true)
@@ -91,7 +91,7 @@ export default () => {
             setAccess(schema.access)
         }
         setEditorSchema(schema?.schema ? toString(schema.schema) : undefined)
-    }, [schema])
+    }, [schema, schemaId])
      // TODO editor types
     const editor = useRef<ValueGetter>();
     const [uri, setUri] = useState(schema?.uri)
@@ -364,12 +364,12 @@ export default () => {
                       <Button variant="primary"
                           onClick={e => {
                               let savedSchema;
-                              if (activeTab == 0) {
+                              if (activeTab === 0) {
                                  savedSchema = editor.current?.getValue()
                               } else {
                                  savedSchema = editorSchema;
                               }
-                              let newSchema: Schema = {
+                              let newSchema = {
                                   id: schemaId !== "_new" ? parseInt(schemaId) : 0,
                                   name,
                                   uri: uri || "", // TODO require URI set?

@@ -20,41 +20,33 @@ interface Schema extends SelectOptionObject {
 }
 
 /* This is going to be a complex component with modal for Extractor definition */
-export default ({ value = "", onChange = (_: string) => {}, disabled = []}: SchemaSelectProps) => {
+export default function SchemaSelect({ value = "", onChange = (_: string) => {}, disabled = []}: SchemaSelectProps) {
    const [isExpanded, setExpanded] = useState(false)
-   const [selected, setSelected] = useState<Schema | null>(null)
    const [options, setOptions] = useState<Schema[]>([])
    useEffect(() => {
+      if (value !== "" && options.length > 0) {
+         return
+      }
       // TODO: this is fetching all schemas including the schema JSONs
       allSchemas().then((response: Schema[]) => {
-         const schemas = response.map(s => { return { name: s.name, uri: s.uri }; })
+         const schemas = response.map(s => { return { name: s.name, uri: s.uri, toString: () => `${s.name} (${s.uri})` }; })
          setOptions(schemas)
-         if (selected === null && schemas.length > 0) {
+         if (value === "" && schemas.length > 0) {
             onChange(schemas[0].uri)
          }
       })
-   }, [])
-   useEffect(() => {
-      if (value && value !== "") {
-         const o = options.find(s => s.uri === value)
-         if (o && o !== selected) {
-            setSelected({ ...o, toString: () => `${o.name} (${o.uri})` })
-         }
-      }
-   }, [value])
+   }, [onChange, value, options])
    return (
       <Select aria-label="Select schema"
                     isOpen={isExpanded}
                     onToggle={setExpanded}
-                    selections={selected || []}
+                    selections={options.find(o => o.uri === value) || []}
                     onClear={ () => {
-                       setSelected(null)
                        setExpanded(false)
                        onChange(undefined)
                     }}
                     onSelect={ (e, newValue) => {
                        const schema = (newValue as Schema);
-                       setSelected(schema)
                        setExpanded(false)
                        onChange(schema.uri)
                     }}

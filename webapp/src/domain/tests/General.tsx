@@ -38,7 +38,7 @@ type StalenessSettingsDisplay = {
     maxStalenessStr: string
 } & StalenessSettings
 
-export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
+export default function General({test, onTestIdChange, onModified, funcsRef}: GeneralProps) {
     const defaultRole = useSelector(defaultRoleSelector)
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -53,7 +53,7 @@ export default ({test, onTestIdChange, onModified, funcsRef}: GeneralProps) => {
         setName(test ? test.name : "");
         setDescription(test ? test.description : "");
         setTags(test && test.tags ? test.tags.split(";").filter(t => t !== "") : []);
-        setCompareUrl(test && test.compareUrl && test.compareUrl.toString() || "")
+        setCompareUrl((test && test.compareUrl && test.compareUrl.toString()) || "")
         setNotificationsEnabled(!test || test.notificationsEnabled)
         setStalenessSettings(test?.stalenessSettings?.map(ss => ({ ...ss,
             maxStalenessStr: ss.maxStaleness ? millisToDuration(ss.maxStaleness) : ""
