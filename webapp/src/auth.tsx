@@ -148,6 +148,7 @@ export const initKeycloak = (state: State) => {
         // Typecast required due to https://github.com/keycloak/keycloak/pull/5858
         initPromise = keycloak.init({
           onLoad: "check-sso",
+          silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
           promiseType: 'native',
         } as Keycloak.KeycloakInitOptions);
         (initPromise as Promise<boolean>).then(authenticated => {
