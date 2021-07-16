@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.api;
 
 import io.hyperfoil.tools.horreum.entity.converter.JsonResultTransformer;
 import io.hyperfoil.tools.horreum.entity.json.*;
+import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -314,5 +315,28 @@ public class TestService {
          test.persist();
       }
       return Response.noContent().build();
+   }
+
+   @PermitAll
+   @GET
+   @Path("{id}/tags")
+   public Response tags(@PathParam("id") Integer testId, @QueryParam("trashed") Boolean trashed) {
+      if (testId == null) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
+      }
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         StringBuilder sql = new StringBuilder("SELECT tags::::text FROM run LEFT JOIN run_tags ON run_tags.runid = run.id WHERE run.testid = ?");
+         if (trashed == null || !trashed) {
+            sql.append(" AND NOT run.trashed");
+         }
+         sql.append(" GROUP BY tags");
+         Query tagComboQuery = em.createNativeQuery(sql.toString());
+         Json result = new Json(true);
+         @SuppressWarnings("unchecked") List<String> tagList = tagComboQuery.setParameter(1, testId).getResultList();
+         for (String tags : tagList) {
+            result.add(Json.fromString(tags));
+         }
+         return Response.ok(result).build();
+      }
    }
 }

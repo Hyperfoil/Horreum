@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux'
+import { rolesSelector } from '../auth'
 
 import {
     Select,
@@ -9,7 +11,7 @@ import {
 import { useDispatch } from 'react-redux'
 import { alertAction } from '../alerts'
 
-import { fetchTags } from '../domain/alerting/api'
+import { fetchTags } from '../domain/tests/api'
 
 
 export function convertTags(tags: any): string {
@@ -33,14 +35,15 @@ export function convertTags(tags: any): string {
 type TagsSelectProps = {
     testId?: number,
     disabled?: boolean,
-    initialTags?: string,
     tagFilter?: (tags: any) => boolean,
     selection?: SelectOptionObject,
     onSelect(selection: SelectOptionObject): void,
     direction?: "up" | "down",
     showIfNoTags?: boolean,
     addAllTagsOption?: boolean,
+    beforeTagsLoading?(): void,
     onTagsLoaded?(tags: any[] | undefined): void,
+    includeTrashed?: boolean
 }
 
 export default function TagsSelect(props: TagsSelectProps) {
@@ -50,27 +53,27 @@ export default function TagsSelect(props: TagsSelectProps) {
     const dispatch = useDispatch()
     const testId = props.testId
     const onTagsLoaded = props.onTagsLoaded
-    const initialTags = props.initialTags
     const onSelect = props.onSelect
+    const roles = useSelector(rolesSelector)
     useEffect(() => {
-        if (onTagsLoaded) onTagsLoaded(undefined)
         if (!testId) {
             return;
         }
-        fetchTags(testId).then((response: any[]) => {
+        if (props.beforeTagsLoading) {
+            props.beforeTagsLoading()
+        }
+        fetchTags(testId, props.includeTrashed || false).then((response: any[]) => {
+            console.log('TAGS')
+            console.log(response)
             setAvailableTags(response)
-            let tags: any = undefined
-            if (initialTags) {
-                tags = response.find(t => convertTags(t) === initialTags)
-            } else if (response.length === 1) {
-                tags = response[0]
-            }
-            onSelect((tags && { ...tags, toString: () => convertTags(tags) }) || undefined)
             if (onTagsLoaded) {
                 onTagsLoaded(response)
             }
+            if (!props.addAllTagsOption && response && response.length === 1) {
+                onSelect({ ...response[0], toString: () => convertTags(response[0]) })
+            }
         }, error => dispatch(alertAction("TAGS_FETCH", "Failed to fetch test tags", error)))
-    }, [testId, onTagsLoaded, initialTags, onSelect, dispatch])
+    }, [testId, onTagsLoaded, props.beforeTagsLoading, onSelect, dispatch, roles, props.includeTrashed, props.addAllTagsOption])
     let options = []
     let hasAllTags = false
     if (props.addAllTagsOption && (!props.tagFilter || props.tagFilter({}))) {

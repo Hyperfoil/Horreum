@@ -1,5 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
+import { useDispatch } from 'react-redux'
 import { AutoSizer } from 'react-virtualized';
 import {
     CartesianGrid,
@@ -15,10 +16,18 @@ import {
 import {
     Button,
     EmptyState,
+    Spinner,
     Title,
 } from '@patternfly/react-core'
 import { DateTime } from 'luxon';
+import { findLastDatapoints } from './api'
 import { Annotation, fetchDatapoints, fetchAllAnnotations, TimeseriesTarget } from './grafanaapi'
+import { alertAction } from '../../alerts'
+
+type LastDatapoint = {
+    variable: number,
+    timestamp: number,
+}
 
 function tsToDate(timestamp: number) {
     return DateTime.fromMillis(timestamp).toFormat("yyyy-LL-dd")
@@ -45,6 +54,8 @@ type PanelProps = {
     variables: number[],
     tags: string,
     timespan: number,
+    endTime: number,
+    setEndTime(endTime: number): void,
     lineType: string,
     onChangeSelected(changeId: number, variableId: number, runId: number): void,
 }
@@ -52,17 +63,14 @@ type PanelProps = {
 const colors = [ "#4caf50", "#FF0000", "#CC0066", "#0066FF", "#42a5f5", "#f1c40f"]
 
 export default function PanelChart(props: PanelProps) {
-    const now = useMemo(() => Date.now(), [])
-    const [domain, setDomain] = useState<[number, number]>([now - props.timespan * 1000, now])
     const [legend, setLegend] = useState<any[]>() // Payload is not exported
     const [lines, setLines] = useState<any[]>()
     const [datapoints, setDatapoints] = useState<TimeseriesTarget[]>()
     const [annotations, setAnnotations] = useState<Annotation[]>()
+    const [gettingLast, setGettingLast] = useState(false)
+    const startTime = props.endTime - props.timespan * 1000;
     useEffect(() => {
-        setDomain([now - props.timespan * 1000, now])
-    }, [props.timespan, now])
-    useEffect(() => {
-        fetchDatapoints(props.variables, props.tags, domain[0], domain[1]).then(response => {
+        fetchDatapoints(props.variables, props.tags, startTime, props.endTime).then(response => {
             setLegend(response.map((tt, i) => ({
                 id: tt.target,
                 type: "line",
@@ -80,10 +88,10 @@ export default function PanelChart(props: PanelProps) {
                 />)))
             setDatapoints(response)
         })
-    }, [domain, props.variables, props.tags, props.lineType])
+    }, [startTime, props.endTime, props.variables, props.tags, props.lineType])
     useEffect(() => {
-        fetchAllAnnotations(props.variables, props.tags, domain[0] as number, domain[1] as number).then(setAnnotations)
-    }, [domain, props.variables, props.tags])
+        fetchAllAnnotations(props.variables, props.tags, startTime, props.endTime).then(setAnnotations)
+    }, [startTime, props.endTime, props.variables, props.tags])
 
     const chartData = useMemo(() => {
         if (!datapoints) {
@@ -132,6 +140,8 @@ export default function PanelChart(props: PanelProps) {
             />)
         }
     }) || [], [annotations, datapoints, onChangeSelected]);
+
+    const dispatch = useDispatch()
     return (<>
         <h2 style={{ width: "100%", textAlign: "center"}}>{ props.title }</h2>
         <div style={{ display: "flex", width: "100%"}}>
@@ -139,12 +149,24 @@ export default function PanelChart(props: PanelProps) {
                 variant="control"
                 style={{height: 372}}
                 onClick={() => {
-                    const domainSpan = domain[1] - domain[0]
-                    setDomain([domain[0] - domainSpan / 4, domain[1] - domainSpan / 4])
+                    props.setEndTime(props.endTime - props.timespan * 250)
                 }}
             >&#8810;</Button>
             <div style={{ width: "100%", height: 450 }}>
-                { chartData.length === 0 && <EmptyState><Title headingLevel="h3">No datapoints in this range</Title></EmptyState>}
+                { chartData.length === 0 &&
+                    <EmptyState>
+                        <Title headingLevel="h3">No datapoints in this range</Title>
+                        <Button
+                            isDisabled={ gettingLast }
+                            onClick={ () => {
+                                setGettingLast(true)
+                                findLastDatapoints(props.variables, props.tags).then(
+                                    response => props.setEndTime(Math.max(...response.map(({ timestamp }: LastDatapoint) => timestamp)) + 1),
+                                    error => dispatch(alertAction('LAST_DATAPOINTS', "Failed to fetch last datapoint timestamps.", error))
+                                ).finally(() => setGettingLast(false))
+                            }}
+                        >Find most recent datapoints { gettingLast && <Spinner size="sm" /> }</Button>
+                    </EmptyState>}
                 { chartData.length > 0 &&
                 <AutoSizer disableHeight={true}>{({ height, width }) => (
                     <LineChart
@@ -164,7 +186,7 @@ export default function PanelChart(props: PanelProps) {
                             dataKey="timestamp"
                             tick={{ fontSize: 12 }}
                             tickFormatter={tsToDate}
-                            domain={domain}
+                            domain={[ startTime, props.endTime]}
                         />
                         <YAxis
                             width={80}
@@ -220,8 +242,7 @@ export default function PanelChart(props: PanelProps) {
                 variant="control"
                 style={{height: 372}}
                 onClick={() => {
-                    const domainSpan = domain[1] - domain[0]
-                    setDomain([domain[0] + domainSpan / 4, domain[1] + domainSpan / 4])
+                    props.setEndTime(props.endTime + props.timespan * 250)
                 }}
             >&#8811;</Button>
         </div>

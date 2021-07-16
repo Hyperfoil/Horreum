@@ -6,12 +6,12 @@ import {
     SelectOptionObject,
 } from '@patternfly/react-core';
 
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch, useSelector, shallowEqual } from 'react-redux'
 
 import { Test } from '../domain/tests/reducers'
 import { all } from '../domain/tests/selectors'
 import { fetchSummary } from '../domain/tests/actions'
-import { registerAfterLogin } from '../auth'
+import { rolesSelector } from '../auth'
 
 export interface SelectedTest extends SelectOptionObject {
     id: number,
@@ -20,7 +20,7 @@ export interface SelectedTest extends SelectOptionObject {
 
 type TestSelectProps = {
     selection?: SelectedTest,
-    onSelect(selection: SelectedTest): void,
+    onSelect(selection: SelectedTest, isInitial: boolean): void,
     extraOptions?: SelectedTest[],
     direction?: "up" | "down",
     placeholderText?: string,
@@ -30,29 +30,28 @@ type TestSelectProps = {
 
 export default function TestSelect({ selection, onSelect, extraOptions, direction, placeholderText, initialTestName, isDisabled } : TestSelectProps) {
     const [open, setOpen] = useState(false)
-    const tests = useSelector(all)
+    // a new instance of test list is created in every invocation => we need shallowEqual
+    const tests = useSelector(all, shallowEqual)
     const dispatch = useDispatch()
+    const roles = useSelector(rolesSelector)
     useEffect(() => {
         dispatch(fetchSummary())
-        dispatch(registerAfterLogin("reload_tests", () => {
-            dispatch(fetchSummary())
-        }))
-    }, [dispatch])
+    }, [dispatch, roles])
     useEffect(() => {
         if (initialTestName && tests) {
             const initialTest = tests.find(t => t.name === initialTestName)
-            if (initialTest && initialTestName !== selection?.toString()) {
-                onSelect({ id: initialTest.id, toString: () => initialTest.name })
+            if (initialTest) {
+                onSelect({ id: initialTest.id, owner: initialTest.owner, toString: () => initialTest.name }, true)
             }
         }
-    }, [initialTestName, tests, onSelect, selection]);
+    }, [initialTestName, tests, onSelect]);
     return (<Select
         isOpen={open}
         onToggle={ setOpen }
         selections={selection}
         menuAppendTo="parent"
         onSelect={(_, item) => {
-            onSelect(item as SelectedTest)
+            onSelect(item as SelectedTest, false)
             setOpen(false)
         }}
         direction={direction}

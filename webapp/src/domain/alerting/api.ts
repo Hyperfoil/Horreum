@@ -5,7 +5,6 @@ const base = "/api/alerting"
 const endPoints = {
     base: ()=>`${base}`,
     variables: (testId: number) => `${base}/variables?test=${testId}`,
-    tags: (testId: number) => `${base}/tags?test=${testId}`,
     dashboard: (testId: number, tags?: string) => `${base}/dashboard?test=${testId}&tags=${tags || ""}`,
     changes: (varId: number) => `${base}/changes?var=${varId}`,
     change: (changeId: number) => `${base}/change/${changeId}`,
@@ -13,6 +12,7 @@ const endPoints = {
         `${base}/recalculate?test=${testId}&debug=${debug}${ from ? "&from=" + from : ""}${to ? "&to=" + to : ""}`,
     log: (testId: number, page?: number, limit?: number) => `${base}/log/${testId}?page=${page ? page : 0}&limit=${limit ? limit : 25}`,
     logCount: (testId: number) => `${base}/log/${testId}/count`,
+    lastDatapoints: () => `${base}/datapoint/last`
 }
 
 export const fetchVariables = (testId: number) => {
@@ -21,10 +21,6 @@ export const fetchVariables = (testId: number) => {
 
 export const updateVariables = (testId: number, variables: Variable[]) => {
     return fetchApi(endPoints.variables(testId), variables, 'post', {}, 'response')
-}
-
-export const fetchTags = (testId: number) => {
-    return fetchApi(endPoints.tags(testId), null, 'get')
 }
 
 export const fetchDashboard = (testId: number, tags?: string) => {
@@ -57,4 +53,8 @@ export const fetchLog = (testId: number, page?: number, limit?: number) => {
 
 export const getLogCount = (testId: number) => {
     return fetchApi(endPoints.logCount(testId), null, 'get')
+}
+
+export const findLastDatapoints = (variableIds: number[], tags: string) => {
+    return fetchApi(endPoints.lastDatapoints(), { variables: variableIds, tags }, 'post')
 }

@@ -14,6 +14,7 @@ const endPoints = {
     addToken: (id: number) => `${base}/${id}/addToken`,
     revokeToken: (testId: number, tokenId: number) => `${base}/${testId}/revokeToken/${tokenId}`,
     updateAccess: (id: number, owner: string, access: string) => `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
+    tags: (testId: number, trashed: boolean) => `${base}/${testId}/tags?trashed=${trashed}`,
 }
 
 export const updateView = (testId: number, view: View) => {
@@ -48,3 +49,7 @@ export const updateAccess = (id: number, owner: string, access: string) => {
 }
 
 export const deleteTest = (id: number) => fetchApi(endPoints.crud(id), null, 'delete')
+
+export const fetchTags = (testId: number, trashed: boolean) => {
+    return fetchApi(endPoints.tags(testId, trashed), null, 'get')
+}

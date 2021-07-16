@@ -12,6 +12,22 @@ function ensureISO(timestamp: string) {
    return timestamp.replace(" ", "T")
 }
 
+export function formatDate(timestamp: any): string {
+   var datetime;
+   if (!timestamp) {
+      return "--"
+   } else if (typeof timestamp === "string") {
+      datetime = DateTime.fromISO(ensureISO(timestamp))
+   } else if (typeof timestamp === "number") {
+      datetime = DateTime.fromMillis(timestamp)
+   } else if (timestamp instanceof Date) {
+      datetime = DateTime.fromJSDate(timestamp)
+   } else {
+      return String(datetime)
+   }
+   return datetime.toFormat("yyyy-LL-dd")
+}
+
 export function formatDateTime(timestamp: any): string {
    var datetime;
    if (!timestamp) {
@@ -20,6 +36,8 @@ export function formatDateTime(timestamp: any): string {
       datetime = DateTime.fromISO(ensureISO(timestamp))
    } else if (typeof timestamp === "number") {
       datetime = DateTime.fromMillis(timestamp)
+   } else if (timestamp instanceof Date) {
+      datetime = DateTime.fromJSDate(timestamp)
    } else {
       return String(datetime)
    }

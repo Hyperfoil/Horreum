@@ -257,6 +257,7 @@ export default function TestRuns() {
                                     selection={tags}
                                     onSelect={setTags}
                                     addAllTagsOption={true}
+                                    includeTrashed={ showTrashed }
                                 />
                             </ToolbarItem>
                             <ToolbarItem>

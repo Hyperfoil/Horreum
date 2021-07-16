@@ -53,8 +53,11 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
+import org.hibernate.jpa.TypedParameterValue;
 import org.hibernate.transform.AliasToEntityMapResultTransformer;
 import org.jboss.logging.Logger;
+
+import com.vladmihalcea.hibernate.type.array.LongArrayType;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
@@ -648,24 +651,6 @@ public class AlertingService {
 
    @PermitAll
    @GET
-   @Path("tags")
-   public Response tags(@QueryParam("test") Integer testId) {
-      if (testId == null) {
-         return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
-      }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Query tagComboQuery = em.createNativeQuery("SELECT tags::::text FROM run LEFT JOIN run_tags ON run_tags.runid = run.id WHERE run.testid = ? GROUP BY tags");
-         Json result = new Json(true);
-         @SuppressWarnings("unchecked") List<String> tagList = tagComboQuery.setParameter(1, testId).getResultList();
-         for (String tags : tagList) {
-            result.add(Json.fromString(tags));
-         }
-         return Response.ok(result).build();
-      }
-   }
-
-   @PermitAll
-   @GET
    @Path("dashboard")
    @Transactional
    public Response dashboard(@QueryParam("test") Integer testId, @QueryParam("tags") String tags) throws SystemException {
@@ -846,6 +831,30 @@ public class AlertingService {
             last.lastNotification = Instant.now();
             last.persist();
          }
+      }
+   }
+
+   @PermitAll
+   @POST
+   @Path("/datapoint/last")
+   public Json findLastDatapoints(Json params) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Json variables = params.getJson("variables");
+         Map<String, String> tags = Tags.parseTags(params.getString("tags"));
+         StringBuilder sql = new StringBuilder("SELECT DISTINCT ON(variable_id) variable_id, EXTRACT(EPOCH FROM timestamp) * 1000 ")
+            .append(" FROM datapoint LEFT JOIN run_tags on run_tags.runid = datapoint.runid ");
+         int counter = Tags.addTagQuery(tags, sql, 1);
+         sql.append(" WHERE variable_id = ANY(?").append(counter).append(") ORDER BY variable_id, timestamp DESC;");
+         Query query = em.createNativeQuery(sql.toString());
+         counter = Tags.addTagValues(tags, query, 1);
+         query.setParameter(counter, new TypedParameterValue(LongArrayType.INSTANCE, variables.values().toArray()));
+         @SuppressWarnings("unchecked")
+         List<Object[]> rows = query.getResultList();
+         Json.ArrayBuilder result = new Json.ArrayBuilder();
+         for (Object[] row: rows) {
+            result.add(new Json.MapBuilder().add("variable", row[0]).add("timestamp", row[1]).build());
+         }
+         return result.build();
       }
    }
 

@@ -94,7 +94,7 @@ public class GrafanaService {
 
             StringBuilder sql = new StringBuilder("SELECT datapoint.* FROM datapoint ");
             if (tags != null) {
-               sql.append(" JOIN run_tags ON run_tags.runid = datapoint.runid ");
+               sql.append(" LEFT JOIN run_tags ON run_tags.runid = datapoint.runid ");
             }
             sql.append(" WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3 ");
             Tags.addTagQuery(tags, sql, 4);

@@ -1,28 +1,41 @@
 package io.hyperfoil.tools.horreum.api;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 
 public class Tags {
-   static void addTagQuery(Map<String, String> tags, StringBuilder sql, int counter) {
+   static int addTagQuery(Map<String, String> tags, StringBuilder sql, int counter) {
       if (tags != null) {
          for (String tag : tags.keySet()) {
-            sql.append(" AND jsonb_path_query_first(run_tags.tags, '$.").append(tag).append("'::::jsonpath)#>>'{}' = ?").append(counter++);
+            if (tag == null) {
+               // special case for no-tags query
+               sql.append(" AND run_tags.tags IS NULL");
+            } else {
+               sql.append(" AND jsonb_path_query_first(run_tags.tags, '$.").append(tag).append("'::::jsonpath)#>>'{}' = ?").append(counter++);
+            }
          }
       }
+      return counter;
    }
 
-   static void addTagValues(Map<String, String> tags, javax.persistence.Query nativeQuery, int counter) {
+   static int addTagValues(Map<String, String> tags, javax.persistence.Query nativeQuery, int counter) {
       if (tags != null) {
-         for (String value : tags.values()) {
-            nativeQuery.setParameter(counter++, value);
+         for (var entry : tags.entrySet()) {
+            if (entry.getKey() != null) {
+               nativeQuery.setParameter(counter++, entry.getValue());
+            }
          }
       }
+      return counter;
    }
 
    static Map<String, String> parseTags(String tagString) {
       if (tagString == null || tagString.isEmpty()) {
+         // all tags
          return null;
+      } else if ("<no tags>".equals(tagString)) {
+         return Collections.singletonMap(null, null);
       }
       Map<String, String> tags = new TreeMap<>();
       for (String keyValue : tagString.split(";")) {
