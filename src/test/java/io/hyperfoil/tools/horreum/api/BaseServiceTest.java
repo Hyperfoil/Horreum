@@ -49,7 +49,7 @@ public class BaseServiceTest {
             .body(runJson)
             .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=foo-team&access=PUBLIC")
             .then()
-            .statusCode(200)
+            .statusCode(201)
             .extract().asString();
       return Integer.parseInt(runIdString);
    }

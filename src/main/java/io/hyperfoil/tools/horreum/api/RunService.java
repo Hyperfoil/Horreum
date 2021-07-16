@@ -371,7 +371,7 @@ public class RunService {
       }
       eventBus.publish(Run.EVENT_NEW, run);
 
-      return Response.ok(String.valueOf(run.id)).header(HttpHeaders.LOCATION, "/run/" + run.id).build();
+      return Response.status(201).entity(String.valueOf(run.id)).header(HttpHeaders.LOCATION, "/run/" + run.id).build();
    }
 
    private void addPaging(StringBuilder sql, Integer limit, Integer page, String sort, String direction) {
