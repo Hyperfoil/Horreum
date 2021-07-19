@@ -57,10 +57,6 @@ export default function Schema() {
     const [loading, setLoading] = useState(true)
     const [name, setName] = useState("")
     const [description, setDescription] = useState("");
-    const [testPath, setTestPath] = useState(schema?.testPath || "")
-    const [startPath, setStartPath] = useState(schema?.startPath || "")
-    const [stopPath, setStopPath] = useState(schema?.stopPath || "")
-    const [descriptionPath, setDescriptionPath] = useState(schema?.descriptionPath || "")
     const [editorSchema, setEditorSchema] = useState(schema?.schema ? toString(schema.schema) : undefined)
 
     const dispatch = useDispatch();
@@ -81,9 +77,6 @@ export default function Schema() {
         setName(schema?.name || "");
         setDescription(schema?.description || "")
         setUri(schema?.uri || "")
-        setTestPath(schema?.testPath || "")
-        setStartPath(schema?.startPath || "")
-        setStopPath(schema?.stopPath || "")
         if (schema && schema.owner) {
             setOwner(schema.owner)
         }
@@ -216,34 +209,6 @@ export default function Schema() {
                                         onChange={e => setDescription(e)}
                                     />
                                 </FormGroup>
-                                <FormGroup label="Test name JSON path" fieldId="testPath">
-                                    <TextInput id="testPath"
-                                               value={testPath || ""}
-                                               onChange={setTestPath}
-                                               placeholder="e.g. $.testName"
-                                               isReadOnly={ !isTester } />
-                                </FormGroup>
-                                <FormGroup label="Start time JSON path" fieldId="startPath">
-                                    <TextInput id="startPath"
-                                               value={startPath || ""}
-                                               onChange={setStartPath}
-                                               placeholder="e.g. $.startTimestamp"
-                                               isReadOnly={ !isTester } />
-                                </FormGroup>
-                                <FormGroup label="Stop time JSON path" fieldId="stopPath">
-                                    <TextInput id="stopPath"
-                                               value={stopPath || ""}
-                                               onChange={setStopPath}
-                                               placeholder="e.g. $.stopTimestamp"
-                                               isReadOnly={ !isTester } />
-                                </FormGroup>
-                                <FormGroup label="Description JSON path" fieldId="descriptionPath">
-                                    <TextInput id="descriptionPath"
-                                               value={descriptionPath || ""}
-                                               onChange={setDescriptionPath}
-                                               placeholder="e.g. $.description"
-                                               isReadOnly={ !isTester } />
-                                </FormGroup>
                                 <FormGroup label="Owner" fieldId="schemaOwner">
                                    { isTester ? (
                                       <OwnerSelect includeGeneral={false}
@@ -375,10 +340,6 @@ export default function Schema() {
                                   uri: uri || "", // TODO require URI set?
                                   description,
                                   schema: savedSchema ? JSON.parse(savedSchema) : null,
-                                  testPath,
-                                  startPath,
-                                  stopPath,
-                                  descriptionPath,
                                   access,
                                   owner: owner || "__schema_created_by_user_without_role__", // TODO this shouldn't happen,
                                   token: null

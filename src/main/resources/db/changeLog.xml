@@ -1568,5 +1568,12 @@
                 ) AND has_role2((SELECT owner FROM run WHERE run.id = runid), 'tester'));
         </sql>
     </changeSet>
+
+    <changeSet id="26" author="rvansa">
+        <dropColumn tableName="schema" columnName="testpath" />
+        <dropColumn tableName="schema" columnName="startpath" />
+        <dropColumn tableName="schema" columnName="stoppath" />
+        <dropColumn tableName="schema" columnName="descriptionpath" />
+    </changeSet>
 </databaseChangeLog>
 

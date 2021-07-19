@@ -223,31 +223,6 @@ public class RunService {
          } else {
             data.set("$schema", schemaUri);
          }
-         if (schemaUri == null) {
-            for (Object value : data.values()) {
-               if (value instanceof Json) {
-                  Json json = (Json) value;
-                  String uri = json.getString("$schema");
-                  if (uri != null) {
-                     Schema schema = Schema.find("uri", uri).firstResult();
-                     if (schema != null) {
-                        foundTest = findIfNotSet(foundTest, json, schema.testPath);
-                        foundStart = findIfNotSet(foundStart, json, schema.startPath);
-                        foundStop = findIfNotSet(foundStop, json, schema.stopPath);
-                        foundDescription = findIfNotSet(foundDescription, json, schema.descriptionPath);
-                     }
-                  }
-               }
-            }
-         } else {
-            Schema schema = Schema.find("uri", schemaUri).firstResult();
-            if (schema != null) {
-               foundTest = findIfNotSet(foundTest, data, schema.testPath);
-               foundStart = findIfNotSet(foundStart, data, schema.startPath);
-               foundStop = findIfNotSet(foundStop, data, schema.stopPath);
-               foundDescription = findIfNotSet(foundDescription, data, schema.descriptionPath);
-            }
-         }
 
          String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
          if (testNameOrId == null || testNameOrId.isEmpty()) {

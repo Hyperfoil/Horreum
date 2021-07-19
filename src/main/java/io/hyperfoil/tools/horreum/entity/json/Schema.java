@@ -41,25 +41,4 @@ public class Schema extends ProtectedBaseEntity {
 
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public Json schema;
-
-   /**
-    * JsonPath query selecting the test name.
-    */
-   public String testPath;
-
-   /**
-    * JsonPath query selecting start timestamp.
-    */
-   public String startPath;
-
-   /**
-    * JsonPath query selection stop timestamp;
-    */
-   public String stopPath;
-
-   /**
-    * JsonPath query selection for run description.
-    */
-   public String descriptionPath;
-
 }
