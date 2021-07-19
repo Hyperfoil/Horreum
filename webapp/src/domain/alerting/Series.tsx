@@ -159,6 +159,8 @@ export default function Series() {
         history.replace(history.location.pathname + createQuery(false))
     }, [selectedTest, currentTags, endTime, timespan, lineType, firstNow, history])
     useEffect(() => {
+        setPanels([])
+        setDashboardUrl("")
         // We need to prevent fetching dashboard until we are sure if we need the tags
         if (selectedTest && !loadingTags) {
             setLoadingPanels(true)
@@ -179,8 +181,6 @@ export default function Series() {
     const [selectedVariable, setSelectedVariable] = useState<number>()
 
     const onSelectTest = useCallback((selection, isInitial) => {
-        setPanels([])
-        setDashboardUrl("")
         if (selectedTest !== selection) {
             setSelectedTest(selection as SelectedTest)
         }
@@ -275,10 +275,10 @@ export default function Series() {
                 }
                 { selectedTest && !loadingTags && requiresTags && !currentTags &&
                     <EmptyState>
-                        <EmptyStateBody>Please select tags filtering test runs.</EmptyStateBody>
+                        <Title headingLevel="h2">Please select tags filtering test runs.</Title>
                     </EmptyState>
                 }
-                { selectedTest && !loadingPanels && panels.length === 0 &&
+                { selectedTest && !loadingPanels && !requiresTags && panels.length === 0 &&
                     <EmptyState>
                         <Title headingLevel="h2">Test { selectedTest.toString() } does not define any regression variables</Title>
                         <NavLink
@@ -287,7 +287,7 @@ export default function Series() {
                         >Define regression variables</NavLink>
                     </EmptyState>
                 }
-                { panels && panels.map((p, i) =>
+                { !loadingTags && (!requiresTags || currentTags) && panels && panels.map((p, i) =>
                     <DataList key={i} aria-label="test variables">
                         <DataListItem aria-labelledby="variable-name">
                             { dashboardUrl &&

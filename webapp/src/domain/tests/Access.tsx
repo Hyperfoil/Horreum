@@ -155,9 +155,6 @@ function Access(props: AccessProps) {
 
     }, [ props.test ])
 
-    console.log('TOKENS')
-    console.log(props.test?.tokens)
-
     const thunkDispatch = useDispatch<TestDispatch>()
     const dispatch = useDispatch()
     props.funcsRef.current = {

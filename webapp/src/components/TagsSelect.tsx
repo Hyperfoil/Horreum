@@ -63,8 +63,6 @@ export default function TagsSelect(props: TagsSelectProps) {
             props.beforeTagsLoading()
         }
         fetchTags(testId, props.includeTrashed || false).then((response: any[]) => {
-            console.log('TAGS')
-            console.log(response)
             setAvailableTags(response)
             if (onTagsLoaded) {
                 onTagsLoaded(response)
