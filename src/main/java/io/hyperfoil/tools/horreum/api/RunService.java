@@ -3,7 +3,6 @@ package io.hyperfoil.tools.horreum.api;
 import io.hyperfoil.tools.horreum.entity.converter.JsonResultTransformer;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Run;
-import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
@@ -74,18 +73,13 @@ public class RunService {
    @Inject
    SchemaService schemaService;
 
-   private Run findRun(@PathParam("id") Integer id, @QueryParam("token") String token) {
-      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
-           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         return Run.find("id", id).firstResult();
-      }
-   }
-
-   private Response runQuery(String query, Integer id, String token) {
+   private Response runQuery(String query, String token, Object... params) {
       try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
            @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
          Query q = em.createNativeQuery(query);
-         q.setParameter(1, id);
+         for (int i = 0; i < params.length; ++i) {
+            q.setParameter(i + 1, params[i]);
+         }
          try {
             return Response.ok(q.getSingleResult()).build();
          } catch (NoResultException e) {
@@ -99,14 +93,16 @@ public class RunService {
    @Path("{id}")
    public Response getRun(@PathParam("id") Integer id,
                           @QueryParam("token") String token) {
-      return runQuery("SELECT row_to_json(run)::::text from run where id = ?", id, token);
+      return runQuery("SELECT jsonb_set(to_jsonb(run), '{schema}', (" +
+            "SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = ?" +
+            ")::::jsonb, true)::::text FROM run where id = ?", token, id, id);
    }
 
    @PermitAll
    @GET
    @Path("{id}/data")
    public Response getData(@PathParam("id") Integer id, @QueryParam("token") String token) {
-      return runQuery("SELECT data#>>'{}' from run where id = ?", id, token);
+      return runQuery("SELECT data#>>'{}' from run where id = ?", token, id);
    }
 
    @RolesAllowed("tester")
@@ -161,11 +157,14 @@ public class RunService {
    @Path("{id}/structure")
    public Json getStructure(@PathParam("id") Integer id,
                             @QueryParam("token") String token) {
-      Run found = findRun(id, token);
-      if (found != null) {
-         return Json.typeStructure(found.data);
+      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
+           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
+         Run found = Run.find("id", id).firstResult();
+         if (found != null) {
+            return Json.typeStructure(found.data);
+         }
+         return new Json(false);
       }
-      return new Json(false);
    }
 
    @PermitAll // all because of possible token-based upload
@@ -577,7 +576,7 @@ public class RunService {
                             @QueryParam("tags") String tags
    ) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
-            .append("    SELECT jsonb_object_agg(schemaid, uri) AS schemas, rs.runid FROM run_schemas rs GROUP BY schemaid, rs.runid")
+            .append("    SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') AS schemas, rs.runid FROM run_schemas rs GROUP BY rs.runid")
             .append("), view_agg AS (")
             .append("    SELECT jsonb_object_agg(coalesce(vd.vcid, 0), vd.object) AS view, vd.runid FROM view_data vd GROUP BY vd.runid")
             .append(") SELECT run.id, run.start, run.stop, run.access, run.owner, schema_agg.schemas::::text AS schemas, view_agg.view#>>'{}' AS view, ")
@@ -696,6 +695,37 @@ public class RunService {
          consumer.accept(run);
          run.persistAndFlush();
          return Response.ok().build();
+      }
+   }
+
+   @RolesAllowed("tester")
+   @POST
+   @Path("{id}/schema")
+   @Consumes(MediaType.TEXT_PLAIN)
+   @Transactional
+   public Response updateSchema(@PathParam("id") Integer id, @QueryParam("path") String path, String schemaUri) {
+      // FIXME: fetchival stringifies the body into JSON string :-/
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Run run = Run.findById(id);
+         if (run == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+         }
+         // Triggering dirty property on Run
+         Json data = run.data.clone();
+         String uri = Util.destringify(schemaUri);
+         Json item = path == null || path.isEmpty() ? data : data.getJson(path);
+         if (uri != null && !uri.isEmpty()) {
+            item.set("$schema", uri);
+         } else {
+            item.remove("$schema");
+         }
+         run.data = data;
+         run.persist();
+         Query query = em.createNativeQuery("SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}')::::text FROM run_schemas WHERE runid = ?");
+         query.setParameter(1, run.id);
+         Object schemas = query.getSingleResult();
+         em.flush();
+         return Response.ok(schemas).build();
       }
    }
 }

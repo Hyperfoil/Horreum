@@ -9,53 +9,56 @@ import {
 } from '@patternfly/react-core';
 
 type SchemaSelectProps = {
-   value: string,
-   onChange(schema: string | undefined): void,
-   disabled: string[],
+   value?: string,
+   onChange(schema: string | undefined, id: number | undefined): void,
+   disabled?: string[],
+   noSchemaOption?: boolean,
 }
 
 interface Schema extends SelectOptionObject {
    name: string,
+   id: number,
    uri: string,
 }
 
 /* This is going to be a complex component with modal for Extractor definition */
-export default function SchemaSelect({ value = "", onChange = (_: string) => {}, disabled = []}: SchemaSelectProps) {
+export default function SchemaSelect(props: SchemaSelectProps) {
    const [isExpanded, setExpanded] = useState(false)
    const [options, setOptions] = useState<Schema[]>([])
    useEffect(() => {
-      if (value !== "" && options.length > 0) {
-         return
-      }
       // TODO: this is fetching all schemas including the schema JSONs
       allSchemas().then((response: Schema[]) => {
-         const schemas = response.map(s => { return { name: s.name, uri: s.uri, toString: () => `${s.name} (${s.uri})` }; })
+         const schemas = response.map(s => { return { name: s.name, id: s.id, uri: s.uri, toString: () => `${s.name} (${s.uri})` }; })
          setOptions(schemas)
-         if (value === "" && schemas.length > 0) {
-            onChange(schemas[0].uri)
+         if (!props.noSchemaOption && !props.value && schemas.length > 0) {
+            props.onChange(schemas[0].uri, schemas[0].id)
          }
       })
-   }, [onChange, value, options])
+   }, [props.onChange, props.value])
+   var extraOptions: Schema[] = []
+   if (props.noSchemaOption) {
+      extraOptions.push({ name: "", id: 0, uri: "", toString: () => "-- no schema --" })
+   }
    return (
       <Select aria-label="Select schema"
                     isOpen={isExpanded}
                     onToggle={setExpanded}
-                    selections={options.find(o => o.uri === value) || []}
+                    selections={options.find(o => o.uri === props.value) || []}
                     onClear={ () => {
                        setExpanded(false)
-                       onChange(undefined)
+                       props.onChange(undefined, undefined)
                     }}
                     onSelect={ (e, newValue) => {
                        const schema = (newValue as Schema);
                        setExpanded(false)
-                       onChange(schema.uri)
+                       props.onChange(schema.uri, schema.id)
                     }}
             >
-      {options.map((option, index) => (
+      { [ ...extraOptions, ...options ].map((option, index) => (
          <SelectOption key={index}
-                       value={{ ...option, toString: () => `${option.name} (${option.uri})` }}
-                       isDisabled={disabled.includes(option.uri)}/>
-      ))}
+                       value={ option }
+                       isDisabled={ props.disabled?.includes(option.uri) }/>
+      )) }
       </Select>
    )
 }

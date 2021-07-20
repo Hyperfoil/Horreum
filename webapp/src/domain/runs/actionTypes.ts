@@ -11,3 +11,4 @@ export const SELECT_ROLES = 'runs/SELECT_ROLES';
 export const UPDATE_TOKEN = 'runs/UPDATE_TOKEN';
 export const UPDATE_ACCESS = 'runs/UPDATE_ACCESS';
 export const UPDATE_DESCRIPTION = 'runs/UPDATE_DESCRIPTION';
+export const UPDATE_SCHEMA = 'runs/UPDATE_SCHEMA'

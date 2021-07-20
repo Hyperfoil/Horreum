@@ -21,6 +21,7 @@ const endPoints = {
     trash: (runId: number, isTrashed: boolean) => `${base}/${runId}/trash?isTrashed=${isTrashed}`,
     description: (runId: number) => `${base}/${runId}/description`,
     count: (testId: number) => `${base}/count?testId=${testId}`,
+    schema: (runId: number, path?: string) => `${base}/${runId}/schema${ (path && "?path=" + path) || ""}`,
 }
 
 export const get = (id: number, token?: string, js?: any) => {
@@ -61,3 +62,7 @@ export type RunCount = {
 }
 
 export const runCount = (testId: number): Promise<RunCount> => fetchApi(endPoints.count(testId), null, 'get')
+
+export const updateSchema = (id: number, path: string | undefined, schema: string) => {
+    return fetchApi(endPoints.schema(id, path), schema, 'post', { 'Content-Type' : 'text/plain' })
+}

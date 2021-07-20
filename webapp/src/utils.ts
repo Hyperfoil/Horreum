@@ -104,6 +104,16 @@ export function millisToDuration(duration: number): string {
    return text
 }
 
+export function interleave<T>(arr: T[], inBetween: (i: number) => T) {
+   var narr: T[] = []
+   for (let i = 0; i < arr.length - 1; ++i) {
+      narr.push(arr[i])
+      narr.push(inBetween(i))
+   }
+   narr.push(arr[arr.length - 1])
+   return narr;
+}
+
 export type PaginationInfo = {
    page: number,
    perPage: number,

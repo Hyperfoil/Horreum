@@ -5,6 +5,11 @@ import { Role } from '../../components/OwnerSelect'
 import { Access } from "../../auth"
 import { ThunkDispatch } from 'redux-thunk';
 
+export interface RunSchemas {
+    // schemaid -> uri
+    [key: string]: string
+}
+
 export interface Run {
     id: number,
     testid: number,
@@ -17,7 +22,7 @@ export interface Run {
     token: string | null,
     data: any,
     testname?: string,
-    schema?: Map<string, number>
+    schema?: RunSchemas
     // TODO - this could rather be a map<view_id, viewcomponent[]>
     view?: any[]
     trashed: boolean,
@@ -96,9 +101,19 @@ export interface UpdateDescriptionAction {
     description: string,
 }
 
+export interface UpdateSchemaAction {
+    type: typeof actionTypes.UPDATE_SCHEMA,
+    id: number,
+    testid: number,
+    path: string | undefined,
+    schema: string,
+    schemas: RunSchemas,
+}
+
 type RunsAction = LoadingAction | LoadedAction | TestIdAction |
                   LoadSuggestionsAction |  SuggestAction | SelectRolesAction |
-                  UpdateTokenAction | UpdateAccessAction | TrashAction | UpdateDescriptionAction
+                  UpdateTokenAction | UpdateAccessAction | TrashAction | UpdateDescriptionAction |
+                  UpdateSchemaAction
 
 export type RunsDispatch = ThunkDispatch<any, unknown, RunsAction>
 
@@ -183,21 +198,48 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
             state = updateRun(state, action.id, action.testid, { description: action.description })
             break
         }
+        case actionTypes.UPDATE_SCHEMA: {
+            state = updateRun(state, action.id, action.testid, run => {
+                const copy = { ...run }
+                copy.schema = action.schemas
+                if (action.schema) {
+                    if (action.path) {
+                        copy.data = { ...run.data }
+                        copy.data[action.path]["$schema"] = action.schema
+                    } else {
+                        copy.data = { ...run.data, "$schema": action.schema }
+                    }
+                } else {
+                    copy.data = { ...run.data }
+                    if (action.path) {
+                        var sub = copy.data[action.path] = { ...copy.data[action.path] }
+                        console.log(sub)
+                        delete sub["$schema"]
+                    } else {
+                        delete copy.data["$schema"];
+                    }
+                }
+                return copy
+            })
+            break;
+        }
         default:
     }
     return state;
 }
 
-function updateRun(state: RunsState, id: number, testid: number, patch: object) {
+function updateRun(state: RunsState, id: number, testid: number, patch: object | ((current: Run) => Run)) {
     let run = state.byId?.get(id);
     if (run) {
-        state.byId = (state.byId || Map<number, Run>()).set(run.id, { ...run, ...patch })
+        const updated = typeof patch === 'function' ? patch(run) : { ...run, ...patch }
+        state.byId = (state.byId || Map<number, Run>()).set(run.id, updated)
     }
     let testMap: Map<number, Run> | undefined = state.byTest?.get(testid)
     if (testMap) {
         const current: Run | undefined = testMap.get(id)
         if (current) {
-            testMap = testMap.set(id, { ...current, ...patch })
+            const updated = typeof patch === 'function' ? patch(current) : { ...current, ...patch }
+            testMap = testMap.set(id, updated)
         }
         state.byTest = state.byTest?.set(testid, testMap)
     }

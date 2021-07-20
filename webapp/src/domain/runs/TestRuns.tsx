@@ -25,7 +25,7 @@ import {
 import { NavLink } from 'react-router-dom';
 
 import { Duration } from 'luxon';
-import { toEpochMillis } from '../../utils'
+import { toEpochMillis, interleave } from '../../utils'
 
 import { byTest } from './actions';
 import * as selectors from './selectors';
@@ -126,7 +126,9 @@ const staticColumns: RunColumn[] = [
             const { cell: { value } } = arg;
             // LEFT JOIN results in schema.id == 0
             if (value) {
-               return Object.keys(value).map(key => (<><NavLink key={key} to={`/schema/${key}`}>{value[key]}</NavLink>&nbsp;</>))
+               return interleave(Object.keys(value).map(
+                       (key, i) => <NavLink key={2 * i} to={`/schema/${key}`}>{value[key]}</NavLink>
+                   ), i => <br key={ 2*i + 1 } />)
             } else {
                return "--"
             }

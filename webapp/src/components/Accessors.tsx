@@ -165,7 +165,7 @@ export default function Accessors({ value = [], onChange = (_: string[]) => {}, 
                 />
             </FormGroup>
             <FormGroup label="Schema" isRequired={true} fieldId="extractor-schema" >
-               <SchemaSelect value={ created.schema || "" }
+               <SchemaSelect value={ created.schema }
                              disabled={ disabledSchemas }
                              onChange={ onSchemaChange } />
             </FormGroup>

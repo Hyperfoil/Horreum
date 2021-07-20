@@ -78,7 +78,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.version>1.13.2.Final</quarkus.version>
         <surefire-plugin.version>2.22.0</surefire-plugin.version>
-        <yaup.version>0.8.4</yaup.version>
+        <yaup.version>0.8.6</yaup.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
     </properties>

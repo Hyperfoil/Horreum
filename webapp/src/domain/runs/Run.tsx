@@ -6,7 +6,11 @@ import jsonpath from 'jsonpath';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
+import { RunsDispatch } from './reducers'
 import { formatDateTime } from '../../utils'
+import { useTester } from '../../auth'
+import { interleave } from '../../utils'
+import { alertAction } from '../../alerts'
 
 import Editor from '../../components/Editor/monaco/Editor';
 
@@ -25,11 +29,27 @@ import {
     ToolbarContent,
     ToolbarItem,
 } from '@patternfly/react-core';
-import { HelpIcon } from '@patternfly/react-icons'
+import { EditIcon, HelpIcon } from '@patternfly/react-icons'
 import { toString } from '../../components/Editor';
 import { NavLink } from 'react-router-dom';
 import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams } from 'react-autosuggest'
 import { Description } from './components'
+import ChangeSchemaModal from './ChangeSchemaModal'
+
+function findFirstValue(o: any) {
+   if (!o || Object.keys(o).length !== 1) {
+      return undefined;
+   }
+   const key = Object.keys(o)[0]
+   return { id: parseInt(key), schema: o[key] }
+}
+
+function getPaths(data: any) {
+   if (!data) {
+      return []
+   }
+   return Object.keys(data).filter(k => typeof data[k] === "object")
+}
 
 export default function Run() {
     const { id: stringId } = useParams<any>();
@@ -42,7 +62,10 @@ export default function Run() {
     const [pathType, setPathType] = useState('js')
     const [pathTypeOpen, setPathTypeOpen] = useState(false)
     const [pathSuggestions, setPathSuggestions] = useState<string[]>([])
+
+    const [changeSchemaModalOpen, setChangeSchemaModalOpen] = useState(false)
     const dispatch = useDispatch();
+    const thunkDispatch = useDispatch<RunsDispatch>()
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get('token')
@@ -232,6 +255,7 @@ export default function Run() {
           return pathQuery.substring(0, lastClosingSquareBracket + 1) + value
        }
     }
+    const isTester = useTester((run && run.owner) || "")
     return (
         // <PageSection>
         <React.Fragment>
@@ -250,6 +274,7 @@ export default function Run() {
                                         <th>start</th>
                                         <th>stop</th>
                                         <th>description</th>
+                                        <th>schema</th>
                                     </tr>
                                     <tr>
                                         <td>{run.id}</td>
@@ -257,6 +282,26 @@ export default function Run() {
                                         <td>{ formatDateTime(run.start) }</td>
                                         <td>{ formatDateTime(run.stop) }</td>
                                         <td>{ Description(run.description) }</td>
+                                        <td>{
+                                          (run.schema && Object.keys(run.schema).length > 0 && interleave(Object.keys(run.schema).map(
+                                             (key, i) => <NavLink key={2 * i} to={`/schema/${key}`}>{run.schema && run.schema[key] }</NavLink>
+                                          ), i => <br key={2*i + 1} />)) || "--"}
+                                          { isTester && <>
+                                          <Button
+                                             variant="link"
+                                             style={{ float: 'right'}}
+                                             onClick={ () => setChangeSchemaModalOpen(true) }
+                                          ><EditIcon /></Button>
+                                          <ChangeSchemaModal
+                                             isOpen={ changeSchemaModalOpen }
+                                             onClose={ () => setChangeSchemaModalOpen(false) }
+                                             initialSchema={ findFirstValue(run.schema) }
+                                             paths={ getPaths(run.data) }
+                                             update={ (path, schema, schemaid) => thunkDispatch(actions.updateSchema(run.id, run.testid, path, schemaid, schema))
+                                                .catch(e => dispatch(alertAction('SCHEME_UPDATE_FAILED', "Failed to update run schema", e))) }
+                                          />
+                                          </> }
+                                       </td>
                                     </tr>
                                 </tbody>
                             </table>

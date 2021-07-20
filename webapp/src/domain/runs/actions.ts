@@ -13,6 +13,7 @@ import {
    UpdateTokenAction,
    TrashAction,
    UpdateDescriptionAction,
+   UpdateSchemaAction,
 } from '../runs/reducers';
 import * as actionTypes from './actionTypes';
 import * as api from './api';
@@ -159,4 +160,12 @@ export const updateDescription = (id: number, testid: number, description: strin
             description,
          })
       }
+   )
+
+export const updateSchema = (id: number, testid: number, path: string | undefined, schemaid: number, schema: string) => (dispatch: Dispatch<UpdateSchemaAction>) =>
+   api.updateSchema(id, path, schema).then(
+      schemas => dispatch({
+         type: actionTypes.UPDATE_SCHEMA,
+         id, testid, path, schema, schemas,
+      })
    )
