@@ -93,9 +93,10 @@ public class RunService {
    @Path("{id}")
    public Response getRun(@PathParam("id") Integer id,
                           @QueryParam("token") String token) {
-      return runQuery("SELECT jsonb_set(to_jsonb(run), '{schema}', (" +
-            "SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = ?" +
-            ")::::jsonb, true)::::text FROM run where id = ?", token, id, id);
+      return runQuery("SELECT (to_jsonb(run) ||" +
+            "jsonb_set('{}', '{schema}', (SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = ?)::::jsonb, true) || " +
+            "jsonb_set('{}', '{testname}', to_jsonb((SELECT name FROM test WHERE test.id = run.testid)), true)" +
+            ")::::text FROM run where id = ?", token, id, id);
    }
 
    @PermitAll

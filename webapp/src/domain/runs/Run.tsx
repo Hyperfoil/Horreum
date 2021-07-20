@@ -279,7 +279,7 @@ export default function Run() {
                                     </tr>
                                     <tr>
                                         <td>{run.id}</td>
-                                        <td><NavLink to={`/test/${run.testid}`} >{run.testid}</NavLink></td>
+                                        <td><NavLink to={`/test/${run.testid}`} >{run.testname || run.testid}</NavLink></td>
                                         <td>{ formatDateTime(run.start) }</td>
                                         <td>{ formatDateTime(run.stop) }</td>
                                         <td>{ Description(run.description) }</td>
