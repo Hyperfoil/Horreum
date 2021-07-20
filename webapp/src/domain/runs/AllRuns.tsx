@@ -16,6 +16,7 @@ import {
     Tooltip,
 } from '@patternfly/react-core';
 import {
+    ArrowRightIcon,
     FolderOpenIcon,
     HelpIcon,
     SearchIcon,
@@ -67,7 +68,7 @@ export default function AllRuns() {
           accessor:"id",
           Cell: (arg: C) => {
             const {cell: {value} } = arg;
-            return (<><NavLink to={`/run/${value}`}>{value}</NavLink>
+            return (<><NavLink to={`/run/${value}`}><ArrowRightIcon />{'\u00A0'}{value}</NavLink>
                { arg.row.original.trashed &&
                   <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} /> }
             </>)

@@ -18,6 +18,7 @@ import {
     Checkbox,
 } from '@patternfly/react-core';
 import {
+    ArrowRightIcon,
     EditIcon,
     TrashIcon,
     WarningTriangleIcon,
@@ -97,9 +98,10 @@ const staticColumns: RunColumn[] = [
         accessor: "id",
         Cell: (arg: C) => {
             const { cell: { value } } = arg;
-            return (<><NavLink to={`/run/${value}`}>{value}</NavLink>
-               { arg.row.original.trashed &&
-                  <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} /> }
+            return (<>
+                <NavLink to={`/run/${value}`}><ArrowRightIcon />{'\u00A0'}{value}</NavLink>
+                { arg.row.original.trashed &&
+                    <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} /> }
             </>)
         }
     }, {
