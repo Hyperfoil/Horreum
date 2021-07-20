@@ -31,7 +31,7 @@ import { CellProps, Column } from 'react-table'
 
 import { list, suggest, selectRoles } from './actions';
 import * as selectors from './selectors';
-import { isAuthenticatedSelector, registerAfterLogin, roleToName } from '../../auth'
+import { isAuthenticatedSelector, rolesSelector, roleToName } from '../../auth'
 import { toEpochMillis } from '../../utils'
 
 import Table from '../../components/Table';
@@ -132,12 +132,10 @@ export default function AllRuns() {
     }
     const suggestions = useSelector(selectors.suggestions)
     const loadingDisplay = useSelector(selectors.isFetchingSuggestions) ? "inline-block" : "none"
+    const roles = useSelector(rolesSelector)
     useEffect(()=>{
         runFilter(selectedRoles.key)
-        dispatch(registerAfterLogin("reload_runs", () => {
-           runFilter(selectedRoles.key)
-        }))
-    },[dispatch, showTrashed, page, perPage, sort, direction, selectedRoles.key, runFilter ])
+    },[dispatch, showTrashed, page, perPage, sort, direction, selectedRoles.key, runFilter, roles ])
 
     const inputProps: InputProps<string> = {
        placeholder: "Enter search query",

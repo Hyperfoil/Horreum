@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import {
@@ -11,7 +11,7 @@ import { NavLink } from 'react-router-dom';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
-import { useTester, registerAfterLogin, roleToName } from '../../auth'
+import { useTester, rolesSelector, roleToName } from '../../auth'
 import { alertAction } from '../../alerts'
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
@@ -83,12 +83,10 @@ export default function AllSchema() {
         }
     ], [dispatch, thunkDispatch])
     const list = useSelector(selectors.all);
+    const roles = useSelector(rolesSelector)
     useEffect(() => {
         dispatch(actions.all())
-        dispatch(registerAfterLogin("reload_schemas", () => {
-           dispatch(actions.all())
-        }))
-    }, [dispatch])
+    }, [dispatch, roles])
     const isTester = useTester()
     return (
         <PageSection>

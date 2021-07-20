@@ -13,7 +13,6 @@ import { alertAction, CLEAR_ALERT } from './alerts'
 
 const INIT = "auth/INIT"
 const UPDATE_ROLES = "auth/UPDATE_ROLES"
-const REGISTER_AFTER_LOGIN = "auth/REGISTER_AFTER_LOGIN"
 const STORE_PROFILE = "auth/STORE_PROFILE"
 const AFTER_LOGOUT = "auth/AFTER_LOGOUT"
 
@@ -24,7 +23,6 @@ export class AuthState {
   roles: string[] = [];
   userProfile?: Keycloak.KeycloakProfile;
   initPromise?: Promise<boolean> = undefined;
-  afterLogin: { name: string, func(): void }[] = [];
 }
 
 const initialState = new AuthState()
@@ -40,12 +38,6 @@ interface UpdateRolesAction {
    roles: string[],
 }
 
-interface RegisterAfterLoginAction {
-   type: typeof REGISTER_AFTER_LOGIN,
-   name: string,
-   func(): void,
-}
-
 interface StoreProfileAction {
    type: typeof STORE_PROFILE,
    profile: Keycloak.KeycloakProfile,
@@ -55,7 +47,7 @@ interface AfterLogoutAction {
    type: typeof AFTER_LOGOUT,
 }
 
-type AuthActions = InitAction | UpdateRolesAction | RegisterAfterLoginAction | StoreProfileAction | AfterLogoutAction
+type AuthActions = InitAction | UpdateRolesAction | StoreProfileAction | AfterLogoutAction
 
 export const reducer = (state = initialState, action: AuthActions) => {
    switch (action.type) {
@@ -68,10 +60,6 @@ export const reducer = (state = initialState, action: AuthActions) => {
       case UPDATE_ROLES:
          state.roles = action.roles
          break
-      case REGISTER_AFTER_LOGIN:
-         state.afterLogin = [...state.afterLogin.filter(({ name, func }) => name !== action.name),
-                             { name: action.name, func: action.func }]
-         break
       case STORE_PROFILE:
          state.userProfile = action.profile
          break
@@ -83,14 +71,6 @@ export const reducer = (state = initialState, action: AuthActions) => {
       default:
    }
    return state;
-}
-
-export const registerAfterLogin = (name: string, func: () => void) => {
-   return {
-      type: REGISTER_AFTER_LOGIN,
-      name: name,
-      func: func,
-   }
 }
 
 const keycloakSelector = (state: State) => {
@@ -154,7 +134,6 @@ export const initKeycloak = (state: State) => {
         (initPromise as Promise<boolean>).then(authenticated => {
           store.dispatch({type: CLEAR_ALERT })
           store.dispatch({type: UPDATE_ROLES, roles: keycloak?.realmAccess?.roles || [] })
-          store.getState().auth.afterLogin.forEach(a => a.func())
           if (authenticated) {
             keycloak.loadUserProfile()
                .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))

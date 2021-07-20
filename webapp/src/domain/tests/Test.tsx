@@ -21,7 +21,7 @@ import { TestDispatch } from './reducers'
 
 import SaveChangesModal from '../../components/SaveChangesModal'
 
-import { useTester } from '../../auth'
+import { useTester, rolesSelector } from '../../auth'
 import { infoActions } from '../../alerts'
 import General from './General'
 import Views from './Views'
@@ -70,12 +70,13 @@ export default function Test() {
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<TestDispatch>()
 
+    const roles = useSelector(rolesSelector)
     useEffect(() => {
         if (testId !== 0) {
             setLoaded(false)
             thunkDispatch(actions.fetchTest(testId)).finally(() => setLoaded(true))
         }
-    }, [dispatch, thunkDispatch, testId])
+    }, [dispatch, thunkDispatch, testId, roles])
 
     useEffect(() => {
         document.title = (testId === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"

@@ -30,7 +30,7 @@ import { toEpochMillis, interleave } from '../../utils'
 
 import { byTest } from './actions';
 import * as selectors from './selectors';
-import { tokenSelector, roleToName } from '../../auth'
+import { tokenSelector, rolesSelector, roleToName } from '../../auth'
 import { alertAction } from '../../alerts'
 
 import { fetchTest } from '../tests/actions';
@@ -199,9 +199,10 @@ export default function TestRuns() {
     const [ showTrashed, setShowTrashed ] = useState(false)
     const runs = useSelector(selectors.testRuns(testId, pagination, showTrashed));
     const runCount = useSelector(selectors.count)
+    const roles = useSelector(rolesSelector)
     useEffect(() => {
         dispatch(fetchTest(testId));
-    }, [dispatch, testId])
+    }, [dispatch, testId, roles])
     useEffect(() => {
         dispatch(byTest(testId, pagination, showTrashed, tags?.toString() || ""))
     }, [dispatch, showTrashed, page, perPage, sort, direction, tags, pagination, testId])

@@ -39,7 +39,6 @@ import ConfirmTestDeleteModal from './ConfirmTestDeleteModal'
 import {
   isAuthenticatedSelector,
   useTester,
-  registerAfterLogin,
   roleToName,
   rolesSelector,
   userProfileSelector,
@@ -204,12 +203,10 @@ export default function AllTests() {
         }
     ], [dispatch, thunkDispatch])
     const allTests = useSelector(selectors.all);
+    const roles = useSelector(rolesSelector)
     useEffect(()=>{
         dispatch(fetchSummary())
-        dispatch(registerAfterLogin("reload_tests", () => {
-          dispatch(fetchSummary())
-        }))
-    },[dispatch])
+    },[dispatch, roles])
     const isAuthenticated = useSelector(isAuthenticatedSelector)
     useEffect(() => {
       if (isAuthenticated) {
