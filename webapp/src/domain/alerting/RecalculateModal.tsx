@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import { useState, useRef } from 'react'
 
 import { useDispatch} from 'react-redux'
 
@@ -10,6 +10,13 @@ import {
     Modal,
     Progress,
 } from '@patternfly/react-core'
+import {
+    Table,
+    TableBody,
+} from '@patternfly/react-table'
+import {
+    NavLink
+} from 'react-router-dom'
 
 import { recalculate, recalculateProgress } from './api'
 import { alertAction } from '../../alerts'
@@ -25,12 +32,35 @@ type RecalculateModalProps = {
     testId: number,
 }
 
+function isEmpty(value: any) {
+    return !Array.isArray(value) || value.length === 0
+}
+
+type RecalculationResult = {
+    totalRuns: number,
+    errors: number,
+    runsWithoutAccessor: number[],
+    runsWithoutValue: number[],
+}
+
+function runsToLinks(ids: number[]) {
+    // reverse sort
+    return (<>
+            { ids.sort((a, b) => a - b).slice(0, 10).map((id, i) => <>
+                { i !== 0 && ", "}
+                <NavLink to={`/run/${id}`}>{ id }</NavLink>
+            </>) }
+            { ids.length > 10 && "..."}
+        </>)
+}
+
 export default function RecalculateModal(props : RecalculateModalProps) {
     const [progress, setProgress] = useState(-1)
     const dispatch = useDispatch()
     const [debug, setDebug] = useState(false)
     const [timeRange, setTimeRange] = useState<TimeRange>()
     const timer = useRef<number>()
+    const [result, setResult] = useState<RecalculationResult>()
     const fetchProgress = () => {
         recalculateProgress(props.testId).then(
             response => {
@@ -38,6 +68,9 @@ export default function RecalculateModal(props : RecalculateModalProps) {
                     setProgress(-1)
                     window.clearInterval(timer.current)
                     props.onClose()
+                    if (response.errors !== 0 || !isEmpty(response.runsWithoutAccessor) || !isEmpty(response.runsWithoutValue)) {
+                        setResult(response)
+                    }
                 } else {
                     setProgress(response.percentage)
                 }
@@ -50,7 +83,7 @@ export default function RecalculateModal(props : RecalculateModalProps) {
             }
         )
     }
-    return (<Modal
+    return (<><Modal
         variant="small"
         title={props.title}
         isOpen={props.isOpen}
@@ -102,5 +135,29 @@ export default function RecalculateModal(props : RecalculateModalProps) {
             </FormGroup>
         </Form> }
         { progress >= 0 && <Progress value={progress} title="Recalculating..." measureLocation="inside" /> }
-    </Modal>)
+    </Modal>
+    { result && <Modal
+        variant="small"
+        title="Recalculation completed"
+        isOpen={ !!result }
+        onClose={ () => setResult(undefined) }
+        actions={ [
+            <Button key={0} onClick={ () => setResult(undefined) }>Close</Button>
+        ]}
+    >
+        <Table
+          aria-label="Results table"
+          variant='compact'
+          cells={ ['Category', 'Value']}
+          rows={[
+              [ 'Total number of runs', result.totalRuns ],
+              [ 'Runs without accessor', runsToLinks(result.runsWithoutAccessor) ],
+              [ 'Runs without value', runsToLinks(result.runsWithoutValue) ],
+              [ 'Value parsing errors', result.errors]
+          ]}
+        >
+          <TableBody />
+        </Table>
+    </Modal> }
+    </>)
 }

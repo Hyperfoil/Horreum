@@ -7,11 +7,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -92,7 +96,7 @@ public class AlertingService {
          "   WHERE testid = ?" +
          ") SELECT vars.id as vid, vars.name as name, vars.calculation, vars.accessor, se.jsonpath, schema.uri  FROM vars " +
          "JOIN schemaextractor se ON se.accessor = replace(vars.accessor, '[]', '') " +
-         "JOIN schema ON schema.id = se.schema_id WHERE schema.uri = ANY(string_to_array(?, ';'));";
+         "JOIN schema ON schema.id = se.schema_id;";
 
    private static final String LOOKUP_STALE =
          "WITH last_run AS (" +
@@ -146,7 +150,8 @@ public class AlertingService {
    @Inject
    NotificationService notificationService;
 
-   private final Map<Integer, Integer> recalcProgress = new HashMap<>();
+   // entries can be removed from timer thread while normally this is updated from one of blocking threads
+   private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
 
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
@@ -158,7 +163,7 @@ public class AlertingService {
       } catch (NoResultException e) {
          showNotifications = true;
       }
-      onNewRun(run, showNotifications, false);
+      onNewRun(run, showNotifications, false, null);
    }
 
    @PostConstruct
@@ -201,8 +206,30 @@ public class AlertingService {
       }
    }
 
-   private void onNewRun(Run run, boolean notify, boolean debug) {
+   private void onNewRun(Run run, boolean notify, boolean debug, Recalculation recalculation) {
       log.infof("Received run ID %d", run.id);
+      // In order to create datapoints we'll use the horreum.alerting ownership
+      List<String> roles = Arrays.asList(run.owner, HORREUM_ALERTING);
+
+      // TODO: We will have the JSONPaths in PostgreSQL format while the Run
+      // itself is available here in the application.
+      // We'll use the database as a library function
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, roles)) {
+
+         Query setRun = em.createNativeQuery(UPLOAD_RUN);
+         setRun.setParameter(1, run.data.toString());
+         setRun.executeUpdate();
+         try {
+            emitDatapoints(run, notify, debug, recalculation);
+         } catch (Throwable t) {
+            log.error("Failed to create new datapoints", t);
+         } finally {
+            em.createNativeQuery("DROP TABLE current_run").executeUpdate();
+         }
+      }
+   }
+
+   private void emitDatapoints(Run run, boolean notify, boolean debug, Recalculation recalculation) {
       String firstLevelSchema = run.data.getString("$schema");
       List<String> schemas = run.data.values().stream()
             .filter(Json.class::isInstance).map(Json.class::cast)
@@ -212,158 +239,173 @@ public class AlertingService {
          schemas.add(firstLevelSchema);
       }
 
-      // In order to create datapoints we'll use the horreum.alerting ownership
-      List<String> roles = Arrays.asList(run.owner, HORREUM_ALERTING);
-
-      // TODO: We will have the JSONPaths in PostgreSQL format while the Run
-      // itself is available here in the application.
-      // We'll use the database as a library function
       StringBuilder extractionQuery = new StringBuilder("SELECT 1");
       Map<Integer, VarInfo> vars = new HashMap<>();
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, roles)) {
+      Map<String, Set<AccessorInfo>> allAccessors = new HashMap<>();
 
-         Query setRun = em.createNativeQuery(UPLOAD_RUN);
-         setRun.setParameter(1, run.data.toString());
-         setRun.executeUpdate();
-         try {
-            Query lookup = em.createNativeQuery(LOOKUP_VARS);
-            lookup.setParameter(1, run.testid);
-            lookup.setParameter(2, String.join(";", schemas));
-            @SuppressWarnings("unchecked")
-            List<Object[]> varSelection = lookup.getResultList();
-            Map<String, String> usedAccessors = new HashMap<>();
+      Query lookup = em.createNativeQuery(LOOKUP_VARS);
+      lookup.setParameter(1, run.testid);
+      @SuppressWarnings("unchecked")
+      List<Object[]> varSelection = lookup.getResultList();
 
-            ACCESSOR_LOOP:
-            for (Object[] row : varSelection) {
-               int id = (Integer) row[0];
-               String name = (String) row[1];
-               String calc = (String) row[2];
-               String accessor = (String) row[3];
-               String jsonpath = (String) row[4];
-               String schema = (String) row[5];
-               VarInfo var = vars.computeIfAbsent(id, i -> new VarInfo(i, name, calc));
+      for (Object[] row : varSelection) {
+         int id = (Integer) row[0];
+         String name = (String) row[1];
+         String calc = (String) row[2];
+         String accessor = (String) row[3];
+         String jsonpath = (String) row[4];
+         String schema = (String) row[5];
+         VarInfo var = vars.computeIfAbsent(id, i -> new VarInfo(id, name, calc));
+         var.accessors.add(accessor);
+         Set<AccessorInfo> accessors = allAccessors.computeIfAbsent(accessor, a -> new HashSet<>());
+         // note that as we do single query there may be array and non-array variant for different variables
+         accessors.add(new AccessorInfo(schema, jsonpath));
+      }
 
-               boolean isArray = SchemaExtractor.isArray(accessor);
-               if (isArray) {
-                  // we have to allow select both as first match and as an array, while keeping only one in the result
-                  accessor = SchemaExtractor.arrayName(accessor) + "___arr";
-               }
-
-               for (; ; ) {
-                  String prev = usedAccessors.putIfAbsent(accessor, schema);
-                  if (prev == null) {
-                     break;
-                  } else if (prev.equals(schema)) {
-                     var.accessors.add(accessor);
-                     continue ACCESSOR_LOOP;
-                  }
-                  log.warnf("Accessor %s used for multiple schemas: %s, %s", accessor, schema, prev);
-                  accessor = accessor + "_";
-               }
-               if (isArray) {
-                  extractionQuery.append(", jsonb_path_query_array(data, '");
-               } else {
-                  extractionQuery.append(", jsonb_path_query_first(data, '");
-               }
-               if (schema.equals(firstLevelSchema)) {
-                  extractionQuery.append("$");
-               } else {
-                  extractionQuery.append("$.*");
-               }
-               // four colons to escape it for Hibernate
-               extractionQuery.append(jsonpath).append("'::::jsonpath)::::text as ").append(StringUtil.quote(accessor, "\""));
-               var.accessors.add(accessor);
+      for (var entry: allAccessors.entrySet()) {
+         String accessor = entry.getKey();
+         boolean isArray = SchemaExtractor.isArray(accessor);
+         String column = StringUtil.quote(isArray ? SchemaExtractor.arrayName(accessor) + "___arr" : accessor, "\"");
+         List<AccessorInfo> matching = entry.getValue().stream().filter(ai -> schemas.contains(ai.schema)).collect(Collectors.toList());
+         if (matching.isEmpty()) {
+            recalculation.runsWithoutAccessor.add(run.id);
+            logCalculationMessage(run.testid, run.id, CalculationLog.WARN,
+                  "Accessor %s referenced from variables %s cannot be extracted: requires one of these schemas: %s", accessor,
+                  vars.values().stream().filter(var -> var.accessors.contains(accessor)).map(var -> var.name).collect(Collectors.toList()),
+                  entry.getValue().stream().map(ai -> ai.schema).collect(Collectors.toList()));
+         } else if (matching.size() > 1) {
+            // we want deterministic order (at least)
+            matching.sort(Comparator.comparing(ai -> ai.schema));
+            logCalculationMessage(run.testid, run.id, CalculationLog.WARN,
+                  "Accessor %s referenced from variables %s is used for multiple schemas: %s", accessor,
+                  vars.values().stream().filter(var -> var.accessors.contains(accessor)).map(var -> var.name).collect(Collectors.toList()),
+                  matching.stream().map(ai -> ai.schema).collect(Collectors.toList()));
+            extractionQuery.append(", to_json(array[");
+            for (int i = 0; i < matching.size(); i++) {
+               AccessorInfo ai = matching.get(i);
+               if (i != 0) extractionQuery.append(", ");
+               appendPathQuery(extractionQuery, ai.schema.equals(firstLevelSchema), isArray, ai.jsonpath);
             }
-            extractionQuery.append(" FROM current_run");
-
-            Query extraction = em.createNativeQuery(extractionQuery.toString());
-
-            SqlService.setResultTransformer(extraction, AliasToEntityMapResultTransformer.INSTANCE);
-            Map<String, String> extracted;
-            try {
-               @SuppressWarnings("unchecked")
-               Map<String, Object> result = (Map<String, Object>) extraction.getSingleResult();
-               extracted = result.entrySet().stream()
-                     .filter(e -> e.getValue() instanceof String)
-                     .collect(Collectors.toMap(e -> e.getKey().toLowerCase(), e -> String.valueOf(e.getValue())));
-            } catch (NoResultException e) {
-               log.errorf("Run %d does not exist in the database!", run.id);
-               return;
-            }
-            for (VarInfo var : vars.values()) {
-               if (var.accessors.isEmpty()) {
-                  continue;
-               }
-               DataPoint dataPoint = new DataPoint();
-               // TODO: faking the variable
-               Variable variable = new Variable();
-               variable.id = var.id;
-               dataPoint.variable = variable;
-               dataPoint.runId = run.id;
-               dataPoint.timestamp = run.start;
-               if (debug) {
-                  String data = extracted.isEmpty() ? "<no data>" : extracted.entrySet().stream().map(e -> (e.getKey() + " -> " + e.getValue())).collect(Collectors.joining("\n"));
-                  logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Variable %s fetches values for these accessors:<pre>%s</pre>", var.name, data);
-               }
-               if (var.calculation == null || var.calculation.isEmpty()) {
-                  if (var.accessors.size() > 1) {
-                     logCalculationMessage(run.testid, run.id, CalculationLog.WARN, "Variable %s has more than one accessor (%s) but no calculation function.", var.name, var.accessors);
-                  }
-                  String accessor = var.accessors.get(0);
-                  String value = extracted.get(accessor.toLowerCase());
-                  if (value == null) {
-                     logCalculationMessage(run.testid, run.id, CalculationLog.INFO, "Null value for variable %s, accessor %s - datapoint is not created", var.name, accessor);
-                     continue;
-                  }
-                  String maybeNumber = value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"' ?
-                        value.substring(1, value.length() - 1) : value;
-                  try {
-                     dataPoint.value = Double.parseDouble(maybeNumber);
-                  } catch (NumberFormatException e) {
-                     logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Cannot turn %s into a floating-point value for variable %s: %s", value, var.name, e.getMessage());
-                     continue;
-                  }
-               } else {
-                  StringBuilder code = new StringBuilder();
-                  if (var.accessors.size() > 1) {
-                     code.append("const __obj = {\n");
-                     for (String accessor : var.accessors) {
-                        String value = extracted.get(accessor.toLowerCase());
-                        if (accessor.endsWith("___arr")) {
-                           code.append(accessor, 0, accessor.length() - 6);
-                        } else {
-                           code.append(accessor);
-                        }
-                        code.append(": ");
-                        appendValue(code, value);
-                        code.append(",\n");
-                     }
-                     code.append("};\n");
-                  } else {
-                     code.append("const __obj = ");
-                     appendValue(code, extracted.get(var.accessors.get(0).toLowerCase()));
-                     code.append(";\n");
-                  }
-                  code.append("const __func = ").append(var.calculation).append(";\n");
-                  code.append("__func(__obj)");
-                  if (debug) {
-                     logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Variable %s, <pre>%s</pre>" , var.name, code.toString());
-                  }
-                  Double value = execute(run.testid, run.id, code.toString(), var.name);
-                  if (value == null) {
-                     continue;
-                  }
-                  dataPoint.value = value;
-               }
-               dataPoint.persist();
-               publishLater(DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
-            }
-         } catch (Throwable t) {
-            log.error("Failed to create new datapoints", t);
-         } finally {
-            em.createNativeQuery("DROP TABLE current_run").executeUpdate();
+            extractionQuery.append("])::::text as ").append(column);
+         } else {
+            AccessorInfo ai = matching.get(0);
+            appendPathQuery(extractionQuery, ai.schema.equals(firstLevelSchema), isArray, ai.jsonpath);
+            extractionQuery.append("::::text as ").append(column);
          }
       }
+
+      extractionQuery.append(" FROM current_run");
+      Query extraction = em.createNativeQuery(extractionQuery.toString());
+
+      SqlService.setResultTransformer(extraction, AliasToEntityMapResultTransformer.INSTANCE);
+      Map<String, String> extracted;
+      try {
+         @SuppressWarnings("unchecked")
+         Map<String, Object> result = (Map<String, Object>) extraction.getSingleResult();
+         extracted = result.entrySet().stream()
+               .filter(e -> e.getValue() instanceof String)
+               .collect(Collectors.toMap(e -> e.getKey().toLowerCase(), e -> String.valueOf(e.getValue())));
+      } catch (NoResultException e) {
+         log.errorf("Run %d does not exist in the database!", run.id);
+         return;
+      }
+      if (debug) {
+         String data = extracted.isEmpty() ? "&lt;no data&gt;" : extracted.entrySet().stream().map(e -> (e.getKey() + " -> " + e.getValue())).collect(Collectors.joining("\n"));
+         logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Fetched values for these accessors:<pre>%s</pre>", data);
+      }
+
+      for (VarInfo var : vars.values()) {
+         DataPoint dataPoint = new DataPoint();
+         // TODO: faking the variable
+         Variable variable = new Variable();
+         variable.id = var.id;
+         dataPoint.variable = variable;
+         dataPoint.runId = run.id;
+         dataPoint.timestamp = run.start;
+
+         if (var.calculation == null || var.calculation.isEmpty()) {
+            if (var.accessors.size() > 1) {
+               logCalculationMessage(run.testid, run.id, CalculationLog.WARN, "Variable %s has more than one accessor (%s) but no calculation function.", var.name, var.accessors);
+            }
+            String accessor = var.accessors.stream().findFirst().orElseThrow();
+            String column = toColumn(accessor);
+            String value = extracted.get(column);
+            if (value == null) {
+               logCalculationMessage(run.testid, run.id, CalculationLog.INFO, "Null value for variable %s, accessor %s - datapoint is not created", var.name, accessor);
+               recalculation.runsWithoutValue.add(run.id);
+               continue;
+            }
+            String maybeNumber = value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"' ?
+                  value.substring(1, value.length() - 1) : value;
+            try {
+               dataPoint.value = Double.parseDouble(maybeNumber);
+            } catch (NumberFormatException e) {
+               logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Cannot turn %s into a floating-point value for variable %s: %s", value, var.name, e.getMessage());
+               recalculation.errors++;
+               continue;
+            }
+         } else {
+            StringBuilder code = new StringBuilder();
+            if (var.accessors.size() > 1) {
+               code.append("const __obj = {\n");
+               for (String accessor : var.accessors) {
+                  String column = toColumn(accessor);
+                  String value = extracted.get(column);
+                  if (SchemaExtractor.isArray(accessor)) {
+                     code.append(SchemaExtractor.arrayName(accessor));
+                  } else {
+                     code.append(accessor);
+                  }
+                  code.append(": ");
+                  appendValue(code, value);
+                  code.append(",\n");
+               }
+               code.append("};\n");
+            } else {
+               code.append("const __obj = ");
+               String column = toColumn(var.accessors.stream().findFirst().orElseThrow());
+               String value = extracted.get(column);
+               appendValue(code, value);
+               code.append(";\n");
+            }
+            code.append("const __func = ").append(var.calculation).append(";\n");
+            code.append("__func(__obj)");
+            if (debug) {
+               logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Variable %s, <pre>%s</pre>" , var.name, code.toString());
+            }
+            Double value = execute(run.testid, run.id, code.toString(), var.name);
+            if (value == null) {
+               recalculation.runsWithoutValue.add(run.id);
+               continue;
+            }
+            dataPoint.value = value;
+         }
+         dataPoint.persist();
+         publishLater(DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
+      }
+   }
+
+   private String toColumn(String accessor) {
+      String column = accessor.toLowerCase();
+      if (SchemaExtractor.isArray(accessor)) {
+         column = SchemaExtractor.arrayName(column) + "___arr";
+      }
+      return column;
+   }
+
+   private void appendPathQuery(StringBuilder query, boolean isFirstLevel, boolean isArray, String jsonpath) {
+      if (isArray) {
+         query.append(", jsonb_path_query_array(data, '");
+      } else {
+         query.append(", jsonb_path_query_first(data, '");
+      }
+      if (isFirstLevel) {
+         query.append("$");
+      } else {
+         query.append("$.*");
+      }
+      // four colons to escape it for Hibernate
+      query.append(jsonpath).append("'::::jsonpath)");
    }
 
    private void logCalculationMessage(int testId, int runId, int level, String format, Object... args) {
@@ -757,8 +799,9 @@ public class AlertingService {
       SecurityIdentity identity = CachedSecurityIdentity.of(this.identity);
 
       vertx.executeBlocking(promise -> {
-         List<Integer> runIds = withTx(() -> {
-            if (recalcProgress.putIfAbsent(testId, 0) != null) {
+         Recalculation recalculation = withTx(() -> {
+            Recalculation r = new Recalculation();
+            if (recalcProgress.putIfAbsent(testId, r) != null) {
                promise.complete();
                return null;
             }
@@ -769,27 +812,30 @@ public class AlertingService {
                      .setParameter(3, to == null ? Long.MAX_VALUE : to);
                @SuppressWarnings("unchecked")
                List<Integer> ids = query.getResultList();
+               r.runs = ids;
                DataPoint.delete("runId in ?1", ids);
                Change.delete("runId in ?1 AND confirmed = false", ids);
-               return ids;
+               return r;
             }
          });
-         if (runIds != null) {
+         if (recalculation != null) {
             int completed = 0;
-            for (int runId : runIds) {
+            recalcProgress.put(testId, recalculation);
+            for (int runId : recalculation.runs) {
                // Since the evaluation might take few moments and we're dealing potentially with thousands
                // of runs we'll process each run in a separate transaction
                withTx(() -> {
                   try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
                      Run run = Run.findById(runId);
-                     onNewRun(run, false, debug);
+                     onNewRun(run, false, debug, recalculation);
                   }
                   return null;
                });
-               recalcProgress.put(testId, 100 * ++completed / runIds.size());
+               recalculation.progress = 100 * ++completed / recalculation.runs.size();
             }
+            recalculation.done = true;
+            vertx.setTimer(30_000, timerId -> recalcProgress.remove(testId, recalculation));
          }
-         recalcProgress.remove(testId);
          promise.complete();
       }, result -> {});
       return Response.ok().build();
@@ -802,10 +848,16 @@ public class AlertingService {
       if (testId == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing param 'test'").build();
       }
-      Integer progress = recalcProgress.get(testId);
+      Recalculation recalculation = recalcProgress.get(testId);
       Json json = new Json(false);
-      json.add("percentage", progress == null ? 100 : progress);
-      json.add("done", progress == null);
+      json.add("percentage", recalculation == null ? 100 : recalculation.progress);
+      json.add("done", recalculation == null || recalculation.done);
+      if (recalculation != null) {
+         json.add("totalRuns", recalculation.runs.size());
+         json.add("errors", recalculation.errors);
+         json.add("runsWithoutAccessor", recalculation.runsWithoutAccessor);
+         json.add("runsWithoutValue", recalculation.runsWithoutValue);
+      }
       return Response.ok(json).build();
    }
 
@@ -875,16 +927,48 @@ public class AlertingService {
       }
    }
 
+   private static class AccessorInfo {
+      final String schema;
+      final String jsonpath;
+
+      private AccessorInfo(String schema, String jsonpath) {
+         this.schema = schema;
+         this.jsonpath = jsonpath;
+      }
+
+      @Override
+      public boolean equals(Object o) {
+         if (this == o) return true;
+         if (o == null || getClass() != o.getClass()) return false;
+         AccessorInfo that = (AccessorInfo) o;
+         return schema.equals(that.schema);
+      }
+
+      @Override
+      public int hashCode() {
+         return schema.hashCode();
+      }
+   }
+
    private static class VarInfo {
       final int id;
       final String name;
       final String calculation;
-      final List<String> accessors = new ArrayList<>();
+      final Set<String> accessors = new HashSet<>();
 
       private VarInfo(int id, String name, String calculation) {
          this.id = id;
          this.name = name;
          this.calculation = calculation;
       }
+   }
+
+   private static class Recalculation {
+      List<Integer> runs = Collections.emptyList();
+      int progress;
+      boolean done;
+      public int errors;
+      Set<Integer> runsWithoutAccessor = new HashSet<>();
+      Set<Integer> runsWithoutValue = new HashSet<>();
    }
 }
