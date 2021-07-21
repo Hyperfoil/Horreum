@@ -20,6 +20,7 @@ export type Access = 0 | 1 | 2
 
 export class AuthState {
   keycloak?: Keycloak.KeycloakInstance = undefined;
+  authenticated: boolean = false;
   roles: string[] = [];
   userProfile?: Keycloak.KeycloakProfile;
   initPromise?: Promise<boolean> = undefined;
@@ -35,6 +36,7 @@ interface InitAction {
 
 interface UpdateRolesAction {
    type: typeof UPDATE_ROLES,
+   authenticated: boolean,
    roles: string[],
 }
 
@@ -58,7 +60,8 @@ export const reducer = (state = initialState, action: AuthActions) => {
          }
          break
       case UPDATE_ROLES:
-         state.roles = action.roles
+         state.authenticated = action.authenticated
+         state.roles = [ ...action.roles ]
          break
       case STORE_PROFILE:
          state.userProfile = action.profile
@@ -66,6 +69,7 @@ export const reducer = (state = initialState, action: AuthActions) => {
       case AFTER_LOGOUT:
          state.userProfile = undefined
          state.initPromise = undefined
+         state.authenticated = false
          state.roles = []
          break
       default:
@@ -90,13 +94,11 @@ export const userProfileSelector = (state: State) => {
 }
 
 export const isAuthenticatedSelector = (state: State) => {
-   let keycloak = state.auth.keycloak
-   return !!keycloak && keycloak.authenticated;
+   return state.auth.authenticated
 }
 
 export const isAdminSelector = (state: State) => {
-   let keycloak = state.auth.keycloak
-   return !!keycloak && keycloak.hasRealmRole("admin")
+   return state.auth.roles.includes("admin")
 }
 
 export const rolesSelector = (state: State): string[] => {
@@ -133,7 +135,11 @@ export const initKeycloak = (state: State) => {
         } as Keycloak.KeycloakInitOptions);
         (initPromise as Promise<boolean>).then(authenticated => {
           store.dispatch({type: CLEAR_ALERT })
-          store.dispatch({type: UPDATE_ROLES, roles: keycloak?.realmAccess?.roles || [] })
+          store.dispatch({
+             type: UPDATE_ROLES,
+             authenticated,
+             roles: keycloak?.realmAccess?.roles || []
+         })
           if (authenticated) {
             keycloak.loadUserProfile()
                .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
@@ -152,10 +158,12 @@ export const TryLoginAgain = () => {
 
 export const LoginLogout = () => {
    const keycloak = useSelector(keycloakSelector)
+   const authenticated = useSelector(isAuthenticatedSelector)
    const dispatch = useDispatch()
    if (!keycloak) {
       return (<></>)
-   } else if (keycloak.authenticated) {
+   }
+   if (authenticated) {
       return (
          <Button onClick={ () => {
             keycloak.logout()
