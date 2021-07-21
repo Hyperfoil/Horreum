@@ -46,7 +46,7 @@ type AlertActions = AddAlertAction | ClearAlertAction;
 export const reducer = (state: Alert[] = [], action: AlertActions) => {
    switch (action.type) {
       case ADD_ALERT:
-         return [...state, action.alert]
+         return [...state.filter(a => a.type != action.alert.type), action.alert]
       case CLEAR_ALERT:
          if (action.alert) {
             const alert: Alert = action.alert;
