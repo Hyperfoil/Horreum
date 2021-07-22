@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.api;
 
-import io.hyperfoil.tools.yaup.StringUtil;
 import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.security.identity.SecurityIdentity;
 
@@ -18,16 +17,13 @@ import javax.ws.rs.core.Response;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.sql.*;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.hibernate.JDBCException;
@@ -97,63 +93,6 @@ public class SqlService {
    void init() {
       log.info("Initializing SqlService");
       dbSecretBytes = dbSecret.getBytes(StandardCharsets.UTF_8);
-   }
-
-   public static Json fromResultSet(ResultSet resultSet) throws SQLException {
-      Json rtrn = new Json(true);
-      Map<String, Integer> names = new HashMap<>();
-      ResultSetMetaData rsmd = resultSet.getMetaData();
-      int columnCount = rsmd.getColumnCount();
-      for (int i = 1; i <= columnCount; i++) {
-         String name = rsmd.getColumnName(i);
-         names.put(name, rsmd.getColumnType(i));
-      }
-
-      while (resultSet.next()) {
-         Json entry = new Json();
-         for (String name : names.keySet()) {
-            Object value = getValue(resultSet, name, names.get(name));
-            entry.set(name, value );
-         }
-         rtrn.add(entry);
-      }
-      return rtrn;
-   }
-
-   public static Object getValue(ResultSet resultSet, String column, int type) throws SQLException {
-      switch (type) {
-
-         case Types.DATE:
-         case Types.TIME:
-         case Types.TIMESTAMP:
-         case Types.TIMESTAMP_WITH_TIMEZONE:
-            return resultSet.getTimestamp(column).getTime();
-         case Types.JAVA_OBJECT:
-            Object obj = resultSet.getObject(column);
-            if (obj == null) {
-               return "";
-            } else {
-               return Json.fromString(obj.toString());
-            }
-
-         case Types.TINYINT:
-         case Types.SMALLINT:
-         case Types.INTEGER:
-         case Types.BIGINT:
-            return resultSet.getLong(column);
-         case Types.OTHER:
-            String str = StringUtil.removeQuotes(resultSet.getString(column));
-            if (Json.isJsonLike(str)) {
-               return Json.fromString(str);
-            } else {
-               return str;
-            }
-         case Types.BIT:
-         case Types.BOOLEAN:
-            return resultSet.getBoolean(column);
-         default:
-            return StringUtil.removeQuotes(resultSet.getString(column));
-      }
    }
 
    private String getSignedRoles(Iterable<String> roles) throws NoSuchAlgorithmException {
@@ -247,16 +186,6 @@ public class SqlService {
             unsetToken.setParameter(1, "");
             unsetToken.getSingleResult();
          };
-      }
-   }
-
-   public static ResultSet execute(PreparedStatement statement) throws SQLException {
-      long startTime = System.nanoTime();
-      try {
-         return statement.executeQuery();
-      } finally {
-         long endTime = System.nanoTime();
-         log.debugf("SQL query execution took %d ms, query: %s", TimeUnit.NANOSECONDS.toMillis(endTime - startTime), statement);
       }
    }
 }
