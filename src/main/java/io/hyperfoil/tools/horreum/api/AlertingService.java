@@ -138,6 +138,9 @@ public class AlertingService {
    @ConfigProperty(name = "horreum.grafana.url")
    Optional<String> grafanaBaseUrl;
 
+   @ConfigProperty(name = "horreum.grafana.update.datasource")
+   Optional<Boolean> updateGrafanaDatasource;
+
    @ConfigProperty(name = "horreum.internal.url")
    String internalUrl;
 
@@ -168,7 +171,7 @@ public class AlertingService {
 
    @PostConstruct
    void init() {
-      if (grafanaBaseUrl.isPresent()) {
+      if (grafanaBaseUrl.isPresent() && updateGrafanaDatasource.orElse(true)) {
          vertx.setTimer(1, this::setupGrafanaDatasource);
       }
    }
