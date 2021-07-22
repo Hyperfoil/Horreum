@@ -11,7 +11,7 @@ const endPoints = {
     updateAccess: (id: number, owner: string, access: Access) => `${base}/${id}/updateAccess?owner=${owner}&access=${accessName(access)}`,
     extractor: () => `${base}/extractor`,
     extractorForSchema: (schemaId: number) => `${base}/extractor?schemaId=${schemaId}`,
-    testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${jsonpath}`
+    testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${encodeURIComponent(jsonpath)}`
 }
 export const all = ()=>{
     return fetchApi(endPoints.base(),null,'get');
