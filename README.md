@@ -1,5 +1,5 @@
 # Hyperfoil Horreum
-A service for storing performance data. Curently under early development.
+A service for storing performance data and regression analysis. Curently under early development.
 
 Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io).
 
@@ -43,7 +43,15 @@ podman run --rm --name horreum_app --env-file .env --network=host -p 8080:8080 q
 ```
 
 > :warning: *If npm install fails*: please try clearing the node module cache `npm cache clean`
+
+## Build tooling set-up
+```bash
+mvn -N io.takari:maven:wrapper
+```
+This set's up your environment with the maven wrapper tool
+
 ## Creating jar
+
 ```bash
 ./mvnw clean package -Dui
 ```
