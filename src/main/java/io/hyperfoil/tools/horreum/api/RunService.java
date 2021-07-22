@@ -186,7 +186,7 @@ public class RunService {
       }
       try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
            @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         Test test = getOrCreateTest(testNameOrId, run.owner, run.access);
+         Test test = testService.getByNameOrId(testNameOrId);
          if (test == null) {
             return Response.serverError().entity("Failed to find test " + testNameOrId).build();
          }
@@ -237,9 +237,9 @@ public class RunService {
             return Response.status(Response.Status.BAD_REQUEST).entity("Cannot get stop time.").build();
          }
 
-         Test testEntity = getOrCreateTest(testNameOrId, owner, access);
+         Test testEntity = testService.getByNameOrId(testNameOrId);
          if (testEntity == null) {
-            return Response.serverError().entity("Failed to find or create test " + testNameOrId).build();
+            return Response.serverError().entity("Failed to find test " + testNameOrId).build();
          }
 
          Json validationErrors = schemaService.validate(data, schemaUri);
@@ -279,13 +279,6 @@ public class RunService {
       }
    }
 
-   private Object findIfNotSet(Object current, Json json, String path) {
-      if (current == null && path != null && !path.isEmpty()) {
-         return Json.find(json, path);
-      }
-      return current;
-   }
-
    private Instant toInstant(Object time) {
       if (time == null) {
          return null;
@@ -303,24 +296,6 @@ public class RunService {
             return null;
          }
       }
-   }
-
-   private Test getOrCreateTest(String testNameOrId, String owner, Access access) {
-      Test testEntity = testService.getByNameOrId(testNameOrId);
-      if (testEntity == null && !testNameOrId.matches("-?\\d+")) {
-         log.infof("Creating new test %s with owner %s and access %s", testNameOrId, owner, access);
-         testEntity = new Test();
-         testEntity.name = testNameOrId;
-         testEntity.description = "created by data upload";
-         testEntity.owner = owner;
-         testEntity.access = access;
-         try {
-            testService.addAuthenticated(testEntity);
-         } catch (PersistenceException e) {
-            log.error("Failed to create new test.", e);
-         }
-      }
-      return testEntity;
    }
 
    private Response addAuthenticated(Run run, Test test) {
