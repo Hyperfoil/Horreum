@@ -127,6 +127,7 @@ public class TestService {
          if (test.defaultView == null) {
             test.defaultView = existing.defaultView;
          }
+         test.tokens = existing.tokens;
          test.copyIds(existing);
          em.merge(test);
       } else {
