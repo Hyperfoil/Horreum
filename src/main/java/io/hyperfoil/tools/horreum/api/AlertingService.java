@@ -814,7 +814,7 @@ public class AlertingService {
                return null;
             }
             try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-               Query query = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) ORDER BY start")
+               Query query = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) AND NOT run.trashed ORDER BY start")
                      .setParameter(1, testId)
                      .setParameter(2, from == null ? Long.MIN_VALUE : from)
                      .setParameter(3, to == null ? Long.MAX_VALUE : to);
