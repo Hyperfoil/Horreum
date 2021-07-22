@@ -65,6 +65,11 @@ public class GrafanaService {
    @POST
    @Path("/query")
    public Response query(@Context HttpServletRequest request, Query query) {
+      if (query == null) {
+         return Response.status(400).entity("No query").build();
+      } else if (query.range == null || query.range.from == null || query.range.to == null) {
+         return Response.status(400).entity("Invalid time range").build();
+      }
       List<TimeseriesTarget> result = new ArrayList<>();
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          for (Target target : query.targets) {
@@ -140,6 +145,11 @@ public class GrafanaService {
    @POST
    @Path("/annotations")
    public Response annotations(AnnotationsQuery query) {
+      if (query == null) {
+         return Response.status(400).entity("No query").build();
+      } else if (query.range == null || query.range.from == null || query.range.to == null) {
+         return Response.status(400).entity("Invalid time range").build();
+      }
       // Note that annotations are per-dashboard, not per-panel:
       // https://github.com/grafana/grafana/issues/717
       List<AnnotationDefinition> annotations = new ArrayList<>();

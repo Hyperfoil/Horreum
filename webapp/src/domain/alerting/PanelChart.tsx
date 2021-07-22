@@ -22,7 +22,7 @@ import {
 import { DateTime } from 'luxon';
 import { findLastDatapoints } from './api'
 import { Annotation, fetchDatapoints, fetchAllAnnotations, TimeseriesTarget } from './grafanaapi'
-import { alertAction } from '../../alerts'
+import { alertAction, dispatchInfo } from '../../alerts'
 
 type LastDatapoint = {
     variable: number,
@@ -161,7 +161,14 @@ export default function PanelChart(props: PanelProps) {
                             onClick={ () => {
                                 setGettingLast(true)
                                 findLastDatapoints(props.variables, props.tags).then(
-                                    response => props.setEndTime(Math.max(...response.map(({ timestamp }: LastDatapoint) => timestamp)) + 1),
+                                    response => {
+                                        if (Array.isArray(response) && response.length > 0) {
+                                            props.setEndTime(Math.max(...response.map(({ timestamp }: LastDatapoint) => timestamp)) + 1)
+                                        } else {
+                                            dispatchInfo(dispatch, "NO_DATAPOINT", "No datapoints have been found",
+                                                "We could not find any datapoints in the history. Try to recalculate them?", 3000)
+                                        }
+                                    },
                                     error => dispatch(alertAction('LAST_DATAPOINTS', "Failed to fetch last datapoint timestamps.", error))
                                 ).finally(() => setGettingLast(false))
                             }}

@@ -1,4 +1,4 @@
-import React, { MutableRefObject, useState, useEffect, useRef } from 'react';
+import { MutableRefObject, useState, useEffect, useRef } from 'react';
 import { useParams, useHistory } from "react-router"
 import { Location } from 'history'
 import { useSelector } from 'react-redux'
@@ -22,7 +22,7 @@ import { TestDispatch } from './reducers'
 import SaveChangesModal from '../../components/SaveChangesModal'
 
 import { useTester, rolesSelector } from '../../auth'
-import { infoActions } from '../../alerts'
+import { dispatchInfo } from '../../alerts'
 import General from './General'
 import Views from './Views'
 import Variables from './Variables'
@@ -93,9 +93,7 @@ export default function Test() {
             return funcs.save().then(() => {
                 setModified(false)
                 gotoTab(nextTab)
-                const info = infoActions("SAVE", "Saved!", "Test was succesfully updated!")
-                dispatch(info.action)
-                window.setTimeout(() => dispatch(info.clear), 3000)
+                dispatchInfo(dispatch, "SAVE", "Saved!", "Test was succesfully updated!", 3000);
             }).finally(() => setSaving(false))
         } else {
             return Promise.reject()

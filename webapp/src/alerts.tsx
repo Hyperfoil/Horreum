@@ -1,5 +1,4 @@
-import React from 'react';
-
+import { Dispatch } from 'redux'
 import { useDispatch, useSelector } from 'react-redux'
 
 import {
@@ -46,7 +45,7 @@ type AlertActions = AddAlertAction | ClearAlertAction;
 export const reducer = (state: Alert[] = [], action: AlertActions) => {
    switch (action.type) {
       case ADD_ALERT:
-         return [...state.filter(a => a.type != action.alert.type), action.alert]
+         return [...state.filter(a => a.type !== action.alert.type), action.alert]
       case CLEAR_ALERT:
          if (action.alert) {
             const alert: Alert = action.alert;
@@ -103,6 +102,12 @@ export function infoActions(type: string, title: string, message: string): { act
          }
       }
    }
+}
+
+export function dispatchInfo(dispatch: Dispatch<any>, type: string, title: string, message: string, timeout: number) {
+   const info = infoActions(type, title, message)
+   dispatch(info.action)
+   window.setTimeout(() => dispatch(info.clear), timeout)
 }
 
 export const defaultFormatError = (e: any) => {
