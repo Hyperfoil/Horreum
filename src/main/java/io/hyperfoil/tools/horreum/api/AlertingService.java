@@ -268,7 +268,9 @@ public class AlertingService {
          String column = StringUtil.quote(isArray ? SchemaExtractor.arrayName(accessor) + "___arr" : accessor, "\"");
          List<AccessorInfo> matching = entry.getValue().stream().filter(ai -> schemas.contains(ai.schema)).collect(Collectors.toList());
          if (matching.isEmpty()) {
-            recalculation.runsWithoutAccessor.add(run.id);
+            if (recalculation != null) {
+               recalculation.runsWithoutAccessor.add(run.id);
+            }
             logCalculationMessage(run.testid, run.id, CalculationLog.WARN,
                   "Accessor %s referenced from variables %s cannot be extracted: requires one of these schemas: %s", accessor,
                   vars.values().stream().filter(var -> var.accessors.contains(accessor)).map(var -> var.name).collect(Collectors.toList()),
@@ -332,7 +334,9 @@ public class AlertingService {
             String value = extracted.get(column);
             if (value == null) {
                logCalculationMessage(run.testid, run.id, CalculationLog.INFO, "Null value for variable %s, accessor %s - datapoint is not created", var.name, accessor);
-               recalculation.runsWithoutValue.add(run.id);
+               if (recalculation != null) {
+                  recalculation.runsWithoutValue.add(run.id);
+               }
                continue;
             }
             String maybeNumber = value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"' ?
@@ -341,7 +345,9 @@ public class AlertingService {
                dataPoint.value = Double.parseDouble(maybeNumber);
             } catch (NumberFormatException e) {
                logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Cannot turn %s into a floating-point value for variable %s: %s", value, var.name, e.getMessage());
-               recalculation.errors++;
+               if (recalculation != null) {
+                  recalculation.errors++;
+               }
                continue;
             }
          } else {
@@ -375,7 +381,9 @@ public class AlertingService {
             }
             Double value = execute(run.testid, run.id, code.toString(), var.name);
             if (value == null) {
-               recalculation.runsWithoutValue.add(run.id);
+               if (recalculation != null) {
+                  recalculation.runsWithoutValue.add(run.id);
+               }
                continue;
             }
             dataPoint.value = value;
