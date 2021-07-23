@@ -76,6 +76,7 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                 dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", "Invalid max staleness."))
                 return Promise.reject()
             }
+            console.log(test)
             const newTest: Test = {
                 id: test?.id || 0,
                 name,
@@ -83,8 +84,8 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                 compareUrl: compareUrlEditor.current?.getValue(),
                 notificationsEnabled,
                 tags: tags.join(";"),
-                owner: defaultRole || "__test_created_without_a_role__",
-                access: 2,
+                owner: test?.owner || defaultRole || "__test_created_without_a_role__",
+                access: test ? test.access : 2, // || notation does not work well with 0
                 tokens: [],
                 stalenessSettings,
             }
