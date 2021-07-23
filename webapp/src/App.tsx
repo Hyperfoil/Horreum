@@ -41,6 +41,8 @@ import Alerts from './alerts'
 
 import Series from './domain/alerting/Series';
 
+import About from './About'
+
 class App extends Component {
   constructor(props: any) {
      super(props)
@@ -101,6 +103,7 @@ function Main() {
                <PageHeaderTools>
                  <UserProfileLink />
                  <LoginLogout />
+                 <About />
                </PageHeaderTools>
             )}
           />
