@@ -54,11 +54,17 @@ export class TestsState {
 
 export interface LoadingAction {
     type: typeof actionTypes.LOADING,
+    isLoading: boolean,
 }
 
-export interface LoadedAction {
-    type: typeof actionTypes.LOADED,
+export interface LoadedSummaryAction {
+    type: typeof actionTypes.LOADED_SUMMARY,
     tests: Test[],
+}
+
+export interface LoadedTestAction {
+    type: typeof actionTypes.LOADED_TEST,
+    test: Test,
 }
 
 export interface DeleteAction {
@@ -102,30 +108,29 @@ export interface RevokeTokenAction {
     tokenId: number,
 }
 
-export type TestAction = LoadingAction | LoadedAction | DeleteAction | UpdateAccessAction | UpdateTestWatchAction | UpdateViewAction | UpdateHookAction | UpdateTokensAction | RevokeTokenAction
+export type TestAction = LoadingAction | LoadedSummaryAction | LoadedTestAction | DeleteAction | UpdateAccessAction | UpdateTestWatchAction | UpdateViewAction | UpdateHookAction | UpdateTokensAction | RevokeTokenAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction>
 
 export const reducer = (state = new TestsState(), action: TestAction) => {
     switch (action.type) {
         case actionTypes.LOADING:
-            state.loading = true
+            state.loading = action.isLoading
         break;
-        case actionTypes.LOADED:
+        case actionTypes.LOADED_SUMMARY: {
+            state.loading = false
+            var byId = Map<number, Test>()
+            action.tests.forEach(test => {
+                byId = byId.set(test.id, test)
+            })
+            state.byId = byId
+        } break;
+        case actionTypes.LOADED_TEST:
             state.loading = false
             if (!state.byId) {
                 state.byId = Map<number, Test>()
             }
-            if (!utils.isEmpty(action.tests)) {
-                action.tests.forEach(test => {
-                    if (test && test.id !== null && typeof test.id !== "undefined") {
-                        const byId = state.byId as Map<number, Test>
-                        state.byId = byId.set(test.id, {
-                            ...(byId.get(test.id, {})), ...test
-                        })
-                    }
-                })
-            }
+            state.byId = (state.byId as Map<number, Test>).set(action.test.id, action.test)
         break;
         case actionTypes.UPDATE_ACCESS: {
             let test = state.byId?.get(action.id)

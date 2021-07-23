@@ -34,6 +34,7 @@ import * as selectors from './selectors';
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from '../../components/ActionMenu';
+import OwnerSelect, { Role, SHOW_ALL, ONLY_MY_OWN } from '../../components/OwnerSelect'
 import ConfirmTestDeleteModal from './ConfirmTestDeleteModal'
 
 import {
@@ -204,15 +205,16 @@ export default function AllTests() {
     ], [dispatch, thunkDispatch])
     const allTests = useSelector(selectors.all);
     const roles = useSelector(rolesSelector)
-    useEffect(()=>{
-        dispatch(fetchSummary())
-    },[dispatch, roles])
     const isAuthenticated = useSelector(isAuthenticatedSelector)
+    const [rolesFilter, setRolesFilter] = useState<Role>(ONLY_MY_OWN)
+    useEffect(()=>{
+        dispatch(fetchSummary(rolesFilter.key))
+    },[dispatch, roles, rolesFilter])
     useEffect(() => {
       if (isAuthenticated) {
         dispatch(fetchTestWatch())
       }
-    }, [dispatch, isAuthenticated])
+    }, [dispatch, isAuthenticated, rolesFilter])
     if (isAuthenticated) {
       columns = [ watchingColumn, ...columns ]
     }
@@ -222,13 +224,21 @@ export default function AllTests() {
     return (
         <PageSection>
           <Card>
-            { isTester &&
             <CardHeader>
+              { isTester &&
               <NavLink className="pf-c-button pf-m-primary" to="/test/_new">
                 New Test
               </NavLink>
+              }
+              { isAuthenticated && <div style={{ width: "200px", marginLeft: "16px" }}>
+                <OwnerSelect
+                  includeGeneral={true}
+                  selection={rolesFilter}
+                  onSelect={selection => {
+                    setRolesFilter(selection)
+                  }} />
+              </div> }
             </CardHeader>
-            }
             <CardBody>
               <Table columns={columns} data={allTests || []} isLoading={isLoading}/>
             </CardBody>

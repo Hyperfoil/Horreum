@@ -5,7 +5,8 @@ import {
     Test,
     View,
     LoadingAction,
-    LoadedAction,
+    LoadedSummaryAction,
+    LoadedTestAction,
     UpdateAccessAction,
     DeleteAction,
     UpdateTestWatchAction,
@@ -20,33 +21,38 @@ import { Map } from 'immutable';
 import { alertAction, AddAlertAction } from '../../alerts'
 import {Hook} from "../hooks/reducers";
 
-const loaded = (tests: Test | Test[]): LoadedAction =>({
-    type: actionTypes.LOADED,
-    tests: Array.isArray(tests) ? tests: [tests]
-})
+function loading(isLoading: boolean): LoadingAction {
+    return ({ type: actionTypes.LOADING, isLoading });
+}
 
-export const fetchSummary = () => (dispatch: Dispatch<LoadingAction | LoadedAction>) => {
-    dispatch({ type: actionTypes.LOADING })
-    api.summary().then(
-        response => dispatch(loaded(response)),
-        error => dispatch(loaded([]))
+export const fetchSummary = (roles?: string) => (dispatch: Dispatch<LoadingAction | LoadedSummaryAction | AddAlertAction>) => {
+    dispatch(loading(true))
+    return api.summary(roles).then(
+        tests => dispatch({ type: actionTypes.LOADED_SUMMARY, tests }),
+        error => {
+            dispatch(loading(false))
+            dispatch(alertAction("FETCH_TEST_SUMMARY", "Failed to fetch test summary.", error))
+            return Promise.reject(error)
+        }
     )
 }
 
-export const fetchTest = (id: number) => (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-    api.get(id).then(
-        response => dispatch(loaded(response)),
+export const fetchTest = (id: number) => (dispatch: Dispatch<LoadingAction | LoadedTestAction | AddAlertAction>) => {
+    dispatch(loading(true))
+    return api.get(id).then(
+        test => dispatch({ type: actionTypes.LOADED_TEST, test}),
         error => {
-            dispatch(loaded([]))
+            dispatch(loading(false))
             dispatch(alertAction("FETCH_TEST", "Failed to fetch test; the test may not exist or you don't have sufficient permissions to access it.", error))
-            return error
+            return Promise.reject(error)
         }
     )
+}
 
-export const sendTest = (test: Test) => (dispatch: Dispatch<LoadedAction>) =>
+export const sendTest = (test: Test) => (dispatch: Dispatch<LoadedTestAction>) =>
     api.send(test).then(
         response => {
-            dispatch(loaded(response))
+            dispatch({ type: actionTypes.LOADED_TEST, test })
             return response
         }
     )

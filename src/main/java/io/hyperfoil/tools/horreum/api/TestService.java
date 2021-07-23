@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api;
 import io.hyperfoil.tools.horreum.entity.converter.JsonResultTransformer;
 import io.hyperfoil.tools.horreum.entity.json.*;
 import io.hyperfoil.tools.yaup.json.Json;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -18,10 +19,13 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import org.hibernate.Hibernate;
 
@@ -29,11 +33,6 @@ import org.hibernate.Hibernate;
 @Consumes({MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 public class TestService {
-   //@formatter:off
-   private static final String SUMMARY =
-         "SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.access " +
-         "FROM test LEFT JOIN run ON run.testid = test.id AND run.trashed = false OR run.trashed IS NULL " +
-         "GROUP BY test.id";
    //@formatter:on
    private static final String UPDATE_NOTIFICATIONS = "UPDATE test SET notificationsenabled = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
@@ -148,31 +147,51 @@ public class TestService {
       return null;
    }
 
-   public List<Test> all(){
-      return list(null,null,"name", Sort.Direction.Ascending);
-   }
-
    @PermitAll
    @GET
-   public List<Test> list(@QueryParam("limit") Integer limit,
+   public List<Test> list(@QueryParam("roles") String roles,
+                          @QueryParam("limit") Integer limit,
                           @QueryParam("page") Integer page,
                           @QueryParam("sort") @DefaultValue("name") String sort,
                           @QueryParam("direction") @DefaultValue("Ascending") Sort.Direction direction){
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         if (limit != null && page != null) {
-            return Test.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
-         } else {
-            return Test.listAll(Sort.by(sort).direction(direction));
+         PanacheQuery<Test> query;
+         Set<String> actualRoles = null;
+         if (Roles.hasRolesParam(roles)) {
+            if (roles.equals("__my")) {
+               if (!identity.isAnonymous()) {
+                  actualRoles = identity.getRoles();
+               }
+            } else {
+               actualRoles = new HashSet<>(Arrays.asList(roles.split(";")));
+            }
          }
+
+         Sort sortOptions = Sort.by(sort).direction(direction);
+         if (actualRoles == null) {
+            query = Test.findAll(sortOptions);
+         } else {
+            query = Test.find("owner IN ?1", sortOptions, actualRoles);
+         }
+         if (limit != null && page != null) {
+            query.page(Page.of(page, limit));
+         }
+         return query.list();
       }
    }
 
    @PermitAll
    @Path("summary")
    @GET
-   public Response summary() {
+   public Response summary(@QueryParam("roles") String roles) {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Query query = em.createNativeQuery(SUMMARY);
+         StringBuilder sql = new StringBuilder();
+         sql.append("SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.access ");
+         sql.append("FROM test LEFT JOIN run ON run.testid = test.id AND (run.trashed = false OR run.trashed IS NULL)");
+         Roles.addRolesSql(identity, "test", sql, roles, 1, " WHERE");
+         sql.append(" GROUP BY test.id");
+         Query query = em.createNativeQuery(sql.toString());
+         Roles.addRolesParam(identity, query, 1, roles);
          SqlService.setResultTransformer(query, JsonResultTransformer.INSTANCE);
          return Response.ok(query.getResultList()).build();
       }

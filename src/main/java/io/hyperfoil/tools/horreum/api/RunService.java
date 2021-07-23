@@ -457,13 +457,7 @@ public class RunService {
          whereStarted = true;
       }
 
-      if (!identity.isAnonymous() && hasRolesParam(roles)) {
-         if (whereStarted) {
-            sql.append(" AND ");
-         }
-         sql.append(" run.owner = ANY(string_to_array(?").append(queryParts.length + 1).append(", ';')) ");
-         whereStarted = true;
-      }
+      whereStarted = Roles.addRolesSql(identity, "run", sql, roles, queryParts.length + 1, whereStarted ? " AND" : null) || whereStarted;
       if (!trashed) {
          if (whereStarted) {
             sql.append(" AND ");
@@ -483,15 +477,7 @@ public class RunService {
          }
       }
 
-      if (!identity.isAnonymous() && hasRolesParam(roles)) {
-         String actualRoles;
-         if (roles.equals("__my")) {
-            actualRoles = String.join(";", identity.getRoles());
-         } else {
-            actualRoles = roles;
-         }
-         sqlQuery.setParameter(queryParts.length + 1, actualRoles);
-      }
+      Roles.addRolesParam(identity, sqlQuery, queryParts.length + 1, roles);
 
       SqlService.setResultTransformer(sqlQuery, JsonResultTransformer.INSTANCE);
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)){
@@ -534,10 +520,6 @@ public class RunService {
                .add("trashed", total - active)
                .build()).build();
       }
-   }
-
-   private boolean hasRolesParam(String roles) {
-      return roles != null && !roles.isEmpty() && !roles.equals("__all");
    }
 
    @PermitAll

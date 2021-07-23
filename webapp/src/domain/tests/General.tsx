@@ -76,7 +76,6 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                 dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", "Invalid max staleness."))
                 return Promise.reject()
             }
-            console.log(test)
             const newTest: Test = {
                 id: test?.id || 0,
                 name,

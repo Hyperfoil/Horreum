@@ -21,7 +21,7 @@ export const SHOW_ALL: Role = { key: "__all", toString: () => "Show all" }
 
 type OwnerSelectProps = {
    includeGeneral: boolean,
-   selection: string,
+   selection: string | Role,
    onSelect(selection: Role): void
 }
 

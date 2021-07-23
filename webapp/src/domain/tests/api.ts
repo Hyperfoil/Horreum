@@ -9,7 +9,7 @@ const endPoints = {
     schema: (id: number)=>`${base}/${id}/schema`,
     view: (id: number)=>`${base}/${id}/view`,
     hook: (id: number)=>`${base}/${id}/hook`,
-    summary: ()=>`${base}/summary`,
+    summary: (roles?: string)=>`${base}/summary` + (roles ? "?roles=" + roles : ""),
     tokens: (id: number) => `${base}/${id}/tokens`,
     addToken: (id: number) => `${base}/${id}/addToken`,
     revokeToken: (testId: number, tokenId: number) => `${base}/${testId}/revokeToken/${tokenId}`,
@@ -26,8 +26,8 @@ export const updateHook = (testId: number, hook: Hook) => {
 export const get = (id: number) => {
     return fetchApi(endPoints.crud(id),null,'get')
 }
-export const summary = () => {
-    return fetchApi(endPoints.summary(),null,'get');
+export const summary = (roles?: string) => {
+    return fetchApi(endPoints.summary(roles),null,'get');
 }
 export const send = (test: Test) => {
     return fetchApi(endPoints.base(),test,'post')
