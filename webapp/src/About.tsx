@@ -19,13 +19,15 @@ import { formatDateTime } from './utils'
 type VersionInfo = {
     version: string,
     commit: string,
-    timestamp: string,
+    buildTimestamp: number,
+    startTimestamp: number,
 }
 
 const VERSION_ERROR = {
     version: "<unknown:error>",
     commit: "<unknown:error>",
-    timestamp: "<unknown:error>"
+    buildTimestamp: 0,
+    startTimestamp: 0,
 }
 
 export default function About() {
@@ -63,7 +65,8 @@ export default function About() {
           rows={[
               [ 'Version', versionInfo.version ],
               [ 'Git commit ID', versionInfo.commit ],
-              [ 'Build timestamp', formatDateTime(parseInt(versionInfo.timestamp)) ],
+              [ 'Build timestamp', formatDateTime(versionInfo.buildTimestamp) ],
+              [ 'Start timestamp', formatDateTime(versionInfo.startTimestamp) ],
           ]}
         >
           <TableBody />
