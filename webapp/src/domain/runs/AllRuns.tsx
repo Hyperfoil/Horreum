@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, KeyboardEvent } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, KeyboardEvent } from 'react';
 
 import { useSelector, useDispatch } from 'react-redux'
 import {
@@ -37,7 +37,7 @@ import { toEpochMillis } from '../../utils'
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import OwnerSelect, { ONLY_MY_OWN, SHOW_ALL } from '../../components/OwnerSelect';
-import { Run } from './reducers';
+import { Run, RunsDispatch } from './reducers';
 import { Description, ExecutionTime, Menu, RunTags } from './components'
 
 type C = CellProps<Run>
@@ -56,12 +56,12 @@ export default function AllRuns() {
     const runCount = useSelector(selectors.count)
 
     const [filterQuery, setFilterQuery] = useState("")
-    const [filterValid, setFilterValid] = useState(true)
-    const [filterLoading, setFilterLoading] = useState(false)
-    const [matchDisabled, setMatchDisabled] = useState(false)
+    const [filterError, setFilterError] = useState<any>()
     const [matchAll, setMatchAll] = useState(false)
+    const matchDisabled = filterQuery.trim().startsWith("$") || filterQuery.trim().startsWith("@")
 
     const dispatch = useDispatch();
+    const thunkDispatch = useDispatch<RunsDispatch>()
     const columns: Column<Run>[] = useMemo(()=>[
         {
           Header:"Id",
@@ -120,12 +120,11 @@ export default function AllRuns() {
 
     const selectedRoles = useSelector(selectors.selectedRoles) || isAuthenticated ? ONLY_MY_OWN : SHOW_ALL
 
-    const runFilter = useMemo(() => (roles: string) => {
-       setFilterLoading(true)
-       dispatch(list(filterQuery, matchAll, roles, pagination, showTrashed, success => {
-         setFilterLoading(false);
-         setFilterValid(success);
-       }))
+    const runFilter = useCallback((roles: string) => {
+       // TODO: if we receive responses in a wrong order we might end up with the query not in sync with results
+       thunkDispatch(list(filterQuery, matchAll, roles, pagination, showTrashed)).then(
+          () => setFilterError(undefined),
+          e => setFilterError(e))
     }, [ filterQuery, matchAll, pagination, showTrashed, dispatch ])
     const handleMatchAll = (checked: boolean, evt: React.ChangeEvent<any>) => {
        if (checked) setMatchAll(evt.target.value === "true")
@@ -143,9 +142,8 @@ export default function AllRuns() {
        onChange: (evt: React.FormEvent<any>, v: ChangeEvent) => {
           // TODO
           let value = (v as any).newValue
-          setFilterValid(true)
+          setFilterError(undefined)
           setFilterQuery(value)
-          setMatchDisabled(value.trim().startsWith("$") || value.trim().startsWith("@"))
        },
        onKeyDown: (evt: KeyboardEvent<Element>) => {
           if (evt.key === " " && evt.ctrlKey) {
@@ -169,7 +167,30 @@ export default function AllRuns() {
        }
        suggest(filterQuery, selectedRoles.key)(dispatch)
     }
+    useEffect(() => {
+      setFilterError(undefined)
+      fetchSuggestions({ value: filterQuery, reason: 'input-changed' })
+    }, [filterQuery])
     const isLoading = useSelector(selectors.isLoading)
+    const appendSelection = (value: string) => {
+      let quoted = false;
+      for (let i = filterQuery.length; i >= 0; --i) {
+         switch (filterQuery.charAt(i)) {
+            // we're not handling escaped quotes...
+            case '"':
+               quoted = !quoted;
+               break;
+            case '.':
+            case ']':
+               if (!quoted) {
+                  return filterQuery.substring(0, i + 1) + value
+               }
+               break;
+            default:
+         }
+      }
+      return value;
+    }
     return (
         <PageSection>
           <Card>
@@ -181,67 +202,58 @@ export default function AllRuns() {
                         <HelpIcon />
                      </a>
                  </Tooltip>
-                 {/* TODO: Spinner left as an excercise for the reader */}
-                 <Tooltip position="bottom" content={
-                    <div style={{ textAlign: "left" }}>Enter query in one of these formats:<br />
-                      - JSON keys separated by spaces or commas. Multiple keys are combined with OR (match any) or AND (match all) relation.<br />
-                      - Full jsonpath query starting with <code>$</code>, e.g. <code>$.foo.bar</code>, or <code>$.foo&nbsp;?&nbsp;@.bar&nbsp;==&nbsp;0</code><br />
-                      - Part of the jsonpath query starting with <code>@</code>, e.g. <code>@.bar&nbsp;==&nbsp;0</code>. This condition will be evaluated on all sub-objects.<br />
-                    </div>
-                 }><>
-                    { /* TODO: It seems Patternfly has this as Select variant={SelectVariant.typeahead} */ }
-                    <Autosuggest inputProps={inputProps}
-                                 suggestions={suggestions}
-                                 onSuggestionsFetchRequested={fetchSuggestions}
-                                 onSuggestionsClearRequested={() => {
-                                    if (filterQuery === "") suggest("", selectedRoles.key)(dispatch)
-                                 }}
-                                 getSuggestionValue={(value) => {
-                                    let quoted = false;
-                                    for (let i = filterQuery.length; i >= 0; --i) {
-                                       switch (filterQuery.charAt(i)) {
-                                          // we're not handling escaped quotes...
-                                          case '"':
-                                             quoted = !quoted;
-                                             break;
-                                          case '.':
-                                          case ']':
-                                             if (!quoted) {
-                                                return filterQuery.substring(0, i + 1) + value
-                                             }
-                                             break;
-                                          default:
-                                       }
-                                    }
-                                    return value;
-                                 }}
-                                 renderSuggestion={v => <div>{v}</div>}
-                                 renderInputComponent={ inputProps => (
-                                    <input {...inputProps as any}
-                                           {... (filterLoading ? { readOnly : true } : {}) }
-                                           className="pf-c-form-control"
-                                           aria-invalid={!filterValid}
-                                           onKeyPress={ evt => {
-                                              if (evt.key === "Enter") runFilter(selectedRoles.key)
-                                           }}
-                                           style={{ width: "500px" }}/>
-                                 )}
-                                 renderSuggestionsContainer={ ({ containerProps, children, query }) => (
-                                    <div {...containerProps}>
-                                      <div className="react-autosuggest__loading"
-                                           style={{ display: loadingDisplay }}>
-                                           <Spinner size="md" />&nbsp;Loading...
-                                      </div>
-                                      {children}
-                                    </div>
-                                 )}
-                                 />
-                 </></Tooltip>
-                 <Button variant={ButtonVariant.control}
-                         aria-label="search button for search input"
-                         onClick={() => runFilter(selectedRoles.key)}>
-                     <SearchIcon />
-                 </Button>
+                 <div>
+                     <div style={{ display: "flex"}}>
+                        {/* TODO: Spinner left as an excercise for the reader */}
+                        <Tooltip position="bottom" content={
+                           <div style={{ textAlign: "left" }}>Enter query in one of these formats:<br />
+                              - JSON keys separated by spaces or commas. Multiple keys are combined with OR (match any) or AND (match all) relation.<br />
+                              - Full jsonpath query starting with <code>$</code>, e.g. <code>$.foo.bar</code>, or <code>$.foo&nbsp;?&nbsp;@.bar&nbsp;==&nbsp;0</code><br />
+                              - Part of the jsonpath query starting with <code>@</code>, e.g. <code>@.bar&nbsp;==&nbsp;0</code>. This condition will be evaluated on all sub-objects.<br />
+                           </div>
+                        }>
+                           { /* PF4 has Select.variant="typeahead" but it appears too quirky yet */ }
+                           <Autosuggest inputProps={inputProps}
+                                          suggestions={suggestions}
+                                          onSuggestionsFetchRequested={fetchSuggestions}
+                                          onSuggestionsClearRequested={() => {
+                                             if (filterQuery === "") suggest("", selectedRoles.key)(dispatch)
+                                          }}
+                                          getSuggestionValue={(value) => appendSelection(value) }
+                                          renderSuggestion={v => <div>{v}</div>}
+                                          renderInputComponent={ inputProps => (
+                                             <input {...inputProps as any}
+                                                   className="pf-c-form-control"
+                                                   aria-invalid={!!filterError}
+                                                   onKeyPress={ evt => {
+                                                      if (evt.key === "Enter") runFilter(selectedRoles.key)
+                                                   }}
+                                                   style={{ width: "500px" }}/>
+                                          )}
+                                          renderSuggestionsContainer={ ({ containerProps, children, query }) => (
+                                             <div {...containerProps}>
+                                             <div className="react-autosuggest__loading"
+                                                   style={{ display: loadingDisplay }}>
+                                                   <Spinner size="md" />&nbsp;Loading...
+                                             </div>
+                                             {children}
+                                             </div>
+                                          )}
+                                          />
+                        </Tooltip>
+                        <Button variant={ButtonVariant.control}
+                                 aria-label="search button for search input"
+                                 onClick={() => runFilter(selectedRoles.key)}>
+                              <SearchIcon />
+                        </Button>
+                     </div>
+                     { filterError && <span style={{
+                           display: "inline-block",
+                           maxWidth: "520px",
+                           color: "var(--pf-global--danger-color--100)" }}>
+                        { filterError.reason }: (actual JSONPath: <code>{ filterError.jsonpath })</code>
+                     </span> }
+                 </div>
                  {/* TODO: add some margin to the radio buttons below */}
                  <React.Fragment>
                    <Radio id="matchAny" name="matchAll" value="false" label="Match any key"

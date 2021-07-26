@@ -18,6 +18,10 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
+import javax.transaction.InvalidTransactionException;
+import javax.transaction.SystemException;
+import javax.transaction.Transaction;
+import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -26,6 +30,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -46,7 +51,7 @@ public class RunService {
    //@formatter:off
    private static final String FIND_AUTOCOMPLETE = "SELECT * FROM (" +
             "SELECT DISTINCT jsonb_object_keys(q) AS key " +
-            "FROM run, jsonb_path_query(run.data, ? ::jsonpath) q " +
+            "FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
    //@formatter:on
@@ -60,6 +65,9 @@ public class RunService {
 
    @Inject
    SecurityIdentity identity;
+
+   @Inject
+   TransactionManager tm;
 
    @Inject
    SqlService sqlService;
@@ -405,10 +413,9 @@ public class RunService {
          findAutocomplete.setParameter(1, jsonpath);
          findAutocomplete.setParameter(2, incomplete);
          @SuppressWarnings("unchecked")
-         List<Object[]> results = findAutocomplete.getResultList();
+         List<String> results = findAutocomplete.getResultList();
          Json.ArrayBuilder array = Json.array();
-         for (Object[] row : results) {
-            String option = (String) row[0];
+         for (String option : results) {
             if (!option.matches("^[a-zA-Z0-9_-]*$")) {
                option = "\"" + option + "\"";
             }
@@ -423,7 +430,7 @@ public class RunService {
    @PermitAll
    @GET
    @Path("list")
-   public Response list(@QueryParam("query") String query,
+   public Json list(@QueryParam("query") String query,
                         @QueryParam("matchAll") boolean matchAll,
                         @QueryParam("roles") String roles,
                         @QueryParam("trashed") boolean trashed,
@@ -452,6 +459,13 @@ public class RunService {
                sql.append(matchAll ? " AND " : " OR ");
             }
             sql.append("jsonb_path_exists(data, ?").append(i + 1).append(" ::::jsonpath)");
+            if (queryParts[i].startsWith("$")) {
+               // no change
+            } else if (queryParts[i].startsWith("@")) {
+               queryParts[i] = "$.** ? (" + queryParts[i] + ")";
+            } else {
+               queryParts[i] = "$.**." + queryParts[i];
+            }
          }
          sql.append(")");
          whereStarted = true;
@@ -468,13 +482,7 @@ public class RunService {
 
       Query sqlQuery = em.createNativeQuery(sql.toString());
       for (int i = 0; i < queryParts.length; ++i) {
-         if (queryParts[i].startsWith("$")) {
-            sqlQuery.setParameter(i + 1, queryParts[i]);
-         } else if (queryParts[i].startsWith("@")) {
-            sqlQuery.setParameter(i + 1, "   $.** ? (" + queryParts[i] + ")");
-         } else {
-            sqlQuery.setParameter(i + 1, "$.**." + queryParts[i]);
-         }
+         sqlQuery.setParameter(i + 1, queryParts[i]);
       }
 
       Roles.addRolesParam(identity, sqlQuery, queryParts.length + 1, roles);
@@ -500,7 +508,25 @@ public class RunService {
                .add("total", trashed ? Run.count() : Run.count("trashed = false"))
                .add("runs", runs)
                .build();
-         return Response.ok(result).build();
+         return result;
+      } catch (PersistenceException pe) {
+         // In case of an error PostgreSQL won't let us execute another query in the same transaction
+         try {
+            Transaction old = tm.suspend();
+            try {
+               for (String jsonpath : queryParts) {
+                  Json result = sqlService.testJsonPathInternal(jsonpath);
+                  if (!result.getBoolean("valid")) {
+                     throw new WebApplicationException(Response.status(400).entity(result).build());
+                  }
+               }
+            } finally {
+               tm.resume(old);
+            }
+         } catch (InvalidTransactionException | SystemException e) {
+            // ignore
+         }
+         throw new WebApplicationException(pe, 500);
       }
    }
 

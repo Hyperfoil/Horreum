@@ -48,12 +48,11 @@ export const byTest = (id: number, pagination: PaginationInfo, trashed: boolean,
    )
 }
 
-export const list = (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean, callback: (success: boolean) => void) => (dispatch: Dispatch<LoadedAction>) => {
-   api.list(query, matchAll, roles, pagination, trashed)
+export const list = (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) => (dispatch: Dispatch<LoadedAction>) => {
+   return api.list(query, matchAll, roles, pagination, trashed)
    .then(response => {
       dispatch(loaded(response.runs, response.total))
-      callback(true)
-   }, e => callback(false))
+   })
 }
 
 export const suggest = (query: string, roles: string) => (dispatch: Dispatch<SuggestAction | LoadSuggestionsAction>) => {

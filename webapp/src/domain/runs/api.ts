@@ -11,8 +11,8 @@ const endPoints = {
 
     getRun: (runId: number, token?: string) => `${base}/${runId}${token ? '?token=' + token : ''}`,
     addRun: () => `${base}/`,
-    list: (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) => `${base}/list?${paginationParams(pagination)}&query=${query}&matchAll=${matchAll}&roles=${roles}&trashed=${trashed}`,
-    suggest: (query: string, roles: string) => `${base}/autocomplete?query=${query}&roles=${roles}`,
+    list: (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) => `${base}/list?${paginationParams(pagination)}&query=${encodeURIComponent(query)}&matchAll=${matchAll}&roles=${roles}&trashed=${trashed}`,
+    suggest: (query: string, roles: string) => `${base}/autocomplete?query=${encodeURIComponent(query)}&roles=${roles}`,
     js: (runId: number, token?: string) => `${base}/${runId}/js`,
     listByTest: (testId: number, pagination: PaginationInfo, trashed: boolean, tags: string) => `${base}/list/${testId}?${paginationParams(pagination)}&trashed=${!!trashed}&tags=${tags}`,
     resetToken: (runId: number) => `${base}/${runId}/resetToken`,
@@ -34,7 +34,9 @@ export const get = (id: number, token?: string, js?: any) => {
 
 export const byTest = (id: number, pagination: PaginationInfo, trashed: boolean, tags: string) => fetchApi(endPoints.listByTest(id, pagination, trashed, tags), null, 'get');
 
-export const list = (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) => fetchApi(endPoints.list(query, matchAll, roles, pagination, trashed),null,'get')
+export function list(query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) {
+    return fetchApi(endPoints.list(query, matchAll, roles, pagination, trashed), null, 'get')
+}
 
 export const suggest = (query: string, roles: string) => fetchApi(endPoints.suggest(query, roles), null, 'get');
 

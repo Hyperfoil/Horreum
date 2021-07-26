@@ -68,6 +68,11 @@ public class SqlService {
       if (jsonpath == null) {
          return Response.status(Response.Status.BAD_REQUEST).entity("No query").build();
       }
+      Json result = testJsonPathInternal(jsonpath);
+      return Response.ok(result).build();
+   }
+
+   Json testJsonPathInternal(String jsonpath) {
       Query query = em.createNativeQuery("SELECT jsonb_path_query_first('{}', ('$' || ?)::::jsonpath)::::text");
       query.setParameter(1, jsonpath);
       Json result = new Json(false);
@@ -76,6 +81,7 @@ public class SqlService {
          result.add("valid", true);
       } catch (PersistenceException pe) {
          result.add("valid", false);
+         result.add("jsonpath", jsonpath);
          if (pe.getCause() instanceof JDBCException) {
             JDBCException je = (JDBCException) pe.getCause();
             result.add("errorCode", je.getErrorCode());
@@ -86,7 +92,7 @@ public class SqlService {
             result.add("reason", pe.getMessage());
          }
       }
-      return Response.ok(result).build();
+      return result;
    }
 
    @PostConstruct
