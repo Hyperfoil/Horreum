@@ -13,7 +13,6 @@ import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
-import io.quarkus.qute.api.ResourcePath;
 
 @ApplicationScoped
 public class EmailPlugin implements NotificationPlugin {

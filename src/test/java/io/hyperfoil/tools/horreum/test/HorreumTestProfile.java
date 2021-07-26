@@ -8,7 +8,8 @@ public class HorreumTestProfile implements QuarkusTestProfile {
    @Override
    public Map<String, String> getConfigOverrides() {
       return Map.of(
-            "smallrye.jwt.sign.key-location", "privateKey.jwk",
+            "quarkus.oidc.auth-server-url", "${keycloak.url}/realms/quarkus/",
+            "smallrye.jwt.sign.key.location", "/privateKey.jwk",
             "horreum.url", "http://localhost:8081");
    }
 }

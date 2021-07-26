@@ -6,6 +6,8 @@ import java.util.HashSet;
 
 import javax.ws.rs.core.HttpHeaders;
 
+import org.junit.jupiter.api.TestInfo;
+
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
@@ -19,9 +21,9 @@ public class BaseServiceTest {
    static final String TESTER_TOKEN = BaseServiceTest.getAccessToken("alice", TESTER_ROLES);
    static final String UPLOADER_TOKEN = BaseServiceTest.getAccessToken("alice", UPLOADER_ROLES);
 
-   public static Test createExampleTest() {
+   public static Test createExampleTest(String testName) {
       Test test = new Test();
-      test.name = "Foo";
+      test.name = testName;
       test.description = "Bar";
       test.tags = "";
       test.owner = "foo-team";
@@ -66,5 +68,9 @@ public class BaseServiceTest {
    protected RequestSpecification jsonRequest() {
       return RestAssured.given().auth().oauth2(TESTER_TOKEN)
             .header(HttpHeaders.CONTENT_TYPE, "application/json");
+   }
+
+   protected String getTestName(TestInfo info) {
+      return info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
    }
 }

@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 
 import org.eclipse.jetty.util.BlockingArrayQueue;
+import org.junit.jupiter.api.TestInfo;
 
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
@@ -35,8 +36,8 @@ public class AlertingServiceTest extends BaseServiceTest {
    EventBus eventBus;
 
    @org.junit.jupiter.api.Test
-   public void testNotifications() throws InterruptedException {
-      Test test = createTest(createExampleTest());
+   public void testNotifications(TestInfo info) throws InterruptedException {
+      Test test = createTest(createExampleTest(getTestName(info)));
 
       Schema schema = new Schema();
       schema.owner = test.owner;

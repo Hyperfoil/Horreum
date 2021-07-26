@@ -9,6 +9,8 @@ import java.util.Arrays;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 
+import org.junit.jupiter.api.TestInfo;
+
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
@@ -32,10 +34,10 @@ public class TestServiceTest extends BaseServiceTest {
    SqlService sqlService;
 
    @org.junit.jupiter.api.Test
-   public void testCreateDelete() {
+   public void testCreateDelete(TestInfo info) {
 
       // create test
-      Test test = createExampleTest();
+      Test test = createExampleTest(getTestName(info));
       Test response = createTest(test);
       try (CloseMe ignored = sqlService.withRoles(em, Arrays.asList(TESTER_ROLES))) {
          assertNotNull(Test.findById(response.id));
