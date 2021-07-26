@@ -37,6 +37,7 @@ import { toEpochMillis } from '../../utils'
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import OwnerSelect, { ONLY_MY_OWN, SHOW_ALL } from '../../components/OwnerSelect';
+import JsonPathDocsLink from '../../components/JsonPathDocsLink'
 import { Run, RunsDispatch } from './reducers';
 import { Description, ExecutionTime, Menu, RunTags } from './components'
 
@@ -196,12 +197,7 @@ export default function AllRuns() {
           <Card>
             <CardHeader>
               <div className="pf-c-input-group">
-                 <Tooltip position="right" content={<span>PostgreSQL JSON path documentation</span>}>
-                     <a style={{ padding: "5px 8px" }} target="_blank" rel="noopener noreferrer"
-                        href="https://www.postgresql.org/docs/12/functions-json.html#FUNCTIONS-SQLJSON-PATH">
-                        <HelpIcon />
-                     </a>
-                 </Tooltip>
+                 <JsonPathDocsLink />
                  <div>
                      <div style={{ display: "flex"}}>
                         {/* TODO: Spinner left as an excercise for the reader */}
