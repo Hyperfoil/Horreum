@@ -251,7 +251,7 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
                             id="maxDifferenceLastDatapoint"
                             onChange={ value => {
                                 variable.maxDifferenceLastDatapointStr = value
-                                variable.maxDifferenceLastDatapoint = parseInt(value)
+                                variable.maxDifferenceLastDatapoint = parseFloat(value)
                                 onChange()
                             }}
                             validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.maxDifferenceLastDatapointStr) ? "default" : "error" }
@@ -273,7 +273,7 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
                             id="maxDifferenceFloatingWindow"
                             onChange={ value => {
                                 variable.maxDifferenceFloatingWindowStr = value
-                                variable.maxDifferenceFloatingWindow = parseInt(value)
+                                variable.maxDifferenceFloatingWindow = parseFloat(value)
                                 onChange()
                             }}
                             validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.maxDifferenceFloatingWindowStr) ? "default" : "error" }
