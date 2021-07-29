@@ -11,6 +11,7 @@ import {
     PageSection,
     Pagination,
     SelectOptionObject,
+    Title,
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
@@ -242,7 +243,8 @@ export default function TestRuns() {
                     <Toolbar className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
                              style={{ width: "70%", display: "flex" }}>
                         <ToolbarGroup style={{ flexGrow: 100 }}>
-                            <ToolbarItem className="pf-u-mr-xl">{`Test: ${(test && test.name) || testId}`} <NavLink to={ `/test/${testId}` } ><EditIcon /></NavLink></ToolbarItem>
+                            <ToolbarItem><Title headingLevel="h2">Test: {`${(test && test.name) || testId}`}</Title></ToolbarItem>
+                            <ToolbarItem><NavLink className="pf-c-button pf-m-primary" to={ `/test/${testId}` } >Edit test</NavLink></ToolbarItem>
                         </ToolbarGroup>
                         { test && test.compareUrl &&
                         <ToolbarGroup>

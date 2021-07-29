@@ -73,7 +73,7 @@ export default function ChangeSchemaModal(props: ChangeSchemaModalProps) {
     }, [ props.initialSchema ])
     return (<Modal
         variant="small"
-        title={"Change root schema"}
+        title={"Change run schema"}
         isOpen={props.isOpen}
         onClose={ props.onClose }
         actions={ [

@@ -116,7 +116,7 @@ export default function Test() {
             />
             <Card style={{flexGrow:1}}>
                 { !loaded && testId !== 0 && (<Bullseye><Spinner /></Bullseye>) }
-                { (test || testId === 0) && (<>
+                { ((loaded && test) || testId === 0) && (<>
                 <CardBody>
                     <Tabs
                         activeKey={activeTab}
