@@ -26,11 +26,17 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
+import javax.persistence.PersistenceException;
 import javax.persistence.Query;
+import javax.transaction.HeuristicMixedException;
+import javax.transaction.HeuristicRollbackException;
+import javax.transaction.InvalidTransactionException;
+import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
+import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.Consumes;
@@ -227,7 +233,13 @@ public class AlertingService {
          } catch (Throwable t) {
             log.error("Failed to create new datapoints", t);
          } finally {
-            em.createNativeQuery("DROP TABLE current_run").executeUpdate();
+            try {
+               if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
+                  em.createNativeQuery("DROP TABLE current_run").executeUpdate();
+               }
+            } catch (SystemException e) {
+               log.error("Failure getting current transaction status.", e);
+            }
          }
       }
    }
@@ -309,6 +321,25 @@ public class AlertingService {
          extracted = (Map<String, Object>) extraction.getSingleResult();
       } catch (NoResultException e) {
          log.errorf("Run %d does not exist in the database!", run.id);
+         return;
+      } catch (PersistenceException e) {
+         log.errorf(e, "Failed to extract regression variables for run %d", run.id);
+         Transaction old;
+         try {
+            old = tm.suspend();
+            try {
+               withTx(() -> {
+                  try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
+                     logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Failed to extract regression variables from database. This is likely due to a malformed JSONPath in one of extractors.");
+                     return null;
+                  }
+               });
+            } finally {
+               tm.resume(old);
+            }
+         } catch (SystemException | InvalidTransactionException e2) {
+            log.error("Failed to switch to a different transaction for logging.", e2);
+         }
          return;
       }
       extracted.remove("__ignore_this_column__");
@@ -815,7 +846,7 @@ public class AlertingService {
                tm.rollback();
             }
          }
-      } catch (Exception ex) {
+      } catch (SystemException | RollbackException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException ex) {
          log.error("Failed to run transaction", ex);
       }
       return null;
@@ -832,44 +863,61 @@ public class AlertingService {
       SecurityIdentity identity = CachedSecurityIdentity.of(this.identity);
 
       vertx.executeBlocking(promise -> {
-         Recalculation recalculation = withTx(() -> {
-            Recalculation r = new Recalculation();
-            if (recalcProgress.putIfAbsent(testId, r) != null) {
-               promise.complete();
-               return null;
-            }
-            try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-               Query query = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) AND NOT run.trashed ORDER BY start")
-                     .setParameter(1, testId)
-                     .setParameter(2, from == null ? Long.MIN_VALUE : from)
-                     .setParameter(3, to == null ? Long.MAX_VALUE : to);
-               @SuppressWarnings("unchecked")
-               List<Integer> ids = query.getResultList();
-               r.runs = ids;
-               DataPoint.delete("runId in ?1", ids);
-               Change.delete("runId in ?1 AND confirmed = false", ids);
-               return r;
-            }
-         });
-         if (recalculation != null) {
-            int completed = 0;
-            recalcProgress.put(testId, recalculation);
-            for (int runId : recalculation.runs) {
-               // Since the evaluation might take few moments and we're dealing potentially with thousands
-               // of runs we'll process each run in a separate transaction
-               withTx(() -> {
-                  try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-                     Run run = Run.findById(runId);
-                     onNewRun(run, false, debug, recalculation);
-                  }
+         Recalculation recalculation = null;
+         try {
+            recalculation = withTx(() -> {
+               Recalculation r = new Recalculation();
+               if (recalcProgress.putIfAbsent(testId, r) != null) {
+                  promise.complete();
                   return null;
-               });
-               recalculation.progress = 100 * ++completed / recalculation.runs.size();
+               }
+               try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+                  Query query = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) AND NOT run.trashed ORDER BY start")
+                        .setParameter(1, testId)
+                        .setParameter(2, from == null ? Long.MIN_VALUE : from)
+                        .setParameter(3, to == null ? Long.MAX_VALUE : to);
+                  @SuppressWarnings("unchecked")
+                  List<Integer> ids = query.getResultList();
+                  r.runs = ids;
+                  DataPoint.delete("runId in ?1", ids);
+                  Change.delete("runId in ?1 AND confirmed = false", ids);
+                  if (ids.size() > 0) {
+                     // Due to RLS policies we cannot add a record to a run we don't own
+                     logCalculationMessage(testId, ids.get(0), CalculationLog.INFO, "Starting recalculation of %d runs.", ids.size());
+                  }
+                  return r;
+               }
+            });
+            if (recalculation != null) {
+               int numRuns = recalculation.runs == null ? 0 : recalculation.runs.size();
+               log.infof("Starting recalculation of test %d, %d runs", testId, numRuns);
+               int completed = 0;
+               recalcProgress.put(testId, recalculation);
+               for (int runId : recalculation.runs) {
+                  // Since the evaluation might take few moments and we're dealing potentially with thousands
+                  // of runs we'll process each run in a separate transaction
+                  Recalculation r = recalculation;
+                  withTx(() -> {
+                     try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+                        Run run = Run.findById(runId);
+                        onNewRun(run, false, debug, r);
+                     }
+                     return null;
+                  });
+                  recalculation.progress = 100 * ++completed / numRuns;
+               }
             }
-            recalculation.done = true;
-            vertx.setTimer(30_000, timerId -> recalcProgress.remove(testId, recalculation));
+         } catch (Throwable t) {
+            log.error("Recalculation failed", t);
+            throw t;
+         } finally {
+            if (recalculation != null) {
+               recalculation.done = true;
+               Recalculation r = recalculation;;
+               vertx.setTimer(30_000, timerId -> recalcProgress.remove(testId, r));
+            }
+            promise.complete();
          }
-         promise.complete();
       }, result -> {});
       return Response.ok().build();
    }
