@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Path("/api/run")
 @Consumes({MediaType.APPLICATION_JSON})
@@ -310,10 +311,18 @@ public class RunService {
       // Id will be always generated anew
       run.id = null;
 
-      if (run.owner == null || run.access == null) {
-         return Response.status(400).entity("Missing access info (owner and access)").build();
+      if (run.owner == null) {
+         List<String> uploaders = identity.getRoles().stream().filter(role -> role.endsWith("-uploader")).collect(Collectors.toList());
+         if (uploaders.size() != 1) {
+            return Response.status(400).entity("Missing owner and cannot select single default owners; this user has these uploader roles: " + uploaders).build();
+         }
+         String uploader = uploaders.get(0);
+         run.owner = uploader.substring(0, uploader.length() - 9) + "-team";
       } else if (!Objects.equals(test.owner, run.owner) && !identity.getRoles().contains(run.owner)) {
          return Response.status(400).entity("This user does not have permissions to upload run for owner=" + run.owner).build();
+      }
+      if (run.access == null) {
+         run.access = Access.PRIVATE;
       }
 
       try {
