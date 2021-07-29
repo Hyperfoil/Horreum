@@ -242,7 +242,7 @@ public class AlertingService {
          schemas.add(firstLevelSchema);
       }
 
-      StringBuilder extractionQuery = new StringBuilder("SELECT 1");
+      StringBuilder extractionQuery = new StringBuilder("SELECT 1 AS __ignore_this_column__");
       Map<Integer, VarInfo> vars = new HashMap<>();
       Map<String, Set<AccessorInfo>> allAccessors = new HashMap<>();
 
@@ -303,17 +303,15 @@ public class AlertingService {
       Query extraction = em.createNativeQuery(extractionQuery.toString());
 
       SqlService.setResultTransformer(extraction, AliasToEntityMapResultTransformer.INSTANCE);
-      Map<String, String> extracted;
+      Map<String, Object> extracted;
       try {
-         @SuppressWarnings("unchecked")
-         Map<String, Object> result = (Map<String, Object>) extraction.getSingleResult();
-         extracted = result.entrySet().stream()
-               .filter(e -> e.getValue() instanceof String)
-               .collect(Collectors.toMap(e -> e.getKey().toLowerCase(), e -> String.valueOf(e.getValue())));
+         //noinspection unchecked
+         extracted = (Map<String, Object>) extraction.getSingleResult();
       } catch (NoResultException e) {
          log.errorf("Run %d does not exist in the database!", run.id);
          return;
       }
+      extracted.remove("__ignore_this_column__");
       if (debug) {
          String data = extracted.isEmpty() ? "&lt;no data&gt;" : extracted.entrySet().stream().map(e -> (e.getKey() + " -> " + e.getValue())).collect(Collectors.joining("\n"));
          logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Fetched values for these accessors:<pre>%s</pre>", data);
@@ -334,7 +332,7 @@ public class AlertingService {
             }
             String accessor = var.accessors.stream().findFirst().orElseThrow();
             String column = toColumn(accessor);
-            String value = extracted.get(column);
+            Object value = extracted.get(column);
             if (value == null) {
                logCalculationMessage(run.testid, run.id, CalculationLog.INFO, "Null value for variable %s, accessor %s - datapoint is not created", var.name, accessor);
                if (recalculation != null) {
@@ -342,16 +340,15 @@ public class AlertingService {
                }
                continue;
             }
-            String maybeNumber = value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"' ?
-                  value.substring(1, value.length() - 1) : value;
-            try {
-               dataPoint.value = Double.parseDouble(maybeNumber);
-            } catch (NumberFormatException e) {
-               logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Cannot turn %s into a floating-point value for variable %s: %s", value, var.name, e.getMessage());
+            Double number = convertToNumber(value);
+            if (number == null) {
+               logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Cannot turn %s into a floating-point value for variable %s", value, var.name);
                if (recalculation != null) {
                   recalculation.errors++;
                }
                continue;
+            } else {
+               dataPoint.value = number;
             }
          } else {
             StringBuilder code = new StringBuilder();
@@ -359,22 +356,22 @@ public class AlertingService {
                code.append("const __obj = {\n");
                for (String accessor : var.accessors) {
                   String column = toColumn(accessor);
-                  String value = extracted.get(column);
+                  Object value = extracted.get(column);
                   if (SchemaExtractor.isArray(accessor)) {
                      code.append(SchemaExtractor.arrayName(accessor));
                   } else {
                      code.append(accessor);
                   }
                   code.append(": ");
-                  appendValue(code, value);
+                  appendValue(code, String.valueOf(value));
                   code.append(",\n");
                }
                code.append("};\n");
             } else {
                code.append("const __obj = ");
                String column = toColumn(var.accessors.stream().findFirst().orElseThrow());
-               String value = extracted.get(column);
-               appendValue(code, value);
+               Object value = extracted.get(column);
+               appendValue(code, String.valueOf(value));
                code.append(";\n");
             }
             code.append("const __func = ").append(var.calculation).append(";\n");
@@ -396,8 +393,33 @@ public class AlertingService {
       }
    }
 
+   private Double convertToNumber(Object value) {
+      if (value instanceof String) {
+         String str = (String) value;
+         String maybeNumber = str.charAt(0) == '"' && str.charAt(str.length() - 1) == '"' ?
+               str.substring(1, str.length() - 1) : str;
+         try {
+            return Double.parseDouble(maybeNumber);
+         } catch (NumberFormatException e) {
+            return null;
+         }
+      } else if (value instanceof Double) {
+         return (Double) value;
+      } else if (value instanceof Long) {
+         return ((Long) value).doubleValue();
+      } else if (value instanceof Integer) {
+         return ((Integer) value).doubleValue();
+      } else if (value instanceof Float) {
+         return ((Float) value).doubleValue();
+      } else if (value instanceof Short) {
+         return ((Short) value).doubleValue();
+      } else {
+         return null;
+      }
+   }
+
    private String toColumn(String accessor) {
-      String column = accessor.toLowerCase();
+      String column = accessor;
       if (SchemaExtractor.isArray(accessor)) {
          column = SchemaExtractor.arrayName(column) + "___arr";
       }
