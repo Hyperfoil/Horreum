@@ -45,7 +45,7 @@ public class TestServiceTest extends BaseServiceTest {
 
       // add run to the test
       long timestamp = System.currentTimeMillis();
-      int runId = uploadRun(timestamp, timestamp, "{ \"foo\" : \"bar\" }", "Foo");
+      int runId = uploadRun(timestamp, timestamp, "{ \"foo\" : \"bar\" }", test.name);
 
       // delete run
       RestAssured.given().auth().oauth2(TESTER_TOKEN)
