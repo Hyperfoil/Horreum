@@ -10,6 +10,9 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
+import javax.transaction.Status;
+import javax.transaction.SystemException;
+import javax.transaction.TransactionManager;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -37,12 +40,15 @@ import org.jboss.logging.Logger;
 public class SqlService {
    private static final Logger log = Logger.getLogger(SqlService.class);
 
-   private static final String SET_ROLES = "SELECT set_config('horreum.userroles', ?, false)";
-   private static final String SET_TOKEN = "SELECT set_config('horreum.token', ?, false)";
+   private static final String SET_ROLES = "SELECT set_config('horreum.userroles', ?, ?)";
+   private static final String SET_TOKEN = "SELECT set_config('horreum.token', ?, ?)";
    private static final CloseMe NOOP = () -> {};
 
    @Inject
    EntityManager em;
+
+   @Inject
+   TransactionManager tm;
 
    @Inject
    SecurityIdentity identity;
@@ -172,12 +178,25 @@ public class SqlService {
    private CloseMe withRoles(EntityManager em, String signedRoles) {
       Query setRoles = em.createNativeQuery(SET_ROLES);
       setRoles.setParameter(1, signedRoles);
+      boolean inTx = isInTx();
+      setRoles.setParameter(2, inTx);
       setRoles.getSingleResult(); // ignored
-      return () -> {
+      // The config was set only for the scope of current transaction
+      return inTx ? NOOP : (() -> {
          Query unsetRoles = em.createNativeQuery(SET_ROLES);
          unsetRoles.setParameter(1, "");
+         unsetRoles.setParameter(2, false);
          unsetRoles.getSingleResult(); // ignored
-      };
+      });
+   }
+
+   private boolean isInTx() {
+      try {
+         return tm.getStatus() != Status.STATUS_NO_TRANSACTION;
+      } catch (SystemException e) {
+         log.error("Error retrieving TX status", e);
+         return false;
+      }
    }
 
    CloseMe withToken(EntityManager em, String token) {
@@ -186,12 +205,15 @@ public class SqlService {
       } else {
          Query setToken = em.createNativeQuery(SET_TOKEN);
          setToken.setParameter(1, token);
+         boolean inTx = isInTx();
+         setToken.setParameter(2, inTx);
          setToken.getSingleResult();
-         return () -> {
+         return inTx ? NOOP : (() -> {
             Query unsetToken = em.createNativeQuery(SET_TOKEN);
             unsetToken.setParameter(1, "");
+            unsetToken.setParameter(2, false);
             unsetToken.getSingleResult();
-         };
+         });
       }
    }
 }
