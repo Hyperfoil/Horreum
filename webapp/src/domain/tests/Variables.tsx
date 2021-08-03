@@ -180,6 +180,16 @@ type VariableFormProps = {
     onChange(): void,
 }
 
+function checkVariable(v: Variable) {
+    if (!v.accessors || v.accessors.length === 0) {
+        return "Variable requires at least one accessor"
+    } else if (v.accessors.split(';').length > 1 && !v.calculation) {
+        return "Variable defines multiple accessors but does not define any function to combine these."
+    } else if (v.accessors.endsWith("[]")) {
+        return "Variable fetches all matches but does not define any function to combine these."
+    }
+}
+
 const VariableForm = ({ index, variables, calculations, isTester, onChange, groups, setGroups }: VariableFormProps) => {
     const variable = variables[index]
     const [isExpanded, setExpanded] = useState(false)
@@ -228,6 +238,7 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
         <FormGroup label="Accessors" fieldId="accessor">
             <Accessors
                         value={ (variable.accessors && variable.accessors.split(/[,;] */).map(a => a.trim()).filter(a => a.length !== 0)) || [] }
+                        error={ checkVariable(variable) }
                         onChange={ value => {
                             variable.accessors = value.join(";")
                             onChange()

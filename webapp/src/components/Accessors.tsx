@@ -58,10 +58,10 @@ type AccessorsProps = {
    onChange(selectors: string[]): void,
    isReadOnly: boolean,
    allowArray?: boolean,
-   valid?: boolean,
+   error?: string,
 }
 
-export default function Accessors({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowArray, valid}: AccessorsProps) {
+export default function Accessors({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowArray, error}: AccessorsProps) {
    const [created, setCreated] = useState<Extractor>({ accessor: ""})
    const onCreate = (newValue: string) => {
          setCreated({ accessor: newValue })
@@ -94,7 +94,7 @@ export default function Accessors({ value = [], onChange = (_: string[]) => {}, 
    return (<>
       <Select variant="typeaheadmulti"
               aria-label="Select accessor"
-              validated={ valid === undefined || valid ? 'default' : 'error' }
+              validated={ error ? 'error' : 'default' }
               placeholderText="Select accessor"
               isCreatable={true}
               onCreateOption={onCreate}
@@ -136,8 +136,14 @@ export default function Accessors({ value = [], onChange = (_: string[]) => {}, 
          .map((option, index) => (<SelectOption key={index} value={option.accessor} />)
       )}
       </Select>
+      { error && <span style={{
+            display: "inline-block",
+            color: "var(--pf-global--danger-color--100)" }}>
+         { error }
+      </span> }
       { selected && selected.map(s => {
-         const distinctSchemaOptions = distinctSorted(options.filter(o => o.accessor === s), (o: Extractor) => o.schema)
+         const name = s.endsWith('[]') ? s.substr(0, s.length - 2) : s
+         const distinctSchemaOptions = distinctSorted(options.filter(o => o.accessor === name), (o: Extractor) => o.schema)
          return (
          <div key={s} style={{ marginTop: "5px" }}>
             <span style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{s}</span> is valid for schemas:{'\u00A0'}
