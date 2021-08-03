@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux'
 import {
     Button,
@@ -14,6 +14,9 @@ import {
     Tabs,
     TextInput,
 } from '@patternfly/react-core';
+import {
+    NavLink
+} from 'react-router-dom'
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
 
 import { useTester } from '../../auth'
@@ -73,6 +76,7 @@ const ViewComponentForm = ({ c, onChange, isTester, setRenderGetter } : ViewComp
                         { /* TODO: call onModified(true) */ }
                         <Editor value={ (c.render && c.render.toString()) || "" }
                                 setValueGetter={ setRenderGetter }
+                                language="typescript"
                                 options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
                     </div>)
                 }
@@ -89,10 +93,15 @@ type ViewsProps = {
     onModified(modified: boolean): void,
 }
 
+function deepCopy(view: View): View {
+    const str = JSON.stringify(view, (_, val) => typeof val === 'function' ? val + '' : val)
+    return JSON.parse(str) as View
+}
+
 export default function Views({ testId, testView, testOwner, funcsRef, onModified }: ViewsProps) {
     const isTester = useTester(testOwner)
     const renderRefs = useRef(new Array<ValueGetter | undefined>(testView.components.length));
-    const [view, setView] = useState(testView)
+    const [view, setView] = useState(deepCopy(testView))
     const updateRenders = () => view.components.forEach((_, i) => {
         view.components[i].render = renderRefs.current[i]?.getValue()
    })
@@ -100,18 +109,27 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
 
     useEffect(() => {
         // Perform a deep copy of the view object to prevent modifying store
-        setView(JSON.parse(JSON.stringify(testView)) as View)
+        setView(deepCopy(testView))
     }, [testView])
 
     const dispatch = useDispatch()
     const thunkDispatch = useDispatch<TestDispatch>()
     funcsRef.current = {
-        save: () => thunkDispatch(updateView(testId, view)).catch(
-            error => {
-                dispatch(alertAction("VIEW_UPDATE", "View update failed", error))
-                return Promise.reject()
+        save: () => {
+            for (const c of view.components) {
+                if (c.accessors.trim() === "") {
+                    dispatch(alertAction("VIEW_UPDATE", "Column " + c.headerName + " is invalid; must set at least one accessor.", undefined))
+                    return Promise.reject()
+                }
             }
-        ),
+            updateRenders()
+            return thunkDispatch(updateView(testId, view)).catch(
+                error => {
+                    dispatch(alertAction("VIEW_UPDATE", "View update failed. It is possible that some schema extractors used in this view do not use valid JSON paths.", error))
+                    return Promise.reject()
+                }
+            )
+        },
         reset: () => {
             // Perform a deep copy of the view object to prevent modifying store
             setView(JSON.parse(JSON.stringify(testView)) as View)
@@ -125,20 +143,23 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
             <Tab key="__default" eventKey={0} title="Default" />
             <Tab key="__new" eventKey={1} title="+" />
         </Tabs>
-        { isTester && <div style={{ width: "100%", textAlign: "right" }}>
-            <Button onClick={ () => {
-               const components = view.components
-               components.push({
-                   headerName: "",
-                   accessors: "",
-                   render: "",
-                   headerOrder: components.length
-               })
-               setView({ ...view, components })
-               onModified(true)
-               renderRefs.current.push(undefined)
-            }} >Add component</Button>
-        </div> }
+        <div style={{ width: "100%", textAlign: "right" }}>
+            { isTester &&
+                <Button onClick={ () => {
+                const components = view.components
+                components.push({
+                    headerName: "",
+                    accessors: "",
+                    render: "",
+                    headerOrder: components.length
+                })
+                setView({ ...view, components })
+                onModified(true)
+                renderRefs.current.push(undefined)
+                }} >Add component</Button>
+            }
+            <NavLink className="pf-c-button pf-m-secondary" to={ "/run/list/" + testId }>Go to runs</NavLink>
+        </div>
         { (!view.components || view.components.length === 0) && "The view is not defined" }
         <DataList aria-label="List of variables">
             { view.components.map((c, i) => (

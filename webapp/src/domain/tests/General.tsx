@@ -165,10 +165,10 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                                 setValueGetter={e => {
                                     compareUrlEditor.current = e
                                 }}
+                                language="typescript"
                                 options={{
                                     wordWrap: 'on',
                                     wrappingIndent: 'DeepIndent',
-                                    language: 'typescript',
                                     readOnly: !isTester
                                 }}/>
                     </div>)

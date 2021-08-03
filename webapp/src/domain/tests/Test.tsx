@@ -94,7 +94,7 @@ export default function Test() {
                 setModified(false)
                 gotoTab(nextTab)
                 dispatchInfo(dispatch, "SAVE", "Saved!", "Test was succesfully updated!", 3000);
-            }).finally(() => setSaving(false))
+            }, () => { /* ignore errors */ }).finally(() => setSaving(false))
         } else {
             return Promise.reject()
         }

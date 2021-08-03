@@ -36,11 +36,12 @@ export default function Editor({value = "{}", language="json", setValueGetter = 
     return (
         <MonacoEditor
             value={value}
-            language="json"
+            language={language}
             theme="vs-dark"
             options={{
                 //renderLineHighlight : 'none',
-                ...options
+                ...options,
+                language,
             }}
             onMount={onMount}
         />

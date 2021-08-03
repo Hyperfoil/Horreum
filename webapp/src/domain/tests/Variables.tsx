@@ -242,7 +242,8 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
                     { /* TODO: call onModified(true) */ }
                     <Editor value={ (variable.calculation && variable.calculation.toString()) || "" }
                             setValueGetter={e => { calculations[index] = e }}
-                            options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
+                            language="typescript"
+                            options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', readOnly: !isTester }} />
                 </div>
             </FormGroup>
             { /* TODO: use sliders when Patternfly 4 has them */ }

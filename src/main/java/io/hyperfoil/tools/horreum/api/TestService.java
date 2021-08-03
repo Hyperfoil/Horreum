@@ -13,9 +13,11 @@ import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
 import javax.ws.rs.*;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -28,12 +30,14 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.hibernate.Hibernate;
+import org.jboss.logging.Logger;
 
 @Path("/api/test")
 @Consumes({MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 public class TestService {
-   //@formatter:on
+   private static final Logger log = Logger.getLogger(TestService.class);
+
    private static final String UPDATE_NOTIFICATIONS = "UPDATE test SET notificationsenabled = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
    private static final String TRASH_RUNS = "UPDATE run SET trashed = true WHERE testid = ?";
@@ -266,6 +270,7 @@ public class TestService {
    @RolesAllowed("tester")
    @POST
    @Path("{testId}/view")
+   @Transactional
    public Response updateView(@PathParam("testId") Integer testId, View view) {
       if (testId == null || testId <= 0) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Missing test id").build();
@@ -286,6 +291,11 @@ public class TestService {
             test.defaultView = em.merge(view);
          }
          test.persist();
+         em.flush();
+      } catch (PersistenceException e) {
+         log.error("Failed to persist updated view", e);
+         return Response.status(400).header(HttpHeaders.CONTENT_TYPE, "text/plain")
+               .entity("Failed to persist the view. It is possible that some schema extractors used in this view do not use valid JSON paths.").build();
       }
       return Response.noContent().build();
    }

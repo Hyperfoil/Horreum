@@ -248,7 +248,10 @@ export default function Schema() {
                                 <Editor
                                     value={editorSchema}
                                     setValueGetter={e => { editor.current = e }}
-                                    options={{ mode: "application/ld+json" }}
+                                    options={{
+                                        mode: "application/ld+json",
+                                        readOnly: !isTester
+                                    }}
                                 />
                             </div>
                         }

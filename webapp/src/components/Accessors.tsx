@@ -58,9 +58,10 @@ type AccessorsProps = {
    onChange(selectors: string[]): void,
    isReadOnly: boolean,
    allowArray?: boolean,
+   valid?: boolean,
 }
 
-export default function Accessors({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowArray}: AccessorsProps) {
+export default function Accessors({ value = [], onChange = (_: string[]) => {}, isReadOnly, allowArray, valid}: AccessorsProps) {
    const [created, setCreated] = useState<Extractor>({ accessor: ""})
    const onCreate = (newValue: string) => {
          setCreated({ accessor: newValue })
@@ -93,6 +94,7 @@ export default function Accessors({ value = [], onChange = (_: string[]) => {}, 
    return (<>
       <Select variant="typeaheadmulti"
               aria-label="Select accessor"
+              validated={ valid === undefined || valid ? 'default' : 'error' }
               placeholderText="Select accessor"
               isCreatable={true}
               onCreateOption={onCreate}
@@ -139,9 +141,9 @@ export default function Accessors({ value = [], onChange = (_: string[]) => {}, 
          return (
          <div key={s} style={{ marginTop: "5px" }}>
             <span style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{s}</span> is valid for schemas:{'\u00A0'}
-            { distinctSchemaOptions.map((o, i) => (<>
-               <span key={s + "-" + i} style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{o.schema}</span>{'\u00A0'}
-            </>)) }
+            { distinctSchemaOptions.map((o, i) => (<React.Fragment key={s + "-" + i}>
+               <span style={{ border: "1px solid #888", borderRadius: "4px", padding: "4px", backgroundColor: "#f0f0f0"}}>{o.schema}</span>{'\u00A0'}
+            </React.Fragment>)) }
             { !isReadOnly && s !== "" &&
                <Button variant="link" onClick={() => {
                   setCreated({ accessor: s })
