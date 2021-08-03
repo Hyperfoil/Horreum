@@ -26,8 +26,10 @@ export const getByName = (name: string) => (dispatch: Dispatch<LoadedAction>) =>
        error => dispatch(loaded([]))
     )
 
-export const add = (payload: Schema) => (dispatch: Dispatch<undefined>) =>
-   api.add(payload)
+export const add = (payload: Schema) => (dispatch: Dispatch<LoadedAction>) =>
+   api.add(payload).then(
+      response => dispatch(loaded(payload))
+   )
 
 export const all = () => (dispatch: Dispatch<LoadedAction>) =>
    api.all().then(

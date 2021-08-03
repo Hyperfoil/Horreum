@@ -137,8 +137,8 @@ function Alerts() {
       return <></>
    }
    return (<div style={{ position: "absolute", zIndex: 1000, width: "100%" }}>
-      { alerts.map(alert => (
-         <PatternflyAlert variant={ alert.variant || "warning" }
+      { alerts.map((alert, i) => (
+         <PatternflyAlert key={i} variant={ alert.variant || "warning" }
                 title={ alert.title || "Title is missing" }
                 actionClose={<AlertActionCloseButton onClose={() => {
                     dispatch({ type: CLEAR_ALERT, alert: { type: alert.type }})
