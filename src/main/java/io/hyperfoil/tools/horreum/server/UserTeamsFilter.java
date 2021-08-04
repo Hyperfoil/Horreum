@@ -20,7 +20,7 @@ import org.jboss.logging.Logger;
 import io.hyperfoil.tools.horreum.api.NotificationService;
 import io.quarkus.security.identity.SecurityIdentity;
 
-@WebFilter("/*")
+@WebFilter(value = "/*", asyncSupported = true)
 @ApplicationScoped
 public class UserTeamsFilter extends HttpFilter {
    private static final Logger log = Logger.getLogger(GrafanaUserFilter.class);

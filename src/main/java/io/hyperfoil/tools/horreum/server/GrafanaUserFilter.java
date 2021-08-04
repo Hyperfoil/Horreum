@@ -25,7 +25,7 @@ import io.smallrye.jwt.auth.principal.JWTCallerPrincipal;
 /**
  * Make sure that matching Grafana user exists. We cache the fact in cookie to avoid querying Grafana all the time.
  */
-@WebFilter("/*")
+@WebFilter(value = "/*", asyncSupported = true)
 @ApplicationScoped
 public class GrafanaUserFilter extends HttpFilter {
    private static final Logger log = Logger.getLogger(GrafanaUserFilter.class);
@@ -79,8 +79,12 @@ public class GrafanaUserFilter extends HttpFilter {
                grafana.createUser(userInfo);
                log.infof("Created Grafana user %s (%s)", userInfo.login, userInfo.email);
             } catch (WebApplicationException e2) {
-               log.errorf(e2, "Failed to create user %s", email);
-               userInfo = null;
+               if (e2.getResponse().getStatus() == 412) {
+                  log.infof("This request did not create user %s due to a mid-air collision.", userInfo.login);
+               } else {
+                  log.errorf(e2, "Failed to create user %s", email);
+                  userInfo = null;
+               }
             }
          } else {
             log.errorf(e, "Failed to fetch user %s", email);

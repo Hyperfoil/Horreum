@@ -221,6 +221,22 @@ public class NotificationService {
       }
    }
 
+   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @GET
+   @Path("/testwatch/{testId}")
+   public Watch testwatch(@PathParam("testId") Integer testId) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Watch watch = Watch.find("testId = ?1", testId).firstResult();
+         if (watch == null) {
+            watch = new Watch();
+            watch.testId = testId;
+            watch.teams = Collections.emptyList();
+            watch.users = Collections.emptyList();
+         }
+         return watch;
+      }
+   }
+
    private static List<String> add(List<String> list, String item) {
       if (list == null) {
          list = new ArrayList<>();
@@ -294,6 +310,25 @@ public class NotificationService {
          }
          watch.persist();
          return currentWatches(watch);
+      }
+   }
+
+   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @POST
+   @Path("/testwatch/{testid}")
+   @Transactional
+   public void addTestWatch(@PathParam("testid") Integer testId, Watch watch) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         Watch existing = Watch.find("testid", testId).firstResult();
+         if (existing == null) {
+            watch.id = null;
+            watch.testId = testId;
+            watch.persistAndFlush();
+         } else {
+            existing.users = watch.users;
+            existing.teams = watch.teams;
+            existing.persistAndFlush();
+         }
       }
    }
 

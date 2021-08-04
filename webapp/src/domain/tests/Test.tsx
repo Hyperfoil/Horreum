@@ -28,8 +28,9 @@ import Views from './Views'
 import Variables from './Variables'
 import Hooks from "./Hooks";
 import Access from "./Access";
+import Subscriptions from './Subscriptions'
 
-const tabs = [ "#general", "#access", "#views", "#vars", "#hooks"];
+const tabs = [ "#general", "#access", "#views", "#vars", "#hooks", "#subscriptions"];
 
 
 function initialActiveTab(location: Location) {
@@ -59,7 +60,8 @@ export default function Test() {
     const viewFuncsRef = useRef<TabFunctions>()
     const variablesFuncsRef = useRef<TabFunctions>()
     const hooksFuncsRef = useRef<TabFunctions>()
-    const funcRefs = [ generalFuncsRef, accessFuncsRef, viewFuncsRef, variablesFuncsRef, hooksFuncsRef ]
+    const subscriptionsFuncsRef = useRef<TabFunctions>()
+    const funcRefs = [ generalFuncsRef, accessFuncsRef, viewFuncsRef, variablesFuncsRef, hooksFuncsRef, subscriptionsFuncsRef ]
     const [ loaded, setLoaded ] = useState(false)
     const gotoTab = (index: number) => {
         setActiveTab(index)
@@ -167,6 +169,14 @@ export default function Test() {
                                 testOwner={test ? test.owner : undefined}
                                 onModified={ setModified }
                                 funcsRef={ hooksFuncsRef }
+                            />
+                        </Tab>
+                        <Tab key="subscriptions" eventKey={5} isHidden={ testId <= 0 || !isTester } title="Subscriptions">
+                            <Subscriptions
+                                testId={testId}
+                                testOwner={ test ? test.owner : undefined }
+                                onModified={ setModified }
+                                funcsRef={ subscriptionsFuncsRef }
                             />
                         </Tab>
                     </Tabs>
