@@ -304,79 +304,75 @@ export default function Schema() {
                   dispatch(alertAction("SAVE_SCHEMA", "Failed to save the schema", e, constraintValidationFormatter("the saved schema")))
                })
     }
-    const storeEditor = () => {
-        /* When we switch tab the editor gets unmounted; getValue() would return empty string */
-        const value = editor.current?.getValue()
-        console.log(value)
-        if (value) {
-           setEditorSchema(value);
-        }
-    }
     return (
         <React.Fragment>
             <Card style={{ flexGrow: 1 }}>
                 { loading && (<Bullseye><Spinner /></Bullseye>) }
                 { !loading && (<>
                 <CardBody>
-                    <Tabs activeKey={activeTab}>
-                       <Tab key="general" eventKey={0} title="General" onClick={ () => {
-                           storeEditor()
-                           setActiveTab(0)
-                       }} />
-                       <Tab key="schema" eventKey={1} title="JSON schema" style={{ height: "100%" }} onClick={ () => setActiveTab(1) }/>
-                       <Tab key="extractors" eventKey={2} title="Schema extractors" onClick={ () => {
-                           storeEditor()
-                           setActiveTab(2)
-                        } }/>
+                    <Tabs
+                        activeKey={activeTab}
+                        onSelect={(_, index) => {
+                            if (activeTab === 1) {
+                                /* When we switch tab the editor gets unmounted; getValue() would return empty string */
+                                const value = editor.current?.getValue()
+                                console.log(value)
+                                if (value) {
+                                setEditorSchema(value);
+                                }
+                            }
+                            setActiveTab(index as number)
+                        }}
+                    >
+                        <Tab key="general" eventKey={0} title="General">
+                            <General
+                                schema={ currentSchema }
+                                getUri={ editorSchema ? () => getUri(editorSchema) : undefined }
+                                onChange={ setCurrentSchema }
+                            />
+                        </Tab>
+                        <Tab key="schema" eventKey={1} title="JSON schema" style={{ height: "100%" }}>
+                            { editorSchema &&
+                                <div style={{ height: "600px" }}>
+                                    <Editor
+                                        value={editorSchema}
+                                        setValueGetter={e => { editor.current = e }}
+                                        options={{
+                                            mode: "application/ld+json",
+                                            readOnly: !isTester
+                                        }}
+                                    />
+                                </div>
+                            }
+                            { !editorSchema && <>
+                                This schema does not have a validation JSON schema defined.<br />
+                                <Button onClick={ () => {
+                                    setEditorSchema(JSON.stringify({
+                                        "$id": currentSchema?.uri,
+                                        "$schema": "http://json-schema.org/draft-07/schema#",
+                                        "type": "object"
+                                    }, undefined, 2))
+                                }}>Add validation schema</Button>
+                            </>}
+                        </Tab>
+                        <Tab key="extractors" eventKey={2} title="Schema extractors">
+                            <Extractors
+                                extractors={extractors}
+                                setExtractors={setExtractors}
+                                isTester={isTester}
+                            />
+                            { isTester && <>
+                                <Button
+                                    isDisabled={!currentSchema?.uri}
+                                    onClick={() => {
+                                        if (currentSchema?.uri) {
+                                            setExtractors([...extractors, { accessor: "", schema: currentSchema?.uri }])
+                                        }
+                                    }} >Add extractor</Button>
+                                { !currentSchema?.uri && <><br /><span style={{ color: "red"}}>Please define an URI first.</span></> }
+                            </> }
+                         </Tab>
                     </Tabs>
-                    { activeTab === 0 && <>
-                        <General
-                            schema={ currentSchema }
-                            getUri={ editorSchema ? () => getUri(editorSchema) : undefined }
-                            onChange={ setCurrentSchema }
-                        />
-                    </> }
-                    { activeTab === 1 && <>
-                        { editorSchema &&
-                            <div style={{ height: "600px" }}>
-                                <Editor
-                                    value={editorSchema}
-                                    setValueGetter={e => { editor.current = e }}
-                                    options={{
-                                        mode: "application/ld+json",
-                                        readOnly: !isTester
-                                    }}
-                                />
-                            </div>
-                        }
-                        { !editorSchema && <>
-                            This schema does not have a validation JSON schema defined.<br />
-                            <Button onClick={ () => {
-                                setEditorSchema(JSON.stringify({
-                                    "$id": currentSchema?.uri,
-                                    "$schema": "http://json-schema.org/draft-07/schema#",
-                                    "type": "object"
-                                }, undefined, 2))
-                            }}>Add validation schema</Button>
-                        </>}
-                    </>}
-                    { activeTab === 2 && <>
-                        <Extractors
-                            extractors={extractors}
-                            setExtractors={setExtractors}
-                            isTester={isTester}
-                        />
-                        { isTester && <>
-                            <Button
-                                isDisabled={!currentSchema?.uri}
-                                onClick={() => {
-                                    if (currentSchema?.uri) {
-                                        setExtractors([...extractors, { accessor: "", schema: currentSchema?.uri }])
-                                    }
-                                }} >Add extractor</Button>
-                            { !currentSchema?.uri && <><br /><span style={{ color: "red"}}>Please define an URI first.</span></> }
-                        </> }
-                    </> }
                 </CardBody>
                 { isTester &&
                 <CardFooter>
