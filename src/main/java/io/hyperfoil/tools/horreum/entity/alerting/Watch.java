@@ -29,5 +29,8 @@ public class Watch extends PanacheEntityBase {
    public List<String> users;
 
    @ElementCollection
+   public List<String> optout;
+
+   @ElementCollection
    public List<String> teams;
 }

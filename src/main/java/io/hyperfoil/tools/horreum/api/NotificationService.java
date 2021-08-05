@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
@@ -66,7 +67,8 @@ public class NotificationService {
             "SELECT ns.*, watch_id FROM notificationsettings ns " +
             "JOIN userinfo_teams ut ON NOT ns.isteam AND ns.name = ut.username " +
             "JOIN watch_teams wt ON wt.teams = ut.team " +
-         ") SELECT method, data, name FROM ens JOIN watch ON ens.watch_id = watch.id WHERE testid = ?;";
+         ") SELECT method, data, name FROM ens JOIN watch ON ens.watch_id = watch.id WHERE testid = ?" +
+         " AND name NOT IN (SELECT optout FROM watch_optout WHERE ens.watch_id  = watch_optout.watch_id)";
    //@formatter:on
    public final Map<String, NotificationPlugin> plugins = new HashMap<>();
 
@@ -202,13 +204,17 @@ public class NotificationService {
    public Map<Integer, Set<String>> testwatch() {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          // TODO: do all of this in single obscure PSQL query
-         List<Watch> personal = Watch.list("?1 IN elements(users)", identity.getPrincipal().getName());
-         List<Watch> team = Watch.list("FROM watch w LEFT JOIN w.teams teams WHERE teams IN ?1", identity.getRoles());
+         String username = identity.getPrincipal().getName();
+         List<Watch> personal = Watch.list("?1 IN elements(users)", username);
+         List<Watch> optout = Watch.list("?1 IN elements(optout)", username);
+         Set<String> teams = identity.getRoles().stream().filter(role -> role.endsWith("-team")).collect(Collectors.toSet());
+         List<Watch> team = Watch.list("FROM watch w LEFT JOIN w.teams teams WHERE teams IN ?1", teams);
          Map<Integer, Set<String>> result = new HashMap<>();
-         personal.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, identity.getPrincipal().getName())));
+         personal.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, username)));
+         optout.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, "!" + username)));
          team.forEach(w -> result.compute(w.testId, (i, set) -> {
             Set<String> nset = new HashSet<>(w.teams);
-            nset.retainAll(identity.getRoles());
+            nset.retainAll(teams);
             if (set != null) {
                nset.addAll(set);
             }
@@ -232,6 +238,7 @@ public class NotificationService {
             watch.testId = testId;
             watch.teams = Collections.emptyList();
             watch.users = Collections.emptyList();
+            watch.optout = Collections.emptyList();
          }
          return watch;
       }
@@ -258,11 +265,20 @@ public class NotificationService {
          userOrTeam = userOrTeam.substring(1, userOrTeam.length() - 1);
       }
       boolean isTeam = true;
-      if (userOrTeam.equals("__self") || userOrTeam.equals(identity.getPrincipal().getName())) {
-         userOrTeam = identity.getPrincipal().getName();
+      boolean isOptout = false;
+      if (userOrTeam.startsWith("!")) {
+         userOrTeam = userOrTeam.substring(1);
+         isOptout = true;
+      }
+      String username = identity.getPrincipal().getName();
+      if (userOrTeam.equals("__self") || userOrTeam.equals(username)) {
+         userOrTeam = username;
          isTeam = false;
-      } else if (!userOrTeam.endsWith("-team")) {
+      } else if (!userOrTeam.endsWith("-team") || !identity.getRoles().contains(userOrTeam)) {
          return Response.status(Response.Status.BAD_REQUEST).entity("Wrong user/team: " + userOrTeam).build();
+      }
+      if (isTeam && isOptout) {
+         return Response.status(Response.Status.BAD_REQUEST).entity("Cannot opt-out team: use remove").build();
       }
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          Watch watch = Watch.find("testid", testId).firstResult();
@@ -270,10 +286,18 @@ public class NotificationService {
             watch = new Watch();
             watch.testId = testId;
          }
-         if (isTeam) {
+         if (isOptout) {
+            watch.optout = add(watch.optout, userOrTeam);
+            if (watch.users != null) {
+               watch.users.remove(userOrTeam);
+            }
+         } else if (isTeam) {
             watch.teams = add(watch.teams, userOrTeam);
          } else {
             watch.users = add(watch.users, userOrTeam);
+            if (watch.optout != null) {
+               watch.optout.remove(userOrTeam);
+            }
          }
          watch.persist();
          return currentWatches(watch);
@@ -297,11 +321,24 @@ public class NotificationService {
          if (watch == null) {
             return Response.ok("[]").build();
          }
-         if (who.equals("__self") || who.equals(identity.getPrincipal().getName())) {
-            if (watch.users != null) {
-               watch.users.remove(identity.getPrincipal().getName());
+         boolean isOptout = false;
+         if (who.startsWith("!")) {
+            isOptout = true;
+            who = who.substring(1);
+         }
+         String username = identity.getPrincipal().getName();
+         if (who.equals("__self") || who.equals(username)) {
+            if (isOptout) {
+               if (watch.optout != null) {
+                  watch.optout.remove(who);
+               }
+            } else if (watch.users != null) {
+               watch.users.remove(username);
             }
          } else if (who.endsWith("-team") && identity.getRoles().contains(who)) {
+            if (isOptout) {
+               return Response.status(Response.Status.BAD_REQUEST).entity("Team cannot be opted out.").build();
+            }
             if (watch.teams != null) {
                watch.teams.remove(who);
             }
@@ -326,6 +363,7 @@ public class NotificationService {
             watch.persistAndFlush();
          } else {
             existing.users = watch.users;
+            existing.optout = watch.optout;
             existing.teams = watch.teams;
             existing.persistAndFlush();
          }
@@ -334,7 +372,8 @@ public class NotificationService {
 
    private Response currentWatches(Watch watch) {
       ArrayList<String> own = new ArrayList<>(identity.getRoles());
-      own.add(identity.getPrincipal().getName());
+      String username = identity.getPrincipal().getName();
+      own.add(username);
       ArrayList<String> all = new ArrayList<>();
       if (watch.teams != null) {
          all.addAll(watch.teams);
@@ -343,6 +382,9 @@ public class NotificationService {
          all.addAll(watch.users);
       }
       all.retainAll(own);
+      if (watch.optout != null && watch.optout.contains(username)) {
+         all.add("!" + username);
+      }
       return Response.ok(all).build();
    }
 

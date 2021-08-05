@@ -14,11 +14,9 @@ import {
 } from '@patternfly/react-core';
 import { NavLink } from 'react-router-dom';
 import {
-  FaEye
-} from 'react-icons/fa'
-
-import {
-   FolderOpenIcon
+    EyeIcon,
+    EyeSlashIcon,
+    FolderOpenIcon,
 } from '@patternfly/react-icons'
 
 import {
@@ -62,16 +60,31 @@ const WatchDropdown = ({ id, watching } : WatchDropdownProps) => {
   if (watching === undefined) {
     return <Spinner size="sm" />
   }
-  const personalItem = watching.some(u => u === profile?.username) ? (
-  <DropdownItem
-    key="__stop"
-    onClick={ () => dispatch(removeTestWatch(id, profile?.username || "__self")) }
-  >Stop watching personally</DropdownItem> ) : (
-  <DropdownItem
-    key="__stop"
-    onClick={ () => dispatch(addTestWatch(id, profile?.username || "__self")) }
-  >Watch personally</DropdownItem>
-  )
+  const personalItems = []
+  const self = profile?.username || "__self"
+  const isOptOut = watching.some(u => u.startsWith("!"))
+  if (watching.some(u => u === profile?.username)) {
+    personalItems.push(<DropdownItem
+        key="__self"
+        onClick={ () => dispatch(removeTestWatch(id, self)) }
+      >Stop watching personally</DropdownItem>)
+  } else {
+    personalItems.push(<DropdownItem
+        key="__self"
+        onClick={ () => dispatch(addTestWatch(id, self)) }
+      >Watch personally</DropdownItem>)
+  }
+  if (isOptOut) {
+    personalItems.push(<DropdownItem
+        key="__optout"
+        onClick={ () => dispatch(removeTestWatch(id, "!" + self)) }
+    >Resume watching per team settings</DropdownItem>)
+  } else if (watching.some(u => u.endsWith("-team"))) {
+    personalItems.push(<DropdownItem
+        key="__optout"
+        onClick={ () => dispatch(addTestWatch(id, "!" + self)) }
+    >Opt-out of all notifications</DropdownItem>)
+  }
   return (
     <Dropdown
       isOpen={open}
@@ -79,10 +92,11 @@ const WatchDropdown = ({ id, watching } : WatchDropdownProps) => {
       onSelect={_ => setOpen(false) }
       toggle={
         <DropdownToggle toggleIndicator={null} onToggle={setOpen}>
-          <FaEye className="watchIcon" style={{ cursor: "pointer", color: (watching.length > 0 ? "#151515" : "#d2d2d2" )}}/>
+          { !isOptOut && <EyeIcon className="watchIcon" style={{ cursor: "pointer", color: (watching.length > 0 ? "#151515" : "#d2d2d2" )}}/> }
+          { isOptOut && <EyeSlashIcon className="watchIcon" style={{ cursor: "pointer", color: "#151515"}} /> }
         </DropdownToggle>
       }>
-        { personalItem }
+        { personalItems }
         {
           roles.filter(role => role.endsWith("-team"))
                .sort()

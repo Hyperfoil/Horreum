@@ -1575,5 +1575,20 @@
         <dropColumn tableName="schema" columnName="stoppath" />
         <dropColumn tableName="schema" columnName="descriptionpath" />
     </changeSet>
+
+    <changeSet id="27" author="rvansa">
+        <createTable tableName="watch_optout">
+            <column name="watch_id" type="integer"/>
+            <column name="optout" type="text" />
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_watch_optout"
+                                 baseTableName="watch_optout" baseColumnNames="watch_id"
+                                 referencedTableName="watch" referencedColumnNames="id" />
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE watch_optout TO "${quarkus.datasource.username}";
+            ALTER TABLE watch_optout ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY watch_optout_policies ON watch_optout FOR ALL USING (has_role('horreum.alerting') OR has_role(optout));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

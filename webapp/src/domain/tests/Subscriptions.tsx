@@ -29,6 +29,7 @@ type Watch = {
     id?: number,
     testId: number,
     users: string[],
+    optout: string[],
     teams: string[],
 }
 
@@ -71,6 +72,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
     const isTester = useTester(props.testOwner)
     const [availableUsers, setAvailableUsers] = useState<ReactElement[]>([])
     const [watchingUsers, setWatchingUsers] = useState<ReactElement[]>([])
+    const [optoutUsers, setOptoutUsers] = useState<ReactElement[]>([])
     const [userSearch, setUserSearch] = useState<string>()
     const [userSearchTimer, setUserSearchTimer] = useState<number>()
 
@@ -79,6 +81,10 @@ export default function Subscriptions(props: SubscriptionsProps) {
 
     const [reloadCounter, setReloadCounter] = useState(0)
     const fireSearch = (query: string) => {
+        if (!query) {
+            // do not query all users in the system
+            return
+        }
         search(query).then(
             (users: User[]) => setAvailableUsers(users
                 .filter(u => !watchingUsers.some(w => w && w.key === u.username)).map(userElement)),
@@ -99,6 +105,14 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 } else {
                     setWatchingUsers([])
                 }
+                if (watch.optout.length > 0) {
+                    info(watch.optout).then(
+                        users => setOptoutUsers(users.map(userElement)),
+                        error => dispatch(alertAction("USER_INFO", "User info lookup failed, error", error))
+                    )
+                } else {
+                    setOptoutUsers([])
+                }
                 setWatchingTeams(watch.teams.map(teamElement))
             },
             error => dispatch(alertAction("WATCH_LOOKUP", "Subscription lookup failed", error))
@@ -114,6 +128,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
         save: () => updateWatch({
             testId: props.testId,
             users: watchingUsers.map(u => u.key as string),
+            optout: optoutUsers.map(u => u.key as string),
             teams: watchingTeams.map(t => t.key as string),
         }),
         reset: () => setReloadCounter(reloadCounter + 1)
@@ -147,9 +162,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
                     onClick={() => {
                         window.clearTimeout(userSearchTimer)
                         setUserSearchTimer(undefined)
-                        if (userSearch) {
-                            fireSearch(userSearch)
-                        }
+                        fireSearch(userSearch || "")
                     }}
                 ><ArrowRightIcon /></Button>
             ] : []}
@@ -158,6 +171,46 @@ export default function Subscriptions(props: SubscriptionsProps) {
             onListChange={ (newAvailable, newChosen) => {
                 setAvailableUsers((newAvailable as ReactElement[]))
                 setWatchingUsers((newChosen as ReactElement[]))
+                props.onModified(true)
+            }}
+        />
+        <br /><Divider /><br />
+        <DualListSelector
+            availableOptions={ availableUsers }
+            availableOptionsTitle="Users to opt-out"
+            availableOptionsActions={isTester ? [
+                <SearchInput
+                    style={{ width: "100%"}}
+                    placeholder="Find user..."
+                    value={ userSearch }
+                    onKeyDown={ e => {
+                        const value = (e.target as any)?.value
+                        if (e.key === "Enter" && value) {
+                            window.clearTimeout(userSearchTimer)
+                            fireSearch(value)
+                        }
+                    }}
+                    onChange={ value => {
+                        setUserSearch(value)
+                        window.clearTimeout(userSearchTimer)
+                        setUserSearchTimer(window.setTimeout(() => fireSearch(value), 1000))
+                    }}
+                    onClear={ () => setUserSearch(undefined) }
+                />,
+                <Button
+                    variant="control"
+                    onClick={() => {
+                        window.clearTimeout(userSearchTimer)
+                        setUserSearchTimer(undefined)
+                        fireSearch(userSearch || "")
+                    }}
+                ><ArrowRightIcon /></Button>
+            ] : []}
+            chosenOptions={ optoutUsers }
+            chosenOptionsTitle="Opted out users"
+            onListChange={ (newAvailable, newChosen) => {
+                setAvailableUsers((newAvailable as ReactElement[]))
+                setOptoutUsers((newChosen as ReactElement[]))
                 props.onModified(true)
             }}
         />

@@ -149,6 +149,6 @@ export const removeTestWatch = (id: number, userOrTeam: string) => (dispatch: Di
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map([[id, response as string[]]])
         }),
-        error => dispatch(alertAction("REMOVE_TEST_WATCH", "Failed to add test watch", error))
+        error => dispatch(alertAction("REMOVE_TEST_WATCH", "Failed to remove test watch", error))
     )
 }
