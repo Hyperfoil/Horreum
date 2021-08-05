@@ -16,7 +16,7 @@ import {
     RevokeTokenAction,
 } from './reducers';
 import { Dispatch } from 'react';
-import * as notifications from '../../usersettings'
+import * as subscriptions from './subscriptions-api'
 import { Map } from 'immutable';
 import { alertAction, AddAlertAction } from '../../alerts'
 import {Hook} from "../hooks/reducers";
@@ -116,39 +116,39 @@ export const deleteTest = (id: number) => (dispatch: Dispatch<DeleteAction>) =>
         () => dispatch({ type: actionTypes.DELETE, id })
     )
 
-export const fetchTestWatch = () => (dispatch: Dispatch<UpdateTestWatchAction| AddAlertAction>) =>
-    notifications.fetchTestWatch().then(
+export const allSubscriptions = () => (dispatch: Dispatch<UpdateTestWatchAction| AddAlertAction>) =>
+    subscriptions.all().then(
         response => dispatch({
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map(Object.entries(response).map(([key, value]) => [parseInt(key), value as string[]]))
         }),
-        error => dispatch(alertAction("FETCH_TEST_WATCH", "Failed to fetch test watch", error))
+        error => dispatch(alertAction("GET_ALL_SUBSCRIPTIONS", "Failed to fetch test subscriptions", error))
 )
 
-export const addTestWatch = (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
+export const addUserOrTeam = (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
     dispatch({
         type: actionTypes.UPDATE_TEST_WATCH,
         byId: Map([[id, undefined]])
     })
-    notifications.addTestWatch(id, userOrTeam).then(
+    subscriptions.addUserOrTeam(id, userOrTeam).then(
         response => dispatch({
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map([[id, response as string[]]])
         }),
-        error => dispatch(alertAction("ADD_TEST_WATCH", "Failed to add test watch", error))
+        error => dispatch(alertAction("ADD_SUBSCRIPTION", "Failed to add test subscriptions", error))
     )
 }
 
-export const removeTestWatch = (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
+export const removeUserOrTeam = (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
     dispatch({
         type: actionTypes.UPDATE_TEST_WATCH,
         byId: Map([[id, undefined]])
     })
-    notifications.removeTestWatch(id, userOrTeam).then(
+    subscriptions.removeUserOrTeam(id, userOrTeam).then(
         response => dispatch({
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map([[id, response as string[]]])
         }),
-        error => dispatch(alertAction("REMOVE_TEST_WATCH", "Failed to remove test watch", error))
+        error => dispatch(alertAction("REMOVE_SUBSCRIPTION", "Failed to remove test subscriptions", error))
     )
 }

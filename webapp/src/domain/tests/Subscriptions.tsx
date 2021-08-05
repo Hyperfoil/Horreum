@@ -16,30 +16,17 @@ import {
     User,
 } from '../user/api'
 import {
+  getSubscription,
+  updateSubscription,
+} from './subscriptions-api'
+import {
     alertAction
 } from '../../alerts'
 import {
     roleToName,
     useTester,
 } from '../../auth'
-import { fetchApi } from '../../services/api';
 import { TabFunctionsRef } from './Test'
-
-type Watch = {
-    id?: number,
-    testId: number,
-    users: string[],
-    optout: string[],
-    teams: string[],
-}
-
-function fetchWatch(testId: number) {
-    return fetchApi(`/api/notifications/testwatch/${testId}`, null, 'get')
-}
-
-function updateWatch(watch: Watch) {
-    return fetchApi(`/api/notifications/testwatch/${watch.testId}`, watch, 'post')
-}
 
 type SubscriptionsProps = {
     testId: number,
@@ -95,7 +82,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
         if (!isTester) {
             return
         }
-        fetchWatch(props.testId).then(
+        getSubscription(props.testId).then(
             watch => {
                 if (watch.users.length > 0) {
                     info(watch.users).then(
@@ -125,7 +112,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
     }, [isTester, reloadCounter])
 
     props.funcsRef.current = {
-        save: () => updateWatch({
+        save: () => updateSubscription({
             testId: props.testId,
             users: watchingUsers.map(u => u.key as string),
             optout: optoutUsers.map(u => u.key as string),

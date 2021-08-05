@@ -23,9 +23,9 @@ import {
    fetchSummary,
    updateAccess,
    deleteTest,
-   fetchTestWatch,
-   addTestWatch,
-   removeTestWatch,
+   allSubscriptions,
+   addUserOrTeam,
+   removeUserOrTeam,
 } from './actions';
 import * as selectors from './selectors';
 
@@ -66,23 +66,23 @@ const WatchDropdown = ({ id, watching } : WatchDropdownProps) => {
   if (watching.some(u => u === profile?.username)) {
     personalItems.push(<DropdownItem
         key="__self"
-        onClick={ () => dispatch(removeTestWatch(id, self)) }
+        onClick={ () => dispatch(removeUserOrTeam(id, self)) }
       >Stop watching personally</DropdownItem>)
   } else {
     personalItems.push(<DropdownItem
         key="__self"
-        onClick={ () => dispatch(addTestWatch(id, self)) }
+        onClick={ () => dispatch(addUserOrTeam(id, self)) }
       >Watch personally</DropdownItem>)
   }
   if (isOptOut) {
     personalItems.push(<DropdownItem
         key="__optout"
-        onClick={ () => dispatch(removeTestWatch(id, "!" + self)) }
+        onClick={ () => dispatch(removeUserOrTeam(id, "!" + self)) }
     >Resume watching per team settings</DropdownItem>)
   } else if (watching.some(u => u.endsWith("-team"))) {
     personalItems.push(<DropdownItem
         key="__optout"
-        onClick={ () => dispatch(addTestWatch(id, "!" + self)) }
+        onClick={ () => dispatch(addUserOrTeam(id, "!" + self)) }
     >Opt-out of all notifications</DropdownItem>)
   }
   return (
@@ -102,11 +102,11 @@ const WatchDropdown = ({ id, watching } : WatchDropdownProps) => {
                .sort()
                .map(role => watching.some(u => u === role) ? (
                 <DropdownItem key={role}
-                  onClick={ () => dispatch(removeTestWatch(id, role)) }
+                  onClick={ () => dispatch(removeUserOrTeam(id, role)) }
                 >Stop watching as team { roleToName(role) }</DropdownItem>
                 ) : (
                   <DropdownItem key={role}
-                    onClick={ () => dispatch(addTestWatch(id, role)) }
+                    onClick={ () => dispatch(addUserOrTeam(id, role)) }
                   >Watch as team { roleToName(role) }</DropdownItem>
                 ))
         }
@@ -226,7 +226,7 @@ export default function AllTests() {
     },[dispatch, roles, rolesFilter])
     useEffect(() => {
       if (isAuthenticated) {
-        dispatch(fetchTestWatch())
+        dispatch(allSubscriptions())
       }
     }, [dispatch, isAuthenticated, rolesFilter])
     if (isAuthenticated) {
