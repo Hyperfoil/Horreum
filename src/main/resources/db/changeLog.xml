@@ -1590,5 +1590,13 @@
             CREATE POLICY watch_optout_policies ON watch_optout FOR ALL USING (has_role('horreum.alerting') OR has_role(optout));
         </sql>
     </changeSet>
+
+    <changeSet id="28" author="rvansa">
+        <sql>
+            CREATE POLICY watch_teams_owner ON watch_teams FOR ALL USING (has_role2((SELECT test.owner FROM test JOIN watch ON test.id = watch.testid WHERE watch.id = watch_id), 'tester'));
+            CREATE POLICY watch_users_owner ON watch_users FOR ALL USING (has_role2((SELECT test.owner FROM test JOIN watch ON test.id = watch.testid WHERE watch.id = watch_id), 'tester'));
+            CREATE POLICY watch_optout_owner ON watch_optout FOR ALL USING (has_role2((SELECT test.owner FROM test JOIN watch ON test.id = watch.testid WHERE watch.id = watch_id), 'tester'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
