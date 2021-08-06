@@ -17,7 +17,7 @@ import javax.transaction.Transactional;
 
 import org.jboss.logging.Logger;
 
-import io.hyperfoil.tools.horreum.api.NotificationService;
+import io.hyperfoil.tools.horreum.svc.NotificationServiceImpl;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @WebFilter(value = "/*", asyncSupported = true)
@@ -30,7 +30,7 @@ public class UserTeamsFilter extends HttpFilter {
    SecurityIdentity identity;
 
    @Inject
-   NotificationService ns;
+   NotificationServiceImpl ns;
 
    @Override
    @Transactional

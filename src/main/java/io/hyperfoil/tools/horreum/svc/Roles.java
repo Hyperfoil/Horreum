@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api;
+package io.hyperfoil.tools.horreum.svc;
 
 import javax.persistence.Query;
 

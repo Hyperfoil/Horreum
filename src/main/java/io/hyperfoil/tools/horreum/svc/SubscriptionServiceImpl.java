@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api;
+package io.hyperfoil.tools.horreum.svc;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,13 +16,14 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
+import io.hyperfoil.tools.horreum.api.SubscriptionService;
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 public class SubscriptionServiceImpl implements SubscriptionService {
    @Inject
-   SqlService sqlService;
+   SqlServiceImpl sqlService;
 
    @Inject
    EntityManager em;

@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api;
+package io.hyperfoil.tools.horreum.svc;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -31,7 +31,7 @@ public class TestServiceTest extends BaseServiceTest {
    EntityManager em;
 
    @Inject
-   SqlService sqlService;
+   SqlServiceImpl sqlService;
 
    @org.junit.jupiter.api.Test
    public void testCreateDelete(TestInfo info) {

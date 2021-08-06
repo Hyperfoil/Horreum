@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api;
+package io.hyperfoil.tools.horreum.svc;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.HttpHeaders;
@@ -10,9 +10,16 @@ public class ServiceException extends WebApplicationException {
       return new ServiceException(Response.Status.BAD_REQUEST, message);
    }
 
-   public ServiceException(int status, String message) {
-      super(message, Response.status(status)
-            .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN).entity(message).build());
+   public static ServiceException forbidden(String message) {
+      return new ServiceException(Response.Status.FORBIDDEN, message);
+   }
+
+   public static ServiceException notFound(String message) {
+      return new ServiceException(Response.Status.NOT_FOUND, message);
+   }
+
+   public static ServiceException serverError(String message) {
+      return new ServiceException(Response.Status.INTERNAL_SERVER_ERROR, message);
    }
 
    public ServiceException(Response.Status status, String message) {
