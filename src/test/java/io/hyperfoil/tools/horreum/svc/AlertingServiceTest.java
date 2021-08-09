@@ -61,7 +61,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       variable.add("name", "Value");
       variable.add("accessors", "value");
       variables.add(variable);
-      jsonRequest().body(variables.toString()).post("/api/alerting/variables?test=" + test.id).then().statusCode(200);
+      jsonRequest().body(variables.toString()).post("/api/alerting/variables?test=" + test.id).then().statusCode(204);
 
       BlockingQueue<DataPoint.Event> dpe = new BlockingArrayQueue<>();
       eventBus.consumer(DataPoint.EVENT_NEW, msg -> {
