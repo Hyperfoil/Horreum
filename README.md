@@ -36,10 +36,10 @@ Alternatively you can build Horreum image and run it (assuming that you've start
 
 ```bash
 # The base image contains tools like curl and jq and horreum.sh script
-docker build -f src/main/docker/Dockerfile.jvm.base -t quay.io/hyperfoil/horreum-base:latest .
-docker push quay.io/hyperfoil/horreum-base:latest
-./mvnw package -Dui -Dquarkus.container-image.build
-podman run --rm --name horreum_app --env-file .env --network=host -p 8080:8080 quay.io/hyperfoil/horreum
+podman build -f src/main/docker/Dockerfile.jvm.base -t quay.io/hyperfoil/horreum-base:latest .
+podman push quay.io/hyperfoil/horreum-base:latest
+./mvnw package -Dui -Dquarkus.container-image.build=true
+podman run --rm --name horreum_app --env-file .env --network=host quay.io/hyperfoil/horreum
 ```
 
 > :warning: *If npm install fails*: please try clearing the node module cache `npm cache clean`
