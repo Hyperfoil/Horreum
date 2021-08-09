@@ -9,6 +9,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.Context;
 
 import io.hyperfoil.tools.horreum.api.GrafanaService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
@@ -34,6 +35,9 @@ public class GrafanaServiceImpl implements GrafanaService {
    @Inject
    EntityManager em;
 
+   @Context
+   HttpServletRequest request;
+
    @Override
    public Object[] search(Target query) {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
@@ -42,7 +46,7 @@ public class GrafanaServiceImpl implements GrafanaService {
    }
 
    @Override
-   public List<TimeseriesTarget> query(HttpServletRequest request, Query query) {
+   public List<TimeseriesTarget> query(Query query) {
       if (query == null) {
          throw ServiceException.badRequest("No query");
       } else if (query.range == null || query.range.from == null || query.range.to == null) {

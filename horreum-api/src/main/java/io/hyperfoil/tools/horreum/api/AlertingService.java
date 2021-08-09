@@ -18,7 +18,6 @@ import javax.ws.rs.core.MediaType;
 import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
-import io.hyperfoil.tools.horreum.svc.AlertingServiceImpl;
 import io.hyperfoil.tools.yaup.json.Json;
 
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -76,7 +75,7 @@ public interface AlertingService {
       public int testId;
       public String uid;
       public String url;
-      public List<AlertingServiceImpl.PanelInfo> panels = new ArrayList<>();
+      public List<PanelInfo> panels = new ArrayList<>();
    }
 
    class PanelInfo {

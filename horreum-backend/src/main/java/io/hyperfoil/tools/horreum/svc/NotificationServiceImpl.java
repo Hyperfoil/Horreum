@@ -155,12 +155,16 @@ public class NotificationServiceImpl implements NotificationService {
    @RolesAllowed({ Roles.TESTER, Roles.ADMIN})
    @Transactional
    @Override
-   public void updateSettings(String name, boolean team, NotificationSettings[] settings) throws SystemException {
+   public void updateSettings(String name, boolean team, NotificationSettings[] settings) {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          NotificationSettings.delete("name = ?1 AND isTeam = ?2", name, team);
          for (NotificationSettings s : settings) {
             if (!plugins.containsKey(s.method)) {
-               tm.setRollbackOnly();
+               try {
+                  tm.setRollbackOnly();
+               } catch (SystemException e) {
+                  log.error("Cannot rollback", e);
+               }
                throw ServiceException.badRequest("Invalid method " + s.method);
             }
             s.name = name;

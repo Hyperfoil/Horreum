@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SqlService;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.security.identity.SecurityIdentity;
 
 import javax.annotation.PostConstruct;
