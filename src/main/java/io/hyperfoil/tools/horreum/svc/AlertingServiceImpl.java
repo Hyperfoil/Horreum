@@ -678,6 +678,8 @@ public class AlertingServiceImpl implements AlertingService {
          }
 
          em.flush();
+      } catch (PersistenceException e) {
+         throw new WebApplicationException(e, Response.serverError().build());
       }
    }
 
@@ -796,6 +798,8 @@ public class AlertingServiceImpl implements AlertingService {
             throw ServiceException.badRequest("Path ID and entity don't match");
          }
          em.merge(change);
+      } catch (PersistenceException e) {
+         throw new WebApplicationException(e, Response.serverError().build());
       }
    }
 

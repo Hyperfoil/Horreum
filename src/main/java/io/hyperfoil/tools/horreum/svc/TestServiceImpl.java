@@ -17,6 +17,7 @@ import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
@@ -144,7 +145,15 @@ public class TestServiceImpl implements TestService {
             em.persist(view);
             test.defaultView = view;
          }
-         em.flush();
+         try {
+            em.flush();
+         } catch (PersistenceException e) {
+            if (e.getCause() instanceof org.hibernate.exception.ConstraintViolationException) {
+               throw new ServiceException(Response.Status.CONFLICT, "Could not persist test due to another test.");
+            } else {
+               throw new WebApplicationException(e, Response.serverError().build());
+            }
+         }
          eventBus.publish(Test.EVENT_NEW, test);
          response.setStatus(Response.Status.CREATED.getStatusCode());
       }
