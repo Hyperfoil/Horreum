@@ -954,7 +954,7 @@ public class AlertingServiceImpl implements AlertingService {
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          Json variables = params.getJson("variables");
          Map<String, String> tags = Tags.parseTags(params.getString("tags"));
-         StringBuilder sql = new StringBuilder("SELECT DISTINCT ON(variable_id) variable_id AS variable, EXTRACT(EPOCH FROM timestamp) * 1000 ")
+         StringBuilder sql = new StringBuilder("SELECT DISTINCT ON(variable_id) variable_id AS variable, EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp")
             .append(" FROM datapoint LEFT JOIN run_tags on run_tags.runid = datapoint.runid ");
          int counter = Tags.addTagQuery(tags, sql, 1);
          sql.append(" WHERE variable_id = ANY(?").append(counter).append(") ORDER BY variable_id, timestamp DESC;");

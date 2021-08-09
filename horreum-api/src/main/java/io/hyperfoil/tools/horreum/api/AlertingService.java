@@ -135,6 +135,6 @@ public interface AlertingService {
 
    class DatapointLastTimestamp {
       public int variable;
-      public long timestamp;
+      public Number timestamp;
    }
 }
