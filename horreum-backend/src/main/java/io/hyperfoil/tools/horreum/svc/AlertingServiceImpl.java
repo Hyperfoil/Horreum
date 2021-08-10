@@ -236,12 +236,13 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void emitDatapoints(Run run, boolean notify, boolean debug, Recalculation recalculation) {
       String firstLevelSchema = run.data.getString("$schema");
-      List<String> schemas = run.data.values().stream()
-            .filter(Json.class::isInstance).map(Json.class::cast)
-            .map(json -> json.getString("$schema")).filter(Objects::nonNull)
-            .collect(Collectors.toList());
+      Map<String, String> schemas = run.data.stream()
+            .filter(entry -> entry.getValue() instanceof Json && ((Json) entry.getValue()).has("$schema"))
+            .collect(Collectors.toMap(
+                  entry -> ((Json) entry.getValue()).getString("$schema"),
+                  entry -> String.valueOf(entry.getKey())));
       if (firstLevelSchema != null) {
-         schemas.add(firstLevelSchema);
+         schemas.put(firstLevelSchema, null);
       }
 
       StringBuilder extractionQuery = new StringBuilder("SELECT 1 AS __ignore_this_column__");
@@ -271,7 +272,7 @@ public class AlertingServiceImpl implements AlertingService {
          String accessor = entry.getKey();
          boolean isArray = SchemaExtractor.isArray(accessor);
          String column = StringUtil.quote(isArray ? SchemaExtractor.arrayName(accessor) + "___arr" : accessor, "\"");
-         List<AccessorInfo> matching = entry.getValue().stream().filter(ai -> schemas.contains(ai.schema)).collect(Collectors.toList());
+         List<AccessorInfo> matching = entry.getValue().stream().filter(ai -> schemas.containsKey(ai.schema)).collect(Collectors.toList());
          if (matching.isEmpty()) {
             if (recalculation != null) {
                recalculation.runsWithoutAccessor.add(run.id);
@@ -291,12 +292,12 @@ public class AlertingServiceImpl implements AlertingService {
             for (int i = 0; i < matching.size(); i++) {
                AccessorInfo ai = matching.get(i);
                if (i != 0) extractionQuery.append(", ");
-               appendPathQuery(extractionQuery, ai.schema.equals(firstLevelSchema), isArray, ai.jsonpath);
+               appendPathQuery(extractionQuery, schemas.get(ai.schema), isArray, ai.jsonpath);
             }
             extractionQuery.append("])::::text as ").append(column);
          } else {
             AccessorInfo ai = matching.get(0);
-            appendPathQuery(extractionQuery, ai.schema.equals(firstLevelSchema), isArray, ai.jsonpath);
+            appendPathQuery(extractionQuery, schemas.get(ai.schema), isArray, ai.jsonpath);
             extractionQuery.append("::::text as ").append(column);
          }
       }
@@ -447,16 +448,16 @@ public class AlertingServiceImpl implements AlertingService {
       return column;
    }
 
-   private void appendPathQuery(StringBuilder query, boolean isFirstLevel, boolean isArray, String jsonpath) {
+   private void appendPathQuery(StringBuilder query, String topKey, boolean isArray, String jsonpath) {
       if (isArray) {
          query.append(", jsonb_path_query_array(data, '");
       } else {
          query.append(", jsonb_path_query_first(data, '");
       }
-      if (isFirstLevel) {
+      if (topKey == null) {
          query.append("$");
       } else {
-         query.append("$.*");
+         query.append("$.\"").append(topKey.replaceAll("\"", "\\\"")).append('"');
       }
       // four colons to escape it for Hibernate
       query.append(jsonpath).append("'::::jsonpath)");
