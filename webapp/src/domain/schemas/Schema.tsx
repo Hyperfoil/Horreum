@@ -60,31 +60,34 @@ function General(props: GeneralProps) {
     const isTester = useTester(props.schema?.owner)
     const [importFailed, setImportFailed] = useState(false)
 
-    const onChange = (override: Partial<SchemaDef>) => {
-        if (props.schema) {
-            props.onChange({
-                ...props.schema, ...override
-            })
-        }
+    const schema: SchemaDef = props.schema || {
+        id: 0,
+        name: "",
+        description: "",
+        uri: "",
+        schema: {},
+        owner: defaultRole || "",
+        access: 2,
+        token: null,
     }
-    const name = props.schema?.name || ""
-    const uri = props.schema?.uri || ""
-    const description = props.schema?.description || ""
-    const owner = props.schema?.owner || defaultRole
-    const access = props.schema?.access || 2
+    const onChange = (override: Partial<SchemaDef>) => {
+        props.onChange({
+            ...schema, ...override
+        })
+    }
 
     const otherUri = props.getUri ? props.getUri() : ""
     return (
         <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
             <FormGroup label="Name" isRequired={true} fieldId="schemaName" helperText="names must be unique" helperTextInvalid="Name must be unique and not empty">
                 <TextInput
-                    value={name}
+                    value={schema.name}
                     isRequired
                     type="text"
                     id="schemaName"
                     aria-describedby="name-helper"
                     name="schemaName"
-                    validated={ (name && name !== "") || !isTester ? "default" : "error"}
+                    validated={ (schema.name && schema.name !== "") || !isTester ? "default" : "error"}
                     isReadOnly={ !isTester }
                     onChange={value => {
                         onChange({ name: value})
@@ -94,7 +97,7 @@ function General(props: GeneralProps) {
             <FormGroup label="URI" isRequired={true} fieldId="schemaURI" helperTextInvalid="Must provide a valid URI">
                 <>
                 <div style={{ display: "flex" }}>
-                { !uri && isTester && props.getUri !== undefined &&
+                { !schema.uri && isTester && props.getUri !== undefined &&
                 <Tooltip content={"Import URI from the schema"}>
                     <Button variant="control"
                             style={{ float: "left" }}
@@ -113,13 +116,13 @@ function General(props: GeneralProps) {
                 </Tooltip>
                 }
                 <TextInput
-                    value={uri || ""}
+                    value={schema.uri || ""}
                     isRequired
                     type="text"
                     id="schemaURI"
                     name="schemaURI"
                     isReadOnly={ !isTester }
-                    validated={(uri && uri !== "") || !isTester ? "default" : "error"}
+                    validated={(schema.uri && schema.uri !== "") || !isTester ? "default" : "error"}
                     onChange={value => {
                         onChange({ uri: value })
                     }}
@@ -127,7 +130,7 @@ function General(props: GeneralProps) {
                     style={{ width: "1200px" }}
                 />
                 </div>
-                { uri && otherUri && otherUri !== uri &&
+                { schema.uri && otherUri && otherUri !== schema.uri &&
                     <Alert variant="warning" title="Schema $id in JSON is not matching to this URI" />
                 }
                 { importFailed &&
@@ -137,7 +140,7 @@ function General(props: GeneralProps) {
             </FormGroup>
             <FormGroup label="Description" fieldId="schemaDescription" helperText="" helperTextInvalid="">
                 <TextArea
-                    value={description}
+                    value={schema.description}
                     type="text"
                     id="schemaDescription"
                     aria-describedby="description-helper"
@@ -151,21 +154,21 @@ function General(props: GeneralProps) {
             <FormGroup label="Owner" fieldId="schemaOwner">
                 { isTester ? (
                     <OwnerSelect includeGeneral={false}
-                                selection={roleToName(owner) || ""}
+                                selection={roleToName(schema.owner) || ""}
                                 onSelect={selection => {
                                     onChange({ owner: selection.key })
                                 }} />
                 ) : (
-                    <TextInput id="schemaOwner" value={roleToName(owner) || ""} isReadOnly />
+                    <TextInput id="schemaOwner" value={roleToName(schema.owner) || ""} isReadOnly />
                 )}
             </FormGroup>
             <FormGroup label="Access rights" fieldId="schemaAccess">
                 { isTester ? (
-                    <AccessChoice checkedValue={access} onChange={access => {
+                    <AccessChoice checkedValue={schema.access} onChange={access => {
                         onChange({ access })
                     }} />
                 ) : (
-                    <AccessIcon access={access} />
+                    <AccessIcon access={schema.access} />
                 )}
             </FormGroup>
         </Form>)

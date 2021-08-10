@@ -78,6 +78,7 @@ function useUpdateDescription(run: Run): MenuItem<Run> {
                 >Edit description</DropdownItem>,
             modal:
                 <UpdateDescriptionModal
+                    key="updateDescription"
                     isOpen={updateDescriptionOpen}
                     onClose={() => setUpdateDescriptionOpen(false)}
                     run={run} />
