@@ -225,7 +225,11 @@ public class SchemaServiceImpl implements SchemaService {
          } else {
             extractors = SchemaExtractor.<SchemaExtractor>find("schema_id", schema).stream().collect(Collectors.toList());
          }
-         extractors.forEach(e -> Hibernate.initialize(e.schema));
+         extractors.forEach(e -> {
+            Hibernate.initialize(e.schema);
+            em.detach(e);
+            e.jsonpath = "$" + e.jsonpath;
+         });
          return extractors;
       }
    }
@@ -249,6 +253,11 @@ public class SchemaServiceImpl implements SchemaService {
       }
       if (accessor == null || accessor.isEmpty() || schema == null || jsonpath == null) {
          throw ServiceException.badRequest("Missing accessor/schema/jsonpath");
+      }
+      if (jsonpath.startsWith("strict ")) {
+         jsonpath = jsonpath.substring(7);
+      } else if (jsonpath.startsWith("lax ")) {
+         jsonpath = jsonpath.substring(4);
       }
       if (jsonpath.startsWith("$")) {
          jsonpath = jsonpath.substring(1);

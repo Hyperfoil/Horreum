@@ -40,6 +40,7 @@ import { toString } from '../../components/Editor';
 import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
+import JsonPathDocsLink from '../../components/JsonPathDocsLink'
 import OwnerSelect from '../../components/OwnerSelect'
 import { Extractor } from '../../components/Accessors';
 import { Schema as SchemaDef, SchemaDispatch } from './reducers';
@@ -189,13 +190,16 @@ function Extractors(props: ExtractorsProps) {
                     props.setExtractors([...props.extractors])
                 }}/>
             </FormGroup>
-            <FormGroup label="JSON path" fieldId="jsonpath"
-                        validated={ !(e.jsonpath && e.jsonpath.trim().startsWith("$")) && (!e.validationResult || e.validationResult.valid) ? "default" : "error"}
-                        helperTextInvalid={ e.jsonpath && e.jsonpath.trim().startsWith("$") ? "JSON path must not start with '$'" : (e.validationResult?.reason || "")  }>
+            <FormGroup
+                label={
+                    <>JSON path <JsonPathDocsLink /></>
+                }
+                fieldId="jsonpath"
+                validated={ !e.validationResult || e.validationResult.valid ? "default" : "error"}
+                helperTextInvalid={ e.validationResult?.reason || ""  }>
                 <TextInput id="jsonpath"
                             value={e.jsonpath || ""}
                             isReadOnly={!props.isTester}
-                            validated={!e.jsonpath || !e.jsonpath.trim().startsWith("$") ? "default" : "error"}
                             onChange={newValue => {
                     e.jsonpath = newValue;
                     e.changed = true

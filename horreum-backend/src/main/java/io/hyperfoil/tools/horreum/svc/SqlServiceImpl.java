@@ -71,9 +71,22 @@ public class SqlServiceImpl implements SqlService {
    }
 
    JsonpathValidation testJsonPathInternal(String jsonpath) {
-      Query query = em.createNativeQuery("SELECT jsonb_path_query_first('{}', ('$' || ?)::::jsonpath)::::text");
-      query.setParameter(1, jsonpath);
+      jsonpath = jsonpath.trim();
       JsonpathValidation result = new JsonpathValidation();
+      if (jsonpath.startsWith("strict") || jsonpath.startsWith("lax")) {
+         result.valid = false;
+         result.jsonpath = jsonpath;
+         result.reason = "Horreum always uses lax (default) jsonpaths.";
+         return result;
+      }
+      if (!jsonpath.startsWith("$")) {
+         result.valid = false;
+         result.jsonpath = jsonpath;
+         result.reason = "Jsonpath should start with '$'";
+         return result;
+      }
+      Query query = em.createNativeQuery("SELECT jsonb_path_query_first('{}', ?::::jsonpath)::::text");
+      query.setParameter(1, jsonpath);
       try {
          query.getSingleResult();
          result.valid = true;
