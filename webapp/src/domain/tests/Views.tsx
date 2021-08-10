@@ -40,6 +40,16 @@ type ViewComponentFormProps = {
     setRenderGetter(vg: ValueGetter): void,
 }
 
+function checkComponent(v: ViewComponent) {
+    if (!v.accessors || v.accessors.length === 0) {
+        return "View component requires at least one accessor"
+    } else if (v.accessors.split(';').length > 1 && !v.render) {
+        return "View component defines multiple accessors but does not define any function to combine these."
+    } else if (v.accessors.endsWith("[]")) {
+        return "View component fetches all matches but does not define any function to combine these."
+    }
+}
+
 const ViewComponentForm = ({ c, onChange, isTester, setRenderGetter } : ViewComponentFormProps) => {
     return (
         <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
@@ -60,6 +70,7 @@ const ViewComponentForm = ({ c, onChange, isTester, setRenderGetter } : ViewComp
                             c.accessors = value.join(";")
                             onChange()
                         }}
+                        error={ checkComponent(c) }
                         isReadOnly={!isTester} />
             </FormGroup>
             <FormGroup label="Rendering" fieldId="rendering">
