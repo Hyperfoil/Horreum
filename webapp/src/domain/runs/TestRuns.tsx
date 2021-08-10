@@ -53,6 +53,8 @@ const renderCell = (render: string | Function | undefined) => (arg: C) => {
     if (!render) {
         if (typeof value === "object") {
             return JSON.stringify(value)
+        } else if ((typeof value === "string") && (value.startsWith("http://") || value.startsWith("https://"))) {
+            return (<a href={ value } target="_blank ">{ value }</a>)
         }
         return value
     } else if (typeof render === "string") {
