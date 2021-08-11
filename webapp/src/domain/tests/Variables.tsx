@@ -85,7 +85,7 @@ const CopyVarsModal = ({isOpen, onClose, onConfirm}: TestSelectModalProps) => {
                         .then(response => setGroups(groupNames(response)))
                 }}
                 placeholderText="Select..."
-                direction="up" />
+            />
             { test && groups.length > 0 &&
                 <Select
                     isOpen={selectGroupOpen}
@@ -173,7 +173,6 @@ type VariableDisplay = {
 type VariableFormProps = {
     index: number,
     variables: VariableDisplay[],
-    calculations:(ValueGetter | undefined)[],
     isTester: boolean,
     groups: string[],
     setGroups(gs: string[]): void,
@@ -190,7 +189,7 @@ function checkVariable(v: Variable) {
     }
 }
 
-const VariableForm = ({ index, variables, calculations, isTester, onChange, groups, setGroups }: VariableFormProps) => {
+const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups }: VariableFormProps) => {
     const variable = variables[index]
     const [isExpanded, setExpanded] = useState(false)
     const [groupOpen, setGroupOpen] = useState(false)
@@ -245,18 +244,31 @@ const VariableForm = ({ index, variables, calculations, isTester, onChange, grou
                         }}
                         isReadOnly={!isTester} />
         </FormGroup>
-        <ExpandableSection toggleText={ isExpanded ? "Hide settings" : "Show advanced settings" }
-                           onToggle={setExpanded}
-                           isExpanded={isExpanded} >
-            <FormGroup label="Calculation" fieldId="calculation">
+        <FormGroup label="Calculation" fieldId="calculation">
+            { variable.calculation === undefined && (isTester ?
+                <Button
+                    variant="link"
+                    onClick={() => {
+                        variable.calculation = "value => value"
+                        onChange()
+                    }}
+                >Add calculation function...</Button> : "No calculation function")
+            }
+            { variable.calculation !== undefined &&
                 <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
-                    { /* TODO: call onModified(true) */ }
                     <Editor value={ (variable.calculation && variable.calculation.toString()) || "" }
-                            setValueGetter={e => { calculations[index] = e }}
+                            onChange={ value => {
+                                variable.calculation = value;
+                                onChange()
+                            }}
                             language="typescript"
                             options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', readOnly: !isTester }} />
                 </div>
-            </FormGroup>
+            }
+        </FormGroup>
+        <ExpandableSection toggleText={ isExpanded ? "Hide settings" : "Show advanced settings" }
+                           onToggle={setExpanded}
+                           isExpanded={isExpanded} >
             { /* TODO: use sliders when Patternfly 4 has them */ }
             <FormGroup label="Max difference for last datapoint" fieldId="maxDifferenceLastDatapoint" helperText="Maximum difference between the last value and the mean of preceding values.">
                 <TextInput value={ variable.maxDifferenceLastDatapointStr }
@@ -365,7 +377,6 @@ function groupNames(vars: Variable[]) {
 export default function Variables({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) {
     const [variables, setVariables] = useState<VariableDisplay[]>([])
     const [groups, setGroups] = useState<string[]>([])
-    const calculations = useRef(new Array<ValueGetter | undefined>())
     const [recalcConfirm, setRecalcConfirm] = useState<(_: any) => void>()
     const dispatch = useDispatch()
     // dummy variable to cause reloading of variables
@@ -388,8 +399,6 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                 }).sort(sortByOrder))
 
                 setGroups(groupNames(response))
-                calculations.current.splice(0)
-                response.forEach((_: any) => calculations.current.push(undefined));
             },
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
         )
@@ -398,8 +407,10 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
     funcsRef.current = {
         save: () => {
             variables.forEach((v, i) => {
-                v.calculation = calculations.current[i]?.getValue()
                 v.order = i
+                if (v.calculation === "") {
+                    v.calculation = undefined
+                }
             })
             return api.updateVariables(testId, variables).catch(
                 error => {
@@ -417,7 +428,6 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
         },
         reset: () => {
             setVariables([])
-            calculations.current.splice(0)
             setReload(reload + 1)
         }
     }
@@ -440,7 +450,6 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             floatingWindowStr: "5",
             floatingWindow: 5
         })
-        calculations.current.push(undefined)
         setVariables([ ...variables])
         onModified(true)
     }
@@ -523,7 +532,6 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                             maxDifferenceFloatingWindowStr: String(v.maxDifferenceFloatingWindow),
                             floatingWindowStr: String(v.floatingWindow),
                         }))])
-                        response.forEach((_: Variable) => calculations.current.push(undefined))
                     },
                     error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
                 )
@@ -542,7 +550,6 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                                 <VariableForm
                                     index={i}
                                     variables={variables}
-                                    calculations={calculations.current}
                                     isTester={isTester}
                                     onChange={() => {
                                         setVariables([ ...variables ])
@@ -568,8 +575,6 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                                 isDisabled={i === 0}
                                 variant="control"
                                 onClick={() => {
-                                    variables[i - 1].calculation = calculations.current[i - 1]?.getValue()
-                                    variables[i].calculation = calculations.current[i]?.getValue()
                                     swap(variables, i - 1, i)
                                     setVariables([ ...variables ])
                                     onModified(true)
@@ -580,7 +585,6 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                                 variant="primary"
                                 onClick={() => {
                                     variables.splice(i, 1)
-                                    calculations.current.splice(i, 1)
                                     setVariables([ ...variables ])
                                     onModified(true)
                                 }}
@@ -590,8 +594,6 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                                 isDisabled={i === variables.length - 1}
                                 variant="control"
                                 onClick={() => {
-                                    variables[i + 1].calculation = calculations.current[i + 1]?.getValue()
-                                    variables[i].calculation = calculations.current[i]?.getValue()
                                     swap(variables, i + 1, i)
                                     setVariables([ ...variables ])
                                     onModified(true)

@@ -7,13 +7,23 @@ export type ValueGetter = {
     getValue(): string | undefined
 }
 
-export default function Editor({value = "{}", language="json", setValueGetter = (_: ValueGetter) => {}, options = {} }) {
+type EditorProps = {
+    value?: string,
+    language?: string,
+    setValueGetter?(_: ValueGetter): void,
+    options: any,
+    onChange?(value: string | undefined): void,
+}
+
+export default function Editor(props: EditorProps) {
     const monaco = useMonaco()
     const valueGetter = useRef<() => string>();
 
     const onMount: OnMount = (editor: editor.IStandaloneCodeEditor) => {
         valueGetter.current = () => editor.getValue();
-        setValueGetter({ getValue: () => valueGetter.current ? valueGetter.current() : undefined });
+        if (props.setValueGetter) {
+            props.setValueGetter({ getValue: () => valueGetter.current ? valueGetter.current() : undefined });
+        }
         if (!monaco) {
             return
         }
@@ -35,15 +45,16 @@ export default function Editor({value = "{}", language="json", setValueGetter = 
 
     return (
         <MonacoEditor
-            value={value}
-            language={language}
+            value={props.value}
+            language={props.language || "json"}
             theme="vs-dark"
             options={{
                 //renderLineHighlight : 'none',
-                ...options,
-                language,
+                ...props.options,
+                language: props.language || "json",
             }}
-            onMount={onMount}
+            onMount={ onMount }
+            onChange={ props.onChange }
         />
     )
 }
