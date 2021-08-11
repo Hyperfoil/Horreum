@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -40,20 +40,6 @@ export default function HookList() {
         },
         {
             Header:"Event type",accessor:"type"
-        },
-        {
-            Header:"Target",accessor:"target",
-            Cell: (arg: any) => {
-                if (arg.row.original.type === "run/new" && tests) {
-                    if (arg.cell.value === -1) {
-                        return "All tests"
-                    }
-                    const test = tests.find(t => t.id === arg.cell.value)
-                    return test ? test.name : "Unknown test";
-                } else {
-                    return "";
-                }
-            }
         },
         {
             Header:"Active",accessor:"active"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
     Button,
     ButtonVariant,
@@ -9,7 +9,6 @@ import {
     Modal,
 } from '@patternfly/react-core';
 import { Hook } from './reducers';
-import TestSelect, { SelectedTest } from '../../components/TestSelect'
 import HookUrlSelector from '../../components/HookUrlSelector'
 import { globalEventTypes } from "./reducers";
 
@@ -24,14 +23,11 @@ function AddHookModal(props: AddHookModalProps) {
 
     const [url,setUrl] = useState("");
     const [eventType,setEventType] = useState(globalEventTypes[0])
-    const allTests: SelectedTest = { id: -1, toString: () => "All tests" }
-    const [target,setTarget] = useState<SelectedTest>(allTests);
     const [isSaving, setSaving] = useState(false)
 
     const onClose = () => {
         setUrl("")
         setEventType(globalEventTypes[0])
-        setTarget(allTests)
         setSaving(false)
         props.onClose()
     }
@@ -53,7 +49,7 @@ function AddHookModal(props: AddHookModalProps) {
                             id: 0,
                             url: url.trim(),
                             type: eventType,
-                            target : target.id,
+                            target : -1,
                             active: true
                         }).finally(onClose)
                     }}
@@ -90,16 +86,6 @@ function AddHookModal(props: AddHookModalProps) {
                         })}
                     </FormSelect>
                 </FormGroup>
-                {
-                    ( eventType === "run/new"  || eventType ===  "change/new" ) &&
-                    <FormGroup label="Test" isRequired={true} helperText="Which tests should this hook fire on" fieldId="target">
-                        <TestSelect
-                            selection={target}
-                            onSelect={ setTarget }
-                            extraOptions={[ allTests ]}
-                            isDisabled={ isSaving }/>
-                    </FormGroup>
-                }
             </Form>
         </Modal>
     )
