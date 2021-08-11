@@ -58,7 +58,7 @@ services:
     ports:
     - 8180:8180
     volumes:
-    - ./src/main/resources:/etc/keycloak/imports:ro,z
+    - ./horreum-backend/src/main/resources:/etc/keycloak/imports:ro,z
     - ./:/cwd:rw,z
   app-init:
     depends_on:
