@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams } from "react-router"
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -10,7 +10,6 @@ import {
     CardFooter,
     PageSection,
     Pagination,
-    SelectOptionObject,
     Title,
     Toolbar,
     ToolbarGroup,
@@ -20,7 +19,6 @@ import {
 } from '@patternfly/react-core';
 import {
     ArrowRightIcon,
-    EditIcon,
     TrashIcon,
     WarningTriangleIcon,
 } from '@patternfly/react-icons';

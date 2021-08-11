@@ -56,7 +56,7 @@ export default function HookList() {
             }
         }
 
-    ],[dispatch, tests])
+    ],[dispatch])
     const [isOpen,setOpen] = useState(false);
     const list = useSelector(selectors.all);
     const isAdmin = useSelector(isAdminSelector)

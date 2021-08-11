@@ -18,7 +18,6 @@ import {
 import {
     ArrowRightIcon,
     FolderOpenIcon,
-    HelpIcon,
     SearchIcon,
     TrashIcon,
 } from '@patternfly/react-icons'
@@ -126,7 +125,7 @@ export default function AllRuns() {
        thunkDispatch(list(filterQuery, matchAll, roles, pagination, showTrashed)).then(
           () => setFilterError(undefined),
           e => setFilterError(e))
-    }, [ filterQuery, matchAll, pagination, showTrashed, dispatch ])
+    }, [ filterQuery, matchAll, pagination, showTrashed, thunkDispatch ])
     const handleMatchAll = (checked: boolean, evt: React.ChangeEvent<any>) => {
        if (checked) setMatchAll(evt.target.value === "true")
     }

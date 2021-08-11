@@ -1,5 +1,5 @@
 import { ReactElement, useState, useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import {
     Button,
     Divider,
@@ -109,7 +109,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
             teamRoles => setAvailableTeams(teamRoles.map(teamElement)),
             error => dispatch(alertAction("TEAM_LOOKUP", "Team lookup failed", error))
         )
-    }, [isTester, reloadCounter])
+    }, [isTester, reloadCounter, props.testId, dispatch])
 
     props.funcsRef.current = {
         save: () => updateSubscription({

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 
 import { useTester } from '../../auth'
@@ -28,7 +28,7 @@ import {
 } from '@patternfly/react-core';
 
 import Accessors from '../../components/Accessors'
-import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
+import Editor from '../../components/Editor/monaco/Editor'
 import RecalculateModal from '../alerting/RecalculateModal'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
 import CalculationLogModal from './CalculationLogModal'

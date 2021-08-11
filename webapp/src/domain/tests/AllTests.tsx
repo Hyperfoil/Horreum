@@ -32,7 +32,7 @@ import * as selectors from './selectors';
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from '../../components/ActionMenu';
-import OwnerSelect, { Role, SHOW_ALL, ONLY_MY_OWN } from '../../components/OwnerSelect'
+import OwnerSelect, { Role, ONLY_MY_OWN } from '../../components/OwnerSelect'
 import ConfirmTestDeleteModal from './ConfirmTestDeleteModal'
 
 import {
