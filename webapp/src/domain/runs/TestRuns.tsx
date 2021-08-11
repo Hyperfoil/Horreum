@@ -39,7 +39,7 @@ import { get } from '../tests/selectors';
 
 import AccessIcon from '../../components/AccessIcon'
 import Table from '../../components/Table';
-import TagsSelect from '../../components/TagsSelect'
+import TagsSelect, { SelectedTags } from '../../components/TagsSelect'
 import { CellProps, UseTableOptions, UseRowSelectInstanceProps, UseRowSelectRowProps, Column, UseSortByColumnOptions } from 'react-table';
 import { Run } from './reducers';
 import { Description, ExecutionTime, Menu, RunTags } from './components'
@@ -179,7 +179,7 @@ export default function TestRuns() {
     const [perPage, setPerPage] = useState(20)
     const [sort, setSort] = useState("start")
     const [direction, setDirection] = useState("descending")
-    const [tags, setTags] = useState<SelectOptionObject>()
+    const [tags, setTags] = useState<SelectedTags>()
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction ])
     const tableColumns = useMemo(() => {
         const rtrn = [ ...staticColumns ]

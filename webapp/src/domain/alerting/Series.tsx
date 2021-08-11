@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {  useDispatch, useSelector } from 'react-redux'
 import { fetchDashboard } from './api'
 import { Panel } from './types'
 import { ChangesTabs } from './Changes'
 import { alertAction } from '../../alerts'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
-import TagsSelect from '../../components/TagsSelect'
+import TagsSelect, { SelectedTags } from '../../components/TagsSelect'
 import PanelChart from './PanelChart'
 import { formatDate } from '../../utils'
 import { DateTime } from 'luxon'
@@ -123,7 +123,7 @@ export default function Series() {
     const dispatch = useDispatch()
     const roles = useSelector(rolesSelector)
     const [selectedTest, setSelectedTest] = useState<SelectedTest>()
-    const [currentTags, setCurrentTags] = useState<SelectOptionObject | undefined>(paramTags ? ({ toString: () => paramTags }) : undefined)
+    const [currentTags, setCurrentTags] = useState<SelectedTags | undefined>(paramTags ? ({ toString: () => paramTags }) : undefined)
     const [dashboardUrl, setDashboardUrl] = useState("")
     const [panels, setPanels] = useState<Panel[]>([])
     const [loadingPanels, setLoadingPanels] = useState(false)

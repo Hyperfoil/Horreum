@@ -351,7 +351,7 @@ public class TestServiceImpl implements TestService {
          @SuppressWarnings("unchecked") List<String> tagList = tagComboQuery.setParameter(1, testId).getResultList();
          ArrayList<Json> result = new ArrayList<>(tagList.size());
          for (String tags : tagList) {
-            result.add(Json.fromString(tags));
+            result.add(tags == null ? new Json(false) : Json.fromString(tags));
          }
          return result;
       }

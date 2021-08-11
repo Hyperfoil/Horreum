@@ -13,9 +13,12 @@ import { alertAction } from '../alerts'
 
 import { fetchTags } from '../domain/tests/api'
 
+const ALL_TAGS = "<all tags>"
 
 export function convertTags(tags: any): string {
-    if (!tags || Object.keys(tags).length === 0) {
+    if (!tags) {
+        return ALL_TAGS;
+    } else if (Object.keys(tags).length === 0) {
         return "<no tags>"
     }
     let str = ""
@@ -32,12 +35,14 @@ export function convertTags(tags: any): string {
     return str
 }
 
+export type SelectedTags = SelectOptionObject | null
+
 type TagsSelectProps = {
     testId?: number,
     disabled?: boolean,
-    tagFilter?: (tags: any) => boolean,
-    selection?: SelectOptionObject,
-    onSelect(selection: SelectOptionObject): void,
+    tagFilter?: (tags: SelectedTags) => boolean,
+    selection?: SelectedTags,
+    onSelect(selection: SelectedTags): void,
     direction?: "up" | "down",
     showIfNoTags?: boolean,
     addAllTagsOption?: boolean,
@@ -74,8 +79,8 @@ export default function TagsSelect(props: TagsSelectProps) {
     }, [testId, onTagsLoaded, props.beforeTagsLoading, onSelect, dispatch, roles, props.includeTrashed, props.addAllTagsOption])
     let options = []
     let hasAllTags = false
-    if (props.addAllTagsOption && (!props.tagFilter || props.tagFilter({}))) {
-        options.push({ toString: () => "<all tags>" })
+    if (props.addAllTagsOption && (!props.tagFilter || props.tagFilter(null))) {
+        options.push(ALL_TAGS)
         hasAllTags = true
     }
     const filtered = props.tagFilter ? availableTags.filter(props.tagFilter) : availableTags;
@@ -90,15 +95,15 @@ export default function TagsSelect(props: TagsSelectProps) {
             isDisabled={props.disabled || empty}
             isOpen={open}
             onToggle={ setOpen }
-            selections={props.selection}
+            selections={props.selection === null ? ALL_TAGS : props.selection}
             onSelect={(_, item) => {
-                props.onSelect(item)
+                props.onSelect(item === ALL_TAGS ? null : item)
                 setOpen(false)
             }}
             direction={props.direction}
             menuAppendTo="parent"
             placeholderText="Choose tags..."
         >
-            { options.map((tags: any, i: number) => (<SelectOption key={i} value={ tags } />)) }
+            { options.map((tags: SelectOptionObject | string, i: number) => (<SelectOption key={i} value={ tags } />)) }
         </Select>)
 }

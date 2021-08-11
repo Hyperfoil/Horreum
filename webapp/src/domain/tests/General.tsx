@@ -15,7 +15,7 @@ import { durationToMillis, millisToDuration } from '../../utils'
 import {alertAction, constraintValidationFormatter} from '../../alerts'
 
 import Accessors from '../../components/Accessors'
-import TagsSelect, { convertTags } from '../../components/TagsSelect'
+import TagsSelect, { convertTags, SelectedTags } from '../../components/TagsSelect'
 import Editor, {ValueGetter} from '../../components/Editor/monaco/Editor'
 
 import {Test, TestDispatch, StalenessSettings} from './reducers';
@@ -47,7 +47,7 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
     const [tags, setTags] = useState<string[]>([])
     const compareUrlEditor = useRef<ValueGetter>()
     const [stalenessSettings, setStalenessSettings] = useState<StalenessSettingsDisplay[]>([])
-    const [newStalenessTags, setNewStalenessTags] = useState<any>()
+    const [newStalenessTags, setNewStalenessTags] = useState<SelectedTags>()
 
     const updateState = (test?: Test) => {
         setName(test ? test.name : "");
@@ -200,7 +200,7 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                             <FormGroup
                                 label="Tags"
                                 fieldId="tags">
-                                <span style={{ position: 'relative', top: '12px' }}>{ (!settings.tags || Object.keys(settings.tags).length === 0) ? "<all tags>" : convertTags(settings.tags) }</span>
+                                <span style={{ position: 'relative', top: '12px' }}>{ convertTags(settings.tags) }</span>
                             </FormGroup>
                         </GridItem>
                         <GridItem span={6}>
@@ -243,14 +243,11 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                                     showIfNoTags={true}
                                 />
                         <Button
-                            isDisabled={ !newStalenessTags }
+                            isDisabled={ newStalenessTags === undefined }
                             onClick={() => {
-                                let copy = { ...newStalenessTags }
-                                delete copy.toString
-                                // we can't use null for the extended SelectOption so we use {}
-                                // but the database expects null for 'all tags option'
-                                if (Object.keys(copy).length === 0) {
-                                    copy = null;
+                                let copy = newStalenessTags === null ? null : { ...newStalenessTags }
+                                if (copy !== null) {
+                                    delete copy.toString
                                 }
                                 setStalenessSettings(stalenessSettings.concat({
                                     tags: copy,
