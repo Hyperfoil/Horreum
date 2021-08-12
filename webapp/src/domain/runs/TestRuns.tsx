@@ -49,7 +49,9 @@ type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> 
 const renderCell = (render: string | Function | undefined) => (arg: C) => {
     const { cell: { value, row: { index } }, data, column } = arg;
     if (!render) {
-        if (typeof value === "object") {
+        if (value === null || value === undefined) {
+            return "--"
+        } else if (typeof value === "object") {
             return JSON.stringify(value)
         } else if ((typeof value === "string") && (value.startsWith("http://") || value.startsWith("https://"))) {
             return (<a href={ value } target="_blank ">{ value }</a>)
@@ -59,11 +61,11 @@ const renderCell = (render: string | Function | undefined) => (arg: C) => {
         return (<Tooltip content={ "Render failure: " + render } ><WarningTriangleIcon style={{color: "#a30000"}} /></Tooltip>);
     }
     const token = useSelector(tokenSelector)
+    const useValue = (value === null || value === undefined) ? (data[index] as any)[column.id.toLowerCase()] : value;
     try {
-        const useValue = (value === null || value === undefined) ? (data[index] as any)[column.id.toLowerCase()] : value;
         const rendered = render(useValue, data[index], token)
         if (!rendered) {
-            return "-"
+            return "--"
         } else if (typeof rendered === "string") {
             //this is a hacky way to see if it looks like html :)
             if (rendered.trim().startsWith("<") && rendered.trim().endsWith(">")) {
@@ -76,7 +78,7 @@ const renderCell = (render: string | Function | undefined) => (arg: C) => {
             return rendered;
         }
     } catch (e) {
-        console.error(e)
+        console.warn("Error in render function %s trying to render %O: %O", render.toString(), useValue, e)
         return "--"
     }
 }
