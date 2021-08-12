@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from "react-router"
 import { useSelector, useDispatch } from 'react-redux'
 
@@ -235,19 +235,22 @@ function Extractors(props: ExtractorsProps) {
 }
 
 export default function Schema() {
-    const { schemaId } = useParams<SchemaParams>();
-    const schema = useSelector(selectors.getById(Number.parseInt(schemaId)))
+    const params = useParams<SchemaParams>();
+    const [schemaId, setSchemaId] = useState(params.schemaId === "_new" ? -1 : Number.parseInt(params.schemaId))
+    const schema = useSelector(selectors.getById(schemaId))
     const [loading, setLoading] = useState(true)
     const [editorSchema, setEditorSchema] = useState(schema?.schema ? toString(schema?.schema) : undefined)
     const [currentSchema, setCurrentSchema] = useState(schema)
+    const [modified, setModified] = useState(false)
+    const [saving, setSaving] = useState(false)
 
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<SchemaDispatch>()
     const roles = useSelector(rolesSelector)
     useEffect(() => {
-        if (schemaId !== "_new") {
+        if (schemaId >= 0) {
             setLoading(true)
-            thunkDispatch(actions.getById(Number.parseInt(schemaId))).catch(e => {
+            thunkDispatch(actions.getById(schemaId)).catch(e => {
                 dispatch(alertAction("FAILED_LOADING_SCHEMA", "Failed loading schema " + schemaId, e))
             }).finally(() => setLoading(false))
         } else {
@@ -255,12 +258,10 @@ export default function Schema() {
         }
     }, [dispatch, thunkDispatch, schemaId, roles])
     useEffect(() => {
-        document.title = (schemaId === "_new" ? "New schema" : schema?.name || "(unknown schema)")  + " | Horreum"
+        document.title = (schemaId < 0 ? "New schema" : schema?.name || "(unknown schema)")  + " | Horreum"
         setCurrentSchema(schema)
         setEditorSchema(schema?.schema ? toString(schema?.schema) : undefined)
     }, [schema, schemaId])
-     // TODO editor types
-    const editor = useRef<ValueGetter>();
     // TODO: use this in reaction to editor change
     const getUri = (content?: string) => {
         if (!content) {
@@ -278,38 +279,39 @@ export default function Schema() {
     const [activeTab, setActiveTab] = useState(0)
     const [extractors, setExtractors] = useState<Extractor[]>([])
     useEffect(() => {
-        if (schemaId !== "_new") {
-            api.listExtractors(Number.parseInt(schemaId)).then(result => setExtractors(result.map((e: Extractor) => {
+        if (schemaId >= 0) {
+            api.listExtractors(schemaId).then(result => setExtractors(result.map((e: Extractor) => {
                 e.newName = e.accessor
                 return e
             }).sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))))
         }
     }, [schemaId])
+    const uri = currentSchema?.uri
     useEffect(() => {
-        if (currentSchema?.uri) {
-            setExtractors(extractors.map(e => ({ ...e, schema: currentSchema?.uri })))
+        if (uri) {
+            setExtractors(extractors.map(e => ({ ...e, schema: uri })))
         }
-    }, [currentSchema?.uri])
+    }, [uri])
 
     const save = () => {
-        let savedSchema;
-        if (activeTab === 1) {
-           savedSchema = editor.current?.getValue()
-        } else {
-           savedSchema = editorSchema
-        }
+        setSaving(true)
         let newSchema = {
-            id: schemaId !== "_new" ? parseInt(schemaId) : 0,
+            id: schemaId,
             ...currentSchema,
-            schema: savedSchema ? JSON.parse(savedSchema) : null,
+            schema: editorSchema ? JSON.parse(editorSchema) : null,
             token: null
         } as SchemaDef
-        thunkDispatch(actions.add(newSchema))
+        // do not update the main schema when just changing extractors
+        (modified ? thunkDispatch(actions.add(newSchema)) : Promise.resolve(schemaId))
+               .then(id => {
+                   setSchemaId(id)
+               })
                .then(() => Promise.all(extractors.filter(e => e.changed || (e.deleted && e.accessor !== "")).map(e => api.addOrUpdateExtractor(e))))
                .then(() => dispatchInfo(dispatch, "SAVE_SCHEMA", "Saved!", "Schema was successfully saved", 3000))
                .catch(e => {
                   dispatch(alertAction("SAVE_SCHEMA", "Failed to save the schema", e, constraintValidationFormatter("the saved schema")))
                })
+               .finally(() => setSaving(false))
     }
     return (
         <React.Fragment>
@@ -319,23 +321,16 @@ export default function Schema() {
                 <CardBody>
                     <Tabs
                         activeKey={activeTab}
-                        onSelect={(_, index) => {
-                            if (activeTab === 1) {
-                                /* When we switch tab the editor gets unmounted; getValue() would return empty string */
-                                const value = editor.current?.getValue()
-                                console.log(value)
-                                if (value) {
-                                setEditorSchema(value);
-                                }
-                            }
-                            setActiveTab(index as number)
-                        }}
+                        onSelect={(_, index) => setActiveTab(index as number)}
                     >
                         <Tab key="general" eventKey={0} title="General">
                             <General
                                 schema={ currentSchema }
                                 getUri={ editorSchema ? () => getUri(editorSchema) : undefined }
-                                onChange={ setCurrentSchema }
+                                onChange={ schema => {
+                                    setCurrentSchema(schema)
+                                    setModified(true)
+                                }}
                             />
                         </Tab>
                         <Tab key="schema" eventKey={1} title="JSON schema" style={{ height: "100%" }}>
@@ -343,7 +338,10 @@ export default function Schema() {
                                 <div style={{ height: "600px" }}>
                                     <Editor
                                         value={editorSchema}
-                                        setValueGetter={e => { editor.current = e }}
+                                        onChange={value => {
+                                            setEditorSchema(value)
+                                            setModified(true)
+                                        }}
                                         options={{
                                             mode: "application/ld+json",
                                             readOnly: !isTester
@@ -359,6 +357,7 @@ export default function Schema() {
                                         "$schema": "http://json-schema.org/draft-07/schema#",
                                         "type": "object"
                                     }, undefined, 2))
+                                    setModified(true)
                                 }}>Add validation schema</Button>
                             </>}
                         </Tab>
@@ -385,12 +384,15 @@ export default function Schema() {
                 <CardFooter>
                   <ActionGroup style={{ marginTop: 0 }}>
                       <Button
+                        isDisabled={ saving }
                         variant="primary"
                         onClick={save}
-                      >Save</Button>
-                      <NavLink className="pf-c-button pf-m-secondary" to="/schema/">
-                          Cancel
-                      </NavLink>
+                      >Save{ saving && <>{'\u00A0'}<Spinner size="md"/></> }</Button>
+                      { !saving &&
+                        <NavLink className="pf-c-button pf-m-secondary" to="/schema/">
+                            Cancel
+                        </NavLink>
+                      }
                   </ActionGroup>
                 </CardFooter>
                 }

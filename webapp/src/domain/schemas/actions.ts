@@ -28,7 +28,10 @@ export const getByName = (name: string) => (dispatch: Dispatch<LoadedAction>) =>
 
 export const add = (payload: Schema) => (dispatch: Dispatch<LoadedAction>) =>
    api.add(payload).then(
-      response => dispatch(loaded(payload))
+      id => {
+         dispatch(loaded({ ...payload, id }))
+         return id;
+      }
    )
 
 export const all = () => (dispatch: Dispatch<LoadedAction>) =>
