@@ -13,7 +13,6 @@ import java.math.BigDecimal;
 
 public class JsonSerializer implements JsonbSerializer<Json>, JsonbDeserializer<Json> {
 
-
    public JsonSerializer(){}
 
    @Override
@@ -102,49 +101,50 @@ public class JsonSerializer implements JsonbSerializer<Json>, JsonbDeserializer<
 
       }
       return rtrn;
-   }catch(Exception e){
-
+   } catch (Exception e){
       e.printStackTrace();
    }
-      return new Json(false);
-   }
+   return new Json(false);
+}
 
    @Override
    public void serialize(Json json, JsonGenerator jsonGenerator, SerializationContext serializationContext) {
-      if(json == null){
+      if (json == null){
          return;
       }
-      if(json.isArray()){
+      if (json.isArray()){
          jsonGenerator.writeStartArray();
-         json.forEach(value->{
-            if(value instanceof Json){
-               serialize((Json)value,jsonGenerator,serializationContext);
-            }else{
+         json.forEach(value -> {
+            if (value instanceof Json){
+               serialize((Json) value, jsonGenerator, serializationContext);
+            } else {
                if (value instanceof Long) {
-                  jsonGenerator.write((Long)value);
+                  jsonGenerator.write((long)value);
                } else if (value instanceof Double) {
-                  jsonGenerator.write((Double) value);
+                  jsonGenerator.write((double) value);
                } else if (value instanceof Boolean) {
-                  jsonGenerator.write((Boolean) value);
-               } else {
+                  jsonGenerator.write((boolean) value);
+               } else if (value != null) {
                   jsonGenerator.write(value.toString());
+               } else {
+                  jsonGenerator.writeNull();
                }
             }
          });
          jsonGenerator.writeEnd();
-      }else{
+      } else {
          jsonGenerator.writeStartObject();
-         json.forEach((key,value)->{
+         json.forEach((key,value) -> {
             jsonGenerator.writeKey(key.toString());
-            if(value instanceof Json){
+            if (value instanceof Json){
                serialize((Json)value,jsonGenerator,serializationContext);
-            }else{
+            } else {
                if (value instanceof Long) {
-                  jsonGenerator.write((Long)value);
+                  jsonGenerator.write((long) value);
                } else if (value instanceof Double) {
-                  jsonGenerator.write((Double) value);
+                  jsonGenerator.write((double) value);
                } else if (value instanceof Boolean) {
-                  jsonGenerator.write((Boolean) value);
+                  jsonGenerator.write((boolean) value);
                } else if (value != null) {
                   jsonGenerator.write(value.toString());
                } else {
