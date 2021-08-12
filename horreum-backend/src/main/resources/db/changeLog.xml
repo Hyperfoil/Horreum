@@ -1640,5 +1640,11 @@
         </createProcedure>
         <sql>UPDATE run SET id = id;</sql>
     </changeSet>
+
+    <changeSet id="30" author="rvansa">
+        <createIndex tableName="view_data" indexName="view_data_runid">
+            <column name="runid" />
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
 
