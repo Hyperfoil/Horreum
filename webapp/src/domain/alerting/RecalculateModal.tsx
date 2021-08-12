@@ -30,6 +30,7 @@ type RecalculateModalProps = {
     isOpen: boolean,
     onClose(): void,
     testId: number,
+    showLog?(): void,
 }
 
 function isEmpty(value: any) {
@@ -142,7 +143,16 @@ export default function RecalculateModal(props : RecalculateModalProps) {
         isOpen={ !!result }
         onClose={ () => setResult(undefined) }
         actions={ [
-            <Button key={0} onClick={ () => setResult(undefined) }>Close</Button>
+            <Button key={0} onClick={ () => setResult(undefined) }>Close</Button>,
+            <Button key={1}
+                variant="secondary"
+                isDisabled={ !props.showLog }
+                onClick={ () => {
+                    setResult(undefined)
+                    if (props.showLog) {
+                        props.showLog()
+                    }
+                }}>Show log</Button>
         ]}
     >
         <Table

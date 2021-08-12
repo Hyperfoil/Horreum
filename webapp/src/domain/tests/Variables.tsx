@@ -501,6 +501,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                 }
                 setRecalcConfirm(undefined)
             }}
+            showLog={ () => setLogOpen(true) }
             testId={testId}
             title="Proceed with recalculation"
             recalculate="Recalculate"
@@ -510,10 +511,11 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
         <RecalculateModal
             isOpen={recalculateOpen}
             onClose={() => setRecalculateOpen(false)}
+            showLog={ () => setLogOpen(true) }
             testId={testId}
             title="Confirm recalculation"
             recalculate="Recalculate"
-            cancel="cancel"
+            cancel="Cancel"
             message="Really drop all datapoints, calculating new ones?"
             />
         <CopyVarsModal

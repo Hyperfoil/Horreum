@@ -236,11 +236,11 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void emitDatapoints(Run run, boolean notify, boolean debug, Recalculation recalculation) {
       String firstLevelSchema = run.data.getString("$schema");
-      Map<String, String> schemas = run.data.stream()
+      Map<String, Object> schemas = run.data.stream()
             .filter(entry -> entry.getValue() instanceof Json && ((Json) entry.getValue()).has("$schema"))
             .collect(Collectors.toMap(
                   entry -> ((Json) entry.getValue()).getString("$schema"),
-                  entry -> String.valueOf(entry.getKey())));
+                  Map.Entry::getKey));
       if (firstLevelSchema != null) {
          schemas.put(firstLevelSchema, null);
       }
@@ -385,7 +385,7 @@ public class AlertingServiceImpl implements AlertingService {
                      code.append(accessor);
                   }
                   code.append(": ");
-                  appendValue(code, String.valueOf(value));
+                  appendValue(code, value);
                   code.append(",\n");
                }
                code.append("};\n");
@@ -393,7 +393,7 @@ public class AlertingServiceImpl implements AlertingService {
                code.append("const __obj = ");
                String column = toColumn(var.accessors.stream().findFirst().orElseThrow());
                Object value = extracted.get(column);
-               appendValue(code, String.valueOf(value));
+               appendValue(code, value);
                code.append(";\n");
             }
             code.append("const __func = ").append(var.calculation).append(";\n");
@@ -448,7 +448,7 @@ public class AlertingServiceImpl implements AlertingService {
       return column;
    }
 
-   private void appendPathQuery(StringBuilder query, String topKey, boolean isArray, String jsonpath) {
+   private void appendPathQuery(StringBuilder query, Object topKey, boolean isArray, String jsonpath) {
       if (isArray) {
          query.append(", jsonb_path_query_array(data, '");
       } else {
@@ -456,8 +456,10 @@ public class AlertingServiceImpl implements AlertingService {
       }
       if (topKey == null) {
          query.append("$");
+      } else if (topKey instanceof Integer) {
+         query.append("$[").append((int) topKey).append("]");
       } else {
-         query.append("$.\"").append(topKey.replaceAll("\"", "\\\"")).append('"');
+         query.append("$.\"").append(String.valueOf(topKey).replaceAll("\"", "\\\"")).append('"');
       }
       // four colons to escape it for Hibernate
       query.append(jsonpath).append("'::::jsonpath)");
@@ -467,26 +469,35 @@ public class AlertingServiceImpl implements AlertingService {
       new CalculationLog(testId, runId, level, String.format(format, args)).persist();
    }
 
-   private void appendValue(StringBuilder code, String value) {
+   private void appendValue(StringBuilder code, Object value) {
       if (value == null) {
-         code.append("null");
+         code.append("undefined");
          return;
       }
-      if (value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"') {
-         String maybeNumber = value.substring(1, value.length() - 1);
-         try {
-            code.append(Integer.parseInt(maybeNumber));
-            return;
-         } catch (NumberFormatException e1) {
-               try {
-               code.append(Double.parseDouble(maybeNumber));
+      if (value instanceof Long) {
+         code.append((long) value);
+      } else if (value instanceof Integer) {
+         code.append((int) value);
+      } else if (value instanceof Number){
+         code.append(((Number) value).doubleValue());
+      } else {
+         String str = value.toString();
+         if (str.charAt(0) == '"' && str.charAt(str.length() - 1) == '"') {
+            String maybeNumber = str.substring(1, str.length() - 1);
+            try {
+               code.append(Integer.parseInt(maybeNumber));
                return;
-            } catch (NumberFormatException e2) {
-                // ignore
+            } catch (NumberFormatException e1) {
+               try {
+                  code.append(Double.parseDouble(maybeNumber));
+                  return;
+               } catch (NumberFormatException e2) {
+                  // ignore
+               }
             }
          }
+         code.append(value);
       }
-      code.append(value);
    }
 
    private Double execute(int testId, int runId, String jsCode, String name) {
@@ -496,7 +507,13 @@ public class AlertingServiceImpl implements AlertingService {
          try {
             Value value = context.eval("js", jsCode);
             if (value.isNumber()) {
-               return value.asDouble();
+               double dValue = value.asDouble();
+               if (Double.isFinite(dValue)) {
+                  return dValue;
+               } else {
+                  logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation for variable %s failed: Not a finite number: %s", name, value);
+                  return null;
+               }
             } else if (value.isString()) {
                try {
                   return Double.parseDouble(value.asString());
