@@ -9,6 +9,7 @@ import javax.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
+import io.hyperfoil.tools.horreum.svc.MissingRunValuesEvent;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 import io.quarkus.qute.Location;
@@ -27,6 +28,9 @@ public class EmailPlugin implements NotificationPlugin {
 
    @Location("missing_run_notification_email")
    Template missingRunNotificationEmail;
+
+   @Location("missing_values_notification_email")
+   Template missingValuesNotificationEmail;
 
    @Inject
    Mailer mailer;
@@ -75,6 +79,21 @@ public class EmailPlugin implements NotificationPlugin {
                .data("currentStaleness", prettyPrintTime(System.currentTimeMillis() - lastRunTimestamp))
                .data("lastRunId", String.valueOf(lastRunId))
                .data("lastRunTimestamp", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(lastRunTimestamp)))
+               .render();
+         mailer.send(Mail.withHtml(data, subject, content));
+      }
+
+      @Override
+      public void notifyMissingRunValues(String testName, String tags, MissingRunValuesEvent event) {
+         String subject = subjectPrefix + " Missing regression values for " + testName + "/" + tags + ", run " + event.runId;
+         String content = missingValuesNotificationEmail
+               .data("username", username)
+               .data("testName", testName)
+               .data("testId", String.valueOf(event.testId))
+               .data("tags", tags)
+               .data("baseUrl", baseUrl)
+               .data("runId", event.runId)
+               .data("variables", String.join(", ", event.variables))
                .render();
          mailer.send(Mail.withHtml(data, subject, content));
       }

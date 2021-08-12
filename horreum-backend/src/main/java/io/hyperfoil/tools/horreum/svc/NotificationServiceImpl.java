@@ -29,6 +29,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
 import io.hyperfoil.tools.horreum.entity.alerting.UserInfo;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
+import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
@@ -78,7 +79,7 @@ public class NotificationServiceImpl implements NotificationService {
 
    @Transactional
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
-   public void onNewChange(Change.Event event) {
+   public void onMissingRunValues(Change.Event event) {
       if (!event.notify) {
          log.debug("Notification skipped");
          return;
@@ -91,19 +92,39 @@ public class NotificationServiceImpl implements NotificationService {
          String testName = test == null ? "unknown" : test.name;
          log.infof("Received new change in test %d (%s), run %d, variable %d (%s)", variable.testId, testName, event.change.runId, variable.id, variable.name);
 
-         @SuppressWarnings("rawtypes")
-         List tagsList = em.createNativeQuery("SELECT tags::::text FROM run_tags WHERE runid = ?")
-                 .setParameter(1, event.change.runId)
-                 .getResultList();
-         String tags;
-         if (tagsList.size() > 0) {
-            Object tagsResult = tagsList.stream().findFirst().get();
-            tags = tagsToString(Json.fromString(String.valueOf(tagsResult)));
-         } else {
-            tags = "";
-         }
+         String tags = getTags(event.change.runId);
 
          notifyAll(variable.testId, n -> n.notifyChange(testName, tags, event.change));
+      }
+   }
+
+   private String getTags(int runId) {
+      @SuppressWarnings("rawtypes")
+      List tagsList = em.createNativeQuery("SELECT tags::::text FROM run_tags WHERE runid = ?")
+              .setParameter(1, runId)
+              .getResultList();
+      String tags;
+      if (tagsList.size() > 0) {
+         Object tagsResult = tagsList.stream().findFirst().get();
+         tags = tagsToString(Json.fromString(String.valueOf(tagsResult)));
+      } else {
+         tags = "";
+      }
+      return tags;
+   }
+
+   @Transactional
+   @ConsumeEvent(value = Run.EVENT_MISSING_VALUES, blocking = true)
+   public void onMissingRunValues(MissingRunValuesEvent event) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(AlertingServiceImpl.HORREUM_ALERTING))) {
+         // TODO: breaks storage/alerting separation!
+         Test test = Test.findById(event.testId);
+         String testName = test == null ? "unknown" : test.name;
+         log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.testId, testName, event.runId, event.variables);
+
+         String tags = getTags(event.runId);
+
+         notifyAll(event.testId, n -> n.notifyMissingRunValues(testName, tags, event));
       }
    }
 

@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -339,6 +338,7 @@ public class AlertingServiceImpl implements AlertingService {
          logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Fetched values for these accessors:<pre>%s</pre>", data);
       }
 
+      Set<String> missingValueVariables = new HashSet<>();
       for (VarInfo var : vars.values()) {
          DataPoint dataPoint = new DataPoint();
          // TODO: faking the variable
@@ -406,12 +406,16 @@ public class AlertingServiceImpl implements AlertingService {
                if (recalculation != null) {
                   recalculation.runsWithoutValue.add(run.id);
                }
+               missingValueVariables.add(var.name);
                continue;
             }
             dataPoint.value = value;
          }
          dataPoint.persist();
          publishLater(DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
+      }
+      if (!missingValueVariables.isEmpty()) {
+         publishLater(Run.EVENT_MISSING_VALUES, new MissingRunValuesEvent(run.id, run.testid, missingValueVariables, notify));
       }
    }
 
