@@ -11,7 +11,7 @@ import { NavLink } from 'react-router-dom';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
-import { useTester, rolesSelector, roleToName } from '../../auth'
+import { useTester, teamsSelector, teamToName } from '../../auth'
 import { alertAction } from '../../alerts'
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
@@ -37,7 +37,7 @@ export default function AllSchema() {
         },
         {
             Header: "Owner", accessor:"owner",
-            Cell: (arg: C) => roleToName(arg.cell.value)},
+            Cell: (arg: C) => teamToName(arg.cell.value)},
         {
             Header: "Name", accessor: "name",
             Cell: (arg: C) => { return (
@@ -83,10 +83,10 @@ export default function AllSchema() {
         }
     ], [dispatch, thunkDispatch])
     const list = useSelector(selectors.all);
-    const roles = useSelector(rolesSelector)
+    const teams = useSelector(teamsSelector)
     useEffect(() => {
         dispatch(actions.all())
-    }, [dispatch, roles])
+    }, [dispatch, teams])
     const isTester = useTester()
     return (
         <PageSection>

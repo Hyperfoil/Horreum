@@ -20,13 +20,13 @@ import {
 
 import AccessChoice from '../../components/AccessChoice'
 import AccessIcon from '../../components/AccessIcon'
-import OwnerSelect from '../../components/OwnerSelect'
+import TeamSelect from '../../components/TeamSelect'
 
 import {
     useTester,
-    roleToName,
+    teamToName,
     Access as authAccess,
-    defaultRoleSelector
+    defaultTeamSelector
 } from '../../auth'
 import {
     alertAction,
@@ -141,7 +141,7 @@ type AccessProps = {
 }
 
 function Access(props: AccessProps) {
-    const defaultRole = useSelector(defaultRoleSelector)
+    const defaultRole = useSelector(defaultTeamSelector)
     const [access, setAccess] = useState<authAccess>(props.test?.access || 0)
     const [owner, setOwner] = useState(props.test?.owner || defaultRole || "")
     const [modalOpen, setModalOpen] = useState(false)
@@ -180,14 +180,14 @@ function Access(props: AccessProps) {
             <h2>Permissions</h2>
             <FormGroup label="Owner" fieldId="testOwner">
                 {isTester ? (
-                    <OwnerSelect includeGeneral={false}
-                                    selection={roleToName(owner) || ""}
+                    <TeamSelect includeGeneral={false}
+                                    selection={teamToName(owner) || ""}
                                     onSelect={selection => {
                                         setOwner(selection.key)
                                         props.onModified(true)
                                     }}/>
                 ) : (
-                    <TextInput value={roleToName(owner) || ""} id="testOwner" isReadOnly/>
+                    <TextInput value={teamToName(owner) || ""} id="testOwner" isReadOnly/>
                 )}
             </FormGroup>
             <FormGroup label="Access rights" fieldId="testAccess">

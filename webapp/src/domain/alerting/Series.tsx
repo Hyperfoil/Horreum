@@ -9,7 +9,7 @@ import TagsSelect, { SelectedTags } from '../../components/TagsSelect'
 import PanelChart from './PanelChart'
 import { formatDate } from '../../utils'
 import { DateTime } from 'luxon'
-import { rolesSelector } from '../../auth'
+import { teamsSelector } from '../../auth'
 
 import {
     Button,
@@ -121,7 +121,7 @@ export default function Series() {
     const paramTest = useMemo(() => params.get("test") || undefined, [])
     const paramTags = params.get("tags")
     const dispatch = useDispatch()
-    const roles = useSelector(rolesSelector)
+    const teams = useSelector(teamsSelector)
     const [selectedTest, setSelectedTest] = useState<SelectedTest>()
     const [currentTags, setCurrentTags] = useState<SelectedTags | undefined>(paramTags ? ({ toString: () => paramTags }) : undefined)
     const [dashboardUrl, setDashboardUrl] = useState("")
@@ -170,7 +170,7 @@ export default function Series() {
             }, error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error)))
             .finally(() => setLoadingPanels(false))
         }
-    }, [selectedTest, currentTags, roles, dispatch])
+    }, [selectedTest, currentTags, teams, dispatch])
     useEffect(() => {
         const newDate = formatDate(endTime)
         if (newDate !== date) {

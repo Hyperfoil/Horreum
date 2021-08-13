@@ -32,14 +32,14 @@ import * as selectors from './selectors';
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
 import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from '../../components/ActionMenu';
-import OwnerSelect, { Role, ONLY_MY_OWN } from '../../components/OwnerSelect'
+import TeamSelect, { Team, ONLY_MY_OWN } from '../../components/TeamSelect'
 import ConfirmTestDeleteModal from './ConfirmTestDeleteModal'
 
 import {
   isAuthenticatedSelector,
   useTester,
-  roleToName,
-  rolesSelector,
+  teamToName,
+  teamsSelector,
   userProfileSelector,
 } from '../../auth'
 import { alertAction } from '../../alerts'
@@ -54,7 +54,7 @@ type WatchDropdownProps = {
 
 const WatchDropdown = ({ id, watching } : WatchDropdownProps) => {
   const [open, setOpen] = useState(false)
-  const roles = useSelector(rolesSelector)
+  const teams = useSelector(teamsSelector)
   const profile = useSelector(userProfileSelector)
   const dispatch = useDispatch();
   if (watching === undefined) {
@@ -98,16 +98,14 @@ const WatchDropdown = ({ id, watching } : WatchDropdownProps) => {
       }>
         { personalItems }
         {
-          roles.filter(role => role.endsWith("-team"))
-               .sort()
-               .map(role => watching.some(u => u === role) ? (
-                <DropdownItem key={role}
-                  onClick={ () => dispatch(removeUserOrTeam(id, role)) }
-                >Stop watching as team { roleToName(role) }</DropdownItem>
+          teams.map(team => watching.some(u => u === team) ? (
+                <DropdownItem key={team}
+                  onClick={ () => dispatch(removeUserOrTeam(id, team)) }
+                >Stop watching as team { teamToName(team) }</DropdownItem>
                 ) : (
-                  <DropdownItem key={role}
-                    onClick={ () => dispatch(addUserOrTeam(id, role)) }
-                  >Watch as team { roleToName(role) }</DropdownItem>
+                  <DropdownItem key={team}
+                    onClick={ () => dispatch(addUserOrTeam(id, team)) }
+                  >Watch as team { teamToName(team) }</DropdownItem>
                 ))
         }
 
@@ -180,7 +178,7 @@ export default function AllTests() {
           Header: "Access", accessor:"access",
           Cell: (arg: C) => <AccessIcon access={arg.cell.value} />
         },
-        {Header:"Owner",accessor:"owner", Cell: (arg: C) => roleToName(arg.cell.value)},
+        {Header:"Owner",accessor:"owner", Cell: (arg: C) => teamToName(arg.cell.value)},
         {Header:"Name",accessor:"name", Cell: (arg: C) => (<NavLink to={`/test/${arg.row.original.id}`}>{ arg.cell.value }</NavLink>)},
         {Header:"Description",accessor:"description"},
         {
@@ -218,12 +216,12 @@ export default function AllTests() {
         }
     ], [dispatch, thunkDispatch])
     const allTests = useSelector(selectors.all);
-    const roles = useSelector(rolesSelector)
+    const teams = useSelector(teamsSelector)
     const isAuthenticated = useSelector(isAuthenticatedSelector)
-    const [rolesFilter, setRolesFilter] = useState<Role>(ONLY_MY_OWN)
+    const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
     useEffect(()=>{
         dispatch(fetchSummary(rolesFilter.key))
-    },[dispatch, roles, rolesFilter])
+    },[dispatch, teams, rolesFilter])
     useEffect(() => {
       if (isAuthenticated) {
         dispatch(allSubscriptions())
@@ -245,7 +243,7 @@ export default function AllTests() {
               </NavLink>
               }
               { isAuthenticated && <div style={{ width: "200px", marginLeft: "16px" }}>
-                <OwnerSelect
+                <TeamSelect
                   includeGeneral={true}
                   selection={rolesFilter}
                   onSelect={selection => {

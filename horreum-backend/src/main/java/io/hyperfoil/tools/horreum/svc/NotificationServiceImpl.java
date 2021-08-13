@@ -15,19 +15,15 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import javax.persistence.LockModeType;
-import javax.persistence.PersistenceException;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
-import org.hibernate.exception.ConstraintViolationException;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.NotificationService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
-import io.hyperfoil.tools.horreum.entity.alerting.UserInfo;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -191,28 +187,6 @@ public class NotificationServiceImpl implements NotificationService {
             s.name = name;
             s.isTeam = team;
             em.merge(s);
-         }
-      }
-   }
-
-   public void cacheUserTeams(String username, Set<String> teams) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(AlertingServiceImpl.HORREUM_ALERTING))) {
-         // Running this without pessimistic lock leads to duplicate inserts at the same time
-         UserInfo userInfo = UserInfo.findById(username, LockModeType.PESSIMISTIC_WRITE);
-         if (userInfo == null) {
-            userInfo = new UserInfo();
-            userInfo.username = username;
-         } else if (!teams.equals(userInfo.teams)) {
-            userInfo.teams = teams;
-         }
-         userInfo.persistAndFlush();
-      } catch (PersistenceException e) {
-         if (e.getCause() instanceof ConstraintViolationException) {
-            // silently ignore
-            // note: alternative would be to define @SQLInsert with INSERT ... ON CONFLICT DO NOTHING
-            log.tracef(e, "Concurrent insertion of %s", username);
-         } else {
-            throw e;
          }
       }
    }

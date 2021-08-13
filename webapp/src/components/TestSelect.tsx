@@ -11,7 +11,7 @@ import { useDispatch, useSelector, shallowEqual } from 'react-redux'
 import { Test } from '../domain/tests/reducers'
 import { all } from '../domain/tests/selectors'
 import { fetchSummary } from '../domain/tests/actions'
-import { rolesSelector } from '../auth'
+import { teamsSelector } from '../auth'
 
 export interface SelectedTest extends SelectOptionObject {
     id: number,
@@ -33,10 +33,10 @@ export default function TestSelect({ selection, onSelect, extraOptions, directio
     // a new instance of test list is created in every invocation => we need shallowEqual
     const tests = useSelector(all, shallowEqual)
     const dispatch = useDispatch()
-    const roles = useSelector(rolesSelector)
+    const teams = useSelector(teamsSelector)
     useEffect(() => {
         dispatch(fetchSummary())
-    }, [dispatch, roles])
+    }, [dispatch, teams])
     useEffect(() => {
         if (initialTestName && tests) {
             const initialTest = tests.find(t => t.name === initialTestName)

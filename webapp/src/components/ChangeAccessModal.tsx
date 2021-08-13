@@ -5,10 +5,10 @@ import {
     Modal,
 } from '@patternfly/react-core';
 
-import { roleToName, Access } from '../auth'
+import { teamToName, Access } from '../auth'
 
 import AccessChoice from './AccessChoice'
-import OwnerSelect from './OwnerSelect'
+import TeamSelect from './TeamSelect'
 
 type ChangeAccessModalProps = {
   isOpen: boolean,
@@ -28,8 +28,8 @@ export default function ChangeAccessModal({ isOpen, onClose, owner, onOwnerChang
              onClose={ onClose } >
          <div>
             Owner:
-            <OwnerSelect includeGeneral={false}
-                         selection={roleToName(owner) || ""}
+            <TeamSelect includeGeneral={false}
+                         selection={teamToName(owner) || ""}
                          onSelect={selection => onOwnerChange(selection.key) } />
          </div>
          <div>

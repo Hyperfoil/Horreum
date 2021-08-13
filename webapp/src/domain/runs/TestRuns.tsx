@@ -29,7 +29,7 @@ import { toEpochMillis, interleave } from '../../utils'
 
 import { byTest } from './actions';
 import * as selectors from './selectors';
-import { tokenSelector, rolesSelector, roleToName } from '../../auth'
+import { tokenSelector, teamsSelector, teamToName } from '../../auth'
 import { alertAction } from '../../alerts'
 
 import { fetchTest } from '../tests/actions';
@@ -114,7 +114,7 @@ const staticColumns: RunColumn[] = [
     }, {
         Header: "Owner",
         accessor:"owner",
-        Cell: (arg: C) => roleToName(arg.cell.value)
+        Cell: (arg: C) => teamToName(arg.cell.value)
     }, {
         Header: "Executed",
         accessor: "start",
@@ -202,10 +202,10 @@ export default function TestRuns() {
     const [ showTrashed, setShowTrashed ] = useState(false)
     const runs = useSelector(selectors.testRuns(testId, pagination, showTrashed));
     const runCount = useSelector(selectors.count)
-    const roles = useSelector(rolesSelector)
+    const teams = useSelector(teamsSelector)
     useEffect(() => {
         dispatch(fetchTest(testId));
-    }, [dispatch, testId, roles])
+    }, [dispatch, testId, teams])
     useEffect(() => {
         dispatch(byTest(testId, pagination, showTrashed, tags?.toString() || ""))
     }, [dispatch, showTrashed, page, perPage, sort, direction, tags, pagination, testId])

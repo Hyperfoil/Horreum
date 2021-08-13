@@ -1646,5 +1646,24 @@
             <column name="runid" />
         </createIndex>
     </changeSet>
+
+    <changeSet id="31" author="rvansa">
+        <addColumn tableName="userinfo">
+            <column name="defaultteam" type="text" />
+        </addColumn>
+        <sql>
+            DROP POLICY userinfo_policies ON userinfo;
+            DROP POLICY userinfo_teams_policies ON userinfo_teams;
+
+            CREATE POLICY userinfo_rw ON userinfo FOR ALL
+                USING (has_role(username));
+            CREATE POLICY userinfo_teams_rw ON userinfo_teams FOR ALL
+                USING (has_role(username));
+            CREATE POLICY userinfo_read ON userinfo_teams FOR SELECT
+                USING (has_role('horreum.alerting'));
+            CREATE POLICY userinfo_teams_read ON userinfo_teams FOR SELECT
+                USING (has_role('horreum.alerting'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

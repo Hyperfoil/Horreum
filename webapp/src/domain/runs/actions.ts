@@ -1,6 +1,6 @@
 import { Dispatch } from 'react';
 import { Access } from '../../auth';
-import { Role } from '../../components/OwnerSelect';
+import { Team } from '../../components/TeamSelect';
 import {
    LoadedAction,
    LoadingAction,
@@ -95,7 +95,7 @@ const fetchSuggestions = (query: string, roles: string, dispatch: Dispatch<Sugge
    })
 }
 
-export const selectRoles = (selection: Role): SelectRolesAction => {
+export const selectRoles = (selection: Team): SelectRolesAction => {
    return {
       type: actionTypes.SELECT_ROLES,
       selection: selection,

@@ -8,7 +8,7 @@ import * as actions from './actions';
 import * as selectors from './selectors';
 import { RunsDispatch } from './reducers'
 import { formatDateTime } from '../../utils'
-import { useTester, rolesSelector } from '../../auth'
+import { useTester, teamsSelector } from '../../auth'
 import { interleave } from '../../utils'
 import { alertAction } from '../../alerts'
 
@@ -66,12 +66,12 @@ export default function Run() {
     const [changeSchemaModalOpen, setChangeSchemaModalOpen] = useState(false)
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<RunsDispatch>()
-    const roles = useSelector(rolesSelector)
+    const teams = useSelector(teamsSelector)
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get('token')
         dispatch(actions.get(id, token || undefined))
-    }, [dispatch, id, roles])
+    }, [dispatch, id, teams])
     useEffect(() => {
         //change the loaded document when the run changes
         document.title = run && run.id ? "Run " + run.id + " | Horreum" : "Loading run... | Horreum"

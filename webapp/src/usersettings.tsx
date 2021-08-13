@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
-import { roleToName, userProfileSelector } from './auth'
+import {
+    defaultTeamSelector,
+    keycloakSelector,
+    teamToName,
+    userProfileSelector
+} from './auth'
 import { fetchApi } from './services/api';
-import { alertAction } from './alerts'
+import { alertAction, dispatchInfo } from './alerts'
+import SavedTabs, { SavedTab } from './components/SavedTabs'
+import { updateDefaultRole, TryLoginAgain } from './auth'
 
 import {
-    ActionGroup,
+    Alert,
     Bullseye,
     Button,
     Card,
@@ -24,8 +31,6 @@ import {
     Select,
     SelectOption,
     Spinner,
-    Tabs,
-    Tab,
     TextInput,
     Title,
 } from '@patternfly/react-core'
@@ -34,13 +39,12 @@ import {
     UserIcon,
 } from '@patternfly/react-icons'
 
-import OwnerSelect from './components/OwnerSelect'
-import SaveChangesModal from './components/SaveChangesModal'
+import TeamSelect, { createTeam, Team } from './components/TeamSelect'
 
 const base = "/api/notifications"
 const fetchMethods = () => fetchApi(`${base}/methods`, null, 'get')
 const fetchSettings = (name: string, isTeam: boolean) => fetchApi(`${base}/settings?name=${name}&team=${isTeam}`, null, 'get')
-const updateSettings = (name: string, isTeam: boolean, settings: Settings[]) => fetchApi(`${base}/settings?name=${name}&team=${isTeam}`, settings, 'post', {}, 'response')
+const updateSettings = (name: string, isTeam: boolean, settings: NotificationConfig[]) => fetchApi(`${base}/settings?name=${name}&team=${isTeam}`, settings, 'post', {}, 'response')
 
 export const UserProfileLink = () => {
     const profile = useSelector(userProfileSelector)
@@ -54,20 +58,20 @@ export const UserProfileLink = () => {
     } else return (<></>)
 }
 
-type Settings = {
+type NotificationConfig = {
     id: number,
     method: string,
     data: string,
     disabled: boolean,
 }
 
-type SingleSettingsProps = {
-    settings: Settings,
+type NotificationSettingsProps = {
+    settings: NotificationConfig,
     methods: string[],
     onChange(): void,
 }
 
-const SingleSettings = ({ settings, methods, onChange } : SingleSettingsProps) => {
+const NotificationSettings = ({ settings, methods, onChange } : NotificationSettingsProps) => {
     const [methodOpen, setMethodOpen] = useState(false)
     return (
         <Form isHorizontal={true} style={{ marginTop: "20px", width: "100%" }}>
@@ -101,17 +105,14 @@ const SingleSettings = ({ settings, methods, onChange } : SingleSettingsProps) =
     )
 }
 
-type SettingsListProps = {
+type NotificationSettingsListProps = {
     title: string,
-    data?: Settings[],
+    data?: NotificationConfig[],
     methods: string[],
-    onUpdate(data: Settings[]): void,
-    modified: boolean,
-    saving: boolean,
-    onSave(): void,
+    onUpdate(data: NotificationConfig[]): void,
 }
 
-const SettingsList = ({ title, data, methods, onUpdate, modified, saving, onSave }: SettingsListProps) => {
+const NotificationSettingsList = ({ title, data, methods, onUpdate }: NotificationSettingsListProps) => {
     if (data) {
         return (<>
             <div style={{
@@ -130,7 +131,7 @@ const SettingsList = ({ title, data, methods, onUpdate, modified, saving, onSave
                     <DataListItemRow>
                         <DataListItemCells dataListCells={[
                             <DataListCell key="content">
-                                <SingleSettings
+                                <NotificationSettings
                                     settings={s}
                                     methods={methods}
                                     onChange={ () => onUpdate([...data]) } />
@@ -163,31 +164,53 @@ const SettingsList = ({ title, data, methods, onUpdate, modified, saving, onSave
                 </DataListItem>
             ))}
             </DataList>
-            { modified &&
-            <ActionGroup style={{ marginTop: "16px" }}>
-                <Button
-                    isDisabled={saving}
-                    variant="primary"
-                    onClick={onSave}
-                >{ saving ? <>Saving <Spinner size="md"/></> : "Save" }</Button>
-            </ActionGroup>
-            }
         </>)
     } else {
         return <Bullseye><Spinner /></Bullseye>
     }
 }
 
+type ProfileProps = {
+    defaultRole: Team,
+    onDefaultRoleChange(role: Team): void,
+}
+
+function Profile(props: ProfileProps) {
+    const keycloak = useSelector(keycloakSelector)
+    return (
+        <Form isHorizontal={true} style={{ marginTop: "20px", width: "100%" }}>
+            { keycloak && <FormGroup label="Account management" fieldId="account">
+                <Button onClick={ () => {
+                    window.location.href = keycloak.createAccountUrl({ redirectUri: window.location.href })
+                }}>
+                    Manage in Keycloak...
+                </Button>
+            </FormGroup> }
+            <FormGroup label="Default team" fieldId="defaultRole">
+                <TeamSelect
+                    includeGeneral={ false }
+                    selection={ props.defaultRole}
+                    onSelect={ props.onDefaultRoleChange }/>
+            </FormGroup>
+        </Form>)
+}
+
+
 const EMPTY = { id: -1, method: "", data: "", disabled: false }
 
 export function UserSettings() {
     const dispatch = useDispatch()
     const profile = useSelector(userProfileSelector)
+    const prevDefaultTeam = useSelector(defaultTeamSelector)
+    const [defaultTeam, setDefaultTeam] = useState<Team>(createTeam(prevDefaultTeam))
+    useEffect(() => {
+        setDefaultTeam(createTeam(prevDefaultTeam))
+    }, [ prevDefaultTeam ])
     const [methods, setMethods] = useState<string[]>([])
-    const [personal, setPersonal] = useState<Settings[]>()
+    const [personal, setPersonal] = useState<NotificationConfig[]>()
     const [selectedTeam, setSelectedTeam] = useState<string>()
-    const [team, setTeam] = useState<Settings[]>()
-    const [saveFunction, setSaveFunction] = useState<() => Promise<void>>()
+    const [team, setTeam] = useState<NotificationConfig[]>()
+    const [modified, setModified] = useState(false)
     useEffect(() => {
         fetchMethods().then(response => setMethods(response))
     },[])
@@ -200,72 +223,85 @@ export function UserSettings() {
         }
     }
     useEffect(loadPersonal, [profile, dispatch])
-    const [activeTab, setActiveTab] = useState<number | string>(0)
-    const [requestedTab, setRequestedTab] = useState<number | string>(0)
-    const [modalOpen, setModalOpen] = useState(false)
-    const [saving, setSaving] = useState(false)
     const reportError = (error: any) => {
         console.log(error)
         dispatch(alertAction("UPDATE_SETTINGS", "Failed to update settings", error))
         return Promise.reject()
     }
-    const savePersonal = (): Promise<void> => {
-        setSaving(true)
-        return updateSettings(profile?.username || "user-should-be-set", false, personal || [])
-            .then(_ => setSaveFunction(undefined), reportError).finally(() => setSaving(false))
-    }
-    const saveTeam = (): Promise<void> => {
-        setSaving(true)
-        return updateSettings(selectedTeam || "team-should-be-set", true, team || [])
-            .then(_ => setSaveFunction(undefined), reportError).finally(() => setSaving(false))
-    }
-    return (
-        <Card>
+    return !profile ?
+        ( <Alert
+            variant="warning"
+            title="Anonymous access to user settings">
+            <TryLoginAgain />
+        </Alert> ) :
+        ( <Card>
             <CardBody>
-                <SaveChangesModal
-                    isOpen={modalOpen}
-                    onClose={ () => setModalOpen(false) }
-                    onSave={ saveFunction && (() => saveFunction().then(_ => {
-                                setActiveTab(requestedTab)
-                            })) }
-                    onReset={() => {
-                        setActiveTab(requestedTab)
-                        if (requestedTab === 0) {
+                <SavedTabs
+                    afterSave={ () => {
+                        setModified(false)
+                        dispatchInfo(dispatch, "SAVE", "Saved!", "User settings succesfully updated!", 3000);
+                    } }
+                    afterReset={ () => setModified(false) }
+                >
+                    <SavedTab
+                        title="My profile"
+                        fragment="profile"
+                        onSave={ () => updateDefaultRole(defaultTeam.key).catch(reportError) }
+                        onReset={ () => {
+                            setDefaultTeam(createTeam(prevDefaultTeam))
+                            setModified(false)
+                        }}
+                        isModified={ () => modified }
+                    >
+                        <Profile
+                            defaultRole={ defaultTeam }
+                            onDefaultRoleChange={ role => {
+                                setDefaultTeam(role)
+                                setModified(true)
+                            }}
+                        />
+                    </SavedTab>
+                    <SavedTab
+                        title="Personal notifications"
+                        fragment="personal-notifications"
+                        onSave={ () => {
+                            const username = profile?.username || "user-should-be-set"
+                            return updateSettings(username, false, personal || []).catch(reportError)
+                        }}
+                        onReset={ () => {
                             setPersonal(undefined)
                             loadPersonal()
-                        } else {
-                            setTeam(undefined)
-                            setSelectedTeam(undefined)
-                        }
-                    }}
-                />
-                <Tabs activeKey={activeTab} onSelect={(_, index) => {
-                    if (!!saveFunction) {
-                        setModalOpen(true)
-                        setRequestedTab(index)
-                    } else {
-                        setActiveTab(index)}
-                    }
-                }>
-                    <Tab key="personal-notifications" eventKey={0} title="Personal notifications">
-                        <SettingsList
+                        }}
+                        isModified={ () => modified }
+                    >
+                        <NotificationSettingsList
                             title="Personal notifications"
                             data={personal}
                             methods={methods}
                             onUpdate={ list => {
                                 setPersonal(list)
-                                setSaveFunction(() => savePersonal)
+                                setModified(true)
                             }}
-                            modified={!!saveFunction}
-                            saving={saving}
-                            onSave={ savePersonal }/>
-                    </Tab>
-                    <Tab key="team-notifications" eventKey={1} title="Team notifications">
+                        />
+                    </SavedTab>
+                    <SavedTab
+                        title="Team-notifications"
+                        fragment="team-notifications"
+                        onSave={ () => {
+                            const teamname = selectedTeam || "team-should-be-set"
+                            return updateSettings(teamname, true, team || []).catch(reportError)
+                        }}
+                        onReset={ () => {
+                            setTeam(undefined)
+                            setSelectedTeam(undefined)
+                        }}
+                        isModified={ () => modified }
+                    >
                         <Form isHorizontal={true} style={{ marginTop: "20px" }}>
                             <FormGroup label="Notification for team" fieldId="teamSelection">
-                                <OwnerSelect
+                                <TeamSelect
                                     includeGeneral={false}
-                                    selection={ roleToName(selectedTeam) || ""}
+                                    selection={ teamToName(selectedTeam) || ""}
                                     onSelect={role => {
                                         setTeam(undefined)
                                         setSelectedTeam(role.key)
@@ -278,21 +314,19 @@ export function UserSettings() {
                             </FormGroup>
                         </Form>
                         { selectedTeam &&
-                            <SettingsList
+                            <NotificationSettingsList
                                 title="Team notifications"
                                 data={team}
                                 methods={methods}
                                 onUpdate={ list => {
                                     setTeam(list)
-                                    setSaveFunction(() => saveTeam)
+                                    setModified(true)
                                 }}
-                                modified={!!saveFunction}
-                                saving={saving}
-                                onSave={saveTeam}/>
+                            />
                         }
                         { !selectedTeam && <EmptyState><Title headingLevel="h3">No team selected</Title></EmptyState>}
-                    </Tab>
-                </Tabs>
+                    </SavedTab>
+                </SavedTabs>
             </CardBody>
         </Card>)
 }

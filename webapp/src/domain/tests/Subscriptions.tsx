@@ -23,7 +23,7 @@ import {
     alertAction
 } from '../../alerts'
 import {
-    roleToName,
+    teamToName,
     useTester,
 } from '../../auth'
 import { TabFunctionsRef } from './Test'
@@ -51,7 +51,7 @@ function userElement(user: User): ReactElement {
 }
 
 function teamElement(team: string): ReactElement {
-    return <span key={team}>{ roleToName(team) }</span>
+    return <span key={team}>{ teamToName(team) }</span>
 }
 
 export default function Subscriptions(props: SubscriptionsProps) {

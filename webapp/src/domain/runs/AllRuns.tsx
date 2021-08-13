@@ -30,12 +30,12 @@ import { CellProps, Column } from 'react-table'
 
 import { list, suggest, selectRoles } from './actions';
 import * as selectors from './selectors';
-import { isAuthenticatedSelector, rolesSelector, roleToName } from '../../auth'
+import { isAuthenticatedSelector, teamsSelector, teamToName } from '../../auth'
 import { toEpochMillis } from '../../utils'
 
 import Table from '../../components/Table';
 import AccessIcon from '../../components/AccessIcon';
-import OwnerSelect, { ONLY_MY_OWN, SHOW_ALL } from '../../components/OwnerSelect';
+import TeamSelect, { ONLY_MY_OWN, SHOW_ALL } from '../../components/TeamSelect';
 import JsonPathDocsLink from '../../components/JsonPathDocsLink'
 import { Run, RunsDispatch } from './reducers';
 import { Description, ExecutionTime, Menu, RunTags } from './components'
@@ -80,7 +80,7 @@ export default function AllRuns() {
         }, {
           Header: "Owner",
           accessor:"owner",
-          Cell: (arg: C) => roleToName(arg.cell.value)
+          Cell: (arg: C) => teamToName(arg.cell.value)
         },
         {
           Header: "Executed",
@@ -131,10 +131,10 @@ export default function AllRuns() {
     }
     const suggestions = useSelector(selectors.suggestions)
     const loadingDisplay = useSelector(selectors.isFetchingSuggestions) ? "inline-block" : "none"
-    const roles = useSelector(rolesSelector)
+    const teams = useSelector(teamsSelector)
     useEffect(()=>{
         runFilter(selectedRoles.key)
-    },[dispatch, showTrashed, page, perPage, sort, direction, selectedRoles.key, runFilter, roles ])
+    },[dispatch, showTrashed, page, perPage, sort, direction, selectedRoles.key, runFilter, teams ])
 
     const inputProps: InputProps<string> = {
        placeholder: "Enter search query",
@@ -260,7 +260,7 @@ export default function AllRuns() {
                  </React.Fragment>
                  { isAuthenticated &&
                  <div style={{ width: "200px", marginLeft: "16px" }}>
-                    <OwnerSelect includeGeneral={true}
+                    <TeamSelect includeGeneral={true}
                                  selection={selectedRoles.toString()}
                                  onSelect={selection => {
                                     dispatch(selectRoles(selection))

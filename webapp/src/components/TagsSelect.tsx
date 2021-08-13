@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux'
-import { rolesSelector } from '../auth'
+import { teamsSelector } from '../auth'
 
 import {
     Select,
@@ -59,7 +59,7 @@ export default function TagsSelect(props: TagsSelectProps) {
     const testId = props.testId
     const onTagsLoaded = props.onTagsLoaded
     const onSelect = props.onSelect
-    const roles = useSelector(rolesSelector)
+    const teams = useSelector(teamsSelector)
     useEffect(() => {
         if (!testId) {
             return;
@@ -76,7 +76,7 @@ export default function TagsSelect(props: TagsSelectProps) {
                 onSelect({ ...response[0], toString: () => convertTags(response[0]) })
             }
         }, error => dispatch(alertAction("TAGS_FETCH", "Failed to fetch test tags", error)))
-    }, [testId, onTagsLoaded, props.beforeTagsLoading, onSelect, dispatch, roles, props.includeTrashed, props.addAllTagsOption])
+    }, [testId, onTagsLoaded, props.beforeTagsLoading, onSelect, dispatch, teams, props.includeTrashed, props.addAllTagsOption])
     let options = []
     let hasAllTags = false
     if (props.addAllTagsOption && (!props.tagFilter || props.tagFilter(null))) {

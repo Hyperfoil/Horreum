@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.entity.alerting;
+package io.hyperfoil.tools.horreum.entity;
 
 import java.util.Set;
 
@@ -20,6 +20,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * in Keycloak. As the Keycloak API does not allow querying for users having effective
  * role (see https://issues.redhat.com/browse/KEYCLOAK-11494) we'll update these cached
  * roles as needed in {@link UserTeamsFilter}.
+ * The table is actually read in {@link io.hyperfoil.tools.horreum.svc.NotificationServiceImpl}.GET_NOTIFICATIONS
  */
 @Entity(name = "userinfo")
 public class UserInfo extends PanacheEntityBase {
@@ -34,4 +35,6 @@ public class UserInfo extends PanacheEntityBase {
    )
    @Column(name = "team")
    public Set<String> teams;
+
+   public String defaultTeam;
 }

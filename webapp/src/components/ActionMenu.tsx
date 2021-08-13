@@ -8,7 +8,7 @@ import {
     KebabToggle,
 } from '@patternfly/react-core'
 
-import { rolesSelector, Access } from '../auth'
+import { teamsSelector, Access } from '../auth'
 
 import ShareLinkModal from './ShareLinkModal'
 import ChangeAccessModal from './ChangeAccessModal'
@@ -159,9 +159,9 @@ export function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
 
 export default function ActionMenu(props: ActionMenuProps) {
    const [menuOpen, setMenuOpen] = useState(false)
-   const roles = useSelector(rolesSelector)
+   const teams = useSelector(teamsSelector)
 
-   const isOwner = roles && roles.includes(props.owner)
+   const isOwner = teams && teams.includes(props.owner)
 
    const items = props.items.map(([ provider, config ]) => provider(props, isOwner, () => setMenuOpen(false), config))
    return (<>

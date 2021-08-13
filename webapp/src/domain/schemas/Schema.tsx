@@ -29,7 +29,7 @@ import jsonpath from 'jsonpath';
 import * as actions from './actions';
 import * as selectors from './selectors';
 import * as api from './api';
-import { defaultRoleSelector, rolesSelector, roleToName, useTester } from '../../auth'
+import { defaultTeamSelector, teamsSelector, teamToName, useTester } from '../../auth'
 import {
    alertAction,
    constraintValidationFormatter,
@@ -37,11 +37,11 @@ import {
 } from "../../alerts"
 
 import { toString } from '../../components/Editor';
-import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor';
+import Editor from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import JsonPathDocsLink from '../../components/JsonPathDocsLink'
-import OwnerSelect from '../../components/OwnerSelect'
+import TeamSelect from '../../components/TeamSelect'
 import { Extractor } from '../../components/Accessors';
 import { Schema as SchemaDef, SchemaDispatch } from './reducers';
 
@@ -56,7 +56,7 @@ type GeneralProps = {
 }
 
 function General(props: GeneralProps) {
-    const defaultRole = useSelector(defaultRoleSelector)
+    const defaultTeam = useSelector(defaultTeamSelector)
     const isTester = useTester(props.schema?.owner)
     const [importFailed, setImportFailed] = useState(false)
 
@@ -66,7 +66,7 @@ function General(props: GeneralProps) {
         description: "",
         uri: "",
         schema: {},
-        owner: defaultRole || "",
+        owner: defaultTeam || "",
         access: 2,
         token: null,
     }
@@ -153,13 +153,13 @@ function General(props: GeneralProps) {
             </FormGroup>
             <FormGroup label="Owner" fieldId="schemaOwner">
                 { isTester ? (
-                    <OwnerSelect includeGeneral={false}
-                                selection={roleToName(schema.owner) || ""}
+                    <TeamSelect includeGeneral={false}
+                                selection={teamToName(schema.owner) || ""}
                                 onSelect={selection => {
                                     onChange({ owner: selection.key })
                                 }} />
                 ) : (
-                    <TextInput id="schemaOwner" value={roleToName(schema.owner) || ""} isReadOnly />
+                    <TextInput id="schemaOwner" value={teamToName(schema.owner) || ""} isReadOnly />
                 )}
             </FormGroup>
             <FormGroup label="Access rights" fieldId="schemaAccess">
@@ -246,7 +246,7 @@ export default function Schema() {
 
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<SchemaDispatch>()
-    const roles = useSelector(rolesSelector)
+    const teams = useSelector(teamsSelector)
     useEffect(() => {
         if (schemaId >= 0) {
             setLoading(true)
@@ -256,7 +256,7 @@ export default function Schema() {
         } else {
             setLoading(false)
         }
-    }, [dispatch, thunkDispatch, schemaId, roles])
+    }, [dispatch, thunkDispatch, schemaId, teams])
     useEffect(() => {
         document.title = (schemaId < 0 ? "New schema" : schema?.name || "(unknown schema)")  + " | Horreum"
         setCurrentSchema(schema)

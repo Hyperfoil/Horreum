@@ -17,7 +17,7 @@ import javax.transaction.Transactional;
 
 import org.jboss.logging.Logger;
 
-import io.hyperfoil.tools.horreum.svc.NotificationServiceImpl;
+import io.hyperfoil.tools.horreum.svc.UserServiceImpl;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @WebFilter(value = "/*", asyncSupported = true)
@@ -30,7 +30,7 @@ public class UserTeamsFilter extends HttpFilter {
    SecurityIdentity identity;
 
    @Inject
-   NotificationServiceImpl ns;
+   UserServiceImpl userService;
 
    @Override
    @Transactional
@@ -66,7 +66,7 @@ public class UserTeamsFilter extends HttpFilter {
             }
          }
       }
-      ns.cacheUserTeams(username, teams);
+      userService.cacheUserTeams(username, teams);
       // Cookie API does not allow to set SameSite attribute
       res.setHeader("Set-Cookie", TEAMS + "=" + username + "!" + String.join("+", teams) + ";path=/;SameSite=Lax");
       chain.doFilter(req, res);

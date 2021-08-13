@@ -1,7 +1,7 @@
 import * as actionTypes from './actionTypes';
 import { Map } from 'immutable';
 import * as utils from '../../utils'
-import { Role } from '../../components/OwnerSelect'
+import { Team } from '../../components/TeamSelect'
 import { Access } from "../../auth"
 import { ThunkDispatch } from 'redux-thunk';
 
@@ -34,7 +34,7 @@ export class RunsState {
     byTest?: Map<number, Map<number, Run>> = undefined
     currentPage: number[] = []
     currentTotal: number = 0
-    selectedRoles?: Role = undefined
+    selectedRoles?: Team = undefined
     suggestQuery: string[] = []
     suggestions: string[] = []
 }
@@ -69,7 +69,7 @@ export interface SuggestAction {
 
 export interface SelectRolesAction {
     type: typeof actionTypes.SELECT_ROLES,
-    selection: Role
+    selection: Team
 }
 
 export interface UpdateTokenAction {

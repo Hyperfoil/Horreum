@@ -28,4 +28,14 @@ public interface UserService {
    @GET
    @Path("teams")
    CompletionStage<List<String>> getTeams();
+
+   @GET
+   @Path("defaultTeam")
+   @Produces("text/plain")
+   String defaultTeam();
+
+   @POST
+   @Path("defaultTeam")
+   @Consumes("text/plain")
+   void setDefaultTeam(String team);
 }

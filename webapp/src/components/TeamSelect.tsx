@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import {
     Select,
@@ -10,40 +10,45 @@ import {
 
 import { useSelector } from 'react-redux'
 
-import { rolesSelector, roleToName } from '../auth'
+import { teamsSelector, teamToName } from '../auth'
 
-export interface Role extends SelectOptionObject {
+export interface Team extends SelectOptionObject {
    key: string,
 }
 
-export const ONLY_MY_OWN: Role = { key: "__my", toString: () => "Only my own"}
-export const SHOW_ALL: Role = { key: "__all", toString: () => "Show all" }
-
-type OwnerSelectProps = {
-   includeGeneral: boolean,
-   selection: string | Role,
-   onSelect(selection: Role): void
+export function createTeam(role?: string) {
+   return {
+      key: role || "",
+      toString: () => teamToName(role) || "No team"
+   }
 }
 
-export default function OwnerSelect({ includeGeneral, selection, onSelect }: OwnerSelectProps) {
-   const roles = useSelector(rolesSelector)
-   const rolesAsSelectOptions = () => {
-      return (roles ? roles.filter(role => role.endsWith("-team"))
-                           .sort()
-                           .map(role => (
-                     <SelectOption key={role} value={{ key: role, toString: () => roleToName(role) || "" } as Role}/>
+export const ONLY_MY_OWN: Team = { key: "__my", toString: () => "Only my own"}
+export const SHOW_ALL: Team = { key: "__all", toString: () => "Show all" }
+
+type TeamSelectProps = {
+   includeGeneral: boolean,
+   selection: string | Team,
+   onSelect(selection: Team): void
+}
+
+export default function TeamSelect({ includeGeneral, selection, onSelect }: TeamSelectProps) {
+   const teams = useSelector(teamsSelector)
+   const teamsAsSelectOptions = () => {
+      return (teams ? teams.map(team => (
+                     <SelectOption key={team} value={ createTeam(team) }/>
                    )) : [])
    }
    const [expanded, setExpanded] = useState(false)
    return (
       <Select
          variant={SelectVariant.single}
-         aria-label="Select ownership role"
+         aria-label="Select team"
          placeholderText="Select team..."
          onToggle={setExpanded}
          onSelect={(event, selection, isPlaceholder) => {
             setExpanded(false)
-            onSelect(selection as Role)
+            onSelect(selection as Team)
          }}
          selections={selection}
          isOpen={expanded}
@@ -55,9 +60,9 @@ export default function OwnerSelect({ includeGeneral, selection, onSelect }: Own
                  <SelectOption value={ SHOW_ALL } />
                </SelectGroup>,
                <SelectGroup key="__role" label="Run for team" value="">
-                 { rolesAsSelectOptions() }
+                 { teamsAsSelectOptions() }
                </SelectGroup>
-            ] : rolesAsSelectOptions()
+            ] : teamsAsSelectOptions()
          }
       </Select>
    )
