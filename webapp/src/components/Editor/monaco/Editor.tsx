@@ -1,16 +1,11 @@
-import React, {useRef} from 'react';
+import {useRef} from 'react';
 
 import MonacoEditor, {useMonaco, OnMount} from '@monaco-editor/react';
 import { editor } from 'monaco-editor/esm/vs/editor/editor.api';
 
-export type ValueGetter = {
-    getValue(): string | undefined
-}
-
 type EditorProps = {
     value?: string,
     language?: string,
-    setValueGetter?(_: ValueGetter): void,
     options: any,
     onChange?(value: string | undefined): void,
 }
@@ -21,9 +16,6 @@ export default function Editor(props: EditorProps) {
 
     const onMount: OnMount = (editor: editor.IStandaloneCodeEditor) => {
         valueGetter.current = () => editor.getValue();
-        if (props.setValueGetter) {
-            props.setValueGetter({ getValue: () => valueGetter.current ? valueGetter.current() : undefined });
-        }
         if (!monaco) {
             return
         }

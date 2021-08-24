@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux'
 import {
     Alert,
@@ -24,7 +24,6 @@ import { TestDispatch } from './reducers';
 import { Hook } from "../hooks/reducers";
 import { TabFunctionsRef } from './Test'
 import {updateHooks} from './actions'
-import { ValueGetter } from '../../components/Editor/monaco/Editor'
 import * as api from "../hooks/api";
 import { testHookEventTypes } from "../hooks/reducers";
 import HookUrlSelector from '../../components/HookUrlSelector'
@@ -86,7 +85,6 @@ type HooksProps = {
 export default function Hooks({ testId, testOwner, funcsRef, onModified }: HooksProps) {
     const [testWebHooks, setTestWebHooks] = useState<Hook[]>([])
     const isTester = useTester(testOwner)
-    const renderRefs = useRef(new Array<ValueGetter | undefined>(testWebHooks.length));
     const hasDuplicates = new Set(testWebHooks.map(h => h.type + "_" + h.url )).size !== testWebHooks.length
 
     const dispatch = useDispatch()
@@ -151,7 +149,6 @@ export default function Hooks({ testId, testOwner, funcsRef, onModified }: Hooks
                 }
                 setTestWebHooks([...testWebHooks, newWebHook])
                 onModified(true)
-                renderRefs.current.push(undefined)
             }} >New Webhook</Button>
 
         </div>

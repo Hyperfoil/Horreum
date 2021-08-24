@@ -167,6 +167,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
             availableOptionsTitle="Users to opt-out"
             availableOptionsActions={isTester ? [
                 <SearchInput
+                    key="search"
                     style={{ width: "100%"}}
                     placeholder="Find user..."
                     value={ userSearch }
@@ -185,6 +186,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
                     onClear={ () => setUserSearch(undefined) }
                 />,
                 <Button
+                    key="button"
                     variant="control"
                     onClick={() => {
                         window.clearTimeout(userSearchTimer)

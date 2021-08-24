@@ -7,19 +7,14 @@ import {
     Button,
     Card,
     CardBody,
-    CardFooter,
     Form,
-    ActionGroup,
     FormGroup,
     Spinner,
-    Tab,
-    Tabs,
     TextArea,
     TextInput,
     Tooltip,
     Bullseye,
 } from '@patternfly/react-core';
-import { NavLink } from 'react-router-dom';
 import {
     ImportIcon,
     OutlinedTimesCircleIcon
@@ -41,6 +36,7 @@ import Editor from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
 import JsonPathDocsLink from '../../components/JsonPathDocsLink'
+import SavedTabs, { SavedTab } from '../../components/SavedTabs'
 import TeamSelect from '../../components/TeamSelect'
 import { Extractor } from '../../components/Accessors';
 import { Schema as SchemaDef, SchemaDispatch } from './reducers';
@@ -184,14 +180,15 @@ function Extractors(props: ExtractorsProps) {
     return (<>{ props.extractors.filter((e: Extractor) => !e.deleted).map((e: Extractor) =>
         <Form isHorizontal={true} style={{ gridGap: "2px", marginBottom: "10px", paddingRight: "40px", position: "relative" }}>
             <FormGroup label="Accessor" fieldId="accessor">
-                <TextInput id="accessor"
-                            value={e.newName || ""}
-                            isReadOnly={!props.isTester}
-                            onChange={newValue => {
-                    e.newName = newValue
-                    e.changed = true
-                    props.setExtractors([...props.extractors])
-                }}/>
+                <TextInput
+                    id="accessor"
+                    value={e.newName || ""}
+                    isReadOnly={!props.isTester}
+                    onChange={newValue => {
+                        e.newName = newValue
+                        e.changed = true
+                        props.setExtractors([...props.extractors])
+                    }}/>
             </FormGroup>
             <FormGroup
                 label={
@@ -200,33 +197,38 @@ function Extractors(props: ExtractorsProps) {
                 fieldId="jsonpath"
                 validated={ !e.validationResult || e.validationResult.valid ? "default" : "error"}
                 helperTextInvalid={ e.validationResult?.reason || ""  }>
-                <TextInput id="jsonpath"
-                            value={e.jsonpath || ""}
-                            isReadOnly={!props.isTester}
-                            onChange={newValue => {
-                    e.jsonpath = newValue;
-                    e.changed = true
-                    e.validationResult = undefined
-                    props.setExtractors([...props.extractors])
-                    if (e.validationTimer) {
-                        clearTimeout(e.validationTimer)
-                    }
-                    e.validationTimer = window.setTimeout(() => {
-                        if (e.jsonpath) {
-                            api.testJsonPath(e.jsonpath).then(result => {
-                                e.validationResult = result
-                                props.setExtractors([...props.extractors])
-                            })
+                <TextInput
+                    id="jsonpath"
+                    value={e.jsonpath || ""}
+                    isReadOnly={!props.isTester}
+                    onChange={newValue => {
+                        e.jsonpath = newValue;
+                        e.changed = true
+                        e.validationResult = undefined
+                        props.setExtractors([...props.extractors])
+                        if (e.validationTimer) {
+                            clearTimeout(e.validationTimer)
                         }
-                    }, 1000)
-                }}/>
+                        e.validationTimer = window.setTimeout(() => {
+                            if (e.jsonpath) {
+                                api.testJsonPath(e.jsonpath).then(result => {
+                                    e.validationResult = result
+                                    props.setExtractors([...props.extractors])
+                                })
+                            }
+                        }, 1000)
+                    }}
+                />
             </FormGroup>
             { props.isTester &&
-            <Button variant="plain" style={{ position: "absolute", right: "0px", top: "22px" }}
-                    onClick={ () => {
-                e.deleted = true;
-                props.setExtractors([...props.extractors])
-            }}>
+            <Button
+                variant="plain"
+                style={{ position: "absolute", right: "0px", top: "22px" }}
+                onClick={ () => {
+                    e.deleted = true;
+                    props.setExtractors([...props.extractors])
+                }}
+            >
                 <OutlinedTimesCircleIcon style={{color: "#a30000"}} />
             </Button>
             }
@@ -242,7 +244,6 @@ export default function Schema() {
     const [editorSchema, setEditorSchema] = useState(schema?.schema ? toString(schema?.schema) : undefined)
     const [currentSchema, setCurrentSchema] = useState(schema)
     const [modified, setModified] = useState(false)
-    const [saving, setSaving] = useState(false)
 
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<SchemaDispatch>()
@@ -276,14 +277,18 @@ export default function Schema() {
 
     const isTester = useTester(schema?.owner)
 
-    const [activeTab, setActiveTab] = useState(0)
     const [extractors, setExtractors] = useState<Extractor[]>([])
+    const [originalExtractors, setOriginalExtractors] = useState<Extractor[]>([])
     useEffect(() => {
         if (schemaId >= 0) {
-            api.listExtractors(schemaId).then(result => setExtractors(result.map((e: Extractor) => {
-                e.newName = e.accessor
-                return e
-            }).sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))))
+            api.listExtractors(schemaId).then(result => {
+                const exs = result.map((e: Extractor) => {
+                    e.newName = e.accessor
+                    return e
+                }).sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))
+                setExtractors(exs)
+                setOriginalExtractors(JSON.parse(JSON.stringify(exs))) // deep copy
+            })
         }
     }, [schemaId])
     const uri = currentSchema?.uri
@@ -294,7 +299,6 @@ export default function Schema() {
     }, [uri])
 
     const save = () => {
-        setSaving(true)
         let newSchema = {
             id: schemaId,
             ...currentSchema,
@@ -302,16 +306,15 @@ export default function Schema() {
             token: null
         } as SchemaDef
         // do not update the main schema when just changing extractors
-        (modified ? thunkDispatch(actions.add(newSchema)) : Promise.resolve(schemaId))
+        return (modified ? thunkDispatch(actions.add(newSchema)) : Promise.resolve(schemaId))
                .then(id => {
                    setSchemaId(id)
                })
                .then(() => Promise.all(extractors.filter(e => e.changed || (e.deleted && e.accessor !== "")).map(e => api.addOrUpdateExtractor(e))))
-               .then(() => dispatchInfo(dispatch, "SAVE_SCHEMA", "Saved!", "Schema was successfully saved", 3000))
+               .then(() => setOriginalExtractors(JSON.parse(JSON.stringify(extractors))))
                .catch(e => {
                   dispatch(alertAction("SAVE_SCHEMA", "Failed to save the schema", e, constraintValidationFormatter("the saved schema")))
                })
-               .finally(() => setSaving(false))
     }
     return (
         <React.Fragment>
@@ -319,11 +322,23 @@ export default function Schema() {
                 { loading && (<Bullseye><Spinner /></Bullseye>) }
                 { !loading && (<>
                 <CardBody>
-                    <Tabs
-                        activeKey={activeTab}
-                        onSelect={(_, index) => setActiveTab(index as number)}
-                    >
-                        <Tab key="general" eventKey={0} title="General">
+                    <SavedTabs
+                        afterSave={() => {
+                            setModified(false)
+                            dispatchInfo(dispatch, "SAVE_SCHEMA", "Saved!", "Schema was successfully saved", 3000)
+                        }}
+                        afterReset={() => {
+                            setModified(false)
+                        }}>
+                        <SavedTab
+                            title="General"
+                            fragment="general"
+                            onSave={ save }
+                            onReset={ () => {
+                                setCurrentSchema(schema)
+                            }}
+                            isModified={ () => modified }
+                        >
                             <General
                                 schema={ currentSchema }
                                 getUri={ editorSchema ? () => getUri(editorSchema) : undefined }
@@ -332,9 +347,18 @@ export default function Schema() {
                                     setModified(true)
                                 }}
                             />
-                        </Tab>
-                        <Tab key="schema" eventKey={1} title="JSON schema" style={{ height: "100%" }}>
-                            { editorSchema &&
+                        </SavedTab>
+                        <SavedTab
+                            title="JSON schema"
+                            fragment="json-schema"
+                            onSave={ save }
+                            onReset={ () => {
+                                setCurrentSchema(schema)
+                                setEditorSchema(schema?.schema ? toString(schema?.schema) : undefined)
+                            }}
+                            isModified={ () => modified }
+                        >
+                            { editorSchema !== undefined &&
                                 <div style={{ height: "600px" }}>
                                     <Editor
                                         value={editorSchema}
@@ -360,11 +384,23 @@ export default function Schema() {
                                     setModified(true)
                                 }}>Add validation schema</Button>
                             </>}
-                        </Tab>
-                        <Tab key="extractors" eventKey={2} title="Schema extractors">
+                        </SavedTab>
+                        <SavedTab
+                            title="Schema extractors"
+                            fragment="extractors"
+                            onSave={ save }
+                            onReset={ () => {
+                                setCurrentSchema(schema)
+                                setExtractors(originalExtractors)
+                            }}
+                            isModified={ () => modified }
+                        >
                             <Extractors
                                 extractors={extractors}
-                                setExtractors={setExtractors}
+                                setExtractors={extractors => {
+                                    setExtractors(extractors)
+                                    setModified(true)
+                                }}
                                 isTester={isTester}
                             />
                             { isTester && <>
@@ -377,25 +413,9 @@ export default function Schema() {
                                     }} >Add extractor</Button>
                                 { !currentSchema?.uri && <><br /><span style={{ color: "red"}}>Please define an URI first.</span></> }
                             </> }
-                         </Tab>
-                    </Tabs>
+                         </SavedTab>
+                    </SavedTabs>
                 </CardBody>
-                { isTester &&
-                <CardFooter>
-                  <ActionGroup style={{ marginTop: 0 }}>
-                      <Button
-                        isDisabled={ saving }
-                        variant="primary"
-                        onClick={save}
-                      >Save{ saving && <>{'\u00A0'}<Spinner size="md"/></> }</Button>
-                      { !saving &&
-                        <NavLink className="pf-c-button pf-m-secondary" to="/schema/">
-                            Cancel
-                        </NavLink>
-                      }
-                  </ActionGroup>
-                </CardFooter>
-                }
                 </>)}
             </Card>
         </React.Fragment>

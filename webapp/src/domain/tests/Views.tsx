@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux'
 import {
     Button,
@@ -17,7 +17,7 @@ import {
 import {
     NavLink
 } from 'react-router-dom'
-import Editor, { ValueGetter } from '../../components/Editor/monaco/Editor'
+import Editor from '../../components/Editor/monaco/Editor'
 
 import { useTester } from '../../auth'
 
@@ -37,7 +37,6 @@ type ViewComponentFormProps = {
     c: ViewComponent,
     onChange(): void,
     isTester: boolean,
-    setRenderGetter(vg: ValueGetter): void,
 }
 
 function checkComponent(v: ViewComponent) {
@@ -50,7 +49,7 @@ function checkComponent(v: ViewComponent) {
     }
 }
 
-const ViewComponentForm = ({ c, onChange, isTester, setRenderGetter } : ViewComponentFormProps) => {
+const ViewComponentForm = ({ c, onChange, isTester } : ViewComponentFormProps) => {
     return (
         <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
             <FormGroup label="Header" fieldId="header">
@@ -86,7 +85,10 @@ const ViewComponentForm = ({ c, onChange, isTester, setRenderGetter } : ViewComp
                     <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
                         { /* TODO: call onModified(true) */ }
                         <Editor value={ (c.render && c.render.toString()) || "" }
-                                setValueGetter={ setRenderGetter }
+                                onChange={ value => {
+                                    c.render = value
+                                    onChange()
+                                }}
                                 language="typescript"
                                 options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
                     </div>)
@@ -111,12 +113,7 @@ function deepCopy(view: View): View {
 
 export default function Views({ testId, testView, testOwner, funcsRef, onModified }: ViewsProps) {
     const isTester = useTester(testOwner)
-    const renderRefs = useRef(new Array<ValueGetter | undefined>(testView.components.length));
     const [view, setView] = useState(deepCopy(testView))
-    const updateRenders = () => view.components.forEach((_, i) => {
-        view.components[i].render = renderRefs.current[i]?.getValue()
-   })
-
 
     useEffect(() => {
         // Perform a deep copy of the view object to prevent modifying store
@@ -133,7 +130,6 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                     return Promise.reject()
                 }
             }
-            updateRenders()
             return thunkDispatch(updateView(testId, view)).catch(
                 error => {
                     dispatch(alertAction("VIEW_UPDATE", "View update failed. It is possible that some schema extractors used in this view do not use valid JSON paths.", error))
@@ -141,10 +137,7 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                 }
             )
         },
-        reset: () => {
-            // Perform a deep copy of the view object to prevent modifying store
-            setView(JSON.parse(JSON.stringify(testView)) as View)
-        }
+        reset: () => setView(deepCopy(testView))
     }
 
     return (<>
@@ -166,7 +159,6 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                 })
                 setView({ ...view, components })
                 onModified(true)
-                renderRefs.current.push(undefined)
                 }} >Add component</Button>
             }
             <NavLink className="pf-c-button pf-m-secondary" to={ "/run/list/" + testId }>Go to runs</NavLink>
@@ -185,9 +177,7 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                                         onModified(true)
                                     }}
                                     isTester={ isTester }
-                                    setRenderGetter={ getter => {
-                                        renderRefs.current[i] = getter
-                                    }}/>
+                                />
                             </DataListCell>
                         ]} />
                         { isTester && <DataListAction
@@ -204,7 +194,6 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                                 variant="control"
                                 isDisabled={ i === 0 }
                                 onClick={ () => {
-                                    updateRenders()
                                     swap(view.components, i - 1, i)
                                     c.headerOrder = i - 1;
                                     view.components[i].headerOrder = i;
@@ -216,7 +205,6 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                                 variant="primary"
                                 onClick={() => {
                                     view.components.splice(i, 1)
-                                    renderRefs.current.splice(i, 1)
                                     view.components.forEach((c, i) => c.headerOrder = i)
                                     setView({ ...view})
                                     onModified(true)
@@ -227,7 +215,6 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                                 variant="control"
                                 isDisabled={ i === view.components.length - 1 }
                                 onClick={ () => {
-                                    updateRenders()
                                     swap(view.components, i + 1, i)
                                     c.headerOrder = i + 1;
                                     view.components[i].headerOrder = i;

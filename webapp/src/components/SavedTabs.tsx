@@ -1,6 +1,6 @@
-import { ReactElement, ReactNode, useState } from 'react'
+import { ReactElement, ReactNode, useEffect, useMemo, useState, useRef } from 'react'
 import { useHistory } from "react-router"
-import { Location } from 'history'
+import { Location, UnregisterCallback } from 'history'
 import {
     ActionGroup,
     Button,
@@ -16,6 +16,7 @@ type SavedTabProps = {
     onSave(): Promise<any>,
     onReset(): void,
     isModified(): boolean,
+    isHidden?: boolean,
     children: ReactNode,
 }
 
@@ -29,7 +30,7 @@ type SavedTabsProps = {
 
 export default function SavedTabs(props: SavedTabsProps) {
     const history = useHistory()
-    const children = Array.isArray(props.children) ? props.children : [ props.children ]
+    const children = useMemo(() => Array.isArray(props.children) ? props.children : [ props.children ], [ props.children ])
     const [activeKey, setActiveKey] = useState(() => {
         const index = children.findIndex(c => history.location.hash === "#" + c.props.fragment)
         return index < 0 ? 0 : index
@@ -40,24 +41,54 @@ export default function SavedTabs(props: SavedTabsProps) {
         setActiveKey(index)
         history.replace(history.location.pathname + "#" + children[index].props.fragment)
     }
+    const [requestedLocation, setRequestedLocation] = useState<Location<any>>()
+    const historyUnblock = useRef<UnregisterCallback>()
+    useEffect(() => {
+        const unblock = history.block(location => {
+            if (children[activeKey].props.isModified()) {
+                setRequestedLocation(location)
+                return false
+            }
+        })
+        historyUnblock.current = unblock
+        return () => {
+            unblock()
+        }
+    }, [activeKey, children, history])
+    const navigate = () => {
+        if (requestedKey !== undefined) {
+            goToTab(requestedKey as number)
+        }
+        if (requestedLocation !== undefined) {
+            console.log(historyUnblock)
+            console.log(requestedLocation)
+            if (historyUnblock.current) {
+                historyUnblock.current()
+            }
+            history.push(requestedLocation)
+        }
+        setRequestedKey(undefined)
+        setRequestedLocation(undefined)
+    }
     return (<>
         <SaveChangesModal
-            isOpen={!!requestedKey}
-            onClose={ () => setRequestedKey(undefined) }
-            onSave={ () => children[activeKey].props.onSave().then(_ => {
-                goToTab(requestedKey as number)
+            isOpen={requestedKey !== undefined || requestedLocation !== undefined}
+            onClose={ () => {
                 setRequestedKey(undefined)
+                setRequestedLocation(undefined)
+            }}
+            onSave={ () => children[activeKey].props.onSave().then(_ => {
+                navigate()
                 if (props.afterSave) {
                     return props.afterSave()
                 }
             }) }
             onReset={() => {
                 children[activeKey].props.onReset()
-                goToTab(requestedKey as number)
-                setRequestedKey(undefined)
                 if (props.afterReset) {
                     props.afterReset()
                 }
+                navigate()
             }}
         />
         <Tabs
@@ -70,7 +101,7 @@ export default function SavedTabs(props: SavedTabsProps) {
                 }
             }}
         >
-            { children.map((c, i) => <Tab key={i} eventKey={i} title={c.props.title}>{ c.props.children }</Tab>)}
+            { children.map((c, i) => <Tab key={i} eventKey={i} title={c.props.title} isHidden={ c.props.isHidden }>{ c.props.children }</Tab>)}
         </Tabs>
         <ActionGroup style={{ marginTop: 0 }}>
             <Button

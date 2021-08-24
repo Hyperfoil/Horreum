@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useEffect} from 'react';
 import {useSelector, useDispatch} from 'react-redux'
 
 import {
@@ -16,7 +16,7 @@ import {alertAction, constraintValidationFormatter} from '../../alerts'
 
 import Accessors from '../../components/Accessors'
 import TagsSelect, { convertTags, SelectedTags } from '../../components/TagsSelect'
-import Editor, {ValueGetter} from '../../components/Editor/monaco/Editor'
+import Editor from '../../components/Editor/monaco/Editor'
 
 import {Test, TestDispatch, StalenessSettings} from './reducers';
 
@@ -42,10 +42,9 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
     const defaultRole = useSelector(defaultTeamSelector)
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [compareUrl, setCompareUrl] = useState("")
+    const [compareUrl, setCompareUrl] = useState<string | undefined>(undefined)
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
     const [tags, setTags] = useState<string[]>([])
-    const compareUrlEditor = useRef<ValueGetter>()
     const [stalenessSettings, setStalenessSettings] = useState<StalenessSettingsDisplay[]>([])
     const [newStalenessTags, setNewStalenessTags] = useState<SelectedTags>()
 
@@ -53,7 +52,7 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
         setName(test ? test.name : "");
         setDescription(test ? test.description : "");
         setTags(test && test.tags ? test.tags.split(";").filter(t => t !== "") : []);
-        setCompareUrl((test && test.compareUrl && test.compareUrl.toString()) || "")
+        setCompareUrl(test?.compareUrl?.toString() || undefined)
         setNotificationsEnabled(!test || test.notificationsEnabled)
         setStalenessSettings(test?.stalenessSettings?.map(ss => ({ ...ss,
             maxStalenessStr: ss.maxStaleness ? millisToDuration(ss.maxStaleness) : ""
@@ -80,7 +79,7 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                 id: test?.id || 0,
                 name,
                 description,
-                compareUrl: compareUrlEditor.current?.getValue(),
+                compareUrl: compareUrl || undefined, // when empty set to undefined
                 notificationsEnabled,
                 tags: tags.join(";"),
                 owner: test?.owner || defaultRole || "__test_created_without_a_role__",
@@ -149,7 +148,7 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
             <FormGroup label="Compare URL function"
                        fieldId="compareUrl"
                        helperText="This function receives an array of ids as first argument and auth token as second. It should return URL to comparator service.">
-                {compareUrl === "" ? (
+                {compareUrl === undefined ? (
                     isTester ? (<Button
                         variant="link"
                         onClick={() => {
@@ -162,8 +161,9 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                     <div style={{minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto"}}>
                         { /* TODO: call onModified(true) */}
                         <Editor value={compareUrl}
-                                setValueGetter={e => {
-                                    compareUrlEditor.current = e
+                                onChange={ value => {
+                                    setCompareUrl(value || "")
+                                    onModified(true)
                                 }}
                                 language="typescript"
                                 options={{

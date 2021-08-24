@@ -20,7 +20,6 @@ import { allHooks, addHook, removeHook } from './actions';
 import * as selectors from './selectors';
 import { isAdminSelector } from '../../auth'
 
-import { all as allTests } from '../tests/selectors'
 import { fetchSummary } from '../tests/actions'
 
 import Table from '../../components/Table';
@@ -30,7 +29,6 @@ import { Hook, HooksDispatch } from './reducers';
 
 export default function HookList() {
     const dispatch = useDispatch<HooksDispatch>();
-    const tests = useSelector(allTests)
     useEffect(() => {
         dispatch(fetchSummary())
     }, [dispatch])
