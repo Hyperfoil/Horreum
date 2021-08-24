@@ -674,6 +674,7 @@ public class AlertingServiceImpl implements AlertingService {
                current.accessors = matching.accessors;
                current.calculation = matching.calculation;
                current.maxDifferenceLastDatapoint = matching.maxDifferenceLastDatapoint;
+               current.minWindow = matching.minWindow;
                current.maxDifferenceFloatingWindow = matching.maxDifferenceFloatingWindow;
                current.floatingWindow = matching.floatingWindow;
                current.persist();

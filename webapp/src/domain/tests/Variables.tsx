@@ -29,6 +29,7 @@ import {
 
 import Accessors from '../../components/Accessors'
 import Editor from '../../components/Editor/monaco/Editor'
+import LogSlider from '../../components/LogSlider'
 import RecalculateModal from '../alerting/RecalculateModal'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
 import CalculationLogModal from './CalculationLogModal'
@@ -163,16 +164,9 @@ const RenameGroupModal = (props: RenameGroupModalProps) => {
     )
 }
 
-type VariableDisplay = {
-    maxDifferenceLastDatapointStr: string,
-    minWindowStr: string,
-    maxDifferenceFloatingWindowStr: string,
-    floatingWindowStr: string,
-} & Variable;
-
 type VariableFormProps = {
     index: number,
-    variables: VariableDisplay[],
+    variables: Variable[],
     isTester: boolean,
     groups: string[],
     setGroups(gs: string[]): void,
@@ -269,51 +263,59 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
         <ExpandableSection toggleText={ isExpanded ? "Hide settings" : "Show advanced settings" }
                            onToggle={setExpanded}
                            isExpanded={isExpanded} >
-            { /* TODO: use sliders when Patternfly 4 has them */ }
             <FormGroup label="Max difference for last datapoint" fieldId="maxDifferenceLastDatapoint" helperText="Maximum difference between the last value and the mean of preceding values.">
-                <TextInput value={ variable.maxDifferenceLastDatapointStr }
-                            id="maxDifferenceLastDatapoint"
-                            onChange={ value => {
-                                variable.maxDifferenceLastDatapointStr = value
-                                variable.maxDifferenceLastDatapoint = parseFloat(value)
-                                onChange()
-                            }}
-                            validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.maxDifferenceLastDatapointStr) ? "default" : "error" }
-                            isReadOnly={!isTester} />
+                <LogSlider
+                    value={ variable.maxDifferenceLastDatapoint * 100 }
+                    onChange={ value => {
+                        variable.maxDifferenceLastDatapoint = value / 100
+                        onChange()
+                    }}
+                    isDisabled={!isTester}
+                    min={1}
+                    max={1000}
+                    unit='%'
+                />
             </FormGroup>
             <FormGroup label="Min window" fieldId="minWindow" helperText="Minimum number of datapoints after last change to run tests against.">
-                <TextInput value={ variable.minWindowStr }
-                            id="minWindow"
-                            onChange={ value => {
-                                variable.minWindowStr = value
-                                variable.minWindow = parseInt(value)
-                                onChange()
-                            }}
-                            validated={ /^[0-9]+$/.test(variable.minWindowStr) ? "default" : "error" }
-                            isReadOnly={!isTester} />
+                <LogSlider
+                    value={ variable.minWindow }
+                    onChange={ value => {
+                        variable.minWindow = value
+                        onChange()
+                    }}
+                    isDiscrete={true}
+                    isDisabled={!isTester}
+                    min={1}
+                    max={1000}
+                    unit={'\u00A0'}
+                />
             </FormGroup>
             <FormGroup label="Max difference for floating window" fieldId="maxDifferenceFloatingWindow" helperText="Maximum difference between the mean of last N datapoints in the floating window and the mean of preceding values.">
-                <TextInput value={ variable.maxDifferenceFloatingWindowStr }
-                            id="maxDifferenceFloatingWindow"
-                            onChange={ value => {
-                                variable.maxDifferenceFloatingWindowStr = value
-                                variable.maxDifferenceFloatingWindow = parseFloat(value)
-                                onChange()
-                            }}
-                            validated={ /^[0-9]+(\.[0-9]+)?$/.test(variable.maxDifferenceFloatingWindowStr) ? "default" : "error" }
-                            isReadOnly={!isTester} />
+                <LogSlider
+                    value={ variable.maxDifferenceFloatingWindow * 100 }
+                    onChange={ value => {
+                        variable.maxDifferenceFloatingWindow = value / 100
+                        onChange()
+                    }}
+                    isDisabled={!isTester}
+                    min={1}
+                    max={1000}
+                    unit='%'
+                />
             </FormGroup>
-            { /* TODO: use sliders when Patternfly 4 has them */ }
             <FormGroup label="Floating window size" fieldId="floatingWindow" helperText="Limit the number of datapoints considered when testing for a change.">
-                <TextInput value={ variable.floatingWindowStr }
-                            id="maxWindow"
-                            onChange={ value => {
-                                variable.floatingWindowStr = value
-                                variable.floatingWindow = parseInt(value)
-                                onChange()
-                            }}
-                            validated={ /^[0-9]+$/.test(variable.floatingWindowStr) ? "default" : "error" }
-                            isReadOnly={!isTester} />
+                <LogSlider
+                    value={ variable.floatingWindow }
+                    onChange={ value => {
+                        variable.floatingWindow = value
+                        onChange()
+                    }}
+                    isDisabled={!isTester}
+                    isDiscrete={true}
+                    min={1}
+                    max={1000}
+                    unit={'\u00A0'}
+                />
             </FormGroup>
         </ExpandableSection>
     </Form>
@@ -333,7 +335,7 @@ type VariablesProps = {
     onModified(modified: boolean): void,
 }
 
-function sortByOrder(v1: VariableDisplay, v2: VariableDisplay) {
+function sortByOrder(v1: Variable, v2: Variable) {
     if (v1.group === v2.group) {
         return v1.order - v2.order
     } else if (!v1.group) {
@@ -375,7 +377,7 @@ function groupNames(vars: Variable[]) {
 }
 
 export default function Variables({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) {
-    const [variables, setVariables] = useState<VariableDisplay[]>([])
+    const [variables, setVariables] = useState<Variable[]>([])
     const [groups, setGroups] = useState<string[]>([])
     const [recalcConfirm, setRecalcConfirm] = useState<(_: any) => void>()
     const dispatch = useDispatch()
@@ -387,17 +389,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
         }
         api.fetchVariables(testId).then(
             response => {
-                setVariables(response.map((v: Variable) => {
-                    let vd: VariableDisplay = {
-                        ...v,
-                        maxDifferenceLastDatapointStr: String(v.maxDifferenceLastDatapoint),
-                        minWindowStr: String(v.minWindow),
-                        maxDifferenceFloatingWindowStr: String(v.maxDifferenceFloatingWindow),
-                        floatingWindowStr: String(v.floatingWindow),
-                    }
-                    return vd
-                }).sort(sortByOrder))
-
+                setVariables(response.sort(sortByOrder))
                 setGroups(groupNames(response))
             },
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
@@ -441,13 +433,9 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             name: "",
             order: variables.length,
             accessors: "",
-            maxDifferenceLastDatapointStr: "0.2",
             maxDifferenceLastDatapoint: 0.2,
-            minWindowStr: "5",
             minWindow: 5,
-            maxDifferenceFloatingWindowStr: "0.1",
             maxDifferenceFloatingWindow: 0.1,
-            floatingWindowStr: "5",
             floatingWindow: 5
         })
         setVariables([ ...variables])
