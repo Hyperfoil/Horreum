@@ -360,6 +360,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (recalculation != null) {
                   recalculation.runsWithoutValue.add(run.id);
                }
+               missingValueVariables.add(var.name);
                continue;
             }
             Double number = convertToNumber(value);
@@ -368,6 +369,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (recalculation != null) {
                   recalculation.errors++;
                }
+               missingValueVariables.add(var.name);
                continue;
             } else {
                dataPoint.value = number;
