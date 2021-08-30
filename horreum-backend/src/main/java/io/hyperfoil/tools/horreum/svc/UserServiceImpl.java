@@ -94,6 +94,7 @@ public class UserServiceImpl implements UserService {
             .thenApply(roles -> roles.stream().map(r -> r.name).filter(n -> n.endsWith("-team")).collect(Collectors.toList()));
    }
 
+   @Transactional
    public void cacheUserTeams(String username, Set<String> teams) {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          // Running this without pessimistic lock leads to duplicate inserts at the same time

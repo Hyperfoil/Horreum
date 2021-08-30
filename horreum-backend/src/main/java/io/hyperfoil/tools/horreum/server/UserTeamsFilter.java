@@ -33,7 +33,6 @@ public class UserTeamsFilter extends HttpFilter {
    UserServiceImpl userService;
 
    @Override
-   @Transactional
    protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
       if (identity.isAnonymous()) {
          // ignore anonymous access

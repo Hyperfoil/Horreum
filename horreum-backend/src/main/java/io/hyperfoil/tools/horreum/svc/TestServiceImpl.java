@@ -249,6 +249,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @Transactional
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
    public void updateAccess(Integer id,
                             String owner,
@@ -296,6 +297,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @Transactional
    public void updateAccess(Integer id,
                             boolean enabled) {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
@@ -310,6 +312,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @Transactional
    public void updateHook(Integer testId, Hook hook) {
       if (testId == null || testId <= 0) {
          throw ServiceException.badRequest("Missing test id");

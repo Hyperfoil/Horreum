@@ -113,12 +113,14 @@ public class RunServiceImpl implements RunService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @Transactional
    @Override
    public String resetToken(Integer id) {
       return updateToken(id, Tokens.generateToken());
    }
 
    @RolesAllowed(Roles.TESTER)
+   @Transactional
    @Override
    public String dropToken(Integer id) {
       return updateToken(id, null);
@@ -138,6 +140,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @Transactional
    @Override
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
    public void updateAccess(Integer id, String owner, Access access) {
