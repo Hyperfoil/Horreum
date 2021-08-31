@@ -79,6 +79,7 @@ export default function Test() {
                             dispatchInfo(dispatch, "SAVE", "Saved!", "Test was succesfully updated!", 3000)
                         }}
                         afterReset={ () => setModified(false) }
+                        canSave={ isTester }
                     >
                         <SavedTab
                             title="General"

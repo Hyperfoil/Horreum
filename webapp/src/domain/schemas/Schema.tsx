@@ -264,7 +264,8 @@ export default function Schema() {
                         }}
                         afterReset={() => {
                             setModified(false)
-                        }}>
+                        }}
+                        canSave={ isTester }>
                         <SavedTab
                             title="General"
                             fragment="general"

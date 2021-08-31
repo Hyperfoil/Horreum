@@ -26,6 +26,7 @@ type SavedTabsProps = {
     afterSave?(): Promise<any> | void,
     afterReset?(): void,
     children: ReactElement<SavedTabProps> | ReactElement<SavedTabProps>[]
+    canSave?: boolean,
 }
 
 export default function SavedTabs(props: SavedTabsProps) {
@@ -103,7 +104,7 @@ export default function SavedTabs(props: SavedTabsProps) {
         >
             { children.map((c, i) => <Tab key={i} eventKey={i} title={c.props.title} isHidden={ c.props.isHidden }>{ c.props.children }</Tab>)}
         </Tabs>
-        <ActionGroup style={{ marginTop: 0 }}>
+        { props.canSave !== false && <ActionGroup style={{ marginTop: 0 }}>
             <Button
                 variant="primary"
                 isDisabled={saving}
@@ -118,6 +119,6 @@ export default function SavedTabs(props: SavedTabsProps) {
                     })
                 }}
             >{ saving ? <>{"Saving... "}<Spinner size="md"/></> : "Save" }</Button>
-        </ActionGroup>
+        </ActionGroup> }
     </>)
 }

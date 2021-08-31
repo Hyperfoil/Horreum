@@ -112,20 +112,23 @@ function TryJsonPathModal(props: TryJsonPathModalProps) {
         </Flex>
         { runs === undefined && <Bullseye><Spinner size="xl"/></Bullseye> }
         { runs && result === undefined && <>
-            <Table
-                aria-label="Available runs"
-                variant='compact'
-                cells={ ['Test', 'Run', 'Description', '']}
-                rows={ runs.map(r => ({ cells: [
-                    r.testname,
-                    { title: <NavLink to={ `/run/${r.id}?query=${ encodeURIComponent(props.jsonpath || "")}` }>{ r.id }</NavLink> },
-                    r.description,
-                    { title: <Button onClick={ () => executeQuery(r.id) }>Execute</Button> },
-                ]}))}
-            >
-                <TableHeader />
-                <TableBody />
-            </Table>
+            { /* TODO FIXME */ }
+            <div style={{ display: 'block', overflowY: 'scroll', maxHeight: '50vh'}}>
+                <Table
+                    aria-label="Available runs"
+                    variant='compact'
+                    cells={ ['Test', 'Run', 'Description', '']}
+                    rows={ runs.map(r => ({ cells: [
+                        r.testname,
+                        { title: <NavLink to={ `/run/${r.id}?query=${ encodeURIComponent(props.jsonpath || "")}` }>{ r.id }</NavLink> },
+                        r.description,
+                        { title: <Button onClick={ () => executeQuery(r.id) }>Execute</Button> },
+                    ]}))}
+                >
+                    <TableHeader />
+                    <TableBody />
+                </Table>
+            </div>
             <Pagination
                 itemCount={runCount}
                 perPage={perPage}
@@ -218,13 +221,14 @@ export default function Extractors(props: ExtractorsProps) {
                     </FormGroup>
                 </Form>
             </FlexItem>
-            <FlexItem alignSelf={{ default: "alignSelfCenter"}}>
+            { props.isTester && <FlexItem alignSelf={{ default: "alignSelfCenter"}}>
                 <Button
                     variant="primary"
                     isDisabled={ !e.jsonpath }
                     onClick={ () => setTestExtractor(e) }
                 >Try it!</Button>
             </FlexItem>
+            }
             { props.isTester &&
             <FlexItem alignSelf={{ default: "alignSelfCenter"}}>
                 <Button
