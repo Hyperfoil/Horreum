@@ -6,7 +6,8 @@ import jsonpath from 'jsonpath';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
-import { RunsDispatch } from './reducers'
+import * as api from './api'
+import { Run as RunDef, RunsDispatch } from './reducers'
 import { formatDateTime } from '../../utils'
 import { useTester, teamsSelector } from '../../auth'
 import { interleave } from '../../utils'
@@ -51,12 +52,191 @@ function getPaths(data: any) {
    return Object.keys(data).filter(k => typeof data[k] === "object")
 }
 
+function postgresTojsJsonPath(query: string) {
+   query = query.replace(/\.\*\*\.?/g, "..");
+   query = query.replace(/\."([^"]*)"/g, "['$1']")
+   query = query.replace(/ *\? */, '?')
+
+   // Note: postgres query allows conditions beyond selecting array items
+   let qIndex = query.indexOf('?');
+   if (qIndex >= 0) {
+      query = query.substring(0, qIndex) + "[" + query.substring(qIndex) + "]"
+   }
+   return query;
+}
+
+function execQuery(run: RunDef | false, type: string, query: string): Promise<[string, boolean]> {
+   if (!run) {
+      return Promise.resolve(["", true])
+   }
+   if (query === "") {
+      return Promise.resolve([toString(run.data), true])
+   }
+   var array = false;
+   switch (type) {
+      case "js":
+         return Promise.resolve(execQueryLocal(run, query))
+      case "jsonb_path_query_first":
+         break
+      case "jsonb_path_query_array":
+         array = true
+         break
+      default:
+         return Promise.reject("Unknown type of query")
+   }
+   return api.query(run.id, query, array).then(result => {
+      if (result.valid) {
+         try {
+            result.value = JSON.parse(result.value)
+         } catch (e) {
+            // ignored
+         }
+         result.value = JSON.stringify(result.value, null, 2)
+         return [result.value, true]
+      } else {
+         return [result.reason, false]
+      }
+   })
+}
+
+function execQueryLocal(run: RunDef, pathQuery: string): [string, boolean] {
+   let query = postgresTojsJsonPath(pathQuery);
+   while (query.endsWith(".")) {
+      query = query.substring(0, query.length - 1);
+   }
+   if (query.startsWith("@")) {
+      query = "$..*[?(" + query + ")]";
+   } else if (!query.startsWith("$")) {
+      query = "$.." + query
+   }
+   try {
+      const found = jsonpath.nodes(run.data, query).map(({path, value}) => {
+         let obj: { [key: string]: string } = {}
+         var combinedPath = "";
+         path.forEach(x => {
+            if (combinedPath === "") {
+               combinedPath = String(x);
+            } else {
+               if (typeof(x) === "number") {
+                  combinedPath = combinedPath + "[" + x + "]"
+               } else if (x.match(/^[a-zA-Z0-9_]*$/)) {
+                  combinedPath = combinedPath + "." + x
+               } else {
+                  combinedPath = combinedPath + '."' + x.replace(/"/g, '\\"') + '"';
+               }
+            }
+         })
+         obj[combinedPath] = value
+         return obj
+      })
+      return [JSON.stringify(found, null, 2), true]
+   } catch (e) {
+      console.log("Failed query: " + query)
+      return [e.message, false]
+   }
+}
+
+function updateSuggestionValue(value: string, pathQuery: string, pathSuggestions: string[]) {
+   let quoted = false;
+   let lastDot = 0;
+   let lastClosingSquareBracket = 0;
+   outer: for (let i = pathQuery.length; i >= 0; --i) {
+      switch (pathQuery.charAt(i)) {
+         // we're not handling escaped quotes...
+         case '"':
+            quoted = !quoted;
+            break;
+         case '.':
+            if (!quoted) {
+               lastDot = i;
+               break outer;
+            }
+            break;
+         case ']':
+            if (!quoted) {
+               lastClosingSquareBracket = i;
+               break outer;
+            }
+            break;
+         default:
+      }
+   }
+   if (lastDot >= lastClosingSquareBracket) {
+      if (value.startsWith('[')) lastDot--;
+      return pathQuery.substring(0, lastDot + 1) + value
+   } else {
+      // It's possible that we've already added one suggestion
+      for (let i = 0; i < pathSuggestions.length; ++i) {
+         let sg = pathSuggestions[i]
+         if (pathQuery.endsWith(sg)) {
+            return pathQuery.substring(0, pathQuery.length - sg.length) + value
+         }
+      }
+      return pathQuery.substring(0, lastClosingSquareBracket + 1) + value
+   }
+}
+
+function findSuggestions(run: RunDef | false, value: string): [string[], boolean | undefined] {
+   if (!run) {
+       return [[], true]
+   }
+   let query = postgresTojsJsonPath(value.trim())
+   let conditionStart = query.indexOf("@")
+   if (conditionStart >= 0) {
+      var condition = query.substring(conditionStart + 1);
+      let conditionEnd = Math.min(...[ "<", ">", "!=", "==", " ", ")"].map(op => {
+         let opIndex = condition.indexOf(op)
+         return opIndex >= 0 ? opIndex : condition.length;
+      }))
+      condition = condition.substring(0, conditionEnd);
+      let qIndex = query.indexOf('?')
+      if (qIndex > 0) {
+         // condition start looks like [?(@...
+         query = query.substring(0, qIndex - 1).trim() + condition;
+      } else {
+         query = query.substring(0, conditionStart) + condition;
+      }
+   }
+   let lastDot = Math.max(query.lastIndexOf('.'), query.lastIndexOf(']'));
+   let incomplete = ""
+   if (lastDot >= 0) {
+      incomplete = query.substring(lastDot + 1)
+      if (incomplete === "*") {
+         incomplete = ""
+      }
+      query = query.substring(0, lastDot + 1);
+      if (query.endsWith(".")) {
+         query = query + "*"
+      }
+      if (!query.startsWith("$")) {
+         query = "$.." + query
+      } else if (query === "$") {
+         query = "$.*"
+      }
+   } else if (query === "$") {
+      // do not offer anything at this point
+      return [[], undefined];
+   } else {
+      incomplete = query;
+      query = "$..*"
+   }
+   try {
+      let sgs = jsonpath.paths(run.data, query)
+           .map(path => path[path.length - 1].toString())
+           .filter(k => k.startsWith(incomplete))
+           .map(k => k.match(/^[a-zA-Z0-9_]*$/) ? k : '"' + k + '"')
+      return [[ ...new Set(sgs)].sort(), undefined]
+   } catch (e) {
+      console.log("Failed query: " + query)
+      return [[], false]
+   }
+}
+
 export default function Run() {
     const { id: stringId } = useParams<any>();
     const id = parseInt(stringId)
     const run = useSelector(selectors.get(id));
     const [data, setData] = useState(run ? toString(run.data) : "{}")
-
     const [pathQuery, setPathQuery] = useState("")
     const [pathInvalid, setPathInvalid] = useState(false)
     const [pathType, setPathType] = useState('js')
@@ -67,17 +247,39 @@ export default function Run() {
     const dispatch = useDispatch();
     const thunkDispatch = useDispatch<RunsDispatch>()
     const teams = useSelector(teamsSelector)
+
+    const runPathQuery = () => {
+      execQuery(run, pathType, pathQuery).then(([result, valid]) => {
+         setData(result)
+         setPathInvalid(!valid)
+      }, error => {
+         dispatch(alertAction("QUERY_ERROR", "Failed to execute query!", error))
+      })
+    }
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get('token')
         dispatch(actions.get(id, token || undefined))
+        const query = urlParams.get('query')
+        if (query) {
+           setPathQuery(query)
+           setPathType("jsonb_path_query_first")
+           // we won't run the query automatically since there would be a race between loading
+           // the data and executing the query and we would have to deal with ordering
+        }
     }, [dispatch, id, teams])
     useEffect(() => {
         //change the loaded document when the run changes
         document.title = run && run.id ? "Run " + run.id + " | Horreum" : "Loading run... | Horreum"
         setData(run ? toString(run.data) : "{}");
     }, [run])
-
+    const updateSuggestions = () => {
+         const [suggs, valid] = findSuggestions(run, pathQuery)
+         setPathSuggestions(suggs)
+         if (valid !== undefined) {
+            setPathInvalid(!valid)
+         }
+    }
     const inputProps: InputProps<string> = {
         placeholder: "Enter selection path, e.g. $.foo[?(@.bar > 42)]",
         value: pathQuery,
@@ -89,67 +291,9 @@ export default function Run() {
         },
         onKeyDown: evt => {
             if (evt.key === " " && evt.ctrlKey) {
-                updateSuggestions(pathQuery);
+                updateSuggestions()
             } else if (evt.key === "Enter") {
-                runPathQuery();
-            }
-        }
-    }
-    const postgresTojsJsonPath = (query: string) => {
-       query = query.replace(/\.\*\*\.?/g, "..");
-       query = query.replace(/\."([^"]*)"/g, "['$1']")
-       query = query.replace(/ *\? */, '?')
-
-       // Note: postgres query allows conditions beyond selecting array items
-       let qIndex = query.indexOf('?');
-       if (qIndex >= 0) {
-          query = query.substring(0, qIndex) + "[" + query.substring(qIndex) + "]"
-       }
-       return query;
-    }
-    const runPathQuery = () => {
-        if (pathQuery === "") {
-            setPathInvalid(false);
-            setData(run ? toString(run.data) : "{}");
-        } else {
-            if (!run) {
-               return;
-            }
-            let query = postgresTojsJsonPath(pathQuery);
-            while (query.endsWith(".")) {
-               query = query.substring(0, query.length - 1);
-            }
-            if (query.startsWith("@")) {
-               query = "$..*[?(" + query + ")]";
-            } else if (!query.startsWith("$")) {
-               query = "$.." + query
-            }
-            try {
-                const found = jsonpath.nodes(run.data, query).map(({path, value}) => {
-                  let obj: { [key: string]: string } = {}
-                  var combinedPath = "";
-                  path.forEach(x => {
-                     if (combinedPath === "") {
-                        combinedPath = String(x);
-                     } else {
-                        if (typeof(x) === "number") {
-                           combinedPath = combinedPath + "[" + x + "]"
-                        } else if (x.match(/^[a-zA-Z0-9_]*$/)) {
-                           combinedPath = combinedPath + "." + x
-                        } else {
-                           combinedPath = combinedPath + '."' + x.replace(/"/g, '\\"') + '"';
-                        }
-                     }
-                  })
-                  obj[combinedPath] = value
-                  return obj
-                })
-                setPathInvalid(false)
-                setData(JSON.stringify(found, null, 2))
-            } catch (e) {
-                console.log("Failed query: " + query)
-                setPathInvalid(true)
-                setData(e.message)
+                runPathQuery()
             }
         }
     }
@@ -158,104 +302,9 @@ export default function Run() {
        if (typingTimer.current !== null) {
           clearTimeout(typingTimer.current)
        }
-       typingTimer.current = window.setTimeout(() => updateSuggestions(value), 1000)
+       typingTimer.current = window.setTimeout(updateSuggestions, 1000)
     }
-    const updateSuggestions = (value: string) => {
-       if (!run) {
-           return
-       }
-       let query = postgresTojsJsonPath(value.trim())
-       let conditionStart = query.indexOf("@")
-       if (conditionStart >= 0) {
-          var condition = query.substring(conditionStart + 1);
-          let conditionEnd = Math.min(...[ "<", ">", "!=", "==", " ", ")"].map(op => {
-             let opIndex = condition.indexOf(op)
-             return opIndex >= 0 ? opIndex : condition.length;
-          }))
-          condition = condition.substring(0, conditionEnd);
-          let qIndex = query.indexOf('?')
-          if (qIndex > 0) {
-             // condition start looks like [?(@...
-             query = query.substring(0, qIndex - 1).trim() + condition;
-          } else {
-             query = query.substring(0, conditionStart) + condition;
-          }
-       }
-       let lastDot = Math.max(query.lastIndexOf('.'), query.lastIndexOf(']'));
-       let incomplete = ""
-       if (lastDot >= 0) {
-          incomplete = query.substring(lastDot + 1)
-          if (incomplete === "*") {
-             incomplete = ""
-          }
-          query = query.substring(0, lastDot + 1);
-          if (query.endsWith(".")) {
-             query = query + "*"
-          }
-          if (!query.startsWith("$")) {
-             query = "$.." + query
-          } else if (query === "$") {
-             query = "$.*"
-          }
-       } else if (query === "$") {
-          // do not offer anything at this point
-          setPathSuggestions([])
-          return;
-       } else {
-          incomplete = query;
-          query = "$..*"
-       }
-       try {
-          let sgs = jsonpath.paths(run.data, query)
-               .map(path => path[path.length - 1].toString())
-               .filter(k => k.startsWith(incomplete))
-               .map(k => k.match(/^[a-zA-Z0-9_]*$/) ? k : '"' + k + '"')
-          setPathSuggestions([ ...new Set(sgs)].sort())
-       } catch (e) {
-          console.log("Failed query: " + query)
-          setPathSuggestions([])
-          setPathInvalid(true)
-       }
-    }
-    const updateSuggestionValue = (value: string) => {
-       let quoted = false;
-       let lastDot = 0;
-       let lastClosingSquareBracket = 0;
-       outer: for (let i = pathQuery.length; i >= 0; --i) {
-          switch (pathQuery.charAt(i)) {
-             // we're not handling escaped quotes...
-             case '"':
-                quoted = !quoted;
-                break;
-             case '.':
-                if (!quoted) {
-                   lastDot = i;
-                   break outer;
-                }
-                break;
-             case ']':
-                if (!quoted) {
-                   lastClosingSquareBracket = i;
-                   break outer;
-                }
-                break;
-             default:
-          }
-       }
-       if (lastDot >= lastClosingSquareBracket) {
-          if (value.startsWith('[')) lastDot--;
-          return pathQuery.substring(0, lastDot + 1) + value
-       } else {
-          // It's possible that we've already added one suggestion
-          for (let i = 0; i < pathSuggestions.length; ++i) {
-             let sg = pathSuggestions[i]
-             if (pathQuery.endsWith(sg)) {
-                return pathQuery.substring(0, pathQuery.length - sg.length) + value
-             }
-          }
-          return pathQuery.substring(0, lastClosingSquareBracket + 1) + value
-       }
-    }
+
     const isTester = useTester((run && run.owner) || "")
     return (
         // <PageSection>
@@ -324,8 +373,8 @@ export default function Run() {
                                     dropdownItems={
                                         [
                                             <DropdownItem id="js" key="query">js</DropdownItem>,
-                                            <DropdownItem id="jsonb_path_query_first" key="jsonb_path_query_first" isDisabled>jsonb_path_query_first</DropdownItem>,
-                                            <DropdownItem id="jsonb_path_query_array" key="jsonb_path_query_array" isDisabled>jsonb_path_query_array</DropdownItem>,
+                                            <DropdownItem id="jsonb_path_query_first" key="jsonb_path_query_first">jsonb_path_query_first</DropdownItem>,
+                                            <DropdownItem id="jsonb_path_query_array" key="jsonb_path_query_array">jsonb_path_query_array</DropdownItem>,
                                         ]}
                                 >
                                 </Dropdown>
@@ -353,7 +402,7 @@ export default function Run() {
                                              onSuggestionsClearRequested={() => {
                                                 if (pathQuery === "") setPathSuggestions([])
                                              }}
-                                             getSuggestionValue={updateSuggestionValue}
+                                             getSuggestionValue={value => updateSuggestionValue(value, pathQuery, pathSuggestions)}
                                              renderSuggestion={v => <div>{v}</div>}
                                              renderInputComponent={ inputProps => (
                                                  <input {...inputProps as any}
@@ -363,7 +412,17 @@ export default function Run() {
                                                         style={{ width: "500px" }} />
                                                )}
                                              />
-                                <Button variant={ButtonVariant.control} onClick={runPathQuery}>Find</Button>
+                                 <Button
+                                    variant='control'
+                                    onClick={runPathQuery}
+                                 >Find</Button>
+                                 <Button
+                                    variant='control'
+                                    onClick={() => {
+                                       setPathQuery("")
+                                       setData(toString(run.data))
+                                    }}
+                                 >Clear</Button>
                             </InputGroup>
                         </ToolbarItem>
                      </ToolbarContent>

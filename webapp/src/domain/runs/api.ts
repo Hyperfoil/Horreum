@@ -8,13 +8,13 @@ function paginationParams(pagination: PaginationInfo) {
 
 const base = "/api/run"
 const endPoints = {
-
     getRun: (runId: number, token?: string) => `${base}/${runId}${token ? '?token=' + token : ''}`,
     addRun: () => `${base}/`,
+    query: (runId: number, query: string, array: boolean, schemaUri?: string) => `${base}/${runId}/query?query=${encodeURIComponent(query)}&array=${array}${ schemaUri ? "&uri=" + schemaUri : ""}`,
     list: (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) => `${base}/list?${paginationParams(pagination)}&query=${encodeURIComponent(query)}&matchAll=${matchAll}&roles=${roles}&trashed=${trashed}`,
     suggest: (query: string, roles: string) => `${base}/autocomplete?query=${encodeURIComponent(query)}&roles=${roles}`,
-    js: (runId: number, token?: string) => `${base}/${runId}/js`,
     listByTest: (testId: number, pagination: PaginationInfo, trashed: boolean, tags: string) => `${base}/list/${testId}?${paginationParams(pagination)}&trashed=${!!trashed}&tags=${tags}`,
+    listBySchema: (uri: string, pagination: PaginationInfo) => `${base}/bySchema?uri=${encodeURIComponent(uri)}&${paginationParams(pagination)}`,
     resetToken: (runId: number) => `${base}/${runId}/resetToken`,
     dropToken: (runId: number) => `${base}/${runId}/dropToken`,
     updateAccess: (runId: number, owner: string, access: Access) => `${base}/${runId}/updateAccess?owner=${owner}&access=${accessName(access)}`,
@@ -24,18 +24,22 @@ const endPoints = {
     schema: (runId: number, path?: string) => `${base}/${runId}/schema${ (path && "?path=" + path) || ""}`,
 }
 
-export const get = (id: number, token?: string, js?: any) => {
-    if(typeof js === "undefined" || js === null){
-        return fetchApi(endPoints.getRun(id, token),null,'get');
-    }else{
-        return fetchApi(endPoints.js(id, token),js,'post');
-    }
+export const get = (id: number, token?: string) => {
+    return fetchApi(endPoints.getRun(id, token),null,'get');
+}
+
+export function query(id: number, query: string, array: boolean, schemaUri?: string) {
+    return fetchApi(endPoints.query(id, query, array, schemaUri), null, 'get')
 }
 
 export const byTest = (id: number, pagination: PaginationInfo, trashed: boolean, tags: string) => fetchApi(endPoints.listByTest(id, pagination, trashed, tags), null, 'get');
 
 export function list(query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) {
     return fetchApi(endPoints.list(query, matchAll, roles, pagination, trashed), null, 'get')
+}
+
+export function listBySchema(uri: string, pagination: PaginationInfo) {
+    return fetchApi(endPoints.listBySchema(uri,pagination), null, 'get')
 }
 
 export const suggest = (query: string, roles: string) => fetchApi(endPoints.suggest(query, roles), null, 'get');

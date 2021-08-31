@@ -17,7 +17,6 @@ import {
 } from '@patternfly/react-core';
 import {
     ImportIcon,
-    OutlinedTimesCircleIcon
 } from '@patternfly/react-icons';
 import jsonpath from 'jsonpath';
 
@@ -35,11 +34,11 @@ import { toString } from '../../components/Editor';
 import Editor from '../../components/Editor/monaco/Editor';
 import AccessIcon from '../../components/AccessIcon'
 import AccessChoice from '../../components/AccessChoice'
-import JsonPathDocsLink from '../../components/JsonPathDocsLink'
 import SavedTabs, { SavedTab } from '../../components/SavedTabs'
 import TeamSelect from '../../components/TeamSelect'
 import { Extractor } from '../../components/Accessors';
 import { Schema as SchemaDef, SchemaDispatch } from './reducers';
+import Extractors from './Extractors'
 
 type SchemaParams = {
     schemaId: string,
@@ -170,71 +169,7 @@ function General(props: GeneralProps) {
         </Form>)
 }
 
-type ExtractorsProps = {
-    extractors: Extractor[]
-    setExtractors(extractors: Extractor[]): void,
-    isTester: boolean,
-}
 
-function Extractors(props: ExtractorsProps) {
-    return (<>{ props.extractors.filter((e: Extractor) => !e.deleted).map((e: Extractor) =>
-        <Form isHorizontal={true} style={{ gridGap: "2px", marginBottom: "10px", paddingRight: "40px", position: "relative" }}>
-            <FormGroup label="Accessor" fieldId="accessor">
-                <TextInput
-                    id="accessor"
-                    value={e.newName || ""}
-                    isReadOnly={!props.isTester}
-                    onChange={newValue => {
-                        e.newName = newValue
-                        e.changed = true
-                        props.setExtractors([...props.extractors])
-                    }}/>
-            </FormGroup>
-            <FormGroup
-                label={
-                    <>JSON path <JsonPathDocsLink /></>
-                }
-                fieldId="jsonpath"
-                validated={ !e.validationResult || e.validationResult.valid ? "default" : "error"}
-                helperTextInvalid={ e.validationResult?.reason || ""  }>
-                <TextInput
-                    id="jsonpath"
-                    value={e.jsonpath || ""}
-                    isReadOnly={!props.isTester}
-                    onChange={newValue => {
-                        e.jsonpath = newValue;
-                        e.changed = true
-                        e.validationResult = undefined
-                        props.setExtractors([...props.extractors])
-                        if (e.validationTimer) {
-                            clearTimeout(e.validationTimer)
-                        }
-                        e.validationTimer = window.setTimeout(() => {
-                            if (e.jsonpath) {
-                                api.testJsonPath(e.jsonpath).then(result => {
-                                    e.validationResult = result
-                                    props.setExtractors([...props.extractors])
-                                })
-                            }
-                        }, 1000)
-                    }}
-                />
-            </FormGroup>
-            { props.isTester &&
-            <Button
-                variant="plain"
-                style={{ position: "absolute", right: "0px", top: "22px" }}
-                onClick={ () => {
-                    e.deleted = true;
-                    props.setExtractors([...props.extractors])
-                }}
-            >
-                <OutlinedTimesCircleIcon style={{color: "#a30000"}} />
-            </Button>
-            }
-        </Form>
-    )} </>)
-}
 
 export default function Schema() {
     const params = useParams<SchemaParams>();
@@ -290,7 +225,7 @@ export default function Schema() {
                 setOriginalExtractors(JSON.parse(JSON.stringify(exs))) // deep copy
             })
         }
-    }, [schemaId])
+    }, [schemaId, teams])
     const uri = currentSchema?.uri
     useEffect(() => {
         if (uri) {
@@ -396,6 +331,7 @@ export default function Schema() {
                             isModified={ () => modified }
                         >
                             <Extractors
+                                uri={ currentSchema?.uri || ""}
                                 extractors={extractors}
                                 setExtractors={extractors => {
                                     setExtractors(extractors)

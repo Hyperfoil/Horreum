@@ -28,6 +28,13 @@ public interface RunService {
    @Path("{id}/data")
    Object getData(@PathParam("id") Integer id, @QueryParam("token") String token);
 
+   @GET
+   @Path("{id}/query")
+   QueryResult queryData(@PathParam("id") Integer id,
+                         @QueryParam("query") String jsonpath,
+                         @QueryParam("uri") String schemaUri,
+                         @QueryParam("array") Boolean array);
+
    @POST
    @Path("{id}/resetToken")
    String resetToken(@PathParam("id") Integer id);
@@ -90,7 +97,17 @@ public interface RunService {
    @GET
    @Path("list/{testId}/")
    TestRunsSummary testList(@PathParam("testId") Integer testId,
-                            @QueryParam("trashed") boolean trashed, @QueryParam("tags") String tags, @QueryParam("limit") Integer limit,
+                            @QueryParam("trashed") boolean trashed,
+                            @QueryParam("tags") String tags,
+                            @QueryParam("limit") Integer limit,
+                            @QueryParam("page") Integer page,
+                            @QueryParam("sort") String sort,
+                            @QueryParam("direction") String direction);
+
+   @GET
+   @Path("bySchema")
+   RunsSummary listBySchema(@QueryParam("uri") String uri,
+                            @QueryParam("limit") Integer limit,
                             @QueryParam("page") Integer page,
                             @QueryParam("sort") String sort,
                             @QueryParam("direction") String direction);
@@ -142,5 +159,9 @@ public interface RunService {
    class TestRunsSummary {
       public long total;
       public List<TestRunSummary> runs;
+   }
+
+   class QueryResult extends SqlService.JsonpathValidation {
+      public String value;
    }
 }

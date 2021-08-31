@@ -61,6 +61,19 @@ public class SqlServiceImpl implements SqlService {
       query.unwrap(org.hibernate.query.Query.class).setResultTransformer(transformer);
    }
 
+   static void setFromException(PersistenceException pe, JsonpathValidation result) {
+      result.valid = false;
+      if (pe.getCause() instanceof JDBCException) {
+         JDBCException je = (JDBCException) pe.getCause();
+         result.errorCode = je.getErrorCode();
+         result.sqlState = je.getSQLState();
+         result.reason = je.getSQLException().getMessage();
+         result.sql = je.getSQL();
+      } else {
+         result.reason = pe.getMessage();
+      }
+   }
+
    @Override
    @PermitAll
    public JsonpathValidation testJsonPath(String jsonpath) {
@@ -73,15 +86,14 @@ public class SqlServiceImpl implements SqlService {
    JsonpathValidation testJsonPathInternal(String jsonpath) {
       jsonpath = jsonpath.trim();
       JsonpathValidation result = new JsonpathValidation();
+      result.jsonpath = jsonpath;
       if (jsonpath.startsWith("strict") || jsonpath.startsWith("lax")) {
          result.valid = false;
-         result.jsonpath = jsonpath;
          result.reason = "Horreum always uses lax (default) jsonpaths.";
          return result;
       }
       if (!jsonpath.startsWith("$")) {
          result.valid = false;
-         result.jsonpath = jsonpath;
          result.reason = "Jsonpath should start with '$'";
          return result;
       }
@@ -91,17 +103,7 @@ public class SqlServiceImpl implements SqlService {
          query.getSingleResult();
          result.valid = true;
       } catch (PersistenceException pe) {
-         result.valid = false;
-         result.jsonpath = jsonpath;
-         if (pe.getCause() instanceof JDBCException) {
-            JDBCException je = (JDBCException) pe.getCause();
-            result.errorCode = je.getErrorCode();
-            result.sqlState = je.getSQLState();
-            result.reason = je.getSQLException().getMessage();
-            result.sql = je.getSQL();
-         } else {
-            result.reason = pe.getMessage();
-         }
+         setFromException(pe, result);
       }
       return result;
    }

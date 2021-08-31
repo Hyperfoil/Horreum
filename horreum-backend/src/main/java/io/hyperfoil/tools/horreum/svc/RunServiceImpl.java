@@ -30,6 +30,8 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+
+import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -110,6 +112,31 @@ public class RunServiceImpl implements RunService {
    @Override
    public Object getData(Integer id, String token) {
       return runQuery("SELECT data#>>'{}' from run where id = ?", token, id);
+   }
+
+   @PermitAll
+   @Override
+   public QueryResult queryData(Integer id, String jsonpath, String schemaUri, Boolean array) {
+      String func = array != null && array ? "jsonb_path_query_array" : "jsonb_path_query_first";
+      QueryResult result = new QueryResult();
+      result.jsonpath = jsonpath;
+      try {
+         if (schemaUri != null && !schemaUri.isEmpty()) {
+            jsonpath = jsonpath.trim();
+            if (jsonpath.startsWith("$")) {
+               jsonpath = jsonpath.substring(1);
+            }
+            String sqlQuery = "SELECT " + func + "(run.data, (rs.prefix || ?)::::jsonpath)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ? AND rs.uri = ?";
+            result.value = String.valueOf(runQuery(sqlQuery, null, jsonpath, id, schemaUri));
+         } else {
+            String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM run WHERE id = ?";
+            result.value = String.valueOf(runQuery(sqlQuery, null, jsonpath, id));
+         }
+         result.valid = true;
+      } catch (PersistenceException pe) {
+         SqlServiceImpl.setFromException(pe, result);
+      }
+      return result;
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -614,6 +641,43 @@ public class RunServiceImpl implements RunService {
          TestRunsSummary summary = new TestRunsSummary();
          summary.total = trashed ? Run.count("testid = ?1", testId) : Run.count("testid = ?1 AND trashed = false", testId);
          summary.runs = runs;
+         return summary;
+      }
+   }
+
+   @PermitAll
+   @Override
+   public RunsSummary listBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
+      if (uri == null || uri.isEmpty()) {
+         throw ServiceException.badRequest("No `uri` query parameter given.");
+      }
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
+               .append("run.owner, run.access, run.token, test.name AS testname, run.description ")
+               .append("FROM run_schemas rs JOIN run ON rs.runid = run.id JOIN test ON rs.testid = test.id ")
+               .append("WHERE uri = ? AND NOT run.trashed");
+         addPaging(sql, limit, page, sort, direction);
+         Query query = em.createNativeQuery(sql.toString());
+         query.setParameter(1, uri);
+         @SuppressWarnings("unchecked")
+         List<Object[]> runs = query.getResultList();
+
+         RunsSummary summary = new RunsSummary();
+         summary.runs = runs.stream().map(row -> {
+            RunSummary run = new RunSummary();
+            run.id = (int) row[0];
+            run.start = ((Timestamp) row[1]).getTime();
+            run.stop = ((Timestamp) row[2]).getTime();
+            run.testid = (int) row[3];
+            run.owner = (String) row[4];
+            run.access = (int) row[5];
+            run.token = (String) row[6];
+            run.testname = (String) row[7];
+            run.description = (String) row[8];
+            return run;
+         }).collect(Collectors.toList());
+         summary.total = ((BigInteger) em.createNativeQuery("SELECT count(*) FROM run_schemas WHERE uri = ?")
+               .setParameter(1, uri).getSingleResult()).longValue();
          return summary;
       }
    }
