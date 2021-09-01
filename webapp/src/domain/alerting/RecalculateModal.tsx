@@ -62,13 +62,18 @@ export default function RecalculateModal(props : RecalculateModalProps) {
     const [timeRange, setTimeRange] = useState<TimeRange>()
     const timer = useRef<number>()
     const [result, setResult] = useState<RecalculationResult>()
+    const close = () => {
+        setProgress(-1)
+        if (timer.current) {
+            window.clearInterval(timer.current)
+        }
+        props.onClose()
+    }
     const fetchProgress = () => {
         recalculateProgress(props.testId).then(
             response => {
                 if (response.done) {
-                    setProgress(-1)
-                    window.clearInterval(timer.current)
-                    props.onClose()
+                    close()
                     if (response.errors !== 0 || !isEmpty(response.runsWithoutAccessor) || !isEmpty(response.runsWithoutValue)) {
                         setResult(response)
                     }
@@ -77,9 +82,7 @@ export default function RecalculateModal(props : RecalculateModalProps) {
                 }
             },
             error => {
-                setProgress(-1)
-                window.clearInterval(timer.current)
-                props.onClose()
+                close()
                 dispatch(alertAction("RECALC_PROGRESS", "Cannot query recalculation progress", error))
             }
         )
@@ -88,13 +91,7 @@ export default function RecalculateModal(props : RecalculateModalProps) {
         variant="small"
         title={props.title}
         isOpen={props.isOpen}
-        onClose={() => {
-            setProgress(-1)
-            if (timer.current) {
-                window.clearInterval(timer.current)
-            }
-            props.onClose()
-        }}
+        onClose={close}
         actions={ progress < 0 ? [
             <Button
                 key={1}
@@ -118,7 +115,13 @@ export default function RecalculateModal(props : RecalculateModalProps) {
                 variant="secondary"
                 onClick={ props.onClose }
             >{ props.cancel }</Button>
-        ] : []}
+        ] : [
+            <Button
+                key={3}
+                variant="secondary"
+                onClick={close}
+            >Continue recalculation in background...</Button>
+        ]}
     >
         { progress < 0 && <Form isHorizontal>
             { props.message }
