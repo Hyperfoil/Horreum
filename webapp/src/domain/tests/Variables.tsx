@@ -178,7 +178,7 @@ function checkVariable(v: Variable) {
         return "Variable requires at least one accessor"
     } else if (v.accessors.split(';').length > 1 && !v.calculation) {
         return "Variable defines multiple accessors but does not define any function to combine these."
-    } else if (v.accessors.endsWith("[]")) {
+    } else if (v.accessors.endsWith("[]") && !v.calculation) {
         return "Variable fetches all matches but does not define any function to combine these."
     }
 }
