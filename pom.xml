@@ -73,7 +73,7 @@
         <maven.compiler.parameters>true</maven.compiler.parameters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>2.1.0.Final</quarkus.version>
+        <quarkus.version>2.2.1.Final</quarkus.version>
         <surefire-plugin.version>2.22.0</surefire-plugin.version>
         <failsafe-plugin.version>3.0.0-M5</failsafe-plugin.version>
         <yaup.version>0.8.6</yaup.version>
