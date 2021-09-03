@@ -74,8 +74,10 @@ const renderCell = (render: string | Function | undefined) => (arg: C) => {
             } else {
                 return rendered;
             }
+        } else if (typeof rendered === "object") {
+            return JSON.stringify(rendered)
         } else {
-            return rendered;
+            return rendered + "";
         }
     } catch (e) {
         console.warn("Error in render function %s trying to render %O: %O", render.toString(), useValue, e)
