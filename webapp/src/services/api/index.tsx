@@ -90,10 +90,6 @@ export const fetchApi = (endPoint: string, payload: any = {}, method: string = '
                                 title: "Request failed due to insufficient permissions",
                                 content: (<TryLoginAgain />),
                              }})
-         } else if (e.response.status >= 500) {
-            e.response.text().then((body: any) => body, (noBody: any) => noBody).then(
-               (body: any) => store.dispatch(alertAction("SERVER_ERROR", e.response.status + " " + e.response.statusText, body))
-            )
          }
          return e.response.json().then((body: any) => {
             return Promise.reject(body)

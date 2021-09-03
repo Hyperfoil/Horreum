@@ -32,7 +32,6 @@ export const fetchSummary = (roles?: string) => (dispatch: Dispatch<LoadingActio
         error => {
             dispatch(loading(false))
             dispatch(alertAction("FETCH_TEST_SUMMARY", "Failed to fetch test summary.", error))
-            return Promise.reject(error)
         }
     )
 }
@@ -44,7 +43,6 @@ export const fetchTest = (id: number) => (dispatch: Dispatch<LoadingAction | Loa
         error => {
             dispatch(loading(false))
             dispatch(alertAction("FETCH_TEST", "Failed to fetch test; the test may not exist or you don't have sufficient permissions to access it.", error))
-            return Promise.reject(error)
         }
     )
 }
