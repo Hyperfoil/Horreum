@@ -41,12 +41,12 @@ services:
   keycloak:
     depends_on:
     - postgres
-    image: docker.io/jboss/keycloak:latest
+    image: quay.io/keycloak/keycloak
     entrypoint: /cwd/keycloak.sh
     environment:
     - KEYCLOAK_USER=admin
     - KEYCLOAK_PASSWORD=secret
-    - KEYCLOAK_LOGLEVEL=DEBUG
+    #- KEYCLOAK_LOGLEVEL=DEBUG
     - ROOT_LOGLEVEL=INFO
     - DB_VENDOR=postgres
     - DB_ADDR=172.17.0.1
@@ -62,7 +62,7 @@ services:
   app-init:
     depends_on:
     - keycloak
-    image: docker.io/dwdraju/alpine-curl-jq:latest
+    image: docker.io/dwdraju/alpine-curl-jq
     restart: on-failure
     command:
     - bash
