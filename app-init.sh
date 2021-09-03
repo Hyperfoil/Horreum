@@ -13,7 +13,8 @@ else
 fi
 
 
-while ! curl --fail $KEYCLOAK_HOST:8180; do
+while ! curl -s --fail $KEYCLOAK_HOST:8180 > /dev/null; do
+  echo 'Waiting for Keycloak to start.'
   sleep 5;
 done
 KEYCLOAK_ADMIN_TOKEN=$(curl -s $KEYCLOAK_HOST:8180/auth/realms/master/protocol/openid-connect/token -X POST -H 'content-type: application/x-www-form-urlencoded' -d 'username=admin&password=secret&grant_type=password&client_id=admin-cli' | jq -r .access_token)
@@ -59,5 +60,5 @@ curl -s $KEYCLOAK_BASEURL/roles -H "$AUTH" -H 'content-type: application/json' -
 TEAM_TESTER_ID=$(curl -s $KEYCLOAK_BASEURL/roles/dev-tester -H "$AUTH" | jq -r '.id')
 curl -s $KEYCLOAK_BASEURL/roles/dev-tester/composites -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_ID'"},{"id":"'$TESTER_ID'"},{"id":"'$VIEWER_ID'"}]'
 curl -s $KEYCLOAK_BASEURL/users -H "$AUTH" -X POST -d '{"username":"user","enabled":true,"firstName":"Dummy","lastName":"User","credentials":[{"type":"password","value":"secret"}],"email":"user@example.com"}' -H 'content-type: application/json'
-USER_ID=$(curl -s $KEYCLOAK_BASEURL/users -H "$AUTH" | jq -r '.[] | select(.username="user") | .id')
+USER_ID=$(curl -s $KEYCLOAK_BASEURL/users -H "$AUTH" | jq -r '.[] | select(.username=="user") | .id')
 curl -s $KEYCLOAK_BASEURL/users/$USER_ID/role-mappings/realm -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_UPLOADER_ID'","name":"dev-uploader"},{"id":"'$TEAM_TESTER_ID'","name":"dev-tester"},{"id":"'$ADMIN_ID'","name":"admin"}]'
