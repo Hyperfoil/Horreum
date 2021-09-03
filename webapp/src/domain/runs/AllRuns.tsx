@@ -283,7 +283,7 @@ export default function AllRuns() {
                  />
               </div>
             </CardHeader>
-            <CardBody>
+            <CardBody style={{ overflowX: "auto"}}>
               <Table
                   columns={columns}
                   data={runs || []}

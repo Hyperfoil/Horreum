@@ -98,7 +98,7 @@ export default function AllSchema() {
                     </NavLink>
                 </CardHeader>
                 }
-                <CardBody>
+                <CardBody style={{ overflowX: "auto"}}>
                     <Table columns={columns} data={list || []} />
                 </CardBody>
             </Card>

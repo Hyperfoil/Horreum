@@ -287,7 +287,7 @@ export default function TestRuns() {
                         onPerPageSelect={(e, pp) => setPerPage(pp)}
                     />
                 </CardHeader>
-                <CardBody>
+                <CardBody style={{ overflowX: "auto"}}>
                     <Table
                         columns={tableColumns}
                         data={runs || []}

@@ -251,7 +251,7 @@ export default function AllTests() {
                   }} />
               </div> }
             </CardHeader>
-            <CardBody>
+            <CardBody style={{ overflowX: "auto"}}>
               <Table columns={columns} data={allTests || []} isLoading={isLoading}/>
             </CardBody>
           </Card>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
     Button,
     Chip,
@@ -25,13 +25,15 @@ import { useTester } from '../../auth'
 
 
 export function Description(description: string) {
-    return (<>
+    return (<Tooltip content={description}>
         <span style={{
             whiteSpace: "nowrap",
             overflow: "hidden",
-            textOverflow: "ellipsis"
+            textOverflow: "ellipsis",
+            maxWidth: "300px",
+            display: "inline-block"
         }}>{description}</span>
-    </>)
+    </Tooltip>)
 }
 
 export const ExecutionTime = (run: Run) =>
