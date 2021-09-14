@@ -44,7 +44,7 @@ function checkComponent(v: ViewComponent) {
         return "View component requires at least one accessor"
     } else if (v.accessors.split(';').length > 1 && !v.render) {
         return "View component defines multiple accessors but does not define any function to combine these."
-    } else if (v.accessors.endsWith("[]")) {
+    } else if (v.accessors.endsWith("[]") && !v.render) {
         return "View component fetches all matches but does not define any function to combine these."
     }
 }
