@@ -17,6 +17,7 @@ import {alertAction, constraintValidationFormatter} from '../../alerts'
 import Accessors from '../../components/Accessors'
 import TagsSelect, { convertTags, SelectedTags } from '../../components/TagsSelect'
 import Editor from '../../components/Editor/monaco/Editor'
+import OptionalFunction from '../../components/OptionalFunction'
 
 import {Test, TestDispatch, StalenessSettings} from './reducers';
 
@@ -45,6 +46,7 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
     const [compareUrl, setCompareUrl] = useState<string | undefined>(undefined)
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
     const [tags, setTags] = useState<string[]>([])
+    const [tagsCalculation, setTagsCalculation] = useState<string>()
     const [stalenessSettings, setStalenessSettings] = useState<StalenessSettingsDisplay[]>([])
     const [newStalenessTags, setNewStalenessTags] = useState<SelectedTags>()
 
@@ -52,6 +54,7 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
         setName(test ? test.name : "");
         setDescription(test ? test.description : "");
         setTags(test && test.tags ? test.tags.split(";").filter(t => t !== "") : []);
+        setTagsCalculation(test && test.tagsCalculation)
         setCompareUrl(test?.compareUrl?.toString() || undefined)
         setNotificationsEnabled(!test || test.notificationsEnabled)
         setStalenessSettings(test?.stalenessSettings?.map(ss => ({ ...ss,
@@ -82,6 +85,7 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                 compareUrl: compareUrl || undefined, // when empty set to undefined
                 notificationsEnabled,
                 tags: tags.join(";"),
+                tagsCalculation: tagsCalculation || undefined,
                 owner: test?.owner || defaultRole || "__test_created_without_a_role__",
                 access: test ? test.access : 2, // || notation does not work well with 0
                 tokens: [],
@@ -145,34 +149,34 @@ export default function General({test, onTestIdChange, onModified, funcsRef}: Ge
                     isReadOnly={!isTester}
                     allowArray={false}/>
             </FormGroup>
+            <FormGroup label="Tags calculation function" fieldId="tagsCalculation"
+                       helperText="Customizable function to select tags">
+                <OptionalFunction
+                    readOnly={ !isTester }
+                    func={ tagsCalculation }
+                    defaultFunc="tags => tags"
+                    addText="Add tags calculation function..."
+                    undefinedText="Tags calculation function is not defined"
+                    onChange={ value => {
+                        setTagsCalculation(value)
+                        onModified(true)
+                    }}
+                />
+            </FormGroup>
             <FormGroup label="Compare URL function"
                        fieldId="compareUrl"
                        helperText="This function receives an array of ids as first argument and auth token as second. It should return URL to comparator service.">
-                {compareUrl === undefined ? (
-                    isTester ? (<Button
-                        variant="link"
-                        onClick={() => {
-                            setCompareUrl("(ids, token) => 'http://example.com/compare?ids=' + ids.join(',')")
-                            onModified(true)
-                        }}
-                    >Add compare function...</Button>
-                    ) : "Compare function is not defined"
-                ) : (
-                    <div style={{minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto"}}>
-                        { /* TODO: call onModified(true) */}
-                        <Editor value={compareUrl}
-                                onChange={ value => {
-                                    setCompareUrl(value || "")
-                                    onModified(true)
-                                }}
-                                language="typescript"
-                                options={{
-                                    wordWrap: 'on',
-                                    wrappingIndent: 'DeepIndent',
-                                    readOnly: !isTester
-                                }}/>
-                    </div>)
-                }
+                <OptionalFunction
+                    readOnly={ !isTester }
+                    func={ compareUrl }
+                    defaultFunc="(ids, token) => 'http://example.com/compare?ids=' + ids.join(',')"
+                    addText="Add compare function..."
+                    undefinedText="Compare function is not defined"
+                    onChange={ value => {
+                        setCompareUrl(value)
+                        onModified(true)
+                    }}
+                />
             </FormGroup>
             <FormGroup
                 label="Notifications"

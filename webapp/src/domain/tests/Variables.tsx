@@ -30,6 +30,7 @@ import {
 import Accessors from '../../components/Accessors'
 import Editor from '../../components/Editor/monaco/Editor'
 import LogSlider from '../../components/LogSlider'
+import OptionalFunction from '../../components/OptionalFunction'
 import RecalculateModal from '../alerting/RecalculateModal'
 import TestSelect, { SelectedTest } from '../../components/TestSelect'
 import CalculationLogModal from './CalculationLogModal'
@@ -239,26 +240,17 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
                         isReadOnly={!isTester} />
         </FormGroup>
         <FormGroup label="Calculation" fieldId="calculation">
-            { variable.calculation === undefined && (isTester ?
-                <Button
-                    variant="link"
-                    onClick={() => {
-                        variable.calculation = "value => value"
-                        onChange()
-                    }}
-                >Add calculation function...</Button> : "No calculation function")
-            }
-            { variable.calculation !== undefined &&
-                <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
-                    <Editor value={ (variable.calculation && variable.calculation.toString()) || "" }
-                            onChange={ value => {
-                                variable.calculation = value;
-                                onChange()
-                            }}
-                            language="typescript"
-                            options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', readOnly: !isTester }} />
-                </div>
-            }
+            <OptionalFunction
+                func={ variable.calculation === undefined ? undefined : variable.calculation.toString() }
+                onChange={ value => {
+                    variable.calculation = value
+                    onChange()
+                }}
+                defaultFunc="value => value"
+                addText="Add calculation function..."
+                undefinedText="No calculation function"
+                readOnly={ !isTester }
+            />
         </FormGroup>
         <ExpandableSection toggleText={ isExpanded ? "Hide settings" : "Show advanced settings" }
                            onToggle={setExpanded}

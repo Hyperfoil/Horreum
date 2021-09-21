@@ -56,6 +56,8 @@ public class Test extends PanacheEntityBase {
 
    public String tags;
 
+   public String tagsCalculation;
+
    @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE }, orphanRemoval = true)
    public View defaultView;
 

@@ -33,6 +33,7 @@ export interface Test {
     description: string,
     compareUrl: string | Function | undefined,
     tags: string,
+    tagsCalculation?: string,
     owner: string,
     access: Access,
     tokens: Token[],

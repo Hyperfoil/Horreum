@@ -1665,5 +1665,51 @@
                 USING (has_role('horreum.alerting'));
         </sql>
     </changeSet>
+
+    <changeSet id="32" author="rvansa">
+        <addColumn tableName="test">
+            <column name="tagscalculation" type="text"/>
+        </addColumn>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION auth_suffix(prefix TEXT) RETURNS text AS $$
+            BEGIN
+                RETURN concat(prefix, ';', current_setting('horreum.token', true), ';', current_setting('horreum.userroles', true));
+            END;
+            $$ LANGUAGE plpgsql STABLE;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_after_insert_run_schemas_func() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM pg_notify('calculate_tags', auth_suffix(NEW.runid::text) );
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_after_insert_test_func() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM pg_notify('calculate_tags', auth_suffix(run.id::text)) FROM run where run.testid = NEW.id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rt_after_update_extractor_func() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM * FROM (WITH test_tags AS (
+                    SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor FROM test
+                ), matching_runs AS (
+                    SELECT runid
+                        FROM schemaextractor se
+                        JOIN test_tags ON se.accessor = test_tags.accessor
+                        JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id
+                        WHERE se.id = NEW.id
+                )
+                SELECT pg_notify('calculate_tags', auth_suffix(runid::text)) FROM matching_runs) AS notify;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+    </changeSet>
 </databaseChangeLog>
 

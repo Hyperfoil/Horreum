@@ -15,7 +15,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -27,10 +26,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.transaction.HeuristicMixedException;
-import javax.transaction.HeuristicRollbackException;
 import javax.transaction.InvalidTransactionException;
-import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
@@ -318,7 +314,7 @@ public class AlertingServiceImpl implements AlertingService {
          try {
             old = tm.suspend();
             try {
-               withTx(() -> {
+               sqlService.withTx(() -> {
                   try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
                      logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Failed to extract regression variables from database. This is likely due to a malformed JSONPath in one of extractors.");
                      return null;
@@ -839,28 +835,6 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   private <T> T withTx(Supplier<T> supplier) {
-      try {
-         tm.begin();
-         try {
-            return supplier.get();
-         } catch (Throwable t) {
-            log.error("Failure in transaction", t);
-            tm.setRollbackOnly();
-            throw t;
-         } finally {
-            if (tm.getStatus() == Status.STATUS_ACTIVE) {
-               tm.commit();
-            } else {
-               tm.rollback();
-            }
-         }
-      } catch (SystemException | RollbackException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException ex) {
-         log.error("Failed to run transaction", ex);
-      }
-      return null;
-   }
-
    @Override
    @RolesAllowed(Roles.TESTER)
    public void recalculate(Integer testId, boolean notify,
@@ -873,7 +847,7 @@ public class AlertingServiceImpl implements AlertingService {
       vertx.executeBlocking(promise -> {
          Recalculation recalculation = null;
          try {
-            recalculation = withTx(() -> {
+            recalculation = sqlService.withTx(() -> {
                Recalculation r = new Recalculation();
                if (recalcProgress.putIfAbsent(testId, r) != null) {
                   promise.complete();
@@ -905,7 +879,7 @@ public class AlertingServiceImpl implements AlertingService {
                   // Since the evaluation might take few moments and we're dealing potentially with thousands
                   // of runs we'll process each run in a separate transaction
                   Recalculation r = recalculation;
-                  withTx(() -> {
+                  sqlService.withTx(() -> {
                      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
                         Run run = Run.findById(runId);
                         onNewRun(run, false, debug, r);

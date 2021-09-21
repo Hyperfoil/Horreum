@@ -23,6 +23,7 @@ import { useTester } from '../../auth'
 
 import { alertAction } from '../../alerts'
 import Accessors from '../../components/Accessors'
+import OptionalFunction from '../../components/OptionalFunction'
 import { View, ViewComponent, TestDispatch } from './reducers';
 import { TabFunctionsRef } from './Test'
 import { updateView } from './actions'
@@ -73,26 +74,17 @@ const ViewComponentForm = ({ c, onChange, isTester } : ViewComponentFormProps) =
                         isReadOnly={!isTester} />
             </FormGroup>
             <FormGroup label="Rendering" fieldId="rendering">
-                { !c.render || c.render === "" ? (isTester ?
-                    <Button
-                        variant="link"
-                        onClick={() => {
-                            c.render = "(value, run, token) => value"
-                            onChange()
-                        }}
-                    >Add render function...</Button> : "No render function"
-                ) : (
-                    <div style={{ minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto" }}>
-                        { /* TODO: call onModified(true) */ }
-                        <Editor value={ (c.render && c.render.toString()) || "" }
-                                onChange={ value => {
-                                    c.render = value
-                                    onChange()
-                                }}
-                                language="typescript"
-                                options={{ wordWrap: 'on', wrappingIndent: 'DeepIndent', language: 'typescript', readOnly: !isTester }} />
-                    </div>)
-                }
+                <OptionalFunction
+                    func={ c.render === undefined ? undefined : c.render.toString()}
+                    onChange={ value => {
+                        c.render = value
+                        onChange()
+                    }}
+                    defaultFunc="(value, run, token) => value"
+                    addText="Add render function..."
+                    undefinedText="No render function."
+                    readOnly={ !isTester }
+                />
             </FormGroup>
         </Form>
     )

@@ -109,6 +109,7 @@ public class TestServiceImpl implements TestService {
       }
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          addAuthenticated(test);
+         Hibernate.initialize(test.tokens);
          return test;
       }
    }

@@ -8,13 +8,19 @@ import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.yaup.json.Json;
+import io.hyperfoil.tools.yaup.json.ValueConverter;
+import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.eventbus.EventBus;
 
+import org.graalvm.polyglot.PolyglotException;
+import org.graalvm.polyglot.Value;
 import org.jboss.logging.Logger;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -31,6 +37,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -46,15 +53,32 @@ import java.util.stream.Collectors;
 
 import com.networknt.schema.ValidationMessage;
 
+@ApplicationScoped
+@Startup
 public class RunServiceImpl implements RunService {
    private static final Logger log = Logger.getLogger(RunServiceImpl.class);
 
    //@formatter:off
-   private static final String FIND_AUTOCOMPLETE = "SELECT * FROM (" +
+   private static final String FIND_AUTOCOMPLETE =
+         "SELECT * FROM (" +
             "SELECT DISTINCT jsonb_object_keys(q) AS key " +
             "FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
+   private static final String GET_TAGS =
+         "WITH test_tags AS (" +
+            "SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor, tagscalculation FROM test" +
+         "), tags AS (" +
+            "SELECT rs.runid, se.id as extractor_id, se.accessor, jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::::jsonpath) AS value, test_tags.tagscalculation " +
+            "FROM schemaextractor se " +
+            "JOIN test_tags ON se.accessor = test_tags.accessor " +
+            "JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id " +
+            "JOIN run ON run.id = rs.runid " +
+            "WHERE rs.runid = ?" +
+         ")" +
+         "SELECT tagscalculation, " +
+            "json_object_agg(tags.accessor, tags.value)::::text AS tags, " +
+            "json_agg(tags.extractor_id)::::text AS extractor_ids FROM tags GROUP BY runid, tagscalculation;";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -83,6 +107,71 @@ public class RunServiceImpl implements RunService {
    SchemaServiceImpl schemaService;
 
    @Context HttpServletResponse response;
+
+   @PostConstruct
+   public void init() {
+      sqlService.registerListener("calculate_tags", this::onCalculateTags);
+   }
+
+   private void onCalculateTags(String param) {
+      String[] parts = param.split(";", 3);
+      if (parts.length < 3) {
+         log.errorf("Received notification to recalculate tags %s but cannot extract run ID.", param);
+         return;
+      }
+      int runId;
+      try {
+         runId = Integer.parseInt(parts[0]);
+      } catch (NumberFormatException e) {
+         log.errorf("Received notification to recalculate tags for run %s but cannot parse as run ID.", parts[0]);
+         return;
+      }
+      try (@SuppressWarnings("ununsed") CloseMe h1 = sqlService.withRoles(em, parts[2]);
+           @SuppressWarnings("ununsed") CloseMe h2 = sqlService.withToken(em, parts[1])) {
+         log.debugf("Recalculating tags for run %s", runId);
+         Object[] result = (Object[]) em.createNativeQuery(GET_TAGS).setParameter(1, runId).getSingleResult();
+         String calculation = (String) result[0];
+         String tags = String.valueOf(result[1]);
+         String extractorIds = String.valueOf(result[2]);
+
+         if (calculation != null) {
+            StringBuilder jsCode = new StringBuilder();
+            jsCode.append("const __obj = ").append(tags).append(";\n");
+            jsCode.append("const __func = ").append(calculation).append(";\n");
+            jsCode.append("__func(__obj);");
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
+               context.enter();
+               try {
+                  Value value = context.eval("js", jsCode);
+                  // TODO debuggable
+                  if (value.isNull()) {
+                     tags = null;
+                  } else {
+                     tags = ValueConverter.convert(value).toString();
+                     if ("undefined".equals(tags)) {
+                        tags = null;
+                     }
+                  }
+               } catch (PolyglotException e) {
+                  log.errorf(e, "Failed to evaluate tags function on run %d.", runId);
+                  log.infof("Offending code: %s", jsCode);
+                  return;
+               } finally {
+                  if (out.size() > 0) {
+                     log.infof("Output while calculating tags for run %d: <pre>%s</pre>", runId, out.toString());
+                  }
+                  context.leave();
+               }
+            }
+         }
+         Query insert = em.createNativeQuery("INSERT INTO run_tags (runid, tags, extractor_ids) VALUES (?, ?::::jsonb, ARRAY(SELECT jsonb_array_elements(?::::jsonb)::::int));");
+         insert.setParameter(1, runId).setParameter(2, tags).setParameter(3, extractorIds);
+         if (insert.executeUpdate() != 1) {
+            log.errorf("Failed to insert run tags for run %d (invalid update count - maybe missing privileges?)", runId);
+         }
+      }
+   }
 
    private Object runQuery(String query, String token, Object... params) {
       try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);

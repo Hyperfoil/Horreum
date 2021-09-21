@@ -2,6 +2,8 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SqlService;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.vertx.core.Vertx;
+import io.vertx.pgclient.PgConnection;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
@@ -10,6 +12,10 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
+import javax.transaction.HeuristicMixedException;
+import javax.transaction.HeuristicRollbackException;
+import javax.transaction.NotSupportedException;
+import javax.transaction.RollbackException;
 import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
@@ -19,11 +25,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.hibernate.JDBCException;
@@ -40,6 +49,15 @@ public class SqlServiceImpl implements SqlService {
 
    @Inject
    EntityManager em;
+
+   @Inject
+   io.vertx.mutiny.pgclient.PgPool client;
+
+   PgConnection listenerConnection;
+   final Map<String, List<Consumer<String>>> listeners = new HashMap<>();
+
+   @Inject
+   Vertx vertx;
 
    @Inject
    TransactionManager tm;
@@ -111,6 +129,37 @@ public class SqlServiceImpl implements SqlService {
    @PostConstruct
    void init() {
       dbSecretBytes = dbSecret.getBytes(StandardCharsets.UTF_8);
+      listenerConnection = (PgConnection) client.getConnectionAndAwait().getDelegate();
+      listenerConnection.notificationHandler(notification ->
+            vertx.executeBlocking(any -> handleNotification(notification.getChannel(), notification.getPayload())));
+   }
+
+   public void registerListener(String channel, Consumer<String> consumer) {
+      synchronized (listeners) {
+         List<Consumer<String>> consumers = listeners.get(channel);
+         if (consumers == null) {
+            listenerConnection.query("LISTEN \"" + channel + "\"").execute()
+                  .onFailure(e -> log.errorf(e, "Failed to register PostgreSQL notification listener on channel %s", channel))
+                  .onSuccess(ignored -> log.infof("Listening for PostgreSQL notification on channel %s", channel));
+            consumers = new ArrayList<>();
+            listeners.put(channel, consumers);
+         }
+         consumers.add(consumer);
+      }
+   }
+
+   private void handleNotification(String channel, String payload) {
+      synchronized (listeners) {
+         List<Consumer<String>> consumers = listeners.get(channel);
+         if (consumers != null) {
+            for (Consumer<String> c : consumers) {
+               withTx(() -> {
+                  c.accept(payload);
+                  return null;
+               });
+            }
+         }
+      }
    }
 
    private String getSignedRoles(Iterable<String> roles) throws NoSuchAlgorithmException {
@@ -179,7 +228,10 @@ public class SqlServiceImpl implements SqlService {
       return withRoles(em, signedRoles);
    }
 
-   private CloseMe withRoles(EntityManager em, String signedRoles) {
+   CloseMe withRoles(EntityManager em, String signedRoles) {
+      if (signedRoles == null || signedRoles.isEmpty()) {
+         return NOOP;
+      }
       Query setRoles = em.createNativeQuery(SET_ROLES);
       setRoles.setParameter(1, signedRoles);
       boolean inTx = isInTx();
@@ -219,5 +271,27 @@ public class SqlServiceImpl implements SqlService {
             unsetToken.getSingleResult();
          });
       }
+   }
+
+   <T> T withTx(Supplier<T> supplier) {
+      try {
+         tm.begin();
+         try {
+            return supplier.get();
+         } catch (Throwable t) {
+            log.error("Failure in transaction", t);
+            tm.setRollbackOnly();
+            throw t;
+         } finally {
+            if (tm.getStatus() == Status.STATUS_ACTIVE) {
+               tm.commit();
+            } else {
+               tm.rollback();
+            }
+         }
+      } catch (SystemException | RollbackException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException ex) {
+         log.error("Failed to run transaction", ex);
+      }
+      return null;
    }
 }
