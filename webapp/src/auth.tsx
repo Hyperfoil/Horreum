@@ -165,7 +165,7 @@ export const initKeycloak = (state: State) => {
                   .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
                   .catch(error => store.dispatch(alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error)))
                fetchApi("/api/user/defaultTeam", null, 'GET', { 'accept': 'text/plain' }, 'text').then(
-                  response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response }),
+                  response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
                   error => store.dispatch(alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve default role", error))
                )
                keycloak.onTokenExpired = () => keycloak.updateToken(30)
