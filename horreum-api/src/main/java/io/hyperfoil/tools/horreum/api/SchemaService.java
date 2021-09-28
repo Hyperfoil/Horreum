@@ -29,6 +29,7 @@ public interface SchemaService {
    Schema getSchema(@PathParam("id") int id, @QueryParam("token") String token);
 
    @POST
+   @Consumes(MediaType.APPLICATION_JSON)
    Integer add(Schema schema);
 
    List<Schema> all();
@@ -53,6 +54,7 @@ public interface SchemaService {
 
    @POST
    @Path("{id}/updateAccess")
+   @Consumes(MediaType.TEXT_PLAIN) //is POST the correct verb for this method as we are not uploading a new artefact?
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
    void updateAccess(@PathParam("id") Integer id,
                      @QueryParam("owner") String owner,
