@@ -9,7 +9,7 @@ services:
     - POSTGRES_USER=dbadmin
     - POSTGRES_PASSWORD=secret
     ports:
-    - 5432:5432
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
     - horreum_pg12:/var/lib/postgresql/data
   db-init:
@@ -18,8 +18,8 @@ services:
     image: docker.io/postgres:12
     restart: on-failure
     environment:
-    - PGHOST=172.17.0.1
-    - PGPORT=5432
+    - "PGHOST=${CONTAINER_HOST_IP:-172.17.0.1}"
+    - "PGPORT=${POSTGRES_PORT:-5432}"
     - PGDATABASE=horreum
     - PGUSER=dbadmin
     - PGPASSWORD=secret
@@ -49,16 +49,16 @@ services:
     #- KEYCLOAK_LOGLEVEL=DEBUG
     - ROOT_LOGLEVEL=INFO
     - DB_VENDOR=postgres
-    - DB_ADDR=172.17.0.1
-    - DB_PORT=5432
+    - "DB_ADDR=${CONTAINER_HOST_IP:-172.17.0.1}"
+    - "DB_PORT=${POSTGRES_PORT:-5432}"
     - DB_DATABASE=keycloak
     - DB_USER=keycloak
     - DB_PASSWORD=secret
     ports:
-    - 8180:8180
+    - "${KEYCLOAK_HTTP_PORT:-8180}:8180"
     volumes:
-    - ./horreum-backend/src/main/resources:/etc/keycloak/imports:ro,z
-    - ./:/cwd:rw,z
+    - "${RESOURCES_PATH:-./horreum-backend/src/main/resources}:/etc/keycloak/imports:ro,z"
+    - "${WORKING_PATH:-./}:/cwd:ro,z"
   app-init:
     depends_on:
     - keycloak
@@ -68,8 +68,9 @@ services:
     - bash
     - -x
     - /cwd/app-init.sh
+    - "${PORT_OFFSET:-0}"
     volumes:
-    - ./:/cwd:rw,z
+    - "${WORKING_PATH:-./}:/cwd:ro,z"
   grafana:
     depends_on:
     - keycloak
@@ -79,7 +80,7 @@ services:
     environment:
     - GF_INSTALL_PLUGINS=simpod-json-datasource
     - GF_LOG_LEVEL=debug
-    - GF_SERVER_ROOT_URL=http://localhost:4040/
+    - "GF_SERVER_ROOT_URL=${GRAFANA_GF_SERVER_ROOT_URL:-http://localhost:4040/}"
     - GF_USERS_DEFAULT_THEME=light
     - GF_SECURITY_ALLOW_EMBEDDING=true
     - GF_AUTH_DISABLE_LOGIN_FORM=true
@@ -87,11 +88,11 @@ services:
     - GF_AUTH_GENERIC_OAUTH_ENABLED=true
     - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
     - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
-    - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://localhost:8180/auth/realms/horreum/protocol/openid-connect/auth
-    - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/token
-    - GF_AUTH_GENERIC_OAUTH_API_URL=http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/userinfo
+    - "GF_AUTH_GENERIC_OAUTH_AUTH_URL=${GF_AUTH_GENERIC_OAUTH_AUTH_URL:-http://localhost:8180/auth/realms/horreum/protocol/openid-connect/auth}"
+    - "GF_AUTH_GENERIC_OAUTH_TOKEN_URL=${GF_AUTH_GENERIC_OAUTH_TOKEN_URL:-http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/token}"
+    - "GF_AUTH_GENERIC_OAUTH_API_URL=${GF_AUTH_GENERIC_OAUTH_API_URL:-http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/userinfo}"
     - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=false
     ports:
-    - 4040:3000
+    - "${GRAFANA_HTTP_PORT:-4040}:3000"
     volumes:
-    - ./:/cwd/:ro,z
+    - "${WORKING_PATH:-./}:/cwd:ro,z"
