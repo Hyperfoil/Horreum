@@ -168,7 +168,7 @@ export const initKeycloak = (state: State) => {
                   response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
                   error => store.dispatch(alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve default role", error))
                )
-               keycloak.onTokenExpired = () => keycloak.updateToken(30)
+               keycloak.onTokenExpired = () => keycloak.updateToken(30).catch(e => console.log("Expired token update failed"))
             }
         })
       }
