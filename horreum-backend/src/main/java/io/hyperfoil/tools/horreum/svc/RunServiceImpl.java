@@ -171,6 +171,8 @@ public class RunServiceImpl implements RunService {
          if (insert.executeUpdate() != 1) {
             log.errorf("Failed to insert run tags for run %d (invalid update count - maybe missing privileges?)", runId);
          }
+      } catch (NoResultException e) {
+         log.infof("Run %d does not create any tags.", runId);
       }
    }
 

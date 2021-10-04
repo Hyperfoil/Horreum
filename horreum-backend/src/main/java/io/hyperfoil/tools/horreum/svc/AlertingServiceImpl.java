@@ -43,7 +43,6 @@ import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.alerting.LastMissingRunNotification;
 import io.hyperfoil.tools.horreum.regression.RegressionModel;
 import io.hyperfoil.tools.horreum.regression.StatisticalVarianceRegressionModel;
-import io.hyperfoil.tools.yaup.StringUtil;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -51,7 +50,6 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.hibernate.jpa.TypedParameterValue;
-import org.hibernate.transform.AliasToEntityMapResultTransformer;
 import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
 
@@ -240,7 +238,8 @@ public class AlertingServiceImpl implements AlertingService {
          schemas.put(firstLevelSchema, null);
       }
 
-      StringBuilder extractionQuery = new StringBuilder("SELECT 1 AS __ignore_this_column__");
+      // Make sure that the return type will be Object[]
+      StringBuilder extractionQuery = new StringBuilder("SELECT 1");
       Map<Integer, VarInfo> vars = new HashMap<>();
       Map<String, Set<AccessorInfo>> allAccessors = new HashMap<>();
 
@@ -262,11 +261,17 @@ public class AlertingServiceImpl implements AlertingService {
          // note that as we do single query there may be array and non-array variant for different variables
          accessors.add(new AccessorInfo(schema, jsonpath));
       }
+      if (allAccessors.isEmpty()) {
+         log.infof("No regression vars for run %d, skipping.", run.id);
+         return;
+      }
 
+      String[] names = new String[allAccessors.size()];
+      int index = 0;
       for (var entry: allAccessors.entrySet()) {
          String accessor = entry.getKey();
+         names[index++] = accessor;
          boolean isArray = SchemaExtractor.isArray(accessor);
-         String column = StringUtil.quote(isArray ? SchemaExtractor.arrayName(accessor) + "___arr" : accessor, "\"");
          List<AccessorInfo> matching = entry.getValue().stream().filter(ai -> schemas.containsKey(ai.schema)).collect(Collectors.toList());
          if (matching.isEmpty()) {
             if (recalculation != null) {
@@ -289,22 +294,21 @@ public class AlertingServiceImpl implements AlertingService {
                if (i != 0) extractionQuery.append(", ");
                appendPathQuery(extractionQuery, schemas.get(ai.schema), isArray, ai.jsonpath);
             }
-            extractionQuery.append("])::::text as ").append(column);
+            extractionQuery.append("])::::text as _").append(index);
          } else {
+            extractionQuery.append(", ");
             AccessorInfo ai = matching.get(0);
             appendPathQuery(extractionQuery, schemas.get(ai.schema), isArray, ai.jsonpath);
-            extractionQuery.append("::::text as ").append(column);
+            extractionQuery.append("::::text as _").append(index);
          }
       }
 
       extractionQuery.append(" FROM current_run");
       Query extraction = em.createNativeQuery(extractionQuery.toString());
 
-      SqlServiceImpl.setResultTransformer(extraction, AliasToEntityMapResultTransformer.INSTANCE);
-      Map<String, Object> extracted;
+      Object[] result;
       try {
-         //noinspection unchecked
-         extracted = (Map<String, Object>) extraction.getSingleResult();
+         result = (Object[]) extraction.getSingleResult();
       } catch (NoResultException e) {
          log.errorf("Run %d does not exist in the database!", run.id);
          return;
@@ -328,7 +332,11 @@ public class AlertingServiceImpl implements AlertingService {
          }
          return;
       }
-      extracted.remove("__ignore_this_column__");
+      Map<String, Object> extracted = new HashMap<>();
+      for (int i = 0; i < names.length; i++) {
+         extracted.put(names[i], result[i + 1]);
+      }
+
       if (debug) {
          String data = extracted.isEmpty() ? "&lt;no data&gt;" : extracted.entrySet().stream().map(e -> (e.getKey() + " -> " + e.getValue())).collect(Collectors.joining("\n"));
          logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Fetched values for these accessors:<pre>%s</pre>", data);
@@ -349,8 +357,7 @@ public class AlertingServiceImpl implements AlertingService {
                logCalculationMessage(run.testid, run.id, CalculationLog.WARN, "Variable %s has more than one accessor (%s) but no calculation function.", var.name, var.accessors);
             }
             String accessor = var.accessors.stream().findFirst().orElseThrow();
-            String column = toColumn(accessor);
-            Object value = extracted.get(column);
+            Object value = extracted.get(accessor);
             if (value == null) {
                logCalculationMessage(run.testid, run.id, CalculationLog.INFO, "Null value for variable %s, accessor %s - datapoint is not created", var.name, accessor);
                if (recalculation != null) {
@@ -375,8 +382,7 @@ public class AlertingServiceImpl implements AlertingService {
             if (var.accessors.size() > 1) {
                code.append("const __obj = {\n");
                for (String accessor : var.accessors) {
-                  String column = toColumn(accessor);
-                  Object value = extracted.get(column);
+                  Object value = extracted.get(accessor);
                   if (SchemaExtractor.isArray(accessor)) {
                      code.append(SchemaExtractor.arrayName(accessor));
                   } else {
@@ -389,8 +395,7 @@ public class AlertingServiceImpl implements AlertingService {
                code.append("};\n");
             } else {
                code.append("const __obj = ");
-               String column = toColumn(var.accessors.stream().findFirst().orElseThrow());
-               Object value = extracted.get(column);
+               Object value = extracted.get(var.accessors.stream().findFirst().orElseThrow());
                appendValue(code, value);
                code.append(";\n");
             }
@@ -417,19 +422,11 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   private String toColumn(String accessor) {
-      String column = accessor;
-      if (SchemaExtractor.isArray(accessor)) {
-         column = SchemaExtractor.arrayName(column) + "___arr";
-      }
-      return column;
-   }
-
    private void appendPathQuery(StringBuilder query, Object topKey, boolean isArray, String jsonpath) {
       if (isArray) {
-         query.append(", jsonb_path_query_array(data, '");
+         query.append("jsonb_path_query_array(data, '");
       } else {
-         query.append(", jsonb_path_query_first(data, '");
+         query.append("jsonb_path_query_first(data, '");
       }
       if (topKey == null) {
          query.append("$");
