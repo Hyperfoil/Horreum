@@ -178,7 +178,7 @@ type UpdateDescriptionModalProps = {
         return null;
     }
     return Object.entries(tags).map(([key, tag]: any[]) => (
-        <Tooltip content={ key }>
+        <Tooltip key={ tag } content={ key }>
             <Chip key={ tag } isReadOnly>{ tag }</Chip>
         </Tooltip>))
  }
