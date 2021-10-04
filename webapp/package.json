@@ -60,7 +60,10 @@
     "start": " BROWSER=none react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint \"**/*.{ts,tsx}\"",
+    "prepare": "cd .. && husky install",
+    "prettier-format": "prettier --config .prettierrc \"**/*.{ts,tsx}\" --write"  
   },
   "eslintConfig": {
     "extends": "react-app",
@@ -79,5 +82,17 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.32.0",
+    "@typescript-eslint/parser": "^4.32.0",
+    "eslint": "^7.32.0",
+    "husky": "^7.0.2",
+    "prettier": "^2.4.1"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run prettier-format"
+    }
   }
 }

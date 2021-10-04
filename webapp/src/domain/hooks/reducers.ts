@@ -1,23 +1,23 @@
-import { ThunkDispatch } from 'redux-thunk';
+import { ThunkDispatch } from "redux-thunk"
 
-import * as actionTypes from './actionTypes';
-import {Map} from 'immutable';
-import * as utils from "../../utils";
+import * as actionTypes from "./actionTypes"
+import { Map } from "immutable"
+import * as utils from "../../utils"
 
-export const globalEventTypes = ["test/new","run/new","change/new"]
-export const testHookEventTypes = ["run/new","change/new"]
+export const globalEventTypes = ["test/new", "run/new", "change/new"]
+export const testHookEventTypes = ["run/new", "change/new"]
 
 export interface Hook {
-    id: number,
-    url: string,
-    type: string,
-    target: number,
-    active: boolean,
+    id: number
+    url: string
+    type: string
+    target: number
+    active: boolean
 }
 
 export interface AllowedHookPrefix {
-    id: number,
-    prefix: string,
+    id: number
+    prefix: string
 }
 
 export class HooksState {
@@ -25,41 +25,43 @@ export class HooksState {
 }
 
 export interface LoadedAction {
-    type: typeof actionTypes.LOADED,
-    hooks: Hook[],
+    type: typeof actionTypes.LOADED
+    hooks: Hook[]
 }
 
 export interface DeleteAction {
-    type: typeof actionTypes.DELETE,
-    id: number,
+    type: typeof actionTypes.DELETE
+    id: number
 }
 
 type HooksAction = LoadedAction | DeleteAction
 export type HooksDispatch = ThunkDispatch<any, unknown, HooksAction>
 
-export const reducer = (state = new HooksState(), action : HooksAction) =>{
-    switch(action.type) {
+export const reducer = (state = new HooksState(), action: HooksAction) => {
+    switch (action.type) {
         case actionTypes.LOADED:
             if (!state.byId) {
                 state.byId = Map({})
             }
-            if ( !utils.isEmpty(action.hooks) ) {
+            if (!utils.isEmpty(action.hooks)) {
                 action.hooks.forEach(hook => {
                     const byId = state.byId as Map<string, Hook>
                     state.byId = byId.set(`${hook.id}`, {
-                        ...(byId.get(`${hook.id}`) || {}), ...hook
+                        ...(byId.get(`${hook.id}`) || {}),
+                        ...hook,
                     })
                 })
             }
-        break;
-        case actionTypes.DELETE: {
-            const byId = state.byId || Map({})
-            if ( byId.has(`${action.id}`) ){
-                state.byId = byId.delete(`${action.id}`)
+            break
+        case actionTypes.DELETE:
+            {
+                const byId = state.byId || Map({})
+                if (byId.has(`${action.id}`)) {
+                    state.byId = byId.delete(`${action.id}`)
+                }
             }
-        }
-        break;
+            break
         default:
     }
-    return state;
+    return state
 }

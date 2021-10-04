@@ -1,42 +1,22 @@
-import { ReactElement, useState, useEffect } from 'react'
-import { useDispatch } from 'react-redux'
-import {
-    Button,
-    Divider,
-    DualListSelector,
-    SearchInput,
-} from '@patternfly/react-core'
-import {
-    ArrowRightIcon
-} from '@patternfly/react-icons'
-import {
-    info,
-    search,
-    teams,
-    User,
-} from '../user/api'
-import {
-  getSubscription,
-  updateSubscription,
-} from './subscriptions-api'
-import {
-    alertAction
-} from '../../alerts'
-import {
-    teamToName,
-    useTester,
-} from '../../auth'
-import { TabFunctionsRef } from './Test'
+import { ReactElement, useState, useEffect } from "react"
+import { useDispatch } from "react-redux"
+import { Button, Divider, DualListSelector, SearchInput } from "@patternfly/react-core"
+import { ArrowRightIcon } from "@patternfly/react-icons"
+import { info, search, teams, User } from "../user/api"
+import { getSubscription, updateSubscription } from "./subscriptions-api"
+import { alertAction } from "../../alerts"
+import { teamToName, useTester } from "../../auth"
+import { TabFunctionsRef } from "./Test"
 
 type SubscriptionsProps = {
-    testId: number,
-    testOwner?: string,
-    onModified(modified: boolean): void,
-    funcsRef: TabFunctionsRef,
+    testId: number
+    testOwner?: string
+    onModified(modified: boolean): void
+    funcsRef: TabFunctionsRef
 }
 
 function userElement(user: User): ReactElement {
-    var str = "";
+    var str = ""
     if (user.firstName) {
         str += user.firstName + " "
     }
@@ -44,14 +24,14 @@ function userElement(user: User): ReactElement {
         str += user.lastName + " "
     }
     if (user.firstName || user.lastName) {
-        return <span key={user.username}>{ str + " [" + user.username + "]"}</span>
+        return <span key={user.username}>{str + " [" + user.username + "]"}</span>
     } else {
-        return <span key={user.username}>{ user.username }</span>
+        return <span key={user.username}>{user.username}</span>
     }
 }
 
 function teamElement(team: string): ReactElement {
-    return <span key={team}>{ teamToName(team) }</span>
+    return <span key={team}>{teamToName(team)}</span>
 }
 
 export default function Subscriptions(props: SubscriptionsProps) {
@@ -73,9 +53,11 @@ export default function Subscriptions(props: SubscriptionsProps) {
             return
         }
         search(query).then(
-            (users: User[]) => setAvailableUsers(users
-                .filter(u => !watchingUsers.some(w => w && w.key === u.username)).map(userElement)),
-            error => dispatch(alertAction('USER_LOOKUP', "User lookup failed", error))
+            (users: User[]) =>
+                setAvailableUsers(
+                    users.filter(u => !watchingUsers.some(w => w && w.key === u.username)).map(userElement)
+                ),
+            error => dispatch(alertAction("USER_LOOKUP", "User lookup failed", error))
         )
     }
     useEffect(() => {
@@ -112,108 +94,127 @@ export default function Subscriptions(props: SubscriptionsProps) {
     }, [isTester, reloadCounter, props.testId, dispatch])
 
     props.funcsRef.current = {
-        save: () => updateSubscription({
-            testId: props.testId,
-            users: watchingUsers.map(u => u.key as string),
-            optout: optoutUsers.map(u => u.key as string),
-            teams: watchingTeams.map(t => t.key as string),
-        }),
-        reset: () => setReloadCounter(reloadCounter + 1)
+        save: () =>
+            updateSubscription({
+                testId: props.testId,
+                users: watchingUsers.map(u => u.key as string),
+                optout: optoutUsers.map(u => u.key as string),
+                teams: watchingTeams.map(t => t.key as string),
+            }),
+        reset: () => setReloadCounter(reloadCounter + 1),
     }
 
-    return (<>
-        <DualListSelector
-            availableOptions={ availableUsers }
-            availableOptionsTitle="Available users"
-            availableOptionsActions={isTester ? [
-                <SearchInput
-                    style={{ width: "100%"}}
-                    placeholder="Find user..."
-                    value={ userSearch }
-                    onKeyDown={ e => {
-                        const value = (e.target as any)?.value
-                        if (e.key === "Enter" && value) {
-                            window.clearTimeout(userSearchTimer)
-                            fireSearch(value)
-                        }
-                    }}
-                    onChange={ value => {
-                        setUserSearch(value)
-                        window.clearTimeout(userSearchTimer)
-                        setUserSearchTimer(window.setTimeout(() => fireSearch(value), 1000))
-                    }}
-                    onClear={ () => setUserSearch(undefined) }
-                />,
-                <Button
-                    variant="control"
-                    onClick={() => {
-                        window.clearTimeout(userSearchTimer)
-                        setUserSearchTimer(undefined)
-                        fireSearch(userSearch || "")
-                    }}
-                ><ArrowRightIcon /></Button>
-            ] : []}
-            chosenOptions={ watchingUsers }
-            chosenOptionsTitle="Watching users"
-            onListChange={ (newAvailable, newChosen) => {
-                setAvailableUsers((newAvailable as ReactElement[]))
-                setWatchingUsers((newChosen as ReactElement[]))
-                props.onModified(true)
-            }}
-        />
-        <br /><Divider /><br />
-        <DualListSelector
-            availableOptions={ availableUsers }
-            availableOptionsTitle="Users to opt-out"
-            availableOptionsActions={isTester ? [
-                <SearchInput
-                    key="search"
-                    style={{ width: "100%"}}
-                    placeholder="Find user..."
-                    value={ userSearch }
-                    onKeyDown={ e => {
-                        const value = (e.target as any)?.value
-                        if (e.key === "Enter" && value) {
-                            window.clearTimeout(userSearchTimer)
-                            fireSearch(value)
-                        }
-                    }}
-                    onChange={ value => {
-                        setUserSearch(value)
-                        window.clearTimeout(userSearchTimer)
-                        setUserSearchTimer(window.setTimeout(() => fireSearch(value), 1000))
-                    }}
-                    onClear={ () => setUserSearch(undefined) }
-                />,
-                <Button
-                    key="button"
-                    variant="control"
-                    onClick={() => {
-                        window.clearTimeout(userSearchTimer)
-                        setUserSearchTimer(undefined)
-                        fireSearch(userSearch || "")
-                    }}
-                ><ArrowRightIcon /></Button>
-            ] : []}
-            chosenOptions={ optoutUsers }
-            chosenOptionsTitle="Opted out users"
-            onListChange={ (newAvailable, newChosen) => {
-                setAvailableUsers((newAvailable as ReactElement[]))
-                setOptoutUsers((newChosen as ReactElement[]))
-                props.onModified(true)
-            }}
-        />
-        <br /><Divider /><br />
-        <DualListSelector
-            availableOptions={ availableTeams.filter(t => !watchingTeams.some(wt => wt.key === t.key)) }
-            availableOptionsTitle="Available teams"
-            chosenOptions={ watchingTeams }
-            chosenOptionsTitle="Watching teams"
-            onListChange={ (newAvailable, newChosen) => {
-                setAvailableTeams((newAvailable as ReactElement[]))
-                setWatchingTeams((newChosen as ReactElement[]))
-                props.onModified(true)
-            }}
-        />
-    </>)
+    return (
+        <>
+            <DualListSelector
+                availableOptions={availableUsers}
+                availableOptionsTitle="Available users"
+                availableOptionsActions={
+                    isTester
+                        ? [
+                              <SearchInput
+                                  style={{ width: "100%" }}
+                                  placeholder="Find user..."
+                                  value={userSearch}
+                                  onKeyDown={e => {
+                                      const value = (e.target as any)?.value
+                                      if (e.key === "Enter" && value) {
+                                          window.clearTimeout(userSearchTimer)
+                                          fireSearch(value)
+                                      }
+                                  }}
+                                  onChange={value => {
+                                      setUserSearch(value)
+                                      window.clearTimeout(userSearchTimer)
+                                      setUserSearchTimer(window.setTimeout(() => fireSearch(value), 1000))
+                                  }}
+                                  onClear={() => setUserSearch(undefined)}
+                              />,
+                              <Button
+                                  variant="control"
+                                  onClick={() => {
+                                      window.clearTimeout(userSearchTimer)
+                                      setUserSearchTimer(undefined)
+                                      fireSearch(userSearch || "")
+                                  }}
+                              >
+                                  <ArrowRightIcon />
+                              </Button>,
+                          ]
+                        : []
+                }
+                chosenOptions={watchingUsers}
+                chosenOptionsTitle="Watching users"
+                onListChange={(newAvailable, newChosen) => {
+                    setAvailableUsers(newAvailable as ReactElement[])
+                    setWatchingUsers(newChosen as ReactElement[])
+                    props.onModified(true)
+                }}
+            />
+            <br />
+            <Divider />
+            <br />
+            <DualListSelector
+                availableOptions={availableUsers}
+                availableOptionsTitle="Users to opt-out"
+                availableOptionsActions={
+                    isTester
+                        ? [
+                              <SearchInput
+                                  key="search"
+                                  style={{ width: "100%" }}
+                                  placeholder="Find user..."
+                                  value={userSearch}
+                                  onKeyDown={e => {
+                                      const value = (e.target as any)?.value
+                                      if (e.key === "Enter" && value) {
+                                          window.clearTimeout(userSearchTimer)
+                                          fireSearch(value)
+                                      }
+                                  }}
+                                  onChange={value => {
+                                      setUserSearch(value)
+                                      window.clearTimeout(userSearchTimer)
+                                      setUserSearchTimer(window.setTimeout(() => fireSearch(value), 1000))
+                                  }}
+                                  onClear={() => setUserSearch(undefined)}
+                              />,
+                              <Button
+                                  key="button"
+                                  variant="control"
+                                  onClick={() => {
+                                      window.clearTimeout(userSearchTimer)
+                                      setUserSearchTimer(undefined)
+                                      fireSearch(userSearch || "")
+                                  }}
+                              >
+                                  <ArrowRightIcon />
+                              </Button>,
+                          ]
+                        : []
+                }
+                chosenOptions={optoutUsers}
+                chosenOptionsTitle="Opted out users"
+                onListChange={(newAvailable, newChosen) => {
+                    setAvailableUsers(newAvailable as ReactElement[])
+                    setOptoutUsers(newChosen as ReactElement[])
+                    props.onModified(true)
+                }}
+            />
+            <br />
+            <Divider />
+            <br />
+            <DualListSelector
+                availableOptions={availableTeams.filter(t => !watchingTeams.some(wt => wt.key === t.key))}
+                availableOptionsTitle="Available teams"
+                chosenOptions={watchingTeams}
+                chosenOptionsTitle="Watching teams"
+                onListChange={(newAvailable, newChosen) => {
+                    setAvailableTeams(newAvailable as ReactElement[])
+                    setWatchingTeams(newChosen as ReactElement[])
+                    props.onModified(true)
+                }}
+            />
+        </>
+    )
 }

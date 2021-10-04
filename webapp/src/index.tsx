@@ -1,19 +1,19 @@
-import ReactDOM from 'react-dom';
+import ReactDOM from "react-dom"
 
-import './index.css';
-import App from './App';
-import * as serviceWorker from './serviceWorker';
+import "./index.css"
+import App from "./App"
+import * as serviceWorker from "./serviceWorker"
 
-import jsonpath from 'jsonpath';
+import jsonpath from "jsonpath"
 
-ReactDOM.render(<App />, document.getElementById('root'));
+ReactDOM.render(<App />, document.getElementById("root"))
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
 // Learn more about service workers: https://bit.ly/CRA-PWA
-serviceWorker.unregister();
+serviceWorker.unregister()
 
 //public API for and user Js
 // global.Duration = Duration;
 // global.DateTime = DateTime;
-global.jsonpath = jsonpath;
+global.jsonpath = jsonpath

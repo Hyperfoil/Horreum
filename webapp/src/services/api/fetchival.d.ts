@@ -1,1 +1,1 @@
-declare module 'fetchival';
+declare module "fetchival"

@@ -1,37 +1,34 @@
-import { ReactElement, ReactNode, useEffect, useMemo, useState, useRef } from 'react'
+import { ReactElement, ReactNode, useEffect, useMemo, useState, useRef } from "react"
 import { useHistory } from "react-router"
-import { Location, UnregisterCallback } from 'history'
-import {
-    ActionGroup,
-    Button,
-    Spinner,
-    Tab,
-    Tabs,
-} from '@patternfly/react-core'
-import SaveChangesModal from './SaveChangesModal'
+import { Location, UnregisterCallback } from "history"
+import { ActionGroup, Button, Spinner, Tab, Tabs } from "@patternfly/react-core"
+import SaveChangesModal from "./SaveChangesModal"
 
 type SavedTabProps = {
-    title: string,
-    fragment: string,
-    onSave(): Promise<any>,
-    onReset(): void,
-    isModified(): boolean,
-    isHidden?: boolean,
-    children: ReactNode,
+    title: string
+    fragment: string
+    onSave(): Promise<any>
+    onReset(): void
+    isModified(): boolean
+    isHidden?: boolean
+    children: ReactNode
 }
 
-export const SavedTab: React.FunctionComponent<SavedTabProps> = (_props: SavedTabProps) => null;
+export const SavedTab: React.FunctionComponent<SavedTabProps> = (_props: SavedTabProps) => null
 
 type SavedTabsProps = {
-    afterSave?(): Promise<any> | void,
-    afterReset?(): void,
+    afterSave?(): Promise<any> | void
+    afterReset?(): void
     children: ReactElement<SavedTabProps> | ReactElement<SavedTabProps>[]
-    canSave?: boolean,
+    canSave?: boolean
 }
 
 export default function SavedTabs(props: SavedTabsProps) {
     const history = useHistory()
-    const children = useMemo(() => Array.isArray(props.children) ? props.children : [ props.children ], [ props.children ])
+    const children = useMemo(
+        () => (Array.isArray(props.children) ? props.children : [props.children]),
+        [props.children]
+    )
     const [activeKey, setActiveKey] = useState(() => {
         const index = children.findIndex(c => history.location.hash === "#" + c.props.fragment)
         return index < 0 ? 0 : index
@@ -71,54 +68,76 @@ export default function SavedTabs(props: SavedTabsProps) {
         setRequestedKey(undefined)
         setRequestedLocation(undefined)
     }
-    return (<>
-        <SaveChangesModal
-            isOpen={requestedKey !== undefined || requestedLocation !== undefined}
-            onClose={ () => {
-                setRequestedKey(undefined)
-                setRequestedLocation(undefined)
-            }}
-            onSave={ () => children[activeKey].props.onSave().then(_ => {
-                navigate()
-                if (props.afterSave) {
-                    return props.afterSave()
-                }
-            }) }
-            onReset={() => {
-                children[activeKey].props.onReset()
-                if (props.afterReset) {
-                    props.afterReset()
-                }
-                navigate()
-            }}
-        />
-        <Tabs
-            activeKey={ activeKey}
-            onSelect={ (_, key) => {
-                if (children[activeKey].props.isModified()) {
-                    setRequestedKey(key as number)
-                } else {
-                    goToTab(key as number)
-                }
-            }}
-        >
-            { children.map((c, i) => <Tab key={i} eventKey={i} title={c.props.title} isHidden={ c.props.isHidden }>{ c.props.children }</Tab>)}
-        </Tabs>
-        { props.canSave !== false && <ActionGroup style={{ marginTop: 0 }}>
-            <Button
-                variant="primary"
-                isDisabled={saving}
-                onClick={ () => {
-                    setSaving(true)
-                    children[activeKey].props.onSave().then(() => {
-                       if (props.afterSave) {
-                           return props.afterSave()
-                       }
-                    }).finally(() => {
-                        setSaving(false)
-                    })
+    return (
+        <>
+            <SaveChangesModal
+                isOpen={requestedKey !== undefined || requestedLocation !== undefined}
+                onClose={() => {
+                    setRequestedKey(undefined)
+                    setRequestedLocation(undefined)
                 }}
-            >{ saving ? <>{"Saving... "}<Spinner size="md"/></> : "Save" }</Button>
-        </ActionGroup> }
-    </>)
+                onSave={() =>
+                    children[activeKey].props.onSave().then(_ => {
+                        navigate()
+                        if (props.afterSave) {
+                            return props.afterSave()
+                        }
+                    })
+                }
+                onReset={() => {
+                    children[activeKey].props.onReset()
+                    if (props.afterReset) {
+                        props.afterReset()
+                    }
+                    navigate()
+                }}
+            />
+            <Tabs
+                activeKey={activeKey}
+                onSelect={(_, key) => {
+                    if (children[activeKey].props.isModified()) {
+                        setRequestedKey(key as number)
+                    } else {
+                        goToTab(key as number)
+                    }
+                }}
+            >
+                {children.map((c, i) => (
+                    <Tab key={i} eventKey={i} title={c.props.title} isHidden={c.props.isHidden}>
+                        {c.props.children}
+                    </Tab>
+                ))}
+            </Tabs>
+            {props.canSave !== false && (
+                <ActionGroup style={{ marginTop: 0 }}>
+                    <Button
+                        variant="primary"
+                        isDisabled={saving}
+                        onClick={() => {
+                            setSaving(true)
+                            children[activeKey].props
+                                .onSave()
+                                .then(() => {
+                                    if (props.afterSave) {
+                                        return props.afterSave()
+                                    }
+                                })
+                                .finally(() => {
+                                    setSaving(false)
+                                })
+                        }}
+                    >
+                        {saving ? (
+                            <>
+                                {"Saving... "}
+                                <Spinner size="md" />
+                            </>
+                        ) : (
+                            "Save"
+                        )}
+                    </Button>
+                </ActionGroup>
+            )}
+        </>
+    )
 }

@@ -1,9 +1,9 @@
-import * as actionTypes from './actionTypes';
-import { Map } from 'immutable';
-import * as utils from '../../utils'
-import { Team } from '../../components/TeamSelect'
+import * as actionTypes from "./actionTypes"
+import { Map } from "immutable"
+import * as utils from "../../utils"
+import { Team } from "../../components/TeamSelect"
 import { Access } from "../../auth"
-import { ThunkDispatch } from 'redux-thunk';
+import { ThunkDispatch } from "redux-thunk"
 
 export interface RunSchemas {
     // schemaid -> uri
@@ -11,21 +11,21 @@ export interface RunSchemas {
 }
 
 export interface Run {
-    id: number,
-    testid: number,
-    start: number,
-    stop: number,
-    description: string,
-    tags: string[],
-    owner: string,
-    access: Access,
-    token: string | null,
-    data: any,
-    testname?: string,
+    id: number
+    testid: number
+    start: number
+    stop: number
+    description: string
+    tags: string[]
+    owner: string
+    access: Access
+    token: string | null
+    data: any
+    testname?: string
     schema?: RunSchemas
     // TODO - this could rather be a map<view_id, viewcomponent[]>
     view?: any[]
-    trashed: boolean,
+    trashed: boolean
 }
 
 export class RunsState {
@@ -40,100 +40,109 @@ export class RunsState {
 }
 
 export interface LoadingAction {
-    type: typeof actionTypes.LOADING,
+    type: typeof actionTypes.LOADING
 }
 
 export interface LoadedAction {
-    type: typeof actionTypes.LOADED,
-    runs: Run[],
-    total?: number,
+    type: typeof actionTypes.LOADED
+    runs: Run[]
+    total?: number
 }
 
 export interface TestIdAction {
-    type: typeof actionTypes.TESTID,
-    id: number,
-    runs: Run[],
-    total: number,
+    type: typeof actionTypes.TESTID
+    id: number
+    runs: Run[]
+    total: number
 }
 
 export interface LoadSuggestionsAction {
-    type: typeof actionTypes.LOAD_SUGGESTIONS,
-    query: string,
+    type: typeof actionTypes.LOAD_SUGGESTIONS
+    query: string
 }
 
 export interface SuggestAction {
-    type: typeof actionTypes.SUGGEST,
-    responseReceived: boolean,
-    options: string[],
+    type: typeof actionTypes.SUGGEST
+    responseReceived: boolean
+    options: string[]
 }
 
 export interface SelectRolesAction {
-    type: typeof actionTypes.SELECT_ROLES,
+    type: typeof actionTypes.SELECT_ROLES
     selection: Team
 }
 
 export interface UpdateTokenAction {
-    type: typeof actionTypes.UPDATE_TOKEN,
-    id: number,
-    testid: number,
-    token: string | null,
+    type: typeof actionTypes.UPDATE_TOKEN
+    id: number
+    testid: number
+    token: string | null
 }
 
 export interface UpdateAccessAction {
-    type: typeof actionTypes.UPDATE_ACCESS,
-    id: number,
-    testid: number,
-    owner: string,
-    access: Access,
+    type: typeof actionTypes.UPDATE_ACCESS
+    id: number
+    testid: number
+    owner: string
+    access: Access
 }
 
 export interface TrashAction {
-    type: typeof actionTypes.TRASH,
-    id: number,
-    testid: number,
-    isTrashed: boolean,
+    type: typeof actionTypes.TRASH
+    id: number
+    testid: number
+    isTrashed: boolean
 }
 
 export interface UpdateDescriptionAction {
-    type: typeof actionTypes.UPDATE_DESCRIPTION,
-    id: number,
-    testid: number,
-    description: string,
+    type: typeof actionTypes.UPDATE_DESCRIPTION
+    id: number
+    testid: number
+    description: string
 }
 
 export interface UpdateSchemaAction {
-    type: typeof actionTypes.UPDATE_SCHEMA,
-    id: number,
-    testid: number,
-    path: string | undefined,
-    schema: string,
-    schemas: RunSchemas,
+    type: typeof actionTypes.UPDATE_SCHEMA
+    id: number
+    testid: number
+    path: string | undefined
+    schema: string
+    schemas: RunSchemas
 }
 
-type RunsAction = LoadingAction | LoadedAction | TestIdAction |
-                  LoadSuggestionsAction |  SuggestAction | SelectRolesAction |
-                  UpdateTokenAction | UpdateAccessAction | TrashAction | UpdateDescriptionAction |
-                  UpdateSchemaAction
+type RunsAction =
+    | LoadingAction
+    | LoadedAction
+    | TestIdAction
+    | LoadSuggestionsAction
+    | SuggestAction
+    | SelectRolesAction
+    | UpdateTokenAction
+    | UpdateAccessAction
+    | TrashAction
+    | UpdateDescriptionAction
+    | UpdateSchemaAction
 
 export type RunsDispatch = ThunkDispatch<any, unknown, RunsAction>
 
 //Takes events and updates the state accordingly
-export const reducer = (state = new RunsState(), action: RunsAction) =>{
-    switch(action.type) {
+export const reducer = (state = new RunsState(), action: RunsAction) => {
+    switch (action.type) {
         case actionTypes.LOADING:
             state.loading = true
-        break;
+            break
         case actionTypes.LOADED: {
             state.loading = false
             if (!state.byId) {
                 state.byId = Map<number, Run>()
             }
-            if ( !utils.isEmpty(action.runs) ) {
+            if (!utils.isEmpty(action.runs)) {
                 action.runs.forEach(run => {
                     if (run !== undefined) {
                         const byId = state.byId as Map<number, Run>
                         state.byId = byId.set(run.id, {
-                            ...(byId.get(run.id) || {}), ...run
+                            ...(byId.get(run.id) || {}),
+                            ...run,
                         })
                     }
                 })
@@ -142,41 +151,41 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
             if (action.total) {
                 state.currentTotal = action.total
             }
-            break;
+            break
         }
         case actionTypes.TESTID: {
             state.loading = false
             const byTest = state.byTest || Map<number, Map<number, Run>>()
             let testMap: Map<number, Run> = byTest.get(action.id, Map<number, Run>())
-            if ( !utils.isEmpty(action.runs) ) {
+            if (!utils.isEmpty(action.runs)) {
                 action.runs.forEach(run => {
-                    if ( run !== undefined ){
+                    if (run !== undefined) {
                         testMap = testMap.set(run.id, {
                             ...testMap.get(run.id),
-                            ...run
+                            ...run,
                         })
                     }
                 })
             }
             state.byTest = byTest.set(action.id, testMap)
             state.currentPage = action.runs.map(run => run.id)
-            state.currentTotal = action.total;
-            break;
+            state.currentTotal = action.total
+            break
         }
         case actionTypes.LOAD_SUGGESTIONS: {
             if (state.suggestQuery.length === 0) {
-               state.suggestQuery = [ action.query ]
+                state.suggestQuery = [action.query]
             } else {
-               state.suggestQuery = [ state.suggestQuery[0], action.query ]
+                state.suggestQuery = [state.suggestQuery[0], action.query]
             }
-            break;
+            break
         }
         case actionTypes.SUGGEST: {
             state.suggestions = action.options
             if (action.responseReceived) {
-               state.suggestQuery.shift()
+                state.suggestQuery.shift()
             }
-            break;
+            break
         }
         case actionTypes.SELECT_ROLES: {
             state.selectedRoles = action.selection
@@ -207,38 +216,38 @@ export const reducer = (state = new RunsState(), action: RunsAction) =>{
                         copy.data = { ...run.data }
                         copy.data[action.path]["$schema"] = action.schema
                     } else {
-                        copy.data = { ...run.data, "$schema": action.schema }
+                        copy.data = { ...run.data, $schema: action.schema }
                     }
                 } else {
                     copy.data = { ...run.data }
                     if (action.path) {
-                        var sub = copy.data[action.path] = { ...copy.data[action.path] }
+                        var sub = (copy.data[action.path] = { ...copy.data[action.path] })
                         console.log(sub)
                         delete sub["$schema"]
                     } else {
-                        delete copy.data["$schema"];
+                        delete copy.data["$schema"]
                     }
                 }
                 return copy
             })
-            break;
+            break
         }
         default:
     }
-    return state;
+    return state
 }
 
 function updateRun(state: RunsState, id: number, testid: number, patch: object | ((current: Run) => Run)) {
-    let run = state.byId?.get(id);
+    let run = state.byId?.get(id)
     if (run) {
-        const updated = typeof patch === 'function' ? patch(run) : { ...run, ...patch }
+        const updated = typeof patch === "function" ? patch(run) : { ...run, ...patch }
         state.byId = (state.byId || Map<number, Run>()).set(run.id, updated)
     }
     let testMap: Map<number, Run> | undefined = state.byTest?.get(testid)
     if (testMap) {
         const current: Run | undefined = testMap.get(id)
         if (current) {
-            const updated = typeof patch === 'function' ? patch(current) : { ...current, ...patch }
+            const updated = typeof patch === "function" ? patch(current) : { ...current, ...patch }
             testMap = testMap.set(id, updated)
         }
         state.byTest = state.byTest?.set(testid, testMap)

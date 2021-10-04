@@ -1,17 +1,17 @@
-import * as api from './api';
-import * as actionTypes from './actionTypes';
-import { Hook, LoadedAction, DeleteAction } from './reducers';
-import { Dispatch } from 'react';
+import * as api from "./api"
+import * as actionTypes from "./actionTypes"
+import { Hook, LoadedAction, DeleteAction } from "./reducers"
+import { Dispatch } from "react"
 
 const loaded = (hook: Hook | Hook[]): LoadedAction => {
     return {
         type: actionTypes.LOADED,
-        hooks: Array.isArray(hook) ? hook : [hook]
+        hooks: Array.isArray(hook) ? hook : [hook],
     }
 }
 const removed = (id: number): DeleteAction => ({
     type: actionTypes.DELETE,
-    id
+    id,
 })
 
 export const getHook = (id: number) => (dispatch: Dispatch<LoadedAction>) =>
@@ -27,11 +27,7 @@ export const addHook = (payload: Hook) => (dispatch: Dispatch<LoadedAction>) =>
     )
 
 export const allHooks = () => (dispatch: Dispatch<LoadedAction>) =>
-    api.allHooks().then(
-        response => dispatch(loaded(response))
-    )
+    api.allHooks().then(response => dispatch(loaded(response)))
 
 export const removeHook = (id: number) => (dispatch: Dispatch<DeleteAction>) =>
-    api.removeHook(id).then(
-        response => dispatch(removed(id))
-    )
+    api.removeHook(id).then(response => dispatch(removed(id)))
