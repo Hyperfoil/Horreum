@@ -49,6 +49,30 @@ function formatValue(value: number | string) {
     return Number(value).toFixed(2) + suffix;
 }
 
+function ellipsis(str: string) {
+    if (!str || str.length < 16) {
+        return str;
+    }
+    const firstHalf = str.substring(0, str.length - 16)
+    const secondHalf = str.substring(str.length - 16)
+    return (
+        <div style={{
+            width: "100%",
+            display: "inline-flex",
+            flexWrap: "nowrap"
+        }}>
+            <span style={{
+                flex: "0 1 content",
+                textOverflow: "ellipsis",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+            }}>{ firstHalf }</span>
+            <span style={{
+                flex: "1 0 content",
+            }}>{ secondHalf }</span>
+        </div>)
+}
+
 type PanelProps = {
     title: string,
     variables: number[],
@@ -227,7 +251,12 @@ export default function PanelChart(props: PanelProps) {
                                     <table id="toolTip">
                                         <tbody>
                                             { payload?.map((row, i) => (<tr key={i}>
-                                                <td style={{ textAlign: "left", color: row.color, paddingRight: "20px" }}>{row.name}</td>
+                                                <td style={{
+                                                    textAlign: "left",
+                                                    color: row.color,
+                                                    paddingRight: "20px",
+                                                    maxWidth: "300px",
+                                                }}>{ ellipsis("" + row.name) }</td>
                                                 <td>{formatValue(row.value as string | number)}</td>
                                             </tr>)) }
                                         </tbody>
