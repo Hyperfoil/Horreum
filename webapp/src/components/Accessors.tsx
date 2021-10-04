@@ -181,8 +181,8 @@ export default function Accessors({ value = [], onChange = (_: string[]) => {}, 
                label="JSON path"
                isRequired={true}
                fieldId="extractor-jsonpath"
-               validated={ !(created.jsonpath && created.jsonpath.trim().startsWith("$")) && (!created.validationResult || created.validationResult.valid) ? "default" : "error"}
-               helperTextInvalid={ created.jsonpath && created.jsonpath.trim().startsWith("$") ? "JSON path must not start with '$'" : (created.validationResult?.reason || "")  }
+               validated={ !created.validationResult || created.validationResult.valid ? "default" : "error"}
+               helperTextInvalid={ created.validationResult?.reason  }
             >
                <TextInput value={ created?.jsonpath || "" }
                           isRequired
