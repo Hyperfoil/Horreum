@@ -670,10 +670,22 @@ public class RunServiceImpl implements RunService {
             if (test.defaultView != null) {
                for (ViewComponent c : test.defaultView.components) {
                   Json componentData = unorderedView.getJson(String.valueOf(c.id));
+                  String[] accessors = c.accessors();
                   if (componentData == null) {
-                     view.add(null);
+                     if (accessors.length == 1) {
+                        view.add(null);
+                     } else {
+                        Json.MapBuilder builder = new Json.MapBuilder();
+                        for (String accessor: accessors) {
+                           if (SchemaExtractor.isArray(accessor)) {
+                              builder.add(SchemaExtractor.arrayName(accessor), null);
+                           } else {
+                              builder.add(accessor, null);
+                           }
+                        }
+                        view.add(builder.build());
+                     }
                   } else {
-                     String[] accessors = c.accessors();
                      if (accessors.length == 1) {
                         String accessor = accessors[0];
                         if (SchemaExtractor.isArray(accessors[0])) {
