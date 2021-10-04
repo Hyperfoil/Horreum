@@ -23,7 +23,6 @@ import {Test, TestDispatch, StalenessSettings} from './reducers';
 import {
     useTester,
     defaultTeamSelector,
-    teamsSelector,
 } from '../../auth'
 
 import {TabFunctionsRef} from './Test'
@@ -41,7 +40,6 @@ type StalenessSettingsDisplay = {
 
 export default function General({test, onTestIdChange, onModified, funcsRef}: GeneralProps) {
     const defaultRole = useSelector(defaultTeamSelector)
-    const teams = useSelector(teamsSelector)
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [compareUrl, setCompareUrl] = useState<string | undefined>(undefined)

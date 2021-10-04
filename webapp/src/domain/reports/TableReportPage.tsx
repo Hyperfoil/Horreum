@@ -43,7 +43,7 @@ export default function TableReportPage() {
                 })
                 .finally(() => setLoading(false))
         }
-    }, [id])
+    }, [id, dispatch])
     const componentRef = useRef<HTMLDivElement>(null)
     const printHandle = useReactToPrint({
         content: () => componentRef.current,

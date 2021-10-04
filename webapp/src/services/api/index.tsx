@@ -1,7 +1,6 @@
-import React from 'react';
 import fetchival from 'fetchival';
 import store from "../../store"
-import { alertAction, ADD_ALERT } from "../../alerts"
+import { ADD_ALERT } from "../../alerts"
 import { TryLoginAgain } from "../../auth"
 
 const serialize = (input: any): any => {

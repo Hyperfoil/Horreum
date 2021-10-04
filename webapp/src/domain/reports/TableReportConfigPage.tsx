@@ -143,7 +143,7 @@ export default function TableReportConfigPage() {
             })
             .finally(() => setLoading(false))
 
-    }, [id, stringId])
+    }, [id, stringId, dispatch])
     const addComponent = () => setConfig({ ...config, components: [ ...config.components, {
         id: -1,
         name: "",
@@ -428,7 +428,7 @@ export default function TableReportConfigPage() {
                         <Button onClick={ addComponent}>Add component</Button>
                     </ActionGroup>
                     }
-                    { config?.components?.length == 0 &&
+                    { config?.components?.length === 0 &&
                         <EmptyState>No components</EmptyState>
                     }
                     { config?.components.map((c, i) => (

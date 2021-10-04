@@ -39,6 +39,7 @@ import { formatDateTime } from '../../utils'
 import './TableReportView.css'
 
 function formatter(func: string | undefined) {
+    // eslint-disable-next-line
     return func ? new Function(func) : (x: string) => x;
 }
 
@@ -276,7 +277,7 @@ function update(report: TableReport, comment: ReportComment | undefined, text: s
 export default function TableReportView(props: TableReportViewProps) {
     const config = props.report.config
     const categories = [ ...new Set(props.report.runData.map(d => d.category))].sort()
-    const singleCategory = categories.length === 0 || categories.length === 1 && categories[0] === ""
+    const singleCategory = categories.length === 0 || (categories.length === 1 && categories[0] === "")
     const categoryFormatter = formatter(config.categoryFormatter)
     const comment0 = props.report.comments.find(c => c.level === 0)
 

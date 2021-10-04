@@ -17,7 +17,6 @@ import {
 import {
     NavLink
 } from 'react-router-dom'
-import Editor from '../../components/Editor/monaco/Editor'
 
 import { useTester } from '../../auth'
 

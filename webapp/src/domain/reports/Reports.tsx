@@ -63,10 +63,10 @@ export default function Reports() {
 
     useEffect(() => {
         setLoading(true)
-        getTableReports(pagination, test && test.id || undefined, roles?.key).then(setTableReports)
+        getTableReports(pagination, (test && test.id) || undefined, roles?.key).then(setTableReports)
             .catch(error => dispatch(alertAction('FETCH_REPORTS', "Failed to fetch reports", error)))
             .finally(() => setLoading(false))
-    }, [pagination, roles, test])
+    }, [pagination, roles, test, dispatch])
 
     const columns: Column<TableReportSummary>[] = useMemo(() => [
         {
@@ -119,8 +119,8 @@ export default function Reports() {
         },
     ], [])
 
-    const tableReportConfig = tableReportConfigId !== undefined && tableReports &&
-        tableReports.reports.find(summary => summary.config.id === tableReportConfigId) || undefined;
+    const tableReportConfig = (tableReportConfigId !== undefined && tableReports &&
+        tableReports.reports.find(summary => summary.config.id === tableReportConfigId)) || undefined;
     return (
         <PageSection>
             <Card>

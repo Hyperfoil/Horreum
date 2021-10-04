@@ -28,7 +28,6 @@ import {
 } from '@patternfly/react-core';
 
 import Accessors from '../../components/Accessors'
-import Editor from '../../components/Editor/monaco/Editor'
 import LogSlider from '../../components/LogSlider'
 import OptionalFunction from '../../components/OptionalFunction'
 import RecalculateModal from '../alerting/RecalculateModal'
