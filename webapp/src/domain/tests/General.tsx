@@ -16,14 +16,14 @@ import {alertAction, constraintValidationFormatter} from '../../alerts'
 
 import Accessors from '../../components/Accessors'
 import TagsSelect, { convertTags, SelectedTags } from '../../components/TagsSelect'
-import Editor from '../../components/Editor/monaco/Editor'
 import OptionalFunction from '../../components/OptionalFunction'
 
 import {Test, TestDispatch, StalenessSettings} from './reducers';
 
 import {
     useTester,
-    defaultTeamSelector
+    defaultTeamSelector,
+    teamsSelector,
 } from '../../auth'
 
 import {TabFunctionsRef} from './Test'
@@ -41,6 +41,7 @@ type StalenessSettingsDisplay = {
 
 export default function General({test, onTestIdChange, onModified, funcsRef}: GeneralProps) {
     const defaultRole = useSelector(defaultTeamSelector)
+    const teams = useSelector(teamsSelector)
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [compareUrl, setCompareUrl] = useState<string | undefined>(undefined)

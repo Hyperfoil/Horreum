@@ -120,3 +120,7 @@ export type PaginationInfo = {
    sort: string,
    direction: string,
 }
+
+export function paginationParams(pagination: PaginationInfo) {
+   return `page=${pagination.page}&limit=${pagination.perPage}&sort=${pagination.sort}&direction=${pagination.direction}`
+}

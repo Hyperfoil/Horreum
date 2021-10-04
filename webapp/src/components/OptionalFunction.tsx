@@ -27,9 +27,11 @@ export default function OptionalFunction(props: OptionalFunctionProps) {
                 >{ props.addText }</Button>)
         }
     } else {
+        // failsafe if the wrong type gets passed in
+        const funcAsString = typeof props.func === 'string' ? props.func : (props.func as any).toString()
         return (
             <div style={{minHeight: "100px", height: "100px", resize: "vertical", overflow: "auto"}}>
-                <Editor value={props.func}
+                <Editor value={funcAsString}
                         onChange={ value => {
                             props.onChange(value || "")
                         }}

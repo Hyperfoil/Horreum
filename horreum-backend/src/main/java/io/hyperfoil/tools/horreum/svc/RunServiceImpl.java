@@ -65,6 +65,7 @@ public class RunServiceImpl implements RunService {
             "FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
+   // TODO: array queries!
    private static final String GET_TAGS =
          "WITH test_tags AS (" +
             "SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor, tagscalculation FROM test" +
@@ -440,34 +441,6 @@ public class RunServiceImpl implements RunService {
       return run.id;
    }
 
-   private void addPaging(StringBuilder sql, Integer limit, Integer page, String sort, String direction) {
-      addOrderBy(sql, sort, direction);
-      addLimitOffset(sql, limit, page);
-   }
-
-   private void addOrderBy(StringBuilder sql, String sort, String direction) {
-      sort = sort == null || sort.trim().isEmpty() ? "start" : sort;
-      direction = direction == null || direction.trim().isEmpty() ? "Ascending" : direction;
-      sql.append(" ORDER BY ").append(sort);
-      addDirection(sql, direction);
-   }
-
-   private void addDirection(StringBuilder sql, String direction) {
-      if (direction != null) {
-         sql.append("Ascending".equalsIgnoreCase(direction) ? " ASC" : " DESC");
-      }
-      sql.append(" NULLS LAST");
-   }
-
-   private void addLimitOffset(StringBuilder sql, Integer limit, Integer page) {
-      if (limit != null && limit > 0) {
-         sql.append(" limit ").append(limit);
-         if (page != null && page >= 0) {
-            sql.append(" offset ").append(limit * (page - 1));
-         }
-      }
-   }
-
    @PermitAll
    @Override
    public List<String> autocomplete(String query) {
@@ -573,7 +546,7 @@ public class RunServiceImpl implements RunService {
          }
          sql.append(" trashed = false ");
       }
-      addPaging(sql, limit, page, sort, direction);
+      Util.addPaging(sql, limit, page, sort, direction);
 
       Query sqlQuery = em.createNativeQuery(sql.toString());
       for (int i = 0; i < queryParts.length; ++i) {
@@ -669,13 +642,13 @@ public class RunServiceImpl implements RunService {
          // TODO: use view ID in the sort format rather than wildcards below
          // prefer numeric sort
          sql.append(" to_double(jsonb_path_query_first(view_agg.view, '$.*.").append(accessor).append("')#>>'{}')");
-         addDirection(sql, direction);
+         Util.addDirection(sql, direction);
          sql.append(", jsonb_path_query_first(view_agg.view, '$.*.").append(accessor).append("')#>>'{}'");
-         addDirection(sql, direction);
+         Util.addDirection(sql, direction);
       } else {
-         addOrderBy(sql, sort, direction);
+         Util.addOrderBy(sql, sort, direction);
       }
-      addLimitOffset(sql, limit, page);
+      Util.addLimitOffset(sql, limit, page);
       Test test;
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          test = Test.find("id", testId).firstResult();
@@ -745,7 +718,7 @@ public class RunServiceImpl implements RunService {
                .append("run.owner, run.access, run.token, test.name AS testname, run.description ")
                .append("FROM run_schemas rs JOIN run ON rs.runid = run.id JOIN test ON rs.testid = test.id ")
                .append("WHERE uri = ? AND NOT run.trashed");
-         addPaging(sql, limit, page, sort, direction);
+         Util.addPaging(sql, limit, page, sort, direction);
          Query query = em.createNativeQuery(sql.toString());
          query.setParameter(1, uri);
          @SuppressWarnings("unchecked")

@@ -1,0 +1,27 @@
+.chartSwitch {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 1000;
+}
+
+@media print {
+    .nonPrintable {
+        display: none;
+    }
+
+    /* This magic piece makes sure that ResponsiveContainer re-renders before print */
+    .recharts-wrapper, .recharts-surface {
+        width: calc(100%)!important;
+    }
+}
+
+.reportComment {
+    padding-bottom: 16px;
+}
+
+.reportCommentEdit {
+    margin: 0;
+    margin-top: 16px;
+    padding: 0;
+}

@@ -22,7 +22,7 @@ function compare(a: any, b: any, desc: boolean): number {
 }
 
 function sort(list: any[], pagination: PaginationInfo) {
-    const desc = pagination.direction === "descending"
+    const desc = pagination.direction === "Descending"
     if (pagination.sort.startsWith("view_data:")) {
         const index = pagination.sort.substring(10, pagination.sort.indexOf(":", 10))
         return list.sort((a, b) => compare(a.view[index], b.view[index], desc))

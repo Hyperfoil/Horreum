@@ -1,10 +1,6 @@
 import { fetchApi } from '../../services/api';
 import { Access, accessName } from '../../auth';
-import { PaginationInfo } from '../../utils'
-
-function paginationParams(pagination: PaginationInfo) {
-    return `page=${pagination.page}&limit=${pagination.perPage}&sort=${pagination.sort}&direction=${pagination.direction}`
-}
+import { PaginationInfo, paginationParams } from '../../utils'
 
 const base = "/api/run"
 const endPoints = {

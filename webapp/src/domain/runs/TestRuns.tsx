@@ -180,7 +180,7 @@ export default function TestRuns() {
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [sort, setSort] = useState("start")
-    const [direction, setDirection] = useState("descending")
+    const [direction, setDirection] = useState("Descending")
     const [tags, setTags] = useState<SelectedTags>()
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction ])
     const tableColumns = useMemo(() => {
@@ -291,11 +291,11 @@ export default function TestRuns() {
                     <Table
                         columns={tableColumns}
                         data={runs || []}
-                        sortBy={[{id: sort, desc: direction === "descending"}]}
+                        sortBy={[{id: sort, desc: direction === "Descending"}]}
                         onSortBy={ (order) => {
                             if (order.length > 0 && order[0]) {
                                 setSort(order[0].id)
-                                setDirection(order[0].desc ? "descending" : "ascending")
+                                setDirection(order[0].desc ? "Descending" : "Ascending")
                             }
                         }}
                         isLoading={isLoading}

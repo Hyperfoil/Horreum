@@ -41,6 +41,10 @@ import Alerts from './alerts'
 
 import Series from './domain/alerting/Series';
 
+import Reports from './domain/reports/Reports'
+import TableReportPage from './domain/reports/TableReportPage'
+import TableReportConfigPage from './domain/reports/TableReportConfigPage'
+
 import About from './About'
 
 class App extends Component {
@@ -90,10 +94,14 @@ function Main() {
                       Schema
                     </NavLink>
                   </NavItem>
-
                   <NavItem itemId={4}>
                     <NavLink to="/series" style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)"}}>
                       Series
+                    </NavLink>
+                  </NavItem>
+                  <NavItem itemId={5}>
+                    <NavLink to="/reports" style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)"}}>
+                      Reports
                     </NavLink>
                   </NavItem>
                 </NavList>
@@ -125,6 +133,10 @@ function Main() {
             <Route path="/schema/:schemaId" component={Schema} />
 
             <Route exact path="/series" component={Series} />
+
+            <Route exact path="/reports" component={Reports} />
+            <Route exact path="/reports/table/config/:configId" component={TableReportConfigPage} />
+            <Route exact path="/reports/table/:id" component={TableReportPage} />
 
             <Route exact path="/usersettings" component={UserSettings} />
 

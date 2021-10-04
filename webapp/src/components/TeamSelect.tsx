@@ -10,7 +10,7 @@ import {
 
 import { useSelector } from 'react-redux'
 
-import { teamsSelector, teamToName } from '../auth'
+import { isAuthenticatedSelector, teamsSelector, teamToName } from '../auth'
 
 export interface Team extends SelectOptionObject {
    key: string,
@@ -34,6 +34,7 @@ type TeamSelectProps = {
 
 export default function TeamSelect({ includeGeneral, selection, onSelect }: TeamSelectProps) {
    const teams = useSelector(teamsSelector)
+   const isAuthenticated = useSelector(isAuthenticatedSelector)
    const teamsAsSelectOptions = () => {
       return (teams ? teams.map(team => (
                      <SelectOption key={team} value={ createTeam(team) }/>
@@ -56,10 +57,10 @@ export default function TeamSelect({ includeGeneral, selection, onSelect }: Team
          >
          {  includeGeneral ? [
                <SelectGroup key="__general" label="General" value="">
-                 <SelectOption value={ ONLY_MY_OWN } />
+                 { isAuthenticated && <SelectOption value={ ONLY_MY_OWN } /> }
                  <SelectOption value={ SHOW_ALL } />
                </SelectGroup>,
-               <SelectGroup key="__role" label="Run for team" value="">
+               <SelectGroup key="__role" label="Team" value="">
                  { teamsAsSelectOptions() }
                </SelectGroup>
             ] : teamsAsSelectOptions()

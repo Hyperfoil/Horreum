@@ -1711,5 +1711,163 @@
             $$ LANGUAGE plpgsql;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="33" author="rvansa">
+        <createTable tableName="tablereportconfig">
+            <column name="id" type="integer">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="title" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="testid" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="filteraccessors" type="text" />
+            <column name="filterfunction" type="text" />
+            <column name="categoryaccessors" type="text" />
+            <column name="categoryfunction" type="text" />
+            <column name="categoryformatter" type="text" />
+            <column name="seriesaccessors" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="seriesfunction" type="text" />
+            <column name="seriesformatter" type="text" />
+            <column name="labelaccessors" type="text" />
+            <column name="labelfunction" type="text" />
+            <column name="labelformatter" type="text" />
+        </createTable>
+        <createTable tableName="reportcomponent">
+            <column name="id" type="integer">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="reportconfig_id" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="component_order" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="accessors" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="function" type="text" />
+        </createTable>
+        <addForeignKeyConstraint constraintName="reportcomponent_report_fk"
+                                 baseTableName="reportcomponent" baseColumnNames="reportconfig_id"
+                                 referencedTableName="tablereportconfig" referencedColumnNames="id" />
+        <createTable tableName="tablereport">
+            <column name="id" type="integer">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="config_id" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="created" type="timestamp">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="tablereport_config_id"
+                                 baseTableName="tablereport" baseColumnNames="config_id"
+                                 referencedTableName="tablereportconfig" referencedColumnNames="id" />
+        <createTable tableName="tablereport_rundata">
+            <column name="report_id" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="runid" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="category" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="series" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="label" type="text">
+                <constraints nullable="false" />
+            </column>
+            <!-- Liquibase would mess up 'double precision[]' -->
+            <column name="values" type="float8[]">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="tablereport_rundata_report_id"
+                                 baseTableName="tablereport_rundata" baseColumnNames="report_id"
+                                 referencedTableName="tablereport" referencedColumnNames="id" />
+        <addUniqueConstraint tableName="tablereport_rundata" columnNames="report_id, runid" />
+        <sql>
+            GRANT select, insert, delete, update ON TABLE tablereportconfig, reportcomponent, tablereport, tablereport_rundata TO "${quarkus.datasource.username}";
+            CREATE POLICY tablereportconfig_select ON tablereportconfig FOR SELECT
+                USING (exists(SELECT 1 FROM test WHERE test.id = testid AND can_view2(test.access, test.owner)));
+            CREATE POLICY tablereportconfig_insert ON tablereportconfig FOR INSERT
+                WITH CHECK (has_role2((SELECT test.owner FROM test WHERE test.id = testid), 'tester'));
+            CREATE POLICY tablereportconfig_update ON tablereportconfig FOR UPDATE
+                USING (has_role2((SELECT test.owner FROM test WHERE test.id = testid), 'tester'));
+            CREATE POLICY tablereportconfig_delete ON tablereportconfig FOR DELETE
+                USING (has_role2((SELECT test.owner FROM test WHERE test.id = testid), 'tester'));
+            CREATE POLICY reportcomponent_select ON reportcomponent FOR SELECT
+                USING (exists(SELECT 1 FROM test JOIN tablereportconfig trc ON test.id = trc.testid WHERE trc.id = reportconfig_id AND can_view2(test.access, test.owner)));
+            CREATE POLICY reportcomponent_insert ON reportcomponent FOR INSERT
+                WITH CHECK (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid WHERE trc.id = reportconfig_id), 'tester'));
+            CREATE POLICY reportcomponent_update ON reportcomponent FOR UPDATE
+                USING (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid WHERE trc.id = reportconfig_id), 'tester'));
+            CREATE POLICY reportcomponent_delete ON reportcomponent FOR DELETE
+                USING (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid WHERE trc.id = reportconfig_id), 'tester'));
+            CREATE POLICY tablereport_select ON tablereport FOR SELECT
+                USING (exists(SELECT 1 FROM test JOIN tablereportconfig trc ON test.id = trc.testid WHERE trc.id = config_id AND can_view2(test.access, test.owner)));
+            CREATE POLICY tablereport_insert ON tablereport FOR INSERT
+                WITH CHECK (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid WHERE trc.id = config_id), 'tester'));
+            CREATE POLICY tablereport_update ON tablereport FOR UPDATE
+                USING (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid WHERE trc.id = config_id), 'tester'));
+            CREATE POLICY tablereport_delete ON tablereport FOR DELETE
+                USING (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid WHERE trc.id = config_id), 'tester'));
+            CREATE POLICY tablereport_rundata_select ON tablereport_rundata FOR SELECT
+                USING (exists(SELECT run.owner FROM run WHERE run.id = runid AND can_view2(run.access, run.owner)));
+            CREATE POLICY tablereport_rundata_insert ON tablereport_rundata FOR INSERT
+                WITH CHECK (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid JOIN tablereport tr ON tr.config_id = trc.id WHERE tr.id = report_id), 'tester'));
+            CREATE POLICY tablereport_rundata_update ON tablereport_rundata FOR UPDATE
+                USING (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid JOIN tablereport tr ON tr.config_id = trc.id WHERE tr.id = report_id), 'tester'));
+            CREATE POLICY tablereport_rundata_delete ON tablereport_rundata FOR DELETE
+                USING (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid JOIN tablereport tr ON tr.config_id = trc.id WHERE tr.id = report_id), 'tester'));
+        </sql>
+    </changeSet>
+    
+    <changeSet id="34" author="rvansa">
+        <createTable tableName="reportcomment">
+            <column name="id" type="integer">
+                <constraints primaryKey="true" />
+            </column>
+            <column name="report_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="level" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category" type="text" />
+            <column name="component_id" type="integer" />
+            <column name="comment" type="text">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <sql>
+            GRANT select, insert, delete, update ON TABLE reportcomment TO "${quarkus.datasource.username}";
+            CREATE POLICY reportcomment_select ON reportcomment FOR SELECT
+                USING (exists(SELECT 1 FROM test JOIN tablereportconfig trc ON test.id = trc.testid JOIN tablereport tr ON trc.id = tr.config_id WHERE tr.id = report_id AND can_view2(test.access, test.owner)));
+            CREATE POLICY reportcomment_insert ON reportcomment FOR INSERT
+                WITH CHECK (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid JOIN tablereport tr ON trc.id = tr.config_id WHERE tr.id = report_id), 'tester'));
+            CREATE POLICY reportcomment_update ON reportcomment FOR UPDATE
+                USING (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid JOIN tablereport tr ON trc.id = tr.config_id WHERE tr.id = report_id), 'tester'));
+            CREATE POLICY reportcomment_delete ON reportcomment FOR DELETE
+                USING (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid JOIN tablereport tr ON trc.id = tr.config_id WHERE tr.id = report_id), 'tester'));
+        </sql>
+        <addForeignKeyConstraint constraintName="fk_tablereport_comment_report"
+                                 baseTableName="reportcomment" baseColumnNames="report_id"
+                                 referencedTableName="tablereport" referencedColumnNames="id" />
+        <createIndex tableName="reportcomment" indexName="report_ids">
+            <column name="report_id" />
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
 

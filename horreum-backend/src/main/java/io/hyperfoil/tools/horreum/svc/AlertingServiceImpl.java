@@ -359,7 +359,7 @@ public class AlertingServiceImpl implements AlertingService {
                missingValueVariables.add(var.name);
                continue;
             }
-            Double number = convertToNumber(value);
+            Double number = Util.toDoubleOrNull(value);
             if (number == null) {
                logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Cannot turn %s into a floating-point value for variable %s", value, var.name);
                if (recalculation != null) {
@@ -414,31 +414,6 @@ public class AlertingServiceImpl implements AlertingService {
       }
       if (!missingValueVariables.isEmpty()) {
          publishLater(Run.EVENT_MISSING_VALUES, new MissingRunValuesEvent(run.id, run.testid, missingValueVariables, notify));
-      }
-   }
-
-   private Double convertToNumber(Object value) {
-      if (value instanceof String) {
-         String str = (String) value;
-         String maybeNumber = str.charAt(0) == '"' && str.charAt(str.length() - 1) == '"' ?
-               str.substring(1, str.length() - 1) : str;
-         try {
-            return Double.parseDouble(maybeNumber);
-         } catch (NumberFormatException e) {
-            return null;
-         }
-      } else if (value instanceof Double) {
-         return (Double) value;
-      } else if (value instanceof Long) {
-         return ((Long) value).doubleValue();
-      } else if (value instanceof Integer) {
-         return ((Integer) value).doubleValue();
-      } else if (value instanceof Float) {
-         return ((Float) value).doubleValue();
-      } else if (value instanceof Short) {
-         return ((Short) value).doubleValue();
-      } else {
-         return null;
       }
    }
 
@@ -508,35 +483,13 @@ public class AlertingServiceImpl implements AlertingService {
          context.enter();
          try {
             Value value = context.eval("js", jsCode);
-            if (value.isNumber()) {
-               double dValue = value.asDouble();
-               if (Double.isFinite(dValue)) {
-                  return dValue;
-               } else {
-                  logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation for variable %s failed: Not a finite number: %s", name, value);
-                  return null;
-               }
-            } else if (value.isString()) {
-               try {
-                  return Double.parseDouble(value.asString());
-               } catch (NumberFormatException e) {
-                  logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation for variable %s failed: Return value %s cannot be parsed into a number.", name, value);
-                  return null;
-               }
-            } else if (value.isNull()) {
-               // returning null is intentional or the data does not exist, don't warn
-               logCalculationMessage(testId, runId, CalculationLog.INFO, "Result for variable %s is null, skipping.", name);
-               return null;
-            } else if ("undefined".equals(value.toString())) {
-               // returning undefined is intentional, don't warn
-               logCalculationMessage(testId, runId, CalculationLog.INFO, "Result for variable %s is undefined, skipping.", name);
-               return null;
-            } else {
-               logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation for variable %s failed: Return value %s is not a number.", name, value);
-               return null;
-            }
+            return Util.toDoubleOrNull(value, error -> {
+               logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation of variable %s failed: %s", name, error);
+            }, info -> {
+               logCalculationMessage(testId, runId, CalculationLog.INFO, "Evaluation of variable %s: %s", name, info);
+            });
          } catch (PolyglotException e) {
-            logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation for variable %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
+            logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
             return null;
          } finally {
             if (out.size() > 0) {

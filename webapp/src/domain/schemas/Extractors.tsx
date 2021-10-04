@@ -45,7 +45,7 @@ function TryJsonPathModal(props: TryJsonPathModalProps) {
     const [valid, setValid] = useState(true)
     const [result, setResult] = useState<string>()
     const [resultRunId, setResultRunId] = useState<number>()
-    const pagination = useMemo(() => ({ page, perPage, sort: 'start', direction: 'descending' }),
+    const pagination = useMemo(() => ({ page, perPage, sort: 'start', direction: 'Descending' }),
         [ page, perPage])
     const dispatch = useDispatch()
     useEffect(() => {
