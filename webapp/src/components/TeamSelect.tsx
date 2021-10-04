@@ -35,6 +35,10 @@ type TeamSelectProps = {
 export default function TeamSelect({ includeGeneral, selection, onSelect }: TeamSelectProps) {
    const teams = useSelector(teamsSelector)
    const isAuthenticated = useSelector(isAuthenticatedSelector)
+   const generalOptions = [ <SelectOption key="__all" value={ SHOW_ALL } /> ];
+   if (isAuthenticated) {
+      generalOptions.push(<SelectOption key="__my" value={ ONLY_MY_OWN } />)
+   }
    const teamsAsSelectOptions = () => {
       return (teams ? teams.map(team => (
                      <SelectOption key={team} value={ createTeam(team) }/>
@@ -57,8 +61,7 @@ export default function TeamSelect({ includeGeneral, selection, onSelect }: Team
          >
          {  includeGeneral ? [
                <SelectGroup key="__general" label="General" value="">
-                 { isAuthenticated && <SelectOption value={ ONLY_MY_OWN } /> }
-                 <SelectOption value={ SHOW_ALL } />
+                 { generalOptions }
                </SelectGroup>,
                <SelectGroup key="__role" label="Team" value="">
                  { teamsAsSelectOptions() }
