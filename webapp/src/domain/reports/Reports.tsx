@@ -25,6 +25,8 @@ import { alertAction } from "../../alerts"
 import { formatDateTime } from "../../utils"
 
 import { AllTableReports, TableReportSummary, getTableReports } from "./api"
+import ButtonLink from "../../components/ButtonLink"
+import { useTester } from "../../auth"
 
 type C = CellProps<TableReportSummary>
 
@@ -121,6 +123,7 @@ export default function Reports() {
         []
     )
 
+    const isTester = useTester()
     const tableReportConfig =
         (tableReportConfigId !== undefined &&
             tableReports &&
@@ -131,6 +134,11 @@ export default function Reports() {
             <Card>
                 <CardHeader>
                     <Flex style={{ width: "100%" }}>
+                        {isTester && (
+                            <FlexItem>
+                                <ButtonLink to="/reports/table/config/__new">New report configuration</ButtonLink>
+                            </FlexItem>
+                        )}
                         <FlexItem>
                             <TeamSelect includeGeneral={true} selection={roles || SHOW_ALL} onSelect={setRoles} />
                         </FlexItem>
