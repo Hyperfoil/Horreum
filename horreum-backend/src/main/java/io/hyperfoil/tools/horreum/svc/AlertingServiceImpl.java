@@ -528,7 +528,7 @@ public class AlertingServiceImpl implements AlertingService {
    public void onRunTrashed(Integer runId) {
       log.infof("Trashing datapoints for run %d", runId);
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
-         Query deleteChanges = em.createNativeQuery("DELETE FROM change WHERE runid ?");
+         Query deleteChanges = em.createNativeQuery("DELETE FROM change WHERE runid = ?");
          deleteChanges.setParameter(1, runId).executeUpdate();
          DataPoint.delete("runid", runId);
       }
