@@ -23,7 +23,9 @@ export const getHook = (id: number) => (dispatch: Dispatch<LoadedAction>) =>
 export const addHook = (payload: Hook) => (dispatch: Dispatch<LoadedAction>) =>
     api.addHook(payload).then(
         response => dispatch(loaded(response)),
-        rejected => { /* noop */ }
+        rejected => {
+            /* noop */
+        }
     )
 
 export const allHooks = () => (dispatch: Dispatch<LoadedAction>) =>

@@ -237,7 +237,12 @@ export const reducer = (state = new RunsState(), action: RunsAction) => {
     return state
 }
 
-function updateRun(state: RunsState, id: number, testid: number, patch: Record<string, unknown> | ((current: Run) => Run)) {
+function updateRun(
+    state: RunsState,
+    id: number,
+    testid: number,
+    patch: Record<string, unknown> | ((current: Run) => Run)
+) {
     const run = state.byId?.get(id)
     if (run) {
         const updated = typeof patch === "function" ? patch(run) : { ...run, ...patch }
