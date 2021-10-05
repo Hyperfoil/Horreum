@@ -2,9 +2,9 @@ import { Tooltip } from "@patternfly/react-core"
 import { LockedIcon } from "@patternfly/react-icons"
 
 export default function AccessIcon({ access }: { access: number | string }) {
-    var color
-    var text
-    var explanation
+    let color
+    let text
+    let explanation
     switch (access) {
         case "PUBLIC":
         case 0: {

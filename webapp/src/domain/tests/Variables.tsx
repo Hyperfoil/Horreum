@@ -461,7 +461,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                     return Promise.reject()
                 })
                 .then(_ => {
-                    return new Promise((resolve, reject) => {
+                    return new Promise(resolve => {
                         // we have to pass this using function, otherwise it would call the resolve function
                         setRecalcConfirm(() => resolve)
                     })

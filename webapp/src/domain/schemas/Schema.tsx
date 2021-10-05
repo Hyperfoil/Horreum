@@ -211,9 +211,12 @@ export default function Schema() {
         if (!content) {
             return
         }
+        let schemaUri
         try {
-            var schemaUri = jsonpath.value(JSON.parse(content), "$['$id']")
-        } catch (e) {}
+            schemaUri = jsonpath.value(JSON.parse(content), "$['$id']")
+        } catch (e) {
+            /* noop */
+        }
         return schemaUri || undefined
     }
 
@@ -243,7 +246,7 @@ export default function Schema() {
     }, [uri])
 
     const save = () => {
-        let newSchema = {
+        const newSchema = {
             id: schemaId,
             ...currentSchema,
             schema: editorSchema ? JSON.parse(editorSchema) : null,

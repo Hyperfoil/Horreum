@@ -33,7 +33,7 @@ export default function SchemaSelect(props: SchemaSelectProps) {
             }
         })
     }, [props.onChange, props.value])
-    var extraOptions: Schema[] = []
+    const extraOptions: Schema[] = []
     if (props.noSchemaOption) {
         extraOptions.push({ name: "", id: 0, uri: "", toString: () => "-- no schema --" })
     }

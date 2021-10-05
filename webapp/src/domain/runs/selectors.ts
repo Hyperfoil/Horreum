@@ -39,7 +39,7 @@ export const testRuns = (id: number, pagination: PaginationInfo, trashed: boolea
     if (!testRuns) {
         return []
     }
-    let list = [...testRuns.values()].filter(run => state.runs.currentPage.includes(run.id))
+    const list = [...testRuns.values()].filter(run => state.runs.currentPage.includes(run.id))
     return sort(list, pagination)
 }
 
@@ -63,11 +63,11 @@ export const count = (state: State) => {
 }
 
 export const isFetchingSuggestions = (state: State) => {
-    let suggestQuery = state.runs.suggestQuery
+    const suggestQuery = state.runs.suggestQuery
     return suggestQuery.length > 0
 }
 export const suggestQuery = (state: State) => {
-    let suggestQuery = state.runs.suggestQuery
+    const suggestQuery = state.runs.suggestQuery
     // Actually when this is called the suggestQuery.length should be <= 1
     return suggestQuery.length === 0 ? null : suggestQuery[suggestQuery.length - 1]
 }

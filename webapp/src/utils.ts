@@ -1,8 +1,8 @@
 import { DateTime } from "luxon"
 
-export function isEmpty(obj: object): boolean {
-    for (var key in obj) {
-        if (obj.hasOwnProperty(key)) return false
+export function isEmpty(obj: any): boolean {
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) return false
     }
     return true
 }
@@ -12,7 +12,7 @@ function ensureISO(timestamp: string) {
 }
 
 export function formatDate(timestamp: any): string {
-    var datetime
+    let datetime
     if (!timestamp) {
         return "--"
     } else if (typeof timestamp === "string") {
@@ -28,7 +28,7 @@ export function formatDate(timestamp: any): string {
 }
 
 export function formatDateTime(timestamp: any): string {
-    var datetime
+    let datetime
     if (!timestamp) {
         return "--"
     } else if (typeof timestamp === "string") {
@@ -104,7 +104,7 @@ export function millisToDuration(duration: number): string {
 }
 
 export function interleave<T>(arr: T[], inBetween: (i: number) => T) {
-    var narr: T[] = []
+    const narr: T[] = []
     for (let i = 0; i < arr.length - 1; ++i) {
         narr.push(arr[i])
         narr.push(inBetween(i))

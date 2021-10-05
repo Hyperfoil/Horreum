@@ -3,6 +3,7 @@ import { Map } from "immutable"
 import { Access } from "../../auth"
 import { ThunkDispatch } from "redux-thunk"
 import { Hook } from "../hooks/reducers"
+import { Run } from "../runs/reducers"
 
 export interface Token {
     id: number
@@ -10,10 +11,12 @@ export interface Token {
     permissions: number
 }
 
+export type RenderFunction = (value: any, row: any, token: string | undefined) => any
+
 export interface ViewComponent {
     headerName: string
     accessors: string
-    render: string | Function | undefined
+    render: string | RenderFunction | undefined
     headerOrder: number
 }
 
@@ -27,11 +30,13 @@ export interface StalenessSettings {
     maxStaleness?: number
 }
 
+export type CompareFunction = (runs: Run[]) => string
+
 export interface Test {
     id: number
     name: string
     description: string
-    compareUrl: string | Function | undefined
+    compareUrl: string | CompareFunction | undefined
     tags: string
     tagsCalculation?: string
     owner: string
@@ -46,7 +51,7 @@ export interface Test {
 
 export class TestsState {
     byId?: Map<number, Test> = undefined
-    loading: boolean = false
+    loading = false
     // we need to store watches independently as the information
     // can arrive before the actual test list
     watches: Map<number, string[] | undefined> = Map<number, string[] | undefined>()
@@ -130,7 +135,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
         case actionTypes.LOADED_SUMMARY:
             {
                 state.loading = false
-                var byId = Map<number, Test>()
+                let byId = Map<number, Test>()
                 action.tests.forEach(test => {
                     byId = byId.set(test.id, test)
                 })
@@ -146,7 +151,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             break
         case actionTypes.UPDATE_ACCESS:
             {
-                let test = state.byId?.get(action.id)
+                const test = state.byId?.get(action.id)
                 if (test) {
                     state.byId = state.byId?.set(action.id, { ...test, owner: action.owner, access: action.access })
                 }
@@ -164,7 +169,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             break
         case actionTypes.UPDATE_VIEW:
             {
-                let test = state.byId?.get(action.testId)
+                const test = state.byId?.get(action.testId)
                 if (test) {
                     state.byId = state.byId?.set(action.testId, { ...test, defaultView: action.view })
                 }
@@ -172,7 +177,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             break
         case actionTypes.UPDATE_TOKENS:
             {
-                let test = state.byId?.get(action.testId)
+                const test = state.byId?.get(action.testId)
                 if (test) {
                     state.byId = state.byId?.set(action.testId, { ...test, tokens: action.tokens })
                 }
@@ -180,7 +185,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             break
         case actionTypes.REVOKE_TOKEN:
             {
-                let test = state.byId?.get(action.testId)
+                const test = state.byId?.get(action.testId)
                 if (test) {
                     state.byId = state.byId?.set(action.testId, {
                         ...test,

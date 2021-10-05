@@ -43,7 +43,7 @@ export default function TeamSelect({ includeGeneral, selection, onSelect }: Team
             aria-label="Select team"
             placeholderText="Select team..."
             onToggle={setExpanded}
-            onSelect={(event, selection, isPlaceholder) => {
+            onSelect={(event, selection) => {
                 setExpanded(false)
                 onSelect(selection as Team)
             }}

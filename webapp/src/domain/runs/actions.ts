@@ -67,7 +67,7 @@ export const suggest =
                 options: [],
             })
         } else {
-            let fetching = isFetchingSuggestions(store.getState())
+            const fetching = isFetchingSuggestions(store.getState())
             dispatch({
                 type: actionTypes.LOAD_SUGGESTIONS,
                 query: query,
@@ -97,7 +97,7 @@ const fetchSuggestions = (query: string, roles: string, dispatch: Dispatch<Sugge
             }
         )
         .finally(() => {
-            let nextQuery = suggestQuery(store.getState())
+            const nextQuery = suggestQuery(store.getState())
             if (nextQuery != null) {
                 fetchSuggestions(nextQuery, roles, dispatch)
             }
@@ -147,7 +147,7 @@ export const updateAccess =
     }
 
 export const trash =
-    (id: number, testid: number, isTrashed: boolean = true) =>
+    (id: number, testid: number, isTrashed = true) =>
     (dispatch: Dispatch<TrashAction>) =>
         api.trash(id, isTrashed).then(response => {
             dispatch({

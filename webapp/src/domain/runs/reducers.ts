@@ -29,11 +29,11 @@ export interface Run {
 }
 
 export class RunsState {
-    loading: boolean = false
+    loading = false
     byId?: Map<number, Run> = undefined
     byTest?: Map<number, Map<number, Run>> = undefined
     currentPage: number[] = []
-    currentTotal: number = 0
+    currentTotal = 0
     selectedRoles?: Team = undefined
     suggestQuery: string[] = []
     suggestions: string[] = []
@@ -221,7 +221,7 @@ export const reducer = (state = new RunsState(), action: RunsAction) => {
                 } else {
                     copy.data = { ...run.data }
                     if (action.path) {
-                        var sub = (copy.data[action.path] = { ...copy.data[action.path] })
+                        const sub = (copy.data[action.path] = { ...copy.data[action.path] })
                         console.log(sub)
                         delete sub["$schema"]
                     } else {
@@ -237,8 +237,8 @@ export const reducer = (state = new RunsState(), action: RunsAction) => {
     return state
 }
 
-function updateRun(state: RunsState, id: number, testid: number, patch: object | ((current: Run) => Run)) {
-    let run = state.byId?.get(id)
+function updateRun(state: RunsState, id: number, testid: number, patch: Record<string, unknown> | ((current: Run) => Run)) {
+    const run = state.byId?.get(id)
     if (run) {
         const updated = typeof patch === "function" ? patch(run) : { ...run, ...patch }
         state.byId = (state.byId || Map<number, Run>()).set(run.id, updated)

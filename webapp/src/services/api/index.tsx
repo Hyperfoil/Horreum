@@ -50,13 +50,7 @@ const deserialize = (input: any): any => {
     }
 }
 
-export const fetchApi = (
-    endPoint: string,
-    payload: any = {},
-    method: string = "get",
-    headers = {},
-    responseAs = "json"
-) => {
+export function fetchApi(endPoint: string, payload: any = {}, method = "get", headers = {}, responseAs = "json") {
     //const accessToken = sessionSelectors.get().tokens.access.value;
     const serialized = serialize(payload)
     const keycloak = store.getState().auth.keycloak
@@ -68,7 +62,7 @@ export const fetchApi = (
     }
     return updateTokenPromise
         .then(() => {
-            let authHeaders: any = {}
+            const authHeaders = Object.create(null)
             if (keycloak != null && keycloak.token != null) {
                 authHeaders.Authorization = "Bearer " + keycloak.token
             }
@@ -108,12 +102,12 @@ export const fetchApi = (
                         (body: any) => {
                             return Promise.reject(body)
                         },
-                        (noBody: any) => {
+                        (_: any) => {
                             return e.response.text().then(
                                 (body: any) => {
                                     return Promise.reject(body)
                                 },
-                                (noBodyAgain: any) => {
+                                (_: any) => {
                                     return Promise.reject(e)
                                 }
                             )

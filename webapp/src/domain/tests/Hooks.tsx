@@ -92,7 +92,7 @@ export default function Hooks({ testId, testOwner, funcsRef, onModified }: Hooks
             response => {
                 setTestWebHooks(
                     response.map((h: Hook) => {
-                        let hd = {
+                        return {
                             ...h,
                             id: Number(h.id),
                             url: String(h.url),
@@ -100,7 +100,6 @@ export default function Hooks({ testId, testOwner, funcsRef, onModified }: Hooks
                             target: Number(h.target),
                             type: String(h.type),
                         }
-                        return hd
                     })
                 )
             },

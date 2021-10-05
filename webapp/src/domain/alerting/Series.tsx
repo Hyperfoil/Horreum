@@ -346,7 +346,7 @@ export default function Series() {
                                                         setEndTime={setEndTime}
                                                         timespan={timespan}
                                                         lineType={lineType}
-                                                        onChangeSelected={(changeId, variableId, runId) => {
+                                                        onChangeSelected={(changeId, variableId) => {
                                                             setSelectedChange(changeId)
                                                             setSelectedVariable(variableId)
                                                             // we cannot scroll to an element that's not visible yet

@@ -61,7 +61,9 @@ type AccessorsProps = {
 
 export default function Accessors({
     value = [],
-    onChange = (_: string[]) => {},
+    onChange = (_: string[]) => {
+        /* noop */
+    },
     isReadOnly,
     allowArray,
     error,
@@ -121,8 +123,8 @@ export default function Accessors({
                         return // this is the create
                     }
                     setExpanded(false)
-                    let base = baseName(newSelected)
-                    let array = base + "[]"
+                    const base = baseName(newSelected)
+                    const array = base + "[]"
                     let updated: string[]
                     if (selected.includes(newSelected)) {
                         updated = selected.filter(o => o !== newSelected)
@@ -259,7 +261,7 @@ export default function Accessors({
                             variant="primary"
                             onClick={() => {
                                 addOrUpdateExtractor(created).then(
-                                    response => {
+                                    ignored => {
                                         setCreateOpen(false)
                                         openVariantModal(created)
                                     },
@@ -304,10 +306,10 @@ export default function Accessors({
                         variant="primary"
                         onClick={() => {
                             setVariantOpen(false)
-                            let base = addedOption ? baseName(addedOption.accessor) : ""
-                            let name = variant === 0 ? base : base + "[]"
+                            const base = addedOption ? baseName(addedOption.accessor) : ""
+                            const name = variant === 0 ? base : base + "[]"
                             setOptions([...options, { ...addedOption, accessor: name }])
-                            let updated = [...selected, name]
+                            const updated = [...selected, name]
                             setSelected(updated)
                             onChange(updated)
                         }}

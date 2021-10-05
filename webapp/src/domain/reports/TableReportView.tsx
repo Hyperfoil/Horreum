@@ -63,9 +63,12 @@ function ComponentTable(props: ComponentTableProps) {
     const labels = [...new Set(props.data.map(d => d.label))].sort()
     const seriesFormatter = formatter(props.config.seriesFormatter)
     const labelFormatter = formatter(props.config.labelFormatter)
-    const chartData: any[] = labels.map(label => ({ label }))
+    const chartData: Record<string, string | number>[] = labels.map(label => ({ label }))
     props.data.forEach(d => {
-        chartData.find(item => item.label === d.label)[d.series] = d.values[props.index]
+        const matching = chartData.find(item => item.label === d.label)
+        if (matching) {
+            matching[d.series] = d.values[props.index]
+        }
     })
     const [minMaxDomain, setMinMaxDomain] = useState(false)
     const commonChartElements = [
@@ -173,7 +176,7 @@ function ComponentTable(props: ComponentTableProps) {
 type CommentProps = {
     editable?: boolean
     text: string
-    onUpdate(text: string): Promise<any>
+    onUpdate(text: string): Promise<unknown>
 }
 
 function Comment(props: CommentProps) {

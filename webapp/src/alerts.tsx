@@ -77,7 +77,12 @@ export const constraintValidationFormatter = (object: any) => (e: any) => {
     }
 }
 
-export const alertAction = (type: string, title: string, e: any, ...errorFormatter: Function[]): AddAlertAction => {
+export const alertAction = (
+    type: string,
+    title: string,
+    e: any,
+    ...errorFormatter: ((error: any) => any)[]
+): AddAlertAction => {
     let formatted = undefined
     for (const f of errorFormatter) {
         formatted = f.call(null, e)
@@ -135,7 +140,9 @@ export const defaultFormatError = (e: any) => {
     if (typeof e === "string") {
         try {
             e = JSON.parse(e)
-        } catch {}
+        } catch {
+            /* noop */
+        }
     }
     if (typeof e !== "object") {
         return String(e)

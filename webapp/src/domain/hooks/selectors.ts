@@ -4,7 +4,7 @@ export const all = (state: State) => {
     if (!state.hooks.byId) {
         return false
     }
-    let list = [...state.hooks.byId.values()]
+    const list = [...state.hooks.byId.values()]
     list.sort((a, b) => a.id - b.id)
     return list
 }

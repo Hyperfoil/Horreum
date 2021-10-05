@@ -10,7 +10,7 @@ export interface Schema {
     name: string
     description: string
     uri: string
-    schema: object
+    schema: unknown
     owner: string
     access: Access
     token: string | null
@@ -71,7 +71,7 @@ export const reducer = (state = new SchemasState(), action: SchemaAction) => {
             break
         case actionTypes.UPDATE_TOKEN:
             {
-                let schema = state.byId?.get(`${action.id}`)
+                const schema = state.byId?.get(`${action.id}`)
                 if (schema) {
                     state.byId = (state.byId as Map<string, Schema>).set(`${action.id}`, {
                         ...schema,
@@ -82,7 +82,7 @@ export const reducer = (state = new SchemasState(), action: SchemaAction) => {
             break
         case actionTypes.UPDATE_ACCESS:
             {
-                let schema = state.byId && state.byId.get(`${action.id}`)
+                const schema = state.byId && state.byId.get(`${action.id}`)
                 if (schema) {
                     state.byId = (state.byId as Map<string, Schema>).set(`${action.id}`, {
                         ...schema,

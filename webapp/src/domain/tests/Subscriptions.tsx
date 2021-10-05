@@ -16,7 +16,7 @@ type SubscriptionsProps = {
 }
 
 function userElement(user: User): ReactElement {
-    var str = ""
+    let str = ""
     if (user.firstName) {
         str += user.firstName + " "
     }

@@ -121,7 +121,7 @@ export default function PanelChart(props: PanelProps) {
         if (!datapoints) {
             return []
         }
-        let series = new Map()
+        const series = new Map()
         datapoints.forEach(tt => {
             tt.datapoints.forEach(([value, timestamp]) => {
                 let point = series.get(timestamp)

@@ -15,9 +15,10 @@ import {
 import clsx from "clsx"
 
 // We need to pass the same empty list to prevent re-renders
-const NO_DATA: {}[] = []
+const NO_DATA: Record<string, unknown>[] = []
 const NO_SORT: SortingRule<any>[] = []
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 type TableProps<D extends object> = {
     columns: Column<D>[]
     data: D[]
@@ -33,8 +34,12 @@ const defaultProps = {
     sortBy: NO_SORT,
     isLoading: false,
     selected: NO_DATA,
-    onSelected: () => {},
+    onSelected: () => {
+        /* noop */
+    },
 }
+
+// eslint-disable-next-line @typescript-eslint/ban-types
 function Table<D extends object>({ columns, data, sortBy, isLoading, selected, onSelected, onSortBy }: TableProps<D>) {
     const [currentSortBy, setCurrentSortBy] = useState(sortBy)
     useEffect(() => {
@@ -74,10 +79,10 @@ function Table<D extends object>({ columns, data, sortBy, isLoading, selected, o
         <>
             <table className="pf-c-table pf-m-compact pf-m-grid-md" {...getTableProps()}>
                 <thead>
-                    {headerGroups.map((headerGroup, headerGroupIndex) => {
+                    {headerGroups.map(headerGroup => {
                         return (
                             <tr {...headerGroup.getHeaderGroupProps()}>
-                                {headerGroup.headers.map((column, columnIndex) => {
+                                {headerGroup.headers.map(column => {
                                     const columnProps = column as unknown as UseSortByColumnProps<D>
                                     return (
                                         // Add the sorting props to control sorting. For this example
@@ -125,7 +130,7 @@ function Table<D extends object>({ columns, data, sortBy, isLoading, selected, o
                             </td>
                         </tr>
                     )}
-                    {rows.map((row, i) => {
+                    {rows.map(row => {
                         prepareRow(row)
                         const rowProps = row.getRowProps()
                         if ((row as unknown as UseRowSelectRowProps<D>).isSelected) {
@@ -133,7 +138,7 @@ function Table<D extends object>({ columns, data, sortBy, isLoading, selected, o
                         }
                         return (
                             <tr {...rowProps}>
-                                {row.cells.map((cell, cellIndex) => {
+                                {row.cells.map(cell => {
                                     return (
                                         <td data-label={cell.column.Header} {...cell.getCellProps()}>
                                             {cell.render("Cell")}

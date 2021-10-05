@@ -18,7 +18,7 @@ export type Access = 0 | 1 | 2
 
 export class AuthState {
     keycloak?: Keycloak.KeycloakInstance = undefined
-    authenticated: boolean = false
+    authenticated = false
     roles: string[] = []
     teams: string[] = []
     defaultTeam?: string = undefined
@@ -129,12 +129,12 @@ export const defaultTeamSelector = (state: State) => {
     if (state.auth.defaultTeam !== undefined) {
         return state.auth.defaultTeam
     }
-    let teamRoles = teamsSelector(state)
+    const teamRoles = teamsSelector(state)
     return teamRoles.length > 0 ? teamRoles[0] : undefined
 }
 
 export const initKeycloak = (state: State) => {
-    let keycloak = keycloakSelector(state)
+    const keycloak = keycloakSelector(state)
     let keycloakPromise
     if (!keycloak) {
         keycloakPromise = fetchApi("/api/config/keycloak").then(response => Keycloak(response))

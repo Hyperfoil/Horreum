@@ -14,7 +14,7 @@ import TableReportView from "./TableReportView"
 import ButtonLink from "../../components/ButtonLink"
 
 export default function TableReportPage() {
-    const { id: stringId } = useParams<any>()
+    const { id: stringId } = useParams<Record<string, string>>()
     const id = parseInt(stringId)
     const [report, setReport] = useState<TableReport>()
     const [loading, setLoading] = useState(false)

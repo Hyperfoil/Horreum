@@ -135,7 +135,7 @@ export function Menu(run: Run) {
             ),
     })
     const restore = useRestore(run)
-    let menuItems: MenuItem<any>[] = [shareLink, changeAccess]
+    const menuItems: MenuItem<any>[] = [shareLink, changeAccess]
     menuItems.push(run.trashed ? restore : del)
 
     const isTester = useTester(run.owner)

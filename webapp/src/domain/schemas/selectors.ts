@@ -4,7 +4,7 @@ export const all = (state: State) => {
     if (!state.schemas.byId) {
         return false
     }
-    let list = [...state.schemas.byId.values()]
+    const list = [...state.schemas.byId.values()]
     list.sort((a, b) => a.id - b.id)
     return list
 }

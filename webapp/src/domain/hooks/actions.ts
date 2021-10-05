@@ -23,11 +23,11 @@ export const getHook = (id: number) => (dispatch: Dispatch<LoadedAction>) =>
 export const addHook = (payload: Hook) => (dispatch: Dispatch<LoadedAction>) =>
     api.addHook(payload).then(
         response => dispatch(loaded(response)),
-        rejected => {}
+        rejected => { /* noop */ }
     )
 
 export const allHooks = () => (dispatch: Dispatch<LoadedAction>) =>
     api.allHooks().then(response => dispatch(loaded(response)))
 
 export const removeHook = (id: number) => (dispatch: Dispatch<DeleteAction>) =>
-    api.removeHook(id).then(response => dispatch(removed(id)))
+    api.removeHook(id).then(_ => dispatch(removed(id)))

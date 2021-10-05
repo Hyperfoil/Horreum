@@ -85,7 +85,7 @@ export default function TagsSelect(props: TagsSelectProps) {
         props.includeTrashed,
         props.addAllTagsOption,
     ])
-    let options = []
+    const options = []
     let hasAllTags = false
     if (props.addAllTagsOption && (!props.tagFilter || props.tagFilter(null))) {
         options.push(ALL_TAGS)

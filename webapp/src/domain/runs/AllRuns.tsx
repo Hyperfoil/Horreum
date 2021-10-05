@@ -167,7 +167,7 @@ export default function AllRuns() {
         value: filterQuery,
         onChange: (evt: React.FormEvent<any>, v: ChangeEvent) => {
             // TODO
-            let value = (v as any).newValue
+            const value = (v as any).newValue
             setFilterError(undefined)
             setFilterQuery(value)
         },
@@ -265,7 +265,7 @@ export default function AllRuns() {
                                                 style={{ width: "500px" }}
                                             />
                                         )}
-                                        renderSuggestionsContainer={({ containerProps, children, query }) => (
+                                        renderSuggestionsContainer={({ containerProps, children }) => (
                                             <div {...containerProps}>
                                                 <div
                                                     className="react-autosuggest__loading"

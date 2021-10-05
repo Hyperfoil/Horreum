@@ -266,7 +266,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                             <Button
                                 isDisabled={newStalenessTags === undefined}
                                 onClick={() => {
-                                    let copy = newStalenessTags === null ? null : { ...newStalenessTags }
+                                    const copy = newStalenessTags === null ? null : { ...newStalenessTags }
                                     if (copy !== null) {
                                         delete copy.toString
                                     }

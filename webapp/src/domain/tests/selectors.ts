@@ -6,7 +6,7 @@ export const all = (state: State) => {
     if (!state.tests.byId) {
         return false
     }
-    let list = [...state.tests.byId.values()]
+    const list = [...state.tests.byId.values()]
     list.sort((a, b) => a.id - b.id)
     state.tests.watches.forEach((watching, id) => {
         const test = list.find(t => t.id === id)

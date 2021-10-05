@@ -44,12 +44,12 @@ import {
 } from "react-table"
 import { Run } from "./reducers"
 import { Description, ExecutionTime, Menu, RunTags } from "./components"
-import { Test } from "../tests/reducers"
+import { RenderFunction, Test } from "../tests/reducers"
 
 type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row: UseRowSelectRowProps<Run> }
 
 //TODO how to prevent rendering before the data is loaded? (we just have start,stop,id)
-const renderCell = (render: string | Function | undefined) => (arg: C) => {
+const renderCell = (render: string | RenderFunction | undefined) => (arg: C) => {
     const {
         cell: {
             value,

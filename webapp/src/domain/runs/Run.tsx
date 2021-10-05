@@ -58,7 +58,7 @@ function postgresTojsJsonPath(query: string) {
     query = query.replace(/ *\? */, "?")
 
     // Note: postgres query allows conditions beyond selecting array items
-    let qIndex = query.indexOf("?")
+    const qIndex = query.indexOf("?")
     if (qIndex >= 0) {
         query = query.substring(0, qIndex) + "[" + query.substring(qIndex) + "]"
     }
@@ -72,7 +72,7 @@ function execQuery(run: RunDef | false, type: string, query: string): Promise<[s
     if (query === "") {
         return Promise.resolve([toString(run.data), true])
     }
-    var array = false
+    let array = false
     switch (type) {
         case "js":
             return Promise.resolve(execQueryLocal(run, query))
@@ -111,8 +111,8 @@ function execQueryLocal(run: RunDef, pathQuery: string): [string, boolean] {
     }
     try {
         const found = jsonpath.nodes(run.data, query).map(({ path, value }) => {
-            let obj: { [key: string]: string } = {}
-            var combinedPath = ""
+            const obj: { [key: string]: string } = {}
+            let combinedPath = ""
             path.forEach(x => {
                 if (combinedPath === "") {
                     combinedPath = String(x)
@@ -132,7 +132,7 @@ function execQueryLocal(run: RunDef, pathQuery: string): [string, boolean] {
         return [JSON.stringify(found, null, 2), true]
     } catch (e) {
         console.log("Failed query: " + query)
-        return [e.message, false]
+        return [(e as any).message, false]
     }
 }
 
@@ -167,7 +167,7 @@ function updateSuggestionValue(value: string, pathQuery: string, pathSuggestions
     } else {
         // It's possible that we've already added one suggestion
         for (let i = 0; i < pathSuggestions.length; ++i) {
-            let sg = pathSuggestions[i]
+            const sg = pathSuggestions[i]
             if (pathQuery.endsWith(sg)) {
                 return pathQuery.substring(0, pathQuery.length - sg.length) + value
             }
@@ -181,17 +181,17 @@ function findSuggestions(run: RunDef | false, value: string): [string[], boolean
         return [[], true]
     }
     let query = postgresTojsJsonPath(value.trim())
-    let conditionStart = query.indexOf("@")
+    const conditionStart = query.indexOf("@")
     if (conditionStart >= 0) {
-        var condition = query.substring(conditionStart + 1)
-        let conditionEnd = Math.min(
+        let condition = query.substring(conditionStart + 1)
+        const conditionEnd = Math.min(
             ...["<", ">", "!=", "==", " ", ")"].map(op => {
-                let opIndex = condition.indexOf(op)
+                const opIndex = condition.indexOf(op)
                 return opIndex >= 0 ? opIndex : condition.length
             })
         )
         condition = condition.substring(0, conditionEnd)
-        let qIndex = query.indexOf("?")
+        const qIndex = query.indexOf("?")
         if (qIndex > 0) {
             // condition start looks like [?(@...
             query = query.substring(0, qIndex - 1).trim() + condition
@@ -199,7 +199,7 @@ function findSuggestions(run: RunDef | false, value: string): [string[], boolean
             query = query.substring(0, conditionStart) + condition
         }
     }
-    let lastDot = Math.max(query.lastIndexOf("."), query.lastIndexOf("]"))
+    const lastDot = Math.max(query.lastIndexOf("."), query.lastIndexOf("]"))
     let incomplete = ""
     if (lastDot >= 0) {
         incomplete = query.substring(lastDot + 1)
@@ -223,7 +223,7 @@ function findSuggestions(run: RunDef | false, value: string): [string[], boolean
         query = "$..*"
     }
     try {
-        let sgs = jsonpath
+        const sgs = jsonpath
             .paths(run.data, query)
             .map(path => path[path.length - 1].toString())
             .filter(k => k.startsWith(incomplete))
@@ -304,7 +304,7 @@ export default function Run() {
         },
     }
     const typingTimer = useRef<number | null>(null)
-    const delayedUpdateSuggestions = ({ value }: SuggestionsFetchRequestedParams) => {
+    const delayedUpdateSuggestions = (_: SuggestionsFetchRequestedParams) => {
         if (typingTimer.current !== null) {
             clearTimeout(typingTimer.current)
         }

@@ -97,7 +97,7 @@ function HelpButton() {
 }
 
 export default function TableReportConfigPage() {
-    const { configId: stringId } = useParams<any>()
+    const { configId: stringId } = useParams<Record<string, string>>()
     const id = parseInt(stringId)
 
     const [config, setConfig] = useState<TableReportConfig>({

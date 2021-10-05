@@ -39,13 +39,13 @@ type AddTokenModalProps = {
 
 const byteToHex: string[] = []
 
-for (let n: number = 0; n <= 0xff; ++n) {
+for (let n = 0; n <= 0xff; ++n) {
     const hexOctet = n.toString(16).padStart(2, "0")
     byteToHex.push(hexOctet)
 }
 
 function randomToken() {
-    var u8 = new Uint8Array(32)
+    const u8 = new Uint8Array(32)
     window.crypto.getRandomValues(u8)
     const hexOctets = []
     for (let i = 0; i < u8.length; ++i) hexOctets.push(byteToHex[u8[i]])
@@ -148,7 +148,6 @@ function Access(props: AccessProps) {
         setOwner(props.test?.owner || defaultRole || "")
         setAccess(props.test?.access || 0)
     }, [props.test, defaultRole])
-    useEffect(() => {}, [props.test])
 
     const thunkDispatch = useDispatch<TestDispatch>()
     const dispatch = useDispatch()
