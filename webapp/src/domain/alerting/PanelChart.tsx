@@ -1,7 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { useDispatch } from "react-redux"
-import { AutoSizer } from "react-virtualized"
-import { CartesianGrid, Legend, Line, LineChart, ReferenceDot, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts"
+import {
+    CartesianGrid,
+    Legend,
+    Line,
+    LineChart,
+    ReferenceDot,
+    ReferenceLine,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts"
 import { Button, EmptyState, Spinner, Title } from "@patternfly/react-core"
 import { DateTime } from "luxon"
 import { findLastDatapoints } from "./api"
@@ -224,103 +234,99 @@ export default function PanelChart(props: PanelProps) {
                         </EmptyState>
                     )}
                     {chartData.length > 0 && (
-                        <AutoSizer disableHeight={true}>
-                            {({ height, width }) => (
-                                <LineChart width={width} height={450} data={chartData} style={{ userSelect: "none" }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis
-                                        allowDataOverflow={true}
-                                        type="number"
-                                        scale="time"
-                                        angle={-30}
-                                        textAnchor="end"
-                                        height={50}
-                                        dataKey="timestamp"
-                                        tick={{ fontSize: 12 }}
-                                        tickFormatter={tsToDate}
-                                        domain={[startTime, props.endTime]}
-                                    />
-                                    <YAxis
-                                        width={80}
-                                        yAxisId={0}
-                                        tickFormatter={formatValue}
-                                        tick={{ fontSize: 12 }}
-                                        domain={["dataMin", "dataMax"]}
-                                    />
-                                    <Legend iconType="line" payload={legend} align="left" />
-                                    <Tooltip
-                                        content={({ active, payload, label }) => {
-                                            if (!active) {
-                                                return null
-                                            }
-                                            const timestamp = label
-                                                ? typeof label === "number"
-                                                    ? label
-                                                    : parseInt(label)
-                                                : undefined
-                                            const date = timestamp
-                                                ? DateTime.fromMillis(timestamp).toFormat("yyyy-LL-dd HH:mm:ss")
-                                                : ""
-                                            const as = annotations?.filter(a => a.time === timestamp) || []
-                                            return (
-                                                <>
-                                                    <div
-                                                        className="recharts-default-tooltip"
-                                                        style={{
-                                                            background: "white",
-                                                            border: "1px solid black",
-                                                            maxWidth: "400px",
-                                                            maxHeight: "500px",
-                                                            overflowY: "auto",
-                                                            direction: "rtl",
-                                                            pointerEvents: "auto",
-                                                        }}
-                                                    >
-                                                        <div style={{ direction: "ltr", marginLeft: 5 }}>
-                                                            {date}
-                                                            <table id="toolTip">
-                                                                <tbody>
-                                                                    {payload?.map((row, i) => (
-                                                                        <tr key={i}>
-                                                                            <td
-                                                                                style={{
-                                                                                    textAlign: "left",
-                                                                                    color: row.color,
-                                                                                    paddingRight: "20px",
-                                                                                    maxWidth: "300px",
-                                                                                }}
-                                                                            >
-                                                                                {ellipsis("" + row.name)}
-                                                                            </td>
-                                                                            <td>
-                                                                                {formatValue(
-                                                                                    row.value as string | number
-                                                                                )}
-                                                                            </td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                            {as.map(a => (
-                                                                <React.Fragment key={a.changeId}>
-                                                                    <strong>{a.title}</strong>
-                                                                    <div
-                                                                        style={{ fontSize: 12 }}
-                                                                        dangerouslySetInnerHTML={{ __html: a.text }}
-                                                                    />
-                                                                </React.Fragment>
-                                                            ))}
-                                                        </div>
+                        <ResponsiveContainer width="100%" height={450}>
+                            <LineChart data={chartData} style={{ userSelect: "none" }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis
+                                    allowDataOverflow={true}
+                                    type="number"
+                                    scale="time"
+                                    angle={-30}
+                                    textAnchor="end"
+                                    height={50}
+                                    dataKey="timestamp"
+                                    tick={{ fontSize: 12 }}
+                                    tickFormatter={tsToDate}
+                                    domain={[startTime, props.endTime]}
+                                />
+                                <YAxis
+                                    width={80}
+                                    yAxisId={0}
+                                    tickFormatter={formatValue}
+                                    tick={{ fontSize: 12 }}
+                                    domain={["dataMin", "dataMax"]}
+                                />
+                                <Legend iconType="line" payload={legend} align="left" />
+                                <Tooltip
+                                    content={({ active, payload, label }) => {
+                                        if (!active) {
+                                            return null
+                                        }
+                                        const timestamp = label
+                                            ? typeof label === "number"
+                                                ? label
+                                                : parseInt(label)
+                                            : undefined
+                                        const date = timestamp
+                                            ? DateTime.fromMillis(timestamp).toFormat("yyyy-LL-dd HH:mm:ss")
+                                            : ""
+                                        const as = annotations?.filter(a => a.time === timestamp) || []
+                                        return (
+                                            <>
+                                                <div
+                                                    className="recharts-default-tooltip"
+                                                    style={{
+                                                        background: "white",
+                                                        border: "1px solid black",
+                                                        maxWidth: "400px",
+                                                        maxHeight: "500px",
+                                                        overflowY: "auto",
+                                                        direction: "rtl",
+                                                        pointerEvents: "auto",
+                                                    }}
+                                                >
+                                                    <div style={{ direction: "ltr", marginLeft: 5 }}>
+                                                        {date}
+                                                        <table id="toolTip">
+                                                            <tbody>
+                                                                {payload?.map((row, i) => (
+                                                                    <tr key={i}>
+                                                                        <td
+                                                                            style={{
+                                                                                textAlign: "left",
+                                                                                color: row.color,
+                                                                                paddingRight: "20px",
+                                                                                maxWidth: "300px",
+                                                                            }}
+                                                                        >
+                                                                            {ellipsis("" + row.name)}
+                                                                        </td>
+                                                                        <td>
+                                                                            {formatValue(row.value as string | number)}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                        {as.map(a => (
+                                                            <React.Fragment key={a.changeId}>
+                                                                <strong>{a.title}</strong>
+                                                                <div
+                                                                    style={{ fontSize: 12 }}
+                                                                    dangerouslySetInnerHTML={{ __html: a.text }}
+                                                                />
+                                                            </React.Fragment>
+                                                        ))}
                                                     </div>
-                                                </>
-                                            )
-                                        }}
-                                    />
-                                    {lines}
-                                    {changes}
-                                </LineChart>
-                            )}
-                        </AutoSizer>
+                                                </div>
+                                            </>
+                                        )
+                                    }}
+                                />
+                                {lines}
+                                {changes}
+                            </LineChart>
+                        </ResponsiveContainer>
                     )}
                 </div>
                 <Button
