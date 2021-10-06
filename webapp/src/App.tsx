@@ -11,7 +11,7 @@ import { Route, Switch } from "react-router"
 
 import store, { history } from "./store"
 import { initKeycloak, isAdminSelector, LoginLogout } from "./auth"
-import { UserProfileLink, UserSettings } from "./usersettings"
+import { UserProfileLink, UserSettings } from "./domain/user/UserSettings"
 
 import AllRuns from "./domain/runs/AllRuns"
 import TestRuns from "./domain/runs/TestRuns"
