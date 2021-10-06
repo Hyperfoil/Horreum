@@ -2,67 +2,91 @@ import * as api from "./api"
 import * as actionTypes from "./actionTypes"
 import { Access } from "../../auth"
 import { Schema, DeleteAction, LoadedAction, UpdateTokenAction, UpdateAccessAction } from "./reducers"
-import { Dispatch } from "react"
+import { Dispatch } from "redux"
 import { ThunkDispatch } from "redux-thunk"
+import { AddAlertAction, dispatchError } from "../../alerts"
 
 const loaded = (schema: Schema | Schema[]): LoadedAction => ({
     type: actionTypes.LOADED,
     schemas: Array.isArray(schema) ? schema : [schema],
 })
 
-export const getById = (id: number) => (dispatch: Dispatch<LoadedAction>) =>
-    api.getById(id).then(
-        response => dispatch(loaded(response)),
-        error => {
-            dispatch(loaded([]))
-            throw error
-        }
-    )
+export function getById(id: number) {
+    return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
+        api.getById(id).then(
+            response => dispatch(loaded(response)),
+            error => {
+                dispatch(loaded([]))
+                return dispatchError(dispatch, error, "GET_SCHEMA", "Failed to fetch schema")
+            }
+        )
+}
 
-// TODO: unused, remove me?
-export const getByName = (name: string) => (dispatch: Dispatch<LoadedAction>) =>
-    api.getByName(name).then(
-        response => dispatch(loaded(response)),
-        error => dispatch(loaded([]))
-    )
+export function add(payload: Schema) {
+    return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
+        api.add(payload).then(
+            id => {
+                dispatch(loaded({ ...payload, id }))
+                return id
+            },
+            error => dispatchError(dispatch, error, "ADD_SCHEMA", "Failed to add schema")
+        )
+}
 
-export const add = (payload: Schema) => (dispatch: Dispatch<LoadedAction>) =>
-    api.add(payload).then(id => {
-        dispatch(loaded({ ...payload, id }))
-        return id
-    })
+export function all() {
+    return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
+        api.all().then(
+            response => dispatch(loaded(response)),
+            error => {
+                dispatch(loaded([]))
+                return dispatchError(dispatch, error, "LIST_SCHEMAS", "Failed to list schemas")
+            }
+        )
+}
 
-export const all = () => (dispatch: Dispatch<LoadedAction>) =>
-    api.all().then(
-        response => dispatch(loaded(response)),
-        error => dispatch(loaded([]))
-    )
+export function resetToken(id: number) {
+    return (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) =>
+        api.resetToken(id).then(
+            token =>
+                dispatch({
+                    type: actionTypes.UPDATE_TOKEN,
+                    id: id,
+                    token: token,
+                }),
+            error => dispatchError(dispatch, error, "RESET_SCHEMA_TOKEN", "Failed to reset schema token")
+        )
+}
 
-export const resetToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>) =>
-    api.resetToken(id).then(token =>
-        dispatch({
-            type: actionTypes.UPDATE_TOKEN,
-            id: id,
-            token: token,
-        })
-    )
+export function dropToken(id: number) {
+    return (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) =>
+        api.dropToken(id).then(
+            () =>
+                dispatch({
+                    type: actionTypes.UPDATE_TOKEN,
+                    id: id,
+                    token: null,
+                }),
+            error => dispatchError(dispatch, error, "DROP_SCHEMA_TOKEN", "Failed to drop schema token")
+        )
+}
 
-export const dropToken = (id: number) => (dispatch: Dispatch<UpdateTokenAction>) =>
-    api.dropToken(id).then(() =>
-        dispatch({
-            type: actionTypes.UPDATE_TOKEN,
-            id: id,
-            token: null,
-        })
-    )
+export function updateAccess(id: number, owner: string, access: Access) {
+    return (dispatch: Dispatch<UpdateAccessAction | AddAlertAction>) =>
+        api.updateAccess(id, owner, access).then(
+            () => dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access }),
+            error => dispatchError(dispatch, error, "SCHEMA_UPDATE", "Failed to update schema access.")
+        )
+}
 
-export const updateAccess = (id: number, owner: string, access: Access) => (dispatch: Dispatch<UpdateAccessAction>) =>
-    api.updateAccess(id, owner, access).then(() => dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access }))
-
-export const deleteSchema = (id: number) => async (dispatch: ThunkDispatch<any, unknown, DeleteAction>) =>
-    api.deleteSchema(id).then(() => {
-        dispatch({
-            type: actionTypes.DELETE,
-            id: id,
-        })
-    })
+export function deleteSchema(id: number) {
+    return (dispatch: ThunkDispatch<any, unknown, DeleteAction>) =>
+        api.deleteSchema(id).then(
+            () => {
+                dispatch({
+                    type: actionTypes.DELETE,
+                    id: id,
+                })
+            },
+            error => dispatchError(dispatch, error, "SCHEMA_DELETE", "Failed to delete schema " + id)
+        )
+}

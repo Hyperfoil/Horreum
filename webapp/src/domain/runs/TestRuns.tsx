@@ -21,7 +21,7 @@ import { ArrowRightIcon, TrashIcon, WarningTriangleIcon } from "@patternfly/reac
 import { NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
-import { toEpochMillis, interleave } from "../../utils"
+import { toEpochMillis, interleave, noop } from "../../utils"
 
 import { byTest } from "./actions"
 import * as selectors from "./selectors"
@@ -42,7 +42,7 @@ import {
     Column,
     UseSortByColumnOptions,
 } from "react-table"
-import { Run } from "./reducers"
+import { Run, RunsDispatch } from "./reducers"
 import { Description, ExecutionTime, Menu, RunTags } from "./components"
 import { RenderFunction, Test } from "../tests/reducers"
 
@@ -238,16 +238,16 @@ export default function TestRuns() {
         return rtrn
     }, [columns, test])
 
-    const dispatch = useDispatch()
+    const dispatch = useDispatch<RunsDispatch>()
     const [showTrashed, setShowTrashed] = useState(false)
     const runs = useSelector(selectors.testRuns(testId, pagination, showTrashed))
     const runCount = useSelector(selectors.count)
     const teams = useSelector(teamsSelector)
     useEffect(() => {
-        dispatch(fetchTest(testId))
+        dispatch(fetchTest(testId)).catch(noop)
     }, [dispatch, testId, teams])
     useEffect(() => {
-        dispatch(byTest(testId, pagination, showTrashed, tags?.toString() || ""))
+        dispatch(byTest(testId, pagination, showTrashed, tags?.toString() || "")).catch(noop)
     }, [dispatch, showTrashed, page, perPage, sort, direction, tags, pagination, testId])
     useEffect(() => {
         document.title = (test ? test.name : "Loading...") + " | Horreum"

@@ -15,148 +15,223 @@ import {
     UpdateTokensAction,
     RevokeTokenAction,
 } from "./reducers"
-import { Dispatch } from "react"
+import { Dispatch } from "redux"
 import * as subscriptions from "./subscriptions-api"
 import { Map } from "immutable"
-import { alertAction, AddAlertAction } from "../../alerts"
+import { alertAction, AddAlertAction, constraintValidationFormatter, dispatchError } from "../../alerts"
 import { Hook } from "../hooks/reducers"
 
 function loading(isLoading: boolean): LoadingAction {
     return { type: actionTypes.LOADING, isLoading }
 }
 
-export const fetchSummary =
-    (roles?: string) => (dispatch: Dispatch<LoadingAction | LoadedSummaryAction | AddAlertAction>) => {
+export function fetchSummary(roles?: string) {
+    return (dispatch: Dispatch<LoadingAction | LoadedSummaryAction | AddAlertAction>) => {
         dispatch(loading(true))
         return api.summary(roles).then(
             tests => dispatch({ type: actionTypes.LOADED_SUMMARY, tests }),
             error => {
                 dispatch(loading(false))
-                dispatch(alertAction("FETCH_TEST_SUMMARY", "Failed to fetch test summary.", error))
+                return dispatchError(dispatch, error, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
             }
         )
     }
+}
 
-export const fetchTest = (id: number) => (dispatch: Dispatch<LoadingAction | LoadedTestAction | AddAlertAction>) => {
-    dispatch(loading(true))
-    return api.get(id).then(
-        test => dispatch({ type: actionTypes.LOADED_TEST, test }),
-        error => {
-            dispatch(loading(false))
-            dispatch(
-                alertAction(
+export function fetchTest(id: number) {
+    return (dispatch: Dispatch<LoadingAction | LoadedTestAction | AddAlertAction>) => {
+        dispatch(loading(true))
+        return api.get(id).then(
+            test => dispatch({ type: actionTypes.LOADED_TEST, test }),
+            error => {
+                dispatch(loading(false))
+                return dispatchError(
+                    dispatch,
+                    error,
                     "FETCH_TEST",
-                    "Failed to fetch test; the test may not exist or you don't have sufficient permissions to access it.",
-                    error
+                    "Failed to fetch test; the test may not exist or you don't have sufficient permissions to access it."
                 )
-            )
+            }
+        )
+    }
+}
+
+export function sendTest(test: Test) {
+    return (dispatch: Dispatch<LoadedTestAction | AddAlertAction>) => {
+        if (test.stalenessSettings && test.stalenessSettings.some(ss => !ss.maxStaleness || ss.maxStaleness <= 0)) {
+            dispatch(alertAction("UPDATE_TEST", "Test update failed", "Invalid max staleness."))
+            return Promise.reject()
         }
-    )
+        return api.send(test).then(
+            response => {
+                dispatch({ type: actionTypes.LOADED_TEST, test })
+                return response
+            },
+            error =>
+                dispatchError(
+                    dispatch,
+                    error,
+                    "UPDATE_TEST",
+                    "Failed to create/update test " + test.name,
+                    constraintValidationFormatter("the saved test")
+                )
+        )
+    }
 }
 
-export const sendTest = (test: Test) => (dispatch: Dispatch<LoadedTestAction>) =>
-    api.send(test).then(response => {
-        dispatch({ type: actionTypes.LOADED_TEST, test })
-        return response
-    })
-
-export const updateView = (testId: number, view: View) => (dispatch: Dispatch<UpdateViewAction>) => {
-    return api.updateView(testId, view).then(response => {
-        dispatch({
-            type: actionTypes.UPDATE_VIEW,
-            testId,
-            view,
-        })
-        return response
-    })
-}
-
-export const updateHooks = (testId: number, testWebHooks: Hook[]) => (dispatch: Dispatch<UpdateHookAction>) => {
-    const promises: any[] = []
-
-    testWebHooks.forEach(hook => {
-        promises.push(
-            api.updateHook(testId, hook).then(response => {
+export function updateView(testId: number, view: View) {
+    return (dispatch: Dispatch<UpdateViewAction | AddAlertAction>) => {
+        for (const c of view.components) {
+            if (c.accessors.trim() === "") {
+                dispatch(
+                    alertAction(
+                        "VIEW_UPDATE",
+                        "Column " + c.headerName + " is invalid; must set at least one accessor.",
+                        undefined
+                    )
+                )
+                return Promise.reject()
+            }
+        }
+        return api.updateView(testId, view).then(
+            response => {
                 dispatch({
-                    type: actionTypes.UPDATE_HOOK,
+                    type: actionTypes.UPDATE_VIEW,
                     testId,
-                    hook,
+                    view,
                 })
                 return response
-            })
+            },
+            error =>
+                dispatchError(
+                    dispatch,
+                    error,
+                    "VIEW_UPDATE",
+                    "View update failed. It is possible that some schema extractors used in this view do not use valid JSON paths."
+                )
         )
-    })
-    return Promise.all(promises)
+    }
 }
 
-export const addToken =
-    (testId: number, value: string, description: string, permissions: number) =>
-    (dispatch: Dispatch<UpdateTokensAction>) =>
-        api.addToken(testId, value, description, permissions).then(() =>
-            api.tokens(testId).then(tokens =>
-                dispatch({
-                    type: actionTypes.UPDATE_TOKENS,
-                    testId,
-                    tokens,
-                })
+export function updateHooks(testId: number, testWebHooks: Hook[]) {
+    return (dispatch: Dispatch<UpdateHookAction | AddAlertAction>) => {
+        const promises: any[] = []
+        testWebHooks.forEach(hook => {
+            promises.push(
+                api.updateHook(testId, hook).then(
+                    response => {
+                        dispatch({
+                            type: actionTypes.UPDATE_HOOK,
+                            testId,
+                            hook,
+                        })
+                        return response
+                    },
+                    error =>
+                        dispatchError(dispatch, error, "UPDATE_HOOK", `Failed to update hook ${hook.id} (${hook.url}`)
+                )
             )
-        )
-
-export const revokeToken = (testId: number, tokenId: number) => (dispatch: Dispatch<RevokeTokenAction>) =>
-    api.revokeToken(testId, tokenId).then(() =>
-        dispatch({
-            type: actionTypes.REVOKE_TOKEN,
-            testId,
-            tokenId,
         })
-    )
+        return Promise.all(promises)
+    }
+}
 
-export const updateAccess = (id: number, owner: string, access: Access) => (dispatch: Dispatch<UpdateAccessAction>) =>
-    api
-        .updateAccess(id, owner, accessName(access))
-        .then(() => dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access }))
+export function addToken(testId: number, value: string, description: string, permissions: number) {
+    return (dispatch: Dispatch<UpdateTokensAction | AddAlertAction>) =>
+        api.addToken(testId, value, description, permissions).then(
+            () =>
+                api.tokens(testId).then(
+                    tokens =>
+                        dispatch({
+                            type: actionTypes.UPDATE_TOKENS,
+                            testId,
+                            tokens,
+                        }),
+                    error =>
+                        dispatchError(dispatch, error, "FETCH_TOKENS", "Failed to fetch token list for test " + testId)
+                ),
+            error => dispatchError(dispatch, error, "ADD_TOKEN", "Failed to add token for test " + testId)
+        )
+}
 
-export const deleteTest = (id: number) => (dispatch: Dispatch<DeleteAction>) =>
-    api.deleteTest(id).then(() => dispatch({ type: actionTypes.DELETE, id }))
+export function revokeToken(testId: number, tokenId: number) {
+    return (dispatch: Dispatch<RevokeTokenAction | AddAlertAction>) =>
+        api.revokeToken(testId, tokenId).then(
+            () =>
+                dispatch({
+                    type: actionTypes.REVOKE_TOKEN,
+                    testId,
+                    tokenId,
+                }),
+            error => dispatchError(dispatch, error, "REVOKE_TOKEN", "Failed to revoke token")
+        )
+}
 
-export const allSubscriptions = () => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
-    subscriptions.all().then(
-        response =>
-            dispatch({
-                type: actionTypes.UPDATE_TEST_WATCH,
-                byId: Map(Object.entries(response).map(([key, value]) => [parseInt(key), value as string[]])),
-            }),
-        error => dispatch(alertAction("GET_ALL_SUBSCRIPTIONS", "Failed to fetch test subscriptions", error))
-    )
+export function updateAccess(id: number, owner: string, access: Access) {
+    return (dispatch: Dispatch<UpdateAccessAction | AddAlertAction>) =>
+        api.updateAccess(id, owner, accessName(access)).then(
+            () => dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access }),
+            error =>
+                dispatchError(
+                    dispatch,
+                    error,
+                    "UPDATE_ACCESS",
+                    "Test access update failed",
+                    constraintValidationFormatter("the saved test")
+                )
+        )
+}
 
-export const addUserOrTeam =
-    (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
+export function deleteTest(id: number) {
+    return (dispatch: Dispatch<DeleteAction | AddAlertAction>) =>
+        api.deleteTest(id).then(
+            () => dispatch({ type: actionTypes.DELETE, id }),
+            error => dispatchError(dispatch, error, "DELETE_TEST", "Failed to delete test " + id)
+        )
+}
+
+export function allSubscriptions() {
+    return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
+        subscriptions.all().then(
+            response =>
+                dispatch({
+                    type: actionTypes.UPDATE_TEST_WATCH,
+                    byId: Map(Object.entries(response).map(([key, value]) => [parseInt(key), value as string[]])),
+                }),
+            error => dispatchError(dispatch, error, "GET_ALL_SUBSCRIPTIONS", "Failed to fetch test subscriptions")
+        )
+}
+
+export function addUserOrTeam(id: number, userOrTeam: string) {
+    return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
         dispatch({
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map([[id, undefined]]),
         })
-        subscriptions.addUserOrTeam(id, userOrTeam).then(
+        return subscriptions.addUserOrTeam(id, userOrTeam).then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
                     byId: Map([[id, response as string[]]]),
                 }),
-            error => dispatch(alertAction("ADD_SUBSCRIPTION", "Failed to add test subscriptions", error))
+            error => dispatchError(dispatch, error, "ADD_SUBSCRIPTION", "Failed to add test subscriptions")
         )
     }
+}
 
-export const removeUserOrTeam =
-    (id: number, userOrTeam: string) => (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
+export function removeUserOrTeam(id: number, userOrTeam: string) {
+    return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
         dispatch({
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map([[id, undefined]]),
         })
-        subscriptions.removeUserOrTeam(id, userOrTeam).then(
+        return subscriptions.removeUserOrTeam(id, userOrTeam).then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
                     byId: Map([[id, response as string[]]]),
                 }),
-            error => dispatch(alertAction("REMOVE_SUBSCRIPTION", "Failed to remove test subscriptions", error))
+            error => dispatchError(dispatch, error, "REMOVE_SUBSCRIPTION", "Failed to remove test subscriptions")
         )
     }
+}

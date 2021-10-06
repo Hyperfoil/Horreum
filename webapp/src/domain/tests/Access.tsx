@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 
 import {
@@ -23,8 +23,7 @@ import AccessIcon from "../../components/AccessIcon"
 import TeamSelect from "../../components/TeamSelect"
 
 import { useTester, teamToName, Access as authAccess, defaultTeamSelector } from "../../auth"
-import { alertAction, constraintValidationFormatter } from "../../alerts"
-
+import { noop } from "../../utils"
 import { addToken, revokeToken, updateAccess } from "./actions"
 import { Test, TestDispatch } from "./reducers"
 
@@ -34,7 +33,7 @@ type AddTokenModalProps = {
     testId: number
     isOpen: boolean
     onClose(): void
-    onSubmit(value: string, description: string, permissions: number): Promise<void>
+    onSubmit(value: string, description: string, permissions: number): Promise<unknown>
 }
 
 const byteToHex: string[] = []
@@ -76,7 +75,7 @@ function AddTokenModal(props: AddTokenModalProps) {
                     isDisabled={isSaving || permissions === 0 || description === ""}
                     onClick={() => {
                         setSaving(true)
-                        props.onSubmit(value, description, permissions).finally(onClose)
+                        props.onSubmit(value, description, permissions).catch(noop).finally(onClose)
                     }}
                 >
                     Save
@@ -149,24 +148,13 @@ function Access(props: AccessProps) {
         setAccess(props.test?.access || 0)
     }, [props.test, defaultRole])
 
-    const thunkDispatch = useDispatch<TestDispatch>()
-    const dispatch = useDispatch()
+    const dispatch = useDispatch<TestDispatch>()
     props.funcsRef.current = {
         save: () => {
             if (!props.test) {
                 return Promise.reject()
             }
-            return thunkDispatch(updateAccess(props.test.id, owner, access)).catch(e => {
-                dispatch(
-                    alertAction(
-                        "TEST_UPDATE_FAILED",
-                        "Test update failed",
-                        e,
-                        constraintValidationFormatter("the saved test")
-                    )
-                )
-                return Promise.reject()
-            })
+            return dispatch(updateAccess(props.test.id, owner, access))
         },
         reset: () => {
             setOwner(props.test?.owner || defaultRole || "")
@@ -233,12 +221,7 @@ function Access(props: AccessProps) {
                                 <Button
                                     onClick={() => {
                                         if (props.test?.id) {
-                                            thunkDispatch(revokeToken(props.test?.id, t.id)).catch(e => {
-                                                dispatch(
-                                                    alertAction("REVOKE_TOKEN_FAILED", "Token revocation failed", e)
-                                                )
-                                                return Promise.reject()
-                                            })
+                                            dispatch(revokeToken(props.test?.id, t.id)).catch(noop)
                                         }
                                     }}
                                 >
@@ -257,17 +240,7 @@ function Access(props: AccessProps) {
                     if (!props.test) {
                         return Promise.reject()
                     }
-                    return thunkDispatch(addToken(props.test.id, value, description, permissions)).catch(e => {
-                        dispatch(
-                            alertAction(
-                                "TEST_UPDATE_FAILED",
-                                "Test update failed",
-                                e,
-                                constraintValidationFormatter("the saved test")
-                            )
-                        )
-                        return Promise.reject()
-                    })
+                    return dispatch(addToken(props.test.id, value, description, permissions))
                 }}
             />
         </Form>

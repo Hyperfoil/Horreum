@@ -172,7 +172,7 @@ export const initKeycloak = (state: State) => {
                             )
                     )
                     keycloak.onTokenExpired = () =>
-                        keycloak.updateToken(30).catch(e => console.log("Expired token update failed"))
+                        keycloak.updateToken(30).catch(e => console.log("Expired token update failed: " + e))
                 }
             })
         }

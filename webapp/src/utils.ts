@@ -1,5 +1,9 @@
 import { DateTime } from "luxon"
 
+export function noop() {
+    /* noop */
+}
+
 export function isEmpty(obj: any): boolean {
     for (const key in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, key)) return false

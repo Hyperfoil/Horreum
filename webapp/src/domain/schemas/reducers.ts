@@ -4,6 +4,7 @@ import * as utils from "../../utils"
 import { Access } from "../../auth"
 import { Action } from "redux"
 import { ThunkDispatch } from "redux-thunk"
+import { AddAlertAction } from "../../alerts"
 
 export interface Schema {
     id: number
@@ -45,7 +46,7 @@ export interface UpdateAccessAction extends Action {
 
 export type SchemaAction = LoadedAction | DeleteAction | UpdateTokenAction | UpdateAccessAction
 
-export type SchemaDispatch = ThunkDispatch<any, unknown, SchemaAction>
+export type SchemaDispatch = ThunkDispatch<any, unknown, SchemaAction | AddAlertAction>
 
 export const reducer = (state = new SchemasState(), action: SchemaAction) => {
     switch (action.type) {

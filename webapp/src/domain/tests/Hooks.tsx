@@ -18,8 +18,8 @@ import {
 } from "@patternfly/react-core"
 
 import { useTester } from "../../auth"
-
 import { alertAction } from "../../alerts"
+import { noop } from "../../utils"
 import { TestDispatch } from "./reducers"
 import { Hook } from "../hooks/reducers"
 import { TabFunctionsRef } from "./Test"
@@ -82,8 +82,7 @@ export default function Hooks({ testId, testOwner, funcsRef, onModified }: Hooks
     const isTester = useTester(testOwner)
     const hasDuplicates = new Set(testWebHooks.map(h => h.type + "_" + h.url)).size !== testWebHooks.length
 
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<TestDispatch>()
+    const dispatch = useDispatch<TestDispatch>()
     useEffect(() => {
         if (!testId || !isTester) {
             return
@@ -108,11 +107,7 @@ export default function Hooks({ testId, testOwner, funcsRef, onModified }: Hooks
     }, [testId, isTester, dispatch])
 
     funcsRef.current = {
-        save: () =>
-            thunkDispatch(updateHooks(testId, testWebHooks)).catch(error => {
-                dispatch(alertAction("HOOK_UPDATE", "Hook update failed", error))
-                return Promise.reject()
-            }),
+        save: () => dispatch(updateHooks(testId, testWebHooks)).catch(noop),
         reset: () => {
             // Perform a deep copy of the view object to prevent modifying store
             setTestWebHooks(JSON.parse(JSON.stringify(testWebHooks)) as Hook[])

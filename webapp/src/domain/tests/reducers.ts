@@ -4,6 +4,7 @@ import { Access } from "../../auth"
 import { ThunkDispatch } from "redux-thunk"
 import { Hook } from "../hooks/reducers"
 import { Run } from "../runs/reducers"
+import { AddAlertAction } from "../../alerts"
 
 export interface Token {
     id: number
@@ -125,7 +126,7 @@ export type TestAction =
     | UpdateTokensAction
     | RevokeTokenAction
 
-export type TestDispatch = ThunkDispatch<any, unknown, TestAction>
+export type TestDispatch = ThunkDispatch<any, unknown, TestAction | AddAlertAction>
 
 export const reducer = (state = new TestsState(), action: TestAction) => {
     switch (action.type) {

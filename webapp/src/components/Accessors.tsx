@@ -261,7 +261,7 @@ export default function Accessors({
                             variant="primary"
                             onClick={() => {
                                 addOrUpdateExtractor(created).then(
-                                    ignored => {
+                                    () => {
                                         setCreateOpen(false)
                                         openVariantModal(created)
                                     },

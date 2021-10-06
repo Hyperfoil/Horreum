@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Spinner, Bullseye } from "@patternfly/react-core"
 import {
     useTable,
@@ -13,6 +13,8 @@ import {
     UseSortByColumnProps,
 } from "react-table"
 import clsx from "clsx"
+
+import { noop } from "../utils"
 
 // We need to pass the same empty list to prevent re-renders
 const NO_DATA: Record<string, unknown>[] = []
@@ -34,9 +36,7 @@ const defaultProps = {
     sortBy: NO_SORT,
     isLoading: false,
     selected: NO_DATA,
-    onSelected: () => {
-        /* noop */
-    },
+    onSelected: noop,
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-types

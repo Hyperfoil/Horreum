@@ -4,10 +4,11 @@ import { Select, SelectOption, SelectOptionObject } from "@patternfly/react-core
 
 import { useDispatch, useSelector, shallowEqual } from "react-redux"
 
-import { Test } from "../domain/tests/reducers"
+import { Test, TestDispatch } from "../domain/tests/reducers"
 import { all } from "../domain/tests/selectors"
 import { fetchSummary } from "../domain/tests/actions"
 import { teamsSelector } from "../auth"
+import { noop } from "../utils"
 
 export interface SelectedTest extends SelectOptionObject {
     id: number
@@ -36,10 +37,10 @@ export default function TestSelect({
     const [open, setOpen] = useState(false)
     // a new instance of test list is created in every invocation => we need shallowEqual
     const tests = useSelector(all, shallowEqual)
-    const dispatch = useDispatch()
+    const dispatch = useDispatch<TestDispatch>()
     const teams = useSelector(teamsSelector)
     useEffect(() => {
-        dispatch(fetchSummary())
+        dispatch(fetchSummary()).catch(noop)
     }, [dispatch, teams])
     useEffect(() => {
         if (initialTestName && tests) {

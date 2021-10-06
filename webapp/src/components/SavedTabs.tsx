@@ -3,6 +3,7 @@ import { useHistory } from "react-router"
 import { Location, UnregisterCallback } from "history"
 import { ActionGroup, Button, Spinner, Tab, Tabs } from "@patternfly/react-core"
 import SaveChangesModal from "./SaveChangesModal"
+import { noop } from "../utils"
 
 type SavedTabProps = {
     title: string
@@ -121,7 +122,7 @@ export default function SavedTabs(props: SavedTabsProps) {
                                     if (props.afterSave) {
                                         return props.afterSave()
                                     }
-                                })
+                                }, noop)
                                 .finally(() => {
                                     setSaving(false)
                                 })

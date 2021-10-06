@@ -246,7 +246,6 @@ export function UserSettings() {
     }
     useEffect(loadPersonal, [profile, dispatch])
     const reportError = (error: any) => {
-        console.log(error)
         dispatch(alertAction("UPDATE_SETTINGS", "Failed to update settings", error))
         return Promise.reject()
     }

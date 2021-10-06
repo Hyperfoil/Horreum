@@ -39,7 +39,9 @@ export const testRuns = (id: number, pagination: PaginationInfo, trashed: boolea
     if (!testRuns) {
         return []
     }
-    const list = [...testRuns.values()].filter(run => state.runs.currentPage.includes(run.id))
+    const list = [...testRuns.values()].filter(
+        run => state.runs.currentPage.includes(run.id) && (trashed || run.trashed !== true)
+    )
     return sort(list, pagination)
 }
 

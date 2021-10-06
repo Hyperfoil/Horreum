@@ -5,7 +5,6 @@ import { Button, Form, FormGroup, Grid, GridItem, Switch, TextArea, TextInput } 
 
 import { sendTest } from "./actions"
 import { durationToMillis, millisToDuration } from "../../utils"
-import { alertAction, constraintValidationFormatter } from "../../alerts"
 
 import Accessors from "../../components/Accessors"
 import TagsSelect, { convertTags, SelectedTags } from "../../components/TagsSelect"
@@ -61,14 +60,9 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
         updateState(test)
     }, [test])
 
-    const thunkDispatch = useDispatch<TestDispatch>()
-    const dispatch = useDispatch()
+    const dispatch = useDispatch<TestDispatch>()
     funcsRef.current = {
         save: () => {
-            if (stalenessSettings.some(ss => !ss.maxStaleness || ss.maxStaleness <= 0)) {
-                dispatch(alertAction("TEST_UPDATE_FAILED", "Test update failed", "Invalid max staleness."))
-                return Promise.reject()
-            }
             const newTest: Test = {
                 id: test?.id || 0,
                 name,
@@ -82,20 +76,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 tokens: [],
                 stalenessSettings,
             }
-            return thunkDispatch(sendTest(newTest)).then(
-                response => onTestIdChange(response.id),
-                e => {
-                    dispatch(
-                        alertAction(
-                            "TEST_UPDATE_FAILED",
-                            "Test update failed",
-                            e,
-                            constraintValidationFormatter("the saved test")
-                        )
-                    )
-                    return Promise.reject()
-                }
-            )
+            return dispatch(sendTest(newTest)).then(response => onTestIdChange(response.id))
         },
         reset: () => updateState(test),
     }

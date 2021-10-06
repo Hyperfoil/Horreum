@@ -8,7 +8,7 @@ import * as actions from "./actions"
 import * as selectors from "./selectors"
 import * as api from "./api"
 import { Run as RunDef, RunsDispatch } from "./reducers"
-import { formatDateTime } from "../../utils"
+import { formatDateTime, noop } from "../../utils"
 import { useTester, teamsSelector } from "../../auth"
 import { interleave } from "../../utils"
 import { alertAction } from "../../alerts"
@@ -247,8 +247,7 @@ export default function Run() {
     const [pathSuggestions, setPathSuggestions] = useState<string[]>([])
 
     const [changeSchemaModalOpen, setChangeSchemaModalOpen] = useState(false)
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<RunsDispatch>()
+    const dispatch = useDispatch<RunsDispatch>()
     const teams = useSelector(teamsSelector)
 
     const runPathQuery = () => {
@@ -265,7 +264,7 @@ export default function Run() {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get("token")
-        dispatch(actions.get(id, token || undefined))
+        dispatch(actions.get(id, token || undefined)).catch(noop)
         const query = urlParams.get("query")
         if (query) {
             setPathQuery(query)
@@ -377,7 +376,7 @@ export default function Run() {
                                                                     initialSchema={findFirstValue(run.schema)}
                                                                     paths={getPaths(run.data)}
                                                                     update={(path, schema, schemaid) =>
-                                                                        thunkDispatch(
+                                                                        dispatch(
                                                                             actions.updateSchema(
                                                                                 run.id,
                                                                                 run.testid,
@@ -385,15 +384,7 @@ export default function Run() {
                                                                                 schemaid,
                                                                                 schema
                                                                             )
-                                                                        ).catch(e =>
-                                                                            dispatch(
-                                                                                alertAction(
-                                                                                    "SCHEME_UPDATE_FAILED",
-                                                                                    "Failed to update run schema",
-                                                                                    e
-                                                                                )
-                                                                            )
-                                                                        )
+                                                                        ).catch(noop)
                                                                     }
                                                                 />
                                                             </>

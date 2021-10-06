@@ -1,4 +1,4 @@
-import { Dispatch } from "react"
+import { Dispatch } from "redux"
 import { Access } from "../../auth"
 import { Team } from "../../components/TeamSelect"
 import {
@@ -20,6 +20,7 @@ import * as api from "./api"
 import { isFetchingSuggestions, suggestQuery } from "./selectors"
 import store from "../../store"
 import { PaginationInfo } from "../../utils"
+import { AddAlertAction, alertAction, dispatchError } from "../../alerts"
 
 const loaded = (run: Run | Run[], total?: number): LoadedAction => ({
     type: actionTypes.LOADED,
@@ -27,39 +28,52 @@ const loaded = (run: Run | Run[], total?: number): LoadedAction => ({
     total,
 })
 
-const testId = (id: number, runs: Run[], total: number, tags: string): TestIdAction => ({
+const testId = (id: number, runs: Run[], total: number): TestIdAction => ({
     type: actionTypes.TESTID,
     id,
     runs,
     total,
 })
 
-export const get = (id: number, token?: string) => (dispatch: Dispatch<LoadedAction>) =>
-    api.get(id, token).then(
-        response => dispatch(loaded(response)),
-        error => dispatch(loaded([], 0))
-    )
+export function get(id: number, token?: string) {
+    return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
+        api.get(id, token).then(
+            response => dispatch(loaded(response)),
+            error => {
+                dispatch(alertAction("FETCH_RUN", "Failed to fetch data for run " + id, error))
+                dispatch(loaded([], 0))
+                return Promise.reject(error)
+            }
+        )
+}
 
-export const byTest =
-    (id: number, pagination: PaginationInfo, trashed: boolean, tags: string) =>
-    (dispatch: Dispatch<LoadingAction | TestIdAction>) => {
+export function byTest(id: number, pagination: PaginationInfo, trashed: boolean, tags: string) {
+    return (dispatch: Dispatch<LoadingAction | TestIdAction | AddAlertAction>) => {
         dispatch({ type: actionTypes.LOADING })
-        api.byTest(id, pagination, trashed, tags).then(
-            response => dispatch(testId(id, response.runs, response.total, tags)),
-            error => dispatch(testId(id, [], 0, ""))
+        return api.byTest(id, pagination, trashed, tags).then(
+            response => dispatch(testId(id, response.runs, response.total)),
+            error => {
+                dispatch(alertAction("FETCH_RUNS", "Failed to fetch runs for test " + id, error))
+                dispatch(testId(id, [], 0))
+                return Promise.reject(error)
+            }
         )
     }
+}
 
-export const list =
-    (query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) =>
-    (dispatch: Dispatch<LoadedAction>) => {
-        return api.list(query, matchAll, roles, pagination, trashed).then(response => {
-            dispatch(loaded(response.runs, response.total))
-        })
+export function list(query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) {
+    return (dispatch: Dispatch<LoadedAction | AddAlertAction>) => {
+        return api.list(query, matchAll, roles, pagination, trashed).then(
+            response => {
+                dispatch(loaded(response.runs, response.total))
+            },
+            error => dispatchError(dispatch, error, "FETCH_RUNS", "Failed to fetch runs using query " + query)
+        )
     }
+}
 
-export const suggest =
-    (query: string, roles: string) => (dispatch: Dispatch<SuggestAction | LoadSuggestionsAction>) => {
+export function suggest(query: string, roles: string) {
+    return (dispatch: Dispatch<SuggestAction | LoadSuggestionsAction | AddAlertAction>) => {
         if (query === "") {
             dispatch({
                 type: actionTypes.SUGGEST,
@@ -77,8 +91,13 @@ export const suggest =
             }
         }
     }
+}
 
-const fetchSuggestions = (query: string, roles: string, dispatch: Dispatch<SuggestAction | LoadSuggestionsAction>) => {
+function fetchSuggestions(
+    query: string,
+    roles: string,
+    dispatch: Dispatch<SuggestAction | LoadSuggestionsAction | AddAlertAction>
+) {
     api.suggest(query, roles)
         .then(
             response => {
@@ -88,7 +107,8 @@ const fetchSuggestions = (query: string, roles: string, dispatch: Dispatch<Sugge
                     options: response,
                 })
             },
-            e => {
+            error => {
+                dispatch(alertAction("FETCH_SUGGESTIONS", "Failed to fetch suggestions", error))
                 dispatch({
                     type: actionTypes.SUGGEST,
                     responseReceived: true,
@@ -111,74 +131,95 @@ export const selectRoles = (selection: Team): SelectRolesAction => {
     }
 }
 
-export const resetToken = (id: number, testid: number) => (dispatch: Dispatch<UpdateTokenAction>) => {
-    return api.resetToken(id).then(token => {
-        dispatch({
-            type: actionTypes.UPDATE_TOKEN,
-            id,
-            testid,
-            token,
-        })
-    })
-}
-
-export const dropToken = (id: number, testid: number) => (dispatch: Dispatch<UpdateTokenAction>) => {
-    return api.dropToken(id).then(response => {
-        dispatch({
-            type: actionTypes.UPDATE_TOKEN,
-            id,
-            testid,
-            token: null,
-        })
-    })
-}
-
-export const updateAccess =
-    (id: number, testid: number, owner: string, access: Access) => (dispatch: Dispatch<UpdateAccessAction>) => {
-        return api.updateAccess(id, owner, access).then(response => {
-            dispatch({
-                type: actionTypes.UPDATE_ACCESS,
-                id,
-                testid,
-                owner,
-                access,
-            })
-        })
-    }
-
-export const trash =
-    (id: number, testid: number, isTrashed = true) =>
-    (dispatch: Dispatch<TrashAction>) =>
-        api.trash(id, isTrashed).then(response => {
-            dispatch({
-                type: actionTypes.TRASH,
-                id,
-                testid,
-                isTrashed,
-            })
-        })
-
-export const updateDescription =
-    (id: number, testid: number, description: string) => (dispatch: Dispatch<UpdateDescriptionAction>) =>
-        api.updateDescription(id, description).then(response => {
-            dispatch({
-                type: actionTypes.UPDATE_DESCRIPTION,
-                id,
-                testid,
-                description,
-            })
-        })
-
-export const updateSchema =
-    (id: number, testid: number, path: string | undefined, schemaid: number, schema: string) =>
-    (dispatch: Dispatch<UpdateSchemaAction>) =>
-        api.updateSchema(id, path, schema).then(schemas =>
-            dispatch({
-                type: actionTypes.UPDATE_SCHEMA,
-                id,
-                testid,
-                path,
-                schema,
-                schemas,
-            })
+export function resetToken(id: number, testid: number) {
+    return (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) => {
+        return api.resetToken(id).then(
+            token => {
+                dispatch({
+                    type: actionTypes.UPDATE_TOKEN,
+                    id,
+                    testid,
+                    token,
+                })
+            },
+            error => dispatchError(dispatch, error, "RESET_RUN_TOKEN", "Failed to reset token for run " + id)
         )
+    }
+}
+
+export const dropToken = (id: number, testid: number) => (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) => {
+    return api.dropToken(id).then(
+        _ => {
+            dispatch({
+                type: actionTypes.UPDATE_TOKEN,
+                id,
+                testid,
+                token: null,
+            })
+        },
+        error => dispatchError(dispatch, error, "DROP_RUN_TOKEN", "Failed to drop run token")
+    )
+}
+
+export function updateAccess(id: number, testid: number, owner: string, access: Access) {
+    return (dispatch: Dispatch<UpdateAccessAction | AddAlertAction>) => {
+        return api.updateAccess(id, owner, access).then(
+            _ => {
+                dispatch({
+                    type: actionTypes.UPDATE_ACCESS,
+                    id,
+                    testid,
+                    owner,
+                    access,
+                })
+            },
+            error => dispatchError(dispatch, error, "UPDATE_RUN_ACCESS", "Failed to update run access")
+        )
+    }
+}
+
+export function trash(id: number, testid: number, isTrashed = true) {
+    return (dispatch: Dispatch<TrashAction | AddAlertAction>) =>
+        api.trash(id, isTrashed).then(
+            _ => {
+                dispatch({
+                    type: actionTypes.TRASH,
+                    id,
+                    testid,
+                    isTrashed,
+                })
+            },
+            error => dispatchError(dispatch, error, "RUN_TRASH", "Failed to restore run ID " + id)
+        )
+}
+
+export function updateDescription(id: number, testid: number, description: string) {
+    return (dispatch: Dispatch<UpdateDescriptionAction | AddAlertAction>) =>
+        api.updateDescription(id, description).then(
+            _ => {
+                dispatch({
+                    type: actionTypes.UPDATE_DESCRIPTION,
+                    id,
+                    testid,
+                    description,
+                })
+            },
+            error => dispatchError(dispatch, error, "RUN_UPDATE", "Failed to update description for run ID " + id)
+        )
+}
+
+export function updateSchema(id: number, testid: number, path: string | undefined, schemaid: number, schema: string) {
+    return (dispatch: Dispatch<UpdateSchemaAction | AddAlertAction>) =>
+        api.updateSchema(id, path, schema).then(
+            schemas =>
+                dispatch({
+                    type: actionTypes.UPDATE_SCHEMA,
+                    id,
+                    testid,
+                    path,
+                    schema,
+                    schemas,
+                }),
+            error => dispatchError(dispatch, error, "SCHEME_UPDATE_FAILED", "Failed to update run schema")
+        )
+}

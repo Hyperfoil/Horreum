@@ -18,7 +18,6 @@ import { NavLink } from "react-router-dom"
 
 import { useTester } from "../../auth"
 
-import { alertAction } from "../../alerts"
 import Accessors from "../../components/Accessors"
 import OptionalFunction from "../../components/OptionalFunction"
 import { View, ViewComponent, TestDispatch } from "./reducers"
@@ -120,33 +119,9 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
         setView(deepCopy(testView))
     }, [testView])
 
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<TestDispatch>()
+    const dispatch = useDispatch<TestDispatch>()
     funcsRef.current = {
-        save: () => {
-            for (const c of view.components) {
-                if (c.accessors.trim() === "") {
-                    dispatch(
-                        alertAction(
-                            "VIEW_UPDATE",
-                            "Column " + c.headerName + " is invalid; must set at least one accessor.",
-                            undefined
-                        )
-                    )
-                    return Promise.reject()
-                }
-            }
-            return thunkDispatch(updateView(testId, view)).catch(error => {
-                dispatch(
-                    alertAction(
-                        "VIEW_UPDATE",
-                        "View update failed. It is possible that some schema extractors used in this view do not use valid JSON paths.",
-                        error
-                    )
-                )
-                return Promise.reject()
-            })
-        },
+        save: () => dispatch(updateView(testId, view)),
         reset: () => setView(deepCopy(testView)),
     }
 

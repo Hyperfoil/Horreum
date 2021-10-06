@@ -23,6 +23,7 @@ import * as selectors from "./selectors"
 import * as api from "./api"
 import { defaultTeamSelector, teamsSelector, teamToName, useTester } from "../../auth"
 import { alertAction, constraintValidationFormatter, dispatchInfo } from "../../alerts"
+import { noop } from "../../utils"
 
 import { toString } from "../../components/Editor"
 import Editor from "../../components/Editor/monaco/Editor"
@@ -186,21 +187,18 @@ export default function Schema() {
     const [currentSchema, setCurrentSchema] = useState(schema)
     const [modified, setModified] = useState(false)
 
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<SchemaDispatch>()
+    const dispatch = useDispatch<SchemaDispatch>()
     const teams = useSelector(teamsSelector)
     useEffect(() => {
         if (schemaId >= 0) {
             setLoading(true)
-            thunkDispatch(actions.getById(schemaId))
-                .catch(e => {
-                    dispatch(alertAction("FAILED_LOADING_SCHEMA", "Failed loading schema " + schemaId, e))
-                })
+            dispatch(actions.getById(schemaId))
+                .catch(noop)
                 .finally(() => setLoading(false))
         } else {
             setLoading(false)
         }
-    }, [dispatch, thunkDispatch, schemaId, teams])
+    }, [dispatch, dispatch, schemaId, teams])
     useEffect(() => {
         document.title = (schemaId < 0 ? "New schema" : schema?.name || "(unknown schema)") + " | Horreum"
         setCurrentSchema(schema)
@@ -253,7 +251,7 @@ export default function Schema() {
             token: null,
         } as SchemaDef
         // do not update the main schema when just changing extractors
-        return (modified ? thunkDispatch(actions.add(newSchema)) : Promise.resolve(schemaId))
+        return (modified ? dispatch(actions.add(newSchema)).catch(noop) : Promise.resolve(schemaId))
             .then(id => {
                 setSchemaId(id)
             })

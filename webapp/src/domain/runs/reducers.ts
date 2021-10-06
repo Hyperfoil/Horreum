@@ -4,6 +4,7 @@ import * as utils from "../../utils"
 import { Team } from "../../components/TeamSelect"
 import { Access } from "../../auth"
 import { ThunkDispatch } from "redux-thunk"
+import { AddAlertAction } from "../../alerts"
 
 export interface RunSchemas {
     // schemaid -> uri
@@ -123,7 +124,7 @@ type RunsAction =
     | UpdateDescriptionAction
     | UpdateSchemaAction
 
-export type RunsDispatch = ThunkDispatch<any, unknown, RunsAction>
+export type RunsDispatch = ThunkDispatch<any, unknown, RunsAction | AddAlertAction>
 
 //Takes events and updates the state accordingly
 export const reducer = (state = new RunsState(), action: RunsAction) => {

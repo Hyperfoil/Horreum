@@ -12,6 +12,7 @@ import SavedTabs, { SavedTab } from "../../components/SavedTabs"
 
 import { useTester, teamsSelector } from "../../auth"
 import { dispatchInfo } from "../../alerts"
+import { noop } from "../../utils"
 import General from "./General"
 import Views from "./Views"
 import Variables from "./Variables"
@@ -43,16 +44,17 @@ export default function Test() {
     const subscriptionsFuncsRef = useRef<TabFunctions>()
     const [loaded, setLoaded] = useState(false)
 
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<TestDispatch>()
+    const dispatch = useDispatch<TestDispatch>()
 
     const teams = useSelector(teamsSelector)
     useEffect(() => {
         if (testId !== 0) {
             setLoaded(false)
-            thunkDispatch(actions.fetchTest(testId)).finally(() => setLoaded(true))
+            dispatch(actions.fetchTest(testId))
+                .catch(noop)
+                .finally(() => setLoaded(true))
         }
-    }, [dispatch, thunkDispatch, testId, teams])
+    }, [dispatch, dispatch, testId, teams])
 
     useEffect(() => {
         document.title = (testId === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"

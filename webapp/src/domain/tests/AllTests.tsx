@@ -24,11 +24,10 @@ import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from "../../co
 import TeamSelect, { Team, ONLY_MY_OWN } from "../../components/TeamSelect"
 import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
 
-import { isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
-import { alertAction } from "../../alerts"
+import { Access, isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
 import { CellProps, Column, UseSortByColumnOptions } from "react-table"
 import { Test, TestDispatch } from "./reducers"
-import { Access } from "../../auth"
+import { noop } from "../../utils"
 
 type WatchDropdownProps = {
     id: number
@@ -39,7 +38,7 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
     const [open, setOpen] = useState(false)
     const teams = useSelector(teamsSelector)
     const profile = useSelector(userProfileSelector)
-    const dispatch = useDispatch()
+    const dispatch = useDispatch<TestDispatch>()
     if (watching === undefined) {
         return <Spinner size="sm" />
     }
@@ -48,26 +47,26 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
     const isOptOut = watching.some(u => u.startsWith("!"))
     if (watching.some(u => u === profile?.username)) {
         personalItems.push(
-            <DropdownItem key="__self" onClick={() => dispatch(removeUserOrTeam(id, self))}>
+            <DropdownItem key="__self" onClick={() => dispatch(removeUserOrTeam(id, self)).catch(noop)}>
                 Stop watching personally
             </DropdownItem>
         )
     } else {
         personalItems.push(
-            <DropdownItem key="__self" onClick={() => dispatch(addUserOrTeam(id, self))}>
+            <DropdownItem key="__self" onClick={() => dispatch(addUserOrTeam(id, self)).catch(noop)}>
                 Watch personally
             </DropdownItem>
         )
     }
     if (isOptOut) {
         personalItems.push(
-            <DropdownItem key="__optout" onClick={() => dispatch(removeUserOrTeam(id, "!" + self))}>
+            <DropdownItem key="__optout" onClick={() => dispatch(removeUserOrTeam(id, "!" + self)).catch(noop)}>
                 Resume watching per team settings
             </DropdownItem>
         )
     } else if (watching.some(u => u.endsWith("-team"))) {
         personalItems.push(
-            <DropdownItem key="__optout" onClick={() => dispatch(addUserOrTeam(id, "!" + self))}>
+            <DropdownItem key="__optout" onClick={() => dispatch(addUserOrTeam(id, "!" + self)).catch(noop)}>
                 Opt-out of all notifications
             </DropdownItem>
         )
@@ -92,11 +91,11 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
             {personalItems}
             {teams.map(team =>
                 watching.some(u => u === team) ? (
-                    <DropdownItem key={team} onClick={() => dispatch(removeUserOrTeam(id, team))}>
+                    <DropdownItem key={team} onClick={() => dispatch(removeUserOrTeam(id, team)).catch(noop)}>
                         Stop watching as team {teamToName(team)}
                     </DropdownItem>
                 ) : (
-                    <DropdownItem key={team} onClick={() => dispatch(addUserOrTeam(id, team))}>
+                    <DropdownItem key={team} onClick={() => dispatch(addUserOrTeam(id, team)).catch(noop)}>
                         Watch as team {teamToName(team)}
                     </DropdownItem>
                 )
@@ -114,8 +113,7 @@ type DeleteConfig = {
 
 function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
     const [confirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false)
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<TestDispatch>()
+    const dispatch = useDispatch<TestDispatch>()
     return [
         (props: ActionMenuProps, isOwner: boolean, close: () => void, config: DeleteConfig) => {
             return {
@@ -137,9 +135,7 @@ function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
                         isOpen={confirmDeleteModalOpen}
                         onClose={() => setConfirmDeleteModalOpen(false)}
                         onDelete={() => {
-                            thunkDispatch(deleteTest(props.id)).catch(e => {
-                                dispatch(alertAction("DELETE_TEST", "Failed to delete test", e))
-                            })
+                            dispatch(deleteTest(props.id)).catch(noop)
                         }}
                         testId={props.id}
                         testName={config.name}
@@ -153,8 +149,7 @@ function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
 
 export default function AllTests() {
     document.title = "Tests | Horreum"
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<TestDispatch>()
+    const dispatch = useDispatch<TestDispatch>()
     const watchingColumn: Col = {
         Header: "Watching",
         accessor: "watching",
@@ -213,9 +208,7 @@ export default function AllTests() {
                 Cell: (arg: C) => {
                     const changeAccess = useChangeAccess({
                         onAccessUpdate: (id: number, owner: string, access: Access) => {
-                            thunkDispatch(updateAccess(id, owner, access)).catch(e => {
-                                dispatch(alertAction("UPDATE_TEST", "Failed to update test", e))
-                            })
+                            dispatch(updateAccess(id, owner, access)).catch(noop)
                         },
                     })
                     const del = useDelete({
@@ -233,18 +226,18 @@ export default function AllTests() {
                 },
             },
         ],
-        [dispatch, thunkDispatch]
+        [dispatch, dispatch]
     )
     const allTests = useSelector(selectors.all)
     const teams = useSelector(teamsSelector)
     const isAuthenticated = useSelector(isAuthenticatedSelector)
     const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
     useEffect(() => {
-        dispatch(fetchSummary(rolesFilter.key))
+        dispatch(fetchSummary(rolesFilter.key)).catch(noop)
     }, [dispatch, teams, rolesFilter])
     useEffect(() => {
         if (isAuthenticated) {
-            dispatch(allSubscriptions())
+            dispatch(allSubscriptions()).catch(noop)
         }
     }, [dispatch, isAuthenticated, rolesFilter])
     if (isAuthenticated) {

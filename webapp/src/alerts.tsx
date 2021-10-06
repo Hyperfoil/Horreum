@@ -101,6 +101,17 @@ export const alertAction = (
     }
 }
 
+export function dispatchError(
+    dispatch: Dispatch<AddAlertAction>,
+    error: any,
+    type: string,
+    title: string,
+    ...errorFormatter: ((error: any) => any)[]
+): Promise<unknown> {
+    dispatch(alertAction(type, title, error, ...errorFormatter))
+    return Promise.reject(error)
+}
+
 export function infoActions(
     type: string,
     title: string,
@@ -127,7 +138,13 @@ export function infoActions(
     }
 }
 
-export function dispatchInfo(dispatch: Dispatch<any>, type: string, title: string, message: string, timeout: number) {
+export function dispatchInfo(
+    dispatch: Dispatch<AlertActions>,
+    type: string,
+    title: string,
+    message: string,
+    timeout: number
+) {
     const info = infoActions(type, title, message)
     dispatch(info.action)
     window.setTimeout(() => dispatch(info.clear), timeout)

@@ -27,7 +27,7 @@ export default function About() {
         if (isOpen) {
             fetchApi("/api/config/version").then(
                 response => setVersionInfo(response),
-                e => setVersionInfo(VERSION_ERROR)
+                _ => setVersionInfo(VERSION_ERROR)
             )
         }
     }, [isOpen])

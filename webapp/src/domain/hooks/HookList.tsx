@@ -8,6 +8,7 @@ import { OutlinedTimesCircleIcon, PlusIcon } from "@patternfly/react-icons"
 import { allHooks, addHook, removeHook } from "./actions"
 import * as selectors from "./selectors"
 import { isAdminSelector } from "../../auth"
+import { noop } from "../../utils"
 
 import { fetchSummary } from "../tests/actions"
 
@@ -19,7 +20,7 @@ import { Hook, HooksDispatch } from "./reducers"
 export default function HookList() {
     const dispatch = useDispatch<HooksDispatch>()
     useEffect(() => {
-        dispatch(fetchSummary())
+        dispatch(fetchSummary()).catch(noop)
     }, [dispatch])
     const columns: Column<Hook>[] = useMemo(
         () => [
@@ -48,7 +49,7 @@ export default function HookList() {
                             variant="link"
                             style={{ color: "#a30000" }}
                             onClick={() => {
-                                dispatch(removeHook(value))
+                                dispatch(removeHook(value)).catch(noop)
                             }}
                         >
                             <OutlinedTimesCircleIcon />
@@ -64,7 +65,7 @@ export default function HookList() {
     const isAdmin = useSelector(isAdminSelector)
     useEffect(() => {
         if (isAdmin) {
-            dispatch(allHooks())
+            dispatch(allHooks()).catch(noop)
         }
     }, [dispatch, isAdmin])
     return (
@@ -81,18 +82,17 @@ export default function HookList() {
                     >
                         <ToolbarContent>
                             <ToolbarItem aria-label="info">
-                                <Button
-                                    variant="primary"
-                                    onClick={e => {
-                                        setOpen(true)
-                                    }}
-                                >
+                                <Button variant="primary" onClick={() => setOpen(true)}>
                                     <PlusIcon /> Add Hook
                                 </Button>
                             </ToolbarItem>
                         </ToolbarContent>
                     </Toolbar>
-                    <AddHookModal isOpen={isOpen} onClose={() => setOpen(false)} onSubmit={h => dispatch(addHook(h))} />
+                    <AddHookModal
+                        isOpen={isOpen}
+                        onClose={() => setOpen(false)}
+                        onSubmit={h => dispatch(addHook(h)).catch(noop)}
+                    />
                 </CardHeader>
                 <CardBody>
                     <Table columns={columns} data={list || []} />

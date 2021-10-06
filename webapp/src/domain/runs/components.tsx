@@ -12,8 +12,7 @@ import ActionMenu, {
     useChangeAccess,
     useDelete,
 } from "../../components/ActionMenu"
-import { alertAction } from "../../alerts"
-import { formatDateTime, toEpochMillis } from "../../utils"
+import { formatDateTime, toEpochMillis, noop } from "../../utils"
 import { useTester } from "../../auth"
 
 export function Description(description: string) {
@@ -57,8 +56,7 @@ export const ExecutionTime = (run: Run) => (
 )
 
 function useRestore(run: Run): MenuItem<Run> {
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<RunsDispatch>()
+    const dispatch = useDispatch<RunsDispatch>()
     return [
         (props: ActionMenuProps, isOwner: boolean, close: () => void, run: Run) => {
             return {
@@ -67,9 +65,7 @@ function useRestore(run: Run): MenuItem<Run> {
                         key="restore"
                         onClick={() => {
                             close()
-                            thunkDispatch(trash(run.id, run.testid, false)).catch(e =>
-                                dispatch(alertAction("RUN_TRASH", "Failed to restore run ID " + run.id, e))
-                            )
+                            dispatch(trash(run.id, run.testid, false)).catch(noop)
                         }}
                     >
                         Restore
@@ -113,26 +109,19 @@ function useUpdateDescription(run: Run): MenuItem<Run> {
 }
 
 export function Menu(run: Run) {
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<RunsDispatch>()
+    const dispatch = useDispatch<RunsDispatch>()
 
     const shareLink = useShareLink({
         token: run.token || undefined,
         tokenToLink: (id, token) => "/run/" + id + "?token=" + token,
-        onTokenReset: id => dispatch(resetToken(id, run.testid)),
-        onTokenDrop: id => dispatch(dropToken(id, run.testid)),
+        onTokenReset: id => dispatch(resetToken(id, run.testid)).catch(noop),
+        onTokenDrop: id => dispatch(dropToken(id, run.testid)).catch(noop),
     })
     const changeAccess = useChangeAccess({
-        onAccessUpdate: (id, owner, access) =>
-            thunkDispatch(updateAccess(id, run.testid, owner, access)).catch(e =>
-                dispatch(alertAction("UPDATE_RUN_ACCESS", "Failed to update run access", e))
-            ),
+        onAccessUpdate: (id, owner, access) => dispatch(updateAccess(id, run.testid, owner, access)).catch(noop),
     })
     const del = useDelete({
-        onDelete: id =>
-            thunkDispatch(trash(id, run.testid)).catch(e =>
-                dispatch(alertAction("RUN_TRASH", "Failed to trash run ID " + id, e))
-            ),
+        onDelete: id => dispatch(trash(id, run.testid)).catch(noop),
     })
     const restore = useRestore(run)
     const menuItems: MenuItem<any>[] = [shareLink, changeAccess]
@@ -158,8 +147,7 @@ type UpdateDescriptionModalProps = {
 export function UpdateDescriptionModal({ isOpen, onClose, run }: UpdateDescriptionModalProps) {
     const [value, setValue] = useState(run.description)
     const [updating, setUpdating] = useState(false)
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<RunsDispatch>()
+    const dispatch = useDispatch<RunsDispatch>()
 
     return (
         <Modal variant="small" title="UpdateDescription" isOpen={isOpen} onClose={onClose}>
@@ -175,10 +163,9 @@ export function UpdateDescriptionModal({ isOpen, onClose, run }: UpdateDescripti
                 variant="primary"
                 onClick={() => {
                     setUpdating(true)
-                    thunkDispatch(updateDescription(run.id, run.testid, value))
-                        .catch(e => {
+                    dispatch(updateDescription(run.id, run.testid, value))
+                        .catch(_ => {
                             setValue(run.description)
-                            dispatch(alertAction("RUN_UPDATE", "Failed to update description for run ID " + run.id, e))
                         })
                         .finally(() => {
                             setUpdating(false)

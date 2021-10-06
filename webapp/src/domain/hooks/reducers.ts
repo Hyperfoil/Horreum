@@ -3,6 +3,7 @@ import { ThunkDispatch } from "redux-thunk"
 import * as actionTypes from "./actionTypes"
 import { Map } from "immutable"
 import * as utils from "../../utils"
+import { AddAlertAction } from "../../alerts"
 
 export const globalEventTypes = ["test/new", "run/new", "change/new"]
 export const testHookEventTypes = ["run/new", "change/new"]
@@ -35,7 +36,7 @@ export interface DeleteAction {
 }
 
 type HooksAction = LoadedAction | DeleteAction
-export type HooksDispatch = ThunkDispatch<any, unknown, HooksAction>
+export type HooksDispatch = ThunkDispatch<any, unknown, HooksAction | AddAlertAction>
 
 export const reducer = (state = new HooksState(), action: HooksAction) => {
     switch (action.type) {

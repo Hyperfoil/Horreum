@@ -55,8 +55,7 @@ export default function AllRuns() {
     const [matchAll, setMatchAll] = useState(false)
     const matchDisabled = filterQuery.trim().startsWith("$") || filterQuery.trim().startsWith("@")
 
-    const dispatch = useDispatch()
-    const thunkDispatch = useDispatch<RunsDispatch>()
+    const dispatch = useDispatch<RunsDispatch>()
     const columns: Column<Run>[] = useMemo(
         () => [
             {
@@ -145,12 +144,12 @@ export default function AllRuns() {
     const runFilter = useCallback(
         (roles: string) => {
             // TODO: if we receive responses in a wrong order we might end up with the query not in sync with results
-            thunkDispatch(list(filterQuery, matchAll, roles, pagination, showTrashed)).then(
+            dispatch(list(filterQuery, matchAll, roles, pagination, showTrashed)).then(
                 () => setFilterError(undefined),
                 e => setFilterError(e)
             )
         },
-        [filterQuery, matchAll, pagination, showTrashed, thunkDispatch]
+        [filterQuery, matchAll, pagination, showTrashed, dispatch]
     )
     const handleMatchAll = (checked: boolean, evt: React.ChangeEvent<any>) => {
         if (checked) setMatchAll(evt.target.value === "true")
@@ -185,13 +184,13 @@ export default function AllRuns() {
         if (typingTimer !== null) {
             clearTimeout(typingTimer)
         }
-        setTypingTimer(window.setTimeout(() => suggest(value, selectedRoles.key)(dispatch), 1000))
+        setTypingTimer(window.setTimeout(() => dispatch(suggest(value, selectedRoles.key)), 1000))
     }
     const fetchSuggestionsNow = () => {
         if (typingTimer !== null) {
             clearTimeout(typingTimer)
         }
-        suggest(filterQuery, selectedRoles.key)(dispatch)
+        dispatch(suggest(filterQuery, selectedRoles.key))
     }
     useEffect(() => {
         setFilterError(undefined)
@@ -250,7 +249,9 @@ export default function AllRuns() {
                                         suggestions={suggestions}
                                         onSuggestionsFetchRequested={fetchSuggestions}
                                         onSuggestionsClearRequested={() => {
-                                            if (filterQuery === "") suggest("", selectedRoles.key)(dispatch)
+                                            if (filterQuery === "") {
+                                                dispatch(suggest("", selectedRoles.key))
+                                            }
                                         }}
                                         getSuggestionValue={value => appendSelection(value)}
                                         renderSuggestion={v => <div>{v}</div>}

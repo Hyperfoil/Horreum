@@ -7,7 +7,7 @@ import { NavLink } from "react-router-dom"
 import * as actions from "./actions"
 import * as selectors from "./selectors"
 import { useTester, teamsSelector, teamToName } from "../../auth"
-import { alertAction } from "../../alerts"
+import { noop } from "../../utils"
 import Table from "../../components/Table"
 import AccessIcon from "../../components/AccessIcon"
 import ActionMenu, { useShareLink, useChangeAccess, useDelete } from "../../components/ActionMenu"
@@ -18,8 +18,7 @@ type C = CellProps<Schema>
 
 export default function AllSchema() {
     document.title = "Schemas | Horreum"
-    const thunkDispatch = useDispatch<SchemaDispatch>()
-    const dispatch = useDispatch()
+    const dispatch = useDispatch<SchemaDispatch>()
 
     const columns: Column<Schema>[] = useMemo(
         () => [
@@ -55,20 +54,15 @@ export default function AllSchema() {
                     const shareLink = useShareLink({
                         token: arg.row.original.token || undefined,
                         tokenToLink: (id, token) => "/schema/" + id + "?token=" + token,
-                        onTokenReset: id => dispatch(actions.resetToken(id)),
-                        onTokenDrop: id => dispatch(actions.dropToken(id)),
+                        onTokenReset: id => dispatch(actions.resetToken(id)).catch(noop),
+                        onTokenDrop: id => dispatch(actions.dropToken(id)).catch(noop),
                     })
                     const changeAccess = useChangeAccess({
                         onAccessUpdate: (id, owner, access) =>
-                            thunkDispatch(actions.updateAccess(id, owner, access)).catch(e => {
-                                dispatch(alertAction("SCHEMA_UPDATE", "Schema update failed", e))
-                            }),
+                            dispatch(actions.updateAccess(id, owner, access)).catch(noop),
                     })
                     const del = useDelete({
-                        onDelete: id =>
-                            thunkDispatch(actions.deleteSchema(id)).catch((e: any) => {
-                                dispatch(alertAction("SCHEMA_DELETE", "Failed to delete schema", e))
-                            }),
+                        onDelete: id => dispatch(actions.deleteSchema(id)).catch(noop),
                     })
                     return (
                         <ActionMenu
@@ -82,12 +76,12 @@ export default function AllSchema() {
                 },
             },
         ],
-        [dispatch, thunkDispatch]
+        [dispatch, dispatch]
     )
     const list = useSelector(selectors.all)
     const teams = useSelector(teamsSelector)
     useEffect(() => {
-        dispatch(actions.all())
+        dispatch(actions.all()).catch(noop)
     }, [dispatch, teams])
     const isTester = useTester()
     return (
