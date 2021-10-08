@@ -128,6 +128,9 @@ public class NotificationServiceImpl implements NotificationService {
       @SuppressWarnings("unchecked")
       List<Object[]> results = em.createNativeQuery(GET_NOTIFICATIONS)
             .setParameter(1, testId).getResultList();
+      if (results.isEmpty()) {
+         log.warnf("There are no subscribers for notification on test %d!", testId);
+      }
       for (Object[] pair : results) {
          if (pair.length != 3) {
             log.errorf("Unexpected result %s", Arrays.toString(pair));
