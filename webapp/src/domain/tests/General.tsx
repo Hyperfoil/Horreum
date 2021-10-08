@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { useSelector, useDispatch } from "react-redux"
 
-import { Button, Form, FormGroup, Grid, GridItem, Switch, TextArea, TextInput } from "@patternfly/react-core"
+import { Alert, Button, Form, FormGroup, Grid, GridItem, Switch, TextArea, TextInput } from "@patternfly/react-core"
 
 import { sendTest } from "./actions"
 import { durationToMillis, millisToDuration } from "../../utils"
@@ -11,7 +11,7 @@ import TagsSelect, { convertTags, SelectedTags } from "../../components/TagsSele
 import OptionalFunction from "../../components/OptionalFunction"
 
 import { Test, TestDispatch, StalenessSettings } from "./reducers"
-
+import { subscriptions as subscriptionsSelector } from "./selectors"
 import { useTester, defaultTeamSelector } from "../../auth"
 
 import { TabFunctionsRef } from "./Test"
@@ -82,9 +82,16 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     }
 
     const isTester = useTester(test?.owner)
-
+    const subscriptions = test && useSelector(subscriptionsSelector(test?.id))?.filter(s => !s.startsWith("!"))
+    const hasSubscription = subscriptions && subscriptions.length > 0
     return (
         <>
+            {isTester && !hasSubscription && stalenessSettings.length > 0 && (
+                <Alert variant="warning" title="This test has no subscriptions">
+                    This test is configured to notify on missing regular run uploads but nobody is listening to these
+                    notifications. Please configure interested parties in the Subscriptions tab.
+                </Alert>
+            )}
             <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
                 <FormGroup
                     label="Name"

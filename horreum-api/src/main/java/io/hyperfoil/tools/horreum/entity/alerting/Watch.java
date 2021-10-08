@@ -4,10 +4,14 @@ import java.util.List;
 
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
+
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -24,12 +28,15 @@ public class Watch extends PanacheEntityBase {
 
    public int testId;
 
-   @ElementCollection
+   @ElementCollection(fetch = FetchType.EAGER)
+   @Fetch(FetchMode.SELECT)
    public List<String> users;
 
-   @ElementCollection
+   @ElementCollection(fetch = FetchType.EAGER)
+   @Fetch(FetchMode.SELECT)
    public List<String> optout;
 
-   @ElementCollection
+   @ElementCollection(fetch = FetchType.EAGER)
+   @Fetch(FetchMode.SELECT)
    public List<String> teams;
 }

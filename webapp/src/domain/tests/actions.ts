@@ -202,6 +202,36 @@ export function allSubscriptions() {
         )
 }
 
+function watchToList(watch: subscriptions.Watch) {
+    return [...watch.users, ...watch.teams, ...watch.optout.map((u: string) => `!${u}`)]
+}
+
+export function getSubscription(testId: number) {
+    return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
+        subscriptions.getSubscription(testId).then(
+            watch => {
+                dispatch({
+                    type: actionTypes.UPDATE_TEST_WATCH,
+                    byId: Map([[testId, watchToList(watch)]]),
+                })
+                return watch
+            },
+            error => dispatchError(dispatch, error, "SUBSCRIPTION_LOOKUP", "Subscription lookup failed")
+        )
+}
+
+export function updateSubscription(watch: subscriptions.Watch) {
+    return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
+        subscriptions.updateSubscription(watch).then(
+            () =>
+                dispatch({
+                    type: actionTypes.UPDATE_TEST_WATCH,
+                    byId: Map([[watch.testId, watchToList(watch)]]),
+                }),
+            error => dispatchError(dispatch, error, "SUBSCRIPTION_UPDATE", "Failed to update subscription")
+        )
+}
+
 export function addUserOrTeam(id: number, userOrTeam: string) {
     return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) => {
         dispatch({

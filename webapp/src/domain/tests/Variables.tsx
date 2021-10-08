@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 
 import { useTester } from "../../auth"
 import { alertAction } from "../../alerts"
@@ -8,6 +8,7 @@ import { NavLink } from "react-router-dom"
 import { Variable } from "../alerting/types"
 
 import {
+    Alert,
     Bullseye,
     Button,
     DataList,
@@ -34,6 +35,7 @@ import RecalculateModal from "../alerting/RecalculateModal"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
 import CalculationLogModal from "./CalculationLogModal"
 import { TabFunctionsRef } from "./Test"
+import { subscriptions as subscriptionsSelector } from "./selectors"
 
 type TestSelectModalProps = {
     isOpen: boolean
@@ -496,6 +498,8 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
 
     const [renameGroupOpen, setRenameGroupOpen] = useState(false)
     const [isLogOpen, setLogOpen] = useState(false)
+    const subscriptions = useSelector(subscriptionsSelector(testId))?.filter(s => !s.startsWith("!"))
+    const hasSubscription = subscriptions && subscriptions.length > 0
     if (!variables) {
         return (
             <Bullseye>
@@ -526,6 +530,12 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                     onShowLog={() => setLogOpen(true)}
                 />
             </div>
+            {isTester && !hasSubscription && variables.length > 0 && (
+                <Alert variant="warning" title="This test has no subscriptions">
+                    This test is configured to run regression analysis but nobody is listening to change notifications.
+                    Please configure interested parties in the Subscriptions tab.
+                </Alert>
+            )}
             <RenameGroupModal
                 isOpen={renameGroupOpen}
                 groups={groups}

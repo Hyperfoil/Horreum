@@ -23,3 +23,7 @@ export const get = (id: number) => (state: State) => {
     }
     return state.tests.byId.get(id)
 }
+
+export function subscriptions(id: number) {
+    return (state: State) => state.tests.watches?.get(id)
+}

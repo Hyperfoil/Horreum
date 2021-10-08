@@ -3,10 +3,12 @@ import { useDispatch } from "react-redux"
 import { Button, Divider, DualListSelector, SearchInput } from "@patternfly/react-core"
 import { ArrowRightIcon } from "@patternfly/react-icons"
 import { info, search, teams, User } from "../user/api"
-import { getSubscription, updateSubscription } from "./subscriptions-api"
+import { getSubscription, updateSubscription } from "./actions"
+import { TestDispatch } from "./reducers"
 import { alertAction } from "../../alerts"
 import { teamToName, useTester } from "../../auth"
 import { TabFunctionsRef } from "./Test"
+import { noop } from "../../utils"
 
 type SubscriptionsProps = {
     testId: number
@@ -35,7 +37,7 @@ function teamElement(team: string): ReactElement {
 }
 
 export default function Subscriptions(props: SubscriptionsProps) {
-    const dispatch = useDispatch()
+    const dispatch = useDispatch<TestDispatch>()
     const isTester = useTester(props.testOwner)
     const [availableUsers, setAvailableUsers] = useState<ReactElement[]>([])
     const [watchingUsers, setWatchingUsers] = useState<ReactElement[]>([])
@@ -64,28 +66,25 @@ export default function Subscriptions(props: SubscriptionsProps) {
         if (!isTester) {
             return
         }
-        getSubscription(props.testId).then(
-            watch => {
-                if (watch.users.length > 0) {
-                    info(watch.users).then(
-                        users => setWatchingUsers(users.map(userElement)),
-                        error => dispatch(alertAction("USER_INFO", "User info lookup failed, error", error))
-                    )
-                } else {
-                    setWatchingUsers([])
-                }
-                if (watch.optout.length > 0) {
-                    info(watch.optout).then(
-                        users => setOptoutUsers(users.map(userElement)),
-                        error => dispatch(alertAction("USER_INFO", "User info lookup failed, error", error))
-                    )
-                } else {
-                    setOptoutUsers([])
-                }
-                setWatchingTeams(watch.teams.map(teamElement))
-            },
-            error => dispatch(alertAction("WATCH_LOOKUP", "Subscription lookup failed", error))
-        )
+        dispatch(getSubscription(props.testId)).then(watch => {
+            if (watch.users.length > 0) {
+                info(watch.users).then(
+                    users => setWatchingUsers(users.map(userElement)),
+                    error => dispatch(alertAction("USER_INFO", "User info lookup failed, error", error))
+                )
+            } else {
+                setWatchingUsers([])
+            }
+            if (watch.optout.length > 0) {
+                info(watch.optout).then(
+                    users => setOptoutUsers(users.map(userElement)),
+                    error => dispatch(alertAction("USER_INFO", "User info lookup failed, error", error))
+                )
+            } else {
+                setOptoutUsers([])
+            }
+            setWatchingTeams(watch.teams.map(teamElement))
+        }, noop)
         teams().then(
             // We will filter in the component to not recompute this on watchingTeams change
             teamRoles => setAvailableTeams(teamRoles.map(teamElement)),
@@ -95,12 +94,14 @@ export default function Subscriptions(props: SubscriptionsProps) {
 
     props.funcsRef.current = {
         save: () =>
-            updateSubscription({
-                testId: props.testId,
-                users: watchingUsers.map(u => u.key as string),
-                optout: optoutUsers.map(u => u.key as string),
-                teams: watchingTeams.map(t => t.key as string),
-            }),
+            dispatch(
+                updateSubscription({
+                    testId: props.testId,
+                    users: watchingUsers.map(u => u.key as string),
+                    optout: optoutUsers.map(u => u.key as string),
+                    teams: watchingTeams.map(t => t.key as string),
+                })
+            ),
         reset: () => setReloadCounter(reloadCounter + 1),
     }
 
