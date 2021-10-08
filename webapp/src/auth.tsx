@@ -7,6 +7,7 @@ import Keycloak from "keycloak-js"
 import store, { State } from "./store"
 import { fetchApi } from "./services/api"
 import { alertAction, CLEAR_ALERT } from "./alerts"
+import { noop } from "./utils"
 
 const INIT = "auth/INIT"
 const UPDATE_DEFAULT_TEAM = "auth/UPDATE_DEFAULT_TEAM"
@@ -141,43 +142,47 @@ export const initKeycloak = (state: State) => {
     } else {
         keycloakPromise = Promise.resolve(keycloak)
     }
-    keycloakPromise.then(keycloak => {
-        let initPromise: Promise<boolean> | undefined = undefined
-        if (!keycloak.authenticated) {
-            // Typecast required due to https://github.com/keycloak/keycloak/pull/5858
-            initPromise = keycloak.init({
-                onLoad: "check-sso",
-                silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
-                promiseType: "native",
-            } as Keycloak.KeycloakInitOptions)
-            ;(initPromise as Promise<boolean>).then(authenticated => {
-                store.dispatch({ type: CLEAR_ALERT })
-                store.dispatch({
-                    type: UPDATE_ROLES,
-                    authenticated,
-                    roles: keycloak?.realmAccess?.roles || [],
-                })
-                if (authenticated) {
-                    keycloak
-                        .loadUserProfile()
-                        .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
-                        .catch(error =>
-                            store.dispatch(alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error))
-                        )
-                    fetchApi("/api/user/defaultTeam", null, "GET", { accept: "text/plain" }, "text").then(
-                        response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
-                        error =>
-                            store.dispatch(
-                                alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve default role", error)
+    keycloakPromise
+        .then(keycloak => {
+            let initPromise: Promise<boolean> | undefined = undefined
+            if (!keycloak.authenticated) {
+                // Typecast required due to https://github.com/keycloak/keycloak/pull/5858
+                initPromise = keycloak.init({
+                    onLoad: "check-sso",
+                    silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
+                    promiseType: "native",
+                } as Keycloak.KeycloakInitOptions)
+                ;(initPromise as Promise<boolean>).then(authenticated => {
+                    store.dispatch({ type: CLEAR_ALERT })
+                    store.dispatch({
+                        type: UPDATE_ROLES,
+                        authenticated,
+                        roles: keycloak?.realmAccess?.roles || [],
+                    })
+                    if (authenticated) {
+                        keycloak
+                            .loadUserProfile()
+                            .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
+                            .catch(error =>
+                                store.dispatch(
+                                    alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error)
+                                )
                             )
-                    )
-                    keycloak.onTokenExpired = () =>
-                        keycloak.updateToken(30).catch(e => console.log("Expired token update failed: " + e))
-                }
-            })
-        }
-        store.dispatch({ type: INIT, keycloak: keycloak, initPromise: initPromise })
-    })
+                        fetchApi("/api/user/defaultTeam", null, "GET", { accept: "text/plain" }, "text").then(
+                            response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
+                            error =>
+                                store.dispatch(
+                                    alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve default role", error)
+                                )
+                        )
+                        keycloak.onTokenExpired = () =>
+                            keycloak.updateToken(30).catch(e => console.log("Expired token update failed: " + e))
+                    }
+                })
+            }
+            store.dispatch({ type: INIT, keycloak: keycloak, initPromise: initPromise })
+        })
+        .catch(noop)
 }
 
 export function updateDefaultRole(team: string) {
