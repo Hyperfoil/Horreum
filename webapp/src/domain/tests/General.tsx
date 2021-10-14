@@ -81,7 +81,9 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     }
 
     const isTester = useTester(test?.owner)
-    const subscriptions = test && useSelector(subscriptionsSelector(test?.id))?.filter(s => !s.startsWith("!"))
+    const subscriptions = useSelector(test ? subscriptionsSelector(test.id) : () => undefined)?.filter(
+        s => !s.startsWith("!")
+    )
     const hasSubscription = subscriptions && subscriptions.length > 0
     return (
         <>
