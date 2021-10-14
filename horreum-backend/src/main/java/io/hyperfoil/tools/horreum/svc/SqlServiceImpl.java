@@ -294,4 +294,8 @@ public class SqlServiceImpl implements SqlService {
       }
       return null;
    }
+
+   public CloseMe withSystemRole(EntityManager em) {
+      return withRoles(em, "horreum.system");
+   }
 }

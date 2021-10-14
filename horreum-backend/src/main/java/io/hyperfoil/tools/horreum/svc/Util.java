@@ -2,9 +2,20 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.util.function.Consumer;
 
+import javax.transaction.RollbackException;
+import javax.transaction.Status;
+import javax.transaction.Synchronization;
+import javax.transaction.SystemException;
+import javax.transaction.TransactionManager;
+
 import org.graalvm.polyglot.Value;
+import org.jboss.logging.Logger;
+
+import io.vertx.core.eventbus.EventBus;
 
 class Util {
+   private static final Logger log = Logger.getLogger(Util.class);
+
    static String destringify(String str) {
       if (str == null || str.isEmpty()) {
          return str;
@@ -96,6 +107,27 @@ class Util {
          if (page != null && page >= 0) {
             sql.append(" offset ").append(limit * (page - 1));
          }
+      }
+   }
+
+   static void publishLater(TransactionManager tm, final EventBus eventBus, String eventName, Object event) {
+      try {
+         tm.getTransaction().registerSynchronization(new Synchronization() {
+            @Override
+            public void beforeCompletion() {
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+               if (status == Status.STATUS_COMMITTED || status == Status.STATUS_COMMITTING) {
+                  eventBus.publish(eventName, event);
+               }
+            }
+         });
+      } catch (RollbackException e) {
+         log.debug("Not publishing the event as the transaction has been marked rollback-only");
+      } catch (SystemException e) {
+         log.errorf(e, "Failed to publish event %s: %s after transaction completion", eventName, event);
       }
    }
 }

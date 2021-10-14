@@ -291,9 +291,13 @@ export default function TableReportView(props: TableReportViewProps) {
         <div>
             <Title headingLevel="h1">{config.title}</Title>
             Created on {formatDateTime(props.report.created)} from runs in test{" "}
-            <NavLink to={"/test/" + props.report.config.test.id}>
-                {props.report.config.test.name + " (" + props.report.config.test.id + ")"}
-            </NavLink>
+            {props.report.config.test ? (
+                <NavLink to={"/test/" + props.report.config.test.id}>
+                    {props.report.config.test.name + " (" + props.report.config.test.id + ")"}
+                </NavLink>
+            ) : (
+                "<deleted test>"
+            )}
             <Comment
                 text={comment0?.comment || ""}
                 editable={props.editable}

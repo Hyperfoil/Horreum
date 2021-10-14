@@ -125,9 +125,13 @@ export default function TableReportConfigPage() {
         setLoading(true)
         document.title = "Loading report config ... | Horreum"
         api.getTableConfig(id)
-            .then(config => {
+            .then((config: TableReportConfig) => {
                 setConfig(config)
-                setTest({ id: config.testid, owner: config.owner, toString: () => config.test.name })
+                setTest({
+                    id: config.test?.id !== undefined ? config.test.id : -1,
+                    owner: config.test?.owner,
+                    toString: () => config.test?.name || "<deleted test>",
+                })
                 document.title = "Report " + config.title + " | Horreum"
             })
             .catch(error => {

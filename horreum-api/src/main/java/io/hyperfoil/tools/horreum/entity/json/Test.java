@@ -25,6 +25,7 @@ import javax.validation.constraints.NotNull;
 @RegisterForReflection
 public class Test extends PanacheEntityBase {
    public static final String EVENT_NEW = "test/new";
+   public static final String EVENT_DELETED = "test/deleted";
 
    @Id
    @SequenceGenerator(

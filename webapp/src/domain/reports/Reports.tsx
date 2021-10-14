@@ -76,12 +76,16 @@ export default function Reports() {
                 Header: "Test",
                 id: "testname",
                 disableSortBy: true,
-                accessor: r => r.config.test.id,
+                accessor: r => r.config.test?.id,
                 Cell: (arg: C) => {
                     const {
                         cell: { value: testid },
                     } = arg
-                    return <NavLink to={`/test/${testid}`}>{arg.row.original.config.test.name}</NavLink>
+                    return arg.row.original.config.test ? (
+                        <NavLink to={`/test/${testid}`}>{arg.row.original.config.test.name}</NavLink>
+                    ) : (
+                        "<deleted test>"
+                    )
                 },
             },
             {

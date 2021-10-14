@@ -16,6 +16,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.servlet.http.HttpServletResponse;
+import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
@@ -45,6 +46,9 @@ public class TestServiceImpl implements TestService {
    EntityManager em;
 
    @Inject
+   TransactionManager tm;
+
+   @Inject
    EventBus eventBus;
 
    @Inject
@@ -64,6 +68,8 @@ public class TestServiceImpl implements TestService {
          Test test = Test.findById(id);
          if (test == null) {
             throw ServiceException.notFound("No test with id " + id);
+         } else if (!identity.getRoles().contains(test.owner)) {
+            throw ServiceException.forbidden("You are not an owner of test " + id);
          }
          test.defaultView = null;
          em.merge(test);
@@ -73,6 +79,7 @@ public class TestServiceImpl implements TestService {
          });
          test.delete();
          em.createNativeQuery(TRASH_RUNS).setParameter(1, test.id).executeUpdate();
+         Util.publishLater(tm, eventBus, Test.EVENT_DELETED, test);
       }
    }
 
@@ -155,7 +162,7 @@ public class TestServiceImpl implements TestService {
                throw new WebApplicationException(e, Response.serverError().build());
             }
          }
-         eventBus.publish(Test.EVENT_NEW, test);
+         Util.publishLater(tm, eventBus, Test.EVENT_NEW, test);
          response.setStatus(Response.Status.CREATED.getStatusCode());
       }
    }

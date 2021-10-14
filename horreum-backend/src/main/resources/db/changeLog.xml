@@ -1869,5 +1869,13 @@
             <column name="report_id" />
         </createIndex>
     </changeSet>
+
+    <changeSet id="35" author="rvansa">
+        <dropNotNullConstraint tableName="tablereportconfig" columnName="testid"/>
+        <sql>
+            CREATE POLICY tablereportconfig_update_system ON tablereportconfig FOR UPDATE
+                USING (has_role('horreum.system'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

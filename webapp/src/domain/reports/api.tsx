@@ -5,7 +5,7 @@ import { Test } from "../tests/reducers"
 export type TableReportConfig = {
     id: number
     title: string
-    test: Partial<Test>
+    test?: Partial<Test>
 
     filterAccessors?: string
     filterFunction?: string

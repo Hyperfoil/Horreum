@@ -175,6 +175,7 @@ export default function ActionMenu(props: ActionMenuProps) {
     return (
         <>
             <Dropdown
+                menuAppendTo={() => document.body}
                 toggle={<KebabToggle onToggle={() => setMenuOpen(!menuOpen)} />}
                 isOpen={menuOpen}
                 isPlain

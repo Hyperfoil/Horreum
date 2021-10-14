@@ -27,9 +27,7 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.transaction.InvalidTransactionException;
-import javax.transaction.RollbackException;
 import javax.transaction.Status;
-import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
@@ -415,10 +413,10 @@ public class AlertingServiceImpl implements AlertingService {
             dataPoint.value = value;
          }
          dataPoint.persist();
-         publishLater(DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
+         Util.publishLater(tm, eventBus, DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
       }
       if (!missingValueVariables.isEmpty()) {
-         publishLater(Run.EVENT_MISSING_VALUES, new MissingRunValuesEvent(run.id, run.testid, missingValueVariables, notify));
+         Util.publishLater(tm, eventBus, Run.EVENT_MISSING_VALUES, new MissingRunValuesEvent(run.id, run.testid, missingValueVariables, notify));
       }
    }
 
@@ -563,29 +561,8 @@ public class AlertingServiceImpl implements AlertingService {
 
          regressionModel.analyze(dataPoint, dataPoints, change -> {
             em.persist(change);
-            publishLater(Change.EVENT_NEW, new Change.Event(change, event.notify));
+            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, event.notify));
          });
-      }
-   }
-
-   private void publishLater(String eventName, Object event) {
-      try {
-         tm.getTransaction().registerSynchronization(new Synchronization() {
-            @Override
-            public void beforeCompletion() {
-            }
-
-            @Override
-            public void afterCompletion(int status) {
-               if (status == Status.STATUS_COMMITTED || status == Status.STATUS_COMMITTING) {
-                  eventBus.publish(eventName, event);
-               }
-            }
-         });
-      } catch (RollbackException e) {
-         log.debug("Not publishing the event as the transaction has been marked rollback-only");
-      } catch (SystemException e) {
-         log.errorf(e, "Failed to publish event %s: %s after transaction completion", eventName, event);
       }
    }
 

@@ -26,6 +26,7 @@ import org.hibernate.Hibernate;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.ReportService;
+import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.report.ReportComment;
 import io.hyperfoil.tools.horreum.entity.report.ReportComponent;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
@@ -34,6 +35,7 @@ import io.hyperfoil.tools.yaup.json.ValueConverter;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.vertx.ConsumeEvent;
 
 public class ReportServiceImpl implements ReportService {
    private static final Logger log = Logger.getLogger(ReportServiceImpl.class);
@@ -244,13 +246,13 @@ public class ReportServiceImpl implements ReportService {
          }
          timestampQuery = em.createNativeQuery("SELECT id, start FROM run WHERE testid = ?").setParameter(1, config.test.id);
       }
-      if (runCategories == null) {
+      if (runCategories == null || runCategories.isEmpty()) {
          assert config.categoryAccessors == null;
          assert config.categoryFunction == null;
          assert config.categoryFormatter == null;
          runCategories = series.stream().map(row -> new Object[]{ row[0], "" }).collect(Collectors.toList());
       }
-      if (labels == null) {
+      if (labels == null || labels.isEmpty()) {
          assert config.labelAccessors == null;
          assert config.labelFunction == null;
          assert config.labelFormatter == null;
@@ -302,6 +304,10 @@ public class ReportServiceImpl implements ReportService {
    }
 
    private Map<Integer, TableReport.RunData> getRunData(TableReportConfig config, List<Object[]> runCategories, List<Object[]> series, List<Object[]> labels) {
+      assert !runCategories.isEmpty();
+      assert !series.isEmpty();
+      assert !labels.isEmpty();
+
       Map<Integer, TableReport.RunData> runData = new HashMap<>();
       executeInContext(config, context -> {
          for (Object[] row : runCategories) {
@@ -504,6 +510,16 @@ public class ReportServiceImpl implements ReportService {
          if (out.size() > 0) {
             log.infof("Output while calculating data for report %s(%d): <pre>%s</pre>", config.title, config.id, out.toString());
          }
+      }
+   }
+
+   @ConsumeEvent(value = Test.EVENT_DELETED, blocking = true)
+   @Transactional
+   public void onTestDelete(Test test) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withSystemRole(em)) {
+         int changedRows = em.createNativeQuery("UPDATE tablereportconfig SET testid = NULL WHERE testid = ?")
+               .setParameter(1, test.id).executeUpdate();
+         log.infof("Disowned %d report configs as test %s(%d) was deleted.", changedRows, test.name, test.id);
       }
    }
 }

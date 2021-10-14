@@ -438,7 +438,7 @@ public class RunServiceImpl implements RunService {
          log.error("Failed to persist run.", e);
          throw ServiceException.serverError("Failed to persist run");
       }
-      eventBus.publish(Run.EVENT_NEW, run);
+      Util.publishLater(tm, eventBus, Run.EVENT_NEW, run);
 
       return run.id;
    }
@@ -763,7 +763,7 @@ public class RunServiceImpl implements RunService {
    @Override
    public void trash(Integer id, Boolean isTrashed) {
       updateRun(id, run -> run.trashed = isTrashed == null || isTrashed);
-      eventBus.publish(Run.EVENT_TRASHED, id);
+      Util.publishLater(tm, eventBus, Run.EVENT_TRASHED, id);
    }
 
    @RolesAllowed(Roles.TESTER)

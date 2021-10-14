@@ -31,7 +31,7 @@ public class TableReportConfig extends PanacheEntityBase {
    @NotNull
    public String title;
 
-   @NotNull
+   // This column gets `null` when the test is deleted
    @ManyToOne(fetch = FetchType.EAGER)
    @JoinColumn(name = "testid")
    public Test test;
