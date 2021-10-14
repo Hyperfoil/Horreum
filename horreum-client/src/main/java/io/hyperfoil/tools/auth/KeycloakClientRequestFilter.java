@@ -45,7 +45,7 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 			final String accessToken = getAccessToken();
 			requestContext.getHeaders().add(HttpHeaders.AUTHORIZATION, BEARER_SCHEME_WITH_SPACE + accessToken);
 		} catch (Exception ex) {
-			LOG.warnf("Access token is not available, aborting the request with HTTP 401 error: %s", ex.getMessage());
+			LOG.warnf(ex, "Access token is not available, aborting the request with HTTP 401 error", ex);
 			requestContext.abortWith(Response.status(401).build());
 		}
 	}

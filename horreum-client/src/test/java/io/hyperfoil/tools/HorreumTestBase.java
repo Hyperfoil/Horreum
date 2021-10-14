@@ -151,20 +151,14 @@ public class HorreumTestBase {
 
             infrastructureContainer.start();
 
-            waitForContainerReady(infrastructureContainer, "keycloak_1", "started in", HorreumTestBase::startHorreum);
+            waitForContainerReady(infrastructureContainer, "keycloak_1", "started in");
+            waitForContainerReady(infrastructureContainer, "app-init_1", "Horreum initialization complete");
 
+            horreumContainer.start();
+            waitForContainerReady(horreumContainer, "horreum_1", "started in");
+            initialiseTests();
         }
-
     }
-
-    private static void startHorreum() {
-
-        horreumContainer.start();
-
-        waitForContainerReady(horreumContainer, "horreum_1", "started in", HorreumTestBase::initialiseTests);
-    }
-
-
 
     private static void initialiseTests() {
         if (CREATE_HORREUM_TEST) {
@@ -175,7 +169,7 @@ public class HorreumTestBase {
     }
 
 
-    private static void waitForContainerReady(DockerComposeContainer composeContainer, String serviceName, String pattern, Runnable callback){
+    private static void waitForContainerReady(DockerComposeContainer composeContainer, String serviceName, String pattern){
         ContainerState optionalContainer = (ContainerState) composeContainer.getContainerByServiceName(serviceName).orElse(null);
 
         if (optionalContainer != null ){
@@ -189,7 +183,6 @@ public class HorreumTestBase {
                         , ContainerStartTimeoutUnit
                         , ContainerStartRetries
                 );
-                callback.run();
             } catch (TimeoutException e) {
                 fail("Timed out waiting for " + serviceName + " container to start");
             }
