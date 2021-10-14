@@ -164,7 +164,7 @@ public class NotificationServiceImpl implements NotificationService {
       return plugins.keySet();
    }
 
-   @RolesAllowed({ Roles.TESTER, Roles.ADMIN})
+   @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
    public List<NotificationSettings> settings(String name, boolean team) {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
@@ -172,7 +172,7 @@ public class NotificationServiceImpl implements NotificationService {
       }
    }
 
-   @RolesAllowed({ Roles.TESTER, Roles.ADMIN})
+   @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Transactional
    @Override
    public void updateSettings(String name, boolean team, NotificationSettings[] settings) {

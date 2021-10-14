@@ -39,7 +39,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       return set;
    }
 
-   @RolesAllowed({ Roles.TESTER, Roles.ADMIN})
+   @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
    public Map<Integer, Set<String>> all() {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
@@ -67,7 +67,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       }
    }
 
-   @RolesAllowed({ Roles.TESTER, Roles.ADMIN})
+   @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
    public Watch get(Integer testId) {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
@@ -91,7 +91,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       return list;
    }
 
-   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Transactional
    @Override
    public List<String> addUserOrTeam(Integer testId, String userOrTeam) {
@@ -142,7 +142,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       }
    }
 
-   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Transactional
    @Override
    public List<String> removeUserOrTeam(Integer testId, String userOrTeam) {
@@ -187,7 +187,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       }
    }
 
-   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @RolesAllowed({Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Transactional
    @Override
    public void update(Integer testId, Watch watch) {
