@@ -56,7 +56,6 @@
             <groupId>com.vladmihalcea</groupId>
             <artifactId>hibernate-types-52</artifactId>
             <version>2.12.1</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 

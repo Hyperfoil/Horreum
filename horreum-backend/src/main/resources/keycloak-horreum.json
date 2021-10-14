@@ -405,6 +405,19 @@
       ]
     }
   ],
+  "clientScopeMappings": {
+    "realm-management": [
+      {
+        "client": "horreum",
+        "roles": [
+          "view-realm",
+          "manage-realm",
+          "manage-users",
+          "view-users"
+        ]
+      }
+    ]
+  },
   "clients": [
     {
       "id": "b67425d3-eaaf-439b-a9ed-0eef81026d7c",

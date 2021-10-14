@@ -176,8 +176,10 @@ export default function Series() {
     }
     useEffect(() => {
         if (!selectedTest) {
+            document.title = "Series | Horreum"
             return
         }
+        document.title = `${selectedTest} | Horreum`
         history.replace(history.location.pathname + createQuery(false))
     }, [selectedTest, currentTags, endTime, timespan, lineType, firstNow, history])
     useEffect(() => {

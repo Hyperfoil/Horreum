@@ -9,12 +9,11 @@ import { durationToMillis, millisToDuration } from "../../utils"
 import Accessors from "../../components/Accessors"
 import TagsSelect, { convertTags, SelectedTags } from "../../components/TagsSelect"
 import OptionalFunction from "../../components/OptionalFunction"
+import { TabFunctionsRef } from "../../components/SavedTabs"
 
 import { Test, TestDispatch, StalenessSettings } from "./reducers"
 import { subscriptions as subscriptionsSelector } from "./selectors"
 import { useTester, defaultTeamSelector } from "../../auth"
-
-import { TabFunctionsRef } from "./Test"
 
 type GeneralProps = {
     test?: Test

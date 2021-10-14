@@ -1,20 +1,21 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { NavLink } from "react-router-dom"
 
-import { defaultTeamSelector, teamToName, userProfileSelector } from "../../auth"
+import { defaultTeamSelector, teamToName, useManagedTeams, userProfileSelector } from "../../auth"
 import { fetchApi } from "../../services/api"
 import { alertAction, dispatchInfo } from "../../alerts"
-import SavedTabs, { SavedTab } from "../../components/SavedTabs"
+import SavedTabs, { SavedTab, TabFunctions } from "../../components/SavedTabs"
 import { updateDefaultRole, TryLoginAgain } from "../../auth"
 
-import { Alert, Card, CardBody, EmptyState, Form, FormGroup, Title } from "@patternfly/react-core"
+import { Alert, Bullseye, Card, CardBody, EmptyState, Form, FormGroup, Spinner, Title } from "@patternfly/react-core"
 
 import { UserIcon } from "@patternfly/react-icons"
 
 import TeamSelect, { createTeam, Team } from "../../components/TeamSelect"
 import { NotificationSettingsList, NotificationConfig } from "./NotificationSettings"
 import Profile from "./Profile"
+import ManagedTeams from "./ManagedTeams"
 
 const base = "/api/notifications"
 const fetchMethods = () => fetchApi(`${base}/methods`, null, "get")
@@ -25,7 +26,7 @@ const updateSettings = (name: string, isTeam: boolean, settings: NotificationCon
 
 export const UserProfileLink = () => {
     const profile = useSelector(userProfileSelector)
-    if (profile) {
+    if (profile?.username) {
         return (
             <div style={{ margin: "10px" }}>
                 <NavLink to="/usersettings">
@@ -43,6 +44,7 @@ export const UserProfileLink = () => {
 }
 
 export function UserSettings() {
+    document.title = "User settings | Horreum"
     const dispatch = useDispatch()
     const profile = useSelector(userProfileSelector)
     const prevDefaultTeam = useSelector(defaultTeamSelector)
@@ -71,11 +73,23 @@ export function UserSettings() {
         dispatch(alertAction("UPDATE_SETTINGS", "Failed to update settings", error))
         return Promise.reject()
     }
-    return !profile ? (
-        <Alert variant="warning" title="Anonymous access to user settings">
-            <TryLoginAgain />
-        </Alert>
-    ) : (
+    const managedTeams = useManagedTeams()
+    const teamFuncsRef = useRef<TabFunctions>()
+    if (!profile) {
+        return (
+            <Bullseye>
+                <Spinner size="xl" />
+                {"\u00A0"}Loading user profile...
+            </Bullseye>
+        )
+    } else if (!profile.username) {
+        return (
+            <Alert variant="warning" title="Anonymous access to user settings">
+                <TryLoginAgain />
+            </Alert>
+        )
+    }
+    return (
         <Card>
             <CardBody>
                 <SavedTabs
@@ -179,6 +193,19 @@ export function UserSettings() {
                             </EmptyState>
                         )}
                     </SavedTab>
+                    {managedTeams.length > 0 ? (
+                        <SavedTab
+                            title="Managed teams"
+                            fragment="managed-teams"
+                            isModified={() => modified}
+                            onSave={() => teamFuncsRef.current?.save() || Promise.resolve()}
+                            onReset={() => teamFuncsRef.current?.reset()}
+                        >
+                            <ManagedTeams funcs={teamFuncsRef} onModified={setModified} />
+                        </SavedTab>
+                    ) : (
+                        <></>
+                    )}
                 </SavedTabs>
             </CardBody>
         </Card>

@@ -21,3 +21,15 @@ export function info(usernames: string[]) {
 export function teams() {
     return fetchApi(`${base}/teams`, null, "get")
 }
+
+export function teamMembers(team: string) {
+    return fetchApi(`${base}/team/${team}/members`)
+}
+
+export function updateTeamMembers(team: string, roles: Map<string, string[]>) {
+    return fetchApi(`${base}/team/${team}/members`, Object.fromEntries(roles), "post")
+}
+
+export function createUser(user: User, password: string, team: string, roles: string[]) {
+    return fetchApi(`${base}/createUser`, { user, password, team, roles }, "post")
+}

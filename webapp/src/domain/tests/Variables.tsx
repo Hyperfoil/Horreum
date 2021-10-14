@@ -34,8 +34,8 @@ import OptionalFunction from "../../components/OptionalFunction"
 import RecalculateModal from "../alerting/RecalculateModal"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
 import CalculationLogModal from "./CalculationLogModal"
-import { TabFunctionsRef } from "./Test"
 import { subscriptions as subscriptionsSelector } from "./selectors"
+import { TabFunctionsRef } from "../../components/SavedTabs"
 
 type TestSelectModalProps = {
     isOpen: boolean

@@ -1,9 +1,16 @@
-import { ReactElement, ReactNode, useEffect, useMemo, useState, useRef } from "react"
+import { MutableRefObject, ReactElement, ReactNode, useEffect, useMemo, useState, useRef } from "react"
 import { useHistory } from "react-router"
 import { Location, UnregisterCallback } from "history"
 import { ActionGroup, Button, Spinner, Tab, Tabs } from "@patternfly/react-core"
 import SaveChangesModal from "./SaveChangesModal"
 import { noop } from "../utils"
+
+export type TabFunctions = {
+    save(): Promise<any>
+    reset(): void
+}
+
+export type TabFunctionsRef = MutableRefObject<TabFunctions | undefined>
 
 type SavedTabProps = {
     title: string

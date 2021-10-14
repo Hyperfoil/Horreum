@@ -21,7 +21,7 @@ import { useTester } from "../../auth"
 import Accessors from "../../components/Accessors"
 import OptionalFunction from "../../components/OptionalFunction"
 import { View, ViewComponent, TestDispatch } from "./reducers"
-import { TabFunctionsRef } from "./Test"
+import { TabFunctionsRef } from "../../components/SavedTabs"
 import { updateView } from "./actions"
 
 function swap(array: any[], i1: number, i2: number) {

@@ -126,6 +126,11 @@ export const useTester = (owner?: string) => {
     return roles.includes("tester") && (!owner || roles.includes(owner.slice(0, -4) + "tester"))
 }
 
+export function useManagedTeams(): string[] {
+    const roles = useSelector(rolesSelector)
+    return roles.filter(role => role.endsWith("-manager")).map(role => role.slice(0, -4) + "team")
+}
+
 export const defaultTeamSelector = (state: State) => {
     if (state.auth.defaultTeam !== undefined) {
         return state.auth.defaultTeam
@@ -152,7 +157,7 @@ export const initKeycloak = (state: State) => {
                     silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
                     promiseType: "native",
                 } as Keycloak.KeycloakInitOptions)
-                ;(initPromise as Promise<boolean>).then(authenticated => {
+                initPromise?.then(authenticated => {
                     store.dispatch({ type: CLEAR_ALERT })
                     store.dispatch({
                         type: UPDATE_ROLES,
@@ -177,6 +182,8 @@ export const initKeycloak = (state: State) => {
                         )
                         keycloak.onTokenExpired = () =>
                             keycloak.updateToken(30).catch(e => console.log("Expired token update failed: " + e))
+                    } else {
+                        store.dispatch({ type: STORE_PROFILE, profile: {} })
                     }
                 })
             }

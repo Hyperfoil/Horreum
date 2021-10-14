@@ -10,9 +10,11 @@ import javax.persistence.Query;
 import io.quarkus.security.identity.SecurityIdentity;
 
 public final class Roles {
+   public static final String VIEWER = "viewer";
    public static final String TESTER = "tester";
-   public static final String ADMIN = "admin";
    public static final String UPLOADER = "uploader";
+   public static final String MANAGER = "manager";
+   public static final String ADMIN = "admin";
 
    private static final String MY_ROLES = "__my";
    private static final String ALL_ROLES = "__all";

@@ -21,13 +21,12 @@ import {
 import AccessChoice from "../../components/AccessChoice"
 import AccessIcon from "../../components/AccessIcon"
 import TeamSelect from "../../components/TeamSelect"
+import { TabFunctionsRef } from "../../components/SavedTabs"
 
 import { useTester, teamToName, Access as authAccess, defaultTeamSelector } from "../../auth"
 import { noop } from "../../utils"
 import { addToken, revokeToken, updateAccess } from "./actions"
 import { Test, TestDispatch } from "./reducers"
-
-import { TabFunctionsRef } from "./Test"
 
 type AddTokenModalProps = {
     testId: number

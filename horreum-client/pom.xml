@@ -19,7 +19,6 @@
         <maven.compiler.target>11</maven.compiler.target>
 
         <resteasy-client.version>3.13.2.Final</resteasy-client.version>
-        <keycloack-admin-client.version>14.0.0</keycloack-admin-client.version>
         <slf4j-simple.version>1.7.32</slf4j-simple.version>
     </properties>
 
@@ -99,9 +98,7 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-admin-client</artifactId>
-            <version>${keycloack-admin-client.version}</version>
         </dependency>
-
 
         <dependency>
             <groupId>org.testcontainers</groupId>

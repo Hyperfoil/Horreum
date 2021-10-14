@@ -78,6 +78,7 @@
         <surefire-plugin.version>2.22.0</surefire-plugin.version>
         <failsafe-plugin.version>3.0.0-M5</failsafe-plugin.version>
         <yaup.version>0.8.6</yaup.version>
+        <keycloak-admin-client.version>14.0.0</keycloak-admin-client.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
     </properties>
@@ -123,6 +124,11 @@
                 <version>${quarkus.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.keycloak</groupId>
+                <artifactId>keycloak-admin-client</artifactId>
+                <version>${keycloak-admin-client.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

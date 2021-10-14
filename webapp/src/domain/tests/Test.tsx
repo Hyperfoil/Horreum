@@ -1,4 +1,4 @@
-import { MutableRefObject, useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams } from "react-router"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
@@ -8,7 +8,7 @@ import * as actions from "./actions"
 import * as selectors from "./selectors"
 import { TestDispatch } from "./reducers"
 
-import SavedTabs, { SavedTab } from "../../components/SavedTabs"
+import SavedTabs, { SavedTab, TabFunctions, TabFunctionsRef } from "../../components/SavedTabs"
 
 import { useTester, teamsSelector } from "../../auth"
 import { dispatchInfo } from "../../alerts"
@@ -23,13 +23,6 @@ import Subscriptions from "./Subscriptions"
 type Params = {
     testId: string
 }
-
-export type TabFunctions = {
-    save(): Promise<any>
-    reset(): void
-}
-
-export type TabFunctionsRef = MutableRefObject<TabFunctions | undefined>
 
 export default function Test() {
     const params = useParams<Params>()
@@ -63,9 +56,8 @@ export default function Test() {
 
     // We need to return () => ref.current...() because this component is rendered before the child component
     // that modifies ref.current.save, using the last values - otherwise we would send old values to the server
-    const saveFunc = (ref: MutableRefObject<TabFunctions | undefined>) => () =>
-        ref.current ? ref.current.save() : Promise.resolve()
-    const resetFunc = (ref: MutableRefObject<TabFunctions | undefined>) => () => ref.current?.reset()
+    const saveFunc = (ref: TabFunctionsRef) => () => ref.current ? ref.current.save() : Promise.resolve()
+    const resetFunc = (ref: TabFunctionsRef) => () => ref.current?.reset()
     return (
         <>
             <Card style={{ flexGrow: 1 }}>

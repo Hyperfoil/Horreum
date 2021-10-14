@@ -18,6 +18,8 @@ echo "QUARKUS_DATASOURCE_JDBC_URL=$JDBC_URL" >> /cwd/horreum-backend/.env
 echo "QUARKUS_DATASOURCE_MIGRATION_JDBC_URL=$JDBC_URL" >> /cwd/horreum-backend/.env
 echo "QUARKUS_OIDC_AUTH_SERVER_URL=http://$IP_ADDR:$KEYCLOAK_PORT/auth/realms/horreum" >> /cwd/horreum-backend/.env
 KEYCLOAK_HOST="$IP_ADDR:$KEYCLOAK_PORT"
+# Keycloak URL must match QUARKUS_OIDC_AUTH_SERVER_URL or we have to set QUARKUS_OIDC_TOKEN_ISSUER
+echo "HORREUM_KEYCLOAK_URL=http://"$KEYCLOAK_HOST"/auth" >> /cwd/horreum-backend/.env
 HORREUM_URL="http://$IP_ADDR:$HORREUM_PORT"
 
 
@@ -49,26 +51,29 @@ VIEWER_ID=$(curl -s $KEYCLOAK_BASEURL/roles/viewer -H "$AUTH" | jq -r '.id')
 ADMIN_ID=$(curl -s $KEYCLOAK_BASEURL/roles/admin -H "$AUTH" | jq -r '.id')
 curl -s $KEYCLOAK_BASEURL/roles -H "$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-team"}'
 TEAM_ID=$(curl -s $KEYCLOAK_BASEURL/roles/dev-team -H "$AUTH" | jq -r '.id')
+
+curl -s $KEYCLOAK_BASEURL/roles -H "$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-viewer","composite":true}'
+TEAM_VIEWER_ID=$(curl -s $KEYCLOAK_BASEURL/roles/dev-viewer -H "$AUTH" | jq -r '.id')
+curl -s $KEYCLOAK_BASEURL/roles/dev-viewer/composites -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_ID'"},{"id":"'$VIEWER_ID'"}]'
+
 curl -s $KEYCLOAK_BASEURL/roles -H "$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-uploader","composite":true}'
 TEAM_UPLOADER_ID=$(curl -s $KEYCLOAK_BASEURL/roles/dev-uploader -H "$AUTH" | jq -r '.id')
 curl -s $KEYCLOAK_BASEURL/roles/dev-uploader/composites -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_ID'"},{"id":"'$UPLOADER_ID'"}]'
+
 curl -s $KEYCLOAK_BASEURL/roles -H "$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-tester","composite":true}'
 TEAM_TESTER_ID=$(curl -s $KEYCLOAK_BASEURL/roles/dev-tester -H "$AUTH" | jq -r '.id')
-curl -s $KEYCLOAK_BASEURL/roles/dev-tester/composites -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_ID'"},{"id":"'$TESTER_ID'"},{"id":"'$VIEWER_ID'"}]'
+curl -s $KEYCLOAK_BASEURL/roles/dev-tester/composites -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_ID'"},{"id":"'$TESTER_ID'"},{"id":"'$TEAM_VIEWER_ID'"}]'
+
+curl -s $KEYCLOAK_BASEURL/roles -H "$AUTH" -H 'content-type: application/json' -X POST -d '{"name":"dev-manager","composite":true}'
+TEAM_MANAGER_ID=$(curl -s $KEYCLOAK_BASEURL/roles/dev-manager -H "$AUTH" | jq -r '.id')
+curl -s $KEYCLOAK_BASEURL/roles/dev-manager/composites -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_ID'"}]'
+
 curl -s $KEYCLOAK_BASEURL/users -H "$AUTH" -X POST -d '{"username":"user","enabled":true,"firstName":"Dummy","lastName":"User","credentials":[{"type":"password","value":"secret"}],"email":"user@example.com"}' -H 'content-type: application/json'
 USER_ID=$(curl -s $KEYCLOAK_BASEURL/users -H "$AUTH" | jq -r '.[] | select(.username=="user") | .id')
-curl -s $KEYCLOAK_BASEURL/users/$USER_ID/role-mappings/realm -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_UPLOADER_ID'","name":"dev-uploader"},{"id":"'$TEAM_TESTER_ID'","name":"dev-tester"},{"id":"'$ADMIN_ID'","name":"admin"}]'
+curl -s $KEYCLOAK_BASEURL/users/$USER_ID/role-mappings/realm -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$TEAM_UPLOADER_ID'","name":"dev-uploader"},{"id":"'$TEAM_TESTER_ID'","name":"dev-tester"},{"id":"'$TEAM_VIEWER_ID'","name":"dev-viewer"},{"id":"'$TEAM_MANAGER_ID'","name":"dev-manager"},{"id":"'$ADMIN_ID'","name":"admin"}]'
 
-# Create user that can list other users and roles
-curl -s $KEYCLOAK_BASEURL/users -H "$AUTH" -X POST -d '{"username":"__user_reader","enabled":true,"credentials":[{"type":"password","value":"secret"}],"email":"none@example.com"}' -H 'content-type: application/json'
-USER_READER_ID=$(curl -s $KEYCLOAK_BASEURL/users -H "$AUTH" | jq -r '.[] | select(.username=="__user_reader").id')
-REALM_MANAGEMENT_CLIENTID=$(curl -s $KEYCLOAK_BASEURL/clients -H "$AUTH" | jq -r '.[] | select(.clientId=="realm-management").id')
-VIEW_USERS_ID=$(curl -s $KEYCLOAK_BASEURL/clients/${REALM_MANAGEMENT_CLIENTID}/roles/view-users -H "$AUTH" | jq -r '.id')
-curl -s $KEYCLOAK_BASEURL/users/$USER_READER_ID/role-mappings/clients/${REALM_MANAGEMENT_CLIENTID} -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$VIEW_USERS_ID'","name":"view-users"}]'
-USER_READER_TOKEN=$(curl -s -X POST $KEYCLOAK_BASEURL/protocol/openid-connect/token \
-    -H 'content-type: application/x-www-form-urlencoded' \
-    -d 'username=__user_reader&password=secret&grant_type=password&client_id=horreum-ui&scope=offline_access' \
-    | jq -r .refresh_token)
-echo HORREUM_KEYCLOAK_USER_READER_TOKEN=$USER_READER_TOKEN >> /cwd/horreum-backend/.env
+ACCOUNT_CLIENTID=$(curl -s $KEYCLOAK_BASEURL/clients -H "$AUTH" | jq -r '.[] | select(.clientId=="account") | .id')
+VIEW_PROFILE_ID=$(curl -s $KEYCLOAK_BASEURL/clients/${ACCOUNT_CLIENTID}/roles/view-profile -H "$AUTH" | jq -r '.id')
+curl -s $KEYCLOAK_BASEURL/users/$USER_ID/role-mappings/clients/$ACCOUNT_CLIENTID -H "$AUTH" -H 'content-type: application/json' -X POST -d '[{"id":"'$VIEW_PROFILE_ID'","name":"view-profile"}]'
 
 echo "Horreum initialization complete"
