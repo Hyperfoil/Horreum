@@ -280,6 +280,9 @@ public class UserServiceImpl implements UserService {
             String userId = matchingUsers.get(0).getId();
             RoleMappingResource rolesMappingResource = keycloak.realm(REALM).users().get(userId).roles();
             List<RoleRepresentation> userRoles = rolesMappingResource.getAll().getRealmMappings();
+            if (userRoles == null) {
+               userRoles = Collections.emptyList();
+            }
             List<RoleRepresentation> removed = null;
             Set<String> existingTeamRoles = new HashSet<>();
             for (RoleRepresentation role : userRoles) {
@@ -298,7 +301,9 @@ public class UserServiceImpl implements UserService {
                }
                removed.add(role);
             }
-            rolesMappingResource.realmLevel().remove(removed);
+            if (removed != null) {
+               rolesMappingResource.realmLevel().remove(removed);
+            }
             List<RoleRepresentation> added = null;
             for (String role : entry.getValue()) {
                if (!existingTeamRoles.contains(role)) {
@@ -316,7 +321,9 @@ public class UserServiceImpl implements UserService {
                   }
                }
             }
-            rolesMappingResource.realmLevel().add(added);
+            if (added != null) {
+               rolesMappingResource.realmLevel().add(added);
+            }
             promise.complete();
          }).onSuccess(future).onFailure(t -> {
             log.errorf(t, "Cannot update roles for user %s", entry.getKey());
