@@ -38,6 +38,7 @@ import javax.ws.rs.core.Response;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
+import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.LastMissingRunNotification;
 import io.hyperfoil.tools.horreum.regression.RegressionModel;
 import io.hyperfoil.tools.horreum.regression.StatisticalVarianceRegressionModel;
@@ -111,6 +112,9 @@ public class AlertingServiceImpl implements AlertingService {
    SqlServiceImpl sqlService;
 
    @Inject
+   TestServiceImpl testService;
+
+   @Inject
    EntityManager em;
 
    @Inject
@@ -146,14 +150,14 @@ public class AlertingServiceImpl implements AlertingService {
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
-      boolean showNotifications;
+      boolean sendNotifications;
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singleton(HORREUM_ALERTING))) {
-         showNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
+         sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
                .setParameter(1, run.testid).getSingleResult();
       } catch (NoResultException e) {
-         showNotifications = true;
+         sendNotifications = true;
       }
-      onNewRun(run, showNotifications, false, null);
+      onNewRun(run, sendNotifications, false, null);
    }
 
    @PostConstruct
@@ -264,6 +268,7 @@ public class AlertingServiceImpl implements AlertingService {
          return;
       }
 
+      Map<String, Object> extracted = new HashMap<>();
       String[] names = new String[allAccessors.size()];
       int index = 0;
       for (var entry: allAccessors.entrySet()) {
@@ -279,6 +284,7 @@ public class AlertingServiceImpl implements AlertingService {
                   "Accessor %s referenced from variables %s cannot be extracted: requires one of these schemas: %s", accessor,
                   vars.values().stream().filter(var -> var.accessors.contains(accessor)).map(var -> var.name).collect(Collectors.toList()),
                   entry.getValue().stream().map(ai -> ai.schema).collect(Collectors.toList()));
+            extractionQuery.append(", NULL as _").append(index);
          } else if (matching.size() > 1) {
             // we want deterministic order (at least)
             matching.sort(Comparator.comparing(ai -> ai.schema));
@@ -301,38 +307,39 @@ public class AlertingServiceImpl implements AlertingService {
          }
       }
 
-      extractionQuery.append(" FROM current_run");
-      Query extraction = em.createNativeQuery(extractionQuery.toString());
+      if (index > 0) {
+         extractionQuery.append(" FROM current_run");
+         Query extraction = em.createNativeQuery(extractionQuery.toString());
 
-      Object[] result;
-      try {
-         result = (Object[]) extraction.getSingleResult();
-      } catch (NoResultException e) {
-         log.errorf("Run %d does not exist in the database!", run.id);
-         return;
-      } catch (PersistenceException e) {
-         log.errorf(e, "Failed to extract regression variables for run %d", run.id);
-         Transaction old;
+         Object[] result;
          try {
-            old = tm.suspend();
+            result = (Object[]) extraction.getSingleResult();
+         } catch (NoResultException e) {
+            log.errorf("Run %d does not exist in the database!", run.id);
+            return;
+         } catch (PersistenceException e) {
+            log.errorf(e, "Failed to extract regression variables for run %d", run.id);
+            Transaction old;
             try {
-               sqlService.withTx(() -> {
-                  try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
-                     logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Failed to extract regression variables from database. This is likely due to a malformed JSONPath in one of extractors.");
-                     return null;
-                  }
-               });
-            } finally {
-               tm.resume(old);
+               old = tm.suspend();
+               try {
+                  sqlService.withTx(() -> {
+                     try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
+                        logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Failed to extract regression variables from database. This is likely due to a malformed JSONPath in one of extractors.");
+                        return null;
+                     }
+                  });
+               } finally {
+                  tm.resume(old);
+               }
+            } catch (SystemException | InvalidTransactionException e2) {
+               log.error("Failed to switch to a different transaction for logging.", e2);
             }
-         } catch (SystemException | InvalidTransactionException e2) {
-            log.error("Failed to switch to a different transaction for logging.", e2);
+            return;
          }
-         return;
-      }
-      Map<String, Object> extracted = new HashMap<>();
-      for (int i = 0; i < names.length; i++) {
-         extracted.put(names[i], result[i + 1]);
+         for (int i = 0; i < names.length; i++) {
+            extracted.put(names[i], result[i + 1]);
+         }
       }
 
       if (debug) {
@@ -851,7 +858,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Transactional
    @Scheduled(every = "{horreum.alerting.missing.runs.check}")
-   public void checkRuns() {
+   public void checkMissingRuns() {
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
          @SuppressWarnings("unchecked")
          List<Object[]> results = em.createNativeQuery(LOOKUP_STALE).getResultList();
@@ -890,6 +897,61 @@ public class AlertingServiceImpl implements AlertingService {
          SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(DatapointLastTimestamp.class));
          //noinspection unchecked
          return query.getResultList();
+      }
+   }
+
+   @RolesAllowed(Roles.UPLOADER)
+   @Override
+   @Transactional
+   public void expectRun(String testNameOrId, Long timeoutSeconds, String tags, String expectedBy, String backlink) {
+      if (timeoutSeconds == null) {
+         throw ServiceException.badRequest("No timeout set.");
+      } else if (timeoutSeconds <= 0) {
+         throw ServiceException.badRequest("Timeout must be positive (unit: seconds)");
+      }
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         Test test = testService.getByNameOrId(testNameOrId);
+         if (test == null) {
+            throw ServiceException.notFound("Test " + testNameOrId + " does not exist.");
+         }
+         RunExpectation runExpectation = new RunExpectation();
+         runExpectation.testId = test.id;
+         runExpectation.tags = tags != null && !tags.isEmpty() ? Json.fromString(tags) : null;
+         runExpectation.expectedBefore = Instant.now().plusSeconds(timeoutSeconds);
+         runExpectation.expectedBy = expectedBy != null ? expectedBy : identity.getPrincipal().getName();
+         runExpectation.backlink = backlink;
+         runExpectation.persist();
+      }
+   }
+
+   @ConsumeEvent(value = Run.EVENT_TAGS_CREATED, blocking = true)
+   @Transactional
+   public void removeExpected(Run.TagsEvent event) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singleton(HORREUM_ALERTING))) {
+         Query query = em.createNativeQuery("DELETE FROM run_expectation WHERE testid = (SELECT testid FROM run WHERE id = ?1) AND (tags IS NULL OR tags @> ?2 ::::jsonb AND ?2 ::::jsonb @> tags)");
+         query.setParameter(1, event.runId);
+         query.setParameter(2, event.tags != null ? event.tags : "{}");
+         int updated = query.executeUpdate();
+         if (updated > 0) {
+            log.infof("Removed %d run expectations as run %d with tags %s was added.", updated, event.runId, event.tags);
+         }
+      }
+   }
+
+   @Transactional
+   @Scheduled(every = "{horreum.alerting.missing.runs.check}")
+   public void checkExpectedRuns() {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
+         for (RunExpectation expectation : RunExpectation.<RunExpectation>find("expectedbefore < ?1", Instant.now()).list()) {
+            boolean sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
+                  .setParameter(1, expectation.testId).getSingleResult();
+            if (sendNotifications) {
+               notificationService.notifyExpectedRun(expectation.testId, expectation.tags, expectation.expectedBefore.toEpochMilli(), expectation.expectedBy, expectation.backlink);
+            } else {
+               log.debugf("Skipping expected run notification on test %d since it is disabled.", expectation.testId);
+            }
+            expectation.delete();
+         }
       }
    }
 

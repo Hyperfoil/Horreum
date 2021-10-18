@@ -15,4 +15,5 @@ public abstract class Notification {
    public abstract void notifyChange(String testName, String tags, Change change);
    public abstract void notifyMissingRun(String testName, int testId, String tags, long maxStaleness, int lastRunId, long lastRunTimestamp);
    public abstract void notifyMissingRunValues(String testName, String tags, MissingRunValuesEvent missing);
+   public abstract void notifyExpectedRun(String testName, int testId, String tags, long before, String expectedBy, String backlink);
 }

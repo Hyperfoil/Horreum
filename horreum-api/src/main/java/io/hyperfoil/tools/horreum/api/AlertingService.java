@@ -71,6 +71,14 @@ public interface AlertingService {
    @Path("/datapoint/last")
    List<DatapointLastTimestamp> findLastDatapoints(Json params);
 
+   @POST
+   @Path("/expectRun")
+   void expectRun(@QueryParam("test") String test,
+                  @QueryParam("timeout") Long timeoutSeconds,
+                  @QueryParam("tags") String tags,
+                  @QueryParam("expectedby") String expectedBy,
+                  @QueryParam("backlink") String backlink);
+
    class DashboardInfo {
       public int testId;
       public String uid;

@@ -1877,5 +1877,65 @@
                 USING (has_role('horreum.system'));
         </sql>
     </changeSet>
+
+    <changeSet id="36" author="rvansa">
+        <createTable tableName="run_expectation">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" />
+            </column>
+            <column name="testid" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tags" type="jsonb" />
+            <column name="expectedbefore" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expectedby" type="text"/>
+            <column name="backlink" type="text"/>
+        </createTable>
+        <sql>
+            GRANT select, insert, delete ON TABLE run_expectation TO "${quarkus.datasource.username}";
+            CREATE POLICY run_expectation_select ON run_expectation FOR SELECT
+                USING (has_role('horreum.alerting'));
+            CREATE POLICY run_expectation_insert ON run_expectation FOR INSERT
+                WITH CHECK (has_role2((SELECT test.owner FROM test WHERE test.id = testid), 'uploader'));
+            CREATE POLICY run_expectation_delete ON run_expectation FOR DELETE
+                USING (has_role('horreum.alerting'));
+        </sql>
+    </changeSet>
+
+    <!-- Even if the run does not have any schema we should attempt to calculate its tags (and find these to be null) -->
+    <changeSet id="37" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION after_run_update_func() RETURNS TRIGGER AS $$
+            DECLARE
+                v_schema text;
+                v_schemaid integer;
+                v_has_schema boolean := false;
+            BEGIN
+                FOR v_schema IN (SELECT jsonb_path_query(NEW.data, '$.\$schema'::jsonpath)#>>'{}') LOOP
+                    v_schemaid := (SELECT id FROM schema WHERE uri = v_schema);
+                    IF v_schemaid IS NOT NULL THEN
+                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid)
+                            VALUES (NEW.id, NEW.testid, '$', v_schema, v_schemaid);
+                        v_has_schema := true;
+                    END IF;
+                END LOOP;
+                FOR v_schema IN (SELECT jsonb_path_query(NEW.data, '$.*.\$schema'::jsonpath)#>>'{}') LOOP
+                    v_schemaid := (SELECT id FROM schema WHERE uri = v_schema);
+                    IF v_schemaid IS NOT NULL THEN
+                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid)
+                            VALUES (NEW.id, NEW.testid, '$.*', v_schema, v_schemaid);
+                        v_has_schema := true;
+                    END IF;
+                END LOOP;
+                IF NOT v_has_schema THEN
+                    PERFORM pg_notify('calculate_tags', auth_suffix(NEW.id::text) );
+                END IF;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+    </changeSet>
 </databaseChangeLog>
 

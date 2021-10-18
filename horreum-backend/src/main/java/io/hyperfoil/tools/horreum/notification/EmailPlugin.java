@@ -32,6 +32,9 @@ public class EmailPlugin implements NotificationPlugin {
    @Location("missing_values_notification_email")
    Template missingValuesNotificationEmail;
 
+   @Location("expected_run_notification_email")
+   Template expectedRunNotificationEmail;
+
    @Inject
    Mailer mailer;
 
@@ -94,6 +97,22 @@ public class EmailPlugin implements NotificationPlugin {
                .data("baseUrl", baseUrl)
                .data("runId", event.runId)
                .data("variables", String.join(", ", event.variables))
+               .render();
+         mailer.send(Mail.withHtml(data, subject, content));
+      }
+
+      @Override
+      public void notifyExpectedRun(String testName, int testId, String tags, long before, String expectedBy, String backlink) {
+         String subject = subjectPrefix + " Missing expected run for " + testName + "/" + tags;
+         String content = expectedRunNotificationEmail
+               .data("username", username)
+               .data("testName", testName)
+               .data("testId", String.valueOf(testId))
+               .data("tags", tags)
+               .data("baseUrl", baseUrl)
+               .data("before", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(before)))
+               .data("expectedBy", expectedBy)
+               .data("backlink", backlink)
                .render();
          mailer.send(Mail.withHtml(data, subject, content));
       }

@@ -112,6 +112,10 @@ public class NotificationServiceImpl implements NotificationService {
    @Transactional
    @ConsumeEvent(value = Run.EVENT_MISSING_VALUES, blocking = true)
    public void onMissingRunValues(MissingRunValuesEvent event) {
+      if (!event.notify) {
+         log.debugf("Skipping notification for missing run values on test %d, run %d", event.testId, event.runId);
+         return;
+      }
       try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(AlertingServiceImpl.HORREUM_ALERTING))) {
          // TODO: breaks storage/alerting separation!
          Test test = Test.findById(event.testId);
@@ -119,7 +123,6 @@ public class NotificationServiceImpl implements NotificationService {
          log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.testId, testName, event.runId, event.variables);
 
          String tags = getTags(event.runId);
-
          notifyAll(event.testId, n -> n.notifyMissingRunValues(testName, tags, event));
       }
    }
@@ -148,6 +151,9 @@ public class NotificationServiceImpl implements NotificationService {
    }
 
    private static String tagsToString(Json tagsObject) {
+      if (tagsObject == null) {
+         return null;
+      }
       StringBuilder sb = new StringBuilder();
       tagsObject.forEach((key, value) -> {
          if (sb.length() != 0) {
@@ -198,6 +204,14 @@ public class NotificationServiceImpl implements NotificationService {
    void notifyMissingRun(int testId, Json tagsJson, long maxStaleness, int runId, long runTimestamp) {
       String tags = tagsToString(tagsJson);
       Test test = Test.findById(testId);
-      notifyAll(testId, n -> n.notifyMissingRun(test.name, testId, tags, maxStaleness, runId, runTimestamp));
+      String name = test != null ? test.name : "<unknown test>";
+      notifyAll(testId, n -> n.notifyMissingRun(name, testId, tags, maxStaleness, runId, runTimestamp));
+   }
+
+   public void notifyExpectedRun(int testId, Json tagsJson, long expectedBefore, String expectedBy, String backlink) {
+      String tags = tagsToString(tagsJson);
+      Test test = Test.findById(testId);
+      String name = test != null ? test.name : "<unknown test>";
+      notifyAll(testId, n -> n.notifyExpectedRun(name, testId, tags, expectedBefore, expectedBy, backlink));
    }
 }

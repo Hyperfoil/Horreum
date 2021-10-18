@@ -22,13 +22,13 @@ public class Run extends ProtectedBaseEntity {
    public static final String EVENT_NEW = "run/new";
    public static final String EVENT_TRASHED = "run/trashed";
    public static final String EVENT_MISSING_VALUES = "run/missing_value";
+   public static final String EVENT_TAGS_CREATED = "run/tags_created";
 
    @Id
    @SequenceGenerator(
       name = "runSequence",
       sequenceName = "run_id_seq",
-      allocationSize = 1,
-      initialValue = 1)
+      allocationSize = 1)
    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "runSequence")
    public Integer id;
 
@@ -56,4 +56,14 @@ public class Run extends ProtectedBaseEntity {
    @NotNull
    @Column(columnDefinition = "boolean default false")
    public boolean trashed;
+
+   public static class TagsEvent {
+      public final int runId;
+      public final String tags;
+
+      public TagsEvent(int runId, String tags) {
+         this.runId = runId;
+         this.tags = tags;
+      }
+   }
 }
