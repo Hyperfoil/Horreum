@@ -2,7 +2,6 @@ version: '3.1'
 services:
   horreum:
     image: quay.io/hyperfoil/horreum:latest
-    entrypoint: sh -c "/cwd/scripts/horreum.sh $PORT_OFFSET"
     environment:
       - "QUARKUS_DATASOURCE_JDBC_URL=${HORREUM_QUARKUS_DATASOURCE_JDBC_URL}"
       - "QUARKUS_DATASOURCE_MIGRATION_JDBC_URL=${HORREUM_QUARKUS_DATASOURCE_JDBC_URL}"
@@ -18,10 +17,11 @@ services:
       - HORREUM_GRAFANA_ADMIN_PASSWORD=secret
       - "HORREUM_GRAFANA_MP_REST_URL=${GRAFANA_GF_SERVER_ROOT_URL}"
       - "HORREUM_GRAFANA_URL=${GRAFANA_GF_SERVER_ROOT_URL}"
+    env_file: horreum-backend/.env
 
     ports:
       - "${HORREUM_HTTPS_PORT}:8443"
       - "${HORREUM_HTTP_PORT}:8080"
     volumes:
-      - ./src/main/resources/certs:/etc/horreum/certs:ro,z
+      - ./:/etc/horreum/certs:ro,z
       - ./:/cwd:rw,z

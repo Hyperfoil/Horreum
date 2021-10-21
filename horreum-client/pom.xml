@@ -120,7 +120,8 @@
         </dependency>
 
     </dependencies>
-<build>
+
+    <build>
     <pluginManagement>
         <plugins>
             <plugin>
@@ -132,31 +133,40 @@
     </pluginManagement>
     <plugins>
         <plugin>
-            <artifactId>maven-resources-plugin</artifactId>
-            <version>3.2.0</version>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
             <executions>
                 <execution>
-                    <id>copy-resource-one</id>
-                    <phase>generate-sources</phase>
                     <goals>
-                        <goal>copy-resources</goal>
+                        <goal>test-jar</goal>
                     </goals>
-                    <configuration>
-                        <outputDirectory>${basedir}/target/docker-compose</outputDirectory>
-                        <resources>
-                            <resource>
-                                <directory>../</directory>
-                                <includes>
-                                    <include>*.yml</include>
-                                    <include>*.sh</include>
-                                </includes>
-                            </resource>
-                        </resources>
-                    </configuration>
                 </execution>
             </executions>
         </plugin>
     </plugins>
 
+    <testResources>
+        <testResource>
+            <directory>src/test/resources</directory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </testResource>
+        <testResource>
+            <directory>../</directory>
+            <targetPath>docker-compose</targetPath>
+            <includes>
+                <include>*.sh</include>
+                <include>*.yml</include>
+            </includes>
+        </testResource>
+        <testResource>
+            <directory>../horreum-backend/src/main/resources/</directory>
+            <targetPath>docker-compose</targetPath>
+            <includes>
+                <include>keycloak-horreum.json</include>
+            </includes>
+        </testResource>
+    </testResources>
 </build>
 </project>
