@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
 import io.hyperfoil.tools.horreum.api.*;
 import io.hyperfoil.tools.serializer.CustomYaupProvider;
+import io.hyperfoil.tools.serializer.JsonDeserializer;
 import io.hyperfoil.tools.serializer.JsonSerializer;
 import io.hyperfoil.tools.yaup.json.Json;
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
@@ -106,6 +107,7 @@ public class HorreumClient {
             ObjectMapper customJsonMapper = new ObjectMapper();
             SimpleModule customModule = new SimpleModule("customJsonModule", new Version(1, 0, 0, null, "io.hyperfoil.tools", "horreum-client-java"));
             customModule.addSerializer(Json.class, new JsonSerializer());
+            customModule.addDeserializer(Json.class, new JsonDeserializer());
 
             customJsonMapper.registerModule(customModule);
             customJsonProvider.setMapper(customJsonMapper);
