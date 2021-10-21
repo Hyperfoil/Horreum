@@ -640,7 +640,7 @@ public class RunServiceImpl implements RunService {
       if (tagsMap != null) {
          Tags.addTagQuery(tagsMap, sql, 2);
       }
-      if (sort.startsWith("view_data:")) {
+      if (sort != null && sort.startsWith("view_data:")) {
          String accessor = sort.substring(sort.indexOf(':', 10) + 1);
          sql.append(" ORDER BY");
          // TODO: use view ID in the sort format rather than wildcards below
