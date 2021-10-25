@@ -60,6 +60,7 @@ public class HorreumTestBase {
     private static final Integer KEYCLOAK_PORT = 8180;
 
     protected static boolean START_HORREUM_INFRA;
+    protected static boolean STOP_HORREUM_INFRA;
     protected static boolean HORREUM_DUMP_LOGS;
 
     private static final Integer ContainerStartTimeout = 60;
@@ -88,6 +89,7 @@ public class HorreumTestBase {
                 HORREUM_PASSWORD = getProperty("horreum.password");
 
                 START_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.start-infra"));
+                STOP_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.stop-infra"));
                 HORREUM_DUMP_LOGS = Boolean.parseBoolean(getProperty("horreum.dump-logs"));
             } else {
                 throw new RuntimeException("Could not load test configuration");
@@ -225,8 +227,10 @@ public class HorreumTestBase {
                 log.info("Logs written to: " + tmpFile.getAbsolutePath());
             }
         }
-        stopContainerEnv(infrastructureContainer);
-        stopContainerEnv(horreumContainer);
+        if (STOP_HORREUM_INFRA) {
+            stopContainerEnv(infrastructureContainer);
+            stopContainerEnv(horreumContainer);
+        }
     }
 
     private static void stopContainerEnv(TestContainer composeContainer){

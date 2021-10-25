@@ -1,8 +1,13 @@
 package io.hyperfoil.tools;
 
+import java.time.Instant;
+
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.deser.InstantDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.InstantSerializer;
+
 import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
 import io.hyperfoil.tools.horreum.api.*;
 import io.hyperfoil.tools.serializer.CustomYaupProvider;
@@ -108,6 +113,8 @@ public class HorreumClient {
             SimpleModule customModule = new SimpleModule("customJsonModule", new Version(1, 0, 0, null, "io.hyperfoil.tools", "horreum-client-java"));
             customModule.addSerializer(Json.class, new JsonSerializer());
             customModule.addDeserializer(Json.class, new JsonDeserializer());
+            customModule.addSerializer(Instant.class, InstantSerializer.INSTANCE);
+            customModule.addDeserializer(Instant.class, InstantDeserializer.INSTANT);
 
             customJsonMapper.registerModule(customModule);
             customJsonProvider.setMapper(customJsonMapper);

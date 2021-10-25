@@ -70,7 +70,7 @@ services:
     - /cwd/app-init.sh
     - "${PORT_OFFSET:-0}"
     volumes:
-    - "${WORKING_PATH:-./}:/cwd:ro,z"
+    - "${WORKING_PATH:-./}:/cwd:rw,z"
   grafana:
     depends_on:
     - keycloak
