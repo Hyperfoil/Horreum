@@ -17,6 +17,7 @@ import javax.ws.rs.core.MediaType;
 
 import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
+import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.yaup.json.Json;
 
@@ -78,6 +79,11 @@ public interface AlertingService {
                   @QueryParam("tags") String tags,
                   @QueryParam("expectedby") String expectedBy,
                   @QueryParam("backlink") String backlink);
+
+   // Test mode only
+   @GET
+   @Path("/expectations")
+   List<RunExpectation> expectations();
 
    class DashboardInfo {
       public int testId;

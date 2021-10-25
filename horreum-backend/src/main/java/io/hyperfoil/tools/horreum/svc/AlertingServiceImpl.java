@@ -132,6 +132,9 @@ public class AlertingServiceImpl implements AlertingService {
    @ConfigProperty(name = "horreum.grafana.update.datasource")
    Optional<Boolean> updateGrafanaDatasource;
 
+   @ConfigProperty(name = "horreum.test")
+   Optional<Boolean> isTest;
+
    @ConfigProperty(name = "horreum.internal.url")
    String internalUrl;
 
@@ -921,6 +924,17 @@ public class AlertingServiceImpl implements AlertingService {
          runExpectation.expectedBy = expectedBy != null ? expectedBy : identity.getPrincipal().getName();
          runExpectation.backlink = backlink;
          runExpectation.persist();
+      }
+   }
+
+   @PermitAll
+   @Override
+   public List<RunExpectation> expectations() {
+      if (!isTest.orElse(false)) {
+         throw ServiceException.notFound("Not available without test mode.");
+      }
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, HORREUM_ALERTING)) {
+         return RunExpectation.listAll();
       }
    }
 

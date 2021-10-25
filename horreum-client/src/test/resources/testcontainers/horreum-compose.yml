@@ -17,6 +17,7 @@ services:
       - HORREUM_GRAFANA_ADMIN_PASSWORD=secret
       - "HORREUM_GRAFANA_MP_REST_URL=${GRAFANA_GF_SERVER_ROOT_URL}"
       - "HORREUM_GRAFANA_URL=${GRAFANA_GF_SERVER_ROOT_URL}"
+      - HORREUM_TEST=true
     env_file: horreum-backend/.env
 
     ports:
