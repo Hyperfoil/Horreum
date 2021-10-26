@@ -3,6 +3,8 @@ package io.hyperfoil.tools.auth;
 import org.apache.http.conn.HttpHostConnectException;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.jboss.resteasy.plugins.providers.FormUrlEncodedProvider;
+import org.jboss.resteasy.plugins.providers.jackson.ResteasyJackson2Provider;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 
@@ -27,6 +29,12 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 			String clientId,
 			String clientSecret) {
 
+		ResteasyClientBuilder clientBuilder = new ResteasyClientBuilder().connectionPoolSize(20);
+		// We need to register the necessary providers manually in case this is used in Jenkins
+		// where the hierarchical classloader structure prevents provider lookup via ServiceLoader
+		clientBuilder.register(new FormUrlEncodedProvider());
+		clientBuilder.register(new ResteasyJackson2Provider());
+
 		keycloak = KeycloakBuilder.builder()
 				.serverUrl(keycloakBaseUrl + "/auth")
 				.realm(keycloakRealm)
@@ -34,7 +42,7 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 				.password(password)
 				.clientId(clientId)
 				.clientSecret(clientSecret)
-				.resteasyClient(new ResteasyClientBuilder().connectionPoolSize(20).build())
+				.resteasyClient(clientBuilder.build())
 				.build();
 	}
 

@@ -17,6 +17,8 @@ import io.hyperfoil.tools.yaup.json.Json;
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 import org.jboss.resteasy.microprofile.client.impl.MpClientBuilderImpl;
+import org.jboss.resteasy.plugins.providers.DefaultTextPlain;
+import org.jboss.resteasy.plugins.providers.StringTextStar;
 
 import javax.ws.rs.core.UriBuilder;
 
@@ -124,6 +126,9 @@ public class HorreumClient {
 
             //Register Keycloak Request Filter
             clientBuilder.register(requestFilter);
+            // Other MessageBodyReaders/Writers that may not be found by ServiceLoader mechanism
+            clientBuilder.register(new StringTextStar());
+            clientBuilder.register(new DefaultTextPlain());
 
             ResteasyClient client = clientBuilder.build();
             ResteasyWebTarget target = client.target(UriBuilder.fromPath(this.horreumUrl));
