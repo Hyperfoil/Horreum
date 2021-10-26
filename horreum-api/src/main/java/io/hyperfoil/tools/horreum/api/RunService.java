@@ -66,6 +66,7 @@ public interface RunService {
 
    @POST
    @Path("data")
+   @Produces(MediaType.TEXT_PLAIN) // run ID as string
    String addRunFromData(@QueryParam("start") String start,
                          @QueryParam("stop") String stop,
                          @QueryParam("test") String test,

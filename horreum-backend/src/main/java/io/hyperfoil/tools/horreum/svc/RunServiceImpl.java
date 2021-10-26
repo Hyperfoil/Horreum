@@ -344,9 +344,9 @@ public class RunServiceImpl implements RunService {
          Instant startInstant = toInstant(foundStart);
          Instant stopInstant = toInstant(foundStop);
          if (startInstant == null) {
-            throw ServiceException.badRequest("Cannot get start time.");
+            throw ServiceException.badRequest("Cannot parse start time from " + foundStart + " (" + start + ")");
          } else if (stopInstant == null) {
-            throw ServiceException.badRequest("Cannot get stop time.");
+            throw ServiceException.badRequest("Cannot parse stop time from " + foundStop + " (" + stop + ")");
          }
 
          Test testEntity = testService.getByNameOrId(testNameOrId);
