@@ -601,6 +601,7 @@ public class AlertingServiceImpl implements AlertingService {
             Variable matching = variables.stream().filter(v -> current.id.equals(v.id)).findFirst().orElse(null);
             if (matching == null) {
                DataPoint.delete("variable_id", current.id);
+               Change.delete("variable_id", current.id);
                current.delete();
             } else {
                current.name = matching.name;
@@ -737,7 +738,7 @@ public class AlertingServiceImpl implements AlertingService {
    @Override
    @PermitAll
    public List<Change> changes(Integer varId) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          Variable v = Variable.findById(varId);
          if (v == null) {
             throw ServiceException.notFound("Variable " + varId + " not found");
@@ -751,7 +752,7 @@ public class AlertingServiceImpl implements AlertingService {
    @RolesAllowed(Roles.TESTER)
    @Transactional
    public void updateChange(Integer id, Change change) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          if (id != change.id) {
             throw ServiceException.badRequest("Path ID and entity don't match");
          }
@@ -765,7 +766,7 @@ public class AlertingServiceImpl implements AlertingService {
    @RolesAllowed(Roles.TESTER)
    @Transactional
    public void deleteChange(Integer id) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
          if (!Change.deleteById(id)) {
             throw ServiceException.notFound("Change not found");
          }

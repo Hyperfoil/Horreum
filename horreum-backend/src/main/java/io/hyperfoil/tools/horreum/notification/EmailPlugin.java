@@ -103,7 +103,10 @@ public class EmailPlugin implements NotificationPlugin {
 
       @Override
       public void notifyExpectedRun(String testName, int testId, String tags, long before, String expectedBy, String backlink) {
-         String subject = subjectPrefix + " Missing expected run for " + testName + "/" + tags;
+         String subject = subjectPrefix + " Missing expected run for " + testName;
+         if (tags != null) {
+            subject += "/" + tags;
+         }
          String content = expectedRunNotificationEmail
                .data("username", username)
                .data("testName", testName)
