@@ -171,17 +171,26 @@
                 <version>1.7.6</version>
                 <executions>
                     <execution>
-                        <id>install node and yarn</id>
+                        <id>install npm</id>
                         <phase>generate-resources</phase>
                         <goals>
-                            <goal>install-node-and-yarn</goal>
+                            <goal>install-node-and-npm</goal>
                         </goals>
+                    </execution>
+                    <execution>
+                        <id>npm install</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install</arguments>
+                        </configuration>
                     </execution>
                 </executions>
                 <configuration>
                     <nodeVersion>v10.15.3</nodeVersion>
                     <yarnVersion>v1.15.2</yarnVersion>
-                    <installDirectory>../webapp/node_modules</installDirectory>
+                    <installDirectory>../webapp</installDirectory>
                     <workingDirectory>../webapp</workingDirectory>
                 </configuration>
             </plugin>
@@ -259,12 +268,19 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <configuration>
+                    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
     <profiles>
         <profile>
-            <id>Build the UI with AOT</id>
+            <id>ui</id>
             <activation>
                 <property>
                     <name>ui</name>
@@ -277,13 +293,14 @@
                         <artifactId>frontend-maven-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>yarn run build</id>
+                                <id>npm run build</id>
                                 <phase>compile</phase>
                                 <goals>
-                                    <goal>yarn</goal>
+                                    <goal>npm</goal>
                                 </goals>
                                 <configuration>
                                     <arguments>run build --output-hashing=all --prod --aot --configuration=production</arguments>
+                                    <installDirectory>../webapp</installDirectory>
                                     <workingDirectory>../webapp</workingDirectory>
                                 </configuration>
                             </execution>
@@ -329,14 +346,14 @@
                         <version>1.6.0</version>
                         <executions>
                             <execution>
-                                <id>yarn start</id>
+                                <id>npm start</id>
                                 <phase>compile</phase>
                                 <goals>
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>../webapp/node_modules/node/yarn/dist/bin/yarn</executable>
-                                    <commandlineArgs>run start</commandlineArgs>
+                                    <executable>../webapp/node/node</executable>
+                                    <commandlineArgs>node/node_modules/npm/bin/npm-cli.js run start</commandlineArgs>
                                     <workingDirectory>../webapp</workingDirectory>
                                     <async>true</async>
                                 </configuration>
@@ -392,6 +409,16 @@
             <properties>
                 <quarkus.native.additional-build-args>--allow-incomplete-classpath,--report-unsupported-elements-at-runtime,--language:js,-H:ResourceConfigurationFiles=${project.basedir}/src/main/resources/resources-config.json,-H:ReflectionConfigurationFiles=${project.basedir}/src/main/resources/reflection-config.json</quarkus.native.additional-build-args>
                 <quarkus.package.type>native</quarkus.package.type>
+            </properties>
+        </profile>
+        <profile>
+            <id>do-release</id>
+            <properties>
+                <!-- Some tests rely on paths that do not work during release checkout -->
+                <maven.test.skip>true</maven.test.skip>
+                <quarkus.container-image.tag>${project.version}</quarkus.container-image.tag>
+                <quarkus.container-image.additional-tags>latest</quarkus.container-image.additional-tags>
+                <quarkus.container-image.build>true</quarkus.container-image.build>
             </properties>
         </profile>
     </profiles>

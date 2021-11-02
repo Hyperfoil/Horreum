@@ -43,6 +43,7 @@ package-lock.json
 
 # dependencies
 /webapp/node_modules
+/webapp/node
 .pnp
 .pnp.js
 

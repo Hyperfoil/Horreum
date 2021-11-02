@@ -16,12 +16,15 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * using the names of {@link io.hyperfoil.tools.horreum.entity.json.SchemaExtractor} for accessors and
  * JavaScript code in {@link #calculation} (calculation is not necessary if there's a single accessor).
  *
- * The criteria part tests a {@link DataPoint datapoints} from a single test over time. A mean and standard deviance
- * is calculated from all results after last {@link Change} (but at most {@link #maxWindow results},
- * and if the newest result differs from the mean by more than <code>stddev * deviationFactor</code>
- * a new change is emitted.
- * This criterion also tests K latest results compared to N preceding results
- * (up to previous change or maxWindow) using Student's t-test with given {@link #confidence}.
+ * The criteria part tests a {@link DataPoint datapoints} from a single test over time. A mean value from
+ * all datapoints since last change is calculated and if the new datapoint
+ * is not within bounds of <code>(1 - maxDifferenceLastDatapoint) * mean</code> and
+ * <code>(1 + maxDifferenceLastDatapoint) * mean</code> a new change is emitted. This test is skipped if we don't
+ * have at least {@link #minWindow} previous datapoints to calculate the mean.
+ * A similar comparison is calculated using last {@link #floatingWindow} datapoints (including the newest one);
+ * we calculate the mean of older datapoints since last change and compare if the mean from this floating window
+ * is within the bounds of <code>(1 - maxDifferenceFloatingWindow) * oldMean</code> and
+ * <code>(1 + maxDifferenceFloatingWindow) * oldMean</code>.
  */
 @Entity(name = "variable")
 public class Variable extends PanacheEntityBase {
