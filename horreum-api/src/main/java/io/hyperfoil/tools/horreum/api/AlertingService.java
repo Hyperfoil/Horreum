@@ -19,7 +19,6 @@ import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
-import io.hyperfoil.tools.yaup.json.Json;
 
 @Consumes({ MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
@@ -70,7 +69,7 @@ public interface AlertingService {
 
    @POST
    @Path("/datapoint/last")
-   List<DatapointLastTimestamp> findLastDatapoints(Json params);
+   List<DatapointLastTimestamp> findLastDatapoints(LastDatapointsParams params);
 
    @POST
    @Path("/expectRun")
@@ -150,5 +149,10 @@ public interface AlertingService {
    class DatapointLastTimestamp {
       public int variable;
       public Number timestamp;
+   }
+
+   class LastDatapointsParams {
+      public int[] variables;
+      public String tags;
    }
 }

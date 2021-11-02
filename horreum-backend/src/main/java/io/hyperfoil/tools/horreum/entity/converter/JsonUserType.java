@@ -1,6 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.converter;
 
-import io.hyperfoil.tools.yaup.json.Json;
+import io.hyperfoil.tools.horreum.svc.Util;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -12,17 +12,20 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @RegisterForReflection
 public class JsonUserType implements UserType {
-
    @Override
    public int[] sqlTypes() {
       return new int[]{Types.JAVA_OBJECT};
    }
 
    @Override
-   public Class<Json> returnedClass() {
-      return Json.class;
+   public Class<JsonNode> returnedClass() {
+      return JsonNode.class;
    }
 
    @Override
@@ -45,23 +48,26 @@ public class JsonUserType implements UserType {
 
    @Override
    public Object nullSafeGet(ResultSet resultSet, String[] strings, SharedSessionContractImplementor sharedSessionContractImplementor, Object o) throws HibernateException, SQLException {
-
       String content = resultSet.getString(strings[0]);
-      //return null if the object is not valid json because it could be null / missing from the result set
-//      System.out.println(AsciiArt.ANSI_BLUE+"nullSafeGet:"+AsciiArt.ANSI_RESET+content);
-      return Json.fromString(content,null);
+      if (content == null) {
+         return null;
+      }
+      try {
+         return Util.OBJECT_MAPPER.readTree(content);
+      } catch (JsonProcessingException e) {
+         throw new HibernateException(e);
+      }
    }
 
    @Override
    public void nullSafeSet(PreparedStatement preparedStatement, Object o, int i, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException, SQLException {
-//      System.out.println("nullSafeSet "+o);
-      if(o == null){
+      if (o == null) {
          preparedStatement.setNull(i, Types.OTHER);
          return;
       }
       try {
          preparedStatement.setObject(i, o.toString().replaceAll("\n", ""), Types.OTHER);
-      }catch(Exception e){
+      } catch(Exception e) {
          System.out.println("WTF nullSafeSet"+e.getMessage());
          e.printStackTrace();
       }
@@ -69,8 +75,8 @@ public class JsonUserType implements UserType {
 
    @Override
    public Object deepCopy(Object o) throws HibernateException {
-      if(o instanceof Json){
-         return ((Json)o).clone();
+      if (o instanceof JsonNode) {
+         return ((JsonNode) o).deepCopy();
       }
       return null;
    }
@@ -90,8 +96,12 @@ public class JsonUserType implements UserType {
 
    @Override
    public Object assemble(Serializable cached, Object owner) throws HibernateException {
-      if(cached !=null && cached instanceof String){
-         return Json.fromString((String)cached);
+      if (cached instanceof String) {
+         try {
+            return Util.OBJECT_MAPPER.readTree((String) cached);
+         } catch (JsonProcessingException e) {
+            throw new HibernateException(e);
+         }
       }
       return null;
    }
@@ -100,5 +110,4 @@ public class JsonUserType implements UserType {
    public Object replace(Object original, Object target, Object owner) throws HibernateException {
       return original;
    }
-
 }

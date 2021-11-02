@@ -3,8 +3,6 @@ package io.hyperfoil.tools.horreum.api;
 import java.time.Instant;
 import java.util.List;
 
-import javax.json.bind.annotation.JsonbTypeDeserializer;
-import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -13,7 +11,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import io.hyperfoil.tools.horreum.entity.converter.InstantSerializer;
 import io.hyperfoil.tools.horreum.entity.report.ReportComment;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
 import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
@@ -65,8 +62,6 @@ public interface ReportService {
    class TableReportSummaryItem {
       public int id;
 
-      @JsonbTypeDeserializer(InstantSerializer.class)
-      @JsonbTypeSerializer(InstantSerializer.class)
       public Instant created;
    }
 }

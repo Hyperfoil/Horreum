@@ -31,7 +31,6 @@ import io.hyperfoil.tools.horreum.entity.report.ReportComment;
 import io.hyperfoil.tools.horreum.entity.report.ReportComponent;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
 import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
-import io.hyperfoil.tools.yaup.json.ValueConverter;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -320,7 +319,7 @@ public class ReportServiceImpl implements ReportService {
             } else {
                String jsCode = buildCode(config.categoryFunction, (String) row[1]);
                try {
-                  data.category = ValueConverter.convert(context.eval("js", jsCode)).toString();
+                  data.category = Util.convert(context.eval("js", jsCode)).toString();
                } catch (PolyglotException e) {
                   log.errorf(e, "Failed to run report %s(%d) category function on run %d.", config.title, config.id, runId);
                   log.infof("Offending code: %s", jsCode);
@@ -338,7 +337,7 @@ public class ReportServiceImpl implements ReportService {
                String jsCode = buildCode(config.seriesFunction, (String) row[1]);
                try {
                   if (data != null) {
-                     data.series = ValueConverter.convert(context.eval("js", jsCode)).toString();
+                     data.series = Util.convert(context.eval("js", jsCode)).toString();
                   }
                } catch (PolyglotException e) {
                   log.errorf(e, "Failed to run report %s(%d) series function on run %d.", config.title, config.id, runId);
@@ -355,7 +354,7 @@ public class ReportServiceImpl implements ReportService {
                String jsCode = buildCode(config.labelFunction, (String) row[1]);
                try {
                   if (data != null) {
-                     data.label = ValueConverter.convert(context.eval("js", jsCode)).toString();
+                     data.label = Util.convert(context.eval("js", jsCode)).toString();
                   }
                } catch (PolyglotException e) {
                   log.errorf(e, "Failed to run report %s(%d) label function on run %d.", config.title, config.id, runId);

@@ -14,12 +14,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.TestToken;
 import io.hyperfoil.tools.horreum.entity.json.View;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Sort;
 
 @Path("/api/test")
@@ -86,7 +87,7 @@ public interface TestService {
 
    @GET
    @Path("{id}/tags")
-   List<Json> tags(@PathParam("id") Integer testId, @QueryParam("trashed") Boolean trashed);
+   List<JsonNode> tags(@PathParam("id") Integer testId, @QueryParam("trashed") Boolean trashed);
 
    class TestSummary {
       public int id;

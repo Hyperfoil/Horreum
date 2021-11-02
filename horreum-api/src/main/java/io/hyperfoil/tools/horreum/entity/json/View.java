@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.entity.json;
 
 import java.util.List;
 
-import javax.json.bind.annotation.JsonbTransient;
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -14,6 +13,8 @@ import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -33,7 +34,7 @@ public class View extends PanacheEntityBase {
    // In the future we could make this ManyToMany, but then we'd have to maintain
    // ownership and access in this entity separately.
    @ManyToOne(fetch = FetchType.LAZY)
-   @JsonbTransient
+   @JsonIgnore
    public Test test;
 
    @OneToMany(mappedBy = "view", orphanRemoval = true, cascade = CascadeType.ALL)

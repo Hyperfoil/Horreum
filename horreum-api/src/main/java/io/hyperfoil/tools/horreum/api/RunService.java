@@ -11,9 +11,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Run;
-import io.hyperfoil.tools.yaup.json.Json;
 
 @Path("/api/run")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -50,11 +51,6 @@ public interface RunService {
                      @QueryParam("owner") String owner,
                      @QueryParam("access") Access access);
 
-   @GET
-   @Path("{id}/structure")
-   Json getStructure(@PathParam("id") Integer id,
-                     @QueryParam("token") String token);
-
    @POST
    @Path("test/{test}")
    @Consumes(MediaType.APPLICATION_JSON)
@@ -74,7 +70,7 @@ public interface RunService {
                          @QueryParam("access") Access access,
                          @QueryParam("token") String token, @QueryParam("schema") String schemaUri,
                          @QueryParam("description") String description,
-                         Json data);
+                         JsonNode data);
 
    @GET
    @Path("autocomplete")
@@ -138,7 +134,7 @@ public interface RunService {
       public String testname;
       public boolean trashed;
       public String description;
-      public Json tags;
+      public JsonNode tags;
    }
 
    class RunsSummary {
@@ -153,8 +149,8 @@ public interface RunService {
    }
 
    class TestRunSummary extends RunSummary {
-      public Json schema;
-      public Json view;
+      public JsonNode schema;
+      public JsonNode view;
    }
 
    class TestRunsSummary {

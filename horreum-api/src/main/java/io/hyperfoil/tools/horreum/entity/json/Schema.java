@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.annotations.Type;
 
@@ -13,6 +12,8 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity
 @RegisterForReflection
@@ -40,5 +41,5 @@ public class Schema extends ProtectedBaseEntity {
    public String description;
 
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
-   public Json schema;
+   public JsonNode schema;
 }

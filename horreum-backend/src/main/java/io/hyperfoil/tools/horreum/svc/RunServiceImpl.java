@@ -7,8 +7,6 @@ import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
-import io.hyperfoil.tools.yaup.json.Json;
-import io.hyperfoil.tools.yaup.json.ValueConverter;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.eventbus.EventBus;
@@ -51,6 +49,11 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.networknt.schema.ValidationMessage;
 
 @ApplicationScoped
@@ -84,7 +87,6 @@ public class RunServiceImpl implements RunService {
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE run SET owner = ?, access = ? WHERE id = ?";
-   private static final Json EMPTY_ARRAY = new Json(true);
 
    @Inject
    EntityManager em;
@@ -149,7 +151,7 @@ public class RunServiceImpl implements RunService {
                   if (value.isNull()) {
                      tags = null;
                   } else {
-                     tags = ValueConverter.convert(value).toString();
+                     tags = Util.convert(value).toString();
                      if ("undefined".equals(tags)) {
                         tags = null;
                      }
@@ -276,19 +278,6 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   @PermitAll
-   @Override
-   public Json getStructure(Integer id, String token) {
-      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
-           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         Run found = Run.find("id", id).firstResult();
-         if (found != null) {
-            return Json.typeStructure(found.data);
-         }
-         return new Json(false);
-      }
-   }
-
    @PermitAll // all because of possible token-based upload
    @Transactional
    @Override
@@ -319,7 +308,7 @@ public class RunServiceImpl implements RunService {
    public String addRunFromData(String start, String stop, String test,
                                 String owner, Access access, String token,
                                 String schemaUri, String description,
-                                Json data) {
+                                JsonNode data) {
       if (data == null) {
          throw ServiceException.badRequest("No data!");
       }
@@ -331,9 +320,12 @@ public class RunServiceImpl implements RunService {
       try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
            @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
          if (schemaUri == null || schemaUri.isEmpty()) {
-            schemaUri = data.getString("$schema");
+            JsonNode schemaNode = data.get("$schema");
+            schemaUri = schemaNode == null ? null : schemaNode.asText();
          } else {
-            data.set("$schema", schemaUri);
+            if (data.isObject()) {
+               ((ObjectNode) data).set("$schema", TextNode.valueOf(schemaUri));
+            }
          }
 
          String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
@@ -380,10 +372,10 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   private Object findIfNotSet(String value, Json data) {
+   private Object findIfNotSet(String value, JsonNode data) {
       if (value != null && !value.isEmpty()) {
          if (value.startsWith("$.")) {
-            return Json.find(data, value, null);
+            return Util.findJsonPath(data, value);
          } else {
             return value;
          }
@@ -579,7 +571,7 @@ public class RunServiceImpl implements RunService {
             run.trashed = (boolean) row[8];
             run.description = (String) row[9];
             String tags = (String) row[10];
-            run.tags = tags == null || tags.isEmpty() ? EMPTY_ARRAY : Json.fromString(tags);
+            run.tags = tags == null || tags.isEmpty() ? Util.EMPTY_ARRAY : Util.toJsonNode(tags);
             return run;
          }).collect(Collectors.toList());
          return summary;
@@ -667,25 +659,24 @@ public class RunServiceImpl implements RunService {
          List<TestRunSummary> runs = new ArrayList<>();
          for (Object[] row : resultList) {
             String viewString = (String) row[6];
-            Json unorderedView = viewString == null ? Json.map().build() : Json.fromString(viewString);
-            Json.ArrayBuilder view = Json.array();
+            JsonNode unorderedView = viewString == null ? Util.EMPTY_OBJECT : Util.toJsonNode(viewString);
+            ArrayNode view = JsonNodeFactory.instance.arrayNode();
             if (test.defaultView != null) {
                for (ViewComponent c : test.defaultView.components) {
-                  Json componentData = unorderedView.getJson(String.valueOf(c.id));
+                  JsonNode componentData = unorderedView.get(String.valueOf(c.id));
                   String[] accessors = c.accessors();
                   if (componentData == null) {
                      if (accessors.length == 1) {
-                        view.add(null);
+                        view.addNull();
                      } else {
-                        Json.MapBuilder builder = new Json.MapBuilder();
+                        ObjectNode builder = view.addObject();
                         for (String accessor: accessors) {
                            if (SchemaExtractor.isArray(accessor)) {
-                              builder.add(SchemaExtractor.arrayName(accessor), null);
+                              builder.set(SchemaExtractor.arrayName(accessor), JsonNodeFactory.instance.nullNode());
                            } else {
-                              builder.add(accessor, null);
+                              builder.set(accessor, JsonNodeFactory.instance.nullNode());
                            }
                         }
-                        view.add(builder.build());
                      }
                   } else {
                      if (accessors.length == 1) {
@@ -709,11 +700,11 @@ public class RunServiceImpl implements RunService {
             run.testid = testId;
             run.access = (int) row[3];
             run.owner = (String) row[4];
-            run.schema = schemas == null ? null : Json.fromString(schemas);
-            run.view = view.build();
+            run.schema = Util.toJsonNode(schemas);
+            run.view = view;
             run.trashed = (boolean) row[7];
             run.description = (String) row[8];
-            run.tags = runTags == null ? null : Json.fromString(runTags);
+            run.tags = Util.toJsonNode(runTags);
             runs.add(run);
          }
          TestRunsSummary summary = new TestRunsSummary();
@@ -797,16 +788,24 @@ public class RunServiceImpl implements RunService {
          if (run == null) {
             throw ServiceException.notFound("Run not found.");
          }
-         // Triggering dirty property on Run
-         Json data = run.data.clone();
          String uri = Util.destringify(schemaUri);
-         Json item = path == null || path.isEmpty() ? data : data.getJson(path);
+         // Triggering dirty property on Run
+         JsonNode updated = run.data.deepCopy();
+         ObjectNode item;
+         if (updated.isObject()) {
+            item = (ObjectNode) (path == null || path.isEmpty() ? updated : updated.get(path));
+         } else if (updated.isArray()) {
+            int index = path == null || path.isEmpty() ? 0 : Integer.parseInt(path);
+            item = (ObjectNode) updated.get(index);
+         } else {
+            throw ServiceException.serverError("Cannot update run data with path " + path);
+         }
          if (uri != null && !uri.isEmpty()) {
-            item.set("$schema", uri);
+            item.set("$schema", new TextNode(uri));
          } else {
             item.remove("$schema");
          }
-         run.data = data;
+         run.data = updated;
          run.persist();
          Query query = em.createNativeQuery("SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}')::::text FROM run_schemas WHERE runid = ?");
          query.setParameter(1, run.id);

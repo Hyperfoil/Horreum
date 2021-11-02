@@ -3,8 +3,6 @@ package io.hyperfoil.tools.horreum.entity.report;
 import java.time.Instant;
 import java.util.Collection;
 
-import javax.json.bind.annotation.JsonbTypeDeserializer;
-import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -28,7 +26,6 @@ import org.hibernate.annotations.TypeDefs;
 
 import com.vladmihalcea.hibernate.type.array.DoubleArrayType;
 
-import io.hyperfoil.tools.horreum.entity.converter.InstantSerializer;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity
@@ -43,8 +40,6 @@ public class TableReport extends PanacheEntityBase {
    public TableReportConfig config;
 
    @NotNull
-   @JsonbTypeDeserializer(InstantSerializer.class)
-   @JsonbTypeSerializer(InstantSerializer.class)
    public Instant created;
 
    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)

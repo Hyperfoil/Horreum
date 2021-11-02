@@ -21,6 +21,8 @@ import javax.transaction.Transactional;
 
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.hyperfoil.tools.horreum.api.NotificationService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
@@ -29,7 +31,6 @@ import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 
@@ -102,7 +103,7 @@ public class NotificationServiceImpl implements NotificationService {
       String tags;
       if (tagsList.size() > 0) {
          Object tagsResult = tagsList.stream().findFirst().get();
-         tags = tagsToString(Json.fromString(String.valueOf(tagsResult)));
+         tags = tagsToString(Util.toJsonNode(String.valueOf(tagsResult)));
       } else {
          tags = "";
       }
@@ -150,12 +151,12 @@ public class NotificationServiceImpl implements NotificationService {
       }
    }
 
-   private static String tagsToString(Json tagsObject) {
+   private static String tagsToString(JsonNode tagsObject) {
       if (tagsObject == null) {
          return null;
       }
       StringBuilder sb = new StringBuilder();
-      tagsObject.forEach((key, value) -> {
+      Util.toMap(tagsObject).forEach((key, value) -> {
          if (sb.length() != 0) {
             sb.append(';');
          }
@@ -201,14 +202,14 @@ public class NotificationServiceImpl implements NotificationService {
    }
 
    // must be called with sqlService.withRole
-   void notifyMissingRun(int testId, Json tagsJson, long maxStaleness, int runId, long runTimestamp) {
+   void notifyMissingRun(int testId, JsonNode tagsJson, long maxStaleness, int runId, long runTimestamp) {
       String tags = tagsToString(tagsJson);
       Test test = Test.findById(testId);
       String name = test != null ? test.name : "<unknown test>";
       notifyAll(testId, n -> n.notifyMissingRun(name, testId, tags, maxStaleness, runId, runTimestamp));
    }
 
-   public void notifyExpectedRun(int testId, Json tagsJson, long expectedBefore, String expectedBy, String backlink) {
+   public void notifyExpectedRun(int testId, JsonNode tagsJson, long expectedBefore, String expectedBy, String backlink) {
       String tags = tagsToString(tagsJson);
       Test test = Test.findById(testId);
       String name = test != null ? test.name : "<unknown test>";

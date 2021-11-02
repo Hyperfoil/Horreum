@@ -2,12 +2,9 @@ package io.hyperfoil.tools.horreum.entity.json;
 
 import java.util.Collection;
 
-import io.hyperfoil.tools.horreum.entity.converter.AccessSerializer;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
-import javax.json.bind.annotation.JsonbTypeDeserializer;
-import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -48,8 +45,6 @@ public class Test extends PanacheEntityBase {
    public String owner;
 
    @NotNull
-   @JsonbTypeSerializer(AccessSerializer.class)
-   @JsonbTypeDeserializer(AccessSerializer.class)
    public Access access = Access.PUBLIC;
 
    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)

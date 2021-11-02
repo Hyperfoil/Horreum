@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.entity.report;
 
-import javax.json.bind.annotation.JsonbTransient;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -21,7 +20,6 @@ public class ReportComponent {
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)
-   @JsonbTransient
    @JsonIgnore
    @JoinColumn(name = "reportconfig_id")
    public TableReportConfig report;

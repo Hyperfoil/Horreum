@@ -1,7 +1,5 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
-import javax.json.bind.annotation.JsonbProperty;
-import javax.json.bind.annotation.JsonbTransient;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -11,6 +9,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 
@@ -30,7 +29,6 @@ public class TestToken {
    @ManyToOne(fetch = FetchType.LAZY)
    @JoinColumn(name = "test_id")
    @JsonIgnore
-   @JsonbTransient
    public Test test;
 
    @SuppressWarnings({ "unused", "FieldCanBeLocal" })
@@ -47,12 +45,11 @@ public class TestToken {
    public String description;
 
    @JsonSetter("value")
-   @JsonbProperty("value")
    public void setValue(String value) {
       this.value = value;
    }
 
-   @JsonbProperty("value")
+   @JsonGetter("value")
    public String getValue() {
       return null;
    }

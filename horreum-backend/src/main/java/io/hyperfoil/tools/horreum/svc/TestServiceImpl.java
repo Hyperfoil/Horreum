@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.entity.json.*;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -34,6 +33,8 @@ import java.util.Set;
 import org.hibernate.Hibernate;
 import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
@@ -348,7 +349,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @PermitAll
-   public List<Json> tags(Integer testId, Boolean trashed) {
+   public List<JsonNode> tags(Integer testId, Boolean trashed) {
       if (testId == null) {
          throw ServiceException.badRequest("Missing param 'test'");
       }
@@ -360,9 +361,9 @@ public class TestServiceImpl implements TestService {
          sql.append(" GROUP BY tags");
          Query tagComboQuery = em.createNativeQuery(sql.toString());
          @SuppressWarnings("unchecked") List<String> tagList = tagComboQuery.setParameter(1, testId).getResultList();
-         ArrayList<Json> result = new ArrayList<>(tagList.size());
+         ArrayList<JsonNode> result = new ArrayList<>(tagList.size());
          for (String tags : tagList) {
-            result.add(tags == null ? new Json(false) : Json.fromString(tags));
+            result.add(tags == null ? Util.EMPTY_OBJECT : Util.toJsonNode(tags));
          }
          return result;
       }

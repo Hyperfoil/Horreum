@@ -1,15 +1,18 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
-import javax.json.bind.annotation.JsonbTypeSerializer;
-import javax.json.bind.serializer.JsonbSerializer;
-import javax.json.bind.serializer.SerializationContext;
-import javax.json.stream.JsonGenerator;
+import java.io.IOException;
+
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -25,7 +28,7 @@ public class SchemaExtractor extends PanacheEntityBase {
 
    @NotNull
    @ManyToOne(fetch = FetchType.LAZY)
-   @JsonbTypeSerializer(SchemaToUri.class)
+   @JsonSerialize(using = SchemaToUri.class)
    public Schema schema;
 
    @NotNull
@@ -43,10 +46,10 @@ public class SchemaExtractor extends PanacheEntityBase {
       return accessor.substring(0, accessor.length() - 2);
    }
 
-   public static class SchemaToUri implements JsonbSerializer<Schema> {
+   public static class SchemaToUri extends JsonSerializer<Schema> {
       @Override
-      public void serialize(Schema obj, JsonGenerator generator, SerializationContext ctx) {
-         generator.write(obj.uri);
+      public void serialize(Schema schema, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+         gen.writeString(schema.uri);
       }
    }
 }

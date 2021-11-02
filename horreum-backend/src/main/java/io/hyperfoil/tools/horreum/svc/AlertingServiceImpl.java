@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,7 +53,10 @@ import org.hibernate.jpa.TypedParameterValue;
 import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
 
-import com.vladmihalcea.hibernate.type.array.LongArrayType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.vladmihalcea.hibernate.type.array.IntArrayType;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
@@ -63,7 +67,6 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -233,14 +236,29 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void emitDatapoints(Run run, boolean notify, boolean debug, Recalculation recalculation) {
-      String firstLevelSchema = run.data.getString("$schema");
-      Map<String, Object> schemas = run.data.stream()
-            .filter(entry -> entry.getValue() instanceof Json && ((Json) entry.getValue()).has("$schema"))
-            .collect(Collectors.toMap(
-                  entry -> ((Json) entry.getValue()).getString("$schema"),
-                  Map.Entry::getKey));
-      if (firstLevelSchema != null) {
-         schemas.put(firstLevelSchema, null);
+      Map<String, Object> schemas = new HashMap<>();
+      JsonNode firstLevelSchema = run.data.get("$schema");
+      if (firstLevelSchema != null && firstLevelSchema.isTextual()) {
+         schemas.put(firstLevelSchema.asText(), null);
+      }
+      if (run.data instanceof ObjectNode) {
+         Iterator<Map.Entry<String, JsonNode>> it = run.data.fields();
+         while (it.hasNext()) {
+            var entry = it.next();
+            JsonNode schemaNode = entry.getValue().get("$schema");
+            if (schemaNode != null && schemaNode.isTextual()) {
+               schemas.put(schemaNode.asText(), entry.getKey());
+            }
+         }
+      } else if (run.data instanceof ArrayNode) {
+         int index = 0;
+         for (JsonNode node : run.data) {
+            JsonNode schemaNode = node.get("$schema");
+            if (schemaNode != null && schemaNode.isTextual()) {
+               schemas.put(schemaNode.asText(), index);
+            }
+            ++index;
+         }
       }
 
       // Make sure that the return type will be Object[]
@@ -868,7 +886,7 @@ public class AlertingServiceImpl implements AlertingService {
          List<Object[]> results = em.createNativeQuery(LOOKUP_STALE).getResultList();
          for (Object[] row : results) {
             int testId = ((Number) row[0]).intValue();
-            Json tags = Json.fromString(String.valueOf(row[1]));
+            JsonNode tags = Util.toJsonNode(String.valueOf(row[1]));
             int runId = ((Number) row[2]).intValue();
             long lastRunTimestamp = ((Number) row[3]).longValue();
             long maxStaleness = ((Number) row[4]).longValue();
@@ -887,17 +905,16 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Override
    @PermitAll
-   public List<DatapointLastTimestamp> findLastDatapoints(Json params) {
+   public List<DatapointLastTimestamp> findLastDatapoints(LastDatapointsParams params) {
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Json variables = params.getJson("variables");
-         Map<String, String> tags = Tags.parseTags(params.getString("tags"));
+         Map<String, String> tags = Tags.parseTags(params.tags);
          StringBuilder sql = new StringBuilder("SELECT DISTINCT ON(variable_id) variable_id AS variable, EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp")
             .append(" FROM datapoint LEFT JOIN run_tags on run_tags.runid = datapoint.runid ");
          int counter = Tags.addTagQuery(tags, sql, 1);
          sql.append(" WHERE variable_id = ANY(?").append(counter).append(") ORDER BY variable_id, timestamp DESC;");
          Query query = em.createNativeQuery(sql.toString());
          counter = Tags.addTagValues(tags, query, 1);
-         query.setParameter(counter, new TypedParameterValue(LongArrayType.INSTANCE, variables.values().toArray()));
+         query.setParameter(counter, new TypedParameterValue(IntArrayType.INSTANCE, params.variables));
          SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(DatapointLastTimestamp.class));
          //noinspection unchecked
          return query.getResultList();
@@ -920,7 +937,7 @@ public class AlertingServiceImpl implements AlertingService {
          }
          RunExpectation runExpectation = new RunExpectation();
          runExpectation.testId = test.id;
-         runExpectation.tags = tags != null && !tags.isEmpty() ? Json.fromString(tags) : null;
+         runExpectation.tags = tags != null && !tags.isEmpty() ? Util.toJsonNode(tags) : null;
          runExpectation.expectedBefore = Instant.now().plusSeconds(timeoutSeconds);
          runExpectation.expectedBy = expectedBy != null ? expectedBy : identity.getPrincipal().getName();
          runExpectation.backlink = backlink;

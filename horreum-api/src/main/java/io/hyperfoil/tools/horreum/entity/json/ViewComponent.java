@@ -3,7 +3,6 @@ package io.hyperfoil.tools.horreum.entity.json;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import javax.json.bind.annotation.JsonbTransient;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -13,6 +12,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -28,7 +29,7 @@ public class ViewComponent extends PanacheEntityBase {
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)
-   @JsonbTransient
+   @JsonIgnore
    @JoinColumn(name = "view_id")
    public View view;
 

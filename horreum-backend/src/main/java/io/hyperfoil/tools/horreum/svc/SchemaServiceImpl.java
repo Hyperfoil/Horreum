@@ -4,7 +4,6 @@ import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -186,7 +185,7 @@ public class SchemaServiceImpl implements SchemaService {
 
    @PermitAll
    @Override
-   public Collection<ValidationMessage> validate(Json data, String schemaUri) {
+   public Collection<ValidationMessage> validate(JsonNode data, String schemaUri) {
       if (schemaUri == null || schemaUri.isEmpty()) {
          return null;
       }
@@ -207,9 +206,7 @@ public class SchemaServiceImpl implements SchemaService {
                .uriFactory(URN_FACTORY, "urn")
                .uriFetcher(uriFetcher, ALL_URNS).build();
 
-         JsonNode jsonData = Json.toJsonNode(data);
-         JsonNode jsonSchema = Json.toJsonNode(rootSchema.schema);
-         errors = factory.getSchema(jsonSchema).validate(jsonData);
+         errors = factory.getSchema(rootSchema.schema).validate(data);
       } catch (Exception e) {
          // Do not let messed up schemas fail the upload
          log.warn("Schema validation failed", e);
@@ -237,24 +234,25 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
+   static boolean nullOrEmpty(String str) {
+      return str == null || str.isEmpty();
+   }
 
    @RolesAllowed("tester")
    @Transactional
    @Override
-   public void addOrUpdateExtractor(Json json) {
-      if (json == null) {
+   public void addOrUpdateExtractor(ExtractorUpdate update) {
+      if (update == null) {
          throw ServiceException.badRequest("No extractor");
       }
-      String accessor = json.getString("accessor");
-      String newName = json.getString("newName", accessor);
-      String schema = json.getString("schema");
-      String jsonpath = json.getString("jsonpath");
-      boolean deleted = json.getBoolean("deleted");
+      String accessor = update.accessor;
+      String newName = nullOrEmpty(update.newName) ? accessor : update.newName;
+      String jsonpath = update.jsonpath;
 
-      if ((accessor == null || accessor.isEmpty()) && newName != null && !newName.isEmpty()) {
+      if (nullOrEmpty(accessor) && !nullOrEmpty(newName)) {
          accessor = newName;
       }
-      if (accessor == null || accessor.isEmpty() || schema == null || jsonpath == null) {
+      if (nullOrEmpty(accessor) || update.schema == null || jsonpath == null) {
          throw ServiceException.badRequest("Missing accessor/schema/jsonpath");
       }
       if (jsonpath.startsWith("strict ")) {
@@ -266,19 +264,19 @@ public class SchemaServiceImpl implements SchemaService {
          jsonpath = jsonpath.substring(1);
       }
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Schema persistedSchema = Schema.find("uri", schema).firstResult();
+         Schema persistedSchema = Schema.find("uri", update.schema).firstResult();
          if (persistedSchema == null) {
-            throw ServiceException.badRequest("Missing schema " + schema);
+            throw ServiceException.badRequest("Missing schema " + update.schema);
          }
          SchemaExtractor extractor = SchemaExtractor.find("schema_id = ?1 and accessor = ?2", persistedSchema.id, accessor).firstResult();
          boolean isNew = false;
          if (extractor == null) {
             extractor = new SchemaExtractor();
             isNew = true;
-            if (deleted) {
+            if (update.deleted) {
                throw ServiceException.notFound("Deleted extractor was not found");
             }
-         } else if (deleted) {
+         } else if (update.deleted) {
             em.remove(extractor);
             return;
          }

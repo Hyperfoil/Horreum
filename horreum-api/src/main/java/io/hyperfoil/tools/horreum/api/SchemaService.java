@@ -14,11 +14,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.ValidationMessage;
 
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Sort;
 
 @Path("api/schema")
@@ -63,7 +63,7 @@ public interface SchemaService {
    @POST
    @Path("validate")
    @Consumes(MediaType.APPLICATION_JSON)
-   Collection<ValidationMessage> validate(Json data, @QueryParam("schema") String schemaUri);
+   Collection<ValidationMessage> validate(JsonNode data, @QueryParam("schema") String schemaUri);
 
    @GET
    @Path("extractor")
@@ -73,9 +73,17 @@ public interface SchemaService {
    @POST
    @Path("extractor")
    @Consumes(MediaType.APPLICATION_JSON)
-   void addOrUpdateExtractor(Json json);
+   void addOrUpdateExtractor(ExtractorUpdate update);
 
    @DELETE
    @Path("{id}")
    void delete(@PathParam("id") Integer id);
+
+   class ExtractorUpdate {
+      public String accessor;
+      public String newName;
+      public String schema;
+      public String jsonpath;
+      public boolean deleted;
+   }
 }

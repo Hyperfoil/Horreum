@@ -1,5 +1,8 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import javax.transaction.RollbackException;
@@ -11,10 +14,34 @@ import javax.transaction.TransactionManager;
 import org.graalvm.polyglot.Value;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.InvalidPathException;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.ReadContext;
+import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
+
 import io.vertx.core.eventbus.EventBus;
 
-class Util {
+public class Util {
    private static final Logger log = Logger.getLogger(Util.class);
+   public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+   private static final Configuration JSONPATH_CONFIG = Configuration.builder()
+         .jsonProvider(new JacksonJsonNodeJsonProvider())
+         .options(Option.SUPPRESS_EXCEPTIONS,Option.DEFAULT_PATH_LEAF_TO_NULL).build();
+   static final JsonNode EMPTY_ARRAY = JsonNodeFactory.instance.arrayNode();
+   static final JsonNode EMPTY_OBJECT = JsonNodeFactory.instance.objectNode();
+
+   static {
+      OBJECT_MAPPER.registerModule(new JavaTimeModule());
+   }
 
    static String destringify(String str) {
       if (str == null || str.isEmpty()) {
@@ -128,6 +155,146 @@ class Util {
          log.debug("Not publishing the event as the transaction has been marked rollback-only");
       } catch (SystemException e) {
          log.errorf(e, "Failed to publish event %s: %s after transaction completion", eventName, event);
+      }
+   }
+
+   static JsonNode toJsonNode(String str) {
+      try {
+         if (str == null) {
+            return null;
+         }
+         return OBJECT_MAPPER.readTree(str);
+      } catch (JsonProcessingException e) {
+         log.errorf(e, "Failed to parse into JSON: %s", str);
+         return null;
+      }
+   }
+
+   public static LinkedHashMap<Object, JsonNode> toMap(JsonNode jsonNode) {
+      LinkedHashMap<Object, JsonNode> map = new LinkedHashMap<>(jsonNode.size());
+      if (jsonNode instanceof ObjectNode) {
+         Iterator<Map.Entry<String, JsonNode>> it = jsonNode.fields();
+         while (it.hasNext()) {
+            var entry = it.next();
+            map.put(entry.getKey(), entry.getValue());
+         }
+      } else if (jsonNode instanceof ArrayNode) {
+         int index = 0;
+         Iterator<JsonNode> it = jsonNode.iterator();
+         while (it.hasNext()) {
+            map.put(index++, it.next());
+         }
+      }
+      return map;
+   }
+
+   public static Object convert(Value value) {
+      if (value == null) {
+         return null;
+      } else if (value.isNull()) {
+         // Value api cannot differentiate null and undefined from javascript
+         if (value.toString().contains("undefined")) {
+            return ""; //no return is the same as returning a missing key from a ProxyObject?
+         } else {
+            return null;
+         }
+      } else if (value.isProxyObject()) {
+//         Object po = value.asProxyObject();
+//         if (po instanceof JsonProxyObject) {
+//            return ((JsonProxyObject) po).getJson();
+//         } else if (po instanceof JsonProxyArray) {
+//            return ((JsonProxyArray) po).getJson();
+//         } else {
+            return value.asProxyObject();
+//         }
+//      } else if (value.isHostObject()) {
+//         return value.asHostObject();
+      } else if (value.isBoolean()) {
+         return value.asBoolean();
+      } else if (value.isNumber()) {
+         double v = value.asDouble();
+         if (v == Math.rint(v)) {
+            return (long) v;
+         } else {
+            return v;
+         }
+      } else if (value.isString()) {
+         return value.asString();
+      } else if (value.hasArrayElements()) {
+         return convertArray(value);
+      } else if (value.canExecute()) {
+         return value.toString();
+      } else if (value.hasMembers()) {
+         return convertMapping(value);
+      } else {
+         //TODO log error wtf is Value?
+         return "";
+      }
+   }
+
+   public static ArrayNode convertArray(Value value){
+      ArrayNode json = JsonNodeFactory.instance.arrayNode();
+      for(int i = 0; i < value.getArraySize(); i++){
+         Value element = value.getArrayElement(i);
+         if (element == null || element.isNull()) {
+            json.addNull();
+         } else if (element.isBoolean()) {
+            json.add(element.asBoolean());
+         } else if (element.isNumber()) {
+            double v = element.asDouble();
+            if (v == Math.rint(v)) {
+               json.add(element.asLong());
+            } else {
+               json.add(v);
+            }
+         } else if (element.isString()) {
+            json.add(element.asString());
+         } else if (element.hasArrayElements()) {
+            json.add(convertArray(element));
+         } else if (element.hasMembers()) {
+            json.add(convertMapping(element));
+         } else {
+            json.add(element.toString());
+         }
+      }
+      return json;
+   }
+
+   public static JsonNode convertMapping(Value value){
+      ObjectNode json = JsonNodeFactory.instance.objectNode();
+      for (String key : value.getMemberKeys()){
+         Value element = value.getMember(key);
+         if (element == null || element.isNull()) {
+            json.set(key, JsonNodeFactory.instance.nullNode());
+         } else if (element.isBoolean()) {
+            json.set(key, JsonNodeFactory.instance.booleanNode(element.asBoolean()));
+         } else if (element.isNumber()) {
+            double v = element.asDouble();
+            if (v == Math.rint(v)) {
+               json.set(key, JsonNodeFactory.instance.numberNode(element.asLong()));
+            } else {
+               json.set(key, JsonNodeFactory.instance.numberNode(v));
+            }
+         } else if (element.isString()) {
+            json.set(key, JsonNodeFactory.instance.textNode(element.asString()));
+         } else if (element.hasArrayElements()) {
+            json.set(key, convertArray(element));
+         } else if (element.hasMembers()) {
+            json.set(key, convertMapping(element));
+         } else {
+            json.set(key, JsonNodeFactory.instance.textNode(element.toString()));
+         }
+      }
+      return json;
+   }
+
+   public static Object findJsonPath(JsonNode input, String jsonPath){
+      ReadContext ctx = JsonPath.parse(input, JSONPATH_CONFIG);
+      try {
+         JsonPath path = JsonPath.compile(jsonPath);
+         return ctx.read(path);
+      } catch (InvalidPathException e){
+         return "<invalid jsonpath>";
       }
    }
 }

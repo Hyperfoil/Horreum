@@ -1,24 +1,17 @@
 package io.hyperfoil.tools;
 
-import java.time.Instant;
-
-import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.jsr310.deser.InstantDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.InstantSerializer;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
 import io.hyperfoil.tools.horreum.api.*;
-import io.hyperfoil.tools.serializer.CustomYaupProvider;
-import io.hyperfoil.tools.serializer.JsonDeserializer;
-import io.hyperfoil.tools.serializer.JsonSerializer;
-import io.hyperfoil.tools.yaup.json.Json;
+
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 import org.jboss.resteasy.microprofile.client.impl.MpClientBuilderImpl;
 import org.jboss.resteasy.plugins.providers.DefaultTextPlain;
 import org.jboss.resteasy.plugins.providers.StringTextStar;
+import org.jboss.resteasy.plugins.providers.jackson.ResteasyJackson2Provider;
 
 import javax.ws.rs.core.UriBuilder;
 
@@ -109,16 +102,9 @@ public class HorreumClient {
 
             MpClientBuilderImpl clientBuilder = new MpClientBuilderImpl();
 
-            //Custom Json object mapper
-            CustomYaupProvider customJsonProvider = new CustomYaupProvider();
+            ResteasyJackson2Provider customJsonProvider = new ResteasyJackson2Provider();
             ObjectMapper customJsonMapper = new ObjectMapper();
-            SimpleModule customModule = new SimpleModule("customJsonModule", new Version(1, 0, 0, null, "io.hyperfoil.tools", "horreum-client-java"));
-            customModule.addSerializer(Json.class, new JsonSerializer());
-            customModule.addDeserializer(Json.class, new JsonDeserializer());
-            customModule.addSerializer(Instant.class, InstantSerializer.INSTANCE);
-            customModule.addDeserializer(Instant.class, InstantDeserializer.INSTANT);
-
-            customJsonMapper.registerModule(customModule);
+            customJsonMapper.registerModule(new JavaTimeModule());
             customJsonProvider.setMapper(customJsonMapper);
 
             //Override default ObjectMapper Provider

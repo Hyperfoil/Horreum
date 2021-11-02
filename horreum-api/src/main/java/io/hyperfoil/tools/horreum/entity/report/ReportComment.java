@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.entity.report;
 
-import javax.json.bind.annotation.JsonbTransient;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -21,7 +20,6 @@ public class ReportComment extends PanacheEntityBase {
    public Integer id;
 
    @JsonIgnore
-   @JsonbTransient
    @ManyToOne(fetch = FetchType.LAZY)
    @JoinColumn(name = "report_id")
    public TableReport report;

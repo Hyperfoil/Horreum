@@ -1,13 +1,11 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import io.hyperfoil.tools.horreum.JsonAdapter;
 import io.hyperfoil.tools.horreum.api.HookService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.json.AllowedHookPrefix;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -28,9 +26,6 @@ import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.json.bind.Jsonb;
-import javax.json.bind.JsonbBuilder;
-import javax.json.bind.JsonbConfig;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.transaction.Transactional;
@@ -40,6 +35,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ApplicationScoped
 public class HookServiceImpl implements HookService {
@@ -89,11 +87,7 @@ public class HookServiceImpl implements HookService {
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singletonList("admin"))) {
          hooks = getEventHooks(type, testId);
       }
-      JsonbConfig jsonbConfig = new JsonbConfig();
-      jsonbConfig.withAdapters(new JsonAdapter());
-      final Jsonb jsonb = JsonbBuilder.create(jsonbConfig);
-      String json = jsonb.toJson(value);
-      Json yetAnotherJson = Json.fromString(json);
+      JsonNode json = Util.OBJECT_MAPPER.valueToTree(value);
       for (Hook hook : hooks) {
          try {
             String input = hook.url.startsWith("http") ? hook.url : "http://" + hook.url;
@@ -103,7 +97,7 @@ public class HookServiceImpl implements HookService {
             while (matcher.find()) {
                replacedUrl.append(input, lastMatch, matcher.start());
                String path = matcher.group(1).trim();
-               replacedUrl.append(Json.find(yetAnotherJson, path));
+               replacedUrl.append(Util.findJsonPath(json, path));
                lastMatch = matcher.end();
             }
             replacedUrl.append(input.substring(lastMatch));
@@ -115,7 +109,7 @@ public class HookServiceImpl implements HookService {
                   .setSsl("https".equals(url.getProtocol().toLowerCase()));
             http1xClient.request(HttpMethod.POST, options)
                   .putHeader("Content-Type", "application/json")
-                  .sendBuffer(Buffer.buffer(json))
+                  .sendBuffer(Buffer.buffer(json.toString()))
                   .subscribe().with(response -> {
                         if (response.statusCode() < 400) {
                            log.debugf("Successfully(%d) notified hook: %s", response.statusCode(), url);

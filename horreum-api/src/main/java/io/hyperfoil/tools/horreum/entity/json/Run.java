@@ -1,12 +1,8 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
-import io.hyperfoil.tools.horreum.entity.converter.InstantSerializer;
-import io.hyperfoil.tools.yaup.json.Json;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.annotations.Type;
 
-import javax.json.bind.annotation.JsonbTypeDeserializer;
-import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -15,6 +11,8 @@ import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
 import javax.validation.constraints.NotNull;
 import java.time.Instant;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity(name = "run")
 @RegisterForReflection
@@ -34,14 +32,10 @@ public class Run extends ProtectedBaseEntity {
 
    @NotNull
    @Column(name="start", columnDefinition = "timestamp")
-   @JsonbTypeDeserializer(InstantSerializer.class)
-   @JsonbTypeSerializer(InstantSerializer.class)
    public Instant start;
 
    @NotNull
    @Column(name="stop", columnDefinition = "timestamp")
-   @JsonbTypeDeserializer(InstantSerializer.class)
-   @JsonbTypeSerializer(InstantSerializer.class)
    public Instant stop;
 
    public String description;
@@ -51,7 +45,7 @@ public class Run extends ProtectedBaseEntity {
 
    @NotNull
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
-   public Json data;
+   public JsonNode data;
 
    @NotNull
    @Column(columnDefinition = "boolean default false")

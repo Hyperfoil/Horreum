@@ -24,11 +24,6 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-jsonb</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-resteasy</artifactId>
             <optional>true</optional>
         </dependency>
@@ -38,24 +33,18 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>io.hyperfoil.tools</groupId>
-            <artifactId>yaup</artifactId>
-            <version>${yaup.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.graalvm.sdk</groupId>
-                    <artifactId>graal-sdk</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.graalvm.js</groupId>
-                    <artifactId>js</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.0.29</version>
         </dependency>
         <dependency>
             <groupId>com.vladmihalcea</groupId>
             <artifactId>hibernate-types-52</artifactId>
             <version>2.12.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
     </dependencies>
 

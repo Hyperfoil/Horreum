@@ -2,8 +2,6 @@ package io.hyperfoil.tools.horreum.entity.alerting;
 
 import java.time.Instant;
 
-import javax.json.bind.annotation.JsonbTypeDeserializer;
-import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -11,7 +9,6 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
-import io.hyperfoil.tools.horreum.entity.converter.InstantSerializer;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -37,8 +34,6 @@ public class Change extends PanacheEntityBase {
 
    @NotNull
    @Column(columnDefinition = "timestamp")
-   @JsonbTypeDeserializer(InstantSerializer.class)
-   @JsonbTypeSerializer(InstantSerializer.class)
    public Instant timestamp;
 
    @NotNull

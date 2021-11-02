@@ -6,7 +6,7 @@ import javax.persistence.Embeddable;
 
 import org.hibernate.annotations.Type;
 
-import io.hyperfoil.tools.yaup.json.Json;
+import com.fasterxml.jackson.databind.JsonNode;
 
 // If the test has no run with these tags uploaded for more than this duration (in ms)
 // we send a notification about missing regular run upload. If the value is non-positive
@@ -15,7 +15,7 @@ import io.hyperfoil.tools.yaup.json.Json;
 public class StalenessSettings {
    // when this is null it matches any tags
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
-   public Json tags;
+   public JsonNode tags;
 
    public long maxStaleness;
 
