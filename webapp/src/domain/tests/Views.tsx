@@ -82,7 +82,7 @@ const ViewComponentForm = ({ c, onChange, isTester }: ViewComponentFormProps) =>
             </FormGroup>
             <FormGroup label="Rendering" fieldId="rendering">
                 <OptionalFunction
-                    func={c.render === undefined ? undefined : c.render.toString()}
+                    func={c.render === undefined || c.render === null ? undefined : c.render.toString()}
                     onChange={value => {
                         c.render = value
                         onChange()

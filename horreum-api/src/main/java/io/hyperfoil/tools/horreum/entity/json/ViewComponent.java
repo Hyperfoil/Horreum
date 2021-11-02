@@ -14,6 +14,7 @@ import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -48,6 +49,7 @@ public class ViewComponent extends PanacheEntityBase {
    /**
     * When this is <code>null</code> defaults to rendering as plain text.
     */
+   @JsonInclude(JsonInclude.Include.NON_NULL)
    public String render;
 
    public ViewComponent() {

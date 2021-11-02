@@ -18,6 +18,8 @@ import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 @Entity(name="test")
 @RegisterForReflection
 public class Test extends PanacheEntityBase {
@@ -52,6 +54,7 @@ public class Test extends PanacheEntityBase {
 
    public String tags;
 
+   @JsonInclude(JsonInclude.Include.NON_NULL)
    public String tagsCalculation;
 
    @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE }, orphanRemoval = true)

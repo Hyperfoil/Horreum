@@ -11,7 +11,7 @@ type OptionalFunctionProps = {
 }
 
 export default function OptionalFunction(props: OptionalFunctionProps) {
-    if (props.func === undefined) {
+    if (props.func === undefined || props.func === null) {
         if (props.readOnly) {
             return <>{props.undefinedText} </>
         } else {

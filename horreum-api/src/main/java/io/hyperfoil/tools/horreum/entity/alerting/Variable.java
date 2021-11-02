@@ -6,6 +6,9 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -42,6 +45,7 @@ public class Variable extends PanacheEntityBase {
    @NotNull
    public String accessors;
 
+   @JsonInclude(Include.NON_NULL)
    public String calculation;
 
    public double maxDifferenceLastDatapoint = 0.2;
