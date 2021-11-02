@@ -231,6 +231,16 @@ public class HorreumTestBase {
             stopContainerEnv(infrastructureContainer);
             stopContainerEnv(horreumContainer);
         }
+        File grafanaEnv = new File("target/docker-compose/.grafana");
+        if (grafanaEnv.exists()) {
+            //noinspection ResultOfMethodCallIgnored
+            grafanaEnv.delete();
+        }
+        File horreumEnv = new File("target/docker-compose/horreum-backend/.env");
+        if (horreumEnv.exists()) {
+            //noinspection ResultOfMethodCallIgnored
+            horreumEnv.delete();
+        }
     }
 
     private static void stopContainerEnv(TestContainer composeContainer){
