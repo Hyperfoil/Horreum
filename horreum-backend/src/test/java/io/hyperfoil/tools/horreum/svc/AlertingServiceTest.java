@@ -6,11 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
-import org.eclipse.jetty.util.BlockingArrayQueue;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -67,7 +67,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       variables.add(variable);
       jsonRequest().body(variables.toString()).post("/api/alerting/variables?test=" + test.id).then().statusCode(204);
 
-      BlockingQueue<DataPoint.Event> dpe = new BlockingArrayQueue<>();
+      BlockingQueue<DataPoint.Event> dpe = new LinkedBlockingDeque<>();
       eventBus.consumer(DataPoint.EVENT_NEW, msg -> {
          if (msg.body() instanceof DataPoint.Event) {
             dpe.add((DataPoint.Event) msg.body());
