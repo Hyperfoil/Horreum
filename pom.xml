@@ -121,6 +121,11 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>io.hyperfoil.tools</groupId>
+                <artifactId>horreum-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-bom</artifactId>
                 <version>${quarkus.version}</version>

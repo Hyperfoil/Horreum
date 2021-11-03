@@ -26,7 +26,6 @@
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
             <artifactId>horreum-api</artifactId>
-            <version>${project.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>io.quarkus</groupId>
