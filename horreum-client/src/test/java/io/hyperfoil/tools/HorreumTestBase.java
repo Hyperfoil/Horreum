@@ -126,6 +126,7 @@ public class HorreumTestBase {
             String KEYCLOAK_OFFSET_PORT = getOffsetPort(KEYCLOAK_PORT);
             String KEYCLOAK_URL_ROOT = "http://172.17.0.1:" + KEYCLOAK_OFFSET_PORT;
 
+            envVariables.put("HORREUM_COMMIT_ID", System.getProperty("horreum.commit.id"));
             envVariables.put("CONTAINER_HOST_IP", CONTAINER_HOST_IP);
             envVariables.put("PORT_OFFSET", PORT_OFFSET);
             envVariables.put("RESOURCES_PATH", ".");

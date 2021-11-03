@@ -143,26 +143,6 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>buildnumber-maven-plugin</artifactId>
-                <version>1.4</version>
-                <executions>
-                    <execution>
-                        <id>get-scm-revision</id>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>create</goal>
-                        </goals>
-                        <configuration>
-                            <doCheck>false</doCheck>
-                            <doUpdate>false</doUpdate>
-                            <revisionOnScmFailure>UNKNOWN</revisionOnScmFailure>
-                            <getRevisionOnlyOnce>true</getRevisionOnlyOnce>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <groupId>org.apache.maven.plugins</groupId>
                 <version>3.0.0</version>
@@ -216,7 +196,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!--                    <uberJar>true</uberJar>-->
+                    <properties>
+                        <quarkus.container-image.additional-tags>${buildNumber}</quarkus.container-image.additional-tags>
+                    </properties>
                 </configuration>
             </plugin>
             <plugin>

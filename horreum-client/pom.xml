@@ -136,6 +136,15 @@
                 </execution>
             </executions>
         </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+                <systemPropertyVariables>
+                    <horreum.commit.id>${buildNumber}</horreum.commit.id>
+                </systemPropertyVariables>
+            </configuration>
+        </plugin>
     </plugins>
 
     <testResources>
