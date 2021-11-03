@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ValueNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.InvalidPathException;
@@ -199,16 +200,7 @@ public class Util {
             return null;
          }
       } else if (value.isProxyObject()) {
-//         Object po = value.asProxyObject();
-//         if (po instanceof JsonProxyObject) {
-//            return ((JsonProxyObject) po).getJson();
-//         } else if (po instanceof JsonProxyArray) {
-//            return ((JsonProxyArray) po).getJson();
-//         } else {
-            return value.asProxyObject();
-//         }
-//      } else if (value.isHostObject()) {
-//         return value.asHostObject();
+         return value.asProxyObject();
       } else if (value.isBoolean()) {
          return value.asBoolean();
       } else if (value.isNumber()) {
@@ -292,7 +284,28 @@ public class Util {
       ReadContext ctx = JsonPath.parse(input, JSONPATH_CONFIG);
       try {
          JsonPath path = JsonPath.compile(jsonPath);
-         return ctx.read(path);
+         Object obj = ctx.read(path);
+         if (obj instanceof ValueNode) {
+            ValueNode node = (ValueNode) obj;
+            switch (node.getNodeType()) {
+               case BINARY:
+               case STRING:
+                  return node.asText();
+               case BOOLEAN:
+                  return node.asBoolean();
+               case MISSING:
+               case NULL:
+                  return null;
+               case NUMBER:
+                  double value = node.asDouble();
+                  if (value == Math.rint(value)) {
+                     return value;
+                  } else {
+                     return (long) value;
+                  }
+            }
+         }
+         return obj;
       } catch (InvalidPathException e){
          return "<invalid jsonpath>";
       }
