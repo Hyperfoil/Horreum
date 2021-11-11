@@ -44,7 +44,11 @@ export const addToken = (id: number, value: string, description: string, permiss
             description,
             permissions,
         },
-        "post"
+        "post",
+        {
+            accept: "text/plain",
+        },
+        "text"
     )
 
 export const revokeToken = (testId: number, tokenId: number) =>

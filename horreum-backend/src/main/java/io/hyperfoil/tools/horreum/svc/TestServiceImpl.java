@@ -238,6 +238,7 @@ public class TestServiceImpl implements TestService {
    public Collection<TestToken> tokens(Integer testId) {
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
          Test t = Test.findById(testId);
+         Hibernate.initialize(t.tokens);
          return t.tokens;
       }
    }
