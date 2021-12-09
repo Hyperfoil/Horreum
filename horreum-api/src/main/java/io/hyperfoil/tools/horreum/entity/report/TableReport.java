@@ -21,10 +21,8 @@ import javax.validation.constraints.NotNull;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.Type;
-import org.hibernate.annotations.TypeDef;
-import org.hibernate.annotations.TypeDefs;
 
-import com.vladmihalcea.hibernate.type.array.DoubleArrayType;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -53,7 +51,6 @@ public class TableReport extends PanacheEntityBase {
    public Collection<RunData> runData;
 
    @Embeddable
-   @TypeDefs(@TypeDef(name = "double-array", typeClass = DoubleArrayType.class))
    public static class RunData {
       @NotNull
       @Column(name = "runid")
@@ -65,9 +62,19 @@ public class TableReport extends PanacheEntityBase {
       @NotNull
       public String label;
 
-      @Type(type = "double-array")
-      @Column(name = "values", columnDefinition = "float8[]")
+      @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
       @NotNull
-      public double[] values;
+      public ArrayNode values;
+
+      @Override
+      public String toString() {
+         return "RunData{" +
+               "runId=" + runId +
+               ", category='" + category + '\'' +
+               ", series='" + series + '\'' +
+               ", label='" + label + '\'' +
+               ", values=" + values +
+               '}';
+      }
    }
 }

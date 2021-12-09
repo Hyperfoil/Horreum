@@ -54,7 +54,7 @@ export type RunData = {
     category: string
     series: string
     label: string
-    values: number[]
+    values: any[]
 }
 
 export type AllTableReports = {

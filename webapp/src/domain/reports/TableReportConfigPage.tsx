@@ -62,7 +62,26 @@ function ReportConfigComponent(props: ReportConfigComponentProps) {
                         onChange={a => props.onChange({ ...props.component, accessors: a.join(";") })}
                     />
                 </FormGroup>
-                <FormGroup label="Function" fieldId="function">
+                <FormGroup
+                    label={
+                        <>
+                            Function
+                            <Popover
+                                headerContent="Component transformation function"
+                                bodyContent={
+                                    <div>
+                                        This function should return either single number, array of numbers or an object
+                                        with all fields set to number values. In the latter two cases there will be one
+                                        table + chart for each member item.
+                                    </div>
+                                }
+                            >
+                                <HelpButton />
+                            </Popover>
+                        </>
+                    }
+                    fieldId="function"
+                >
                     <OptionalFunction
                         func={props.component.function}
                         onChange={f => props.onChange({ ...props.component, function: f })}

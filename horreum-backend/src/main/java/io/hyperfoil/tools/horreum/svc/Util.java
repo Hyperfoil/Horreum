@@ -181,12 +181,38 @@ public class Util {
          }
       } else if (jsonNode instanceof ArrayNode) {
          int index = 0;
-         Iterator<JsonNode> it = jsonNode.iterator();
-         while (it.hasNext()) {
-            map.put(index++, it.next());
+         for (JsonNode node : jsonNode) {
+            map.put(index++, node);
          }
       }
       return map;
+   }
+
+   public static JsonNode convertToJson(Value value) {
+      if (value == null || value.isNull()) {
+         return JsonNodeFactory.instance.nullNode();
+      } else if (value.isProxyObject()) {
+         return value.asProxyObject();
+      } else if (value.isBoolean()) {
+         return JsonNodeFactory.instance.booleanNode(value.asBoolean());
+      } else if (value.isNumber()) {
+         double v = value.asDouble();
+         if (v == Math.rint(v)) {
+            return JsonNodeFactory.instance.numberNode((long) v);
+         } else {
+            return JsonNodeFactory.instance.numberNode(v);
+         }
+      } else if (value.isString()) {
+         return JsonNodeFactory.instance.textNode(value.asString());
+      } else if (value.hasArrayElements()) {
+         return convertArray(value);
+      } else if (value.canExecute()) {
+         return JsonNodeFactory.instance.textNode(value.toString());
+      } else if (value.hasMembers()) {
+         return convertMapping(value);
+      } else {
+         return JsonNodeFactory.instance.textNode(value.toString());
+      }
    }
 
    public static Object convert(Value value) {
@@ -308,6 +334,14 @@ public class Util {
          return obj;
       } catch (InvalidPathException e){
          return "<invalid jsonpath>";
+      }
+   }
+
+   public static String unwrapDoubleQuotes(String str) {
+      if (str.startsWith("\"") && str.endsWith("\"")) {
+         return str.substring(1, str.length() - 1);
+      } else {
+         return str;
       }
    }
 }

@@ -22,8 +22,11 @@ import javax.transaction.Transactional;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
+import org.graalvm.polyglot.Value;
 import org.hibernate.Hibernate;
 import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.api.ReportService;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -45,22 +48,27 @@ public class ReportServiceImpl implements ReportService {
             "ELSE " +
                "jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::::jsonpath) " +
             "END" +
-         ")#>>'{}' AS result FROM schemaextractor se " +
+         ")::::text AS result FROM schemaextractor se " +
          "JOIN run_schemas rs ON se.schema_id = rs.schemaid " +
          "JOIN run ON run.id = rs.runid " +
-         "WHERE se.accessor = :accessors OR (se.accessor || '[]') = :accessors ";
+         "WHERE NOT run.trashed AND (se.accessor = :accessors OR (se.accessor || '[]') = :accessors) AND ";
    private static final String SELECT_BY_ACCESSORS = "SELECT run.id, jsonb_object_agg(se.accessor, (" +
             "CASE WHEN ca LIKE '%[]' THEN " +
                "jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::::jsonpath) " +
             "ELSE " +
                "jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::::jsonpath) " +
             "END)" +
-         ")#>>'{}' AS result FROM schemaextractor se " +
+         ")::::text AS result FROM schemaextractor se " +
          "JOIN run_schemas rs ON se.schema_id = rs.schemaid " +
          "JOIN run ON run.id = rs.runid " +
-         "JOIN regexp_split_to_table(:accessors, ';') AS ca ON (se.accessor = ca OR (se.accessor || '[]') = ca) ";
+         "JOIN regexp_split_to_table(:accessors, ';') AS ca ON (se.accessor = ca OR (se.accessor || '[]') = ca) " +
+         "WHERE NOT run.trashed AND ";
          // "WHERE xxx GROUP BY run.id " must be appended here
    //@formatter:on
+
+   static {
+      System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
+   }
 
    @Inject
    SqlServiceImpl sqlService;
@@ -226,22 +234,29 @@ public class ReportServiceImpl implements ReportService {
       Query timestampQuery;
       if (config.filterAccessors != null) {
          List<Integer> runIds = filterRunIds(config);
+         log.debugf("Table report %s(%d) includes runs %s", config.title, config.id, runIds);
          series = selectByRuns(config.seriesAccessors, runIds);
+         log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          if (config.labelAccessors != null) {
             labels = selectByRuns(config.labelAccessors, runIds);
+            log.debugf("Labels: %s", labels.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          }
          if (config.categoryAccessors != null) {
             runCategories = selectByRuns(config.categoryAccessors, runIds);
+            log.debugf("Categories: %s", runCategories.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          }
          timestampQuery = em.createNativeQuery("SELECT id, start FROM run WHERE id IN :runs").setParameter("runs", runIds);
       } else {
-         assert config.filterFunction == null;
+         log.debugf("Table report %s(%d) includes all runs for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
          series = selectByTest(config.seriesAccessors, config.test.id);
+         log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          if (config.labelAccessors != null) {
             labels = selectByTest(config.labelAccessors, config.test.id);
+            log.debugf("Labels: %s", labels.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          }
          if (config.categoryAccessors != null) {
             runCategories = selectByTest(config.categoryAccessors, config.test.id);
+            log.debugf("Categories: %s", runCategories.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          }
          timestampQuery = em.createNativeQuery("SELECT id, start FROM run WHERE testid = ?").setParameter(1, config.test.id);
       }
@@ -258,6 +273,7 @@ public class ReportServiceImpl implements ReportService {
          labels = series.stream().map(row -> new Object[] { row[0], "" }).collect(Collectors.toList());
       }
       Map<Integer, TableReport.RunData> runData = getRunData(config, runCategories, series, labels);
+      log.debugf("Run data: %s", runData);
 
       @SuppressWarnings("unchecked")
       Map<Integer, Timestamp> timestamps = ((Stream<Object[]>) timestampQuery.getResultStream())
@@ -275,20 +291,25 @@ public class ReportServiceImpl implements ReportService {
                Integer runId = (Integer) row[0];
                TableReport.RunData data = runData.get(runId);
                if (component.function == null) {
-                  Double dValue = Util.toDoubleOrNull(row[1]);
-                  if (dValue == null) {
-                     log.errorf("Report %s(%d) run %d component %s: cannot convert %s to double.", config.title, config.id, runId, component.name, row[1]);
+                  if (row[1] == null) {
+                     data.values.addNull();
                   } else {
-                     data.values[i] = dValue;
+                     Double dValue = Util.toDoubleOrNull(row[1]);
+                     if (dValue != null) {
+                        data.values.add(dValue);
+                     } else {
+                        data.values.add(String.valueOf(row[1]));
+                     }
                   }
                } else {
                   String jsCode = buildCode(component.function, (String) row[1]);
                   try {
-                     Double value = Util.toDoubleOrNull(context.eval("js", jsCode), error -> {
-                        log.errorf("Report %s(%d) run %d component %s: %s", config.title, config.id, runId, component.name, error);
-                     }, info -> { /* ignore null/undefined info */ });
-                     if (data != null) {
-                        data.values[i] = value == null ? 0 : value;
+                     Value value = context.eval("js", jsCode);
+                     Double maybeDouble = Util.toDoubleOrNull(value, err -> {}, info -> {});
+                     if (maybeDouble != null) {
+                        data.values.add(maybeDouble);
+                     } else {
+                        data.values.add(Util.convertToJson(value));
                      }
                   } catch (PolyglotException e) {
                      log.errorf(e, "Failed to run report %s(%d) label function on run %d.", config.title, config.id, runId);
@@ -313,9 +334,9 @@ public class ReportServiceImpl implements ReportService {
             Integer runId = (Integer) row[0];
             TableReport.RunData data = new TableReport.RunData();
             data.runId = runId;
-            data.values = new double[config.components.size()];
+            data.values = JsonNodeFactory.instance.arrayNode(config.components.size());
             if (config.categoryFunction == null) {
-               data.category = (String) row[1];
+               data.category = Util.unwrapDoubleQuotes((String) row[1]);
             } else {
                String jsCode = buildCode(config.categoryFunction, (String) row[1]);
                try {
@@ -332,7 +353,7 @@ public class ReportServiceImpl implements ReportService {
             Integer runId = (Integer) row[0];
             TableReport.RunData data = runData.get(runId);
             if (config.seriesFunction == null) {
-               data.series = (String) row[1];
+               data.series = Util.unwrapDoubleQuotes((String) row[1]);
             } else {
                String jsCode = buildCode(config.seriesFunction, (String) row[1]);
                try {
@@ -349,7 +370,7 @@ public class ReportServiceImpl implements ReportService {
             Integer runId = (Integer) row[0];
             TableReport.RunData data = runData.get(runId);
             if (config.labelFunction == null) {
-               data.label = (String) row[1];
+               data.label = Util.unwrapDoubleQuotes((String) row[1]);
             } else {
                String jsCode = buildCode(config.labelFunction, (String) row[1]);
                try {
@@ -395,9 +416,9 @@ public class ReportServiceImpl implements ReportService {
       List<Object[]> runCategories;
       String query;
       if (accessors.indexOf(';') >= 0) {
-         query = SELECT_BY_ACCESSORS + "WHERE run.testid = :testid GROUP BY run.id";
+         query = SELECT_BY_ACCESSORS + "run.testid = :testid GROUP BY run.id";
       } else {
-         query = SELECT_BY_ACCESSOR + "AND run.testid = :testid";
+         query = SELECT_BY_ACCESSOR + "run.testid = :testid";
       }
       //noinspection unchecked
       runCategories = em
@@ -412,9 +433,9 @@ public class ReportServiceImpl implements ReportService {
       List<Object[]> runCategories;
       String query;
       if (accessors.indexOf(';') >= 0) {
-         query = SELECT_BY_ACCESSORS + "WHERE run.id IN :runs GROUP BY run.id";
+         query = SELECT_BY_ACCESSORS + "run.id IN :runs GROUP BY run.id";
       } else {
-         query = SELECT_BY_ACCESSOR + "AND run.id IN :runs";
+         query = SELECT_BY_ACCESSOR + "run.id IN :runs";
       }
       //noinspection unchecked
       runCategories = em

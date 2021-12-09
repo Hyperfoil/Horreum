@@ -18,18 +18,20 @@ function formatter(func: string | undefined) {
 type RunDataViewProps = {
     config: TableReportConfig
     data?: RunData
-    index: number
+    selector(d: RunData): number
+    siblingSelector(d: RunData, index: number): number
 }
 
 function RunDataView(props: RunDataViewProps) {
     if (props.data === undefined) {
         return <>(no data)</>
     }
+    const data = props.data
     return (
         <Popover
             headerContent={
                 <>
-                    Run <NavLink to={"/run/" + props.data.runId}>{props.data.runId}</NavLink>
+                    Run <NavLink to={"/run/" + data.runId}>{data.runId}</NavLink>
                 </>
             }
             bodyContent={
@@ -38,14 +40,14 @@ function RunDataView(props: RunDataViewProps) {
                         {props.config.components.map((c, i) => (
                             <Tr key={i}>
                                 <Th>{c.name}</Th>
-                                <Td>{props.data?.values[i]}</Td>
+                                <Td>{props.siblingSelector(data, i)}</Td>
                             </Tr>
                         ))}
                     </Tbody>
                 </TableComposable>
             }
         >
-            <Button variant="link">{props.data.values[props.index]}</Button>
+            <Button variant="link">{props.selector(data)}</Button>
         </Popover>
     )
 }
@@ -53,7 +55,8 @@ function RunDataView(props: RunDataViewProps) {
 type ComponentTableProps = {
     config: TableReportConfig
     data: RunData[]
-    index: number
+    selector(d: RunData): number
+    siblingSelector(d: RunData, index: number): number
 }
 
 const colors = ["#4caf50", "#FF0000", "#CC0066", "#0066FF", "#42a5f5", "#f1c40f"]
@@ -67,7 +70,7 @@ function ComponentTable(props: ComponentTableProps) {
     props.data.forEach(d => {
         const matching = chartData.find(item => item.label === d.label)
         if (matching) {
-            matching[d.series] = d.values[props.index]
+            matching[d.series] = props.selector(d)
         }
     })
     const [minMaxDomain, setMinMaxDomain] = useState(false)
@@ -111,7 +114,8 @@ function ComponentTable(props: ComponentTableProps) {
                                         <RunDataView
                                             config={props.config}
                                             data={props.data.find(d => d.series === s && d.label === l)}
-                                            index={props.index}
+                                            selector={props.selector}
+                                            siblingSelector={props.siblingSelector}
                                         />
                                     </Td>
                                 ))}
@@ -280,6 +284,14 @@ function update(
     }
 }
 
+function selectByKey(value: any, key: string) {
+    if (typeof value == "object") {
+        return value[key]
+    } else {
+        return value
+    }
+}
+
 export default function TableReportView(props: TableReportViewProps) {
     const config = props.report.config
     const categories = [...new Set(props.report.runData.map(d => d.category))].sort()
@@ -317,21 +329,54 @@ export default function TableReportView(props: TableReportViewProps) {
                             const comment2 = props.report.comments.find(
                                 c => c.level === 2 && c.category === cat && c.componentId === comp.id
                             )
-                            return (
-                                <React.Fragment key={i2}>
-                                    <Title headingLevel="h3">{comp.name}</Title>
-                                    <Comment
-                                        text={comment2?.comment || ""}
-                                        editable={props.editable}
-                                        onUpdate={text => update(props.report, comment2, text, 2, cat, comp.id)}
-                                    />
-                                    <ComponentTable
-                                        config={config}
-                                        data={props.report.runData.filter(d => d.category === cat)}
-                                        index={i2}
-                                    />
-                                </React.Fragment>
-                            )
+                            const categoryData = props.report.runData.filter(d => d.category === cat)
+                            if (categoryData.some(d => typeof d.values[i2] == "object")) {
+                                const set = new Set<string>()
+                                categoryData.forEach(d => {
+                                    const componentData = d.values[i2]
+                                    if (typeof componentData == "object") {
+                                        const keys = [...Object.keys(componentData)]
+                                        keys.forEach(k => set.add(k))
+                                    } else {
+                                        set.add("")
+                                    }
+                                })
+                                return [...set].sort().map(key => (
+                                    <React.Fragment key={i2 + "/" + key}>
+                                        <Title headingLevel="h3">
+                                            {comp.name}: {key}
+                                        </Title>
+                                        <Comment
+                                            text={comment2?.comment || ""}
+                                            editable={props.editable}
+                                            onUpdate={text => update(props.report, comment2, text, 2, cat, comp.id)}
+                                        />
+                                        <ComponentTable
+                                            config={config}
+                                            data={categoryData}
+                                            selector={d => selectByKey(d.values[i2], key)}
+                                            siblingSelector={(d, index) => selectByKey(d.values[index], key)}
+                                        />
+                                    </React.Fragment>
+                                ))
+                            } else {
+                                return (
+                                    <React.Fragment key={i2}>
+                                        <Title headingLevel="h3">{comp.name}</Title>
+                                        <Comment
+                                            text={comment2?.comment || ""}
+                                            editable={props.editable}
+                                            onUpdate={text => update(props.report, comment2, text, 2, cat, comp.id)}
+                                        />
+                                        <ComponentTable
+                                            config={config}
+                                            data={categoryData}
+                                            selector={d => d.values[i2]}
+                                            siblingSelector={(d, index) => d.values[index]}
+                                        />
+                                    </React.Fragment>
+                                )
+                            }
                         })}
                     </React.Fragment>
                 )

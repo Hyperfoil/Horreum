@@ -1937,5 +1937,19 @@
             $$ LANGUAGE plpgsql;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="38" author="rvansa">
+        <addColumn tableName="tablereport_rundata">
+            <column name="data" type="jsonb" defaultValue="{}">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>
+            UPDATE tablereport_rundata SET data = array_to_json(values);
+            ALTER TABLE tablereport_rundata ALTER COLUMN data DROP DEFAULT;
+        </sql>
+        <dropColumn tableName="tablereport_rundata" columnName="values"/>
+        <renameColumn tableName="tablereport_rundata" oldColumnName="data" newColumnName="values"/>
+    </changeSet>
 </databaseChangeLog>
 
