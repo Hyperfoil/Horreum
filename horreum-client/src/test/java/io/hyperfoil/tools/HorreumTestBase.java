@@ -174,7 +174,7 @@ public class HorreumTestBase {
             source = Path.of(root);
         } else {
             FileSystem fileSystem = FileSystems.newFileSystem(root, Collections.emptyMap());
-            source = fileSystem.getPath(".");
+            source = fileSystem.getPath("docker-compose");
         }
         Files.walkFileTree(source, Collections.emptySet(), 1, new SimpleFileVisitor<>() {
             @Override
