@@ -22,7 +22,7 @@
     "@types/recharts": "^2.0.0",
     "@types/redux": "^3.6.0",
     "@types/redux-thunk": "^2.1.0",
-    "axios": "^0.21.1",
+    "axios": "^0.21.2",
     "clsx": "^1.1.1",
     "codemirror": "^5.62.2",
     "connected-react-router": "^6.9.1",
