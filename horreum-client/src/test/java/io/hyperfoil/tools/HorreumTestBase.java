@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -126,7 +127,15 @@ public class HorreumTestBase {
             String KEYCLOAK_OFFSET_PORT = getOffsetPort(KEYCLOAK_PORT);
             String KEYCLOAK_URL_ROOT = "http://172.17.0.1:" + KEYCLOAK_OFFSET_PORT;
 
-            envVariables.put("HORREUM_COMMIT_ID", System.getProperty("horreum.commit.id"));
+            String horreumCommitId = System.getProperty("horreum.commit.id");
+            if (horreumCommitId == null) {
+                InputStream stream = HorreumTestBase.class.getClassLoader().getResourceAsStream("horreum.commit.id.txt");
+                if (stream == null) {
+                    throw new IllegalStateException("Cannot determine Horreum commit ID this test should run against.");
+                }
+                horreumCommitId = new String(stream.readAllBytes(), StandardCharsets.UTF_8).trim();
+            }
+            envVariables.put("HORREUM_COMMIT_ID", horreumCommitId);
             envVariables.put("CONTAINER_HOST_IP", CONTAINER_HOST_IP);
             envVariables.put("PORT_OFFSET", PORT_OFFSET);
             envVariables.put("RESOURCES_PATH", ".");
@@ -174,7 +183,7 @@ public class HorreumTestBase {
             source = Path.of(root);
         } else {
             FileSystem fileSystem = FileSystems.newFileSystem(root, Collections.emptyMap());
-            source = fileSystem.getPath(".");
+            source = fileSystem.getPath("docker-compose");
         }
         Files.walkFileTree(source, Collections.emptySet(), 1, new SimpleFileVisitor<>() {
             @Override

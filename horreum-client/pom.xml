@@ -148,9 +148,13 @@
     <testResources>
         <testResource>
             <directory>src/test/resources</directory>
+            <filtering>true</filtering>
             <includes>
                 <include>**/*</include>
             </includes>
+            <excludes>
+                <exclude>*/horreum-compose.yaml</exclude>
+            </excludes>
         </testResource>
         <testResource>
             <directory>../</directory>
