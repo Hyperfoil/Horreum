@@ -188,8 +188,12 @@ public class HorreumTestBase {
         Files.walkFileTree(source, Collections.emptySet(), 1, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                Files.copy(file, Path.of("target/docker-compose/", file.getFileName().toString()),
+                Path destPath = Path.of("target/docker-compose/", file.getFileName().toString());
+                Files.copy(file, destPath,
                       StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+                if(file.toString().endsWith(".sh")){
+                    destPath.toFile().setExecutable(true);
+                }
                 return FileVisitResult.CONTINUE;
             }
         });
