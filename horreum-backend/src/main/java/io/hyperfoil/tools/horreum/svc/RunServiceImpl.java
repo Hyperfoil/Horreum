@@ -310,6 +310,7 @@ public class RunServiceImpl implements RunService {
                                 String schemaUri, String description,
                                 JsonNode data) {
       if (data == null) {
+         log.debugf("Failed to upload for test %s with description %s because of missing data.", test, description);
          throw ServiceException.badRequest("No data!");
       }
       Object foundTest = findIfNotSet(test, data);
@@ -330,26 +331,32 @@ public class RunServiceImpl implements RunService {
 
          String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
          if (testNameOrId == null || testNameOrId.isEmpty()) {
+            log.debugf("Failed to upload for test %s with description %s as the test cannot be identified.", test, description);
             throw ServiceException.badRequest("Cannot identify test name.");
          }
 
          Instant startInstant = toInstant(foundStart);
          Instant stopInstant = toInstant(foundStop);
          if (startInstant == null) {
+            log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStart, start);
             throw ServiceException.badRequest("Cannot parse start time from " + foundStart + " (" + start + ")");
          } else if (stopInstant == null) {
+            log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStop,stop);
             throw ServiceException.badRequest("Cannot parse stop time from " + foundStop + " (" + stop + ")");
          }
 
          Test testEntity = testService.getByNameOrId(testNameOrId);
          if (testEntity == null) {
+            log.debugf("Failed to upload for test %s with description %s as there is no such test.", test, description);
             throw ServiceException.serverError("Failed to find test " + testNameOrId);
          }
 
          Collection<ValidationMessage> validationErrors = schemaService.validate(data, schemaUri);
          if (validationErrors != null && !validationErrors.isEmpty()) {
+            log.debugf("Failed to upload for test %s with description %s because of validation errors.", test, description);
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST).entity(validationErrors).build());
          }
+         log.debugf("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id, foundDescription);
 
          Run run = new Run();
          run.testid = testEntity.id;
@@ -410,16 +417,19 @@ public class RunServiceImpl implements RunService {
       if (run.owner == null) {
          List<String> uploaders = identity.getRoles().stream().filter(role -> role.endsWith("-uploader")).collect(Collectors.toList());
          if (uploaders.size() != 1) {
+            log.debugf("Failed to upload for test %s: no owner, available uploaders: %s", test.name, uploaders);
             throw ServiceException.badRequest("Missing owner and cannot select single default owners; this user has these uploader roles: " + uploaders);
          }
          String uploader = uploaders.get(0);
          run.owner = uploader.substring(0, uploader.length() - 9) + "-team";
       } else if (!Objects.equals(test.owner, run.owner) && !identity.getRoles().contains(run.owner)) {
+         log.debugf("Failed to upload for test %s: requested owner %s, available roles: %s", test.name, run.owner, identity.getRoles());
          throw ServiceException.badRequest("This user does not have permissions to upload run for owner=" + run.owner);
       }
       if (run.access == null) {
          run.access = Access.PRIVATE;
       }
+      log.debugf("Uploading with owner=%s and access=%s", run.owner, run.access);
 
       try {
          if (run.id == null) {
@@ -432,6 +442,7 @@ public class RunServiceImpl implements RunService {
          log.error("Failed to persist run.", e);
          throw ServiceException.serverError("Failed to persist run");
       }
+      log.debugf("Upload flushed, run ID %d", run.id);
       Util.publishLater(tm, eventBus, Run.EVENT_NEW, run);
 
       return run.id;
