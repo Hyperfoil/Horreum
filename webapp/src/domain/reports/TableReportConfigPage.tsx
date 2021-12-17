@@ -18,6 +18,7 @@ import {
     List,
     ListItem,
     Modal,
+    PageSection,
     Popover,
     Spinner,
     TextInput,
@@ -182,363 +183,375 @@ export default function TableReportConfigPage() {
         )
     }
     return (
-        <Card style={{ flexGrow: 1 }}>
-            <CardBody>
-                <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
-                    <FormGroup
-                        label="Title"
-                        isRequired={true}
-                        fieldId="test"
-                        helperTextInvalid="Name must be unique and not empty"
-                    >
-                        <TextInput
-                            value={config?.title || ""}
-                            isRequired
-                            type="text"
-                            id="title"
-                            aria-describedby="title-helper"
-                            name="title"
-                            isReadOnly={!isTester}
-                            validated={config?.title && config.title.trim().length > 0 ? "default" : "error"}
-                            onChange={value => {
-                                setConfig({ ...config, title: value })
-                            }}
-                        />
-                    </FormGroup>
-                    <FormGroup label="Test" isRequired={true} fieldId="test">
-                        <TestSelect
-                            selection={test}
-                            onSelect={test => {
-                                setTest(test)
-                                setConfig({ ...config, test: { id: test.id } })
-                            }}
-                            isDisabled={!isTester}
-                        />
-                    </FormGroup>
-                    <FormSection
-                        title={
-                            <>
-                                Filtering
-                                <Popover
-                                    headerContent="Filtering accessors and function"
-                                    bodyContent={
-                                        <div>
-                                            Filtering lets you pre-select which runs are admitted to the report. It is
-                                            an optional feature: if you keep the list of accessors empty all runs will
-                                            be admitted.
-                                            <List>
-                                                <ListItem>
-                                                    Accessors select data from the run based on its{" "}
-                                                    <NavLink to="/schema">schema</NavLink>.
-                                                </ListItem>
-                                                <ListItem>
-                                                    Filtering function takes the result of single accessor or object
-                                                    keyed by accessors (in case of multiple accessors) and returns{" "}
-                                                    <code>true</code> if the run should be admitted.
-                                                </ListItem>
-                                            </List>
-                                        </div>
-                                    }
-                                >
-                                    <HelpButton />
-                                </Popover>
-                            </>
-                        }
-                    >
-                        <FormGroup label="Accessors" fieldId="filterAcessors">
-                            <Accessors
-                                value={config?.filterAccessors ? config.filterAccessors.split(";") : []}
-                                onChange={accessors => setConfig({ ...config, filterAccessors: accessors.join(";") })}
+        <PageSection>
+            <Card>
+                <CardBody>
+                    <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
+                        <FormGroup
+                            label="Title"
+                            isRequired={true}
+                            fieldId="test"
+                            helperTextInvalid="Name must be unique and not empty"
+                        >
+                            <TextInput
+                                value={config?.title || ""}
+                                isRequired
+                                type="text"
+                                id="title"
+                                aria-describedby="title-helper"
+                                name="title"
                                 isReadOnly={!isTester}
+                                validated={config?.title && config.title.trim().length > 0 ? "default" : "error"}
+                                onChange={value => {
+                                    setConfig({ ...config, title: value })
+                                }}
                             />
                         </FormGroup>
-                        <FormGroup label="Function" fieldId="filterFunction">
-                            <OptionalFunction
-                                func={config?.filterFunction}
-                                onChange={func => setConfig({ ...config, filterFunction: func })}
-                                readOnly={!isTester}
-                                undefinedText="Filtering function not defined."
-                                addText="Add filtering function..."
-                                defaultFunc="value => value"
+                        <FormGroup label="Test" isRequired={true} fieldId="test">
+                            <TestSelect
+                                selection={test}
+                                onSelect={test => {
+                                    setTest(test)
+                                    setConfig({ ...config, test: { id: test.id } })
+                                }}
+                                isDisabled={!isTester}
                             />
                         </FormGroup>
-                    </FormSection>
-                    <FormSection
-                        title={
-                            <>
-                                Category
-                                <Popover
-                                    headerContent="Category accessors, function and formatter"
-                                    bodyContent={
-                                        <div>
-                                            Categories split runs to several groups where side-by-side comparison
-                                            doesn't make sense. For each category and each component (e.g. 'Throughput'
-                                            or 'CPU Usage') there will be one table/chart of results. If this is left
-                                            empty all runs will be grouped into single unnamed category.
-                                            <List>
-                                                <ListItem>
-                                                    Accessors select data from the run based on its{" "}
-                                                    <NavLink to="/schema">schema</NavLink>.
-                                                </ListItem>
-                                                <ListItem>
-                                                    Category function takes the result of single accessor or object
-                                                    keyed by accessors (in case of multiple accessors) and produces a
-                                                    value that would be used for the distinction.
-                                                </ListItem>
-                                                <ListItem>
-                                                    Category formatter takes the result of category function (or the
-                                                    accessors if the function is not present) and formats it for
-                                                    presentation.
-                                                </ListItem>
-                                            </List>
-                                        </div>
+                        <FormSection
+                            title={
+                                <>
+                                    Filtering
+                                    <Popover
+                                        headerContent="Filtering accessors and function"
+                                        bodyContent={
+                                            <div>
+                                                Filtering lets you pre-select which runs are admitted to the report. It
+                                                is an optional feature: if you keep the list of accessors empty all runs
+                                                will be admitted.
+                                                <List>
+                                                    <ListItem>
+                                                        Accessors select data from the run based on its{" "}
+                                                        <NavLink to="/schema">schema</NavLink>.
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        Filtering function takes the result of single accessor or object
+                                                        keyed by accessors (in case of multiple accessors) and returns{" "}
+                                                        <code>true</code> if the run should be admitted.
+                                                    </ListItem>
+                                                </List>
+                                            </div>
+                                        }
+                                    >
+                                        <HelpButton />
+                                    </Popover>
+                                </>
+                            }
+                        >
+                            <FormGroup label="Accessors" fieldId="filterAcessors">
+                                <Accessors
+                                    value={config?.filterAccessors ? config.filterAccessors.split(";") : []}
+                                    onChange={accessors =>
+                                        setConfig({ ...config, filterAccessors: accessors.join(";") })
                                     }
-                                >
-                                    <HelpButton />
-                                </Popover>
-                            </>
-                        }
-                    >
-                        <FormGroup label="Accessors" fieldId="categoryAcessors">
-                            <Accessors
-                                value={config?.categoryAccessors ? config.categoryAccessors.split(";") : []}
-                                onChange={accessors => setConfig({ ...config, categoryAccessors: accessors.join(";") })}
-                                isReadOnly={!isTester}
-                            />
-                        </FormGroup>
-                        <FormGroup label="Function" fieldId="categoryFunction">
-                            <OptionalFunction
-                                func={config?.categoryFunction}
-                                onChange={func => setConfig({ ...config, categoryFunction: func })}
-                                readOnly={!isTester}
-                                undefinedText="Category function not defined."
-                                addText="Add category function..."
-                                defaultFunc="value => value"
-                            />
-                        </FormGroup>
-                        <FormGroup label="Formatter" fieldId="categoryFormatter">
-                            <OptionalFunction
-                                func={config?.categoryFormatter}
-                                onChange={func => setConfig({ ...config, categoryFormatter: func })}
-                                readOnly={!isTester}
-                                undefinedText="Category formatter function not defined."
-                                addText="Add category formatter function..."
-                                defaultFunc="category => category"
-                            />
-                        </FormGroup>
-                    </FormSection>
-                    <FormSection
-                        title={
-                            <>
-                                Series
-                                <Popover
-                                    headerContent="Series accessors, function and formatter"
-                                    bodyContent={
-                                        <div>
-                                            Series are the products or configurations this report tries to compare,
-                                            presented as the columns in table or lines in the chart. Selector for series
-                                            is mandatory.
-                                            <List>
-                                                <ListItem>
-                                                    Accessors select data from the run based on its{" "}
-                                                    <NavLink to="/schema">schema</NavLink>.
-                                                </ListItem>
-                                                <ListItem>
-                                                    Series function takes the result of single accessor or object keyed
-                                                    by accessors (in case of multiple accessors) and produces a value
-                                                    that would be used to select the series.
-                                                </ListItem>
-                                                <ListItem>
-                                                    Series formatter takes the result of series function (or the
-                                                    accessors if the function is not present) and formats it for
-                                                    presentation.
-                                                </ListItem>
-                                            </List>
-                                        </div>
+                                    isReadOnly={!isTester}
+                                />
+                            </FormGroup>
+                            <FormGroup label="Function" fieldId="filterFunction">
+                                <OptionalFunction
+                                    func={config?.filterFunction}
+                                    onChange={func => setConfig({ ...config, filterFunction: func })}
+                                    readOnly={!isTester}
+                                    undefinedText="Filtering function not defined."
+                                    addText="Add filtering function..."
+                                    defaultFunc="value => value"
+                                />
+                            </FormGroup>
+                        </FormSection>
+                        <FormSection
+                            title={
+                                <>
+                                    Category
+                                    <Popover
+                                        headerContent="Category accessors, function and formatter"
+                                        bodyContent={
+                                            <div>
+                                                Categories split runs to several groups where side-by-side comparison
+                                                doesn't make sense. For each category and each component (e.g.
+                                                'Throughput' or 'CPU Usage') there will be one table/chart of results.
+                                                If this is left empty all runs will be grouped into single unnamed
+                                                category.
+                                                <List>
+                                                    <ListItem>
+                                                        Accessors select data from the run based on its{" "}
+                                                        <NavLink to="/schema">schema</NavLink>.
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        Category function takes the result of single accessor or object
+                                                        keyed by accessors (in case of multiple accessors) and produces
+                                                        a value that would be used for the distinction.
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        Category formatter takes the result of category function (or the
+                                                        accessors if the function is not present) and formats it for
+                                                        presentation.
+                                                    </ListItem>
+                                                </List>
+                                            </div>
+                                        }
+                                    >
+                                        <HelpButton />
+                                    </Popover>
+                                </>
+                            }
+                        >
+                            <FormGroup label="Accessors" fieldId="categoryAcessors">
+                                <Accessors
+                                    value={config?.categoryAccessors ? config.categoryAccessors.split(";") : []}
+                                    onChange={accessors =>
+                                        setConfig({ ...config, categoryAccessors: accessors.join(";") })
                                     }
-                                >
-                                    <HelpButton />
-                                </Popover>
-                            </>
-                        }
-                    >
-                        <FormGroup label="Accessors" fieldId="seriesAcessors">
-                            <Accessors
-                                value={config?.seriesAccessors ? config.seriesAccessors.split(";") : []}
-                                onChange={accessors => setConfig({ ...config, seriesAccessors: accessors.join(";") })}
-                                error={config?.seriesAccessors ? undefined : "Selecting series is mandatory."}
-                                isReadOnly={!isTester}
-                            />
-                        </FormGroup>
-                        <FormGroup label="Function" fieldId="seriesFunction">
-                            <OptionalFunction
-                                func={config?.seriesFunction}
-                                onChange={func => setConfig({ ...config, seriesFunction: func })}
-                                readOnly={!isTester}
-                                undefinedText="Series function not defined."
-                                addText="Add series function..."
-                                defaultFunc="value => value"
-                            />
-                        </FormGroup>
-                        <FormGroup label="Formatter" fieldId="seriesFormatter">
-                            <OptionalFunction
-                                func={config?.seriesFormatter}
-                                onChange={func => setConfig({ ...config, seriesFormatter: func })}
-                                readOnly={!isTester}
-                                undefinedText="Series formatter function not defined."
-                                addText="Add series formatter function..."
-                                defaultFunc="series => series"
-                            />
-                        </FormGroup>
-                    </FormSection>
-                    <FormSection
-                        title={
-                            <>
-                                Labels
-                                <Popover
-                                    headerContent="Labels accessors, function and formatter"
-                                    bodyContent={
-                                        <div>
-                                            Labels represent gradation in configuration, e.g. as the cluster is scaled,
-                                            load is increased or other attributes are changing. Values with different
-                                            labels will be displayed in other rows in the table, and as datapoints in
-                                            series in the chart.
-                                            <List>
-                                                <ListItem>
-                                                    Accessors select data from the run based on its{" "}
-                                                    <NavLink to="/schema">schema</NavLink>.
-                                                </ListItem>
-                                                <ListItem>
-                                                    Label function takes the result of single accessor or object keyed
-                                                    by accessors (in case of multiple accessors) and produces a value
-                                                    that would be used for the label.
-                                                </ListItem>
-                                                <ListItem>
-                                                    Label formatter takes the result of label function (or the accessors
-                                                    if the function is not present) and formats it for presentation.
-                                                </ListItem>
-                                            </List>
-                                        </div>
+                                    isReadOnly={!isTester}
+                                />
+                            </FormGroup>
+                            <FormGroup label="Function" fieldId="categoryFunction">
+                                <OptionalFunction
+                                    func={config?.categoryFunction}
+                                    onChange={func => setConfig({ ...config, categoryFunction: func })}
+                                    readOnly={!isTester}
+                                    undefinedText="Category function not defined."
+                                    addText="Add category function..."
+                                    defaultFunc="value => value"
+                                />
+                            </FormGroup>
+                            <FormGroup label="Formatter" fieldId="categoryFormatter">
+                                <OptionalFunction
+                                    func={config?.categoryFormatter}
+                                    onChange={func => setConfig({ ...config, categoryFormatter: func })}
+                                    readOnly={!isTester}
+                                    undefinedText="Category formatter function not defined."
+                                    addText="Add category formatter function..."
+                                    defaultFunc="category => category"
+                                />
+                            </FormGroup>
+                        </FormSection>
+                        <FormSection
+                            title={
+                                <>
+                                    Series
+                                    <Popover
+                                        headerContent="Series accessors, function and formatter"
+                                        bodyContent={
+                                            <div>
+                                                Series are the products or configurations this report tries to compare,
+                                                presented as the columns in table or lines in the chart. Selector for
+                                                series is mandatory.
+                                                <List>
+                                                    <ListItem>
+                                                        Accessors select data from the run based on its{" "}
+                                                        <NavLink to="/schema">schema</NavLink>.
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        Series function takes the result of single accessor or object
+                                                        keyed by accessors (in case of multiple accessors) and produces
+                                                        a value that would be used to select the series.
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        Series formatter takes the result of series function (or the
+                                                        accessors if the function is not present) and formats it for
+                                                        presentation.
+                                                    </ListItem>
+                                                </List>
+                                            </div>
+                                        }
+                                    >
+                                        <HelpButton />
+                                    </Popover>
+                                </>
+                            }
+                        >
+                            <FormGroup label="Accessors" fieldId="seriesAcessors">
+                                <Accessors
+                                    value={config?.seriesAccessors ? config.seriesAccessors.split(";") : []}
+                                    onChange={accessors =>
+                                        setConfig({ ...config, seriesAccessors: accessors.join(";") })
                                     }
-                                >
-                                    <HelpButton />
-                                </Popover>
-                            </>
-                        }
-                    >
-                        <FormGroup label="Accessors" fieldId="labelAccessors">
-                            <Accessors
-                                value={config?.labelAccessors ? config.labelAccessors.split(";") : []}
-                                onChange={accessors => setConfig({ ...config, labelAccessors: accessors.join(";") })}
-                                isReadOnly={!isTester}
-                            />
-                        </FormGroup>
-                        <FormGroup label="Function" fieldId="labelFunction">
-                            <OptionalFunction
-                                func={config?.labelFunction}
-                                onChange={func => setConfig({ ...config, labelFunction: func })}
-                                readOnly={!isTester}
-                                undefinedText="Label function not defined."
-                                addText="Add label function..."
-                                defaultFunc="value => value"
-                            />
-                        </FormGroup>
-                        <FormGroup label="Formatter" fieldId="labelFormatter">
-                            <OptionalFunction
-                                func={config?.labelFormatter}
-                                onChange={func => setConfig({ ...config, labelFormatter: func })}
-                                readOnly={!isTester}
-                                undefinedText="Label formatter function not defined."
-                                addText="Add label formatter function..."
-                                defaultFunc="label => label"
-                            />
-                        </FormGroup>
-                    </FormSection>
-                    <FormSection title="Components">
+                                    error={config?.seriesAccessors ? undefined : "Selecting series is mandatory."}
+                                    isReadOnly={!isTester}
+                                />
+                            </FormGroup>
+                            <FormGroup label="Function" fieldId="seriesFunction">
+                                <OptionalFunction
+                                    func={config?.seriesFunction}
+                                    onChange={func => setConfig({ ...config, seriesFunction: func })}
+                                    readOnly={!isTester}
+                                    undefinedText="Series function not defined."
+                                    addText="Add series function..."
+                                    defaultFunc="value => value"
+                                />
+                            </FormGroup>
+                            <FormGroup label="Formatter" fieldId="seriesFormatter">
+                                <OptionalFunction
+                                    func={config?.seriesFormatter}
+                                    onChange={func => setConfig({ ...config, seriesFormatter: func })}
+                                    readOnly={!isTester}
+                                    undefinedText="Series formatter function not defined."
+                                    addText="Add series formatter function..."
+                                    defaultFunc="series => series"
+                                />
+                            </FormGroup>
+                        </FormSection>
+                        <FormSection
+                            title={
+                                <>
+                                    Labels
+                                    <Popover
+                                        headerContent="Labels accessors, function and formatter"
+                                        bodyContent={
+                                            <div>
+                                                Labels represent gradation in configuration, e.g. as the cluster is
+                                                scaled, load is increased or other attributes are changing. Values with
+                                                different labels will be displayed in other rows in the table, and as
+                                                datapoints in series in the chart.
+                                                <List>
+                                                    <ListItem>
+                                                        Accessors select data from the run based on its{" "}
+                                                        <NavLink to="/schema">schema</NavLink>.
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        Label function takes the result of single accessor or object
+                                                        keyed by accessors (in case of multiple accessors) and produces
+                                                        a value that would be used for the label.
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        Label formatter takes the result of label function (or the
+                                                        accessors if the function is not present) and formats it for
+                                                        presentation.
+                                                    </ListItem>
+                                                </List>
+                                            </div>
+                                        }
+                                    >
+                                        <HelpButton />
+                                    </Popover>
+                                </>
+                            }
+                        >
+                            <FormGroup label="Accessors" fieldId="labelAccessors">
+                                <Accessors
+                                    value={config?.labelAccessors ? config.labelAccessors.split(";") : []}
+                                    onChange={accessors =>
+                                        setConfig({ ...config, labelAccessors: accessors.join(";") })
+                                    }
+                                    isReadOnly={!isTester}
+                                />
+                            </FormGroup>
+                            <FormGroup label="Function" fieldId="labelFunction">
+                                <OptionalFunction
+                                    func={config?.labelFunction}
+                                    onChange={func => setConfig({ ...config, labelFunction: func })}
+                                    readOnly={!isTester}
+                                    undefinedText="Label function not defined."
+                                    addText="Add label function..."
+                                    defaultFunc="value => value"
+                                />
+                            </FormGroup>
+                            <FormGroup label="Formatter" fieldId="labelFormatter">
+                                <OptionalFunction
+                                    func={config?.labelFormatter}
+                                    onChange={func => setConfig({ ...config, labelFormatter: func })}
+                                    readOnly={!isTester}
+                                    undefinedText="Label formatter function not defined."
+                                    addText="Add label formatter function..."
+                                    defaultFunc="label => label"
+                                />
+                            </FormGroup>
+                        </FormSection>
+                        <FormSection title="Components">
+                            {isTester && (
+                                <ActionGroup>
+                                    <Button onClick={addComponent}>Add component</Button>
+                                </ActionGroup>
+                            )}
+                            {config?.components?.length === 0 && <EmptyState>No components</EmptyState>}
+                            {config?.components.map((c, i) => (
+                                <ReportConfigComponent
+                                    key={i}
+                                    component={c}
+                                    onChange={updated => {
+                                        config.components[i] = updated
+                                        setConfig({ ...config })
+                                    }}
+                                    onDelete={() => {
+                                        config.components.splice(i, 1)
+                                        config.components.forEach((c, j) => {
+                                            c.order = j
+                                        })
+                                        setConfig({ ...config })
+                                    }}
+                                    readOnly={!isTester}
+                                />
+                            ))}
+                            {isTester && config?.components?.length > 0 && (
+                                <ActionGroup>
+                                    <Button onClick={addComponent}>Add component</Button>
+                                </ActionGroup>
+                            )}
+                        </FormSection>
                         {isTester && (
                             <ActionGroup>
-                                <Button onClick={addComponent}>Add component</Button>
+                                <Button
+                                    onClick={() => {
+                                        // TODO save locally for faster reload...
+                                        api.updateTableConfig(config).then(
+                                            report => history.push("/reports/table/" + report.id),
+                                            error =>
+                                                dispatch(
+                                                    alertAction(
+                                                        "SAVE_CONFIG",
+                                                        "Failed to save report configuration.",
+                                                        error
+                                                    )
+                                                )
+                                        )
+                                    }}
+                                >
+                                    Save &amp; create report
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => {
+                                        api.previewTableReport(config).then(
+                                            report => setPreview(report),
+                                            error =>
+                                                dispatch(
+                                                    alertAction(
+                                                        "PREVIEW_REPORT",
+                                                        "Failed to generate report preview.",
+                                                        error
+                                                    )
+                                                )
+                                        )
+                                    }}
+                                >
+                                    Preview
+                                </Button>
                             </ActionGroup>
                         )}
-                        {config?.components?.length === 0 && <EmptyState>No components</EmptyState>}
-                        {config?.components.map((c, i) => (
-                            <ReportConfigComponent
-                                key={i}
-                                component={c}
-                                onChange={updated => {
-                                    config.components[i] = updated
-                                    setConfig({ ...config })
-                                }}
-                                onDelete={() => {
-                                    config.components.splice(i, 1)
-                                    config.components.forEach((c, j) => {
-                                        c.order = j
-                                    })
-                                    setConfig({ ...config })
-                                }}
-                                readOnly={!isTester}
-                            />
-                        ))}
-                        {isTester && config?.components?.length > 0 && (
-                            <ActionGroup>
-                                <Button onClick={addComponent}>Add component</Button>
-                            </ActionGroup>
-                        )}
-                    </FormSection>
-                    {isTester && (
-                        <ActionGroup>
-                            <Button
-                                onClick={() => {
-                                    // TODO save locally for faster reload...
-                                    api.updateTableConfig(config).then(
-                                        report => history.push("/reports/table/" + report.id),
-                                        error =>
-                                            dispatch(
-                                                alertAction(
-                                                    "SAVE_CONFIG",
-                                                    "Failed to save report configuration.",
-                                                    error
-                                                )
-                                            )
-                                    )
+                    </Form>
+                    {preview && (
+                        <Modal isOpen={!!preview} onClose={() => setPreview(undefined)}>
+                            <div
+                                style={{
+                                    overflowY: "scroll",
+                                    paddingRight: "16px",
                                 }}
                             >
-                                Save &amp; create report
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                onClick={() => {
-                                    api.previewTableReport(config).then(
-                                        report => setPreview(report),
-                                        error =>
-                                            dispatch(
-                                                alertAction(
-                                                    "PREVIEW_REPORT",
-                                                    "Failed to generate report preview.",
-                                                    error
-                                                )
-                                            )
-                                    )
-                                }}
-                            >
-                                Preview
-                            </Button>
-                        </ActionGroup>
+                                <TableReportView report={preview} />
+                            </div>
+                        </Modal>
                     )}
-                </Form>
-                {preview && (
-                    <Modal isOpen={!!preview} onClose={() => setPreview(undefined)}>
-                        <div
-                            style={{
-                                overflowY: "scroll",
-                                paddingRight: "16px",
-                            }}
-                        >
-                            <TableReportView report={preview} />
-                        </div>
-                    </Modal>
-                )}
-            </CardBody>
-        </Card>
+                </CardBody>
+            </Card>
+        </PageSection>
     )
 }

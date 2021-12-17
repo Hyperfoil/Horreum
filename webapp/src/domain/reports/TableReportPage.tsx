@@ -2,7 +2,17 @@ import { useEffect, useRef, useState } from "react"
 import { useDispatch } from "react-redux"
 import { useParams } from "react-router"
 
-import { ActionGroup, Button, Card, CardBody, CardHeader, Bullseye, EmptyState, Spinner } from "@patternfly/react-core"
+import {
+    ActionGroup,
+    Button,
+    Card,
+    CardBody,
+    CardHeader,
+    Bullseye,
+    EmptyState,
+    Spinner,
+    PageSection,
+} from "@patternfly/react-core"
 
 import { useReactToPrint } from "react-to-print"
 
@@ -58,26 +68,28 @@ export default function TableReportPage() {
         )
     }
     return (
-        <Card>
-            <CardHeader>
-                <ActionGroup>
-                    <Button
-                        onClick={() => {
-                            if (printHandle) printHandle()
-                        }}
-                    >
-                        Export to PDF
-                    </Button>
-                    <ButtonLink variant="secondary" to={"/reports/table/config/" + report.config.id}>
-                        Configure
-                    </ButtonLink>
-                </ActionGroup>
-            </CardHeader>
-            <CardBody>
-                <div ref={componentRef}>
-                    <TableReportView report={report} editable={isTester} />
-                </div>
-            </CardBody>
-        </Card>
+        <PageSection>
+            <Card>
+                <CardHeader>
+                    <ActionGroup>
+                        <Button
+                            onClick={() => {
+                                if (printHandle) printHandle()
+                            }}
+                        >
+                            Export to PDF
+                        </Button>
+                        <ButtonLink variant="secondary" to={"/reports/table/config/" + report.config.id}>
+                            Configure
+                        </ButtonLink>
+                    </ActionGroup>
+                </CardHeader>
+                <CardBody>
+                    <div ref={componentRef}>
+                        <TableReportView report={report} editable={isTester} />
+                    </div>
+                </CardBody>
+            </Card>
+        </PageSection>
     )
 }

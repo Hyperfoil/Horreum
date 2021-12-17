@@ -25,6 +25,7 @@ import {
     DropdownToggle,
     DropdownItem,
     InputGroup,
+    PageSection,
     Popover,
     Toolbar,
     ToolbarContent,
@@ -312,209 +313,198 @@ export default function Run() {
 
     const isTester = useTester((run && run.owner) || "")
     return (
-        // <PageSection>
-        <React.Fragment>
-            <Card style={{ flexGrow: 1 }}>
-                {!run && (
-                    <Bullseye>
-                        <Spinner />
-                    </Bullseye>
-                )}
-                {run && (
-                    <>
-                        <CardHeader>
-                            <Toolbar
-                                className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
-                                style={{ justifyContent: "space-between", width: "100%" }}
-                            >
-                                <ToolbarContent style={{ width: "100%" }}>
-                                    <ToolbarItem aria-label="info" style={{ width: "100%" }}>
-                                        <table className="pf-c-table pf-m-compact" style={{ width: "100%" }}>
-                                            <tbody>
-                                                <tr>
-                                                    <th>id</th>
-                                                    <th>test</th>
-                                                    <th>start</th>
-                                                    <th>stop</th>
-                                                    <th>description</th>
-                                                    <th>schema</th>
-                                                </tr>
-                                                <tr>
-                                                    <td>{run.id}</td>
-                                                    <td>
-                                                        <NavLink to={`/test/${run.testid}`}>
-                                                            {run.testname || run.testid}
-                                                        </NavLink>
-                                                    </td>
-                                                    <td>{formatDateTime(run.start)}</td>
-                                                    <td>{formatDateTime(run.stop)}</td>
-                                                    <td>{Description(run.description)}</td>
-                                                    <td>
-                                                        {(run.schema &&
-                                                            Object.keys(run.schema).length > 0 &&
-                                                            interleave(
-                                                                Object.keys(run.schema).map((key, i) => (
-                                                                    <NavLink key={2 * i} to={`/schema/${key}`}>
-                                                                        {run.schema && run.schema[key]}
-                                                                    </NavLink>
-                                                                )),
-                                                                i => <br key={2 * i + 1} />
-                                                            )) ||
-                                                            "--"}
-                                                        {isTester && (
-                                                            <>
-                                                                <Button
-                                                                    variant="link"
-                                                                    style={{ float: "right" }}
-                                                                    onClick={() => setChangeSchemaModalOpen(true)}
-                                                                >
-                                                                    <EditIcon />
-                                                                </Button>
-                                                                <ChangeSchemaModal
-                                                                    isOpen={changeSchemaModalOpen}
-                                                                    onClose={() => setChangeSchemaModalOpen(false)}
-                                                                    initialSchema={findFirstValue(run.schema)}
-                                                                    paths={getPaths(run.data)}
-                                                                    update={(path, schema, schemaid) =>
-                                                                        dispatch(
-                                                                            actions.updateSchema(
-                                                                                run.id,
-                                                                                run.testid,
-                                                                                path,
-                                                                                schemaid,
-                                                                                schema
-                                                                            )
-                                                                        ).catch(noop)
-                                                                    }
-                                                                />
-                                                            </>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </ToolbarItem>
+        <PageSection>
+            {!run && (
+                <Bullseye>
+                    <Spinner />
+                </Bullseye>
+            )}
+            {run && (
+                <Card style={{ height: "100%" }}>
+                    <CardHeader>
+                        <Toolbar
+                            className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
+                            style={{ justifyContent: "space-between", width: "100%" }}
+                        >
+                            <ToolbarContent style={{ width: "100%" }}>
+                                <ToolbarItem aria-label="info" style={{ width: "100%" }}>
+                                    <table className="pf-c-table pf-m-compact" style={{ width: "100%" }}>
+                                        <tbody>
+                                            <tr>
+                                                <th>id</th>
+                                                <th>test</th>
+                                                <th>start</th>
+                                                <th>stop</th>
+                                                <th>description</th>
+                                                <th>schema</th>
+                                            </tr>
+                                            <tr>
+                                                <td>{run.id}</td>
+                                                <td>
+                                                    <NavLink to={`/test/${run.testid}`}>
+                                                        {run.testname || run.testid}
+                                                    </NavLink>
+                                                </td>
+                                                <td>{formatDateTime(run.start)}</td>
+                                                <td>{formatDateTime(run.stop)}</td>
+                                                <td>{Description(run.description)}</td>
+                                                <td>
+                                                    {(run.schema &&
+                                                        Object.keys(run.schema).length > 0 &&
+                                                        interleave(
+                                                            Object.keys(run.schema).map((key, i) => (
+                                                                <NavLink key={2 * i} to={`/schema/${key}`}>
+                                                                    {run.schema && run.schema[key]}
+                                                                </NavLink>
+                                                            )),
+                                                            i => <br key={2 * i + 1} />
+                                                        )) ||
+                                                        "--"}
+                                                    {isTester && (
+                                                        <>
+                                                            <Button
+                                                                variant="link"
+                                                                style={{ float: "right" }}
+                                                                onClick={() => setChangeSchemaModalOpen(true)}
+                                                            >
+                                                                <EditIcon />
+                                                            </Button>
+                                                            <ChangeSchemaModal
+                                                                isOpen={changeSchemaModalOpen}
+                                                                onClose={() => setChangeSchemaModalOpen(false)}
+                                                                initialSchema={findFirstValue(run.schema)}
+                                                                paths={getPaths(run.data)}
+                                                                update={(path, schema, schemaid) =>
+                                                                    dispatch(
+                                                                        actions.updateSchema(
+                                                                            run.id,
+                                                                            run.testid,
+                                                                            path,
+                                                                            schemaid,
+                                                                            schema
+                                                                        )
+                                                                    ).catch(noop)
+                                                                }
+                                                            />
+                                                        </>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </ToolbarItem>
 
-                                    <ToolbarItem aria-label="search" style={{ marginTop: 0 }}>
-                                        <InputGroup>
-                                            <Dropdown
-                                                isOpen={pathTypeOpen}
-                                                onSelect={(e?: React.SyntheticEvent<HTMLDivElement>) => {
-                                                    if (e) {
-                                                        setPathType(e.currentTarget.id)
-                                                    }
-                                                    setPathTypeOpen(false)
-                                                }}
-                                                toggle={
-                                                    <DropdownToggle
-                                                        onToggle={e => {
-                                                            setPathTypeOpen(e)
-                                                        }}
-                                                    >
-                                                        {pathType}
-                                                    </DropdownToggle>
+                                <ToolbarItem aria-label="search" style={{ marginTop: 0 }}>
+                                    <InputGroup>
+                                        <Dropdown
+                                            isOpen={pathTypeOpen}
+                                            onSelect={(e?: React.SyntheticEvent<HTMLDivElement>) => {
+                                                if (e) {
+                                                    setPathType(e.currentTarget.id)
                                                 }
-                                                dropdownItems={[
-                                                    <DropdownItem id="js" key="query">
-                                                        js
-                                                    </DropdownItem>,
-                                                    <DropdownItem
-                                                        id="jsonb_path_query_first"
-                                                        key="jsonb_path_query_first"
-                                                    >
-                                                        jsonb_path_query_first
-                                                    </DropdownItem>,
-                                                    <DropdownItem
-                                                        id="jsonb_path_query_array"
-                                                        key="jsonb_path_query_array"
-                                                    >
-                                                        jsonb_path_query_array
-                                                    </DropdownItem>,
-                                                ]}
-                                            ></Dropdown>
-                                            <Popover
-                                                closeBtnAriaLabel="close jsonpath help"
-                                                aria-label="jsonpath help"
-                                                position="bottom"
-                                                bodyContent={
-                                                    <div style={{ width: "500px " }}>
-                                                        <p>
-                                                            The search expression is a JSONPath implemented in the
-                                                            browser. The syntax used in PostgreSQL JSONPath queries is
-                                                            partially transformed into JSONPath which has some
-                                                            limitations, though.
-                                                        </p>
-                                                        <p>Examples:</p>
-                                                        <code>$.store.book[0:2].title</code>
-                                                        <br />
-                                                        <code>$.store.book[?(@.price &lt; 10)]</code>
-                                                        <br />
-                                                        <code>$..*</code>
-                                                    </div>
-                                                }
-                                            >
-                                                <Button variant={ButtonVariant.control} aria-label="show jsonpath help">
-                                                    <HelpIcon />
-                                                </Button>
-                                            </Popover>
-                                            <Autosuggest
-                                                inputProps={inputProps}
-                                                suggestions={pathSuggestions}
-                                                onSuggestionsFetchRequested={delayedUpdateSuggestions}
-                                                onSuggestionsClearRequested={() => {
-                                                    if (pathQuery === "") setPathSuggestions([])
-                                                }}
-                                                getSuggestionValue={value =>
-                                                    updateSuggestionValue(value, pathQuery, pathSuggestions)
-                                                }
-                                                renderSuggestion={v => <div>{v}</div>}
-                                                renderInputComponent={inputProps => (
-                                                    <input
-                                                        {...(inputProps as any)}
-                                                        className="pf-c-form-control"
-                                                        aria-label="jsonpath"
-                                                        aria-invalid={pathInvalid}
-                                                        style={{ width: "500px" }}
-                                                    />
-                                                )}
-                                            />
-                                            <Button variant="control" onClick={runPathQuery}>
-                                                Find
+                                                setPathTypeOpen(false)
+                                            }}
+                                            toggle={
+                                                <DropdownToggle
+                                                    onToggle={e => {
+                                                        setPathTypeOpen(e)
+                                                    }}
+                                                >
+                                                    {pathType}
+                                                </DropdownToggle>
+                                            }
+                                            dropdownItems={[
+                                                <DropdownItem id="js" key="query">
+                                                    js
+                                                </DropdownItem>,
+                                                <DropdownItem id="jsonb_path_query_first" key="jsonb_path_query_first">
+                                                    jsonb_path_query_first
+                                                </DropdownItem>,
+                                                <DropdownItem id="jsonb_path_query_array" key="jsonb_path_query_array">
+                                                    jsonb_path_query_array
+                                                </DropdownItem>,
+                                            ]}
+                                        ></Dropdown>
+                                        <Popover
+                                            closeBtnAriaLabel="close jsonpath help"
+                                            aria-label="jsonpath help"
+                                            position="bottom"
+                                            bodyContent={
+                                                <div style={{ width: "500px " }}>
+                                                    <p>
+                                                        The search expression is a JSONPath implemented in the browser.
+                                                        The syntax used in PostgreSQL JSONPath queries is partially
+                                                        transformed into JSONPath which has some limitations, though.
+                                                    </p>
+                                                    <p>Examples:</p>
+                                                    <code>$.store.book[0:2].title</code>
+                                                    <br />
+                                                    <code>$.store.book[?(@.price &lt; 10)]</code>
+                                                    <br />
+                                                    <code>$..*</code>
+                                                </div>
+                                            }
+                                        >
+                                            <Button variant={ButtonVariant.control} aria-label="show jsonpath help">
+                                                <HelpIcon />
                                             </Button>
-                                            <Button
-                                                variant="control"
-                                                onClick={() => {
-                                                    setPathQuery("")
-                                                    setData(toString(run.data))
-                                                }}
-                                            >
-                                                Clear
-                                            </Button>
-                                        </InputGroup>
-                                    </ToolbarItem>
-                                </ToolbarContent>
-                            </Toolbar>
-                        </CardHeader>
-                        <CardBody>
-                            {!run.data && (
-                                <Bullseye>
-                                    <Spinner />
-                                </Bullseye>
-                            )}
-                            {run.data && (
-                                <Editor
-                                    value={data}
-                                    options={{
-                                        mode: "application/ld+json",
-                                        readOnly: true,
-                                    }}
-                                />
-                            )}
-                        </CardBody>
-                    </>
-                )}
-            </Card>
-        </React.Fragment>
-        // </PageSection>
+                                        </Popover>
+                                        <Autosuggest
+                                            inputProps={inputProps}
+                                            suggestions={pathSuggestions}
+                                            onSuggestionsFetchRequested={delayedUpdateSuggestions}
+                                            onSuggestionsClearRequested={() => {
+                                                if (pathQuery === "") setPathSuggestions([])
+                                            }}
+                                            getSuggestionValue={value =>
+                                                updateSuggestionValue(value, pathQuery, pathSuggestions)
+                                            }
+                                            renderSuggestion={v => <div>{v}</div>}
+                                            renderInputComponent={inputProps => (
+                                                <input
+                                                    {...(inputProps as any)}
+                                                    className="pf-c-form-control"
+                                                    aria-label="jsonpath"
+                                                    aria-invalid={pathInvalid}
+                                                    style={{ width: "500px" }}
+                                                />
+                                            )}
+                                        />
+                                        <Button variant="control" onClick={runPathQuery}>
+                                            Find
+                                        </Button>
+                                        <Button
+                                            variant="control"
+                                            onClick={() => {
+                                                setPathQuery("")
+                                                setData(toString(run.data))
+                                            }}
+                                        >
+                                            Clear
+                                        </Button>
+                                    </InputGroup>
+                                </ToolbarItem>
+                            </ToolbarContent>
+                        </Toolbar>
+                    </CardHeader>
+                    <CardBody>
+                        {!run.data && (
+                            <Bullseye>
+                                <Spinner />
+                            </Bullseye>
+                        )}
+                        {run.data && (
+                            <Editor
+                                value={data}
+                                options={{
+                                    mode: "application/ld+json",
+                                    readOnly: true,
+                                }}
+                            />
+                        )}
+                    </CardBody>
+                </Card>
+            )}
+        </PageSection>
     )
 }

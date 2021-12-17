@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "react-router"
 import { useSelector, useDispatch } from "react-redux"
 
 import {
     Alert,
+    Bullseye,
     Button,
     Card,
     CardBody,
     Form,
     FormGroup,
+    PageSection,
     Spinner,
     TextArea,
     TextInput,
     Tooltip,
-    Bullseye,
 } from "@patternfly/react-core"
 import { ImportIcon } from "@patternfly/react-icons"
 import jsonpath from "jsonpath"
@@ -275,148 +276,140 @@ export default function Schema() {
             })
     }
     return (
-        <React.Fragment>
-            <Card style={{ flexGrow: 1 }}>
-                {loading && (
-                    <Bullseye>
-                        <Spinner />
-                    </Bullseye>
-                )}
-                {!loading && (
-                    <>
-                        <CardBody>
-                            <SavedTabs
-                                afterSave={() => {
-                                    setModified(false)
-                                    dispatchInfo(
-                                        dispatch,
-                                        "SAVE_SCHEMA",
-                                        "Saved!",
-                                        "Schema was successfully saved",
-                                        3000
-                                    )
+        <PageSection>
+            {loading && (
+                <Bullseye>
+                    <Spinner />
+                </Bullseye>
+            )}
+            {!loading && (
+                <Card style={{ height: "100%" }}>
+                    <CardBody>
+                        <SavedTabs
+                            afterSave={() => {
+                                setModified(false)
+                                dispatchInfo(dispatch, "SAVE_SCHEMA", "Saved!", "Schema was successfully saved", 3000)
+                            }}
+                            afterReset={() => {
+                                setModified(false)
+                            }}
+                            canSave={isTester}
+                        >
+                            <SavedTab
+                                title="General"
+                                fragment="general"
+                                onSave={save}
+                                onReset={() => {
+                                    setCurrentSchema(schema)
                                 }}
-                                afterReset={() => {
-                                    setModified(false)
-                                }}
-                                canSave={isTester}
+                                isModified={() => modified}
                             >
-                                <SavedTab
-                                    title="General"
-                                    fragment="general"
-                                    onSave={save}
-                                    onReset={() => {
+                                <General
+                                    schema={currentSchema}
+                                    getUri={editorSchema ? () => getUri(editorSchema) : undefined}
+                                    onChange={schema => {
                                         setCurrentSchema(schema)
+                                        setModified(true)
                                     }}
-                                    isModified={() => modified}
-                                >
-                                    <General
-                                        schema={currentSchema}
-                                        getUri={editorSchema ? () => getUri(editorSchema) : undefined}
-                                        onChange={schema => {
-                                            setCurrentSchema(schema)
-                                            setModified(true)
-                                        }}
-                                    />
-                                </SavedTab>
-                                <SavedTab
-                                    title="JSON schema"
-                                    fragment="json-schema"
-                                    onSave={save}
-                                    onReset={() => {
-                                        setCurrentSchema(schema)
-                                        setEditorSchema(schema?.schema ? toString(schema?.schema) : undefined)
-                                    }}
-                                    isModified={() => modified}
-                                >
-                                    {editorSchema !== undefined && (
-                                        <div style={{ height: "600px" }}>
-                                            <Editor
-                                                value={editorSchema}
-                                                onChange={value => {
-                                                    setEditorSchema(value)
-                                                    setModified(true)
-                                                }}
-                                                options={{
-                                                    mode: "application/ld+json",
-                                                    readOnly: !isTester,
-                                                }}
-                                            />
-                                        </div>
-                                    )}
-                                    {!editorSchema && (
-                                        <>
-                                            This schema does not have a validation JSON schema defined.
-                                            <br />
-                                            <Button
-                                                onClick={() => {
-                                                    setEditorSchema(
-                                                        JSON.stringify(
-                                                            {
-                                                                $id: currentSchema?.uri,
-                                                                $schema: "http://json-schema.org/draft-07/schema#",
-                                                                type: "object",
-                                                            },
-                                                            undefined,
-                                                            2
-                                                        )
+                                />
+                            </SavedTab>
+                            <SavedTab
+                                title="JSON schema"
+                                fragment="json-schema"
+                                onSave={save}
+                                onReset={() => {
+                                    setCurrentSchema(schema)
+                                    setEditorSchema(schema?.schema ? toString(schema?.schema) : undefined)
+                                }}
+                                isModified={() => modified}
+                            >
+                                {editorSchema !== undefined && (
+                                    <div style={{ height: "600px" }}>
+                                        <Editor
+                                            value={editorSchema}
+                                            onChange={value => {
+                                                setEditorSchema(value)
+                                                setModified(true)
+                                            }}
+                                            options={{
+                                                mode: "application/ld+json",
+                                                readOnly: !isTester,
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                                {!editorSchema && (
+                                    <>
+                                        This schema does not have a validation JSON schema defined.
+                                        <br />
+                                        <Button
+                                            onClick={() => {
+                                                setEditorSchema(
+                                                    JSON.stringify(
+                                                        {
+                                                            $id: currentSchema?.uri,
+                                                            $schema: "http://json-schema.org/draft-07/schema#",
+                                                            type: "object",
+                                                        },
+                                                        undefined,
+                                                        2
                                                     )
-                                                    setModified(true)
-                                                }}
-                                            >
-                                                Add validation schema
-                                            </Button>
-                                        </>
-                                    )}
-                                </SavedTab>
-                                <SavedTab
-                                    title="Schema extractors"
-                                    fragment="extractors"
-                                    onSave={save}
-                                    onReset={() => {
-                                        setCurrentSchema(schema)
-                                        setExtractors(originalExtractors)
+                                                )
+                                                setModified(true)
+                                            }}
+                                        >
+                                            Add validation schema
+                                        </Button>
+                                    </>
+                                )}
+                            </SavedTab>
+                            <SavedTab
+                                title="Schema extractors"
+                                fragment="extractors"
+                                onSave={save}
+                                onReset={() => {
+                                    setCurrentSchema(schema)
+                                    setExtractors(originalExtractors)
+                                }}
+                                isModified={() => modified}
+                            >
+                                <Extractors
+                                    uri={currentSchema?.uri || ""}
+                                    extractors={extractors}
+                                    setExtractors={extractors => {
+                                        setExtractors(extractors)
+                                        setModified(true)
                                     }}
-                                    isModified={() => modified}
-                                >
-                                    <Extractors
-                                        uri={currentSchema?.uri || ""}
-                                        extractors={extractors}
-                                        setExtractors={extractors => {
-                                            setExtractors(extractors)
-                                            setModified(true)
-                                        }}
-                                        isTester={isTester}
-                                    />
-                                    {isTester && (
-                                        <>
-                                            <Button
-                                                isDisabled={!currentSchema?.uri}
-                                                onClick={() => {
-                                                    if (currentSchema?.uri) {
-                                                        setExtractors([
-                                                            ...extractors,
-                                                            { accessor: "", schema: currentSchema?.uri },
-                                                        ])
-                                                    }
-                                                }}
-                                            >
-                                                Add extractor
-                                            </Button>
-                                            {!currentSchema?.uri && (
-                                                <>
-                                                    <br />
-                                                    <span style={{ color: "red" }}>Please define an URI first.</span>
-                                                </>
-                                            )}
-                                        </>
-                                    )}
-                                </SavedTab>
-                            </SavedTabs>
-                        </CardBody>
-                    </>
-                )}
-            </Card>
-        </React.Fragment>
+                                    isTester={isTester}
+                                />
+                                {isTester && (
+                                    <>
+                                        <Button
+                                            isDisabled={!currentSchema?.uri}
+                                            onClick={() => {
+                                                if (currentSchema?.uri) {
+                                                    setExtractors([
+                                                        ...extractors,
+                                                        { accessor: "", schema: currentSchema?.uri },
+                                                    ])
+                                                }
+                                            }}
+                                        >
+                                            Add extractor
+                                        </Button>
+                                        {!currentSchema?.uri && (
+                                            <>
+                                                <br />
+                                                <span style={{ color: "red" }}>Please define an URI first.</span>
+                                            </>
+                                        )}
+                                    </>
+                                )}
+                            </SavedTab>
+                        </SavedTabs>
+                    </CardBody>
+                </Card>
+            )}
+        </PageSection>
     )
 }

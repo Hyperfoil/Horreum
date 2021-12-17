@@ -26,6 +26,7 @@ import {
     EmptyState,
     EmptyStateBody,
     Modal,
+    PageSection,
     Select,
     SelectOption,
     SelectOptionObject,
@@ -223,170 +224,172 @@ export default function Series() {
     }, [])
     const [linkCopyOpen, setLinkCopyOpen] = useState(false)
     return (
-        <Card>
-            <CardHeader>
-                {
-                    <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
-                        <div style={{ display: "flex" }}>
-                            <TestSelect
-                                placeholderText="Choose test..."
-                                initialTestName={paramTest}
-                                onSelect={onSelectTest}
-                                selection={selectedTest}
-                            />
-                            {selectedTest && (
-                                <TagsSelect
-                                    testId={selectedTest?.id}
-                                    selection={currentTags}
-                                    onSelect={setCurrentTags}
-                                    showIfNoTags={false}
-                                    beforeTagsLoading={beforeTagsLoading}
-                                    onTagsLoaded={onTagsLoaded}
+        <PageSection>
+            <Card>
+                <CardHeader>
+                    {
+                        <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                            <div style={{ display: "flex" }}>
+                                <TestSelect
+                                    placeholderText="Choose test..."
+                                    initialTestName={paramTest}
+                                    onSelect={onSelectTest}
+                                    selection={selectedTest}
                                 />
-                            )}
-                            {selectedTest && (
-                                <>
-                                    <NavLink
-                                        className="pf-c-button pf-m-primary"
-                                        to={"/test/" + selectedTest.id + "#vars"}
-                                    >
-                                        Variable definitions
-                                    </NavLink>
-                                    <Button variant="secondary" onClick={() => window.open(dashboardUrl, "_blank")}>
-                                        Open Grafana
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        isDisabled={!selectedTest || loadingTags || (requiresTags && !currentTags)}
-                                        onClick={() => setLinkCopyOpen(true)}
-                                    >
-                                        Copy link
-                                    </Button>
-                                    <Modal
-                                        variant="small"
-                                        title="Copy link to this chart"
-                                        isOpen={linkCopyOpen}
-                                        onClose={() => setLinkCopyOpen(false)}
-                                        actions={[
-                                            <Button key="cancel" onClick={() => setLinkCopyOpen(false)}>
-                                                Close
-                                            </Button>,
-                                        ]}
-                                    >
-                                        <ClipboardCopy
-                                            isReadOnly={true}
-                                            onCopy={() => setTimeout(() => setLinkCopyOpen(false), 1000)}
+                                {selectedTest && (
+                                    <TagsSelect
+                                        testId={selectedTest?.id}
+                                        selection={currentTags}
+                                        onSelect={setCurrentTags}
+                                        showIfNoTags={false}
+                                        beforeTagsLoading={beforeTagsLoading}
+                                        onTagsLoaded={onTagsLoaded}
+                                    />
+                                )}
+                                {selectedTest && (
+                                    <>
+                                        <NavLink
+                                            className="pf-c-button pf-m-primary"
+                                            to={"/test/" + selectedTest.id + "#vars"}
                                         >
-                                            {window.location.origin + window.location.pathname + createQuery(true)}
-                                        </ClipboardCopy>
-                                    </Modal>
-                                </>
-                            )}
+                                            Variable definitions
+                                        </NavLink>
+                                        <Button variant="secondary" onClick={() => window.open(dashboardUrl, "_blank")}>
+                                            Open Grafana
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            isDisabled={!selectedTest || loadingTags || (requiresTags && !currentTags)}
+                                            onClick={() => setLinkCopyOpen(true)}
+                                        >
+                                            Copy link
+                                        </Button>
+                                        <Modal
+                                            variant="small"
+                                            title="Copy link to this chart"
+                                            isOpen={linkCopyOpen}
+                                            onClose={() => setLinkCopyOpen(false)}
+                                            actions={[
+                                                <Button key="cancel" onClick={() => setLinkCopyOpen(false)}>
+                                                    Close
+                                                </Button>,
+                                            ]}
+                                        >
+                                            <ClipboardCopy
+                                                isReadOnly={true}
+                                                onCopy={() => setTimeout(() => setLinkCopyOpen(false), 1000)}
+                                            >
+                                                {window.location.origin + window.location.pathname + createQuery(true)}
+                                            </ClipboardCopy>
+                                        </Modal>
+                                    </>
+                                )}
+                            </div>
+                            <div style={{ display: "flex" }}>
+                                <DatePicker
+                                    value={date}
+                                    onChange={value => {
+                                        setDate(value)
+                                        const dateTime = DateTime.fromFormat(value, "yyyy-MM-dd")
+                                        if (dateTime.isValid) {
+                                            setEndTime(dateTime.toMillis())
+                                        }
+                                    }}
+                                />
+                                <TimespanSelect onChange={setTimespan} />
+                                <LineTypeSelect onChange={setLineType} />
+                            </div>
                         </div>
-                        <div style={{ display: "flex" }}>
-                            <DatePicker
-                                value={date}
-                                onChange={value => {
-                                    setDate(value)
-                                    const dateTime = DateTime.fromFormat(value, "yyyy-MM-dd")
-                                    if (dateTime.isValid) {
-                                        setEndTime(dateTime.toMillis())
-                                    }
-                                }}
-                            />
-                            <TimespanSelect onChange={setTimespan} />
-                            <LineTypeSelect onChange={setLineType} />
-                        </div>
-                    </div>
-                }
-            </CardHeader>
-            <CardBody>
-                {!selectedTest && (
-                    <EmptyState>
-                        <Title headingLevel="h2">No test selected</Title>
-                        <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
-                    </EmptyState>
-                )}
-                {selectedTest && loadingTags && (
-                    <EmptyState>
-                        <EmptyStateBody>
-                            Loading tags... <Spinner size="md" />
-                        </EmptyStateBody>
-                    </EmptyState>
-                )}
-                {selectedTest && !loadingTags && requiresTags && !currentTags && (
-                    <EmptyState>
-                        <Title headingLevel="h2">Please select tags filtering test runs.</Title>
-                    </EmptyState>
-                )}
-                {selectedTest && !loadingPanels && !requiresTags && panels.length === 0 && (
-                    <EmptyState>
-                        <Title headingLevel="h2">
-                            Test {selectedTest.toString()} does not define any regression variables
-                        </Title>
-                        <NavLink className="pf-c-button pf-m-primary" to={"/test/" + selectedTest.id + "#vars"}>
-                            Define regression variables
-                        </NavLink>
-                    </EmptyState>
-                )}
-                {!loadingTags &&
-                    (!requiresTags || currentTags) &&
-                    panels &&
-                    panels.map((p, i) => (
-                        <DataList key={i} aria-label="test variables">
-                            <DataListItem aria-labelledby="variable-name">
-                                {dashboardUrl && (
+                    }
+                </CardHeader>
+                <CardBody>
+                    {!selectedTest && (
+                        <EmptyState>
+                            <Title headingLevel="h2">No test selected</Title>
+                            <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
+                        </EmptyState>
+                    )}
+                    {selectedTest && loadingTags && (
+                        <EmptyState>
+                            <EmptyStateBody>
+                                Loading tags... <Spinner size="md" />
+                            </EmptyStateBody>
+                        </EmptyState>
+                    )}
+                    {selectedTest && !loadingTags && requiresTags && !currentTags && (
+                        <EmptyState>
+                            <Title headingLevel="h2">Please select tags filtering test runs.</Title>
+                        </EmptyState>
+                    )}
+                    {selectedTest && !loadingPanels && !requiresTags && panels.length === 0 && (
+                        <EmptyState>
+                            <Title headingLevel="h2">
+                                Test {selectedTest.toString()} does not define any regression variables
+                            </Title>
+                            <NavLink className="pf-c-button pf-m-primary" to={"/test/" + selectedTest.id + "#vars"}>
+                                Define regression variables
+                            </NavLink>
+                        </EmptyState>
+                    )}
+                    {!loadingTags &&
+                        (!requiresTags || currentTags) &&
+                        panels &&
+                        panels.map((p, i) => (
+                            <DataList key={i} aria-label="test variables">
+                                <DataListItem aria-labelledby="variable-name">
+                                    {dashboardUrl && (
+                                        <DataListItemRow>
+                                            <DataListItemCells
+                                                dataListCells={[
+                                                    <DataListCell key="chart">
+                                                        <PanelChart
+                                                            title={p.name}
+                                                            variables={p.variables.map(v => v.id)}
+                                                            tags={currentTags?.toString() || ""}
+                                                            endTime={endTime}
+                                                            setEndTime={setEndTime}
+                                                            timespan={timespan}
+                                                            lineType={lineType}
+                                                            onChangeSelected={(changeId, variableId) => {
+                                                                setSelectedChange(changeId)
+                                                                setSelectedVariable(variableId)
+                                                                // we cannot scroll to an element that's not visible yet
+                                                                window.setTimeout(() => {
+                                                                    const element = document.getElementById(
+                                                                        "change_" + changeId
+                                                                    )
+                                                                    if (element && element !== null) {
+                                                                        element.scrollIntoView()
+                                                                    }
+                                                                    // this is hacky way to reopen tabs on subsequent click
+                                                                    setSelectedVariable(undefined)
+                                                                }, 100)
+                                                            }}
+                                                        />
+                                                    </DataListCell>,
+                                                ]}
+                                            />
+                                        </DataListItemRow>
+                                    )}
                                     <DataListItemRow>
                                         <DataListItemCells
                                             dataListCells={[
-                                                <DataListCell key="chart">
-                                                    <PanelChart
-                                                        title={p.name}
-                                                        variables={p.variables.map(v => v.id)}
-                                                        tags={currentTags?.toString() || ""}
-                                                        endTime={endTime}
-                                                        setEndTime={setEndTime}
-                                                        timespan={timespan}
-                                                        lineType={lineType}
-                                                        onChangeSelected={(changeId, variableId) => {
-                                                            setSelectedChange(changeId)
-                                                            setSelectedVariable(variableId)
-                                                            // we cannot scroll to an element that's not visible yet
-                                                            window.setTimeout(() => {
-                                                                const element = document.getElementById(
-                                                                    "change_" + changeId
-                                                                )
-                                                                if (element && element !== null) {
-                                                                    element.scrollIntoView()
-                                                                }
-                                                                // this is hacky way to reopen tabs on subsequent click
-                                                                setSelectedVariable(undefined)
-                                                            }, 100)
-                                                        }}
+                                                <DataListCell key="changes">
+                                                    <ChangesTabs
+                                                        variables={p.variables}
+                                                        testOwner={selectedTest?.owner}
+                                                        selectedChangeId={selectedChange}
+                                                        selectedVariableId={selectedVariable}
                                                     />
                                                 </DataListCell>,
                                             ]}
                                         />
                                     </DataListItemRow>
-                                )}
-                                <DataListItemRow>
-                                    <DataListItemCells
-                                        dataListCells={[
-                                            <DataListCell key="changes">
-                                                <ChangesTabs
-                                                    variables={p.variables}
-                                                    testOwner={selectedTest?.owner}
-                                                    selectedChangeId={selectedChange}
-                                                    selectedVariableId={selectedVariable}
-                                                />
-                                            </DataListCell>,
-                                        ]}
-                                    />
-                                </DataListItemRow>
-                            </DataListItem>
-                        </DataList>
-                    ))}
-            </CardBody>
-        </Card>
+                                </DataListItem>
+                            </DataList>
+                        ))}
+                </CardBody>
+            </Card>
+        </PageSection>
     )
 }
