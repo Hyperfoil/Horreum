@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from "react"
 import { useParams } from "react-router"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
-import { Bullseye, Card, CardBody, Spinner } from "@patternfly/react-core"
+import { Bullseye, Card, CardBody, CardHeader, PageSection, Spinner } from "@patternfly/react-core"
 
 import * as actions from "./actions"
 import * as selectors from "./selectors"
 import { TestDispatch } from "./reducers"
 
+import ButtonLink from "../../components/ButtonLink"
 import SavedTabs, { SavedTab, TabFunctions, TabFunctionsRef } from "../../components/SavedTabs"
 
 import { useTester, teamsSelector } from "../../auth"
@@ -59,120 +60,117 @@ export default function Test() {
     const saveFunc = (ref: TabFunctionsRef) => () => ref.current ? ref.current.save() : Promise.resolve()
     const resetFunc = (ref: TabFunctionsRef) => () => ref.current?.reset()
     return (
-        <>
-            <Card style={{ flexGrow: 1 }}>
+        <PageSection>
+            <Card>
+                <CardHeader>
+                    <ButtonLink to={`/run/list/${testId}`}>Go to run list</ButtonLink>
+                </CardHeader>
                 {!loaded && testId !== 0 && (
                     <Bullseye>
                         <Spinner />
                     </Bullseye>
                 )}
                 {((loaded && test) || testId === 0) && (
-                    <>
-                        <CardBody>
-                            <SavedTabs
-                                afterSave={() => {
-                                    setModified(false)
-                                    dispatchInfo(dispatch, "SAVE", "Saved!", "Test was succesfully updated!", 3000)
-                                }}
-                                afterReset={() => setModified(false)}
-                                canSave={isTester}
+                    <CardBody>
+                        <SavedTabs
+                            afterSave={() => {
+                                setModified(false)
+                                dispatchInfo(dispatch, "SAVE", "Saved!", "Test was succesfully updated!", 3000)
+                            }}
+                            afterReset={() => setModified(false)}
+                            canSave={isTester}
+                        >
+                            <SavedTab
+                                title="General"
+                                fragment="general"
+                                onSave={saveFunc(generalFuncsRef)}
+                                onReset={resetFunc(generalFuncsRef)}
+                                isModified={() => modified}
                             >
-                                <SavedTab
-                                    title="General"
-                                    fragment="general"
-                                    onSave={saveFunc(generalFuncsRef)}
-                                    onReset={resetFunc(generalFuncsRef)}
-                                    isModified={() => modified}
-                                >
-                                    <General
-                                        test={test || undefined}
-                                        onTestIdChange={setTestId}
-                                        onModified={setModified}
-                                        funcsRef={generalFuncsRef}
-                                    />
-                                </SavedTab>
-                                <SavedTab
-                                    title="Access"
-                                    fragment="access"
-                                    onSave={saveFunc(accessFuncsRef)}
-                                    onReset={resetFunc(accessFuncsRef)}
-                                    isModified={() => modified}
-                                >
-                                    <Access
-                                        test={test || undefined}
-                                        onModified={setModified}
-                                        funcsRef={accessFuncsRef}
-                                    />
-                                </SavedTab>
-                                <SavedTab
-                                    title="Views"
-                                    fragment="views"
-                                    isHidden={testId <= 0}
-                                    onSave={saveFunc(viewFuncsRef)}
-                                    onReset={resetFunc(viewFuncsRef)}
-                                    isModified={() => modified}
-                                >
-                                    <Views
-                                        testId={testId}
-                                        testView={
-                                            (test ? test.defaultView : undefined) || { name: "default", components: [] }
-                                        }
-                                        testOwner={test ? test.owner : undefined}
-                                        onModified={setModified}
-                                        funcsRef={viewFuncsRef}
-                                    />
-                                </SavedTab>
-                                <SavedTab
-                                    title="Regression variables"
-                                    fragment="vars"
-                                    isHidden={testId <= 0}
-                                    onSave={saveFunc(variablesFuncsRef)}
-                                    onReset={resetFunc(variablesFuncsRef)}
-                                    isModified={() => modified}
-                                >
-                                    <Variables
-                                        testId={testId}
-                                        testName={(test && test.name) || ""}
-                                        testOwner={test ? test.owner : undefined}
-                                        onModified={setModified}
-                                        funcsRef={variablesFuncsRef}
-                                    />
-                                </SavedTab>
-                                <SavedTab
-                                    title="Webhooks"
-                                    fragment="hooks"
-                                    isHidden={testId <= 0 || !isTester}
-                                    onSave={saveFunc(hooksFuncsRef)}
-                                    onReset={resetFunc(hooksFuncsRef)}
-                                    isModified={() => modified}
-                                >
-                                    <Hooks
-                                        testId={testId}
-                                        testOwner={test ? test.owner : undefined}
-                                        onModified={setModified}
-                                        funcsRef={hooksFuncsRef}
-                                    />
-                                </SavedTab>
-                                <SavedTab
-                                    title="Subscriptions"
-                                    fragment="subscriptions"
-                                    isHidden={testId <= 0 || !isTester}
-                                    onSave={saveFunc(subscriptionsFuncsRef)}
-                                    onReset={resetFunc(subscriptionsFuncsRef)}
-                                    isModified={() => modified}
-                                >
-                                    <Subscriptions
-                                        testId={testId}
-                                        testOwner={test ? test.owner : undefined}
-                                        onModified={setModified}
-                                        funcsRef={subscriptionsFuncsRef}
-                                    />
-                                </SavedTab>
-                            </SavedTabs>
-                        </CardBody>
-                    </>
+                                <General
+                                    test={test || undefined}
+                                    onTestIdChange={setTestId}
+                                    onModified={setModified}
+                                    funcsRef={generalFuncsRef}
+                                />
+                            </SavedTab>
+                            <SavedTab
+                                title="Access"
+                                fragment="access"
+                                onSave={saveFunc(accessFuncsRef)}
+                                onReset={resetFunc(accessFuncsRef)}
+                                isModified={() => modified}
+                            >
+                                <Access test={test || undefined} onModified={setModified} funcsRef={accessFuncsRef} />
+                            </SavedTab>
+                            <SavedTab
+                                title="Views"
+                                fragment="views"
+                                isHidden={testId <= 0}
+                                onSave={saveFunc(viewFuncsRef)}
+                                onReset={resetFunc(viewFuncsRef)}
+                                isModified={() => modified}
+                            >
+                                <Views
+                                    testId={testId}
+                                    testView={
+                                        (test ? test.defaultView : undefined) || { name: "default", components: [] }
+                                    }
+                                    testOwner={test ? test.owner : undefined}
+                                    onModified={setModified}
+                                    funcsRef={viewFuncsRef}
+                                />
+                            </SavedTab>
+                            <SavedTab
+                                title="Regression variables"
+                                fragment="vars"
+                                isHidden={testId <= 0}
+                                onSave={saveFunc(variablesFuncsRef)}
+                                onReset={resetFunc(variablesFuncsRef)}
+                                isModified={() => modified}
+                            >
+                                <Variables
+                                    testId={testId}
+                                    testName={(test && test.name) || ""}
+                                    testOwner={test ? test.owner : undefined}
+                                    onModified={setModified}
+                                    funcsRef={variablesFuncsRef}
+                                />
+                            </SavedTab>
+                            <SavedTab
+                                title="Webhooks"
+                                fragment="hooks"
+                                isHidden={testId <= 0 || !isTester}
+                                onSave={saveFunc(hooksFuncsRef)}
+                                onReset={resetFunc(hooksFuncsRef)}
+                                isModified={() => modified}
+                            >
+                                <Hooks
+                                    testId={testId}
+                                    testOwner={test ? test.owner : undefined}
+                                    onModified={setModified}
+                                    funcsRef={hooksFuncsRef}
+                                />
+                            </SavedTab>
+                            <SavedTab
+                                title="Subscriptions"
+                                fragment="subscriptions"
+                                isHidden={testId <= 0 || !isTester}
+                                onSave={saveFunc(subscriptionsFuncsRef)}
+                                onReset={resetFunc(subscriptionsFuncsRef)}
+                                isModified={() => modified}
+                            >
+                                <Subscriptions
+                                    testId={testId}
+                                    testOwner={test ? test.owner : undefined}
+                                    onModified={setModified}
+                                    funcsRef={subscriptionsFuncsRef}
+                                />
+                            </SavedTab>
+                        </SavedTabs>
+                    </CardBody>
                 )}
             </Card>
-        </>
+        </PageSection>
     )
 }
