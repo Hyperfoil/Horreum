@@ -1,14 +1,26 @@
 import React, { useEffect, useState } from "react"
 
-import { ActionGroup, Button, Level, LevelItem, Popover, Switch, TextArea, Title } from "@patternfly/react-core"
+import {
+    ActionGroup,
+    Button,
+    Level,
+    LevelItem,
+    Popover,
+    Switch,
+    TextArea,
+    Title,
+    Tooltip,
+} from "@patternfly/react-core"
 import { TableComposable, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table"
-import { EditIcon } from "@patternfly/react-icons"
+import { EditIcon, HelpIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
+import ReactMarkdown from "react-markdown"
 
 import { RunData, TableReport, TableReportConfig, ReportComment, updateComment } from "./api"
 import { formatDateTime } from "../../utils"
 import "./TableReportView.css"
+import "github-markdown-css"
 
 function formatter(func: string | undefined) {
     // eslint-disable-next-line
@@ -75,14 +87,16 @@ function ComponentTable(props: ComponentTableProps) {
     })
     const [minMaxDomain, setMinMaxDomain] = useState(false)
     const commonChartElements = [
-        <CartesianGrid strokeDasharray="3 3" />,
+        <CartesianGrid key="grid" strokeDasharray="3 3" />,
         <YAxis
+            key="yaxis"
             width={80}
             yAxisId={0}
             tick={{ fontSize: 12 }}
             domain={minMaxDomain ? ["dataMin", "dataMax"] : undefined}
         />,
         <Legend
+            key="legend"
             iconType="line"
             payload={series.map((s, i) => ({
                 id: s,
@@ -177,6 +191,21 @@ function ComponentTable(props: ComponentTableProps) {
     )
 }
 
+function MarkdownCheatSheetLink() {
+    return (
+        <Tooltip position="right" content={<span>Markdown Cheat Sheet</span>}>
+            <a
+                style={{ padding: "5px 8px" }}
+                target="_blank"
+                rel="noopener noreferrer"
+                href="https://www.markdownguide.org/cheat-sheet/"
+            >
+                <HelpIcon /> Markdown Cheat Sheet
+            </a>
+        </Tooltip>
+    )
+}
+
 type CommentProps = {
     editable?: boolean
     text: string
@@ -190,15 +219,22 @@ function Comment(props: CommentProps) {
     // last text we've successfully updated to; this prevents the need to re-render whole report
     const [updated, setUpdated] = useState(props.text)
     useEffect(() => setUpdated(props.text), [props.text])
-    if (!props.editable) {
-        return props.text ? <div className="reportComment">{props.text}</div> : null
-    }
-    if (edit) {
+    if (!edit) {
+        return (
+            <div className="reportComment markdown-body">
+                <ReactMarkdown>{text}</ReactMarkdown>
+                {props.editable && (
+                    <Button className="reportCommentEdit nonPrintable" variant="link" onClick={() => setEdit(true)}>
+                        {text ? "Edit" : "Add"} comment <EditIcon />
+                    </Button>
+                )}
+            </div>
+        )
+    } else {
         return (
             <div className="reportComment">
                 <TextArea
                     id="comment"
-                    style={{ width: "100%" }}
                     isDisabled={updating}
                     onChange={setText}
                     autoResize={true}
@@ -232,16 +268,8 @@ function Comment(props: CommentProps) {
                     >
                         Cancel
                     </Button>
+                    <MarkdownCheatSheetLink />
                 </ActionGroup>
-            </div>
-        )
-    } else {
-        return (
-            <div className="reportComment">
-                <Button className="reportCommentEdit nonPrintable" variant="link" onClick={() => setEdit(true)}>
-                    {text ? "Edit" : "Add"} comment <EditIcon />
-                </Button>
-                <div>{text}</div>
             </div>
         )
     }

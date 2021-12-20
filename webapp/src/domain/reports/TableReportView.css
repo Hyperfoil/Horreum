@@ -11,8 +11,9 @@
     }
 
     /* This magic piece makes sure that ResponsiveContainer re-renders before print */
-    .recharts-wrapper, .recharts-surface {
-        width: calc(100%)!important;
+    .recharts-wrapper,
+    .recharts-surface {
+        width: calc(100%) !important;
     }
 }
 
