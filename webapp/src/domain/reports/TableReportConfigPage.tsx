@@ -131,6 +131,7 @@ export default function TableReportConfigPage() {
         labelAccessors: "",
         components: [],
     })
+    const configValid = config.test?.id && config.test.id >= 0 && config.title && config.seriesAccessors
     const [loading, setLoading] = useState(false)
     const [test, setTest] = useState<SelectedTest>()
     const [preview, setPreview] = useState<TableReport>()
@@ -500,6 +501,7 @@ export default function TableReportConfigPage() {
                         {isTester && (
                             <ActionGroup>
                                 <Button
+                                    isDisabled={!configValid}
                                     onClick={() => {
                                         // TODO save locally for faster reload...
                                         api.updateTableConfig(config).then(
@@ -519,6 +521,7 @@ export default function TableReportConfigPage() {
                                 </Button>
                                 <Button
                                     variant="secondary"
+                                    isDisabled={!configValid}
                                     onClick={() => {
                                         api.previewTableReport(config).then(
                                             report => setPreview(report),

@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -163,6 +164,9 @@ public class ReportServiceImpl implements ReportService {
       if (config == null) {
          throw ServiceException.badRequest("No config");
       }
+      if (config.test == null || config.test.id == null) {
+         throw ServiceException.badRequest("No test");
+      }
       if (config.filterFunction != null && config.filterAccessors == null) {
          throw ServiceException.badRequest("Filter function is defined but there are no accessors");
       }
@@ -227,9 +231,15 @@ public class ReportServiceImpl implements ReportService {
    }
 
    private TableReport createTableReport(TableReportConfig config) {
+      Integer testId = config.test.id;
+      config.test = Test.findById(testId);
+      if (config.test == null) {
+         throw ServiceException.badRequest("Cannot find test with ID " + testId);
+      }
       TableReport report = new TableReport();
       report.config = config;
       report.created = Instant.now();
+      report.comments = Collections.emptyList();
       List<Object[]> runCategories = null, series, labels = null;
       Query timestampQuery;
       if (config.filterAccessors != null) {

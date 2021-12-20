@@ -100,7 +100,7 @@ export default function Reports() {
                             <NavLink to={`/reports/table/${last.id}`}>
                                 <ArrowRightIcon />
                                 {"\u00A0"}
-                                {formatDateTime(last.created)}
+                                {formatDateTime(last.created * 1000)}
                             </NavLink>
                         )
                     } else {

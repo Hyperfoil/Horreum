@@ -302,7 +302,7 @@ export default function TableReportView(props: TableReportViewProps) {
     return (
         <div>
             <Title headingLevel="h1">{config.title}</Title>
-            Created on {formatDateTime(props.report.created)} from runs in test{" "}
+            Created on {formatDateTime(props.report.created * 1000)} from runs in test{" "}
             {props.report.config.test ? (
                 <NavLink to={"/test/" + props.report.config.test.id}>
                     {props.report.config.test.name + " (" + props.report.config.test.id + ")"}
