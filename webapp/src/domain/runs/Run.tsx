@@ -236,6 +236,65 @@ function findSuggestions(run: RunDef | false, value: string): [string[], boolean
     }
 }
 
+type SearchQueryHelpProps = {
+    pathType: string
+}
+
+function SearchQueryHelp({ pathType }: SearchQueryHelpProps) {
+    return (
+        <Popover
+            closeBtnAriaLabel="close jsonpath help"
+            aria-label="jsonpath help"
+            position="bottom"
+            hasAutoWidth={true}
+            bodyContent={
+                <div style={{ width: "450px" }}>
+                    {pathType == "js" ? (
+                        <>
+                            <p>
+                                Variant <code>js</code> executes the search expression inside your browser using{" "}
+                                <a
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    href="https://www.npmjs.com/package/jsonpath"
+                                >
+                                    Node.js JSONPath implementation
+                                </a>
+                                . While this won't help you much formulating the PostgreSQL queries (most Horreum
+                                operations are based on PostgreSQL flavour of JSONPath) this implementation will return
+                                the paths to the matching nodes, too.
+                            </p>
+                            <p>Examples:</p>
+                            <code>$.store.book[0:2].title</code>
+                            <br />
+                            <code>$.store.book[?(@.price &lt; 10)]</code>
+                            <br />
+                            <code>$..*</code>
+                        </>
+                    ) : (
+                        <p>
+                            Both <code>jsonb_path_query_first</code> and <code>jsonb_path_query_array</code> use{" "}
+                            <a
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                href="https://www.postgresql.org/docs/12/functions-json.html#FUNCTIONS-SQLJSON-PATH"
+                            >
+                                PostgreSQL flavour
+                            </a>{" "}
+                            of JSONPath. The former returns only the first match while the latter returns all matching
+                            nodes.
+                        </p>
+                    )}
+                </div>
+            }
+        >
+            <Button variant={ButtonVariant.control} aria-label="show jsonpath help">
+                <HelpIcon />
+            </Button>
+        </Popover>
+    )
+}
+
 export default function Run() {
     const { id: stringId } = useParams<any>()
     const id = parseInt(stringId)
@@ -425,30 +484,7 @@ export default function Run() {
                                                 </DropdownItem>,
                                             ]}
                                         ></Dropdown>
-                                        <Popover
-                                            closeBtnAriaLabel="close jsonpath help"
-                                            aria-label="jsonpath help"
-                                            position="bottom"
-                                            bodyContent={
-                                                <div style={{ width: "500px " }}>
-                                                    <p>
-                                                        The search expression is a JSONPath implemented in the browser.
-                                                        The syntax used in PostgreSQL JSONPath queries is partially
-                                                        transformed into JSONPath which has some limitations, though.
-                                                    </p>
-                                                    <p>Examples:</p>
-                                                    <code>$.store.book[0:2].title</code>
-                                                    <br />
-                                                    <code>$.store.book[?(@.price &lt; 10)]</code>
-                                                    <br />
-                                                    <code>$..*</code>
-                                                </div>
-                                            }
-                                        >
-                                            <Button variant={ButtonVariant.control} aria-label="show jsonpath help">
-                                                <HelpIcon />
-                                            </Button>
-                                        </Popover>
+                                        <SearchQueryHelp pathType={pathType} />
                                         <Autosuggest
                                             inputProps={inputProps}
                                             suggestions={pathSuggestions}
