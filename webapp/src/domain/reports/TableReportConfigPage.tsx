@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useDispatch } from "react-redux"
 import { useParams } from "react-router"
 import { useHistory } from "react-router"
@@ -119,6 +119,12 @@ function HelpButton() {
 export default function TableReportConfigPage() {
     const { configId: stringId } = useParams<Record<string, string>>()
     const id = parseInt(stringId)
+    const history = useHistory()
+    const queryParams = new URLSearchParams(history.location.search)
+    const reportId = useMemo(() => {
+        const edit = queryParams.get("edit")
+        return edit ? parseInt(edit) : undefined
+    }, [])
 
     const [config, setConfig] = useState<TableReportConfig>({
         id: -1,
@@ -135,8 +141,8 @@ export default function TableReportConfigPage() {
     const [loading, setLoading] = useState(false)
     const [test, setTest] = useState<SelectedTest>()
     const [preview, setPreview] = useState<TableReport>()
+    const [saving, setSaving] = useState(false)
 
-    const history = useHistory()
     const dispatch = useDispatch()
     useEffect(() => {
         if (!stringId || stringId === "__new") {
@@ -501,42 +507,50 @@ export default function TableReportConfigPage() {
                         {isTester && (
                             <ActionGroup>
                                 <Button
-                                    isDisabled={!configValid}
+                                    isDisabled={!configValid || saving}
                                     onClick={() => {
                                         // TODO save locally for faster reload...
-                                        api.updateTableConfig(config).then(
-                                            report => history.push("/reports/table/" + report.id),
-                                            error =>
-                                                dispatch(
-                                                    alertAction(
-                                                        "SAVE_CONFIG",
-                                                        "Failed to save report configuration.",
-                                                        error
+                                        setSaving(true)
+                                        api.updateTableConfig(config, reportId)
+                                            .then(
+                                                report => history.push("/reports/table/" + report.id),
+                                                error =>
+                                                    dispatch(
+                                                        alertAction(
+                                                            "SAVE_CONFIG",
+                                                            "Failed to save report configuration.",
+                                                            error
+                                                        )
                                                     )
-                                                )
-                                        )
+                                            )
+                                            .finally(() => setSaving(false))
                                     }}
                                 >
-                                    Save &amp; create report
+                                    {reportId ? "Save & update report " + reportId : "Save & create new report"}
+                                    {saving && <Spinner size="md" />}
                                 </Button>
                                 <Button
                                     variant="secondary"
-                                    isDisabled={!configValid}
+                                    isDisabled={!configValid || saving}
                                     onClick={() => {
-                                        api.previewTableReport(config).then(
-                                            report => setPreview(report),
-                                            error =>
-                                                dispatch(
-                                                    alertAction(
-                                                        "PREVIEW_REPORT",
-                                                        "Failed to generate report preview.",
-                                                        error
+                                        setSaving(true)
+                                        api.previewTableReport(config, reportId)
+                                            .then(
+                                                report => setPreview(report),
+                                                error =>
+                                                    dispatch(
+                                                        alertAction(
+                                                            "PREVIEW_REPORT",
+                                                            "Failed to generate report preview.",
+                                                            error
+                                                        )
                                                     )
-                                                )
-                                        )
+                                            )
+                                            .finally(() => setSaving(false))
                                     }}
                                 >
-                                    Preview
+                                    {reportId ? "Preview updated report" : "Preview"}
+                                    {saving && <Spinner size="md" />}
                                 </Button>
                             </ActionGroup>
                         )}

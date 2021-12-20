@@ -137,7 +137,7 @@ public class ReportServiceImpl implements ReportService {
    @RolesAllowed(Roles.TESTER)
    @Override
    @Transactional
-   public TableReport updateTableReportConfig(TableReportConfig config) {
+   public TableReport updateTableReportConfig(TableReportConfig config, Integer reportId) {
       if (config.id != null && config.id < 0) {
          config.id = null;
       }
@@ -149,13 +149,22 @@ public class ReportServiceImpl implements ReportService {
       validateTableConfig(config);
       config.ensureLinked();
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         TableReport report = createTableReport(config);
+         TableReport report = createTableReport(config, reportId);
          if (config.id == null) {
             config.persist();
          } else {
+            TableReportConfig original = TableReportConfig.findById(config.id);
+            original.components.clear();
+            original.components.addAll(config.components);
+            config.components = original.components;
             em.merge(config);
          }
-         report.persistAndFlush();
+         if (report.id == null) {
+            report.persist();
+         } else {
+            em.merge(report);
+         }
+         em.flush();
          return report;
       }
    }
@@ -200,6 +209,15 @@ public class ReportServiceImpl implements ReportService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @Transactional
+   @Override
+   public void deleteTableReport(Integer id) {
+      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+         TableReport.deleteById(id);
+      }
+   }
+
+   @RolesAllowed(Roles.TESTER)
    @Override
    @Transactional
    public ReportComment updateComment(Integer reportId, ReportComment comment) {
@@ -223,23 +241,34 @@ public class ReportServiceImpl implements ReportService {
 
    @PermitAll
    @Override
-   public TableReport previewTableReport(TableReportConfig config) {
+   public TableReport previewTableReport(TableReportConfig config, Integer reportId) {
       validateTableConfig(config);
       try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         return createTableReport(config);
+         return createTableReport(config, reportId);
       }
    }
 
-   private TableReport createTableReport(TableReportConfig config) {
+   private TableReport createTableReport(TableReportConfig config, Integer reportId) {
       Integer testId = config.test.id;
-      config.test = Test.findById(testId);
-      if (config.test == null) {
+      Test test = Test.findById(testId);
+      if (test == null) {
          throw ServiceException.badRequest("Cannot find test with ID " + testId);
+      } else {
+         // We don't assign the full test because then we'd serialize the complete object...
+         config.test.name = test.name;
       }
-      TableReport report = new TableReport();
+      TableReport report;
+      if (reportId == null) {
+         report = new TableReport();
+         report.comments = Collections.emptyList();
+         report.created = Instant.now();
+      } else {
+         report = TableReport.findById(reportId);
+         if (report == null) {
+            throw ServiceException.badRequest("Cannot find report ID " + reportId);
+         }
+      }
       report.config = config;
-      report.created = Instant.now();
-      report.comments = Collections.emptyList();
       List<Object[]> runCategories = null, series, labels = null;
       Query timestampQuery;
       if (config.filterAccessors != null) {

@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api;
 import java.time.Instant;
 import java.util.List;
 
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -35,15 +36,19 @@ public interface ReportService {
 
    @POST
    @Path("table/preview")
-   TableReport previewTableReport(TableReportConfig config);
+   TableReport previewTableReport(TableReportConfig config, @QueryParam("edit") Integer updatedReportId);
 
    @POST
    @Path("table/config")
-   TableReport updateTableReportConfig(TableReportConfig config);
+   TableReport updateTableReportConfig(TableReportConfig config, @QueryParam("edit") Integer updatedReportId);
 
    @GET
    @Path("table/{id}")
    TableReport getTableReport(@PathParam("id") Integer id);
+
+   @DELETE
+   @Path("table/{id}")
+   void deleteTableReport(@PathParam("id") Integer id);
 
    @POST
    @Path("comment/{reportId}")

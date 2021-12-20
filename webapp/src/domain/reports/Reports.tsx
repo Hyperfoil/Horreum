@@ -11,12 +11,10 @@ import {
     CardFooter,
     Flex,
     FlexItem,
-    Modal,
     PageSection,
     Pagination,
 } from "@patternfly/react-core"
 import { ArrowRightIcon, FolderOpenIcon, EditIcon } from "@patternfly/react-icons"
-import { TableComposable, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table"
 
 import Table from "../../components/Table"
 import TeamSelect, { Team, SHOW_ALL } from "../../components/TeamSelect"
@@ -27,6 +25,8 @@ import { formatDateTime } from "../../utils"
 import { AllTableReports, TableReportSummary, getTableReports } from "./api"
 import ButtonLink from "../../components/ButtonLink"
 import { useTester } from "../../auth"
+
+import ListReportsModal from "./ListReportsModal"
 
 type C = CellProps<TableReportSummary>
 
@@ -43,6 +43,7 @@ export default function Reports() {
     const [test, setTest] = useState<SelectedTest>()
 
     const [tableReports, setTableReports] = useState<AllTableReports>()
+    const [tableReportsReloadCounter, setTableReportsReloadCounter] = useState(0)
     const [loading, setLoading] = useState(false)
 
     const [tableReportConfigId, setTableReportConfigId] = useState<number>()
@@ -53,7 +54,7 @@ export default function Reports() {
             .then(setTableReports)
             .catch(error => dispatch(alertAction("FETCH_REPORTS", "Failed to fetch reports", error)))
             .finally(() => setLoading(false))
-    }, [pagination, roles, test, dispatch])
+    }, [pagination, roles, test, dispatch, tableReportsReloadCounter])
 
     const columns: Column<TableReportSummary>[] = useMemo(
         () => [
@@ -128,7 +129,7 @@ export default function Reports() {
     )
 
     const isTester = useTester()
-    const tableReportConfig =
+    const tableReportSummary =
         (tableReportConfigId !== undefined &&
             tableReports &&
             tableReports.reports.find(summary => summary.config.id === tableReportConfigId)) ||
@@ -188,39 +189,12 @@ export default function Reports() {
                     />
                 </CardFooter>
             </Card>
-            <Modal
-                title={"Reports for " + tableReportConfig?.config?.title}
-                variant="small"
+            <ListReportsModal
                 isOpen={tableReportConfigId !== undefined}
                 onClose={() => setTableReportConfigId(undefined)}
-            >
-                <div style={{ overflowY: "auto" }}>
-                    {tableReportConfig && (
-                        <TableComposable variant="compact">
-                            <Thead>
-                                <Tr>
-                                    <Th>Report</Th>
-                                    <Th>Created</Th>
-                                </Tr>
-                            </Thead>
-                            <Tbody>
-                                {tableReportConfig.reports.map(({ id, created }) => (
-                                    <Tr key={id}>
-                                        <Td>
-                                            <NavLink to={`/reports/table/${id}`}>
-                                                <ArrowRightIcon />
-                                                {"\u00A0"}
-                                                {id}
-                                            </NavLink>
-                                        </Td>
-                                        <Td>{formatDateTime(created)}</Td>
-                                    </Tr>
-                                ))}
-                            </Tbody>
-                        </TableComposable>
-                    )}
-                </div>
-            </Modal>
+                summary={loading ? undefined : tableReportSummary}
+                onReload={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
+            />
         </PageSection>
     )
 }

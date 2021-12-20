@@ -125,7 +125,7 @@ export function useChangeAccess(config: ChangeAccessConfig): MenuItem<ChangeAcce
 }
 
 type DeleteConfig = {
-    onDelete?(id: number): void
+    onDelete?(id: number): Promise<any>
 }
 
 export function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
@@ -152,9 +152,11 @@ export function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
                         isOpen={confirmDeleteModalOpen}
                         onClose={() => setConfirmDeleteModalOpen(false)}
                         onDelete={() => {
-                            setConfirmDeleteModalOpen(false)
                             if (config.onDelete) {
-                                config.onDelete(props.id)
+                                return config.onDelete(props.id)
+                            } else {
+                                setConfirmDeleteModalOpen(false)
+                                return Promise.resolve()
                             }
                         }}
                     />

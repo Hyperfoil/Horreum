@@ -79,8 +79,11 @@ export default function TableReportPage() {
                         >
                             Export to PDF
                         </Button>
-                        <ButtonLink variant="secondary" to={"/reports/table/config/" + report.config.id}>
-                            Configure
+                        <ButtonLink
+                            variant="secondary"
+                            to={"/reports/table/config/" + report.config.id + "?edit=" + id}
+                        >
+                            Edit
                         </ButtonLink>
                     </ActionGroup>
                 </CardHeader>

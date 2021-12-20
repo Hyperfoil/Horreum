@@ -73,8 +73,9 @@ const endPoints = {
         `${base}/table?${testid !== undefined ? `test=${testid}&` : ""}${
             roles ? `owner=${encodeURIComponent(roles)}&` : ""
         }${paginationParams(pagination)}`,
-    tableReportConfig: (configId?: number) => `${base}/table/config/${configId ? configId : ""}`,
-    tableReportPreview: () => `${base}/table/preview`,
+    tableReportConfig: (configId?: number, reportId?: number) =>
+        `${base}/table/config${configId ? "/" + configId : ""}${reportId ? "?edit=" + reportId : ""}`,
+    tableReportPreview: (reportId?: number) => `${base}/table/preview${reportId ? "?edit=" + reportId : ""}`,
     tableReport: (id: number) => `${base}/table/${id}`,
     comment: (reportId: number) => `${base}/comment/${reportId}`,
 }
@@ -87,16 +88,20 @@ export function getTableConfig(configId: number) {
     return fetchApi(endPoints.tableReportConfig(configId), null, "get")
 }
 
-export function updateTableConfig(config: TableReportConfig) {
-    return fetchApi(endPoints.tableReportConfig(), config, "post")
+export function updateTableConfig(config: TableReportConfig, reportId?: number) {
+    return fetchApi(endPoints.tableReportConfig(undefined, reportId), config, "post")
 }
 
-export function previewTableReport(config: TableReportConfig) {
-    return fetchApi(endPoints.tableReportPreview(), config, "post")
+export function previewTableReport(config: TableReportConfig, reportId?: number) {
+    return fetchApi(endPoints.tableReportPreview(reportId), config, "post")
 }
 
 export function getTableReport(id: number) {
     return fetchApi(endPoints.tableReport(id), null, "get")
+}
+
+export function deleteTableReport(id: number) {
+    return fetchApi(endPoints.tableReport(id), null, "delete")
 }
 
 export function updateComment(reportId: number, comment: ReportComment) {
