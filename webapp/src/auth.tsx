@@ -58,6 +58,8 @@ interface AfterLogoutAction {
 type AuthActions = InitAction | UpdateDefaultTeamAction | UpdateRolesAction | StoreProfileAction | AfterLogoutAction
 
 export const reducer = (state = initialState, action: AuthActions) => {
+    // TODO: is this necessary? It seems that without that the state is not updated at times.
+    state = { ...state }
     switch (action.type) {
         case INIT:
             state.keycloak = action.keycloak
@@ -72,6 +74,7 @@ export const reducer = (state = initialState, action: AuthActions) => {
             state.authenticated = action.authenticated
             state.roles = [...action.roles]
             state.teams = action.roles.filter(role => role.endsWith("-team")).sort()
+            console.log(state.teams)
             break
         case STORE_PROFILE:
             state.userProfile = action.profile
@@ -213,7 +216,7 @@ export const TryLoginAgain = () => {
 export const LoginLogout = () => {
     const keycloak = useSelector(keycloakSelector)
     // for some reason isAuthenticatedSelector would not return correct value at times (Redux bug?)
-    const authenticated = useSelector(s => (s as State).auth.authenticated)
+    const authenticated = useSelector(isAuthenticatedSelector)
     const dispatch = useDispatch()
     if (!keycloak) {
         return <Button isDisabled>Cannot log in</Button>
