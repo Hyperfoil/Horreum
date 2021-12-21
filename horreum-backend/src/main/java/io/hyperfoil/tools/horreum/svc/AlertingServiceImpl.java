@@ -549,6 +549,22 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
+   @RolesAllowed(Roles.TESTER)
+   @Transactional
+   @Override
+   public void deleteLogs(Integer testId, Long from, Long to) {
+      if (testId == null) {
+         throw ServiceException.badRequest("Missing test ID");
+      }
+      // Not using Instant.MIN/Instant.MAX as Hibernate converts to LocalDateTime internally
+      Instant fromTs = from == null ? Instant.ofEpochMilli(0) : Instant.ofEpochMilli(from);
+      Instant toTs = to == null ? Instant.ofEpochSecond(4 * (long) Integer.MAX_VALUE) : Instant.ofEpochMilli(to);
+      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+         long deleted = CalculationLog.delete("testId = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
+         log.debugf("Deleted %d logs for test %s", deleted, testId);
+      }
+   }
+
    @Transactional
    @ConsumeEvent(value = Run.EVENT_TRASHED, blocking = true)
    public void onRunTrashed(Integer runId) {

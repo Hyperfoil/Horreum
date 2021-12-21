@@ -12,6 +12,10 @@ const endPoints = {
         `${base}/recalculate?test=${testId}&debug=${debug}${from ? "&from=" + from : ""}${to ? "&to=" + to : ""}`,
     log: (testId: number, page?: number, limit?: number) =>
         `${base}/log/${testId}?page=${page ? page : 0}&limit=${limit ? limit : 25}`,
+    logRange: (testId: number, fromMs?: number, toMs?: number) =>
+        `${base}/log/${testId}?${[fromMs ? "from=" + fromMs : undefined, toMs ? "to=" + toMs : undefined]
+            .filter(p => p !== undefined)
+            .join("&")}`,
     logCount: (testId: number) => `${base}/log/${testId}/count`,
     lastDatapoints: () => `${base}/datapoint/last`,
 }
@@ -54,6 +58,10 @@ export const fetchLog = (testId: number, page?: number, limit?: number) => {
 
 export const getLogCount = (testId: number) => {
     return fetchApi(endPoints.logCount(testId), null, "get")
+}
+
+export function deleteLogs(testId: number, fromMs?: number, toMs?: number) {
+    return fetchApi(endPoints.logRange(testId, fromMs, toMs), null, "delete")
 }
 
 export const findLastDatapoints = (variableIds: number[], tags: string) => {

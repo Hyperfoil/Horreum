@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useMemo, useState, useRef } from "react"
 
 import { useDispatch } from "react-redux"
 
@@ -86,6 +86,15 @@ export default function RecalculateModal(props: RecalculateModalProps) {
             }
         )
     }
+    const timeRangeOptions: TimeRange[] = useMemo(
+        () => [
+            { toString: () => "all" },
+            { from: Date.now() - 31 * 86_400_000, to: undefined, toString: () => "last month" },
+            { from: Date.now() - 7 * 86_400_000, to: undefined, toString: () => "last week" },
+            { from: Date.now() - 86_400_000, to: undefined, toString: () => "last 24 hours" },
+        ],
+        []
+    )
     return (
         <>
             <Modal
@@ -132,7 +141,7 @@ export default function RecalculateModal(props: RecalculateModalProps) {
                     <Form isHorizontal>
                         {props.message}
                         <FormGroup label="Runs from:" fieldId="timeRange">
-                            <TimeRangeSelect selection={timeRange} onSelect={setTimeRange} />
+                            <TimeRangeSelect selection={timeRange} onSelect={setTimeRange} options={timeRangeOptions} />
                         </FormGroup>
                         <FormGroup label="Debug logs:" fieldId="debug">
                             <Checkbox id="debug" isChecked={debug} onChange={setDebug} label="Write debug logs" />

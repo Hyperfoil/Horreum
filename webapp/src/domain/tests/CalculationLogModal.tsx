@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useDispatch } from "react-redux"
 import { IRow, Table, TableHeader, TableBody } from "@patternfly/react-table"
-import { EmptyState, EmptyStateBody, Modal, Pagination, Title } from "@patternfly/react-core"
+import { Button, EmptyState, EmptyStateBody, Flex, FlexItem, Modal, Pagination, Title } from "@patternfly/react-core"
 import {
     CheckCircleIcon,
     ExclamationCircleIcon,
@@ -10,7 +10,9 @@ import {
 } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 
-import { fetchLog, getLogCount } from "../alerting/api"
+import TimeRangeSelect, { TimeRange } from "../../components/TimeRangeSelect"
+import ConfirmDeleteModal from "../../components/ConfirmDeleteModal"
+import { fetchLog, getLogCount, deleteLogs } from "../alerting/api"
 import { alertAction } from "../../alerts"
 import { formatDateTime } from "../../utils"
 import "./CalculationLogModal.css"
@@ -42,6 +44,9 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
     const [page, setPage] = useState(0)
     const [limit, setLimit] = useState(25)
     const [rows, setRows] = useState<IRow[]>([])
+    const [deleteRange, setDeleteRange] = useState<TimeRange>()
+    const [deleteRequest, setDeleteRequest] = useState<TimeRange>()
+    const [updateCounter, setUpdateCounter] = useState(0)
     const dispatch = useDispatch()
     useEffect(() => {
         if (props.isOpen) {
@@ -50,7 +55,7 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
                 error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
             )
         }
-    }, [props.isOpen, props.testId, dispatch])
+    }, [props.isOpen, props.testId, dispatch, updateCounter])
     useEffect(() => {
         if (props.isOpen) {
             fetchLog(props.testId, page, limit).then(
@@ -59,7 +64,7 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
                         (response as CalculationLog[]).map(log => ({
                             cells: [
                                 { title: level[log.level] },
-                                { title: formatDateTime(log.timestamp) },
+                                { title: formatDateTime(log.timestamp * 1000) },
                                 { title: <NavLink to={`/run/${log.runId}`}>{log.runId}</NavLink> },
                                 { title: <div dangerouslySetInnerHTML={{ __html: log.message }}></div> },
                             ],
@@ -68,7 +73,16 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
                 error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
             )
         }
-    }, [page, limit, props.isOpen, props.testId, dispatch])
+    }, [page, limit, props.isOpen, props.testId, dispatch, updateCounter])
+    const timeRangeOptions: TimeRange[] = useMemo(
+        () => [
+            { toString: () => "delete all" },
+            { from: undefined, to: Date.now() - 86_400_000, toString: () => "24 hours" },
+            { from: undefined, to: Date.now() - 7 * 86_400_000, toString: () => "one week" },
+            { from: undefined, to: Date.now() - 31 * 86_400_000, toString: () => "one month" },
+        ],
+        []
+    )
     return (
         <Modal isOpen={props.isOpen} onClose={props.onClose} title="Calculation log events" showClose={true}>
             {count === 0 && (
@@ -84,6 +98,36 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
             )}
             {count > 0 && (
                 <>
+                    <Flex>
+                        <FlexItem>
+                            <Button onClick={() => setDeleteRequest(deleteRange)}>Delete logs older than...</Button>
+                        </FlexItem>
+                        <FlexItem>
+                            <TimeRangeSelect
+                                selection={deleteRange}
+                                onSelect={setDeleteRange}
+                                options={timeRangeOptions}
+                            />
+                        </FlexItem>
+                    </Flex>
+                    <ConfirmDeleteModal
+                        description={"logs older than " + deleteRequest}
+                        isOpen={deleteRequest !== undefined}
+                        onClose={() => setDeleteRequest(undefined)}
+                        onDelete={() => {
+                            if (deleteRequest) {
+                                return deleteLogs(props.testId, deleteRequest.from, deleteRequest.to).then(
+                                    () => setUpdateCounter(updateCounter + 1),
+                                    error => {
+                                        dispatch(alertAction("LOGS DELETE", "Deleting logs failed", error))
+                                        props.onClose()
+                                    }
+                                )
+                            } else {
+                                return Promise.resolve()
+                            }
+                        }}
+                    />
                     <div className="forceOverflowY">
                         <Table
                             aria-label="Simple Table"
