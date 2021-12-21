@@ -22,7 +22,13 @@ podman-compose -f podman-compose.yml -t hostnet up -d
 > :warning: **If postgres fails to start**: clear any cached data in the postgresl container mounted volume `podman volume inspect Horreum_horreum_pg12  | jq -r '.[0].Mountpoint'`
 
 Due to subtleties in Podman's rootless network configuration it's not possible to use `docker-compose.yaml`
-and we have to use host networking - otherwise Grafana wouldn't be able to connect to Horreum.                                                   
+and we have to use host networking - otherwise Grafana wouldn't be able to connect to Horreum.
+
+If you want to preload the database with some example data you can run
+
+```bash
+PGPASSWORD=secret psql -h localhost -U dbadmin horreum -f example-data.sql
+```
 
 ## Getting Started
 ```bash
@@ -57,23 +63,6 @@ This set's up your environment with the maven wrapper tool
 ```
 This builds the webapp and adds it to the `horreum-${version}-runner.jar`.
 Start the server with `java -jar horreum-${version}-runner.jar` after docker is already running
-
-## Insecure mode
-
-While by default Horreum runs with DB security enabled, it's easier to experiment with database schema
-using Hibernate's `drop-and-create` database generation mode. To be able to modify database schema
-you need to use database user `dbadmin` (see security section below). Therefore, run Horreum
-with `-Dquarkus.profile=insecure` flag:
-```bash
-./mvnw compile quarkus:dev -Dui.dev -Dquarkus.profile=insecure
-```
-The insecure mode also triggers generating some test data based on `src/main/resources/import.sql`.
-Note though that the `drop-and-create` mode also drops database permissions for the `appuser`;
-before starting with enforced security you need to run
-```
-PGPASSWORD=secret psql -h 172.17.0.1 -U dbadmin -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' horreum
-``` 
-Alternatively you can just drop the database volume and start docker-compose from scratch.
 
 ## Security
 

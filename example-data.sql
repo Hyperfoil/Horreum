@@ -1,35 +1,4 @@
--- These triggers must be in sync with db/changeLog.xml; Hibernate's drop & create destroys them
-CREATE TRIGGER before_run_delete BEFORE DELETE ON run FOR EACH ROW EXECUTE FUNCTION before_run_delete_func();
-CREATE TRIGGER before_run_update BEFORE UPDATE ON run FOR EACH ROW EXECUTE FUNCTION before_run_update_func();
-CREATE TRIGGER after_run_update AFTER INSERT OR UPDATE ON run FOR EACH ROW EXECUTE FUNCTION after_run_update_func();
-CREATE TRIGGER before_schema_delete BEFORE DELETE ON schema FOR EACH ROW EXECUTE FUNCTION before_schema_delete_func();
-CREATE TRIGGER before_schema_update BEFORE UPDATE OF uri ON schema FOR EACH ROW EXECUTE FUNCTION before_schema_update_func();
-CREATE TRIGGER after_schema_update AFTER INSERT OR UPDATE OF uri ON schema FOR EACH ROW EXECUTE FUNCTION after_schema_update_func();
-
--- These two triggers are not dropped as Hibernate does not know about run_schemas
--- CREATE TRIGGER vd_before_delete BEFORE DELETE ON run_schemas FOR EACH ROW EXECUTE FUNCTION vd_before_delete_run_func();
--- CREATE TRIGGER vd_after_insert AFTER INSERT ON run_schemas FOR EACH ROW EXECUTE FUNCTION vd_after_insert_run_func();
-CREATE TRIGGER vd_before_delete BEFORE DELETE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION vd_before_delete_extractor_func();
-CREATE TRIGGER vd_before_update BEFORE UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION vd_before_update_extractor_func();
-CREATE TRIGGER vd_after_update AFTER INSERT OR UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION vd_after_update_extractor_func();
-CREATE TRIGGER vd_before_delete BEFORE DELETE ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_before_delete_vc_func();
-CREATE TRIGGER vd_before_update BEFORE UPDATE OF id, accessors ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_before_update_vc_func();
-CREATE TRIGGER vd_after_update AFTER INSERT OR UPDATE OF id, accessors ON viewcomponent FOR EACH ROW EXECUTE FUNCTION vd_after_update_vc_func();
-
-CREATE TRIGGER rt_before_delete BEFORE DELETE ON test FOR EACH ROW EXECUTE FUNCTION rt_before_delete_test_func();
-CREATE TRIGGER rt_before_update BEFORE UPDATE ON test FOR EACH ROW EXECUTE FUNCTION rt_before_update_test_func();
-CREATE TRIGGER rt_after_insert AFTER INSERT OR UPDATE ON test FOR EACH ROW EXECUTE FUNCTION rt_after_insert_test_func();
-CREATE TRIGGER rt_before_delete BEFORE DELETE ON run FOR EACH ROW EXECUTE FUNCTION rt_before_delete_run_func();
-CREATE TRIGGER rt_before_delete BEFORE DELETE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_delete_extractor_func();
-CREATE TRIGGER rt_before_update BEFORE UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_update_extractor_func();
-CREATE TRIGGER rt_after_update AFTER INSERT OR UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_after_update_extractor_func();
-CREATE TRIGGER rt_before_insert BEFORE INSERT ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_insert_extractor_func();
--- End of triggers
-
--- Since the derived tables are not dropped we need to drop the data to prevent collisions/duplicate rows
-TRUNCATE TABLE run_tags;
-TRUNCATE TABLE run_schemas;
-TRUNCATE TABLE view_data;
+-- This file is intended as example data used during development
 
 INSERT INTO schema (id,name,uri,owner,access) VALUES (1,'SPECjEnterprise2010','urn:spec:jenterprise2010','dev-team',0);
 INSERT INTO test (id,name,description,defaultview_id,owner,access) VALUES (1,'SPECjEnterprise2010','spec.org 2010 enterprise benchmark',NULL,'perf-team',0);

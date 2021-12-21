@@ -31,7 +31,7 @@ public class Test extends PanacheEntityBase {
       name = "testSequence",
       sequenceName = "test_id_seq",
       allocationSize = 1,
-      initialValue = 10) // skip 10 to account for import.sql entries
+      initialValue = 10) // skip 10 to account for example-data.sql entries
    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "testSequence")
    @Column(name="id")
    public Integer id;
