@@ -1951,5 +1951,34 @@
         <dropColumn tableName="tablereport_rundata" columnName="values"/>
         <renameColumn tableName="tablereport_rundata" oldColumnName="data" newColumnName="values"/>
     </changeSet>
+
+    <changeSet id="39" author="rvansa">
+        <createTable tableName="banner">
+            <column name="id" type="integer">
+                <constraints primaryKey="true" />
+            </column>
+            <column name="created" type="timestamp">
+                <constraints nullable="false" />
+            </column>
+            <column name="active" type="boolean">
+                <constraints nullable="false" />
+            </column>
+            <column name="severity" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="title" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="message" type="text" />
+        </createTable>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE banner TO "${quarkus.datasource.username}";
+            ALTER TABLE banner ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY banner_select ON banner FOR SELECT USING(true);
+            CREATE POLICY banner_insert ON banner FOR INSERT WITH CHECK (has_role('admin'));
+            CREATE POLICY banner_update ON banner FOR UPDATE USING (has_role('admin'));
+            CREATE POLICY banner_delete ON banner FOR DELETE USING (has_role('admin'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

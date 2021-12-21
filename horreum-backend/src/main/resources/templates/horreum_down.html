@@ -1,0 +1,20 @@
+HTTP/1.0 503 Service Unavailable
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html>
+<head>
+    <title>Service Unavailable | Horreum</title>
+</head>
+<body>
+<div>
+    <h1>Horreum is currently experiencing downtime.</h1>
+    {#if hasBanner }
+    This is the last message from admin (recorded at {created}):
+    <h2>{title}</h2>
+    <div>{message.raw}</div>
+    {/if}
+</div>
+</body>
+</html>

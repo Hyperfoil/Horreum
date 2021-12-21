@@ -28,6 +28,7 @@ import Alerts from "./alerts"
 import Series from "./domain/alerting/Series"
 
 import Reports from "./domain/reports/Reports"
+import Banner, { BannerConfig } from "./Banner"
 import TableReportPage from "./domain/reports/TableReportPage"
 import TableReportConfigPage from "./domain/reports/TableReportConfigPage"
 
@@ -52,6 +53,7 @@ function Main() {
     const isAdmin = useSelector(isAdminSelector)
     return (
         <ConnectedRouter history={history}>
+            <Banner />
             <Page
                 header={
                     <PageHeader
@@ -109,6 +111,16 @@ function Main() {
                                             Reports
                                         </NavLink>
                                     </NavItem>
+                                    {isAdmin && (
+                                        <NavItem itemId={6}>
+                                            <NavLink
+                                                to="/banner"
+                                                style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            >
+                                                Banner
+                                            </NavLink>
+                                        </NavItem>
+                                    )}
                                 </NavList>
                             </Nav>
                         }
@@ -143,6 +155,7 @@ function Main() {
                     <Route exact path="/reports/table/config/:configId" component={TableReportConfigPage} />
                     <Route exact path="/reports/table/:id" component={TableReportPage} />
 
+                    <Route exact path="/banner" component={BannerConfig} />
                     <Route exact path="/usersettings" component={UserSettings} />
                 </Switch>
             </Page>

@@ -212,10 +212,11 @@ export const TryLoginAgain = () => {
 
 export const LoginLogout = () => {
     const keycloak = useSelector(keycloakSelector)
-    const authenticated = useSelector(isAuthenticatedSelector)
+    // for some reason isAuthenticatedSelector would not return correct value at times (Redux bug?)
+    const authenticated = useSelector(s => (s as State).auth.authenticated)
     const dispatch = useDispatch()
     if (!keycloak) {
-        return <></>
+        return <Button isDisabled>Cannot log in</Button>
     }
     if (authenticated) {
         return (
