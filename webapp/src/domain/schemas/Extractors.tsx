@@ -20,7 +20,7 @@ import * as api from "./api"
 import { listBySchema, query } from "../runs/api"
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
 import Editor from "../../components/Editor/monaco/Editor"
-import { Extractor } from "../../components/Accessors"
+import { Extractor, checkAccessorName, INVALID_ACCESSOR_HELPER } from "../../components/Accessors"
 import { Run } from "../runs/reducers"
 import { alertAction } from "../../alerts"
 
@@ -190,79 +190,94 @@ export default function Extractors(props: ExtractorsProps) {
         <>
             {props.extractors
                 .filter((e: Extractor) => !e.deleted)
-                .map((e: Extractor) => (
-                    <Flex style={{ marginBottom: "10px" }}>
-                        <FlexItem grow={{ default: "grow" }}>
-                            <Form isHorizontal={true} style={{ gridGap: "2px" }}>
-                                <FormGroup label="Accessor" fieldId="accessor">
-                                    <TextInput
-                                        id="accessor"
-                                        value={e.newName || ""}
-                                        isReadOnly={!props.isTester}
-                                        onChange={newValue => {
-                                            e.newName = newValue
-                                            e.changed = true
-                                            props.setExtractors([...props.extractors])
-                                        }}
-                                    />
-                                </FormGroup>
-                                <FormGroup
-                                    label={
-                                        <>
-                                            JSON path <JsonPathDocsLink />
-                                        </>
-                                    }
-                                    fieldId="jsonpath"
-                                    validated={!e.validationResult || e.validationResult.valid ? "default" : "error"}
-                                    helperTextInvalid={e.validationResult?.reason || ""}
-                                >
-                                    <TextInput
-                                        id="jsonpath"
-                                        value={e.jsonpath || ""}
-                                        isReadOnly={!props.isTester}
-                                        onChange={newValue => {
-                                            e.jsonpath = newValue
-                                            e.changed = true
-                                            e.validationResult = undefined
-                                            props.setExtractors([...props.extractors])
-                                            if (e.validationTimer) {
-                                                clearTimeout(e.validationTimer)
-                                            }
-                                            e.validationTimer = window.setTimeout(() => {
-                                                if (e.jsonpath) {
-                                                    api.testJsonPath(e.jsonpath).then(result => {
-                                                        e.validationResult = result
-                                                        props.setExtractors([...props.extractors])
-                                                    })
+                .map((e: Extractor, i) => {
+                    const accessorValid = checkAccessorName(e.newName)
+                    return (
+                        <Flex key={i} style={{ marginBottom: "10px" }}>
+                            <FlexItem grow={{ default: "grow" }}>
+                                <Form isHorizontal={true} style={{ gridGap: "2px" }}>
+                                    <FormGroup
+                                        label="Accessor"
+                                        fieldId="accessor"
+                                        validated={accessorValid ? "default" : "warning"}
+                                        helperText={accessorValid ? null : INVALID_ACCESSOR_HELPER}
+                                    >
+                                        <TextInput
+                                            id="accessor"
+                                            value={e.newName || ""}
+                                            isReadOnly={!props.isTester}
+                                            validated={accessorValid ? "default" : "warning"}
+                                            onChange={newValue => {
+                                                e.newName = newValue
+                                                e.changed = true
+                                                props.setExtractors([...props.extractors])
+                                            }}
+                                        />
+                                    </FormGroup>
+                                    <FormGroup
+                                        label={
+                                            <>
+                                                JSON path <JsonPathDocsLink />
+                                            </>
+                                        }
+                                        fieldId="jsonpath"
+                                        validated={
+                                            !e.validationResult || e.validationResult.valid ? "default" : "error"
+                                        }
+                                        helperTextInvalid={e.validationResult?.reason || ""}
+                                    >
+                                        <TextInput
+                                            id="jsonpath"
+                                            value={e.jsonpath || ""}
+                                            isReadOnly={!props.isTester}
+                                            onChange={newValue => {
+                                                e.jsonpath = newValue
+                                                e.changed = true
+                                                e.validationResult = undefined
+                                                props.setExtractors([...props.extractors])
+                                                if (e.validationTimer) {
+                                                    clearTimeout(e.validationTimer)
                                                 }
-                                            }, 1000)
+                                                e.validationTimer = window.setTimeout(() => {
+                                                    if (e.jsonpath) {
+                                                        api.testJsonPath(e.jsonpath).then(result => {
+                                                            e.validationResult = result
+                                                            props.setExtractors([...props.extractors])
+                                                        })
+                                                    }
+                                                }, 1000)
+                                            }}
+                                        />
+                                    </FormGroup>
+                                </Form>
+                            </FlexItem>
+                            {props.isTester && (
+                                <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
+                                    <Button
+                                        variant="primary"
+                                        isDisabled={!e.jsonpath}
+                                        onClick={() => setTestExtractor(e)}
+                                    >
+                                        Try it!
+                                    </Button>
+                                </FlexItem>
+                            )}
+                            {props.isTester && (
+                                <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => {
+                                            e.deleted = true
+                                            props.setExtractors([...props.extractors])
                                         }}
-                                    />
-                                </FormGroup>
-                            </Form>
-                        </FlexItem>
-                        {props.isTester && (
-                            <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
-                                <Button variant="primary" isDisabled={!e.jsonpath} onClick={() => setTestExtractor(e)}>
-                                    Try it!
-                                </Button>
-                            </FlexItem>
-                        )}
-                        {props.isTester && (
-                            <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => {
-                                        e.deleted = true
-                                        props.setExtractors([...props.extractors])
-                                    }}
-                                >
-                                    Delete
-                                </Button>
-                            </FlexItem>
-                        )}
-                    </Flex>
-                ))}
+                                    >
+                                        Delete
+                                    </Button>
+                                </FlexItem>
+                            )}
+                        </Flex>
+                    )
+                })}
             <TryJsonPathModal
                 uri={props.uri}
                 jsonpath={testExtractor?.jsonpath}

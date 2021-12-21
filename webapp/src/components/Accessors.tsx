@@ -21,6 +21,94 @@ import {
 
 import { AddCircleOIcon } from "@patternfly/react-icons"
 
+const RESERVED = [
+    "abstract",
+    "arguments",
+    "await",
+    "boolean",
+    "break",
+    "byte",
+    "case",
+    "catch",
+    "char",
+    "class",
+    "const",
+    "continue",
+    "debugger",
+    "default",
+    "delete",
+    "do",
+    "double",
+    "else",
+    "enum",
+    "eval",
+    "export",
+    "extends",
+    "false",
+    "final",
+    "finally",
+    "float",
+    "for",
+    "function",
+    "goto",
+    "if",
+    "implements",
+    "import",
+    "in",
+    "instanceof",
+    "int",
+    "interface",
+    "let",
+    "long",
+    "native",
+    "new",
+    "null",
+    "package",
+    "private",
+    "protected",
+    "public",
+    "return",
+    "short",
+    "static",
+    "super",
+    "switch",
+    "synchronized",
+    "this",
+    "throw",
+    "throws",
+    "transient",
+    "true",
+    "try",
+    "typeof",
+    "var",
+    "void",
+    "volatile",
+    "while",
+    "with",
+    "yield",
+]
+
+export function checkAccessorName(name: string | undefined) {
+    console.log("CHECK")
+    console.log(name)
+    if (!name) {
+        return true
+    } else if (!name.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
+        return false
+    } else if (RESERVED.includes(name)) {
+        return false
+    } else {
+        console.log(name.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+        return true
+    }
+}
+
+export const INVALID_ACCESSOR_HELPER = (
+    <span style={{ color: "var(--pf-global--warning-color--200)" }}>
+        Accessor should match <code>[a-zA-Z_][a-zA-Z_0-9]*</code>. It shouldn't be a Javascript-reserved word either.
+    </span>
+)
+
 function distinctSorted(list: Extractor[], selector: (e: Extractor) => any): Extractor[] {
     return Array.from(new Set(list.map(selector)))
         .map(a => list.find(o => selector(o) === a) || a) // distinct
@@ -98,7 +186,7 @@ export default function Accessors({
         setVariantOpen(true)
     }
     const dispatch = useDispatch()
-
+    const accessorValid = checkAccessorName(created.accessor)
     return (
         <>
             <Select
@@ -214,13 +302,19 @@ export default function Accessors({
                 })}
             <Modal title="Create extractor" isOpen={createOpen} onClose={() => setCreateOpen(false)}>
                 <Form isHorizontal={true}>
-                    <FormGroup label="Accessor" isRequired={true} fieldId="extractor-accessor">
+                    <FormGroup
+                        label="Accessor"
+                        isRequired={true}
+                        fieldId="extractor-accessor"
+                        validated={accessorValid ? "default" : "warning"}
+                        helperText={accessorValid ? null : INVALID_ACCESSOR_HELPER}
+                    >
                         <TextInput
                             value={created.accessor}
                             isRequired
                             id="extractor-accessor"
                             name="extractor-accessor"
-                            validated={created.accessor !== "" ? "default" : "error"}
+                            validated={created.accessor !== "" ? (accessorValid ? "default" : "warning") : "error"}
                             onChange={value => setCreated({ ...created, accessor: value })}
                         />
                     </FormGroup>

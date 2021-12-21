@@ -76,7 +76,7 @@ export default function AllSchema() {
                 },
             },
         ],
-        [dispatch, dispatch]
+        [dispatch]
     )
     const list = useSelector(selectors.all)
     const teams = useSelector(teamsSelector)
