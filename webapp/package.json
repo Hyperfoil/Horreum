@@ -58,7 +58,7 @@
   },
   "scripts": {
     "start": " BROWSER=none react-scripts start",
-    "build": "react-scripts build",
+    "build": " NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "lint": "eslint \"**/*.{ts,tsx}\"",
