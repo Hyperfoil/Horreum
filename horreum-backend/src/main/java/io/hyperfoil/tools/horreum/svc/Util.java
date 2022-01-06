@@ -1,10 +1,16 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
+import javax.transaction.HeuristicMixedException;
+import javax.transaction.HeuristicRollbackException;
+import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
@@ -342,6 +348,35 @@ public class Util {
          return str.substring(1, str.length() - 1);
       } else {
          return str;
+      }
+   }
+
+   static <T> T withTx(TransactionManager tm, Supplier<T> supplier) {
+      try {
+         tm.begin();
+         try {
+            return supplier.get();
+         } catch (Throwable t) {
+            tm.setRollbackOnly();
+            throw t;
+         } finally {
+            if (tm.getStatus() == Status.STATUS_ACTIVE) {
+               tm.commit();
+            } else {
+               tm.rollback();
+            }
+         }
+      } catch (SystemException | RollbackException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException ex) {
+         throw new RuntimeException("Failed to run transaction", ex);
+      }
+   }
+
+   public static <T extends Annotation> T getAnnotation(Method method, Class<T> annotationClass) {
+      T methodAnnotation = method.getAnnotation(annotationClass);
+      if (methodAnnotation != null) {
+         return methodAnnotation;
+      } else {
+         return method.getDeclaringClass().getAnnotation(annotationClass);
       }
    }
 }

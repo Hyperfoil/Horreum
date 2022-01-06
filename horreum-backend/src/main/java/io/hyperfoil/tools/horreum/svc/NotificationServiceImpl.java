@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,7 @@ import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
-import io.quarkus.security.identity.SecurityIdentity;
+import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.vertx.ConsumeEvent;
 
 @ApplicationScoped
@@ -55,13 +54,7 @@ public class NotificationServiceImpl implements NotificationService {
    public final Map<String, NotificationPlugin> plugins = new HashMap<>();
 
    @Inject
-   SqlServiceImpl sqlService;
-
-   @Inject
    EntityManager em;
-
-   @Inject
-   SecurityIdentity identity;
 
    @Inject
    Instance<NotificationPlugin> notificationPlugins;
@@ -74,6 +67,7 @@ public class NotificationServiceImpl implements NotificationService {
       notificationPlugins.forEach(plugin -> plugins.put(plugin.method(), plugin));
    }
 
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
    public void onMissingRunValues(Change.Event event) {
@@ -81,18 +75,16 @@ public class NotificationServiceImpl implements NotificationService {
          log.debug("Notification skipped");
          return;
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(AlertingServiceImpl.HORREUM_ALERTING))) {
-         Variable variable = event.change.variable;
-         // TODO: breaks storage/alerting separation!
-         Test test = Test.findById(variable.testId);
-         // Test might be null when it's private
-         String testName = test == null ? "unknown" : test.name;
-         log.infof("Received new change in test %d (%s), run %d, variable %d (%s)", variable.testId, testName, event.change.runId, variable.id, variable.name);
+      Variable variable = event.change.variable;
+      // TODO: breaks storage/alerting separation!
+      Test test = Test.findById(variable.testId);
+      // Test might be null when it's private
+      String testName = test == null ? "unknown" : test.name;
+      log.infof("Received new change in test %d (%s), run %d, variable %d (%s)", variable.testId, testName, event.change.runId, variable.id, variable.name);
 
-         String tags = getTags(event.change.runId);
+      String tags = getTags(event.change.runId);
 
-         notifyAll(variable.testId, n -> n.notifyChange(testName, tags, event.change));
-      }
+      notifyAll(variable.testId, n -> n.notifyChange(testName, tags, event.change));
    }
 
    private String getTags(int runId) {
@@ -110,6 +102,7 @@ public class NotificationServiceImpl implements NotificationService {
       return tags;
    }
 
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
    @ConsumeEvent(value = Run.EVENT_MISSING_VALUES, blocking = true)
    public void onMissingRunValues(MissingRunValuesEvent event) {
@@ -117,15 +110,13 @@ public class NotificationServiceImpl implements NotificationService {
          log.debugf("Skipping notification for missing run values on test %d, run %d", event.testId, event.runId);
          return;
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(AlertingServiceImpl.HORREUM_ALERTING))) {
-         // TODO: breaks storage/alerting separation!
-         Test test = Test.findById(event.testId);
-         String testName = test == null ? "unknown" : test.name;
-         log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.testId, testName, event.runId, event.variables);
+      // TODO: breaks storage/alerting separation!
+      Test test = Test.findById(event.testId);
+      String testName = test == null ? "unknown" : test.name;
+      log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.testId, testName, event.runId, event.variables);
 
-         String tags = getTags(event.runId);
-         notifyAll(event.testId, n -> n.notifyMissingRunValues(testName, tags, event));
-      }
+      String tags = getTags(event.runId);
+      notifyAll(event.testId, n -> n.notifyMissingRunValues(testName, tags, event));
    }
 
    private void notifyAll(int testId, Consumer<Notification> consumer) {
@@ -171,33 +162,31 @@ public class NotificationServiceImpl implements NotificationService {
       return plugins.keySet();
    }
 
+   @WithRoles
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
    public List<NotificationSettings> settings(String name, boolean team) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         return NotificationSettings.list("name = ?1 AND isTeam = ?2", name, team);
-      }
+      return NotificationSettings.list("name = ?1 AND isTeam = ?2", name, team);
    }
 
+   @WithRoles
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Transactional
    @Override
    public void updateSettings(String name, boolean team, NotificationSettings[] settings) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         NotificationSettings.delete("name = ?1 AND isTeam = ?2", name, team);
-         for (NotificationSettings s : settings) {
-            if (!plugins.containsKey(s.method)) {
-               try {
-                  tm.setRollbackOnly();
-               } catch (SystemException e) {
-                  log.error("Cannot rollback", e);
-               }
-               throw ServiceException.badRequest("Invalid method " + s.method);
+      NotificationSettings.delete("name = ?1 AND isTeam = ?2", name, team);
+      for (NotificationSettings s : settings) {
+         if (!plugins.containsKey(s.method)) {
+            try {
+               tm.setRollbackOnly();
+            } catch (SystemException e) {
+               log.error("Cannot rollback", e);
             }
-            s.name = name;
-            s.isTeam = team;
-            em.merge(s);
+            throw ServiceException.badRequest("Invalid method " + s.method);
          }
+         s.name = name;
+         s.isTeam = team;
+         em.merge(s);
       }
    }
 

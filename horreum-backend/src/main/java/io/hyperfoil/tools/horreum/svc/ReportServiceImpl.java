@@ -35,11 +35,13 @@ import io.hyperfoil.tools.horreum.entity.report.ReportComment;
 import io.hyperfoil.tools.horreum.entity.report.ReportComponent;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
 import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
+import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 
+@WithRoles
 public class ReportServiceImpl implements ReportService {
    private static final Logger log = Logger.getLogger(ReportServiceImpl.class);
    //@formatter:off
@@ -83,55 +85,51 @@ public class ReportServiceImpl implements ReportService {
    @PermitAll
    @Override
    public AllTableReports getTableReports(Integer testId, String roles, Integer limit, Integer page, String sort, Sort.Direction direction) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         StringBuilder queryBuilder = new StringBuilder();
-         Map<String, Object> params = new HashMap<>();
-         if (testId != null) {
-            queryBuilder.append("test.id = :test");
-            params.put("test", testId);
-         }
-         Set<String> rolesList = Roles.expandRoles(roles, identity);
-         if (rolesList != null) {
-            if (queryBuilder.length() > 0) {
-               queryBuilder.append(" AND ");
-            }
-            queryBuilder.append(" owner IN :roles");
-            params.put("roles", rolesList);
-         }
-         String query = queryBuilder.toString();
-         Sort querySort = sort == null ? null : Sort.by(sort, direction == null ? Sort.Direction.Ascending : direction);
-         PanacheQuery<TableReportConfig> pQuery = TableReportConfig.find(query, querySort, params);
-         if (page != null && limit != null) {
-            pQuery.page(page - 1, limit);
-         }
-         AllTableReports result = new AllTableReports();
-         result.count = TableReportConfig.count(query, params);
-         List<TableReportConfig> configs = pQuery.list();
-         Map<TableReportConfig, TableReportSummary> summaryLookup = new HashMap<>();
-         result.reports = configs.stream().map(config -> {
-            TableReportSummary summary = new TableReportSummary();
-            summary.config = config;
-            summary.reports = new ArrayList<>();
-            summaryLookup.put(config, summary);
-            return summary;
-         }).collect(Collectors.toList());
-         for (TableReport report : TableReport.<TableReport>find("config IN :configs", Map.of("configs", configs)).list()) {
-            TableReportSummary summary = summaryLookup.get(report.config);
-            TableReportSummaryItem item = new TableReportSummaryItem();
-            item.id = report.id;
-            item.created = report.created;
-            summary.reports.add(item);
-         }
-         return result;
+      StringBuilder queryBuilder = new StringBuilder();
+      Map<String, Object> params = new HashMap<>();
+      if (testId != null) {
+         queryBuilder.append("test.id = :test");
+         params.put("test", testId);
       }
+      Set<String> rolesList = Roles.expandRoles(roles, identity);
+      if (rolesList != null) {
+         if (queryBuilder.length() > 0) {
+            queryBuilder.append(" AND ");
+         }
+         queryBuilder.append(" owner IN :roles");
+         params.put("roles", rolesList);
+      }
+      String query = queryBuilder.toString();
+      Sort querySort = sort == null ? null : Sort.by(sort, direction == null ? Sort.Direction.Ascending : direction);
+      PanacheQuery<TableReportConfig> pQuery = TableReportConfig.find(query, querySort, params);
+      if (page != null && limit != null) {
+         pQuery.page(page - 1, limit);
+      }
+      AllTableReports result = new AllTableReports();
+      result.count = TableReportConfig.count(query, params);
+      List<TableReportConfig> configs = pQuery.list();
+      Map<TableReportConfig, TableReportSummary> summaryLookup = new HashMap<>();
+      result.reports = configs.stream().map(config -> {
+         TableReportSummary summary = new TableReportSummary();
+         summary.config = config;
+         summary.reports = new ArrayList<>();
+         summaryLookup.put(config, summary);
+         return summary;
+      }).collect(Collectors.toList());
+      for (TableReport report : TableReport.<TableReport>find("config IN :configs", Map.of("configs", configs)).list()) {
+         TableReportSummary summary = summaryLookup.get(report.config);
+         TableReportSummaryItem item = new TableReportSummaryItem();
+         item.id = report.id;
+         item.created = report.created;
+         summary.reports.add(item);
+      }
+      return result;
    }
 
    @PermitAll
    @Override
    public TableReportConfig getTableReportConfig(Integer id) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         return TableReportConfig.findById(id);
-      }
+      return TableReportConfig.findById(id);
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -148,25 +146,23 @@ public class ReportServiceImpl implements ReportService {
       }
       validateTableConfig(config);
       config.ensureLinked();
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         TableReport report = createTableReport(config, reportId);
-         if (config.id == null) {
-            config.persist();
-         } else {
-            TableReportConfig original = TableReportConfig.findById(config.id);
-            original.components.clear();
-            original.components.addAll(config.components);
-            config.components = original.components;
-            em.merge(config);
-         }
-         if (report.id == null) {
-            report.persist();
-         } else {
-            em.merge(report);
-         }
-         em.flush();
-         return report;
+      TableReport report = createTableReport(config, reportId);
+      if (config.id == null) {
+         config.persist();
+      } else {
+         TableReportConfig original = TableReportConfig.findById(config.id);
+         original.components.clear();
+         original.components.addAll(config.components);
+         config.components = original.components;
+         em.merge(config);
       }
+      if (report.id == null) {
+         report.persist();
+      } else {
+         em.merge(report);
+      }
+      em.flush();
+      return report;
    }
 
    private void validateTableConfig(TableReportConfig config) {
@@ -201,40 +197,34 @@ public class ReportServiceImpl implements ReportService {
    @PermitAll
    @Override
    public TableReport getTableReport(Integer id) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         TableReport report = TableReport.findById(id);
-         Hibernate.initialize(report.config);
-         return report;
-      }
+      TableReport report = TableReport.findById(id);
+      Hibernate.initialize(report.config);
+      return report;
    }
 
    @RolesAllowed(Roles.TESTER)
    @Transactional
    @Override
    public void deleteTableReport(Integer id) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         TableReport.deleteById(id);
-      }
+      TableReport.deleteById(id);
    }
 
    @RolesAllowed(Roles.TESTER)
    @Override
    @Transactional
    public ReportComment updateComment(Integer reportId, ReportComment comment) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         if (comment.id == null || comment.id < 0) {
-            comment.id = null;
-            comment.report = TableReport.findById(reportId);
-            if (comment.comment != null && !comment.comment.isEmpty()) {
-               comment.persistAndFlush();
-            }
-         } else if (comment.comment == null || comment.comment.isEmpty()){
-            ReportComment.deleteById(comment.id);
-            return null;
-         } else {
-            comment.report = TableReport.findById(reportId);
-            em.merge(comment);
+      if (comment.id == null || comment.id < 0) {
+         comment.id = null;
+         comment.report = TableReport.findById(reportId);
+         if (comment.comment != null && !comment.comment.isEmpty()) {
+            comment.persistAndFlush();
          }
+      } else if (comment.comment == null || comment.comment.isEmpty()){
+         ReportComment.deleteById(comment.id);
+         return null;
+      } else {
+         comment.report = TableReport.findById(reportId);
+         em.merge(comment);
       }
       return comment;
    }
@@ -243,9 +233,7 @@ public class ReportServiceImpl implements ReportService {
    @Override
    public TableReport previewTableReport(TableReportConfig config, Integer reportId) {
       validateTableConfig(config);
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         return createTableReport(config, reportId);
-      }
+      return createTableReport(config, reportId);
    }
 
    private TableReport createTableReport(TableReportConfig config, Integer reportId) {
@@ -572,13 +560,12 @@ public class ReportServiceImpl implements ReportService {
       }
    }
 
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @ConsumeEvent(value = Test.EVENT_DELETED, blocking = true)
    @Transactional
    public void onTestDelete(Test test) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withSystemRole(em)) {
-         int changedRows = em.createNativeQuery("UPDATE tablereportconfig SET testid = NULL WHERE testid = ?")
-               .setParameter(1, test.id).executeUpdate();
-         log.infof("Disowned %d report configs as test %s(%d) was deleted.", changedRows, test.name, test.id);
-      }
+      int changedRows = em.createNativeQuery("UPDATE tablereportconfig SET testid = NULL WHERE testid = ?")
+            .setParameter(1, test.id).executeUpdate();
+      log.infof("Disowned %d report configs as test %s(%d) was deleted.", changedRows, test.name, test.id);
    }
 }

@@ -4,6 +4,8 @@ import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
+import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -38,6 +40,7 @@ import com.networknt.schema.uri.URIFactory;
 import com.networknt.schema.uri.URIFetcher;
 import com.networknt.schema.uri.URLFactory;
 
+@WithRoles
 public class SchemaServiceImpl implements SchemaService {
    private static final Logger log = Logger.getLogger(SchemaServiceImpl.class);
 
@@ -80,38 +83,34 @@ public class SchemaServiceImpl implements SchemaService {
    @Inject
    SecurityIdentity identity;
 
+   @WithToken
    @PermitAll
    @Override
    public Schema getSchema(int id, String token){
-      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
-           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         Schema schema = Schema.find("id", id).firstResult();
-         if (schema == null) {
-            throw ServiceException.notFound("Schema not found");
-         }
-         return schema;
+      Schema schema = Schema.find("id", id).firstResult();
+      if (schema == null) {
+         throw ServiceException.notFound("Schema not found");
       }
+      return schema;
    }
 
    @RolesAllowed(Roles.TESTER)
    @Transactional
    @Override
    public Integer add(Schema schema){
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Schema byName = Schema.find("name", schema.name).firstResult();
-         if (byName != null) {
-            if (Objects.equals(schema.id, byName.id)) {
-               em.merge(schema);
-            } else {
-               throw ServiceException.serverError("Name already used");
-            }
+      Schema byName = Schema.find("name", schema.name).firstResult();
+      if (byName != null) {
+         if (Objects.equals(schema.id, byName.id)) {
+            em.merge(schema);
          } else {
-            schema.id = null; //remove the id so we don't override an existing entry
-            em.persist(schema);
+            throw ServiceException.serverError("Name already used");
          }
-         em.flush();//manually flush to validate constraints
-         return schema.id;
+      } else {
+         schema.id = null; //remove the id so we don't override an existing entry
+         em.persist(schema);
       }
+      em.flush();//manually flush to validate constraints
+      return schema.id;
    }
 
    @Override
@@ -122,15 +121,13 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @Override
    public List<Schema> list(Integer limit, Integer page, String sort, Sort.Direction direction) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         if (sort == null || sort.isEmpty()) {
-            sort = "name";
-         }
-         if (limit != null && page != null) {
-            return Schema.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
-         } else {
-            return Schema.listAll(Sort.by(sort).direction(direction));
-         }
+      if (sort == null || sort.isEmpty()) {
+         sort = "name";
+      }
+      if (limit != null && page != null) {
+         return Schema.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
+      } else {
+         return Schema.listAll(Sort.by(sort).direction(direction));
       }
    }
 
@@ -150,15 +147,13 @@ public class SchemaServiceImpl implements SchemaService {
 
    @Override
    public String updateToken(Integer id, String token) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Query query = em.createNativeQuery(UPDATE_TOKEN);
-         query.setParameter(1, token);
-         query.setParameter(2, id);
-         if (query.executeUpdate() != 1) {
-            throw ServiceException.serverError("Token reset failed (missing permissions?)");
-         } else {
-            return token;
-         }
+      Query query = em.createNativeQuery(UPDATE_TOKEN);
+      query.setParameter(1, token);
+      query.setParameter(2, id);
+      if (query.executeUpdate() != 1) {
+         throw ServiceException.serverError("Token reset failed (missing permissions?)");
+      } else {
+         return token;
       }
    }
 
@@ -172,14 +167,12 @@ public class SchemaServiceImpl implements SchemaService {
       if (access < Access.PUBLIC.ordinal() || access > Access.PRIVATE.ordinal()) {
          throw ServiceException.badRequest("Access not within bounds");
       }
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Query query = em.createNativeQuery(CHANGE_ACCESS);
-         query.setParameter(1, owner);
-         query.setParameter(2, access);
-         query.setParameter(3, id);
-         if (query.executeUpdate() != 1) {
-            throw ServiceException.serverError("Access change failed (missing permissions?)");
-         }
+      Query query = em.createNativeQuery(CHANGE_ACCESS);
+      query.setParameter(1, owner);
+      query.setParameter(2, access);
+      query.setParameter(3, id);
+      if (query.executeUpdate() != 1) {
+         throw ServiceException.serverError("Access change failed (missing permissions?)");
       }
    }
 
@@ -218,20 +211,18 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @Override
    public List<SchemaExtractor> listExtractors(Integer schema) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         List<SchemaExtractor> extractors;
-         if (schema == null) {
-            extractors = SchemaExtractor.<SchemaExtractor>findAll().stream().collect(Collectors.toList());
-         } else {
-            extractors = SchemaExtractor.<SchemaExtractor>find("schema_id", schema).stream().collect(Collectors.toList());
-         }
-         extractors.forEach(e -> {
-            Hibernate.initialize(e.schema);
-            em.detach(e);
-            e.jsonpath = "$" + e.jsonpath;
-         });
-         return extractors;
+      List<SchemaExtractor> extractors;
+      if (schema == null) {
+         extractors = SchemaExtractor.<SchemaExtractor>findAll().stream().collect(Collectors.toList());
+      } else {
+         extractors = SchemaExtractor.<SchemaExtractor>find("schema_id", schema).stream().collect(Collectors.toList());
       }
+      extractors.forEach(e -> {
+         Hibernate.initialize(e.schema);
+         em.detach(e);
+         e.jsonpath = "$" + e.jsonpath;
+      });
+      return extractors;
    }
 
    static boolean nullOrEmpty(String str) {
@@ -263,29 +254,27 @@ public class SchemaServiceImpl implements SchemaService {
       if (jsonpath.startsWith("$")) {
          jsonpath = jsonpath.substring(1);
       }
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Schema persistedSchema = Schema.find("uri", update.schema).firstResult();
-         if (persistedSchema == null) {
-            throw ServiceException.badRequest("Missing schema " + update.schema);
+      Schema persistedSchema = Schema.find("uri", update.schema).firstResult();
+      if (persistedSchema == null) {
+         throw ServiceException.badRequest("Missing schema " + update.schema);
+      }
+      SchemaExtractor extractor = SchemaExtractor.find("schema_id = ?1 and accessor = ?2", persistedSchema.id, accessor).firstResult();
+      boolean isNew = false;
+      if (extractor == null) {
+         extractor = new SchemaExtractor();
+         isNew = true;
+         if (update.deleted) {
+            throw ServiceException.notFound("Deleted extractor was not found");
          }
-         SchemaExtractor extractor = SchemaExtractor.find("schema_id = ?1 and accessor = ?2", persistedSchema.id, accessor).firstResult();
-         boolean isNew = false;
-         if (extractor == null) {
-            extractor = new SchemaExtractor();
-            isNew = true;
-            if (update.deleted) {
-               throw ServiceException.notFound("Deleted extractor was not found");
-            }
-         } else if (update.deleted) {
-            em.remove(extractor);
-            return;
-         }
-         extractor.accessor = newName;
-         extractor.schema = persistedSchema;
-         extractor.jsonpath = jsonpath;
-         if (isNew) {
-            em.persist(extractor);
-         }
+      } else if (update.deleted) {
+         em.remove(extractor);
+         return;
+      }
+      extractor.accessor = newName;
+      extractor.schema = persistedSchema;
+      extractor.jsonpath = jsonpath;
+      if (isNew) {
+         em.persist(extractor);
       }
    }
 
@@ -293,14 +282,12 @@ public class SchemaServiceImpl implements SchemaService {
    @Transactional
    @Override
    public void delete(Integer id){
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Schema schema = Schema.find("id", id).firstResult();
-         if (schema == null) {
-            throw ServiceException.notFound("Schema not found");
-         } else {
-            SchemaExtractor.delete("schema_id", id);
-            schema.delete();
-         }
+      Schema schema = Schema.find("id", id).firstResult();
+      if (schema == null) {
+         throw ServiceException.notFound("Schema not found");
+      } else {
+         SchemaExtractor.delete("schema_id", id);
+         schema.delete();
       }
    }
 }

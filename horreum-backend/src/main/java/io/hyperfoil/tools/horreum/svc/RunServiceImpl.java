@@ -7,6 +7,10 @@ import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
+import io.hyperfoil.tools.horreum.server.CloseMe;
+import io.hyperfoil.tools.horreum.server.RoleManager;
+import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.eventbus.EventBus;
@@ -58,6 +62,8 @@ import com.networknt.schema.ValidationMessage;
 
 @ApplicationScoped
 @Startup
+@WithRoles
+@WithToken
 public class RunServiceImpl implements RunService {
    private static final Logger log = Logger.getLogger(RunServiceImpl.class);
 
@@ -101,6 +107,9 @@ public class RunServiceImpl implements RunService {
    SqlServiceImpl sqlService;
 
    @Inject
+   RoleManager roleManager;
+
+   @Inject
    EventBus eventBus;
 
    @Inject
@@ -129,8 +138,8 @@ public class RunServiceImpl implements RunService {
          log.errorf("Received notification to recalculate tags for run %s but cannot parse as run ID.", parts[0]);
          return;
       }
-      try (@SuppressWarnings("ununsed") CloseMe h1 = sqlService.withRoles(em, parts[2]);
-           @SuppressWarnings("ununsed") CloseMe h2 = sqlService.withToken(em, parts[1])) {
+      try (@SuppressWarnings("unused") CloseMe h1 = roleManager.withRoles(em, parts[2]);
+           @SuppressWarnings("unused") CloseMe h2 = roleManager.withToken(em, parts[1])) {
          log.debugf("Recalculating tags for run %s", runId);
          Object[] result = (Object[]) em.createNativeQuery(GET_TAGS).setParameter(1, runId).getSingleResult();
          String calculation = (String) result[0];
@@ -180,18 +189,15 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   private Object runQuery(String query, String token, Object... params) {
-      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
-           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         Query q = em.createNativeQuery(query);
-         for (int i = 0; i < params.length; ++i) {
-            q.setParameter(i + 1, params[i]);
-         }
-         try {
-            return q.getSingleResult();
-         } catch (NoResultException e) {
-            throw ServiceException.notFound("No result");
-         }
+   private Object runQuery(String query, Object... params) {
+      Query q = em.createNativeQuery(query);
+      for (int i = 0; i < params.length; ++i) {
+         q.setParameter(i + 1, params[i]);
+      }
+      try {
+         return q.getSingleResult();
+      } catch (NoResultException e) {
+         throw ServiceException.notFound("No result");
       }
    }
 
@@ -201,13 +207,13 @@ public class RunServiceImpl implements RunService {
       return runQuery("SELECT (to_jsonb(run) ||" +
             "jsonb_set('{}', '{schema}', (SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = ?)::::jsonb, true) || " +
             "jsonb_set('{}', '{testname}', to_jsonb((SELECT name FROM test WHERE test.id = run.testid)), true)" +
-            ")::::text FROM run where id = ?", token, id, id);
+            ")::::text FROM run where id = ?", id, id);
    }
 
    @PermitAll
    @Override
    public Object getData(Integer id, String token) {
-      return runQuery("SELECT data#>>'{}' from run where id = ?", token, id);
+      return runQuery("SELECT data#>>'{}' from run where id = ?", id);
    }
 
    @PermitAll
@@ -223,10 +229,10 @@ public class RunServiceImpl implements RunService {
                jsonpath = jsonpath.substring(1);
             }
             String sqlQuery = "SELECT " + func + "(run.data, (rs.prefix || ?)::::jsonpath)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ? AND rs.uri = ?";
-            result.value = String.valueOf(runQuery(sqlQuery, null, jsonpath, id, schemaUri));
+            result.value = String.valueOf(runQuery(sqlQuery, jsonpath, id, schemaUri));
          } else {
             String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM run WHERE id = ?";
-            result.value = String.valueOf(runQuery(sqlQuery, null, jsonpath, id));
+            result.value = String.valueOf(runQuery(sqlQuery, jsonpath, id));
          }
          result.valid = true;
       } catch (PersistenceException pe) {
@@ -250,15 +256,13 @@ public class RunServiceImpl implements RunService {
    }
 
    private String updateToken(Integer id, String token) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Query query = em.createNativeQuery(UPDATE_TOKEN);
-         query.setParameter(1, token);
-         query.setParameter(2, id);
-         if (query.executeUpdate() != 1) {
-            throw ServiceException.serverError("Token reset failed (missing permissions?)");
-         } else {
-            return token;
-         }
+      Query query = em.createNativeQuery(UPDATE_TOKEN);
+      query.setParameter(1, token);
+      query.setParameter(2, id);
+      if (query.executeUpdate() != 1) {
+         throw ServiceException.serverError("Token reset failed (missing permissions?)");
+      } else {
+         return token;
       }
    }
 
@@ -267,14 +271,12 @@ public class RunServiceImpl implements RunService {
    @Override
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
    public void updateAccess(Integer id, String owner, Access access) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Query query = em.createNativeQuery(CHANGE_ACCESS);
-         query.setParameter(1, owner);
-         query.setParameter(2, access.ordinal());
-         query.setParameter(3, id);
-         if (query.executeUpdate() != 1) {
-            throw ServiceException.serverError("Access change failed (missing permissions?)");
-         }
+      Query query = em.createNativeQuery(CHANGE_ACCESS);
+      query.setParameter(1, owner);
+      query.setParameter(2, access.ordinal());
+      query.setParameter(3, id);
+      if (query.executeUpdate() != 1) {
+         throw ServiceException.serverError("Access change failed (missing permissions?)");
       }
    }
 
@@ -289,17 +291,14 @@ public class RunServiceImpl implements RunService {
       if (access != null) {
          run.access = access;
       }
-      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
-           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         Test test = testService.getByNameOrId(testNameOrId);
-         if (test == null) {
-            throw ServiceException.serverError("Failed to find test " + testNameOrId);
-         }
-         run.testid = test.id;
-         Integer runId = addAuthenticated(run, test);
-         response.addHeader(HttpHeaders.LOCATION, "/run/" + runId);
-         return String.valueOf(runId);
+      Test test = testService.getByNameOrId(testNameOrId);
+      if (test == null) {
+         throw ServiceException.serverError("Failed to find test " + testNameOrId);
       }
+      run.testid = test.id;
+      Integer runId = addAuthenticated(run, test);
+      response.addHeader(HttpHeaders.LOCATION, "/run/" + runId);
+      return String.valueOf(runId);
    }
 
    @PermitAll // all because of possible token-based upload
@@ -318,65 +317,62 @@ public class RunServiceImpl implements RunService {
       Object foundStop = findIfNotSet(stop, data);
       Object foundDescription = findIfNotSet(description, data);
 
-      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
-           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         if (schemaUri == null || schemaUri.isEmpty()) {
-            JsonNode schemaNode = data.get("$schema");
-            schemaUri = schemaNode == null ? null : schemaNode.asText();
-         } else {
-            if (data.isObject()) {
-               ((ObjectNode) data).set("$schema", TextNode.valueOf(schemaUri));
-            }
+      if (schemaUri == null || schemaUri.isEmpty()) {
+         JsonNode schemaNode = data.get("$schema");
+         schemaUri = schemaNode == null ? null : schemaNode.asText();
+      } else {
+         if (data.isObject()) {
+            ((ObjectNode) data).set("$schema", TextNode.valueOf(schemaUri));
          }
-
-         String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
-         if (testNameOrId == null || testNameOrId.isEmpty()) {
-            log.debugf("Failed to upload for test %s with description %s as the test cannot be identified.", test, description);
-            throw ServiceException.badRequest("Cannot identify test name.");
-         }
-
-         Instant startInstant = toInstant(foundStart);
-         Instant stopInstant = toInstant(foundStop);
-         if (startInstant == null) {
-            log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStart, start);
-            throw ServiceException.badRequest("Cannot parse start time from " + foundStart + " (" + start + ")");
-         } else if (stopInstant == null) {
-            log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStop,stop);
-            throw ServiceException.badRequest("Cannot parse stop time from " + foundStop + " (" + stop + ")");
-         }
-
-         Test testEntity = testService.getByNameOrId(testNameOrId);
-         if (testEntity == null) {
-            log.debugf("Failed to upload for test %s with description %s as there is no such test.", test, description);
-            throw ServiceException.serverError("Failed to find test " + testNameOrId);
-         }
-
-         Collection<ValidationMessage> validationErrors = schemaService.validate(data, schemaUri);
-         if (validationErrors != null && !validationErrors.isEmpty()) {
-            log.debugf("Failed to upload for test %s with description %s because of validation errors.", test, description);
-            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST).entity(validationErrors).build());
-         }
-         log.debugf("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id, foundDescription);
-
-         Run run = new Run();
-         run.testid = testEntity.id;
-         run.start = startInstant;
-         run.stop = stopInstant;
-         run.description = foundDescription != null ? foundDescription.toString() : null;
-         run.data = data;
-         run.owner = owner;
-         run.access = access;
-         // Some triggered functions in the database need to be able to read the just-inserted run
-         // otherwise RLS policies will fail. That's why we reuse the token for the test and later wipe it out.
-         run.token = token;
-
-         Integer runId = addAuthenticated(run, testEntity);
-         if (token != null) {
-            // TODO: remove the token
-         }
-         response.addHeader(HttpHeaders.LOCATION, "/run/" + runId);
-         return String.valueOf(runId);
       }
+
+      String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
+      if (testNameOrId == null || testNameOrId.isEmpty()) {
+         log.debugf("Failed to upload for test %s with description %s as the test cannot be identified.", test, description);
+         throw ServiceException.badRequest("Cannot identify test name.");
+      }
+
+      Instant startInstant = toInstant(foundStart);
+      Instant stopInstant = toInstant(foundStop);
+      if (startInstant == null) {
+         log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStart, start);
+         throw ServiceException.badRequest("Cannot parse start time from " + foundStart + " (" + start + ")");
+      } else if (stopInstant == null) {
+         log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStop,stop);
+         throw ServiceException.badRequest("Cannot parse stop time from " + foundStop + " (" + stop + ")");
+      }
+
+      Test testEntity = testService.getByNameOrId(testNameOrId);
+      if (testEntity == null) {
+         log.debugf("Failed to upload for test %s with description %s as there is no such test.", test, description);
+         throw ServiceException.serverError("Failed to find test " + testNameOrId);
+      }
+
+      Collection<ValidationMessage> validationErrors = schemaService.validate(data, schemaUri);
+      if (validationErrors != null && !validationErrors.isEmpty()) {
+         log.debugf("Failed to upload for test %s with description %s because of validation errors.", test, description);
+         throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST).entity(validationErrors).build());
+      }
+      log.debugf("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id, foundDescription);
+
+      Run run = new Run();
+      run.testid = testEntity.id;
+      run.start = startInstant;
+      run.stop = stopInstant;
+      run.description = foundDescription != null ? foundDescription.toString() : null;
+      run.data = data;
+      run.owner = owner;
+      run.access = access;
+      // Some triggered functions in the database need to be able to read the just-inserted run
+      // otherwise RLS policies will fail. That's why we reuse the token for the test and later wipe it out.
+      run.token = token;
+
+      Integer runId = addAuthenticated(run, testEntity);
+      if (token != null) {
+         // TODO: remove the token
+      }
+      response.addHeader(HttpHeaders.LOCATION, "/run/" + runId);
+      return String.valueOf(runId);
    }
 
    private Object findIfNotSet(String value, JsonNode data) {
@@ -495,7 +491,7 @@ public class RunServiceImpl implements RunService {
       if (!jsonpath.startsWith("$")) {
          jsonpath = "$.**." + jsonpath;
       }
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+      try {
          Query findAutocomplete = em.createNativeQuery(FIND_AUTOCOMPLETE);
          findAutocomplete.setParameter(1, jsonpath);
          findAutocomplete.setParameter(2, incomplete);
@@ -562,7 +558,7 @@ public class RunServiceImpl implements RunService {
 
       Roles.addRolesParam(identity, sqlQuery, queryParts.length + 1, roles);
 
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)){
+      try {
          @SuppressWarnings("unchecked")
          List<Object[]> runs = sqlQuery.getResultList();
 
@@ -613,13 +609,11 @@ public class RunServiceImpl implements RunService {
       if (testId == null) {
          throw ServiceException.badRequest("Missing testId query param.");
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         RunCounts counts = new RunCounts();
-         counts.total = Run.count("testid = ?1", testId);
-         counts.active = Run.count("testid = ?1 AND trashed = false", testId);
-         counts.trashed = counts.total - counts.active;
-         return counts;
-      }
+      RunCounts counts = new RunCounts();
+      counts.total = Run.count("testid = ?1", testId);
+      counts.active = Run.count("testid = ?1 AND trashed = false", testId);
+      counts.trashed = counts.total - counts.active;
+      return counts;
    }
 
    @PermitAll
@@ -656,73 +650,70 @@ public class RunServiceImpl implements RunService {
          Util.addOrderBy(sql, sort, direction);
       }
       Util.addLimitOffset(sql, limit, page);
-      Test test;
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         test = Test.find("id", testId).firstResult();
-         if (test == null) {
-            throw ServiceException.notFound("Cannot find test ID " + testId);
-         }
-         Query query = em.createNativeQuery(sql.toString());
-         query.setParameter(1, testId);
-         Tags.addTagValues(tagsMap, query, 2);
-         @SuppressWarnings("unchecked")
-         List<Object[]> resultList = query.getResultList();
-         List<TestRunSummary> runs = new ArrayList<>();
-         for (Object[] row : resultList) {
-            String viewString = (String) row[6];
-            JsonNode unorderedView = viewString == null ? Util.EMPTY_OBJECT : Util.toJsonNode(viewString);
-            ArrayNode view = JsonNodeFactory.instance.arrayNode();
-            if (test.defaultView != null) {
-               for (ViewComponent c : test.defaultView.components) {
-                  JsonNode componentData = unorderedView.get(String.valueOf(c.id));
-                  String[] accessors = c.accessors();
-                  if (componentData == null) {
-                     if (accessors.length == 1) {
-                        view.addNull();
-                     } else {
-                        ObjectNode builder = view.addObject();
-                        for (String accessor: accessors) {
-                           if (SchemaExtractor.isArray(accessor)) {
-                              builder.set(SchemaExtractor.arrayName(accessor), JsonNodeFactory.instance.nullNode());
-                           } else {
-                              builder.set(accessor, JsonNodeFactory.instance.nullNode());
-                           }
-                        }
-                     }
+      Test test = Test.find("id", testId).firstResult();
+      if (test == null) {
+         throw ServiceException.notFound("Cannot find test ID " + testId);
+      }
+      Query query = em.createNativeQuery(sql.toString());
+      query.setParameter(1, testId);
+      Tags.addTagValues(tagsMap, query, 2);
+      @SuppressWarnings("unchecked")
+      List<Object[]> resultList = query.getResultList();
+      List<TestRunSummary> runs = new ArrayList<>();
+      for (Object[] row : resultList) {
+         String viewString = (String) row[6];
+         JsonNode unorderedView = viewString == null ? Util.EMPTY_OBJECT : Util.toJsonNode(viewString);
+         ArrayNode view = JsonNodeFactory.instance.arrayNode();
+         if (test.defaultView != null) {
+            for (ViewComponent c : test.defaultView.components) {
+               JsonNode componentData = unorderedView.get(String.valueOf(c.id));
+               String[] accessors = c.accessors();
+               if (componentData == null) {
+                  if (accessors.length == 1) {
+                     view.addNull();
                   } else {
-                     if (accessors.length == 1) {
-                        String accessor = accessors[0];
-                        if (SchemaExtractor.isArray(accessors[0])) {
-                           accessor = SchemaExtractor.arrayName(accessor);
+                     ObjectNode builder = view.addObject();
+                     for (String accessor: accessors) {
+                        if (SchemaExtractor.isArray(accessor)) {
+                           builder.set(SchemaExtractor.arrayName(accessor), JsonNodeFactory.instance.nullNode());
+                        } else {
+                           builder.set(accessor, JsonNodeFactory.instance.nullNode());
                         }
-                        view.add(componentData.get(accessor));
-                     } else {
-                        view.add(componentData);
                      }
+                  }
+               } else {
+                  if (accessors.length == 1) {
+                     String accessor = accessors[0];
+                     if (SchemaExtractor.isArray(accessors[0])) {
+                        accessor = SchemaExtractor.arrayName(accessor);
+                     }
+                     view.add(componentData.get(accessor));
+                  } else {
+                     view.add(componentData);
                   }
                }
             }
-            String schemas = (String) row[5];
-            String runTags = (String) row[9];
-            TestRunSummary run = new TestRunSummary();
-            run.id = (int) row[0];
-            run.start = ((Timestamp) row[1]).getTime();
-            run.stop = ((Timestamp) row[2]).getTime();
-            run.testid = testId;
-            run.access = (int) row[3];
-            run.owner = (String) row[4];
-            run.schema = Util.toJsonNode(schemas);
-            run.view = view;
-            run.trashed = (boolean) row[7];
-            run.description = (String) row[8];
-            run.tags = Util.toJsonNode(runTags);
-            runs.add(run);
          }
-         TestRunsSummary summary = new TestRunsSummary();
-         summary.total = trashed ? Run.count("testid = ?1", testId) : Run.count("testid = ?1 AND trashed = false", testId);
-         summary.runs = runs;
-         return summary;
+         String schemas = (String) row[5];
+         String runTags = (String) row[9];
+         TestRunSummary run = new TestRunSummary();
+         run.id = (int) row[0];
+         run.start = ((Timestamp) row[1]).getTime();
+         run.stop = ((Timestamp) row[2]).getTime();
+         run.testid = testId;
+         run.access = (int) row[3];
+         run.owner = (String) row[4];
+         run.schema = Util.toJsonNode(schemas);
+         run.view = view;
+         run.trashed = (boolean) row[7];
+         run.description = (String) row[8];
+         run.tags = Util.toJsonNode(runTags);
+         runs.add(run);
       }
+      TestRunsSummary summary = new TestRunsSummary();
+      summary.total = trashed ? Run.count("testid = ?1", testId) : Run.count("testid = ?1 AND trashed = false", testId);
+      summary.runs = runs;
+      return summary;
    }
 
    @PermitAll
@@ -731,35 +722,33 @@ public class RunServiceImpl implements RunService {
       if (uri == null || uri.isEmpty()) {
          throw ServiceException.badRequest("No `uri` query parameter given.");
       }
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
-               .append("run.owner, run.access, run.token, test.name AS testname, run.description ")
-               .append("FROM run_schemas rs JOIN run ON rs.runid = run.id JOIN test ON rs.testid = test.id ")
-               .append("WHERE uri = ? AND NOT run.trashed");
-         Util.addPaging(sql, limit, page, sort, direction);
-         Query query = em.createNativeQuery(sql.toString());
-         query.setParameter(1, uri);
-         @SuppressWarnings("unchecked")
-         List<Object[]> runs = query.getResultList();
+      StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
+            .append("run.owner, run.access, run.token, test.name AS testname, run.description ")
+            .append("FROM run_schemas rs JOIN run ON rs.runid = run.id JOIN test ON rs.testid = test.id ")
+            .append("WHERE uri = ? AND NOT run.trashed");
+      Util.addPaging(sql, limit, page, sort, direction);
+      Query query = em.createNativeQuery(sql.toString());
+      query.setParameter(1, uri);
+      @SuppressWarnings("unchecked")
+      List<Object[]> runs = query.getResultList();
 
-         RunsSummary summary = new RunsSummary();
-         summary.runs = runs.stream().map(row -> {
-            RunSummary run = new RunSummary();
-            run.id = (int) row[0];
-            run.start = ((Timestamp) row[1]).getTime();
-            run.stop = ((Timestamp) row[2]).getTime();
-            run.testid = (int) row[3];
-            run.owner = (String) row[4];
-            run.access = (int) row[5];
-            run.token = (String) row[6];
-            run.testname = (String) row[7];
-            run.description = (String) row[8];
-            return run;
-         }).collect(Collectors.toList());
-         summary.total = ((BigInteger) em.createNativeQuery("SELECT count(*) FROM run_schemas WHERE uri = ?")
-               .setParameter(1, uri).getSingleResult()).longValue();
-         return summary;
-      }
+      RunsSummary summary = new RunsSummary();
+      summary.runs = runs.stream().map(row -> {
+         RunSummary run = new RunSummary();
+         run.id = (int) row[0];
+         run.start = ((Timestamp) row[1]).getTime();
+         run.stop = ((Timestamp) row[2]).getTime();
+         run.testid = (int) row[3];
+         run.owner = (String) row[4];
+         run.access = (int) row[5];
+         run.token = (String) row[6];
+         run.testname = (String) row[7];
+         run.description = (String) row[8];
+         return run;
+      }).collect(Collectors.toList());
+      summary.total = ((BigInteger) em.createNativeQuery("SELECT count(*) FROM run_schemas WHERE uri = ?")
+            .setParameter(1, uri).getSingleResult()).longValue();
+      return summary;
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -779,14 +768,12 @@ public class RunServiceImpl implements RunService {
    }
 
    public void updateRun(Integer id, Consumer<Run> consumer) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Run run = Run.findById(id);
-         if (run == null) {
-            throw ServiceException.notFound("Run not found");
-         }
-         consumer.accept(run);
-         run.persistAndFlush();
+      Run run = Run.findById(id);
+      if (run == null) {
+         throw ServiceException.notFound("Run not found");
       }
+      consumer.accept(run);
+      run.persistAndFlush();
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -794,35 +781,33 @@ public class RunServiceImpl implements RunService {
    @Override
    public Object updateSchema(Integer id, String path, String schemaUri) {
       // FIXME: fetchival stringifies the body into JSON string :-/
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Run run = Run.findById(id);
-         if (run == null) {
-            throw ServiceException.notFound("Run not found.");
-         }
-         String uri = Util.destringify(schemaUri);
-         // Triggering dirty property on Run
-         JsonNode updated = run.data.deepCopy();
-         ObjectNode item;
-         if (updated.isObject()) {
-            item = (ObjectNode) (path == null || path.isEmpty() ? updated : updated.get(path));
-         } else if (updated.isArray()) {
-            int index = path == null || path.isEmpty() ? 0 : Integer.parseInt(path);
-            item = (ObjectNode) updated.get(index);
-         } else {
-            throw ServiceException.serverError("Cannot update run data with path " + path);
-         }
-         if (uri != null && !uri.isEmpty()) {
-            item.set("$schema", new TextNode(uri));
-         } else {
-            item.remove("$schema");
-         }
-         run.data = updated;
-         run.persist();
-         Query query = em.createNativeQuery("SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}')::::text FROM run_schemas WHERE runid = ?");
-         query.setParameter(1, run.id);
-         Object schemas = query.getSingleResult();
-         em.flush();
-         return schemas;
+      Run run = Run.findById(id);
+      if (run == null) {
+         throw ServiceException.notFound("Run not found.");
       }
+      String uri = Util.destringify(schemaUri);
+      // Triggering dirty property on Run
+      JsonNode updated = run.data.deepCopy();
+      ObjectNode item;
+      if (updated.isObject()) {
+         item = (ObjectNode) (path == null || path.isEmpty() ? updated : updated.get(path));
+      } else if (updated.isArray()) {
+         int index = path == null || path.isEmpty() ? 0 : Integer.parseInt(path);
+         item = (ObjectNode) updated.get(index);
+      } else {
+         throw ServiceException.serverError("Cannot update run data with path " + path);
+      }
+      if (uri != null && !uri.isEmpty()) {
+         item.set("$schema", new TextNode(uri));
+      } else {
+         item.remove("$schema");
+      }
+      run.data = updated;
+      run.persist();
+      Query query = em.createNativeQuery("SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}')::::text FROM run_schemas WHERE runid = ?");
+      query.setParameter(1, run.id);
+      Object schemas = query.getSingleResult();
+      em.flush();
+      return schemas;
    }
 }

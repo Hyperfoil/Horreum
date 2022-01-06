@@ -2,6 +2,8 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.entity.json.*;
+import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -36,6 +38,7 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+@WithRoles
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
 
@@ -65,37 +68,33 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed(Roles.TESTER)
    @Transactional
    public void delete(Integer id){
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)){
-         Test test = Test.findById(id);
-         if (test == null) {
-            throw ServiceException.notFound("No test with id " + id);
-         } else if (!identity.getRoles().contains(test.owner)) {
-            throw ServiceException.forbidden("You are not an owner of test " + id);
-         }
-         test.defaultView = null;
-         em.merge(test);
-         View.find("test_id", id).stream().forEach(view -> {
-            ViewComponent.delete("view_id", ((View) view).id);
-            view.delete();
-         });
-         test.delete();
-         em.createNativeQuery(TRASH_RUNS).setParameter(1, test.id).executeUpdate();
-         Util.publishLater(tm, eventBus, Test.EVENT_DELETED, test);
+      Test test = Test.findById(id);
+      if (test == null) {
+         throw ServiceException.notFound("No test with id " + id);
+      } else if (!identity.getRoles().contains(test.owner)) {
+         throw ServiceException.forbidden("You are not an owner of test " + id);
       }
+      test.defaultView = null;
+      em.merge(test);
+      View.find("test_id", id).stream().forEach(view -> {
+         ViewComponent.delete("view_id", ((View) view).id);
+         view.delete();
+      });
+      test.delete();
+      em.createNativeQuery(TRASH_RUNS).setParameter(1, test.id).executeUpdate();
+      Util.publishLater(tm, eventBus, Test.EVENT_DELETED, test);
    }
 
    @Override
+   @WithToken
    @PermitAll
    public Test get(Integer id, String token){
-      try (@SuppressWarnings("unused") CloseMe h1 = sqlService.withRoles(em, identity);
-           @SuppressWarnings("unused") CloseMe h2 = sqlService.withToken(em, token)) {
-         Test test = Test.find("id", id).firstResult();
-         if (test == null) {
-            throw ServiceException.notFound("No test with id " + id);
-         }
-         Hibernate.initialize(test.tokens);
-         return test;
+      Test test = Test.find("id", id).firstResult();
+      if (test == null) {
+         throw ServiceException.notFound("No test with id " + id);
       }
+      Hibernate.initialize(test.tokens);
+      return test;
    }
 
    @Override
@@ -115,11 +114,9 @@ public class TestServiceImpl implements TestService {
       if (!identity.hasRole(test.owner)) {
          throw ServiceException.forbidden("This user does not have the " + test.owner + " role!");
       }
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         addAuthenticated(test);
-         Hibernate.initialize(test.tokens);
-         return test;
-      }
+      addAuthenticated(test);
+      Hibernate.initialize(test.tokens);
+      return test;
    }
 
    void addAuthenticated(Test test) {
@@ -171,47 +168,43 @@ public class TestServiceImpl implements TestService {
    @Override
    @PermitAll
    public List<Test> list(String roles, Integer limit, Integer page, String sort, Sort.Direction direction){
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         PanacheQuery<Test> query;
-         Set<String> actualRoles = null;
-         if (Roles.hasRolesParam(roles)) {
-            if (roles.equals("__my")) {
-               if (!identity.isAnonymous()) {
-                  actualRoles = identity.getRoles();
-               }
-            } else {
-               actualRoles = new HashSet<>(Arrays.asList(roles.split(";")));
+      PanacheQuery<Test> query;
+      Set<String> actualRoles = null;
+      if (Roles.hasRolesParam(roles)) {
+         if (roles.equals("__my")) {
+            if (!identity.isAnonymous()) {
+               actualRoles = identity.getRoles();
             }
-         }
-
-         Sort sortOptions = Sort.by(sort).direction(direction);
-         if (actualRoles == null) {
-            query = Test.findAll(sortOptions);
          } else {
-            query = Test.find("owner IN ?1", sortOptions, actualRoles);
+            actualRoles = new HashSet<>(Arrays.asList(roles.split(";")));
          }
-         if (limit != null && page != null) {
-            query.page(Page.of(page, limit));
-         }
-         return query.list();
       }
+
+      Sort sortOptions = Sort.by(sort).direction(direction);
+      if (actualRoles == null) {
+         query = Test.findAll(sortOptions);
+      } else {
+         query = Test.find("owner IN ?1", sortOptions, actualRoles);
+      }
+      if (limit != null && page != null) {
+         query.page(Page.of(page, limit));
+      }
+      return query.list();
    }
 
    @Override
    @PermitAll
    public List<TestSummary> summary(String roles) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         StringBuilder sql = new StringBuilder();
-         sql.append("SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.access ");
-         sql.append("FROM test LEFT JOIN run ON run.testid = test.id AND (run.trashed = false OR run.trashed IS NULL)");
-         Roles.addRolesSql(identity, "test", sql, roles, 1, " WHERE");
-         sql.append(" GROUP BY test.id");
-         Query query = em.createNativeQuery(sql.toString());
-         Roles.addRolesParam(identity, query, 1, roles);
-         SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(TestSummary.class));
-         //noinspection unchecked
-         return query.getResultList();
-      }
+      StringBuilder sql = new StringBuilder();
+      sql.append("SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.access ");
+      sql.append("FROM test LEFT JOIN run ON run.testid = test.id AND (run.trashed = false OR run.trashed IS NULL)");
+      Roles.addRolesSql(identity, "test", sql, roles, 1, " WHERE");
+      sql.append(" GROUP BY test.id");
+      Query query = em.createNativeQuery(sql.toString());
+      Roles.addRolesParam(identity, query, 1, roles);
+      SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(TestSummary.class));
+      //noinspection unchecked
+      return query.getResultList();
    }
 
    @Override
@@ -221,40 +214,34 @@ public class TestServiceImpl implements TestService {
       if (token.hasUpload() && !token.hasRead()) {
          throw ServiceException.badRequest("Upload permission requires read permission as well.");
       }
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Test test = Test.findById(testId);
-         if (test == null) {
-            throw ServiceException.notFound("Test not found");
-         }
-         token.test = test;
-         test.tokens.add(token);
-         test.persistAndFlush();
+      Test test = Test.findById(testId);
+      if (test == null) {
+         throw ServiceException.notFound("Test not found");
       }
+      token.test = test;
+      test.tokens.add(token);
+      test.persistAndFlush();
       return token.id;
    }
 
    @Override
    @RolesAllowed("tester")
    public Collection<TestToken> tokens(Integer testId) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Test t = Test.findById(testId);
-         Hibernate.initialize(t.tokens);
-         return t.tokens;
-      }
+      Test t = Test.findById(testId);
+      Hibernate.initialize(t.tokens);
+      return t.tokens;
    }
 
    @Override
    @RolesAllowed("tester")
    @Transactional
    public void dropToken(Integer testId, Integer tokenId) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Test test = Test.findById(testId);
-         if (test == null) {
-            throw ServiceException.notFound("Test not found.");
-         }
-         test.tokens.removeIf(t -> Objects.equals(t.id, tokenId));
-         test.persist();
+      Test test = Test.findById(testId);
+      if (test == null) {
+         throw ServiceException.notFound("Test not found.");
       }
+      test.tokens.removeIf(t -> Objects.equals(t.id, tokenId));
+      test.persist();
    }
 
    @Override
@@ -264,14 +251,12 @@ public class TestServiceImpl implements TestService {
    public void updateAccess(Integer id,
                             String owner,
                             Access access) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Query query = em.createNativeQuery(CHANGE_ACCESS);
-         query.setParameter(1, owner);
-         query.setParameter(2, access.ordinal());
-         query.setParameter(3, id);
-         if (query.executeUpdate() != 1) {
-            throw ServiceException.serverError("Access change failed (missing permissions?)");
-         }
+      Query query = em.createNativeQuery(CHANGE_ACCESS);
+      query.setParameter(1, owner);
+      query.setParameter(2, access.ordinal());
+      query.setParameter(3, id);
+      if (query.executeUpdate() != 1) {
+         throw ServiceException.serverError("Access change failed (missing permissions?)");
       }
    }
 
@@ -282,7 +267,7 @@ public class TestServiceImpl implements TestService {
       if (testId == null || testId <= 0) {
          throw ServiceException.badRequest("Missing test id");
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+      try {
          Test test = Test.findById(testId);
          if (test == null) {
             throw ServiceException.notFound("Test not found");
@@ -310,13 +295,11 @@ public class TestServiceImpl implements TestService {
    @Transactional
    public void updateAccess(Integer id,
                             boolean enabled) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Query query = em.createNativeQuery(UPDATE_NOTIFICATIONS)
-               .setParameter(1, enabled)
-               .setParameter(2, id);
-         if (query.executeUpdate() != 1) {
-            throw ServiceException.serverError("Access change failed (missing permissions?)");
-         }
+      Query query = em.createNativeQuery(UPDATE_NOTIFICATIONS)
+            .setParameter(1, enabled)
+            .setParameter(2, id);
+      if (query.executeUpdate() != 1) {
+         throw ServiceException.serverError("Access change failed (missing permissions?)");
       }
    }
 
@@ -327,25 +310,23 @@ public class TestServiceImpl implements TestService {
       if (testId == null || testId <= 0) {
          throw ServiceException.badRequest("Missing test id");
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Test test = Test.findById(testId);
-         if (test == null) {
-            throw ServiceException.notFound("Test not found.");
-         }
-         hook.target = testId;
-
-         if (hook.id == null) {
-            em.persist(hook);
-         } else {
-            if (!hook.active) {
-               Hook toDelete = em.find(Hook.class, hook.id);
-               em.remove(toDelete);
-            } else {
-               em.merge(hook);
-            }
-         }
-         test.persist();
+      Test test = Test.findById(testId);
+      if (test == null) {
+         throw ServiceException.notFound("Test not found.");
       }
+      hook.target = testId;
+
+      if (hook.id == null) {
+         em.persist(hook);
+      } else {
+         if (!hook.active) {
+            Hook toDelete = em.find(Hook.class, hook.id);
+            em.remove(toDelete);
+         } else {
+            em.merge(hook);
+         }
+      }
+      test.persist();
    }
 
    @Override
@@ -354,19 +335,17 @@ public class TestServiceImpl implements TestService {
       if (testId == null) {
          throw ServiceException.badRequest("Missing param 'test'");
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         StringBuilder sql = new StringBuilder("SELECT tags::::text FROM run LEFT JOIN run_tags ON run_tags.runid = run.id WHERE run.testid = ?");
-         if (trashed == null || !trashed) {
-            sql.append(" AND NOT run.trashed");
-         }
-         sql.append(" GROUP BY tags");
-         Query tagComboQuery = em.createNativeQuery(sql.toString());
-         @SuppressWarnings("unchecked") List<String> tagList = tagComboQuery.setParameter(1, testId).getResultList();
-         ArrayList<JsonNode> result = new ArrayList<>(tagList.size());
-         for (String tags : tagList) {
-            result.add(tags == null ? Util.EMPTY_OBJECT : Util.toJsonNode(tags));
-         }
-         return result;
+      StringBuilder sql = new StringBuilder("SELECT tags::::text FROM run LEFT JOIN run_tags ON run_tags.runid = run.id WHERE run.testid = ?");
+      if (trashed == null || !trashed) {
+         sql.append(" AND NOT run.trashed");
       }
+      sql.append(" GROUP BY tags");
+      Query tagComboQuery = em.createNativeQuery(sql.toString());
+      @SuppressWarnings("unchecked") List<String> tagList = tagComboQuery.setParameter(1, testId).getResultList();
+      ArrayList<JsonNode> result = new ArrayList<>(tagList.size());
+      for (String tags : tagList) {
+         result.add(tags == null ? Util.EMPTY_OBJECT : Util.toJsonNode(tags));
+      }
+      return result;
    }
 }

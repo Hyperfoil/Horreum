@@ -26,13 +26,16 @@ function isEmpty(value: any) {
 }
 
 type RecalculationResult = {
-    totalRuns: number
-    errors: number
-    runsWithoutAccessor: number[]
-    runsWithoutValue: number[]
+    totalRuns?: number
+    errors?: number
+    runsWithoutAccessor?: number[]
+    runsWithoutValue?: number[]
 }
 
-function runsToLinks(ids: number[]) {
+function runsToLinks(ids: number[] | undefined | null) {
+    if (!ids) {
+        return null
+    }
     // reverse sort
     return (
         <>

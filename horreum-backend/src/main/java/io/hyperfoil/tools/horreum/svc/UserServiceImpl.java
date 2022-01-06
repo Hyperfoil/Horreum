@@ -37,6 +37,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 
 import io.hyperfoil.tools.horreum.api.UserService;
 import io.hyperfoil.tools.horreum.entity.UserInfo;
+import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.Vertx;
@@ -183,9 +184,10 @@ public class UserServiceImpl implements UserService {
             .filter(n -> n.endsWith("-team")).collect(Collectors.toList());
    }
 
+   @WithRoles(addUsername = true)
    @Transactional
    public void cacheUserTeams(String username, Set<String> teams) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+      try {
          // Running this without pessimistic lock leads to duplicate inserts at the same time
          UserInfo userInfo = UserInfo.findById(username, LockModeType.PESSIMISTIC_WRITE);
          if (userInfo == null) {
@@ -206,22 +208,20 @@ public class UserServiceImpl implements UserService {
       }
    }
 
+   @WithRoles(addUsername = true)
    @Override
    public String defaultTeam() {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         UserInfo userInfo = UserInfo.findById(identity.getPrincipal().getName());
-         return userInfo != null ? userInfo.defaultTeam : null;
-      }
+      UserInfo userInfo = UserInfo.findById(identity.getPrincipal().getName());
+      return userInfo != null ? userInfo.defaultTeam : null;
    }
 
+   @WithRoles(addUsername = true)
    @Override
    @Transactional
    public void setDefaultTeam(String team) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         UserInfo userInfo = UserInfo.findById(identity.getPrincipal().getName());
-         userInfo.defaultTeam = Util.destringify(team);
-         userInfo.persistAndFlush();
-      }
+      UserInfo userInfo = UserInfo.findById(identity.getPrincipal().getName());
+      userInfo.defaultTeam = Util.destringify(team);
+      userInfo.persistAndFlush();
    }
 
    @Override

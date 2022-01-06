@@ -15,6 +15,9 @@ public final class Roles {
    public static final String UPLOADER = "uploader";
    public static final String MANAGER = "manager";
    public static final String ADMIN = "admin";
+   // TODO: These roles should be probably consolidated?
+   public static final String HORREUM_ALERTING = "horreum.alerting";
+   public static final String HORREUM_SYSTEM = "horreum.system";
 
    private static final String MY_ROLES = "__my";
    private static final String ALL_ROLES = "__all";

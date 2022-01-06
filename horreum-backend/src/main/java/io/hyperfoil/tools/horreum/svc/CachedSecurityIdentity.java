@@ -15,19 +15,15 @@ public class CachedSecurityIdentity implements SecurityIdentity {
    private final Set<Credential> credentials;
    private final Map<String, Object> attributes;
 
-   static SecurityIdentity of(SecurityIdentity identity) {
-      if (identity.isAnonymous()) {
-         return identity;
-      } else {
-         return new CachedSecurityIdentity(identity);
-      }
+   public CachedSecurityIdentity(Principal principal, Set<String> roles, Set<Credential> credentials, Map<String, Object> attributes) {
+      this.principal = principal;
+      this.roles = roles;
+      this.credentials = credentials;
+      this.attributes = attributes;
    }
 
    public CachedSecurityIdentity(SecurityIdentity other) {
-      this.principal = other.getPrincipal();
-      this.roles = other.getRoles();
-      this.credentials = other.getCredentials();
-      this.attributes = other.getAttributes();
+      this(other.getPrincipal(), other.getRoles(), other.getCredentials(), other.getAttributes());
    }
 
    @Override

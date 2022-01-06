@@ -13,6 +13,8 @@ import org.junit.jupiter.api.TestInfo;
 
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.server.CloseMe;
+import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -31,7 +33,7 @@ public class TestServiceTest extends BaseServiceTest {
    EntityManager em;
 
    @Inject
-   SqlServiceImpl sqlService;
+   RoleManager roleManager;
 
    @org.junit.jupiter.api.Test
    public void testCreateDelete(TestInfo info) {
@@ -39,7 +41,7 @@ public class TestServiceTest extends BaseServiceTest {
       // create test
       Test test = createExampleTest(getTestName(info));
       Test response = createTest(test);
-      try (CloseMe ignored = sqlService.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
          assertNotNull(Test.findById(response.id));
       }
 
@@ -53,7 +55,7 @@ public class TestServiceTest extends BaseServiceTest {
             .then()
             .statusCode(204);
       em.clear();
-      try (CloseMe ignored = sqlService.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
          assertNull(Test.findById(response.id));
          // There's no constraint between runs and tests; therefore the run is not deleted
          Run run = Run.findById(runId);

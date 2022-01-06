@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SqlService;
+import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.Vertx;
 import io.vertx.pgclient.PgConnection;
@@ -12,27 +13,14 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.transaction.HeuristicMixedException;
-import javax.transaction.HeuristicRollbackException;
-import javax.transaction.NotSupportedException;
-import javax.transaction.RollbackException;
-import javax.transaction.Status;
-import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.hibernate.JDBCException;
@@ -42,10 +30,6 @@ import org.jboss.logging.Logger;
 @ApplicationScoped
 public class SqlServiceImpl implements SqlService {
    private static final Logger log = Logger.getLogger(SqlServiceImpl.class);
-
-   private static final String SET_ROLES = "SELECT set_config('horreum.userroles', ?, ?)";
-   private static final String SET_TOKEN = "SELECT set_config('horreum.token', ?, ?)";
-   private static final CloseMe NOOP = () -> {};
 
    @Inject
    EntityManager em;
@@ -65,14 +49,11 @@ public class SqlServiceImpl implements SqlService {
    @Inject
    SecurityIdentity identity;
 
-   @ConfigProperty(name = "horreum.db.secret")
-   String dbSecret;
-   byte[] dbSecretBytes;
+   @Inject
+   RoleManager roleManager;
 
    @ConfigProperty(name = "horreum.debug")
    Optional<Boolean> debug;
-
-   private final Map<String, String> signedRoleCache = new ConcurrentHashMap<>();
 
    @SuppressWarnings("deprecation")
    public static void setResultTransformer(Query query, ResultTransformer transformer) {
@@ -128,7 +109,6 @@ public class SqlServiceImpl implements SqlService {
 
    @PostConstruct
    void init() {
-      dbSecretBytes = dbSecret.getBytes(StandardCharsets.UTF_8);
       listenerConnection = (PgConnection) client.getConnectionAndAwait().getDelegate();
       listenerConnection.notificationHandler(notification ->
             vertx.executeBlocking(any -> handleNotification(notification.getChannel(), notification.getPayload())));
@@ -153,36 +133,13 @@ public class SqlServiceImpl implements SqlService {
          List<Consumer<String>> consumers = listeners.get(channel);
          if (consumers != null) {
             for (Consumer<String> c : consumers) {
-               withTx(() -> {
+               Util.withTx(tm, () -> {
                   c.accept(payload);
                   return null;
                });
             }
          }
       }
-   }
-
-   private String getSignedRoles(Iterable<String> roles) throws NoSuchAlgorithmException {
-      StringBuilder sb = new StringBuilder();
-      for (String role : roles) {
-         String signedRole = signedRoleCache.get(role);
-         if (signedRole == null) {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update(role.getBytes(StandardCharsets.UTF_8));
-            String salt = Long.toHexString(ThreadLocalRandom.current().nextLong());
-            digest.update(salt.getBytes(StandardCharsets.UTF_8));
-            digest.update(dbSecretBytes);
-            String signature = Base64.getEncoder().encodeToString(digest.digest());
-            signedRole = role + ':' + salt + ':' + signature;
-            // We don't care about race conditions, all signed roles are equally correct
-            signedRoleCache.putIfAbsent(role, signedRole);
-         }
-         if (sb.length() != 0) {
-            sb.append(',');
-         }
-         sb.append(signedRole);
-      }
-      return sb.toString();
    }
 
    @Override
@@ -194,108 +151,6 @@ public class SqlServiceImpl implements SqlService {
       if (identity.isAnonymous()) {
          return "<anonymous>";
       }
-      List<String> roles = new ArrayList<>(identity.getRoles());
-      roles.add(identity.getPrincipal().getName());
-      try {
-         return SET_ROLES.replace("?", '\'' + getSignedRoles(roles) + '\'');
-      } catch (NoSuchAlgorithmException e) {
-         return "<error>";
-      }
-   }
-
-   CloseMe withRoles(EntityManager em, Iterable<String> roles) {
-      String signedRoles;
-      try {
-         signedRoles = getSignedRoles(roles);
-      } catch (NoSuchAlgorithmException e) {
-         throw new IllegalStateException(e);
-      }
-      return withRoles(em, signedRoles);
-   }
-
-   CloseMe withRoles(EntityManager em, SecurityIdentity identity) {
-      if (identity.isAnonymous()) {
-         return NOOP;
-      }
-      String signedRoles;
-      try {
-         List<String> roles = new ArrayList<>(identity.getRoles());
-         roles.add(identity.getPrincipal().getName());
-         signedRoles = getSignedRoles(roles);
-      } catch (NoSuchAlgorithmException e) {
-         throw new IllegalStateException(e);
-      }
-      return withRoles(em, signedRoles);
-   }
-
-   CloseMe withRoles(EntityManager em, String signedRoles) {
-      if (signedRoles == null || signedRoles.isEmpty()) {
-         return NOOP;
-      }
-      Query setRoles = em.createNativeQuery(SET_ROLES);
-      setRoles.setParameter(1, signedRoles);
-      boolean inTx = isInTx();
-      setRoles.setParameter(2, inTx);
-      setRoles.getSingleResult(); // ignored
-      // The config was set only for the scope of current transaction
-      return inTx ? NOOP : (() -> {
-         Query unsetRoles = em.createNativeQuery(SET_ROLES);
-         unsetRoles.setParameter(1, "");
-         unsetRoles.setParameter(2, false);
-         unsetRoles.getSingleResult(); // ignored
-      });
-   }
-
-   private boolean isInTx() {
-      try {
-         return tm.getStatus() != Status.STATUS_NO_TRANSACTION;
-      } catch (SystemException e) {
-         log.error("Error retrieving TX status", e);
-         return false;
-      }
-   }
-
-   CloseMe withToken(EntityManager em, String token) {
-      if (token == null || token.isEmpty()) {
-         return NOOP;
-      } else {
-         Query setToken = em.createNativeQuery(SET_TOKEN);
-         setToken.setParameter(1, token);
-         boolean inTx = isInTx();
-         setToken.setParameter(2, inTx);
-         setToken.getSingleResult();
-         return inTx ? NOOP : (() -> {
-            Query unsetToken = em.createNativeQuery(SET_TOKEN);
-            unsetToken.setParameter(1, "");
-            unsetToken.setParameter(2, false);
-            unsetToken.getSingleResult();
-         });
-      }
-   }
-
-   <T> T withTx(Supplier<T> supplier) {
-      try {
-         tm.begin();
-         try {
-            return supplier.get();
-         } catch (Throwable t) {
-            log.error("Failure in transaction", t);
-            tm.setRollbackOnly();
-            throw t;
-         } finally {
-            if (tm.getStatus() == Status.STATUS_ACTIVE) {
-               tm.commit();
-            } else {
-               tm.rollback();
-            }
-         }
-      } catch (SystemException | RollbackException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException ex) {
-         log.error("Failed to run transaction", ex);
-      }
-      return null;
-   }
-
-   public CloseMe withSystemRole(EntityManager em) {
-      return withRoles(em, "horreum.system");
+      return roleManager.getDebugQuery(identity);
    }
 }

@@ -3,7 +3,6 @@ package io.hyperfoil.tools.horreum.svc;
 import java.io.ByteArrayOutputStream;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -16,6 +15,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -27,10 +27,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.transaction.InvalidTransactionException;
 import javax.transaction.Status;
 import javax.transaction.SystemException;
-import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.ProcessingException;
@@ -45,6 +43,7 @@ import io.hyperfoil.tools.horreum.regression.RegressionModel;
 import io.hyperfoil.tools.horreum.regression.StatisticalVarianceRegressionModel;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.context.ThreadContext;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
@@ -67,12 +66,15 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
+import io.hyperfoil.tools.horreum.server.RolesInterceptor;
+import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
+import io.smallrye.context.SmallRyeContextManagerProvider;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
@@ -108,11 +110,7 @@ public class AlertingServiceImpl implements AlertingService {
    //@formatter:on
    // the :::: is used instead of :: as Hibernate converts four-dot into colon
    private static final String UPLOAD_RUN = "CREATE TEMPORARY TABLE current_run AS SELECT * FROM (VALUES (?::::jsonb)) as t(data);";
-   static final String HORREUM_ALERTING = "horreum.alerting";
    private static final Sort SORT_BY_TIMESTAMP_DESCENDING = Sort.by("timestamp", Sort.Direction.Descending);
-
-   @Inject
-   SqlServiceImpl sqlService;
 
    @Inject
    TestServiceImpl testService;
@@ -150,14 +148,25 @@ public class AlertingServiceImpl implements AlertingService {
    @Inject
    NotificationServiceImpl notificationService;
 
+   @Inject
+   AlertingServiceImpl self;
+
    // entries can be removed from timer thread while normally this is updated from one of blocking threads
    private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
 
+   public static class OwnerFromRun implements Function<Object[], String[]> {
+      @Override
+      public String[] apply(Object[] objects) {
+         return new String[] { ((Run) objects[0]).owner };
+      }
+   }
+
+   @WithRoles(extras = Roles.HORREUM_ALERTING, fromParams = OwnerFromRun.class)
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
       boolean sendNotifications;
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singleton(HORREUM_ALERTING))) {
+      try {
          sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
                .setParameter(1, run.testid).getSingleResult();
       } catch (NoResultException e) {
@@ -208,29 +217,24 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void onNewRun(Run run, boolean notify, boolean debug, Recalculation recalculation) {
       log.infof("Received run ID %d", run.id);
-      // In order to create datapoints we'll use the horreum.alerting ownership
-      List<String> roles = Arrays.asList(run.owner, HORREUM_ALERTING);
 
       // TODO: We will have the JSONPaths in PostgreSQL format while the Run
       // itself is available here in the application.
       // We'll use the database as a library function
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, roles)) {
-
-         Query setRun = em.createNativeQuery(UPLOAD_RUN);
-         setRun.setParameter(1, run.data.toString());
-         setRun.executeUpdate();
+      Query setRun = em.createNativeQuery(UPLOAD_RUN);
+      setRun.setParameter(1, run.data.toString());
+      setRun.executeUpdate();
+      try {
+         emitDatapoints(run, notify, debug, recalculation);
+      } catch (Throwable t) {
+         log.error("Failed to create new datapoints", t);
+      } finally {
          try {
-            emitDatapoints(run, notify, debug, recalculation);
-         } catch (Throwable t) {
-            log.error("Failed to create new datapoints", t);
-         } finally {
-            try {
-               if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
-                  em.createNativeQuery("DROP TABLE current_run").executeUpdate();
-               }
-            } catch (SystemException e) {
-               log.error("Failure getting current transaction status.", e);
+            if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
+               em.createNativeQuery("DROP TABLE current_run").executeUpdate();
             }
+         } catch (SystemException e) {
+            log.error("Failure getting current transaction status.", e);
          }
       }
    }
@@ -340,22 +344,7 @@ public class AlertingServiceImpl implements AlertingService {
             return;
          } catch (PersistenceException e) {
             log.errorf(e, "Failed to extract regression variables for run %d", run.id);
-            Transaction old;
-            try {
-               old = tm.suspend();
-               try {
-                  sqlService.withTx(() -> {
-                     try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
-                        logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Failed to extract regression variables from database. This is likely due to a malformed JSONPath in one of extractors.");
-                        return null;
-                     }
-                  });
-               } finally {
-                  tm.resume(old);
-               }
-            } catch (SystemException | InvalidTransactionException e2) {
-               log.error("Failed to switch to a different transaction for logging.", e2);
-            }
+            self.logFailure(run);
             return;
          }
          for (int i = 0; i < names.length; i++) {
@@ -448,6 +437,12 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   void logFailure(Run run) {
+      logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Failed to extract regression variables from database. This is likely due to a malformed JSONPath in one of extractors.");
+   }
+
    private void appendPathQuery(StringBuilder query, Object topKey, boolean isArray, String jsonpath) {
       if (isArray) {
          query.append("jsonb_path_query_array(data, '");
@@ -523,8 +518,9 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   @Override
+   @WithRoles
    @RolesAllowed(Roles.TESTER)
+   @Override
    public List<CalculationLog> getCalculationLog(Integer testId, Integer page, Integer limit) {
       if (testId == null) {
          return Collections.emptyList();
@@ -535,23 +531,21 @@ public class AlertingServiceImpl implements AlertingService {
       if (limit == null) {
          limit = 25;
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         return CalculationLog.find("testId = ?1", Sort.descending("timestamp"), testId).page(Page.of(page, limit)).list();
-      }
+      return CalculationLog.find("testId = ?1", Sort.descending("timestamp"), testId).page(Page.of(page, limit)).list();
    }
 
    @Override
+   @WithRoles
    @RolesAllowed(Roles.TESTER)
    public long getLogCount(Integer testId) {
       if (testId == null) return -1;
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         return CalculationLog.count("testId = ?1", testId);
-      }
+      return CalculationLog.count("testId = ?1", testId);
    }
 
-   @RolesAllowed(Roles.TESTER)
-   @Transactional
    @Override
+   @RolesAllowed(Roles.TESTER)
+   @WithRoles
+   @Transactional
    public void deleteLogs(Integer testId, Long from, Long to) {
       if (testId == null) {
          throw ServiceException.badRequest("Missing test ID");
@@ -559,77 +553,73 @@ public class AlertingServiceImpl implements AlertingService {
       // Not using Instant.MIN/Instant.MAX as Hibernate converts to LocalDateTime internally
       Instant fromTs = from == null ? Instant.ofEpochMilli(0) : Instant.ofEpochMilli(from);
       Instant toTs = to == null ? Instant.ofEpochSecond(4 * (long) Integer.MAX_VALUE) : Instant.ofEpochMilli(to);
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         long deleted = CalculationLog.delete("testId = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
-         log.debugf("Deleted %d logs for test %s", deleted, testId);
-      }
+      long deleted = CalculationLog.delete("testId = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
+      log.debugf("Deleted %d logs for test %s", deleted, testId);
    }
 
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
    @ConsumeEvent(value = Run.EVENT_TRASHED, blocking = true)
    public void onRunTrashed(Integer runId) {
       log.infof("Trashing datapoints for run %d", runId);
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
-         Query deleteChanges = em.createNativeQuery("DELETE FROM change WHERE runid = ?");
-         deleteChanges.setParameter(1, runId).executeUpdate();
-         DataPoint.delete("runid", runId);
-      }
+      Query deleteChanges = em.createNativeQuery("DELETE FROM change WHERE runid = ?");
+      deleteChanges.setParameter(1, runId).executeUpdate();
+      DataPoint.delete("runid", runId);
    }
 
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
    @ConsumeEvent(value = DataPoint.EVENT_NEW, blocking = true)
    public void onNewDataPoint(DataPoint.Event event) {
       DataPoint dataPoint = event.dataPoint;
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
-         // The variable referenced by datapoint is a fake
-         Variable variable = Variable.findById(dataPoint.variable.id);
-         log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.runId,
-               dataPoint.variable.id, variable != null ? variable.name : "<unknown>", dataPoint.value);
-         Change lastChange = Change.find("variable = ?1", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, 0).firstResult();
-         PanacheQuery<DataPoint> query;
-         if (lastChange == null) {
-            query = DataPoint.find("variable", SORT_BY_TIMESTAMP_DESCENDING, variable);
-         } else {
-            if (lastChange.timestamp.compareTo(dataPoint.timestamp) > 0) {
-               // We won't revision changes until next variable recalculation
-               log.debugf("Ignoring datapoint %d from %s as there is a newer change %d from %s.",
-                     dataPoint.id, dataPoint.timestamp, lastChange.id, lastChange.timestamp);
-               return;
-            }
-            log.debugf("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
-            query = DataPoint.find("variable = ?1 AND timestamp >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.timestamp);
+      // The variable referenced by datapoint is a fake
+      Variable variable = Variable.findById(dataPoint.variable.id);
+      log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.runId,
+            dataPoint.variable.id, variable != null ? variable.name : "<unknown>", dataPoint.value);
+      Change lastChange = Change.find("variable = ?1", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, 0).firstResult();
+      PanacheQuery<DataPoint> query;
+      if (lastChange == null) {
+         query = DataPoint.find("variable", SORT_BY_TIMESTAMP_DESCENDING, variable);
+      } else {
+         if (lastChange.timestamp.compareTo(dataPoint.timestamp) > 0) {
+            // We won't revision changes until next variable recalculation
+            log.debugf("Ignoring datapoint %d from %s as there is a newer change %d from %s.",
+                  dataPoint.id, dataPoint.timestamp, lastChange.id, lastChange.timestamp);
+            return;
          }
-         List<DataPoint> dataPoints = query.list();
-
-         RegressionModel regressionModel = new StatisticalVarianceRegressionModel();
-
-         regressionModel.analyze(dataPoint, dataPoints, change -> {
-            em.persist(change);
-            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, event.notify));
-         });
+         log.debugf("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
+         query = DataPoint.find("variable = ?1 AND timestamp >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.timestamp);
       }
+      List<DataPoint> dataPoints = query.list();
+
+      RegressionModel regressionModel = new StatisticalVarianceRegressionModel();
+
+      regressionModel.analyze(dataPoint, dataPoints, change -> {
+         em.persist(change);
+         Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, event.notify));
+      });
    }
 
    @Override
+   @WithRoles
    @PermitAll
    public List<Variable> variables(Integer testId) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         if (testId != null) {
-            return Variable.list("testid", testId);
-         } else {
-            return Variable.listAll();
-         }
+      if (testId != null) {
+         return Variable.list("testid", testId);
+      } else {
+         return Variable.listAll();
       }
    }
 
    @Override
+   @WithRoles
    @RolesAllowed("tester")
    @Transactional
    public void variables(Integer testId, List<Variable> variables) {
       if (testId == null) {
          throw ServiceException.badRequest("Missing query param 'test'");
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+      try {
          List<Variable> currentVariables = Variable.list("testid", testId);
          for (Variable current : currentVariables) {
             Variable matching = variables.stream().filter(v -> current.id.equals(v.id)).findFirst().orElse(null);
@@ -738,6 +728,7 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    @Override
+   @WithRoles
    @PermitAll
    @Transactional
    public DashboardInfo dashboard(Integer testId, String tags) {
@@ -747,46 +738,44 @@ public class AlertingServiceImpl implements AlertingService {
       if (tags == null) {
          tags = "";
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         GrafanaClient.GetDashboardResponse response = findDashboard(testId, tags);
-         List<Variable> variables = Variable.list("testid", testId);
-         DashboardInfo dashboard;
-         if (response == null) {
-            dashboard = createDashboard(testId, tags, variables);
-            if (dashboard == null) {
-               throw new ServiceException(Response.Status.SERVICE_UNAVAILABLE, "Cannot update Grafana dashboard.");
-            }
-         } else {
-            dashboard = new DashboardInfo();
-            dashboard.testId = testId;
-            dashboard.uid = response.dashboard.uid;
-            dashboard.url = response.meta.url;
-            for (var entry : groupedVariables(variables).entrySet()) {
-               dashboard.panels.add(new PanelInfo(entry.getKey(), entry.getValue()));
-            }
+      GrafanaClient.GetDashboardResponse response = findDashboard(testId, tags);
+      List<Variable> variables = Variable.list("testid", testId);
+      DashboardInfo dashboard;
+      if (response == null) {
+         dashboard = createDashboard(testId, tags, variables);
+         if (dashboard == null) {
+            throw new ServiceException(Response.Status.SERVICE_UNAVAILABLE, "Cannot update Grafana dashboard.");
          }
-         return dashboard;
+      } else {
+         dashboard = new DashboardInfo();
+         dashboard.testId = testId;
+         dashboard.uid = response.dashboard.uid;
+         dashboard.url = response.meta.url;
+         for (var entry : groupedVariables(variables).entrySet()) {
+            dashboard.panels.add(new PanelInfo(entry.getKey(), entry.getValue()));
+         }
       }
+      return dashboard;
    }
 
    @Override
+   @WithRoles
    @PermitAll
    public List<Change> changes(Integer varId) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Variable v = Variable.findById(varId);
-         if (v == null) {
-            throw ServiceException.notFound("Variable " + varId + " not found");
-         }
-         // TODO: Avoid sending variable in each datapoint
-         return Change.list("variable", v);
+      Variable v = Variable.findById(varId);
+      if (v == null) {
+         throw ServiceException.notFound("Variable " + varId + " not found");
       }
+      // TODO: Avoid sending variable in each datapoint
+      return Change.list("variable", v);
    }
 
    @Override
+   @WithRoles
    @RolesAllowed(Roles.TESTER)
    @Transactional
    public void updateChange(Integer id, Change change) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
+      try {
          if (id != change.id) {
             throw ServiceException.badRequest("Path ID and entity don't match");
          }
@@ -797,13 +786,12 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    @Override
+   @WithRoles
    @RolesAllowed(Roles.TESTER)
    @Transactional
    public void deleteChange(Integer id) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         if (!Change.deleteById(id)) {
-            throw ServiceException.notFound("Change not found");
-         }
+      if (!Change.deleteById(id)) {
+         throw ServiceException.notFound("Change not found");
       }
    }
 
@@ -814,65 +802,77 @@ public class AlertingServiceImpl implements AlertingService {
       if (testId == null) {
          throw ServiceException.badRequest("Missing param 'test'");
       }
-      SecurityIdentity identity = CachedSecurityIdentity.of(this.identity);
 
-      vertx.executeBlocking(promise -> {
-         Recalculation recalculation = null;
+      // We cannot use resteasy propagation because when the request completes the request data
+      // are terminated anyway (it's not reference counter) - therefore we need to manually copy the identity
+      // to the new context in a different thread.
+      // CDI needs to be propagated - without that the interceptors wouldn't run.
+      // Without thread context propagation we would get an exception in Run.findById, though the interceptors would be invoked correctly.
+      CachedSecurityIdentity identity = new CachedSecurityIdentity(this.identity);
+      // Note that we cannot use @ThreadContextConfig in Quarkus -
+      Runnable runnable = SmallRyeContextManagerProvider.getManager().newThreadContextBuilder()
+            .propagated(ThreadContext.CDI).build().contextualRunnable(() -> {
+         Recalculation recalculation = new Recalculation();
+         if (recalcProgress.putIfAbsent(testId, recalculation) != null) {
+            log.infof("Already started recalculation on test %d, ignoring.", testId);
+            return;
+         }
          try {
-            recalculation = sqlService.withTx(() -> {
-               Recalculation r = new Recalculation();
-               if (recalcProgress.putIfAbsent(testId, r) != null) {
-                  promise.complete();
-                  return null;
-               }
-               try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-                  Query query = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) AND NOT run.trashed ORDER BY start")
-                        .setParameter(1, testId)
-                        .setParameter(2, from == null ? Long.MIN_VALUE : from)
-                        .setParameter(3, to == null ? Long.MAX_VALUE : to);
-                  @SuppressWarnings("unchecked")
-                  List<Integer> ids = query.getResultList();
-                  r.runs = ids;
-                  DataPoint.delete("runId in ?1", ids);
-                  Change.delete("runId in ?1 AND confirmed = false", ids);
-                  if (ids.size() > 0) {
-                     // Due to RLS policies we cannot add a record to a run we don't own
-                     logCalculationMessage(testId, ids.get(0), CalculationLog.INFO, "Starting recalculation of %d runs.", ids.size());
-                  }
-                  return r;
-               }
-            });
-            if (recalculation != null) {
-               int numRuns = recalculation.runs == null ? 0 : recalculation.runs.size();
-               log.infof("Starting recalculation of test %d, %d runs", testId, numRuns);
-               int completed = 0;
-               recalcProgress.put(testId, recalculation);
-               for (int runId : recalculation.runs) {
-                  // Since the evaluation might take few moments and we're dealing potentially with thousands
-                  // of runs we'll process each run in a separate transaction
-                  Recalculation r = recalculation;
-                  sqlService.withTx(() -> {
-                     try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-                        Run run = Run.findById(runId);
-                        onNewRun(run, false, debug, r);
-                     }
-                     return null;
-                  });
-                  recalculation.progress = 100 * ++completed / numRuns;
-               }
+            recalculation.runs = self.getRunsForRecalculation(testId, from, to);
+            int numRuns = recalculation.runs.size();
+            log.infof("Starting recalculation of test %d, %d runs", testId, numRuns);
+            int completed = 0;
+            recalcProgress.put(testId, recalculation);
+            for (int runId : recalculation.runs) {
+               // Since the evaluation might take few moments and we're dealing potentially with thousands
+               // of runs we'll process each run in a separate transaction
+               self.recalulateRun(runId, debug, recalculation);
+               recalculation.progress = 100 * ++completed / numRuns;
             }
+
          } catch (Throwable t) {
             log.error("Recalculation failed", t);
             throw t;
          } finally {
-            if (recalculation != null) {
-               recalculation.done = true;
-               Recalculation r = recalculation;
-               vertx.setTimer(30_000, timerId -> recalcProgress.remove(testId, r));
-            }
+            recalculation.done = true;
+            vertx.setTimer(30_000, timerId -> recalcProgress.remove(testId, recalculation));
+         }
+      });
+
+      vertx.executeBlocking(promise -> {
+         RolesInterceptor.setCurrentIdentity(identity);
+         try {
+            runnable.run();
+         } finally {
+            RolesInterceptor.setCurrentIdentity(null);
             promise.complete();
          }
       }, result -> {});
+   }
+
+   @WithRoles
+   @Transactional
+   List<Integer> getRunsForRecalculation(Integer testId, Long from, Long to) {
+      Query query = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) AND NOT run.trashed ORDER BY start")
+            .setParameter(1, testId)
+            .setParameter(2, from == null ? Long.MIN_VALUE : from)
+            .setParameter(3, to == null ? Long.MAX_VALUE : to);
+      @SuppressWarnings("unchecked")
+      List<Integer> ids = query.getResultList();
+      DataPoint.delete("runId in ?1", ids);
+      Change.delete("runId in ?1 AND confirmed = false", ids);
+      if (ids.size() > 0) {
+         // Due to RLS policies we cannot add a record to a run we don't own
+         logCalculationMessage(testId, ids.get(0), CalculationLog.INFO, "Starting recalculation of %d runs.", ids.size());
+      }
+      return ids;
+   }
+
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   void recalulateRun(Integer runId, boolean debug, Recalculation recalculation) {
+      Run run = Run.findById(runId);
+      onNewRun(run, false, debug, recalculation);
    }
 
    @Override
@@ -894,51 +894,50 @@ public class AlertingServiceImpl implements AlertingService {
       return status;
    }
 
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
    @Scheduled(every = "{horreum.alerting.missing.runs.check}")
    public void checkMissingRuns() {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
-         @SuppressWarnings("unchecked")
-         List<Object[]> results = em.createNativeQuery(LOOKUP_STALE).getResultList();
-         for (Object[] row : results) {
-            int testId = ((Number) row[0]).intValue();
-            JsonNode tags = Util.toJsonNode(String.valueOf(row[1]));
-            int runId = ((Number) row[2]).intValue();
-            long lastRunTimestamp = ((Number) row[3]).longValue();
-            long maxStaleness = ((Number) row[4]).longValue();
-            notificationService.notifyMissingRun(testId, tags, maxStaleness, runId, lastRunTimestamp);
-            LastMissingRunNotification last = LastMissingRunNotification.find("testid = ?1 AND tags = ?2", testId, tags).firstResult();
-            if (last == null) {
-               last = new LastMissingRunNotification();
-               last.testId = testId;
-               last.tags = tags;
-            }
-            last.lastNotification = Instant.now();
-            last.persist();
+      @SuppressWarnings("unchecked")
+      List<Object[]> results = em.createNativeQuery(LOOKUP_STALE).getResultList();
+      for (Object[] row : results) {
+         int testId = ((Number) row[0]).intValue();
+         JsonNode tags = Util.toJsonNode(String.valueOf(row[1]));
+         int runId = ((Number) row[2]).intValue();
+         long lastRunTimestamp = ((Number) row[3]).longValue();
+         long maxStaleness = ((Number) row[4]).longValue();
+         notificationService.notifyMissingRun(testId, tags, maxStaleness, runId, lastRunTimestamp);
+         LastMissingRunNotification last = LastMissingRunNotification.find("testid = ?1 AND tags = ?2", testId, tags).firstResult();
+         if (last == null) {
+            last = new LastMissingRunNotification();
+            last.testId = testId;
+            last.tags = tags;
          }
+         last.lastNotification = Instant.now();
+         last.persist();
       }
    }
 
    @Override
+   @WithRoles
    @PermitAll
    public List<DatapointLastTimestamp> findLastDatapoints(LastDatapointsParams params) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Map<String, String> tags = Tags.parseTags(params.tags);
-         StringBuilder sql = new StringBuilder("SELECT DISTINCT ON(variable_id) variable_id AS variable, EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp")
-            .append(" FROM datapoint LEFT JOIN run_tags on run_tags.runid = datapoint.runid ");
-         int counter = Tags.addTagQuery(tags, sql, 1);
-         sql.append(" WHERE variable_id = ANY(?").append(counter).append(") ORDER BY variable_id, timestamp DESC;");
-         Query query = em.createNativeQuery(sql.toString());
-         counter = Tags.addTagValues(tags, query, 1);
-         query.setParameter(counter, new TypedParameterValue(IntArrayType.INSTANCE, params.variables));
-         SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(DatapointLastTimestamp.class));
-         //noinspection unchecked
-         return query.getResultList();
-      }
+      Map<String, String> tags = Tags.parseTags(params.tags);
+      StringBuilder sql = new StringBuilder("SELECT DISTINCT ON(variable_id) variable_id AS variable, EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp")
+         .append(" FROM datapoint LEFT JOIN run_tags on run_tags.runid = datapoint.runid ");
+      int counter = Tags.addTagQuery(tags, sql, 1);
+      sql.append(" WHERE variable_id = ANY(?").append(counter).append(") ORDER BY variable_id, timestamp DESC;");
+      Query query = em.createNativeQuery(sql.toString());
+      counter = Tags.addTagValues(tags, query, 1);
+      query.setParameter(counter, new TypedParameterValue(IntArrayType.INSTANCE, params.variables));
+      SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(DatapointLastTimestamp.class));
+      //noinspection unchecked
+      return query.getResultList();
    }
 
-   @RolesAllowed(Roles.UPLOADER)
    @Override
+   @RolesAllowed(Roles.UPLOADER)
+   @WithRoles
    @Transactional
    public void expectRun(String testNameOrId, Long timeoutSeconds, String tags, String expectedBy, String backlink) {
       if (timeoutSeconds == null) {
@@ -946,64 +945,61 @@ public class AlertingServiceImpl implements AlertingService {
       } else if (timeoutSeconds <= 0) {
          throw ServiceException.badRequest("Timeout must be positive (unit: seconds)");
       }
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Test test = testService.getByNameOrId(testNameOrId);
-         if (test == null) {
-            throw ServiceException.notFound("Test " + testNameOrId + " does not exist.");
-         }
-         RunExpectation runExpectation = new RunExpectation();
-         runExpectation.testId = test.id;
-         runExpectation.tags = tags != null && !tags.isEmpty() ? Util.toJsonNode(tags) : null;
-         runExpectation.expectedBefore = Instant.now().plusSeconds(timeoutSeconds);
-         runExpectation.expectedBy = expectedBy != null ? expectedBy : identity.getPrincipal().getName();
-         runExpectation.backlink = backlink;
-         runExpectation.persist();
+      Test test = testService.getByNameOrId(testNameOrId);
+      if (test == null) {
+         throw ServiceException.notFound("Test " + testNameOrId + " does not exist.");
       }
+      RunExpectation runExpectation = new RunExpectation();
+      runExpectation.testId = test.id;
+      runExpectation.tags = tags != null && !tags.isEmpty() ? Util.toJsonNode(tags) : null;
+      runExpectation.expectedBefore = Instant.now().plusSeconds(timeoutSeconds);
+      runExpectation.expectedBy = expectedBy != null ? expectedBy : identity.getPrincipal().getName();
+      runExpectation.backlink = backlink;
+      runExpectation.persist();
    }
 
    @PermitAll
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Override
    public List<RunExpectation> expectations() {
       if (!isTest.orElse(false)) {
          throw ServiceException.notFound("Not available without test mode.");
       }
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, HORREUM_ALERTING)) {
-         return RunExpectation.listAll();
-      }
+      return RunExpectation.listAll();
    }
 
    @ConsumeEvent(value = Run.EVENT_TAGS_CREATED, blocking = true)
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
    public void removeExpected(Run.TagsEvent event) {
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singleton(HORREUM_ALERTING))) {
-         Query query = em.createNativeQuery("DELETE FROM run_expectation WHERE testid = (SELECT testid FROM run WHERE id = ?1) AND (tags IS NULL OR tags @> ?2 ::::jsonb AND ?2 ::::jsonb @> tags)");
-         query.setParameter(1, event.runId);
-         query.setParameter(2, event.tags != null ? event.tags : "{}");
-         int updated = query.executeUpdate();
-         if (updated > 0) {
-            log.infof("Removed %d run expectations as run %d with tags %s was added.", updated, event.runId, event.tags);
-         }
+      Query query = em.createNativeQuery("DELETE FROM run_expectation WHERE testid = (SELECT testid FROM run WHERE id = ?1) AND (tags IS NULL OR tags @> ?2 ::::jsonb AND ?2 ::::jsonb @> tags)");
+      query.setParameter(1, event.runId);
+      query.setParameter(2, event.tags != null ? event.tags : "{}");
+      int updated = query.executeUpdate();
+      if (updated > 0) {
+         log.infof("Removed %d run expectations as run %d with tags %s was added.", updated, event.runId, event.tags);
       }
    }
 
    @Transactional
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Scheduled(every = "{horreum.alerting.missing.runs.check}")
    public void checkExpectedRuns() {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, Collections.singletonList(HORREUM_ALERTING))) {
-         for (RunExpectation expectation : RunExpectation.<RunExpectation>find("expectedbefore < ?1", Instant.now()).list()) {
-            boolean sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
-                  .setParameter(1, expectation.testId).getSingleResult();
-            if (sendNotifications) {
-               notificationService.notifyExpectedRun(expectation.testId, expectation.tags, expectation.expectedBefore.toEpochMilli(), expectation.expectedBy, expectation.backlink);
-            } else {
-               log.debugf("Skipping expected run notification on test %d since it is disabled.", expectation.testId);
-            }
-            expectation.delete();
+      for (RunExpectation expectation : RunExpectation.<RunExpectation>find("expectedbefore < ?1", Instant.now()).list()) {
+         boolean sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
+               .setParameter(1, expectation.testId).getSingleResult();
+         if (sendNotifications) {
+            notificationService.notifyExpectedRun(expectation.testId, expectation.tags, expectation.expectedBefore.toEpochMilli(), expectation.expectedBy, expectation.backlink);
+         } else {
+            log.debugf("Skipping expected run notification on test %d since it is disabled.", expectation.testId);
          }
+         expectation.delete();
       }
    }
 
-   private static class Recalculation {
+   // Note: this class must be public - otherwise when this is used as a parameter to
+   // a method in AlertingServiceImpl the interceptors would not be invoked.
+   public static class Recalculation {
       List<Integer> runs = Collections.emptyList();
       int progress;
       boolean done;

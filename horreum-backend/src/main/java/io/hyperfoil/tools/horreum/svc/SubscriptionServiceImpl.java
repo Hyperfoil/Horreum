@@ -18,13 +18,12 @@ import javax.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SubscriptionService;
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
+import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.security.identity.SecurityIdentity;
 
+@WithRoles
 @ApplicationScoped
 public class SubscriptionServiceImpl implements SubscriptionService {
-   @Inject
-   SqlServiceImpl sqlService;
-
    @Inject
    EntityManager em;
 
@@ -42,45 +41,41 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
    public Map<Integer, Set<String>> all() {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         // TODO: do all of this in single obscure PSQL query
-         String username = identity.getPrincipal().getName();
-         List<Watch> personal = Watch.list("?1 IN elements(users)", username);
-         List<Watch> optout = Watch.list("?1 IN elements(optout)", username);
-         Set<String> teams = identity.getRoles().stream().filter(role -> role.endsWith("-team")).collect(Collectors.toSet());
-         List<Watch> team = Watch.list("FROM watch w LEFT JOIN w.teams teams WHERE teams IN ?1", teams);
-         Map<Integer, Set<String>> result = new HashMap<>();
-         personal.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, username)));
-         optout.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, "!" + username)));
-         team.forEach(w -> result.compute(w.testId, (i, set) -> {
-            Set<String> nset = new HashSet<>(w.teams);
-            nset.retainAll(teams);
-            if (set != null) {
-               nset.addAll(set);
-            }
-            return nset;
-         }));
-         @SuppressWarnings("unchecked")
-         Stream<Integer> results = em.createQuery("SELECT id FROM test").getResultStream();
-         results.forEach(id -> result.putIfAbsent(id, Collections.emptySet()));
-         return result;
-      }
+      // TODO: do all of this in single obscure PSQL query
+      String username = identity.getPrincipal().getName();
+      List<Watch> personal = Watch.list("?1 IN elements(users)", username);
+      List<Watch> optout = Watch.list("?1 IN elements(optout)", username);
+      Set<String> teams = identity.getRoles().stream().filter(role -> role.endsWith("-team")).collect(Collectors.toSet());
+      List<Watch> team = Watch.list("FROM watch w LEFT JOIN w.teams teams WHERE teams IN ?1", teams);
+      Map<Integer, Set<String>> result = new HashMap<>();
+      personal.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, username)));
+      optout.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, "!" + username)));
+      team.forEach(w -> result.compute(w.testId, (i, set) -> {
+         Set<String> nset = new HashSet<>(w.teams);
+         nset.retainAll(teams);
+         if (set != null) {
+            nset.addAll(set);
+         }
+         return nset;
+      }));
+      @SuppressWarnings("unchecked")
+      Stream<Integer> results = em.createQuery("SELECT id FROM test").getResultStream();
+      results.forEach(id -> result.putIfAbsent(id, Collections.emptySet()));
+      return result;
    }
 
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
    public Watch get(Integer testId) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Watch watch = Watch.find("testId = ?1", testId).firstResult();
-         if (watch == null) {
-            watch = new Watch();
-            watch.testId = testId;
-            watch.teams = Collections.emptyList();
-            watch.users = Collections.emptyList();
-            watch.optout = Collections.emptyList();
-         }
-         return watch;
+      Watch watch = Watch.find("testId = ?1", testId).firstResult();
+      if (watch == null) {
+         watch = new Watch();
+         watch.testId = testId;
+         watch.teams = Collections.emptyList();
+         watch.users = Collections.emptyList();
+         watch.optout = Collections.emptyList();
       }
+      return watch;
    }
 
    private static List<String> add(List<String> list, String item) {
@@ -118,28 +113,26 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       if (isTeam && isOptout) {
          throw ServiceException.badRequest("Cannot opt-out team: use remove");
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Watch watch = Watch.find("testid", testId).firstResult();
-         if (watch == null) {
-            watch = new Watch();
-            watch.testId = testId;
-         }
-         if (isOptout) {
-            watch.optout = add(watch.optout, userOrTeam);
-            if (watch.users != null) {
-               watch.users.remove(userOrTeam);
-            }
-         } else if (isTeam) {
-            watch.teams = add(watch.teams, userOrTeam);
-         } else {
-            watch.users = add(watch.users, userOrTeam);
-            if (watch.optout != null) {
-               watch.optout.remove(userOrTeam);
-            }
-         }
-         watch.persist();
-         return currentWatches(watch);
+      Watch watch = Watch.find("testid", testId).firstResult();
+      if (watch == null) {
+         watch = new Watch();
+         watch.testId = testId;
       }
+      if (isOptout) {
+         watch.optout = add(watch.optout, userOrTeam);
+         if (watch.users != null) {
+            watch.users.remove(userOrTeam);
+         }
+      } else if (isTeam) {
+         watch.teams = add(watch.teams, userOrTeam);
+      } else {
+         watch.users = add(watch.users, userOrTeam);
+         if (watch.optout != null) {
+            watch.optout.remove(userOrTeam);
+         }
+      }
+      watch.persist();
+      return currentWatches(watch);
    }
 
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
@@ -153,56 +146,52 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       } else if (userOrTeam.startsWith("\"") && userOrTeam.endsWith("\"") && userOrTeam.length() > 2) {
          userOrTeam = userOrTeam.substring(1, userOrTeam.length() - 1);
       }
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Watch watch = Watch.find("testid", testId).firstResult();
-         if (watch == null) {
-            return Collections.emptyList();
-         }
-         boolean isOptout = false;
-         if (userOrTeam.startsWith("!")) {
-            isOptout = true;
-            userOrTeam = userOrTeam.substring(1);
-         }
-         String username = identity.getPrincipal().getName();
-         if (userOrTeam.equals("__self") || userOrTeam.equals(username)) {
-            if (isOptout) {
-               if (watch.optout != null) {
-                  watch.optout.remove(userOrTeam);
-               }
-            } else if (watch.users != null) {
-               watch.users.remove(username);
-            }
-         } else if (userOrTeam.endsWith("-team") && identity.getRoles().contains(userOrTeam)) {
-            if (isOptout) {
-               throw ServiceException.badRequest("Team cannot be opted out.");
-            }
-            if (watch.teams != null) {
-               watch.teams.remove(userOrTeam);
-            }
-         } else {
-            throw ServiceException.badRequest("Wrong user/team: " + userOrTeam);
-         }
-         watch.persist();
-         return currentWatches(watch);
+      Watch watch = Watch.find("testid", testId).firstResult();
+      if (watch == null) {
+         return Collections.emptyList();
       }
+      boolean isOptout = false;
+      if (userOrTeam.startsWith("!")) {
+         isOptout = true;
+         userOrTeam = userOrTeam.substring(1);
+      }
+      String username = identity.getPrincipal().getName();
+      if (userOrTeam.equals("__self") || userOrTeam.equals(username)) {
+         if (isOptout) {
+            if (watch.optout != null) {
+               watch.optout.remove(userOrTeam);
+            }
+         } else if (watch.users != null) {
+            watch.users.remove(username);
+         }
+      } else if (userOrTeam.endsWith("-team") && identity.getRoles().contains(userOrTeam)) {
+         if (isOptout) {
+            throw ServiceException.badRequest("Team cannot be opted out.");
+         }
+         if (watch.teams != null) {
+            watch.teams.remove(userOrTeam);
+         }
+      } else {
+         throw ServiceException.badRequest("Wrong user/team: " + userOrTeam);
+      }
+      watch.persist();
+      return currentWatches(watch);
    }
 
    @RolesAllowed({Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Transactional
    @Override
    public void update(Integer testId, Watch watch) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         Watch existing = Watch.find("testid", testId).firstResult();
-         if (existing == null) {
-            watch.id = null;
-            watch.testId = testId;
-            watch.persistAndFlush();
-         } else {
-            existing.users = watch.users;
-            existing.optout = watch.optout;
-            existing.teams = watch.teams;
-            existing.persistAndFlush();
-         }
+      Watch existing = Watch.find("testid", testId).firstResult();
+      if (existing == null) {
+         watch.id = null;
+         watch.testId = testId;
+         watch.persistAndFlush();
+      } else {
+         existing.users = watch.users;
+         existing.optout = watch.optout;
+         existing.teams = watch.teams;
+         existing.persistAndFlush();
       }
    }
 

@@ -6,9 +6,9 @@ import io.hyperfoil.tools.horreum.entity.json.AllowedHookPrefix;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
-import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpVersion;
@@ -37,18 +37,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ApplicationScoped
 public class HookServiceImpl implements HookService {
    private static final Logger log = Logger.getLogger(HookServiceImpl.class);
    private static final Pattern FIND_EXPRESSIONS = Pattern.compile("\\$\\{([^}]*)\\}");
-
-   @Inject
-   SqlServiceImpl sqlService;
-
-   @Inject
-   SecurityIdentity identity;
 
    private static int getIntFromEnv(String var, int def) {
       String env = System.getenv(var);
@@ -83,10 +76,7 @@ public class HookServiceImpl implements HookService {
    }
 
    private void tellHooks(String type, int testId, Object value){
-      List<Hook> hooks;
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, Collections.singletonList("admin"))) {
-         hooks = getEventHooks(type, testId);
-      }
+      List<Hook> hooks = getEventHooks(type, testId);
       JsonNode json = Util.OBJECT_MAPPER.valueToTree(value);
       for (Hook hook : hooks) {
          try {
@@ -106,7 +96,7 @@ public class HookServiceImpl implements HookService {
                   .setHost(url.getHost())
                   .setPort(url.getPort() >= 0 ? url.getPort() : url.getDefaultPort())
                   .setURI(url.getFile())
-                  .setSsl("https".equals(url.getProtocol().toLowerCase()));
+                  .setSsl("https".equalsIgnoreCase(url.getProtocol()));
             http1xClient.request(HttpMethod.POST, options)
                   .putHeader("Content-Type", "application/json")
                   .sendBuffer(Buffer.buffer(json.toString()))
@@ -124,12 +114,14 @@ public class HookServiceImpl implements HookService {
       }
    }
 
+   @WithRoles(extras = Roles.ADMIN)
    @Transactional //Transactional is a workaround for #6059
    @ConsumeEvent(value = Test.EVENT_NEW, blocking = true)
    public void newTest(Test test) {
       tellHooks(Test.EVENT_NEW, -1, test);
    }
 
+   @WithRoles(extras = Roles.ADMIN)
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void newRun(Run run) {
@@ -137,6 +129,7 @@ public class HookServiceImpl implements HookService {
       tellHooks(Run.EVENT_NEW, testId, run);
    }
 
+   @WithRoles(extras = Roles.ADMIN)
    @Transactional
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
    public void newChange(Change.Event changeEvent) {
@@ -146,13 +139,14 @@ public class HookServiceImpl implements HookService {
    }
 
    @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
+   @WithRoles
    @Transactional
    @Override
    public Hook add(Hook hook){
       if(hook == null){
          throw ServiceException.badRequest("Send hook as request body.");
       }
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
+      try {
          if (hook.id != null && hook.id <= 0) {
             hook.id = null;
          }
@@ -170,21 +164,19 @@ public class HookServiceImpl implements HookService {
    }
 
    @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
+   @WithRoles
    @Override
    public Hook get(Integer id){
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         return Hook.find("id", id).firstResult();
-      }
+      return Hook.find("id", id).firstResult();
    }
 
 
+   @WithRoles
    @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
    @Transactional
    @Override
    public void delete(Integer id){
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         Hook.find("id", id).firstResult().delete();
-      }
+      Hook.find("id", id).firstResult().delete();
    }
 
    public List<Hook> getEventHooks(String type, int testId) {
@@ -203,27 +195,25 @@ public class HookServiceImpl implements HookService {
    }
 
    @RolesAllowed(Roles.ADMIN)
+   @WithRoles
    @Override
    public List<Hook> list(Integer limit, Integer page, String sort, Sort.Direction direction){
-      try (@SuppressWarnings("unused") CloseMe h = sqlService.withRoles(em, identity)) {
-         if (limit != null && page != null) {
-            return Hook.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
-         } else {
-            return Hook.listAll(Sort.by(sort).direction(direction));
-         }
+      if (limit != null && page != null) {
+         return Hook.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
+      } else {
+         return Hook.listAll(Sort.by(sort).direction(direction));
       }
    }
 
 
    @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
+   @WithRoles
    @Override
    public List<Hook> hooks(Integer testId) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         if (testId != null) {
-            return Hook.list("target", testId);
-         } else {
-            throw ServiceException.badRequest("No test ID set.");
-         }
+      if (testId != null) {
+         return Hook.list("target", testId);
+      } else {
+         throw ServiceException.badRequest("No test ID set.");
       }
    }
 
@@ -234,24 +224,22 @@ public class HookServiceImpl implements HookService {
    }
 
    @RolesAllowed(Roles.ADMIN)
+   @WithRoles
    @Transactional
    @Override
    public AllowedHookPrefix addPrefix(String prefix) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         AllowedHookPrefix p = new AllowedHookPrefix();
-         // FIXME: fetchival stringifies the body into JSON string :-/
-         p.prefix = Util.destringify(prefix);
-         em.persist(p);
-         return p;
-      }
+      AllowedHookPrefix p = new AllowedHookPrefix();
+      // FIXME: fetchival stringifies the body into JSON string :-/
+      p.prefix = Util.destringify(prefix);
+      em.persist(p);
+      return p;
    }
 
    @RolesAllowed(Roles.ADMIN)
+   @WithRoles
    @Transactional
    @Override
    public void deletePrefix(Long id) {
-      try (@SuppressWarnings("unused") CloseMe closeMe = sqlService.withRoles(em, identity)) {
-         AllowedHookPrefix.delete("id", id);
-      }
+      AllowedHookPrefix.delete("id", id);
    }
 }
