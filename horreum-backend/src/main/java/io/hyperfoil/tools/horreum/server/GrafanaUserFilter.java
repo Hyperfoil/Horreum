@@ -5,6 +5,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebFilter;
@@ -35,7 +36,7 @@ public class GrafanaUserFilter extends HttpFilter {
    SecurityIdentity identity;
 
    @Inject @RestClient
-   GrafanaClient grafana;
+   Provider<GrafanaClient> grafana;
 
    @Override
    protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
@@ -68,7 +69,7 @@ public class GrafanaUserFilter extends HttpFilter {
       }
       GrafanaClient.UserInfo userInfo = null;
       try {
-          userInfo = grafana.lookupUser(email);
+          userInfo = grafana.get().lookupUser(email);
           log.debugf("User %s exists!", email);
       } catch (WebApplicationException e) {
          if (e.getResponse().getStatus() == 404) {
@@ -76,7 +77,7 @@ public class GrafanaUserFilter extends HttpFilter {
             String password = String.format("_%X%X%X!", random.nextLong(), random.nextLong(), random.nextLong());
             userInfo = new GrafanaClient.UserInfo(email, email, email, password, 1);
             try {
-               grafana.createUser(userInfo);
+               grafana.get().createUser(userInfo);
                log.infof("Created Grafana user %s (%s)", userInfo.login, userInfo.email);
             } catch (WebApplicationException e2) {
                if (e2.getResponse().getStatus() == 412) {
