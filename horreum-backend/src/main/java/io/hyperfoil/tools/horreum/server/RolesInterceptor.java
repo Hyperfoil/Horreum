@@ -40,9 +40,12 @@ public class RolesInterceptor {
       if (identity == null) {
          identity = this.identity;
       }
-      Collection<String> roles = identity.getRoles();
       WithRoles annotation = Util.getAnnotation(ctx.getMethod(), WithRoles.class);
       boolean hasParams = annotation.fromParams() != WithRoles.IgnoreParams.class;
+      if (identity.isAnonymous() && annotation.extras().length == 0 && !hasParams) {
+         return ctx.proceed();
+      }
+      Collection<String> roles = identity.getRoles();
       if (annotation.extras().length != 0 || annotation.addUsername() || hasParams) {
          roles = new ArrayList<>(roles);
          Collections.addAll(roles, annotation.extras());
