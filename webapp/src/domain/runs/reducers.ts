@@ -223,7 +223,6 @@ export const reducer = (state = new RunsState(), action: RunsAction) => {
                     copy.data = { ...run.data }
                     if (action.path) {
                         const sub = (copy.data[action.path] = { ...copy.data[action.path] })
-                        console.log(sub)
                         delete sub["$schema"]
                     } else {
                         delete copy.data["$schema"]

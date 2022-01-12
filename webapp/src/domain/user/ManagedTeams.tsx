@@ -162,7 +162,6 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
     }, [team, resetCounter])
     props.funcs.current = {
         save: () => {
-            console.log(memberRoles.current)
             return updateTeamMembers(team.key, memberRoles.current).then(() => setModified(false))
         },
         reset: () => {

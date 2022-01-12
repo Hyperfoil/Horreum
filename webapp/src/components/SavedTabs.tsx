@@ -66,8 +66,6 @@ export default function SavedTabs(props: SavedTabsProps) {
             goToTab(requestedKey as number)
         }
         if (requestedLocation !== undefined) {
-            console.log(historyUnblock)
-            console.log(requestedLocation)
             if (historyUnblock.current) {
                 historyUnblock.current()
             }
