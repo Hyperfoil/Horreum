@@ -41,7 +41,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
         setName(test ? test.name : "")
         setDescription(test ? test.description : "")
         setTags(test && test.tags ? test.tags.split(";").filter(t => t !== "") : [])
-        setTagsCalculation(test && test.tagsCalculation)
+        setTagsCalculation(() => test?.tagsCalculation)
         setCompareUrl(test?.compareUrl?.toString() || undefined)
         setNotificationsEnabled(!test || test.notificationsEnabled)
         setStalenessSettings(
