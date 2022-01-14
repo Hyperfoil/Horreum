@@ -34,4 +34,7 @@ public class ReportComponent {
    @NotNull
    public String accessors;
    public String function;
+
+   // displayed on Y axis
+   public String unit;
 }

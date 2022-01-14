@@ -30,6 +30,7 @@ function formatter(func: string | undefined) {
 type RunDataViewProps = {
     config: TableReportConfig
     data?: RunData
+    unit?: string
     selector(d: RunData): number
     siblingSelector(d: RunData, index: number): number
 }
@@ -59,7 +60,10 @@ function RunDataView(props: RunDataViewProps) {
                 </TableComposable>
             }
         >
-            <Button variant="link">{props.selector(data)}</Button>
+            <Button variant="link">
+                {props.selector(data)}
+                {props.unit}
+            </Button>
         </Popover>
     )
 }
@@ -67,6 +71,7 @@ function RunDataView(props: RunDataViewProps) {
 type ComponentTableProps = {
     config: TableReportConfig
     data: RunData[]
+    unit?: string
     selector(d: RunData): number
     siblingSelector(d: RunData, index: number): number
 }
@@ -86,6 +91,7 @@ function ComponentTable(props: ComponentTableProps) {
         }
     })
     const [minMaxDomain, setMinMaxDomain] = useState(false)
+    const tickSuffix = props.unit && props.unit.length <= 4 ? props.unit : ""
     const commonChartElements = [
         <CartesianGrid key="grid" strokeDasharray="3 3" />,
         <YAxis
@@ -93,7 +99,18 @@ function ComponentTable(props: ComponentTableProps) {
             width={80}
             yAxisId={0}
             tick={{ fontSize: 12 }}
+            tickFormatter={value => value.toLocaleString(undefined, { maximumFractionDigits: 2 }) + tickSuffix}
             domain={minMaxDomain ? ["dataMin", "dataMax"] : undefined}
+            label={
+                props.unit && props.unit.length > 4
+                    ? {
+                          value: props.unit.trim(),
+                          position: "insideLeft",
+                          angle: -90,
+                          style: { textAnchor: "middle" },
+                      }
+                    : undefined
+            }
         />,
         <Legend
             key="legend"
@@ -113,7 +130,7 @@ function ComponentTable(props: ComponentTableProps) {
                 <TableComposable variant="compact">
                     <Thead>
                         <Tr>
-                            <Th></Th>
+                            <Th>{props.config.labelDescription}</Th>
                             {series.map(s => (
                                 <Th key={s}>{seriesFormatter(s)}</Th>
                             ))}
@@ -128,6 +145,7 @@ function ComponentTable(props: ComponentTableProps) {
                                         <RunDataView
                                             config={props.config}
                                             data={props.data.find(d => d.series === s && d.label === l)}
+                                            unit={props.unit}
                                             selector={props.selector}
                                             siblingSelector={props.siblingSelector}
                                         />
@@ -153,6 +171,7 @@ function ComponentTable(props: ComponentTableProps) {
                             {commonChartElements}
                             <XAxis
                                 allowDataOverflow={true}
+                                name={props.config.labelDescription}
                                 type="category"
                                 textAnchor="end"
                                 height={50}
@@ -382,6 +401,7 @@ export default function TableReportView(props: TableReportViewProps) {
                                         <ComponentTable
                                             config={config}
                                             data={categoryData}
+                                            unit={comp.unit}
                                             selector={d => selectByKey(d.values[i2], key)}
                                             siblingSelector={(d, index) => selectByKey(d.values[index], key)}
                                         />
@@ -399,6 +419,7 @@ export default function TableReportView(props: TableReportViewProps) {
                                         <ComponentTable
                                             config={config}
                                             data={categoryData}
+                                            unit={comp.unit}
                                             selector={d => d.values[i2]}
                                             siblingSelector={(d, index) => d.values[index]}
                                         />

@@ -1980,5 +1980,14 @@
             CREATE POLICY banner_delete ON banner FOR DELETE USING (has_role('admin'));
         </sql>
     </changeSet>
+
+    <changeSet id="40" author="rvansa">
+        <addColumn tableName="tablereportconfig">
+            <column name="labeldescription" type="text" />
+        </addColumn>
+        <addColumn tableName="reportcomponent">
+            <column name="unit" type="text" />
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
 

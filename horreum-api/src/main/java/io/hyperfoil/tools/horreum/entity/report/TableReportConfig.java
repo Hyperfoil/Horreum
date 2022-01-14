@@ -55,6 +55,7 @@ public class TableReportConfig extends PanacheEntityBase {
    public String labelAccessors;
    public String labelFunction;
    public String labelFormatter;
+   public String labelDescription;
 
    @OneToMany(mappedBy = "report", orphanRemoval = true, cascade = CascadeType.ALL)
    @OrderBy("order ASC")

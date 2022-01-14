@@ -21,6 +21,7 @@ export type TableReportConfig = {
     labelAccessors: string
     labelFunction?: string
     labelFormatter?: string
+    labelDescription?: string
 
     components: ReportComponent[]
 }
@@ -31,6 +32,7 @@ export type ReportComponent = {
     order: number
     accessors: string
     function?: string
+    unit?: string
 }
 
 export type ReportComment = {

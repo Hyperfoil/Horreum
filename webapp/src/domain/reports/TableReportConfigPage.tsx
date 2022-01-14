@@ -56,6 +56,14 @@ function ReportConfigComponent(props: ReportConfigComponentProps) {
                         isReadOnly={props.readOnly}
                     />
                 </FormGroup>
+                <FormGroup label="Unit" fieldId="unit">
+                    <TextInput
+                        value={props.component.unit}
+                        onChange={unit => props.onChange({ ...props.component, unit })}
+                        placeholder="E.g. milliseconds, requests/sec..."
+                        isReadOnly={props.readOnly}
+                    />
+                </FormGroup>
                 <FormGroup label="Accessors" fieldId="accessors">
                     <Accessors
                         isReadOnly={props.readOnly}
@@ -470,6 +478,14 @@ export default function TableReportConfigPage() {
                                     undefinedText="Label formatter function not defined."
                                     addText="Add label formatter function..."
                                     defaultFunc="label => label"
+                                />
+                            </FormGroup>
+                            <FormGroup label="Description" fieldId="labelDescription">
+                                <TextInput
+                                    value={config?.labelDescription}
+                                    onChange={labelDescription => setConfig({ ...config, labelDescription })}
+                                    placeholder="Name of the property that this report is scaling."
+                                    readOnly={!isTester}
                                 />
                             </FormGroup>
                         </FormSection>
