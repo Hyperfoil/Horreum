@@ -90,3 +90,17 @@ export function deleteSchema(id: number) {
             error => dispatchError(dispatch, error, "SCHEMA_DELETE", "Failed to delete schema " + id)
         )
 }
+
+export function listExtractors(schemaId?: number) {
+    return (dispatch: ThunkDispatch<any, unknown, DeleteAction>) =>
+        api
+            .listExtractors(schemaId)
+            .catch(error =>
+                dispatchError(
+                    dispatch,
+                    error,
+                    "LIST_EXTRACTORS",
+                    "Failed to list extractors" + (schemaId !== undefined ? "for schema " + schemaId : "")
+                )
+            )
+}

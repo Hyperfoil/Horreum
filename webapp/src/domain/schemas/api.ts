@@ -1,6 +1,5 @@
 import { fetchApi } from "../../services/api"
 import { Schema } from "./reducers"
-import { Extractor } from "../../components/Accessors"
 import { Access, accessName } from "../../auth"
 const base = "/api/schema"
 const endPoints = {
@@ -12,6 +11,7 @@ const endPoints = {
         `${base}/${id}/updateAccess?owner=${owner}&access=${accessName(access)}`,
     extractor: () => `${base}/extractor`,
     extractorForSchema: (schemaId: number) => `${base}/extractor?schemaId=${schemaId}`,
+    findUsages: (accessor: string) => `${base}/findUsages?accessor=${encodeURIComponent(accessor)}`,
     testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${encodeURIComponent(jsonpath)}`,
 }
 export const all = () => {
@@ -47,3 +47,56 @@ export const addOrUpdateExtractor = (extractor: Extractor) => fetchApi(endPoints
 export const deleteSchema = (id: number) => fetchApi(endPoints.crud(id), null, "delete")
 
 export const testJsonPath = (jsonpath: string) => fetchApi(endPoints.testJsonPath(jsonpath), null, "get")
+
+export function findUsages(accessor: string) {
+    return fetchApi(endPoints.findUsages(accessor), null, "get")
+}
+
+export type ValidationResult = {
+    valid: boolean
+    reason: string
+    errorCode: number
+    sqlState: string
+}
+
+export interface Extractor {
+    accessor: string
+    schema?: string
+    schemaId?: number
+    jsonpath?: string
+    // upload-only fields
+    newName?: string
+    deleted?: boolean
+    changed?: boolean
+    // temprary fields
+    validationTimer?: any
+    validationResult?: ValidationResult
+}
+
+export interface AccessorLocation {
+    type: "TAGS" | "VARIABLE" | "VIEW" | "REPORT"
+    testId: number
+    testName: string
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface AccessorInTags extends AccessorLocation {}
+
+export interface AccessorInVariable extends AccessorLocation {
+    variableId: number
+    variableName: string
+}
+
+export interface AccessorInView extends AccessorLocation {
+    viewId: number
+    viewName: string
+    componentId: number
+    header: string
+}
+
+export interface AccessorInReport extends AccessorLocation {
+    configId: number
+    title: string
+    where: "component" | "filter" | "category" | "series" | "label"
+    name: string | null
+}

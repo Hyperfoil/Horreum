@@ -15,6 +15,7 @@ import {
     TextInput,
 } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
+import { useHistory } from "react-router"
 
 import { useTester } from "../../auth"
 
@@ -48,7 +49,11 @@ function checkComponent(v: ViewComponent) {
 
 const ViewComponentForm = ({ c, onChange, isTester }: ViewComponentFormProps) => {
     return (
-        <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}>
+        <Form
+            id={`viewcomponent-${c.id}`}
+            isHorizontal={true}
+            style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}
+        >
             <FormGroup label="Header" fieldId="header">
                 <TextInput
                     value={c.headerName || ""}
@@ -124,6 +129,16 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
         save: () => dispatch(updateView(testId, view)),
         reset: () => setView(deepCopy(testView)),
     }
+    const history = useHistory()
+    useEffect(() => {
+        const fragmentParts = history.location.hash.split("+")
+        if (fragmentParts.length === 3 && fragmentParts[0] === "#views") {
+            const component = document.getElementById("viewcomponent-" + fragmentParts[2])
+            if (component) {
+                component.scrollIntoView()
+            }
+        }
+    }, [])
 
     return (
         <>
@@ -139,6 +154,7 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                         onClick={() => {
                             const components = view.components
                             components.push({
+                                id: -1,
                                 headerName: "",
                                 accessors: "",
                                 render: "",

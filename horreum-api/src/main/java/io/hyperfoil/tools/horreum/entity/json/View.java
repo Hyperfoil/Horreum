@@ -44,6 +44,9 @@ public class View extends PanacheEntityBase {
    public void ensureLinked() {
       if (components != null) {
          for (ViewComponent c : components) {
+            if (c.id != null && c.id < 0) {
+               c.id = null;
+            }
             c.view = this;
          }
       }

@@ -32,7 +32,7 @@ import AccessIcon from "../../components/AccessIcon"
 import AccessChoice from "../../components/AccessChoice"
 import SavedTabs, { SavedTab } from "../../components/SavedTabs"
 import TeamSelect from "../../components/TeamSelect"
-import { Extractor } from "../../components/Accessors"
+import { Extractor } from "./api"
 import { Schema as SchemaDef, SchemaDispatch } from "./reducers"
 import Extractors from "./Extractors"
 
@@ -225,16 +225,18 @@ export default function Schema() {
     const [originalExtractors, setOriginalExtractors] = useState<Extractor[]>([])
     useEffect(() => {
         if (schemaId >= 0) {
-            api.listExtractors(schemaId).then(result => {
-                const exs = result
-                    .map((e: Extractor) => {
-                        e.newName = e.accessor
-                        return e
-                    })
-                    .sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))
-                setExtractors(exs)
-                setOriginalExtractors(JSON.parse(JSON.stringify(exs))) // deep copy
-            })
+            dispatch(actions.listExtractors(schemaId))
+                .then(result => {
+                    const exs = result
+                        .map((e: Extractor) => {
+                            e.newName = e.accessor
+                            return e
+                        })
+                        .sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))
+                    setExtractors(exs)
+                    setOriginalExtractors(JSON.parse(JSON.stringify(exs))) // deep copy
+                })
+                .catch(noop)
         }
     }, [schemaId, teams])
     const uri = currentSchema?.uri

@@ -8,7 +8,6 @@ import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
-import io.quarkus.security.identity.SecurityIdentity;
 
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -20,6 +19,8 @@ import javax.transaction.Transactional;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -76,12 +77,6 @@ public class SchemaServiceImpl implements SchemaService {
 
    @Inject
    EntityManager em;
-
-   @Inject
-   SqlServiceImpl sqlService;
-
-   @Inject
-   SecurityIdentity identity;
 
    @WithToken
    @PermitAll
@@ -288,6 +283,61 @@ public class SchemaServiceImpl implements SchemaService {
       } else {
          SchemaExtractor.delete("schema_id", id);
          schema.delete();
+      }
+   }
+
+   @PermitAll
+   @Override
+   public List<AccessorLocation> findUsages(String accessor) {
+      accessor = accessor.trim();
+      List<AccessorLocation> result = new ArrayList<>();
+      for (Object row: em.createNativeQuery("SELECT id, name FROM test WHERE ? = ANY(string_to_array(replace(tags, '[]', ''), ';'));").setParameter(1, accessor).getResultList()) {
+         Object[] columns = (Object[]) row;
+         result.add(new AccessorInTags((int) columns[0], (String) columns[1]));
+      }
+      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, v.id as varid, v.name as varname FROM variable v " +
+            "JOIN test ON test.id = v.testid " +
+            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ','));")
+            .setParameter(1, accessor).getResultList()) {
+         Object[] columns = (Object[]) row;
+         result.add(new AccessorInVariable((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3]));
+      }
+      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, view.id as viewid, view.name as viewname, vc.id as componentid, vc.headername FROM viewcomponent vc " +
+            "JOIN view ON vc.view_id = view.id JOIN test ON test.id = view.test_id " +
+            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ','));")
+            .setParameter(1, accessor).getResultList()) {
+         Object[] columns = (Object[]) row;
+         result.add(new AccessorInView((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], (int) columns[4], (String) columns[5]));
+      }
+      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, trc.id as configid, trc.title, " +
+            "filteraccessors, categoryaccessors, seriesaccessors, labelaccessors FROM tablereportconfig trc " +
+            "JOIN test ON test.id = trc.testid " +
+            "WHERE ?1 = ANY(string_to_array(replace(filteraccessors || ',' || categoryaccessors || ',' || seriesaccessors || ',' || labelaccessors, '[]', ''), ','));")
+            .setParameter(1, accessor).getResultList()) {
+         Object[] columns = (Object[]) row;
+         StringBuilder where = new StringBuilder();
+         addPart(where, (String) columns[4], accessor, "filter");
+         addPart(where, (String) columns[5], accessor, "series");
+         addPart(where, (String) columns[6], accessor, "category");
+         addPart(where, (String) columns[7], accessor, "label");
+         result.add(new AccessorInReport((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], where.toString(), null));
+      }
+      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, trc.id as configid, trc.title, rc.name FROM reportcomponent rc " +
+            "JOIN tablereportconfig trc ON rc.reportconfig_id = trc.id JOIN test ON test.id = trc.testid " +
+            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ','));")
+            .setParameter(1, accessor).getResultList()) {
+         Object[] columns = (Object[]) row;
+         result.add(new AccessorInReport((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], "component", (String) columns[4]));
+      }
+      return result;
+   }
+
+   private void addPart(StringBuilder where, String column, String accessor, String type) {
+      if (Arrays.asList(column.replaceAll("\\[]", "").split(",")).contains(accessor)) {
+         if (where.length() > 0) {
+            where.append(", ");
+         }
+         where.append(type);
       }
    }
 }

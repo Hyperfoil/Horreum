@@ -17,12 +17,14 @@ import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 import { NavLink } from "react-router-dom"
 
 import * as api from "./api"
+import { Extractor } from "./api"
 import { listBySchema, query } from "../runs/api"
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
 import Editor from "../../components/Editor/monaco/Editor"
-import { Extractor, checkAccessorName, INVALID_ACCESSOR_HELPER } from "../../components/Accessors"
+import { checkAccessorName, INVALID_ACCESSOR_HELPER } from "../../components/Accessors"
 import { Run } from "../runs/reducers"
 import { alertAction } from "../../alerts"
+import FindUsagesModal from "./FindUsagesModal"
 
 type TryJsonPathModalProps = {
     uri: string
@@ -186,6 +188,7 @@ type ExtractorsProps = {
 
 export default function Extractors(props: ExtractorsProps) {
     const [testExtractor, setTestExtractor] = useState<Extractor>()
+    const [findUsages, setFindUsages] = useState<string>()
     return (
         <>
             {props.extractors
@@ -252,28 +255,33 @@ export default function Extractors(props: ExtractorsProps) {
                                 </Form>
                             </FlexItem>
                             {props.isTester && (
-                                <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
-                                    <Button
-                                        variant="primary"
-                                        isDisabled={!e.jsonpath}
-                                        onClick={() => setTestExtractor(e)}
-                                    >
-                                        Try it!
-                                    </Button>
-                                </FlexItem>
-                            )}
-                            {props.isTester && (
-                                <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => {
-                                            e.deleted = true
-                                            props.setExtractors([...props.extractors])
-                                        }}
-                                    >
-                                        Delete
-                                    </Button>
-                                </FlexItem>
+                                <>
+                                    <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
+                                        <Button
+                                            variant="primary"
+                                            isDisabled={!e.jsonpath}
+                                            onClick={() => setTestExtractor(e)}
+                                        >
+                                            Try it!
+                                        </Button>
+                                    </FlexItem>
+                                    <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
+                                        <Button variant="secondary" onClick={() => setFindUsages(e.accessor)}>
+                                            Find usages
+                                        </Button>
+                                    </FlexItem>
+                                    <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
+                                        <Button
+                                            variant="danger"
+                                            onClick={() => {
+                                                e.deleted = true
+                                                props.setExtractors([...props.extractors])
+                                            }}
+                                        >
+                                            Delete
+                                        </Button>
+                                    </FlexItem>
+                                </>
                             )}
                         </Flex>
                     )
@@ -290,6 +298,7 @@ export default function Extractors(props: ExtractorsProps) {
                 }}
                 onClose={() => setTestExtractor(undefined)}
             />
+            <FindUsagesModal accessor={findUsages} onClose={() => setFindUsages(undefined)} />
         </>
     )
 }

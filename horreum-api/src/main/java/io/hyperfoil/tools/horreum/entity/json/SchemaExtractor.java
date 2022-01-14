@@ -9,6 +9,7 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -44,6 +45,11 @@ public class SchemaExtractor extends PanacheEntityBase {
 
    public static String arrayName(String accessor) {
       return accessor.substring(0, accessor.length() - 2);
+   }
+
+   @JsonProperty("schemaId")
+   private int schemaId() {
+      return schema.id;
    }
 
    public static class SchemaToUri extends JsonSerializer<Schema> {

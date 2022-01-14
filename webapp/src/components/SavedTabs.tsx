@@ -38,7 +38,9 @@ export default function SavedTabs(props: SavedTabsProps) {
         [props.children]
     )
     const [activeKey, setActiveKey] = useState(() => {
-        const index = children.findIndex(c => history.location.hash === "#" + c.props.fragment)
+        const endOfTab = history.location.hash.indexOf("+")
+        const hash = history.location.hash.substring(1, endOfTab >= 0 ? endOfTab : undefined)
+        const index = children.findIndex(c => hash === c.props.fragment)
         return index < 0 ? 0 : index
     })
     const [requestedKey, setRequestedKey] = useState<number>()

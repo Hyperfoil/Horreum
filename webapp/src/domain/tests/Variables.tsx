@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
+import { useHistory } from "react-router"
 
 import { useTester } from "../../auth"
 import { alertAction } from "../../alerts"
@@ -198,7 +199,7 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
     const [isExpanded, setExpanded] = useState(false)
     const [groupOpen, setGroupOpen] = useState(false)
     return (
-        <Form isHorizontal={true}>
+        <Form id={`variable-${variable.id}`} isHorizontal={true}>
             <FormGroup label="Name" fieldId="name">
                 <TextInput
                     value={variable.name || ""}
@@ -500,6 +501,18 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
     const [isLogOpen, setLogOpen] = useState(false)
     const subscriptions = useSelector(subscriptionsSelector(testId))?.filter(s => !s.startsWith("!"))
     const hasSubscription = subscriptions && subscriptions.length > 0
+
+    const history = useHistory()
+    useEffect(() => {
+        const fragmentParts = history.location.hash.split("+")
+        if (fragmentParts.length === 2 && fragmentParts[0] === "#vars") {
+            const component = document.getElementById("variable-" + fragmentParts[1])
+            if (component) {
+                component.scrollIntoView()
+            }
+        }
+    }, [])
+
     if (!variables) {
         return (
             <Bullseye>

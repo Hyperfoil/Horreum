@@ -15,6 +15,7 @@ export interface Token {
 export type RenderFunction = (value: any, row: any, token: string | undefined) => any
 
 export interface ViewComponent {
+    id: number
     headerName: string
     accessors: string
     render: string | RenderFunction | undefined

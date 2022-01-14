@@ -79,11 +79,75 @@ public interface SchemaService {
    @Path("{id}")
    void delete(@PathParam("id") Integer id);
 
+   @GET
+   @Path("findUsages")
+   @Produces(MediaType.APPLICATION_JSON)
+   List<AccessorLocation> findUsages(@QueryParam("accessor") String accessor);
+
    class ExtractorUpdate {
       public String accessor;
       public String newName;
       public String schema;
       public String jsonpath;
       public boolean deleted;
+   }
+
+   abstract class AccessorLocation {
+      public final String type;
+      public int testId;
+      public String testName;
+
+      public AccessorLocation(String type, int testId, String testName) {
+         this.type = type;
+         this.testId = testId;
+         this.testName = testName;
+      }
+   }
+
+   class AccessorInTags extends AccessorLocation {
+      public AccessorInTags(int testId, String testName) {
+         super("TAGS", testId, testName);
+      }
+   }
+
+   class AccessorInVariable extends AccessorLocation {
+      public int variableId;
+      public String variableName;
+
+      public AccessorInVariable(int testId, String testName, int variableId, String variableName) {
+         super("VARIABLE", testId, testName);
+         this.variableId = variableId;
+         this.variableName = variableName;
+      }
+   }
+
+   class AccessorInView extends AccessorLocation {
+      public int viewId;
+      public String viewName;
+      public int componentId;
+      public String header;
+
+      public AccessorInView(int testId, String testName, int viewId, String viewName, int componentId, String header) {
+         super("VIEW", testId, testName);
+         this.viewId = viewId;
+         this.componentId = componentId;
+         this.viewName = viewName;
+         this.header = header;
+      }
+   }
+
+   class AccessorInReport extends AccessorLocation {
+      public int configId;
+      public String title;
+      public String where; // component, filter, category, series, label
+      public String name; // only set for component
+
+      public AccessorInReport(int testId, String testName, int configId, String title, String where, String name) {
+         super("REPORT", testId, testName);
+         this.configId = configId;
+         this.title = title;
+         this.where = where;
+         this.name = name;
+      }
    }
 }

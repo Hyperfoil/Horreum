@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react"
 import { useDispatch } from "react-redux"
 
-import { addOrUpdateExtractor, listExtractors } from "../domain/schemas/api"
+import { Extractor, addOrUpdateExtractor, listExtractors, testJsonPath } from "../domain/schemas/api"
 import SchemaSelect from "./SchemaSelect"
 
 import { alertAction } from "../alerts"
-import { testJsonPath } from "../domain/schemas/api"
 
 import {
     ActionGroup,
@@ -89,8 +88,6 @@ const RESERVED = [
 ]
 
 export function checkAccessorName(name: string | undefined) {
-    console.log("CHECK")
-    console.log(name)
     if (!name) {
         return true
     } else if (!name.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
@@ -98,7 +95,6 @@ export function checkAccessorName(name: string | undefined) {
     } else if (RESERVED.includes(name)) {
         return false
     } else {
-        console.log(name.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
         return true
     }
 }
@@ -117,26 +113,6 @@ function distinctSorted(list: Extractor[], selector: (e: Extractor) => any): Ext
 
 function baseName(name: string) {
     return name.endsWith("[]") ? name.substring(0, name.length - 2) : name
-}
-
-export type ValidationResult = {
-    valid: boolean
-    reason: string
-    errorCode: number
-    sqlState: string
-}
-
-export interface Extractor {
-    accessor: string
-    schema?: string
-    jsonpath?: string
-    // upload-only fields
-    newName?: string
-    deleted?: boolean
-    changed?: boolean
-    // temprary fields
-    validationTimer?: any
-    validationResult?: ValidationResult
 }
 
 type AccessorsProps = {
