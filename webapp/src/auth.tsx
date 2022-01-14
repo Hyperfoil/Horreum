@@ -74,7 +74,6 @@ export const reducer = (state = initialState, action: AuthActions) => {
             state.authenticated = action.authenticated
             state.roles = [...action.roles]
             state.teams = action.roles.filter(role => role.endsWith("-team")).sort()
-            console.log(state.teams)
             break
         case STORE_PROFILE:
             state.userProfile = action.profile

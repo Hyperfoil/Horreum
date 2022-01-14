@@ -23,7 +23,7 @@ import * as actions from "./actions"
 import * as selectors from "./selectors"
 import * as api from "./api"
 import { defaultTeamSelector, teamsSelector, teamToName, useTester } from "../../auth"
-import { alertAction, constraintValidationFormatter, dispatchInfo } from "../../alerts"
+import { dispatchError, constraintValidationFormatter, dispatchInfo } from "../../alerts"
 import { noop } from "../../utils"
 
 import { toString } from "../../components/Editor"
@@ -266,16 +266,15 @@ export default function Schema() {
                 )
             )
             .then(() => setOriginalExtractors(JSON.parse(JSON.stringify(extractors))))
-            .catch(e => {
-                dispatch(
-                    alertAction(
-                        "SAVE_SCHEMA",
-                        "Failed to save the schema",
-                        e,
-                        constraintValidationFormatter("the saved schema")
-                    )
+            .catch(e =>
+                dispatchError(
+                    dispatch,
+                    e,
+                    "SAVE_SCHEMA",
+                    "Failed to save the schema",
+                    constraintValidationFormatter("the saved schema")
                 )
-            })
+            )
     }
     return (
         <PageSection>

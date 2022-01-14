@@ -98,21 +98,12 @@ export function fetchApi(endPoint: string, payload: any = {}, method = "get", he
                             },
                         })
                     }
-                    return e.response.json().then(
-                        (body: any) => {
-                            return Promise.reject(body)
-                        },
-                        (_: any) => {
-                            return e.response.text().then(
-                                (body: any) => {
-                                    return Promise.reject(body)
-                                },
-                                (_: any) => {
-                                    return Promise.reject(e)
-                                }
-                            )
-                        }
-                    )
+                    const contentType = e.response.headers.get("content-type")
+                    if (contentType === "application/json") {
+                        return e.response.json().then((body: any) => Promise.reject(body))
+                    } else {
+                        return e.response.text().then((text: any) => Promise.reject(text))
+                    }
                 } else {
                     return Promise.reject(e)
                 }
