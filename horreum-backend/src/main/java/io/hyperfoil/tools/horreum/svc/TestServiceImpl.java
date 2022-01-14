@@ -56,9 +56,6 @@ public class TestServiceImpl implements TestService {
    EventBus eventBus;
 
    @Inject
-   SqlServiceImpl sqlService;
-
-   @Inject
    SecurityIdentity identity;
 
    @Context

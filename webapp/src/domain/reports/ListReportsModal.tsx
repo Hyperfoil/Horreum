@@ -25,7 +25,7 @@ export default function ListReportsModal(props: ListReportsModalProps) {
             isOpen={props.isOpen}
             onClose={props.onClose}
         >
-            <div style={{ overflowY: "auto" }}>
+            <div style={{ overflowY: "auto", maxHeight: "60vh" }}>
                 {!props.summary && (
                     <Bullseye>
                         <Spinner size="xl" />

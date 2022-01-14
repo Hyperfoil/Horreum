@@ -116,7 +116,7 @@ public class ReportServiceImpl implements ReportService {
          summaryLookup.put(config, summary);
          return summary;
       }).collect(Collectors.toList());
-      for (TableReport report : TableReport.<TableReport>find("config IN :configs", Map.of("configs", configs)).list()) {
+      for (TableReport report : TableReport.<TableReport>find("config IN :configs", Sort.by("created").descending(), Map.of("configs", configs)).list()) {
          TableReportSummary summary = summaryLookup.get(report.config);
          TableReportSummaryItem item = new TableReportSummaryItem();
          item.id = report.id;
@@ -172,23 +172,23 @@ public class ReportServiceImpl implements ReportService {
       if (config.test == null || config.test.id == null) {
          throw ServiceException.badRequest("No test");
       }
-      if (config.filterFunction != null && config.filterAccessors == null) {
+      if (!nullOrEmpty(config.filterFunction) && nullOrEmpty(config.filterAccessors)) {
          throw ServiceException.badRequest("Filter function is defined but there are no accessors");
       }
-      if (config.categoryAccessors == null) {
-         if (config.categoryFunction != null) {
+      if (nullOrEmpty(config.categoryAccessors)) {
+         if (!nullOrEmpty(config.categoryFunction)) {
             throw ServiceException.badRequest("Category function is defined but there are no accessors");
-         } else if (config.categoryFormatter != null) {
+         } else if (!nullOrEmpty(config.categoryFormatter)) {
             throw ServiceException.badRequest("Category formatter is defined but there are not accessors");
          }
       }
-      if (config.seriesAccessors == null) {
+      if (nullOrEmpty(config.seriesAccessors)) {
          throw ServiceException.badRequest("Service accessors must be defined");
       }
-      if (config.labelAccessors == null) {
-         if (config.labelFunction != null) {
+      if (nullOrEmpty(config.labelAccessors)) {
+         if (!nullOrEmpty(config.labelFunction)) {
             throw ServiceException.badRequest("Label function is defined but there are no accessors");
-         } else if (config.labelFormatter != null) {
+         } else if (!nullOrEmpty(config.labelFormatter)) {
             throw ServiceException.badRequest("Label formatter is defined but there are no accessors");
          }
       }
@@ -264,11 +264,11 @@ public class ReportServiceImpl implements ReportService {
          log.debugf("Table report %s(%d) includes runs %s", config.title, config.id, runIds);
          series = selectByRuns(config.seriesAccessors, runIds);
          log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
-         if (config.labelAccessors != null) {
+         if (!nullOrEmpty(config.labelAccessors)) {
             labels = selectByRuns(config.labelAccessors, runIds);
             log.debugf("Labels: %s", labels.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          }
-         if (config.categoryAccessors != null) {
+         if (!nullOrEmpty(config.categoryAccessors)) {
             runCategories = selectByRuns(config.categoryAccessors, runIds);
             log.debugf("Categories: %s", runCategories.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          }
@@ -348,6 +348,10 @@ public class ReportServiceImpl implements ReportService {
       });
       report.runData = runIds.stream().map(runData::get).collect(Collectors.toList());
       return report;
+   }
+
+   private boolean nullOrEmpty(String str) {
+      return str == null || str.trim().isEmpty();
    }
 
    private Map<Integer, TableReport.RunData> getRunData(TableReportConfig config, List<Object[]> runCategories, List<Object[]> series, List<Object[]> labels) {

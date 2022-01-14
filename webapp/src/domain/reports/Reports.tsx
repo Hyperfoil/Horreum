@@ -96,7 +96,7 @@ export default function Reports() {
                 Cell: (arg: C) => {
                     const reports = arg.cell.value
                     if (reports && reports.length > 0) {
-                        const last = reports[reports.length - 1]
+                        const last = reports[0]
                         return (
                             <NavLink to={`/reports/table/${last.id}`}>
                                 <ArrowRightIcon />

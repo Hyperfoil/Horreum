@@ -77,7 +77,7 @@ public class RunServiceImpl implements RunService {
    // TODO: array queries!
    private static final String GET_TAGS =
          "WITH test_tags AS (" +
-            "SELECT id AS testid, unnest(regexp_split_to_array(tags, ';')) AS accessor, tagscalculation FROM test" +
+            "SELECT id AS testid, unnest(string_to_array(tags, ';')) AS accessor, tagscalculation FROM test" +
          "), tags AS (" +
             "SELECT rs.runid, se.id as extractor_id, se.accessor, jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::::jsonpath) AS value, test_tags.tagscalculation " +
             "FROM schemaextractor se " +
@@ -177,7 +177,7 @@ public class RunServiceImpl implements RunService {
                }
             }
          }
-         Query insert = em.createNativeQuery("INSERT INTO run_tags (runid, tags, extractor_ids) VALUES (?, ?::::jsonb, ARRAY(SELECT jsonb_array_elements(?::::jsonb)::::int));");
+         Query insert = em.createNativeQuery("INSERT INTO run_tags (runid, tags, extractor_ids) VALUES (?, (?::::text)::::jsonb, ARRAY(SELECT jsonb_array_elements((?::::text)::::jsonb)::::int));");
          insert.setParameter(1, runId).setParameter(2, tags).setParameter(3, extractorIds);
          if (insert.executeUpdate() != 1) {
             log.errorf("Failed to insert run tags for run %d (invalid update count - maybe missing privileges?)", runId);
@@ -186,6 +186,8 @@ public class RunServiceImpl implements RunService {
       } catch (NoResultException e) {
          log.infof("Run %d does not create any tags.", runId);
          eventBus.publish(Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, null));
+      } catch (Throwable e) {
+         log.errorf(e, "Failed to calculate tags for run %d", runId);
       }
    }
 
@@ -197,7 +199,11 @@ public class RunServiceImpl implements RunService {
       try {
          return q.getSingleResult();
       } catch (NoResultException e) {
+         log.errorf("No results for params: ", params);
          throw ServiceException.notFound("No result");
+      } catch (Throwable t) {
+         log.errorf("Error for params: ", params);
+         throw ServiceException.serverError("Cannot fetch run.");
       }
    }
 
