@@ -317,7 +317,7 @@ public class ReportServiceImpl implements ReportService {
             for (Object[] row : valuesForComponent) {
                Integer runId = (Integer) row[0];
                TableReport.RunData data = runData.get(runId);
-               if (component.function == null) {
+               if (component.function == null || component.function.trim().isEmpty()) {
                   if (row[1] == null) {
                      data.values.addNull();
                   } else {

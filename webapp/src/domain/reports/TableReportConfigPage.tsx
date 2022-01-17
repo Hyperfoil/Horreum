@@ -575,7 +575,8 @@ export default function TableReportConfigPage() {
                         <Modal isOpen={!!preview} onClose={() => setPreview(undefined)}>
                             <div
                                 style={{
-                                    overflowY: "scroll",
+                                    overflowY: "auto",
+                                    maxHeight: "80vh",
                                     paddingRight: "16px",
                                 }}
                             >
