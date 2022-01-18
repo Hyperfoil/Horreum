@@ -154,6 +154,10 @@ public class AlertingServiceImpl implements AlertingService {
    // entries can be removed from timer thread while normally this is updated from one of blocking threads
    private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
 
+   static {
+      System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
+   }
+
    public static class OwnerFromRun implements Function<Object[], String[]> {
       @Override
       public String[] apply(Object[] objects) {
