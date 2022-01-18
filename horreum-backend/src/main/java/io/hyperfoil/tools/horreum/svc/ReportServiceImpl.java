@@ -74,9 +74,6 @@ public class ReportServiceImpl implements ReportService {
    }
 
    @Inject
-   SqlServiceImpl sqlService;
-
-   @Inject
    SecurityIdentity identity;
 
    @Inject
@@ -281,7 +278,7 @@ public class ReportServiceImpl implements ReportService {
             labels = selectByTest(config.labelAccessors, config.test.id);
             log.debugf("Labels: %s", labels.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          }
-         if (config.categoryAccessors != null) {
+         if (!nullOrEmpty(config.categoryAccessors)) {
             runCategories = selectByTest(config.categoryAccessors, config.test.id);
             log.debugf("Categories: %s", runCategories.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          }
@@ -366,7 +363,7 @@ public class ReportServiceImpl implements ReportService {
             TableReport.RunData data = new TableReport.RunData();
             data.runId = runId;
             data.values = JsonNodeFactory.instance.arrayNode(config.components.size());
-            if (config.categoryFunction == null) {
+            if (nullOrEmpty(config.categoryFunction)) {
                data.category = Util.unwrapDoubleQuotes((String) row[1]);
             } else {
                String jsCode = buildCode(config.categoryFunction, (String) row[1]);
@@ -383,7 +380,7 @@ public class ReportServiceImpl implements ReportService {
          for (Object[] row: series) {
             Integer runId = (Integer) row[0];
             TableReport.RunData data = runData.get(runId);
-            if (config.seriesFunction == null) {
+            if (nullOrEmpty(config.seriesFunction)) {
                data.series = Util.unwrapDoubleQuotes((String) row[1]);
             } else {
                String jsCode = buildCode(config.seriesFunction, (String) row[1]);
@@ -400,7 +397,7 @@ public class ReportServiceImpl implements ReportService {
          for (Object[] row: labels) {
             Integer runId = (Integer) row[0];
             TableReport.RunData data = runData.get(runId);
-            if (config.labelFunction == null) {
+            if (nullOrEmpty(config.labelFunction)) {
                data.label = Util.unwrapDoubleQuotes((String) row[1]);
             } else {
                String jsCode = buildCode(config.labelFunction, (String) row[1]);
