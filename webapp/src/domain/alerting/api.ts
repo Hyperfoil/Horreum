@@ -10,13 +10,6 @@ const endPoints = {
     change: (changeId: number) => `${base}/change/${changeId}`,
     recalculate: (testId: number, debug: boolean, from?: number, to?: number) =>
         `${base}/recalculate?test=${testId}&debug=${debug}${from ? "&from=" + from : ""}${to ? "&to=" + to : ""}`,
-    log: (testId: number, page?: number, limit?: number) =>
-        `${base}/log/${testId}?page=${page ? page : 0}&limit=${limit ? limit : 25}`,
-    logRange: (testId: number, fromMs?: number, toMs?: number) =>
-        `${base}/log/${testId}?${[fromMs ? "from=" + fromMs : undefined, toMs ? "to=" + toMs : undefined]
-            .filter(p => p !== undefined)
-            .join("&")}`,
-    logCount: (testId: number) => `${base}/log/${testId}/count`,
     lastDatapoints: () => `${base}/datapoint/last`,
 }
 
@@ -50,18 +43,6 @@ export const recalculate = (testId: number, debug: boolean, fromTimestamp?: numb
 
 export const recalculateProgress = (testId: number) => {
     return fetchApi(endPoints.recalculate(testId, false), null, "get")
-}
-
-export const fetchLog = (testId: number, page?: number, limit?: number) => {
-    return fetchApi(endPoints.log(testId, page, limit), null, "get")
-}
-
-export const getLogCount = (testId: number) => {
-    return fetchApi(endPoints.logCount(testId), null, "get")
-}
-
-export function deleteLogs(testId: number, fromMs?: number, toMs?: number) {
-    return fetchApi(endPoints.logRange(testId, fromMs, toMs), null, "delete")
 }
 
 export const findLastDatapoints = (variableIds: number[], tags: string) => {

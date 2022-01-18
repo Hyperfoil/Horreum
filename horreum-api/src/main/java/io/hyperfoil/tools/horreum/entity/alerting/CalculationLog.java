@@ -35,16 +35,20 @@ public class CalculationLog extends PanacheEntityBase {
    public Instant timestamp;
 
    @NotNull
+   public String source;
+
+   @NotNull
    public String message;
 
    public CalculationLog() {
    }
 
-   public CalculationLog(int testId, int runId, int level, String message) {
+   public CalculationLog(int testId, int runId, int level, String source, String message) {
       this.testId = testId;
       this.runId = runId;
       this.level = level;
       this.timestamp = Instant.now();
+      this.source = source;
       this.message = message;
    }
 }

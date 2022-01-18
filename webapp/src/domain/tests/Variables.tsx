@@ -612,7 +612,12 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                     )
                 }}
             />
-            <CalculationLogModal isOpen={isLogOpen} onClose={() => setLogOpen(false)} testId={testId} />
+            <CalculationLogModal
+                isOpen={isLogOpen}
+                onClose={() => setLogOpen(false)}
+                testId={testId}
+                source="variables"
+            />
             <DataList aria-label="List of variables">
                 {variables?.map((_, i) => (
                     <DataListItem key={i} aria-labelledby="">

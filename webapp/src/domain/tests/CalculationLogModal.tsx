@@ -12,7 +12,7 @@ import { NavLink } from "react-router-dom"
 
 import TimeRangeSelect, { TimeRange } from "../../components/TimeRangeSelect"
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal"
-import { fetchLog, getLogCount, deleteLogs } from "../alerting/api"
+import { fetchApi } from "../../services/api/index"
 import { alertAction } from "../../alerts"
 import { formatDateTime } from "../../utils"
 import "./CalculationLogModal.css"
@@ -21,6 +21,7 @@ type CalculationLogModalProps = {
     isOpen: boolean
     onClose(): void
     testId: number
+    source: string
 }
 
 type CalculationLog = {
@@ -39,6 +40,24 @@ const level = [
     <ExclamationCircleIcon style={{ fill: "var(--pf-global--danger-color--100)" }} />,
 ]
 
+function fetchLog(testId: number, source: string, page?: number, limit?: number) {
+    return fetchApi(`/api/log/${source}/${testId}?page=${page ? page : 0}&limit=${limit ? limit : 25}`, null, "get")
+}
+
+function getLogCount(testId: number, source: string) {
+    return fetchApi(`/api/log/${source}/${testId}/count`, null, "get")
+}
+
+function deleteLogs(testId: number, source: string, fromMs?: number, toMs?: number) {
+    return fetchApi(
+        `/api/log/${source}/${testId}?${[fromMs ? "from=" + fromMs : undefined, toMs ? "to=" + toMs : undefined]
+            .filter(p => p !== undefined)
+            .join("&")}`,
+        null,
+        "delete"
+    )
+}
+
 export default function CalculationLogModal(props: CalculationLogModalProps) {
     const [count, setCount] = useState(0)
     const [page, setPage] = useState(0)
@@ -49,31 +68,33 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
     const [updateCounter, setUpdateCounter] = useState(0)
     const dispatch = useDispatch()
     useEffect(() => {
-        if (props.isOpen) {
-            getLogCount(props.testId).then(
-                response => setCount(response),
-                error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
-            )
+        if (!props.isOpen) {
+            return
         }
-    }, [props.isOpen, props.testId, dispatch, updateCounter])
+        getLogCount(props.testId, props.source).then(
+            response => setCount(response),
+            error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
+        )
+    }, [props.isOpen, props.testId, props.source, dispatch, updateCounter])
     useEffect(() => {
-        if (props.isOpen) {
-            fetchLog(props.testId, page, limit).then(
-                response =>
-                    setRows(
-                        (response as CalculationLog[]).map(log => ({
-                            cells: [
-                                { title: level[log.level] },
-                                { title: formatDateTime(log.timestamp * 1000) },
-                                { title: <NavLink to={`/run/${log.runId}`}>{log.runId}</NavLink> },
-                                { title: <div dangerouslySetInnerHTML={{ __html: log.message }}></div> },
-                            ],
-                        }))
-                    ),
-                error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
-            )
+        if (!props.isOpen) {
+            return
         }
-    }, [page, limit, props.isOpen, props.testId, dispatch, updateCounter])
+        fetchLog(props.testId, props.source, page, limit).then(
+            response =>
+                setRows(
+                    (response as CalculationLog[]).map(log => ({
+                        cells: [
+                            { title: level[log.level] },
+                            { title: formatDateTime(log.timestamp * 1000) },
+                            { title: <NavLink to={`/run/${log.runId}`}>{log.runId}</NavLink> },
+                            { title: <div dangerouslySetInnerHTML={{ __html: log.message }}></div> },
+                        ],
+                    }))
+                ),
+            error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
+        )
+    }, [page, limit, props.isOpen, props.testId, props.source, dispatch, updateCounter])
     const timeRangeOptions: TimeRange[] = useMemo(
         () => [
             { toString: () => "delete all" },
@@ -111,12 +132,21 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
                         </FlexItem>
                     </Flex>
                     <ConfirmDeleteModal
-                        description={"logs older than " + deleteRequest}
+                        description={
+                            deleteRequest && (deleteRequest.from || deleteRequest.to)
+                                ? "logs older than " + deleteRequest
+                                : "all logs"
+                        }
                         isOpen={deleteRequest !== undefined}
                         onClose={() => setDeleteRequest(undefined)}
                         onDelete={() => {
                             if (deleteRequest) {
-                                return deleteLogs(props.testId, deleteRequest.from, deleteRequest.to).then(
+                                return deleteLogs(
+                                    props.testId,
+                                    props.source,
+                                    deleteRequest.from,
+                                    deleteRequest.to
+                                ).then(
                                     () => setUpdateCounter(updateCounter + 1),
                                     error => {
                                         dispatch(alertAction("LOGS DELETE", "Deleting logs failed", error))

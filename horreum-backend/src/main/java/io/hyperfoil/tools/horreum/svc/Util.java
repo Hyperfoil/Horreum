@@ -2,9 +2,11 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -378,5 +380,19 @@ public class Util {
       } else {
          return method.getDeclaringClass().getAnnotation(annotationClass);
       }
+   }
+
+   public static String explainCauses(Throwable e) {
+      StringBuilder causes = new StringBuilder();
+      Set<Throwable> reported = new HashSet<>();
+      while (e != null && !reported.contains(e)) {
+         if (causes.length() != 0) {
+            causes.append(": ");
+         }
+         causes.append(e.getMessage());
+         reported.add(e);
+         e = e.getCause();
+      }
+      return causes.toString();
    }
 }

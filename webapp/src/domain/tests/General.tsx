@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from "react"
 import { useSelector, useDispatch } from "react-redux"
 
-import { Alert, Button, Form, FormGroup, Grid, GridItem, Switch, TextArea, TextInput } from "@patternfly/react-core"
+import {
+    Alert,
+    Button,
+    Flex,
+    FlexItem,
+    Form,
+    FormGroup,
+    Grid,
+    GridItem,
+    Switch,
+    TextArea,
+    TextInput,
+} from "@patternfly/react-core"
 
 import { sendTest } from "./actions"
 import { durationToMillis, millisToDuration } from "../../utils"
@@ -10,6 +22,7 @@ import Accessors from "../../components/Accessors"
 import TagsSelect, { convertTags, SelectedTags } from "../../components/TagsSelect"
 import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
+import CalculationLogModal from "./CalculationLogModal"
 
 import { Test, TestDispatch, StalenessSettings } from "./reducers"
 import { subscriptions as subscriptionsSelector } from "./selectors"
@@ -36,6 +49,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     const [tagsCalculation, setTagsCalculation] = useState<string>()
     const [stalenessSettings, setStalenessSettings] = useState<StalenessSettingsDisplay[]>([])
     const [newStalenessTags, setNewStalenessTags] = useState<SelectedTags>()
+    const [isLogOpen, setLogOpen] = useState(false)
 
     const updateState = (test?: Test) => {
         setName(test ? test.name : "")
@@ -130,21 +144,29 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                         }}
                     />
                 </FormGroup>
-
                 <FormGroup
                     label="Tags"
                     fieldId="tags"
                     helperText="Accessors that split runs into different categories."
                 >
-                    <Accessors
-                        value={tags}
-                        onChange={newTags => {
-                            setTags(newTags)
-                            onModified(true)
-                        }}
-                        isReadOnly={!isTester}
-                        allowArray={false}
-                    />
+                    <Flex>
+                        <FlexItem grow={{ default: "grow" }}>
+                            <Accessors
+                                value={tags}
+                                onChange={newTags => {
+                                    setTags(newTags)
+                                    onModified(true)
+                                }}
+                                isReadOnly={!isTester}
+                                allowArray={false}
+                            />
+                        </FlexItem>
+                        <FlexItem>
+                            <Button variant="secondary" onClick={() => setLogOpen(true)}>
+                                Show calculation log
+                            </Button>
+                        </FlexItem>
+                    </Flex>
                 </FormGroup>
                 <FormGroup
                     label="Tags calculation function"
@@ -275,6 +297,12 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                     )}
                 </FormGroup>
             </Form>
+            <CalculationLogModal
+                isOpen={isLogOpen}
+                onClose={() => setLogOpen(false)}
+                testId={test?.id || -1}
+                source="tags"
+            />
         </>
     )
 }

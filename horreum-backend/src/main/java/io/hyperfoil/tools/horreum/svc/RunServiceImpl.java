@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.RunService;
 import io.hyperfoil.tools.horreum.api.SqlService;
+import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
@@ -9,6 +10,7 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
+import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.runtime.Startup;
@@ -64,7 +66,6 @@ import com.networknt.schema.ValidationMessage;
 @ApplicationScoped
 @Startup
 @WithRoles
-@WithToken
 public class RunServiceImpl implements RunService {
    private static final Logger log = Logger.getLogger(RunServiceImpl.class);
 
@@ -119,6 +120,9 @@ public class RunServiceImpl implements RunService {
    @Inject
    SchemaServiceImpl schemaService;
 
+   @Inject
+   RunServiceImpl self;
+
    @Context HttpServletResponse response;
 
    @PostConstruct
@@ -169,6 +173,7 @@ public class RunServiceImpl implements RunService {
                } catch (PolyglotException e) {
                   log.errorf(e, "Failed to evaluate tags function on run %d.", runId);
                   log.infof("Offending code: %s", jsCode);
+                  wrappedLogCalculation(CalculationLog.ERROR, runId, "Failed to evaluate tags function with code: <pre>" + jsCode + "</pre>");
                   return;
                } finally {
                   if (out.size() > 0) {
@@ -182,13 +187,36 @@ public class RunServiceImpl implements RunService {
          insert.setParameter(1, runId).setParameter(2, tags).setParameter(3, extractorIds);
          if (insert.executeUpdate() != 1) {
             log.errorf("Failed to insert run tags for run %d (invalid update count - maybe missing privileges?)", runId);
+            wrappedLogCalculation(CalculationLog.ERROR, runId, "Failed to insert run tags (maybe missing privileges?)");
          }
          eventBus.publish(Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, tags));
       } catch (NoResultException e) {
          log.infof("Run %d does not create any tags.", runId);
+         wrappedLogCalculation(CalculationLog.INFO, runId, "Run does not create any tags");
          eventBus.publish(Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, null));
       } catch (Throwable e) {
          log.errorf(e, "Failed to calculate tags for run %d", runId);
+         wrappedLogCalculation(CalculationLog.ERROR, runId, "Failed to calculate tags: " + Util.explainCauses(e));
+      }
+   }
+
+   private void wrappedLogCalculation(int severity, int runId, String message) {
+      RolesInterceptor.setCurrentIdentity(CachedSecurityIdentity.ANONYMOUS);
+      try {
+         self.logCalculation(severity, runId, message);
+      } finally {
+         RolesInterceptor.setCurrentIdentity(null);
+      }
+   }
+
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   void logCalculation(int severity, int runId, String message) {
+      Run run = Run.findById(runId);
+      if (run == null) {
+         log.errorf("Cannot find run %d! Cannot log message : %s", runId, message);
+      } else {
+         new CalculationLog(run.testid, run.id, severity, "tags", message).persistAndFlush();
       }
    }
 
@@ -209,6 +237,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithToken
    @Override
    public Object getRun(Integer id, String token) {
       return runQuery("SELECT (to_jsonb(run) ||" +
@@ -218,12 +247,14 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithToken
    @Override
    public Object getData(Integer id, String token) {
       return runQuery("SELECT data#>>'{}' from run where id = ?", id);
    }
 
    @PermitAll
+   @WithToken
    @Override
    public QueryResult queryData(Integer id, String jsonpath, String schemaUri, Boolean array) {
       String func = array != null && array ? "jsonb_path_query_array" : "jsonb_path_query_first";
@@ -289,6 +320,7 @@ public class RunServiceImpl implements RunService {
 
    @PermitAll // all because of possible token-based upload
    @Transactional
+   @WithToken
    @Override
    public String add(String testNameOrId, String owner, Access access, String token,
                      Run run) {
@@ -310,6 +342,7 @@ public class RunServiceImpl implements RunService {
 
    @PermitAll // all because of possible token-based upload
    @Transactional
+   @WithToken
    @Override
    public String addRunFromData(String start, String stop, String test,
                                 String owner, Access access, String token,
@@ -452,6 +485,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithToken
    @Override
    public List<String> autocomplete(String query) {
       if (query == null || query.isEmpty()) {
@@ -513,6 +547,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithToken
    @Override
    public RunsSummary list(String query, boolean matchAll, String roles, boolean trashed,
                            Integer limit, Integer page, String sort, String direction) {
@@ -611,6 +646,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithToken
    @Override
    public RunCounts runCount(Integer testId) {
       if (testId == null) {
@@ -624,6 +660,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithToken
    @Override
    public TestRunsSummary testList(Integer testId, boolean trashed, String tags,
                                    Integer limit, Integer page, String sort, String direction) {
@@ -724,6 +761,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithToken
    @Override
    public RunsSummary listBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
       if (uri == null || uri.isEmpty()) {

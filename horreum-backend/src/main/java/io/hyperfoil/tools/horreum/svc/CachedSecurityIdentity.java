@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.security.Permission;
 import java.security.Principal;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -10,6 +11,7 @@ import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.mutiny.Uni;
 
 public class CachedSecurityIdentity implements SecurityIdentity {
+   public static final CachedSecurityIdentity ANONYMOUS = new CachedSecurityIdentity(null, Collections.emptySet(), Collections.emptySet(), Collections.emptyMap());
    private final Principal principal;
    private final Set<String> roles;
    private final Set<Credential> credentials;

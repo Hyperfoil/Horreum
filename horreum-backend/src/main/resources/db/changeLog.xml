@@ -1989,5 +1989,26 @@
             <column name="unit" type="text" />
         </addColumn>
     </changeSet>
+
+    <changeSet id="41" author="rvansa">
+        <addColumn tableName="calculationlog">
+            <column name="source" type="text" defaultValue="variables">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>
+            ALTER TABLE calculationlog ALTER COLUMN source DROP DEFAULT;
+            ALTER POLICY run_select ON run
+                USING (can_view(access, owner, token) OR has_role('horreum.system'));
+            ALTER POLICY cl_all ON calculationlog
+                USING (has_role('horreum.alerting') OR has_role('horreum.system') OR (exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = testid AND has_role(test.owner)
+                ) AND exists(
+                    SELECT 1 FROM run
+                    WHERE run.id = runid AND has_role(run.owner)
+                )));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

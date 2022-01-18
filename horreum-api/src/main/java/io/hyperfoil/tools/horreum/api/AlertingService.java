@@ -25,20 +25,6 @@ import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 @Path("/api/alerting")
 public interface AlertingService {
    @GET
-   @Path("log/{testId}")
-   List<CalculationLog> getCalculationLog(@PathParam("testId") Integer testId,
-                                          @QueryParam("page") Integer page,
-                                          @QueryParam("limit") Integer limit);
-
-   @GET
-   @Path("log/{testId}/count")
-   long getLogCount(@PathParam("testId") Integer testId);
-
-   @DELETE
-   @Path("log/{testId}")
-   void deleteLogs(@PathParam("testId") Integer testId, @QueryParam("from") Long from, @QueryParam("to") Long to);
-
-   @GET
    @Path("variables")
    List<Variable> variables(@QueryParam("test") Integer testId);
 

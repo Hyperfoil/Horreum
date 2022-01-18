@@ -69,7 +69,6 @@ import io.hyperfoil.tools.horreum.grafana.Target;
 import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
-import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -465,7 +464,7 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void logCalculationMessage(int testId, int runId, int level, String format, Object... args) {
-      new CalculationLog(testId, runId, level, String.format(format, args)).persist();
+      new CalculationLog(testId, runId, level, "variables", String.format(format, args)).persist();
    }
 
    private void appendValue(StringBuilder code, Object value) {
@@ -520,45 +519,6 @@ public class AlertingServiceImpl implements AlertingService {
             context.leave();
          }
       }
-   }
-
-   @WithRoles
-   @RolesAllowed(Roles.TESTER)
-   @Override
-   public List<CalculationLog> getCalculationLog(Integer testId, Integer page, Integer limit) {
-      if (testId == null) {
-         return Collections.emptyList();
-      }
-      if (page == null) {
-         page = 0;
-      }
-      if (limit == null) {
-         limit = 25;
-      }
-      return CalculationLog.find("testId = ?1", Sort.descending("timestamp"), testId).page(Page.of(page, limit)).list();
-   }
-
-   @Override
-   @WithRoles
-   @RolesAllowed(Roles.TESTER)
-   public long getLogCount(Integer testId) {
-      if (testId == null) return -1;
-      return CalculationLog.count("testId = ?1", testId);
-   }
-
-   @Override
-   @RolesAllowed(Roles.TESTER)
-   @WithRoles
-   @Transactional
-   public void deleteLogs(Integer testId, Long from, Long to) {
-      if (testId == null) {
-         throw ServiceException.badRequest("Missing test ID");
-      }
-      // Not using Instant.MIN/Instant.MAX as Hibernate converts to LocalDateTime internally
-      Instant fromTs = from == null ? Instant.ofEpochMilli(0) : Instant.ofEpochMilli(from);
-      Instant toTs = to == null ? Instant.ofEpochSecond(4 * (long) Integer.MAX_VALUE) : Instant.ofEpochMilli(to);
-      long deleted = CalculationLog.delete("testId = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
-      log.debugf("Deleted %d logs for test %s", deleted, testId);
    }
 
    @WithRoles(extras = Roles.HORREUM_ALERTING)
