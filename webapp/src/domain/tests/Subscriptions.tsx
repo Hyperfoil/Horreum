@@ -97,7 +97,9 @@ export default function Subscriptions(props: SubscriptionsProps) {
             <DualListSelector
                 availableOptions={availableUsers}
                 availableOptionsTitle="Available users"
-                availableOptionsActions={isTester ? [<UserSearch onUsers={users => updateUsers(users)} />] : []}
+                availableOptionsActions={
+                    isTester ? [<UserSearch key="usersearch" onUsers={users => updateUsers(users)} />] : []
+                }
                 chosenOptions={watchingUsers}
                 chosenOptionsTitle="Watching users"
                 onListChange={(newAvailable, newChosen) => {
