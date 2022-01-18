@@ -135,6 +135,13 @@ public class TestServiceImpl implements TestService {
          }
          test.tokens = existing.tokens;
          test.copyIds(existing);
+
+         // This looks like no-op but it's actually a workaround to make sure tagsCalculation is dirty
+         // - otherwise when the function is removed it wouldn't be updated in DB
+         if (test.tagsCalculation == null) {
+            test.tagsCalculation = "";
+            test.tagsCalculation = null;
+         }
          em.merge(test);
       } else {
          em.persist(test);

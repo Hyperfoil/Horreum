@@ -147,7 +147,7 @@ public class RunServiceImpl implements RunService {
          String tags = String.valueOf(result[1]);
          String extractorIds = String.valueOf(result[2]);
 
-         if (calculation != null) {
+         if (calculation != null && !calculation.isEmpty()) {
             StringBuilder jsCode = new StringBuilder();
             jsCode.append("const __obj = ").append(tags).append(";\n");
             jsCode.append("const __func = ").append(calculation).append(";\n");

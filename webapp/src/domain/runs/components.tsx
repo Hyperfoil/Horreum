@@ -196,7 +196,7 @@ export const RunTags = (tags: any) => {
     return Object.entries(tags).map(([key, tag]: any[]) => (
         <Tooltip key={tag} content={key}>
             <Chip key={tag} isReadOnly>
-                {tag}
+                {typeof tag === "object" ? JSON.stringify(tag) : tag}
             </Chip>
         </Tooltip>
     ))
