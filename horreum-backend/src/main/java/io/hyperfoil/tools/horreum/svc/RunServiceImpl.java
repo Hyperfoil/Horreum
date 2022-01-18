@@ -45,6 +45,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -199,11 +200,11 @@ public class RunServiceImpl implements RunService {
       try {
          return q.getSingleResult();
       } catch (NoResultException e) {
-         log.errorf("No results for params: ", params);
+         log.errorf("No results in %s with params: %s", query, Arrays.asList(params));
          throw ServiceException.notFound("No result");
       } catch (Throwable t) {
-         log.errorf("Error for params: ", params);
-         throw ServiceException.serverError("Cannot fetch run.");
+         log.errorf(t, "Query error in %s with params: %s", query, Arrays.asList(params));
+         throw t;
       }
    }
 

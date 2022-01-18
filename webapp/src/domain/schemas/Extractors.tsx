@@ -63,19 +63,25 @@ function TryJsonPathModal(props: TryJsonPathModalProps) {
             return ""
         }
         setResultRunId(runId)
-        return query(runId, props.jsonpath, false, props.uri).then(result => {
-            setValid(result.valid)
-            if (result.valid) {
-                try {
-                    result.value = JSON.parse(result.value)
-                } catch (e) {
-                    // ignored
+        return query(runId, props.jsonpath, false, props.uri).then(
+            result => {
+                setValid(result.valid)
+                if (result.valid) {
+                    try {
+                        result.value = JSON.parse(result.value)
+                    } catch (e) {
+                        // ignored
+                    }
+                    setResult(JSON.stringify(result.value, null, 2))
+                } else {
+                    setResult(result.reason)
                 }
-                setResult(JSON.stringify(result.value, null, 2))
-            } else {
-                setResult(result.reason)
+            },
+            error => {
+                setValid(false)
+                setResult(error)
             }
-        })
+        )
     }
     return (
         <Modal
