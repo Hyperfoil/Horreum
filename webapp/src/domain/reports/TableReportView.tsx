@@ -78,9 +78,14 @@ type ComponentTableProps = {
 
 const colors = ["#4caf50", "#FF0000", "#CC0066", "#0066FF", "#42a5f5", "#f1c40f"]
 
+function tryConvertToNumber(value: any) {
+    const num = parseInt(value)
+    return isNaN(num) ? value : num.toString() === value ? num : value
+}
+
 function ComponentTable(props: ComponentTableProps) {
-    const series = [...new Set(props.data.map(d => d.series))].sort()
-    const labels = [...new Set(props.data.map(d => d.label))].sort()
+    const series = [...new Set(props.data.map(d => d.series))].map(tryConvertToNumber).sort()
+    const labels = [...new Set(props.data.map(d => d.label))].map(tryConvertToNumber).sort()
     const seriesFormatter = formatter(props.config.seriesFormatter)
     const labelFormatter = formatter(props.config.labelFormatter)
     const chartData: Record<string, string | number>[] = labels.map(label => ({ label }))
@@ -341,7 +346,7 @@ function selectByKey(value: any, key: string) {
 
 export default function TableReportView(props: TableReportViewProps) {
     const config = props.report.config
-    const categories = [...new Set(props.report.runData.map(d => d.category))].sort()
+    const categories = [...new Set(props.report.runData.map(d => d.category))].map(tryConvertToNumber).sort()
     const singleCategory = categories.length === 0 || (categories.length === 1 && categories[0] === "")
     const categoryFormatter = formatter(config.categoryFormatter)
     const comment0 = props.report.comments.find(c => c.level === 0)
