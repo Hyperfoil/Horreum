@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useEffect, useMemo, useState, useRef } from "react"
 import { useParams } from "react-router"
 import { useSelector, useDispatch } from "react-redux"
 import { Spinner, Bullseye } from "@patternfly/react-core"
@@ -371,6 +371,17 @@ export default function Run() {
     }
 
     const isTester = useTester((run && run.owner) || "")
+    const memoizedEditor = useMemo(() => {
+        return (
+            <Editor
+                value={data}
+                options={{
+                    mode: "application/ld+json",
+                    readOnly: true,
+                }}
+            />
+        )
+    }, [data])
     return (
         <PageSection>
             {!run && (
@@ -529,15 +540,7 @@ export default function Run() {
                                 <Spinner />
                             </Bullseye>
                         )}
-                        {run.data && (
-                            <Editor
-                                value={data}
-                                options={{
-                                    mode: "application/ld+json",
-                                    readOnly: true,
-                                }}
-                            />
-                        )}
+                        {run.data && memoizedEditor}
                     </CardBody>
                 </Card>
             )}
