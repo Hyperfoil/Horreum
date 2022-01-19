@@ -68,12 +68,16 @@ public interface SchemaService {
    @GET
    @Path("extractor")
    @Produces(MediaType.APPLICATION_JSON)
-   List<SchemaExtractor> listExtractors(@QueryParam("schemaId") Integer schema);
+   List<SchemaExtractor> listExtractors(@QueryParam("schemaId") Integer schema, @QueryParam("accessor") String accessor);
 
    @POST
    @Path("extractor")
    @Consumes(MediaType.APPLICATION_JSON)
-   void addOrUpdateExtractor(ExtractorUpdate update);
+   SchemaExtractor addOrUpdateExtractor(ExtractorUpdate update);
+
+   @GET
+   @Path("extractor/{id}/deprecated")
+   List<SchemaExtractor> findDeprecated(@PathParam("id") Integer extractorId);
 
    @DELETE
    @Path("{id}")
@@ -85,8 +89,8 @@ public interface SchemaService {
    List<AccessorLocation> findUsages(@QueryParam("accessor") String accessor);
 
    class ExtractorUpdate {
+      public int id;
       public String accessor;
-      public String newName;
       public String schema;
       public String jsonpath;
       public boolean deleted;

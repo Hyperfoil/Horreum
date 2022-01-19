@@ -185,6 +185,48 @@ function TryJsonPathModal(props: TryJsonPathModalProps) {
     )
 }
 
+type RenameModalProps = {
+    extractor?: Extractor
+    onRename(accessor: string): void
+    onClose(): void
+}
+
+function RenameModal(props: RenameModalProps) {
+    const [name, setName] = useState("")
+    const valid = checkAccessorName(name)
+    useEffect(() => {
+        if (props.extractor) {
+            setName(props.extractor.accessor)
+        }
+    }, [props.extractor])
+    return (
+        <Modal
+            isOpen={!!props.extractor}
+            onClose={props.onClose}
+            title={`Rename accessor ${props.extractor?.accessor}`}
+            actions={[
+                <Button
+                    key="rename"
+                    onClick={() => {
+                        props.onRename(name)
+                        props.onClose()
+                    }}
+                >
+                    Rename
+                </Button>,
+                <Button key="cancel" variant="secondary" onClick={() => props.onClose()}>
+                    Cancel
+                </Button>,
+            ]}
+        >
+            When the accessor is renamed the old name is deprecated; some places may still use that and we don't want to
+            break the usages. However the old name is not displayed anymore by default.
+            <TextInput aria-label="rename" value={name} onChange={setName} validated={valid ? "default" : "warning"} />
+            {!valid && INVALID_ACCESSOR_HELPER}
+        </Modal>
+    )
+}
+
 type ExtractorsProps = {
     uri: string
     extractors: Extractor[]
@@ -194,15 +236,16 @@ type ExtractorsProps = {
 
 export default function Extractors(props: ExtractorsProps) {
     const [testExtractor, setTestExtractor] = useState<Extractor>()
-    const [findUsages, setFindUsages] = useState<string>()
+    const [findUsages, setFindUsages] = useState<Extractor>()
+    const [rename, setRename] = useState<Extractor>()
     return (
         <>
             {props.extractors
                 .filter((e: Extractor) => !e.deleted)
                 .map((e: Extractor, i) => {
-                    const accessorValid = checkAccessorName(e.newName)
+                    const accessorValid = checkAccessorName(e.accessor)
                     return (
-                        <Flex key={i} style={{ marginBottom: "10px" }}>
+                        <Flex key={i} style={{ marginBottom: "10px" }} alignItems={{ default: "alignItemsCenter" }}>
                             <FlexItem grow={{ default: "grow" }}>
                                 <Form isHorizontal={true} style={{ gridGap: "2px" }}>
                                     <FormGroup
@@ -213,11 +256,11 @@ export default function Extractors(props: ExtractorsProps) {
                                     >
                                         <TextInput
                                             id="accessor"
-                                            value={e.newName || ""}
-                                            isReadOnly={!props.isTester}
+                                            value={e.oldName ? e.oldName + " \u279E " + e.accessor : e.accessor}
+                                            isReadOnly={!props.isTester || e.id >= 0}
                                             validated={accessorValid ? "default" : "warning"}
                                             onChange={newValue => {
-                                                e.newName = newValue
+                                                e.accessor = newValue
                                                 e.changed = true
                                                 props.setExtractors([...props.extractors])
                                             }}
@@ -262,7 +305,7 @@ export default function Extractors(props: ExtractorsProps) {
                             </FlexItem>
                             {props.isTester && (
                                 <>
-                                    <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
+                                    <FlexItem>
                                         <Button
                                             variant="primary"
                                             isDisabled={!e.jsonpath}
@@ -271,17 +314,30 @@ export default function Extractors(props: ExtractorsProps) {
                                             Try it!
                                         </Button>
                                     </FlexItem>
-                                    <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
-                                        <Button variant="secondary" onClick={() => setFindUsages(e.accessor)}>
+                                    <FlexItem>
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => setFindUsages(e)}
+                                            isDisabled={e.id < 0}
+                                        >
                                             Find usages
                                         </Button>
                                     </FlexItem>
-                                    <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
+                                    <FlexItem>
+                                        <Button variant="secondary" onClick={() => setRename(e)} isDisabled={e.id < 0}>
+                                            Rename
+                                        </Button>
+                                    </FlexItem>
+                                    <FlexItem>
                                         <Button
                                             variant="danger"
                                             onClick={() => {
-                                                e.deleted = true
-                                                props.setExtractors([...props.extractors])
+                                                if (e.id < 0) {
+                                                    props.setExtractors([...props.extractors.filter(ex => ex !== e)])
+                                                } else {
+                                                    e.deleted = true
+                                                    props.setExtractors([...props.extractors])
+                                                }
                                             }}
                                         >
                                             Delete
@@ -304,7 +360,27 @@ export default function Extractors(props: ExtractorsProps) {
                 }}
                 onClose={() => setTestExtractor(undefined)}
             />
-            <FindUsagesModal accessor={findUsages} onClose={() => setFindUsages(undefined)} />
+            <FindUsagesModal
+                extractorId={findUsages?.id || -1}
+                accessor={findUsages?.accessor}
+                onClose={() => setFindUsages(undefined)}
+            />
+            <RenameModal
+                extractor={rename}
+                onRename={name => {
+                    if (!rename) {
+                        return //shouldn't happen
+                    }
+                    if (!rename.oldName) {
+                        rename.oldName = rename.accessor
+                    }
+                    rename.accessor = name
+                    rename.changed = true
+                    props.setExtractors([...props.extractors])
+                    console.log(props.extractors)
+                }}
+                onClose={() => setRename(undefined)}
+            />
         </>
     )
 }

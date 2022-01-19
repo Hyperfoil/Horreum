@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux"
 
 import {
     Bullseye,
+    Button,
     DataList,
     DataListItem,
     DataListItemRow,
@@ -16,15 +17,23 @@ import {
 } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
 
-import { AccessorLocation, AccessorInVariable, AccessorInView, AccessorInReport, Extractor, findUsages } from "./api"
+import {
+    AccessorLocation,
+    AccessorInVariable,
+    AccessorInView,
+    AccessorInReport,
+    Extractor,
+    findDeprecated,
+    findUsages,
+} from "./api"
 import { listExtractors } from "./actions"
 import { SchemaDispatch } from "./reducers"
 import { alertAction } from "../../alerts"
 import ButtonLink from "../../components/ButtonLink"
-import { noop } from "../../utils"
 
 type FindUsagesModalProps = {
     accessor: string | undefined
+    extractorId: number
     onClose(): void
 }
 
@@ -79,32 +88,43 @@ function usageToCells(u: AccessorLocation) {
 
 export default function FindUsagesModal(props: FindUsagesModalProps) {
     const dispatch = useDispatch<SchemaDispatch>()
-    const [wasOpen, setWasOpen] = useState(false)
+    const [accessor, setAccessor] = useState(props.accessor)
+    useEffect(() => setAccessor(props.accessor), [props.accessor])
     const [allExtractors, setAllExtractors] = useState<Extractor[]>()
     const [usages, setUsages] = useState<AccessorLocation[]>()
+    const [deprecated, setDeprecated] = useState<Extractor[]>([])
     useEffect(() => {
-        if (props.accessor) {
-            setWasOpen(true)
-            findUsages(props.accessor)
+        if (accessor) {
+            findUsages(accessor)
                 .then(setUsages)
                 .catch(e => {
                     dispatch(alertAction("FETCH USAGES", "Cannot retrieve accessor usages.", e))
                     props.onClose()
                 })
         }
-    }, [props.accessor])
+    }, [accessor])
     useEffect(() => {
-        if (!wasOpen) {
-            // prevent fetching all extractors until the modal is open
+        if (!accessor) {
             return
         }
-        dispatch(listExtractors()).then(setAllExtractors).catch(noop)
-    }, [wasOpen])
+        dispatch(listExtractors(undefined, accessor))
+            .then(setAllExtractors)
+            .catch(() => props.onClose())
+    }, [accessor])
+    useEffect(() => {
+        if (props.extractorId >= 0) {
+            findDeprecated(props.extractorId)
+                .then(setDeprecated)
+                .catch(e => {
+                    dispatch(alertAction("FETCH DEPRECATED", "Cannot retrieve deprecated accessors", e))
+                })
+        }
+    }, [props.extractorId, dispatch])
     return (
         <Modal
             variant="medium"
-            title={`Usages of accessor ${props.accessor}`}
-            isOpen={!!props.accessor}
+            title={`Usages of accessor ${accessor}`}
+            isOpen={!!accessor}
             onClose={() => {
                 setUsages(undefined)
                 props.onClose()
@@ -115,7 +135,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                 {allExtractors ? (
                     <List isPlain isBordered>
                         {allExtractors
-                            .filter(ex => ex.accessor === props.accessor)
+                            .filter(ex => ex.accessor === accessor)
                             .map((ex, i) => (
                                 <ListItem key={i}>
                                     {ex.schemaId ? (
@@ -123,6 +143,17 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                                     ) : (
                                         ex.schema
                                     )}
+                                    {"\u00A0\u279E\u00A0"}
+                                    <span
+                                        style={{
+                                            border: "1px solid #888",
+                                            borderRadius: "4px",
+                                            padding: "4px",
+                                            backgroundColor: "#f0f0f0",
+                                        }}
+                                    >
+                                        {ex.jsonpath}
+                                    </span>
                                 </ListItem>
                             ))}
                     </List>
@@ -136,7 +167,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                 {usages ? (
                     usages.length > 0 ? (
                         <>
-                            <Title headingLevel="h3">These are the places where {props.accessor} is used:</Title>
+                            <Title headingLevel="h3">These are the places where {accessor} is used:</Title>
                             <DataList aria-label="Accessor usages" isCompact>
                                 {usages.map((u, i) => (
                                     <DataListItem key={i}>
@@ -154,6 +185,39 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                     <Bullseye>
                         <Spinner size="xl" />
                     </Bullseye>
+                )}
+                {deprecated.length > 0 && (
+                    <>
+                        <br />
+                        <br />
+                        <Title headingLevel="h3">Deprecated accessors: </Title>
+                        {accessor !== props.accessor && (
+                            <>
+                                (deprecated by
+                                <Button variant="link" onClick={() => setAccessor(props.accessor)}>
+                                    {props.accessor}
+                                </Button>
+                                )
+                            </>
+                        )}
+                        <List isPlain isBordered>
+                            {deprecated
+                                .filter(d => d.accessor !== accessor)
+                                .map(d => (
+                                    <ListItem key={d.id}>
+                                        <Button
+                                            variant="link"
+                                            onClick={() => {
+                                                console.log(d.accessor)
+                                                setAccessor(d.accessor)
+                                            }}
+                                        >
+                                            {d.accessor}
+                                        </Button>
+                                    </ListItem>
+                                ))}
+                        </List>
+                    </>
                 )}
             </div>
         </Modal>

@@ -2010,5 +2010,20 @@
                 )));
         </sql>
     </changeSet>
+
+    <changeSet id="42" author="rvansa">
+        <addColumn tableName="schemaextractor" >
+            <column name="deprecatedby_id" type="integer" />
+            <column name="deleted" type="boolean" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addUniqueConstraint tableName="schemaextractor" columnNames="deprecatedby_id"/>
+        <addUniqueConstraint tableName="schemaextractor" columnNames="accessor,schema_id" />
+        <addForeignKeyConstraint constraintName="singledeprecation"
+                                 baseTableName="schemaextractor" baseColumnNames="deprecatedby_id"
+                                 referencedTableName="schemaextractor" referencedColumnNames="id" />
+        <dropDefaultValue tableName="schemaextractor" columnName="deleted"/>
+    </changeSet>
 </databaseChangeLog>
 

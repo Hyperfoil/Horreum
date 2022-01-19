@@ -7,6 +7,7 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,7 +26,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 public class SchemaExtractor extends PanacheEntityBase {
    @Id
    @GeneratedValue
-   private Integer id;
+   public Integer id;
 
    @NotNull
    @ManyToOne(fetch = FetchType.LAZY)
@@ -37,6 +38,12 @@ public class SchemaExtractor extends PanacheEntityBase {
 
    @NotNull
    public String jsonpath;
+
+   @OneToOne(fetch = FetchType.LAZY)
+   public SchemaExtractor deprecatedBy;
+
+   @NotNull
+   public boolean deleted;
 
    // TODO: eventually we could have syntax for min, max, sum...
    public static boolean isArray(String accessor) {
@@ -55,7 +62,11 @@ public class SchemaExtractor extends PanacheEntityBase {
    public static class SchemaToUri extends JsonSerializer<Schema> {
       @Override
       public void serialize(Schema schema, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-         gen.writeString(schema.uri);
+         if (schema == null) {
+            gen.writeNull();
+         } else {
+            gen.writeString(schema.uri);
+         }
       }
    }
 }

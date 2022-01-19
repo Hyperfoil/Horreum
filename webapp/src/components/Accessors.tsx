@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useDispatch } from "react-redux"
 
+import { NavLink } from "react-router-dom"
 import { Extractor, addOrUpdateExtractor, listExtractors, testJsonPath } from "../domain/schemas/api"
 import SchemaSelect from "./SchemaSelect"
 
@@ -11,11 +12,12 @@ import {
     Button,
     Form,
     FormGroup,
+    Modal,
     Radio,
     Select,
     SelectOption,
     TextInput,
-    Modal,
+    Tooltip,
 } from "@patternfly/react-core"
 
 import { AddCircleOIcon } from "@patternfly/react-icons"
@@ -132,15 +134,15 @@ export default function Accessors({
     allowArray,
     error,
 }: AccessorsProps) {
-    const [created, setCreated] = useState<Extractor>({ accessor: "" })
+    const [created, setCreated] = useState<Extractor>({ id: -1, accessor: "" })
     const onCreate = (newValue: string) => {
-        setCreated({ accessor: newValue })
+        setCreated({ id: -1, accessor: newValue })
         setDisabledSchemas([])
         setCreateOpen(true)
     }
     const [disabledSchemas, setDisabledSchemas] = useState<string[]>([])
     const [isExpanded, setExpanded] = useState(false)
-    const [options, setOptions] = useState(value.map(v => ({ accessor: v })))
+    const [options, setOptions] = useState<Extractor[]>([])
     const [selected, setSelected] = useState(value)
     const onSchemaChange = useCallback(value => {
         setCreated(c => ({ ...c, schema: value }))
@@ -206,11 +208,9 @@ export default function Accessors({
                     onChange(updated)
                 }}
             >
-                {distinctSorted(options.concat(value.map(v => ({ accessor: v }))), o => o.accessor).map(
-                    (option, index) => (
-                        <SelectOption key={index} value={option.accessor} />
-                    )
-                )}
+                {[...new Set(options.map(o => o.accessor).concat(value))].sort().map((accessor, index) => (
+                    <SelectOption key={index} value={accessor} />
+                ))}
             </Select>
             {error && (
                 <span
@@ -227,7 +227,7 @@ export default function Accessors({
                     const name = s.endsWith("[]") ? s.substr(0, s.length - 2) : s
                     const distinctSchemaOptions = distinctSorted(
                         options.filter(o => o.accessor === name),
-                        (o: Extractor) => o.schema
+                        o => o.schema
                     )
                     return (
                         <div key={s} style={{ marginTop: "5px" }}>
@@ -243,25 +243,18 @@ export default function Accessors({
                             </span>{" "}
                             is valid for schemas:{"\u00A0"}
                             {distinctSchemaOptions.map((o, i) => (
-                                <React.Fragment key={s + "-" + i}>
-                                    <span
-                                        style={{
-                                            border: "1px solid #888",
-                                            borderRadius: "4px",
-                                            padding: "4px",
-                                            backgroundColor: "#f0f0f0",
-                                        }}
-                                    >
-                                        {o.schema}
-                                    </span>
-                                    {"\u00A0"}
-                                </React.Fragment>
+                                <>
+                                    <Tooltip maxWidth="80vw" content={<code>{o.jsonpath}</code>}>
+                                        <NavLink to={`/schema/${o.schemaId}`}>{o.schema}</NavLink>
+                                    </Tooltip>
+                                    {i != distinctSchemaOptions.length - 1 && ",\u00A0"}
+                                </>
                             ))}
                             {!isReadOnly && s !== "" && (
                                 <Button
                                     variant="link"
                                     onClick={() => {
-                                        setCreated({ accessor: s })
+                                        setCreated({ id: -1, accessor: s })
                                         setDisabledSchemas(
                                             distinctSchemaOptions
                                                 .map(o => o.schema)
@@ -330,17 +323,19 @@ export default function Accessors({
                         <Button
                             variant="primary"
                             onClick={() => {
-                                addOrUpdateExtractor(created).then(
-                                    () => {
-                                        setCreateOpen(false)
-                                        openVariantModal(created)
-                                    },
-                                    e => {
-                                        dispatch(
-                                            alertAction("EXTRACTOR_UPDATE", "Failed to add/update schema extractor.", e)
-                                        )
-                                    }
-                                )
+                                addOrUpdateExtractor(created)
+                                    .then(
+                                        () => openVariantModal(created),
+                                        e =>
+                                            dispatch(
+                                                alertAction(
+                                                    "EXTRACTOR_UPDATE",
+                                                    "Failed to add/update schema extractor.",
+                                                    e
+                                                )
+                                            )
+                                    )
+                                    .finally(() => setCreateOpen(false))
                             }}
                         >
                             Save
@@ -376,12 +371,14 @@ export default function Accessors({
                         variant="primary"
                         onClick={() => {
                             setVariantOpen(false)
-                            const base = addedOption ? baseName(addedOption.accessor) : ""
-                            const name = variant === 0 ? base : base + "[]"
-                            setOptions([...options, { ...addedOption, accessor: name }])
-                            const updated = [...selected, name]
-                            setSelected(updated)
-                            onChange(updated)
+                            if (addedOption) {
+                                const base = baseName(addedOption.accessor)
+                                const name = variant === 0 ? base : base + "[]"
+                                setOptions([...options, { ...addedOption, accessor: name }])
+                                const updated = [...selected, name]
+                                setSelected(updated)
+                                onChange(updated)
+                            }
                         }}
                     >
                         Select

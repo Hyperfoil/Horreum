@@ -227,12 +227,7 @@ export default function Schema() {
         if (schemaId >= 0) {
             dispatch(actions.listExtractors(schemaId))
                 .then(result => {
-                    const exs = result
-                        .map((e: Extractor) => {
-                            e.newName = e.accessor
-                            return e
-                        })
-                        .sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))
+                    const exs = result.sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))
                     setExtractors(exs)
                     setOriginalExtractors(JSON.parse(JSON.stringify(exs))) // deep copy
                 })
@@ -262,7 +257,15 @@ export default function Schema() {
                 Promise.all(
                     extractors
                         .filter(e => e.changed || (e.deleted && e.accessor !== ""))
-                        .map(e => api.addOrUpdateExtractor(e))
+                        .map(e =>
+                            api.addOrUpdateExtractor(e).then(updated => {
+                                if (e.id < 0 || e.oldName) {
+                                    e.id = updated.id
+                                }
+                                e.oldName = undefined
+                                e.changed = false
+                            })
+                        )
                 )
             )
             .then(() => setOriginalExtractors(JSON.parse(JSON.stringify(extractors))))
@@ -391,7 +394,7 @@ export default function Schema() {
                                                 if (currentSchema?.uri) {
                                                     setExtractors([
                                                         ...extractors,
-                                                        { accessor: "", schema: currentSchema?.uri },
+                                                        { id: -1, accessor: "", schema: currentSchema?.uri },
                                                     ])
                                                 }
                                             }}

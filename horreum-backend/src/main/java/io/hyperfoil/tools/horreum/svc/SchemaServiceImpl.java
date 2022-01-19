@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +46,7 @@ import com.networknt.schema.uri.URLFactory;
 public class SchemaServiceImpl implements SchemaService {
    private static final Logger log = Logger.getLogger(SchemaServiceImpl.class);
 
+   //@formatter:off
    private static final String UPDATE_TOKEN = "UPDATE schema SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE schema SET owner = ?, access = ? WHERE id = ?";
    private static final String FETCH_SCHEMAS_RECURSIVE = "WITH RECURSIVE refs(uri) AS (" +
@@ -52,6 +54,15 @@ public class SchemaServiceImpl implements SchemaService {
          "SELECT substring(jsonb_path_query(schema, '$.**.\"$ref\" ? (! (@ starts with \"#\"))')#>>'{}' from '[^#]*') as uri " +
             "FROM refs INNER JOIN schema on refs.uri = schema.uri) " +
          "SELECT schema.* FROM schema INNER JOIN refs ON schema.uri = refs.uri";
+   private static final String UPDATE_JSONPATH = "WITH RECURSIVE chain AS (" +
+         "SELECT id FROM schemaextractor WHERE id = ? UNION ALL " +
+         "SELECT schemaextractor.id FROM schemaextractor, chain WHERE schemaextractor.deprecatedby_id = chain.id" +
+         ") UPDATE schemaextractor SET jsonpath = ? FROM chain WHERE schemaextractor.id = chain.id";
+   private static final String FIND_DEPRECATED = "WITH RECURSIVE chain AS (" +
+         "SELECT id, accessor FROM schemaextractor WHERE id = ? UNION ALL " +
+         "SELECT se.id, se.accessor FROM schemaextractor se, chain WHERE se.deprecatedby_id = chain.id" +
+         ") SELECT * FROM chain WHERE id != ?";
+   //@formatter:on
 
    private static final JsonSchemaFactory JSON_SCHEMA_FACTORY = new JsonSchemaFactory.Builder()
          .defaultMetaSchemaURI(JsonMetaSchema.getV4().getUri())
@@ -205,12 +216,15 @@ public class SchemaServiceImpl implements SchemaService {
 
    @PermitAll
    @Override
-   public List<SchemaExtractor> listExtractors(Integer schema) {
+   public List<SchemaExtractor> listExtractors(Integer schema, String accessor) {
       List<SchemaExtractor> extractors;
-      if (schema == null) {
-         extractors = SchemaExtractor.<SchemaExtractor>findAll().stream().collect(Collectors.toList());
+      if (schema == null && accessor == null) {
+         extractors = SchemaExtractor.<SchemaExtractor>find("deprecatedby_id = NULL AND deleted = false").stream().collect(Collectors.toList());
+      } else if (accessor != null) {
+         // this call is used to find all schemas and should include deprecated/deleted extractors, too
+         extractors = SchemaExtractor.<SchemaExtractor>find("accessor", accessor).stream().collect(Collectors.toList());
       } else {
-         extractors = SchemaExtractor.<SchemaExtractor>find("schema_id", schema).stream().collect(Collectors.toList());
+         extractors = SchemaExtractor.<SchemaExtractor>find("deprecatedby_id = NULL AND deleted = false AND schema_id = ?1", schema).stream().collect(Collectors.toList());
       }
       extractors.forEach(e -> {
          Hibernate.initialize(e.schema);
@@ -227,18 +241,14 @@ public class SchemaServiceImpl implements SchemaService {
    @RolesAllowed("tester")
    @Transactional
    @Override
-   public void addOrUpdateExtractor(ExtractorUpdate update) {
+   public SchemaExtractor addOrUpdateExtractor(ExtractorUpdate update) {
       if (update == null) {
          throw ServiceException.badRequest("No extractor");
       }
-      String accessor = update.accessor;
-      String newName = nullOrEmpty(update.newName) ? accessor : update.newName;
+
       String jsonpath = update.jsonpath;
 
-      if (nullOrEmpty(accessor) && !nullOrEmpty(newName)) {
-         accessor = newName;
-      }
-      if (nullOrEmpty(accessor) || update.schema == null || jsonpath == null) {
+      if (nullOrEmpty(update.accessor) || update.schema == null || jsonpath == null) {
          throw ServiceException.badRequest("Missing accessor/schema/jsonpath");
       }
       if (jsonpath.startsWith("strict ")) {
@@ -249,27 +259,96 @@ public class SchemaServiceImpl implements SchemaService {
       if (jsonpath.startsWith("$")) {
          jsonpath = jsonpath.substring(1);
       }
-      Schema persistedSchema = Schema.find("uri", update.schema).firstResult();
-      if (persistedSchema == null) {
-         throw ServiceException.badRequest("Missing schema " + update.schema);
-      }
-      SchemaExtractor extractor = SchemaExtractor.find("schema_id = ?1 and accessor = ?2", persistedSchema.id, accessor).firstResult();
-      boolean isNew = false;
-      if (extractor == null) {
-         extractor = new SchemaExtractor();
-         isNew = true;
+      SchemaExtractor extractor;
+      SchemaExtractor result;
+      if (update.id < 0) {
          if (update.deleted) {
-            throw ServiceException.notFound("Deleted extractor was not found");
+            throw ServiceException.badRequest("Deleted fresh extractor?");
          }
-      } else if (update.deleted) {
-         em.remove(extractor);
-         return;
+         Schema persistedSchema = Schema.find("uri", update.schema).firstResult();
+         if (persistedSchema == null) {
+            throw ServiceException.badRequest("Missing schema " + update.schema);
+         }
+         checkUnique(update.accessor, persistedSchema);
+         extractor = new SchemaExtractor();
+         extractor.accessor = update.accessor;
+         extractor.jsonpath = jsonpath;
+         extractor.schema = persistedSchema;
+         extractor.persist();
+         result = extractor;
+      } else {
+         extractor = SchemaExtractor.findById(update.id);
+         if (extractor == null) {
+            throw ServiceException.notFound("Cannot find extractor " + update.id);
+         }
+         if (extractor.deprecatedBy != null || extractor.deleted) {
+            throw ServiceException.badRequest("Cannot perform updates on a deprecated or deleted extractor.");
+         }
+         result = extractor;
+         if (update.deleted) {
+            extractor.deleted = true;
+         } else if (!extractor.accessor.equals(update.accessor)) {
+            SchemaExtractor deprecating = new SchemaExtractor();
+            deprecating.schema = extractor.schema;
+            deprecating.jsonpath = jsonpath;
+            deprecating.accessor = update.accessor;
+            deprecating.persist();
+            result = deprecating;
+
+            extractor.deprecatedBy = deprecating;
+         }
+         extractor.persist();
+         if (!extractor.jsonpath.equals(update.jsonpath)) {
+            em.createNativeQuery(UPDATE_JSONPATH).setParameter(1, update.id).setParameter(2, jsonpath).executeUpdate();
+         }
       }
-      extractor.accessor = newName;
-      extractor.schema = persistedSchema;
-      extractor.jsonpath = jsonpath;
-      if (isNew) {
-         em.persist(extractor);
+      em.flush();
+      Hibernate.initialize(result.schema);
+      em.detach(result);
+      result.jsonpath = "$" + result.jsonpath;
+      return result;
+   }
+
+   @PermitAll
+   @WithRoles
+   @Override
+   public List<SchemaExtractor> findDeprecated(Integer extractorId) {
+      SchemaExtractor extractor = SchemaExtractor.findById(extractorId);
+      if (extractor == null) {
+         return Collections.emptyList();
+      }
+      //noinspection unchecked
+      List<Object[]> resultList = em.createNativeQuery(FIND_DEPRECATED)
+            .setParameter(1, extractorId).setParameter(2, extractorId).getResultList();
+      return resultList.stream().map(row -> {
+         SchemaExtractor ex = new SchemaExtractor();
+         ex.id = (Integer) row[0];
+         ex.accessor = (String) row[1];
+         ex.schema = extractor.schema;
+         return ex;
+      }).collect(Collectors.toList());
+   }
+
+   private void checkUnique(String accessor, Schema schema) {
+      SchemaExtractor other = SchemaExtractor.find("accessor = ?1 AND schema_id = ?2", accessor, schema.id).firstResult();
+      if (other != null) {
+         StringBuilder error = new StringBuilder("There is an existing extractor with accessor '").append(accessor).append("'.");
+         if (other.deprecatedBy != null) {
+            SchemaExtractor ex = other.deprecatedBy;
+            while (ex.deprecatedBy != null) {
+               ex = ex.deprecatedBy;
+            }
+            error.append(" This extractor is hidden as it is deprecated by accessor '").append(ex.accessor).append("'");
+            if (ex.deleted) {
+               error.append(" (already deleted)");
+            }
+            error.append(".");
+         }
+         if (other.deleted) {
+            error.append(" This extractor was deleted but it might be still in use.");
+         }
+         error.append(" Please use a different accessor.");
+         throw ServiceException.badRequest(error.toString());
       }
    }
 

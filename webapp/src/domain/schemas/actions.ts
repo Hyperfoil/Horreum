@@ -91,10 +91,10 @@ export function deleteSchema(id: number) {
         )
 }
 
-export function listExtractors(schemaId?: number) {
+export function listExtractors(schemaId?: number, accessor?: string) {
     return (dispatch: ThunkDispatch<any, unknown, DeleteAction>) =>
         api
-            .listExtractors(schemaId)
+            .listExtractors(schemaId, accessor)
             .catch(error =>
                 dispatchError(
                     dispatch,

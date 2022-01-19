@@ -11,6 +11,8 @@ const endPoints = {
         `${base}/${id}/updateAccess?owner=${owner}&access=${accessName(access)}`,
     extractor: () => `${base}/extractor`,
     extractorForSchema: (schemaId: number) => `${base}/extractor?schemaId=${schemaId}`,
+    extractorForAccessor: (accessor: string) => `${base}/extractor?accessor=${accessor}`,
+    deprecated: (id: number) => `${base}/extractor/${id}/deprecated`,
     findUsages: (accessor: string) => `${base}/findUsages?accessor=${encodeURIComponent(accessor)}`,
     testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${encodeURIComponent(jsonpath)}`,
 }
@@ -38,8 +40,14 @@ export const updateAccess = (id: number, owner: string, access: Access) => {
     //                   'post', { 'content-type' : 'application/x-www-form-urlencoded'}, 'response')
 }
 
-export const listExtractors = (schemaId?: number) => {
-    return fetchApi(schemaId ? endPoints.extractorForSchema(schemaId) : endPoints.extractor(), null, "get")
+export const listExtractors = (schemaId?: number, accessor?: string) => {
+    let path = endPoints.extractor()
+    if (schemaId !== undefined) {
+        path = endPoints.extractorForSchema(schemaId)
+    } else if (accessor !== undefined) {
+        path = endPoints.extractorForAccessor(accessor)
+    }
+    return fetchApi(path, null, "get")
 }
 
 export const addOrUpdateExtractor = (extractor: Extractor) => fetchApi(endPoints.extractor(), extractor, "post")
@@ -52,6 +60,10 @@ export function findUsages(accessor: string) {
     return fetchApi(endPoints.findUsages(accessor), null, "get")
 }
 
+export function findDeprecated(extractorId: number) {
+    return fetchApi(endPoints.deprecated(extractorId), null, "get")
+}
+
 export type ValidationResult = {
     valid: boolean
     reason: string
@@ -60,15 +72,16 @@ export type ValidationResult = {
 }
 
 export interface Extractor {
+    id: number
     accessor: string
     schema?: string
     schemaId?: number
     jsonpath?: string
     // upload-only fields
-    newName?: string
     deleted?: boolean
     changed?: boolean
     // temprary fields
+    oldName?: string
     validationTimer?: any
     validationResult?: ValidationResult
 }
