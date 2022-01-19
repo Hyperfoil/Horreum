@@ -19,6 +19,7 @@ import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 
+import org.eclipse.microprofile.context.ThreadContext;
 import org.graalvm.polyglot.Value;
 import org.jboss.logging.Logger;
 
@@ -37,6 +38,10 @@ import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.ReadContext;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 
+import io.hyperfoil.tools.horreum.server.RolesInterceptor;
+import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.context.SmallRyeContextManagerProvider;
+import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
 public class Util {
@@ -394,5 +399,20 @@ public class Util {
          e = e.getCause();
       }
       return causes.toString();
+   }
+
+   public static void executeBlocking(Vertx vertx, SecurityIdentity identity, Runnable runnable) {
+      // Note that we cannot use @ThreadContextConfig in Quarkus
+      Runnable wrapped = SmallRyeContextManagerProvider.getManager().newThreadContextBuilder()
+            .propagated(ThreadContext.CDI).build().contextualRunnable(runnable);
+      vertx.executeBlocking(promise -> {
+         RolesInterceptor.setCurrentIdentity(identity);
+         try {
+            wrapped.run();
+         } finally {
+            RolesInterceptor.setCurrentIdentity(null);
+            promise.complete();
+         }
+      }, result -> {});
    }
 }

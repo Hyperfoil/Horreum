@@ -772,10 +772,7 @@ public class AlertingServiceImpl implements AlertingService {
       // to the new context in a different thread.
       // CDI needs to be propagated - without that the interceptors wouldn't run.
       // Without thread context propagation we would get an exception in Run.findById, though the interceptors would be invoked correctly.
-      CachedSecurityIdentity identity = new CachedSecurityIdentity(this.identity);
-      // Note that we cannot use @ThreadContextConfig in Quarkus -
-      Runnable runnable = SmallRyeContextManagerProvider.getManager().newThreadContextBuilder()
-            .propagated(ThreadContext.CDI).build().contextualRunnable(() -> {
+      Util.executeBlocking(vertx, new CachedSecurityIdentity(identity), () -> {
          Recalculation recalculation = new Recalculation();
          if (recalcProgress.putIfAbsent(testId, recalculation) != null) {
             log.infof("Already started recalculation on test %d, ignoring.", testId);
@@ -802,16 +799,6 @@ public class AlertingServiceImpl implements AlertingService {
             vertx.setTimer(30_000, timerId -> recalcProgress.remove(testId, recalculation));
          }
       });
-
-      vertx.executeBlocking(promise -> {
-         RolesInterceptor.setCurrentIdentity(identity);
-         try {
-            runnable.run();
-         } finally {
-            RolesInterceptor.setCurrentIdentity(null);
-            promise.complete();
-         }
-      }, result -> {});
    }
 
    @WithRoles

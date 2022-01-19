@@ -4,10 +4,12 @@ import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
+import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
+import io.quarkus.scheduler.Scheduled;
 
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -85,6 +87,8 @@ public class SchemaServiceImpl implements SchemaService {
          URLFactory.SUPPORTED_SCHEMES.stream(), Stream.of("urn")
    ).toArray(String[]::new);
 
+   private static final CachedSecurityIdentity SYSTEM_IDENTITY = new CachedSecurityIdentity(
+         null, Collections.singleton(Roles.HORREUM_SYSTEM), Collections.emptySet(), Collections.emptyMap());
 
    @Inject
    EntityManager em;
@@ -376,14 +380,14 @@ public class SchemaServiceImpl implements SchemaService {
       }
       for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, v.id as varid, v.name as varname FROM variable v " +
             "JOIN test ON test.id = v.testid " +
-            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ','));")
+            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ';'));")
             .setParameter(1, accessor).getResultList()) {
          Object[] columns = (Object[]) row;
          result.add(new AccessorInVariable((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3]));
       }
       for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, view.id as viewid, view.name as viewname, vc.id as componentid, vc.headername FROM viewcomponent vc " +
             "JOIN view ON vc.view_id = view.id JOIN test ON test.id = view.test_id " +
-            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ','));")
+            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ';'));")
             .setParameter(1, accessor).getResultList()) {
          Object[] columns = (Object[]) row;
          result.add(new AccessorInView((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], (int) columns[4], (String) columns[5]));
@@ -417,6 +421,26 @@ public class SchemaServiceImpl implements SchemaService {
             where.append(", ");
          }
          where.append(type);
+      }
+   }
+
+   @Scheduled(every = "{horreum.unused.executors.check}")
+   @Transactional
+   public void cleanUnusedExecutors() {
+      RolesInterceptor.setCurrentIdentity(SYSTEM_IDENTITY);
+      try {
+         int deleted = em.createNativeQuery("DELETE FROM schemaextractor WHERE id IN (SELECT se.id FROM schemaextractor se FULL OUTER JOIN (" +
+                     "SELECT unnest(string_to_array(replace(tags, '[]', ''), ';')) FROM test UNION " +
+                     "SELECT unnest(string_to_array(replace(accessors, '[]', ''), ';')) FROM variable UNION " +
+                     "SELECT unnest(string_to_array(replace(accessors, '[]', ''), ';')) FROM viewcomponent UNION " +
+                     "SELECT unnest(string_to_array(replace(filteraccessors || ',' || categoryaccessors || ',' || seriesaccessors || ',' || labelaccessors, '[]', ''), ',')) FROM tablereportconfig UNION " +
+                     "SELECT unnest(string_to_array(replace(accessors, '[]', ''), ',')) FROM reportcomponent" +
+               ") AS a ON se.accessor = a.unnest WHERE (se.deleted OR se.deprecatedby_id IS NOT NULL) AND a.unnest IS NULL);").executeUpdate();
+         if (deleted > 0) {
+            log.infof("Deleted %d unused extractors.");
+         }
+      } finally {
+         RolesInterceptor.setCurrentIdentity(null);
       }
    }
 }
