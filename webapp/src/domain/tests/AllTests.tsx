@@ -1,27 +1,41 @@
-import React, { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect } from "react"
 
-import { useSelector } from "react-redux"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
+import { useHistory } from "react-router"
+
 import {
+    Button,
     Card,
     CardHeader,
     CardBody,
     Dropdown,
     DropdownToggle,
     DropdownItem,
+    List,
+    ListItem,
+    Modal,
     PageSection,
     Spinner,
 } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
-import { EyeIcon, EyeSlashIcon, FolderOpenIcon } from "@patternfly/react-icons"
+import { EyeIcon, EyeSlashIcon, FolderIcon, FolderOpenIcon } from "@patternfly/react-icons"
 
-import { fetchSummary, updateAccess, deleteTest, allSubscriptions, addUserOrTeam, removeUserOrTeam } from "./actions"
+import {
+    fetchSummary,
+    updateAccess,
+    deleteTest,
+    allSubscriptions,
+    addUserOrTeam,
+    removeUserOrTeam,
+    updateFolder,
+} from "./actions"
 import * as selectors from "./selectors"
 
 import Table from "../../components/Table"
 import AccessIcon from "../../components/AccessIcon"
 import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from "../../components/ActionMenu"
 import TeamSelect, { Team, ONLY_MY_OWN } from "../../components/TeamSelect"
+import FolderSelect from "../../components/FolderSelect"
 import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
 
 import { Access, isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
@@ -76,6 +90,7 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
             isOpen={open}
             isPlain
             onSelect={_ => setOpen(false)}
+            menuAppendTo={() => document.body}
             toggle={
                 <DropdownToggle toggleIndicator={null} onToggle={setOpen}>
                     {!isOptOut && (
@@ -147,7 +162,88 @@ function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
     ]
 }
 
+type MoveToFolderConfig = {
+    name: string
+    folder: string
+    onMove(id: number, folder: string): Promise<any>
+}
+
+function MoveToFolderProvider(props: ActionMenuProps, isOwner: boolean, close: () => void, config: MoveToFolderConfig) {
+    const [isOpen, setOpen] = useState(false)
+    const [newFolder, setNewFolder] = useState<string>(config.folder)
+    const [moving, setMoving] = useState(false)
+
+    useEffect(() => {
+        setNewFolder(config.folder)
+    }, [config.folder])
+
+    return {
+        item: (
+            <DropdownItem
+                key="moveToFolder"
+                isDisabled={!isOwner}
+                onClick={() => {
+                    close()
+                    setOpen(true)
+                }}
+            >
+                Move to another folder
+            </DropdownItem>
+        ),
+        modal: (
+            <Modal
+                key="moveToFolder"
+                title={`Move test ${config.name} from ${config.folder || "root folder"} to another folder`}
+                isOpen={isOpen}
+                onClose={() => setOpen(false)}
+                actions={[
+                    <Button
+                        key="move"
+                        isDisabled={moving || config.folder === newFolder}
+                        onClick={() => {
+                            setMoving(true)
+                            config.onMove(props.id, newFolder).finally(() => {
+                                setMoving(false)
+                                setOpen(false)
+                            })
+                        }}
+                    >
+                        Move
+                        {moving && (
+                            <>
+                                {"\u00A0"}
+                                <Spinner size="md" />
+                            </>
+                        )}
+                    </Button>,
+                    <Button key="cancel" isDisabled={moving} variant="secondary" onClick={() => setOpen(false)}>
+                        Cancel
+                    </Button>,
+                ]}
+            >
+                Please select folder:
+                <br />
+                <FolderSelect canCreate={true} folder={newFolder} onChange={setNewFolder} readOnly={moving} />
+            </Modal>
+        ),
+    }
+}
+
+export function useMoveToFolder(config: MoveToFolderConfig): MenuItem<MoveToFolderConfig> {
+    return [MoveToFolderProvider, config]
+}
+
+function parent(folder: string) {
+    const index = folder.lastIndexOf("/")
+    if (index < 0) return ""
+    return folder.substr(0, index)
+}
+
 export default function AllTests() {
+    const history = useHistory()
+    const params = new URLSearchParams(history.location.search)
+    const folder = params.get("folder")
+
     document.title = "Tests | Horreum"
     const dispatch = useDispatch<TestDispatch>()
     const watchingColumn: Col = {
@@ -211,6 +307,11 @@ export default function AllTests() {
                             dispatch(updateAccess(id, owner, access)).catch(noop)
                         },
                     })
+                    const move = useMoveToFolder({
+                        name: arg.row.original.name,
+                        folder: folder || "",
+                        onMove: (id, newFolder) => dispatch(updateFolder(id, folder || "", newFolder)),
+                    })
                     const del = useDelete({
                         name: arg.row.original.name,
                     })
@@ -220,26 +321,30 @@ export default function AllTests() {
                             access={arg.row.original.access}
                             owner={arg.row.original.owner}
                             description={"test " + arg.row.original.name}
-                            items={[changeAccess, del]}
+                            items={[changeAccess, move, del]}
                         />
                     )
                 },
             },
         ],
-        [dispatch, dispatch]
+        [dispatch, folder]
     )
+    const folders = useSelector(selectors.currentFolders())
+    // This selector causes re-render on any state update as the returned list is always new.
+    // We would need deepEquals for a proper comparison - the selector combines tests and watches
+    // and modifies the Test objects - that wouldn't trigger shallowEqual, though
     const allTests = useSelector(selectors.all)
     const teams = useSelector(teamsSelector)
     const isAuthenticated = useSelector(isAuthenticatedSelector)
     const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
     useEffect(() => {
-        dispatch(fetchSummary(rolesFilter.key)).catch(noop)
-    }, [dispatch, teams, rolesFilter])
+        dispatch(fetchSummary(rolesFilter.key, folder || undefined)).catch(noop)
+    }, [dispatch, teams, rolesFilter, folder])
     useEffect(() => {
         if (isAuthenticated) {
-            dispatch(allSubscriptions()).catch(noop)
+            dispatch(allSubscriptions(folder || undefined)).catch(noop)
         }
-    }, [dispatch, isAuthenticated, rolesFilter])
+    }, [dispatch, isAuthenticated, rolesFilter, folder])
     if (isAuthenticated) {
         columns = [watchingColumn, ...columns]
     }
@@ -268,6 +373,18 @@ export default function AllTests() {
                     )}
                 </CardHeader>
                 <CardBody style={{ overflowX: "auto" }}>
+                    <List isPlain iconSize="large" style={{ paddingLeft: "16px" }}>
+                        {folder && (
+                            <NavLink key=".." to={`/test?folder=${parent(folder)}`}>
+                                <ListItem icon={<FolderIcon />}>.. (parent folder)</ListItem>
+                            </NavLink>
+                        )}
+                        {folders.map(f => (
+                            <NavLink key={f} to={folder ? `/test?folder=${folder}/${f}` : `/test?folder=${f}`}>
+                                <ListItem icon={<FolderIcon />}>{f}</ListItem>
+                            </NavLink>
+                        ))}
+                    </List>
                     <Table columns={columns} data={allTests || []} isLoading={isLoading} />
                 </CardBody>
             </Card>

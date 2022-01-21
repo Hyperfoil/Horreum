@@ -198,17 +198,69 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @PermitAll
-   public List<TestSummary> summary(String roles) {
-      StringBuilder sql = new StringBuilder();
-      sql.append("SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.access ");
-      sql.append("FROM test LEFT JOIN run ON run.testid = test.id AND (run.trashed = false OR run.trashed IS NULL)");
+   public TestListing summary(String roles, String folder) {
+      if (folder != null && folder.endsWith("/")) {
+         folder = folder.substring(0, folder.length() - 1);
+      }
+      StringBuilder testSql = new StringBuilder();
+      testSql.append("SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.access ");
+      testSql.append("FROM test LEFT JOIN run ON run.testid = test.id AND (run.trashed = false OR run.trashed IS NULL)");
+      testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')");
+      Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
+      testSql.append(" GROUP BY test.id ORDER BY test.name");
+      Query testQuery = em.createNativeQuery(testSql.toString());
+      testQuery.setParameter(1, folder);
+      Roles.addRolesParam(identity, testQuery, 2, roles);
+      SqlServiceImpl.setResultTransformer(testQuery, Transformers.aliasToBean(TestSummary.class));
+
+      TestListing listing = new TestListing();
+      //noinspection unchecked
+      listing.tests = testQuery.getResultList();
+
+      StringBuilder folderSql = new StringBuilder("SELECT DISTINCT ON (f) regexp_replace(substr(folder, ?1), '/.*', '') AS f FROM test WHERE ")
+         .append("starts_with(folder, ?2)");
+      Roles.addRolesSql(identity, "test", folderSql, roles, 3, " AND");
+      folderSql.append(" ORDER BY f");
+      Query folderQuery = em.createNativeQuery(folderSql.toString());
+      // PostgreSQL counts posititions from 1, and we want to remove the / as well
+      folderQuery.setParameter(1, folder == null ? 0 : folder.length() + 2);
+      folderQuery.setParameter(2, folder == null ? "" : folder + "/");
+      Roles.addRolesParam(identity, folderQuery, 3, roles);
+
+      //noinspection unchecked
+      listing.folders = folderQuery.getResultList();
+      return listing;
+   }
+
+   @Override
+   @PermitAll
+   public List<String> folders(String roles) {
+      StringBuilder sql = new StringBuilder("SELECT DISTINCT folder FROM test");
       Roles.addRolesSql(identity, "test", sql, roles, 1, " WHERE");
-      sql.append(" GROUP BY test.id");
       Query query = em.createNativeQuery(sql.toString());
       Roles.addRolesParam(identity, query, 1, roles);
-      SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(TestSummary.class));
-      //noinspection unchecked
-      return query.getResultList();
+      Set<String> result = new HashSet<>();
+      @SuppressWarnings("unchecked")
+      List<String> folders = query.getResultList();
+      for (String folder : folders) {
+         if (folder == null) {
+            continue;
+         }
+         int index = -1;
+         for (;;) {
+            index = folder.indexOf('/', index + 1);
+            if (index >= 0) {
+               result.add(folder.substring(0, index));
+            } else {
+               result.add(folder);
+               break;
+            }
+         }
+      }
+      folders = new ArrayList<>(result);
+      folders.sort(String::compareTo);
+      folders.add(0, null);
+      return folders;
    }
 
    @Override
@@ -305,6 +357,24 @@ public class TestServiceImpl implements TestService {
       if (query.executeUpdate() != 1) {
          throw ServiceException.serverError("Access change failed (missing permissions?)");
       }
+   }
+
+   @RolesAllowed("tester")
+   @WithRoles
+   @Transactional
+   @Override
+   public void updateFolder(Integer id, String folder) {
+      Test test = Test.findById(id);
+      if (test == null) {
+         throw ServiceException.notFound("Cannot find test id " + id);
+      }
+      if (folder != null && folder.endsWith("/")) {
+         folder = folder.substring(0, folder.length() - 1);
+      } else if (folder != null && folder.isEmpty()) {
+         folder = null;
+      }
+      test.folder = folder;
+      test.persist();
    }
 
    @Override

@@ -9,7 +9,13 @@ const endPoints = {
     schema: (id: number) => `${base}/${id}/schema`,
     view: (id: number) => `${base}/${id}/view`,
     hook: (id: number) => `${base}/${id}/hook`,
-    summary: (roles?: string) => `${base}/summary` + (roles ? "?roles=" + roles : ""),
+    summary: (roles?: string, folder?: string) =>
+        `${base}/summary?` +
+        [roles ? "roles=" + roles : undefined, folder ? "folder=" + encodeURIComponent(folder) : undefined]
+            .filter(x => !!x)
+            .join("&"),
+    folders: (roles?: string) => `${base}/folders` + (roles ? "?roles=" + roles : ""),
+    move: (id: number, folder: string) => `${base}/${id}/move?folder=${encodeURIComponent(folder)}`,
     tokens: (id: number) => `${base}/${id}/tokens`,
     addToken: (id: number) => `${base}/${id}/addToken`,
     revokeToken: (testId: number, tokenId: number) => `${base}/${testId}/revokeToken/${tokenId}`,
@@ -27,9 +33,14 @@ export const updateHook = (testId: number, hook: Hook) => {
 export const get = (id: number) => {
     return fetchApi(endPoints.crud(id), null, "get")
 }
-export const summary = (roles?: string) => {
-    return fetchApi(endPoints.summary(roles), null, "get")
+export function summary(roles?: string, folder?: string) {
+    return fetchApi(endPoints.summary(roles, folder), null, "get")
 }
+
+export function folders(roles?: string) {
+    return fetchApi(endPoints.folders(roles), null, "get")
+}
+
 export const send = (test: Test) => {
     return fetchApi(endPoints.base(), test, "post")
 }
@@ -59,6 +70,10 @@ export const updateAccess = (id: number, owner: string, access: string) => {
     return fetchApi(endPoints.updateAccess(id, owner, access), null, "post", {}, "response")
     //                   "owner=" + encodeURIComponent(owner) + "&access=" + encodeURIComponent(access),
     //                   'post', { 'content-type' : 'application/x-www-form-urlencoded'}, 'response')
+}
+
+export function updateFolder(testId: number, folder: string) {
+    return fetchApi(endPoints.move(testId, folder), null, "post")
 }
 
 export const deleteTest = (id: number) => fetchApi(endPoints.crud(id), null, "delete")

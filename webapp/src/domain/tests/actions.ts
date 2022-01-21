@@ -14,6 +14,8 @@ import {
     UpdateHookAction,
     UpdateTokensAction,
     RevokeTokenAction,
+    UpdateFoldersAction,
+    UpdateFolderAction,
 } from "./reducers"
 import { Dispatch } from "redux"
 import * as subscriptions from "./subscriptions-api"
@@ -25,11 +27,11 @@ function loading(isLoading: boolean): LoadingAction {
     return { type: actionTypes.LOADING, isLoading }
 }
 
-export function fetchSummary(roles?: string) {
+export function fetchSummary(roles?: string, folder?: string) {
     return (dispatch: Dispatch<LoadingAction | LoadedSummaryAction | AddAlertAction>) => {
         dispatch(loading(true))
-        return api.summary(roles).then(
-            tests => dispatch({ type: actionTypes.LOADED_SUMMARY, tests }),
+        return api.summary(roles, folder).then(
+            listing => dispatch({ type: actionTypes.LOADED_SUMMARY, tests: listing.tests, folders: listing.folders }),
             error => {
                 dispatch(loading(false))
                 return dispatchError(dispatch, error, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
@@ -113,6 +115,20 @@ export function updateView(testId: number, view: View) {
     }
 }
 
+export function updateFolder(testId: number, prevFolder: string, newFolder: string) {
+    return (dispatch: Dispatch<UpdateFolderAction | AddAlertAction>) =>
+        api.updateFolder(testId, newFolder).then(
+            _ =>
+                dispatch({
+                    type: actionTypes.UPDATE_FOLDER,
+                    testId,
+                    prevFolder,
+                    newFolder,
+                }),
+            error => dispatchError(dispatch, error, "TEST_FOLDER_UPDATE", "Cannot update test folder")
+        )
+}
+
 export function updateHooks(testId: number, testWebHooks: Hook[]) {
     return (dispatch: Dispatch<UpdateHookAction | AddAlertAction>) => {
         const promises: any[] = []
@@ -190,9 +206,9 @@ export function deleteTest(id: number) {
         )
 }
 
-export function allSubscriptions() {
+export function allSubscriptions(folder?: string) {
     return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
-        subscriptions.all().then(
+        subscriptions.all(folder).then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -262,6 +278,19 @@ export function removeUserOrTeam(id: number, userOrTeam: string) {
                     byId: Map([[id, response as string[]]]),
                 }),
             error => dispatchError(dispatch, error, "REMOVE_SUBSCRIPTION", "Failed to remove test subscriptions")
+        )
+    }
+}
+
+export function fetchFolders() {
+    return (dispatch: Dispatch<UpdateFoldersAction | AddAlertAction>) => {
+        return api.folders().then(
+            response =>
+                dispatch({
+                    type: actionTypes.UPDATE_FOLDERS,
+                    folders: response,
+                }),
+            error => dispatchError(dispatch, error, "UPDATE_FOLDERS", "Failed to retrieve a list of existing folders")
         )
     }
 }

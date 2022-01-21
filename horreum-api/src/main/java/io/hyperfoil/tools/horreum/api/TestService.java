@@ -49,7 +49,11 @@ public interface TestService {
 
    @Path("summary")
    @GET
-   List<TestSummary> summary(@QueryParam("roles") String roles);
+   TestListing summary(@QueryParam("roles") String roles, @QueryParam("folder") String folder);
+
+   @Path("folders")
+   @GET
+   List<String> folders(@QueryParam("roles") String roles);
 
    @POST
    @Path("{id}/addToken")
@@ -82,12 +86,21 @@ public interface TestService {
                      @QueryParam("enabled") boolean enabled);
 
    @POST
+   @Path("{id}/move")
+   void updateFolder(@PathParam("id") Integer id, @QueryParam("folder") String folder);
+
+   @POST
    @Path("{testId}/hook")
    void updateHook(@PathParam("testId") Integer testId, Hook hook);
 
    @GET
    @Path("{id}/tags")
    List<JsonNode> tags(@PathParam("id") Integer testId, @QueryParam("trashed") Boolean trashed);
+
+   class TestListing {
+      public List<String> folders;
+      public List<TestSummary> tests;
+   }
 
    class TestSummary {
       public int id;

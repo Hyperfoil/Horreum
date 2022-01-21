@@ -19,6 +19,7 @@ import { sendTest } from "./actions"
 import { durationToMillis, millisToDuration } from "../../utils"
 
 import Accessors from "../../components/Accessors"
+import FolderSelect from "../../components/FolderSelect"
 import TagsSelect, { convertTags, SelectedTags } from "../../components/TagsSelect"
 import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -42,6 +43,7 @@ type StalenessSettingsDisplay = {
 export default function General({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) {
     const defaultRole = useSelector(defaultTeamSelector)
     const [name, setName] = useState("")
+    const [folder, setFolder] = useState("")
     const [description, setDescription] = useState("")
     const [compareUrl, setCompareUrl] = useState<string | undefined>(undefined)
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
@@ -52,9 +54,10 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     const [isLogOpen, setLogOpen] = useState(false)
 
     const updateState = (test?: Test) => {
-        setName(test ? test.name : "")
-        setDescription(test ? test.description : "")
-        setTags(test && test.tags ? test.tags.split(";").filter(t => t !== "") : [])
+        setName(test?.name || "")
+        setFolder(test?.folder || "")
+        setDescription(test?.description || "")
+        setTags(test?.tags ? test.tags.split(";").filter(t => t !== "") : [])
         setTagsCalculation(() => test?.tagsCalculation)
         setCompareUrl(test?.compareUrl?.toString() || undefined)
         setNotificationsEnabled(!test || test.notificationsEnabled)
@@ -79,6 +82,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
             const newTest: Test = {
                 id: test?.id || 0,
                 name,
+                folder,
                 description,
                 compareUrl: compareUrl || undefined, // when empty set to undefined
                 notificationsEnabled,
@@ -129,6 +133,9 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                             onModified(true)
                         }}
                     />
+                </FormGroup>
+                <FormGroup label="Folder" fieldId="folder">
+                    <FolderSelect folder={folder} onChange={setFolder} canCreate={true} readOnly={!isTester} />
                 </FormGroup>
                 <FormGroup label="Description" fieldId="description" helperText="" helperTextInvalid="">
                     <TextArea

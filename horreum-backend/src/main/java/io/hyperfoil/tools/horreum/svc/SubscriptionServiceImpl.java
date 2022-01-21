@@ -40,7 +40,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
-   public Map<Integer, Set<String>> all() {
+   public Map<Integer, Set<String>> all(String folder) {
       // TODO: do all of this in single obscure PSQL query
       String username = identity.getPrincipal().getName();
       List<Watch> personal = Watch.list("?1 IN elements(users)", username);
@@ -59,7 +59,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
          return nset;
       }));
       @SuppressWarnings("unchecked")
-      Stream<Integer> results = em.createQuery("SELECT id FROM test").getResultStream();
+      Stream<Integer> results = em.createNativeQuery("SELECT id FROM test WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')")
+            .setParameter(1, folder).getResultStream();
       results.forEach(id -> result.putIfAbsent(id, Collections.emptySet()));
       return result;
    }

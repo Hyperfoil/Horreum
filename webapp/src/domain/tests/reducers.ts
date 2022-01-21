@@ -37,6 +37,7 @@ export type CompareFunction = (runs: Run[]) => string
 export interface Test {
     id: number
     name: string
+    folder?: string
     description: string
     compareUrl: string | CompareFunction | undefined
     tags: string
@@ -54,6 +55,8 @@ export interface Test {
 export class TestsState {
     byId?: Map<number, Test> = undefined
     loading = false
+    currentFolders: string[] = []
+    allFolders: string[] = []
     // we need to store watches independently as the information
     // can arrive before the actual test list
     watches: Map<number, string[] | undefined> = Map<number, string[] | undefined>()
@@ -67,6 +70,7 @@ export interface LoadingAction {
 export interface LoadedSummaryAction {
     type: typeof actionTypes.LOADED_SUMMARY
     tests: Test[]
+    folders: string[]
 }
 
 export interface LoadedTestAction {
@@ -115,6 +119,18 @@ export interface RevokeTokenAction {
     tokenId: number
 }
 
+export interface UpdateFoldersAction {
+    type: typeof actionTypes.UPDATE_FOLDERS
+    folders: string[]
+}
+
+export interface UpdateFolderAction {
+    type: typeof actionTypes.UPDATE_FOLDER
+    testId: number
+    prevFolder: string
+    newFolder: string
+}
+
 export type TestAction =
     | LoadingAction
     | LoadedSummaryAction
@@ -126,6 +142,8 @@ export type TestAction =
     | UpdateHookAction
     | UpdateTokensAction
     | RevokeTokenAction
+    | UpdateFoldersAction
+    | UpdateFolderAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction | AddAlertAction>
 
@@ -142,6 +160,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
                     byId = byId.set(test.id, test)
                 })
                 state.byId = byId
+                state.currentFolders = action.folders
             }
             break
         case actionTypes.LOADED_TEST:
@@ -201,6 +220,23 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
                 //TODO: define state changes
             }
             break
+        case actionTypes.UPDATE_FOLDERS:
+            {
+                state.allFolders = action.folders
+            }
+            break
+        case actionTypes.UPDATE_FOLDER: {
+            // the byId has only the entries from current page, and if we're moving the
+            // test elsewhere we're effectively removing it from the current view
+            state.byId = state.byId?.remove(action.testId)
+            if (action.newFolder.startsWith(action.prevFolder + "/")) {
+                const len = action.prevFolder.length + 1
+                const end = action.newFolder.indexOf("/", len)
+                state.currentFolders.push(action.newFolder.substring(len, end < 0 ? undefined : end))
+                state.currentFolders = [...new Set(state.currentFolders)].sort()
+            }
+            break
+        }
         default:
     }
     return state

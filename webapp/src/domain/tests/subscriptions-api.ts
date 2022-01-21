@@ -17,8 +17,8 @@ export function updateSubscription(watch: Watch) {
     return fetchApi(`${base}/${watch.testId}`, watch, "post")
 }
 
-export function all() {
-    return fetchApi(`${base}/`, null, "get")
+export function all(folder?: string) {
+    return fetchApi(`${base}/${folder ? "?folder=" + folder : ""}`, null, "get")
 }
 
 export function addUserOrTeam(testId: number, userOrTeam: string) {

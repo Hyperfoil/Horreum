@@ -40,6 +40,8 @@ public class Test extends PanacheEntityBase {
    @Column(name="name",unique = true)
    public String name;
 
+   public String folder;
+
    @Column(name="description",unique = false)
    public String description;
 

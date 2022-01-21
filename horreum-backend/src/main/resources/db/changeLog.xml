@@ -2025,5 +2025,11 @@
                                  referencedTableName="schemaextractor" referencedColumnNames="id" />
         <dropDefaultValue tableName="schemaextractor" columnName="deleted"/>
     </changeSet>
+
+    <changeSet id="43" author="rvansa">
+        <addColumn tableName="test">
+            <column name="folder" type="text" />
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
 

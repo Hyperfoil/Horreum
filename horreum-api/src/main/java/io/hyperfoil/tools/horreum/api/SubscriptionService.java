@@ -10,6 +10,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
@@ -20,7 +21,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 public interface SubscriptionService {
    @GET
    @Path("/")
-   Map<Integer, Set<String>> all();
+   Map<Integer, Set<String>> all(@QueryParam("folder") String folder);
 
    @GET
    @Path("/{testId}")
