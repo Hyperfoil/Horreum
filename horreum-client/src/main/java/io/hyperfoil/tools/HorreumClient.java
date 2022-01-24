@@ -1,5 +1,6 @@
 package io.hyperfoil.tools;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
@@ -104,6 +105,8 @@ public class HorreumClient {
 
             ResteasyJackson2Provider customJsonProvider = new ResteasyJackson2Provider();
             ObjectMapper customJsonMapper = new ObjectMapper();
+            // This is useful if the client is old and we have added some new properties
+            customJsonMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
             customJsonMapper.registerModule(new JavaTimeModule());
             customJsonProvider.setMapper(customJsonMapper);
 
