@@ -50,10 +50,11 @@ public class AlertingServiceTest extends BaseServiceTest {
       jsonRequest().body(schema).post("/api/schema").then().statusCode(200);
 
       SchemaService.ExtractorUpdate extractor = new SchemaService.ExtractorUpdate();
+      extractor.id = -1;
       extractor.accessor = "value";
       extractor.jsonpath = ".value";
       extractor.schema = schema.uri;
-      jsonRequest().body(extractor).post("/api/schema/extractor").then().statusCode(204);
+      jsonRequest().body(extractor).post("/api/schema/extractor").then().statusCode(200);
 
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
       runJson.set("$schema", JsonNodeFactory.instance.textNode(schema.uri));
