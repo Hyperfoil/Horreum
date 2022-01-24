@@ -160,7 +160,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
                     byId = byId.set(test.id, test)
                 })
                 state.byId = byId
-                state.currentFolders = action.folders
+                state.currentFolders = action.folders || []
             }
             break
         case actionTypes.LOADED_TEST:

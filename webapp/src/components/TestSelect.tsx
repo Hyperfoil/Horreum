@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 
-import { Select, SelectOption, SelectOptionObject } from "@patternfly/react-core"
+import { Select, SelectGroup, SelectOption, SelectOptionObject } from "@patternfly/react-core"
 
 import { useDispatch, useSelector, shallowEqual } from "react-redux"
 
@@ -25,6 +25,25 @@ type TestSelectProps = {
     isDisabled?: boolean
 }
 
+function groupByFolder(tests: Test[] | undefined | false) {
+    if (!tests) {
+        return []
+    }
+    const groups = tests
+        .reduce((groups: Test[][], test) => {
+            const group = groups.find(g => g[0].folder === test.folder)
+            if (group) {
+                group.push(test)
+            } else {
+                groups.push([test])
+            }
+            return groups
+        }, [])
+        .sort((a, b) => (a[0].folder || "").localeCompare(b[0].folder || ""))
+    groups.forEach(g => g.sort((a, b) => a.name.localeCompare(b.name)))
+    return groups
+}
+
 export default function TestSelect({
     selection,
     onSelect,
@@ -37,10 +56,11 @@ export default function TestSelect({
     const [open, setOpen] = useState(false)
     // a new instance of test list is created in every invocation => we need shallowEqual
     const tests = useSelector(all, shallowEqual)
+    const groupedTests = useMemo(() => groupByFolder(tests), [tests])
     const dispatch = useDispatch<TestDispatch>()
     const teams = useSelector(teamsSelector)
     useEffect(() => {
-        dispatch(fetchSummary()).catch(noop)
+        dispatch(fetchSummary(undefined, "*")).catch(noop)
     }, [dispatch, teams])
     useEffect(() => {
         if (initialTestName && tests) {
@@ -66,14 +86,16 @@ export default function TestSelect({
         >
             {[
                 ...(extraOptions ? extraOptions.map((option, i) => <SelectOption key={i} value={option} />) : []),
-                ...(tests
-                    ? tests.map((test: Test, i: number) => (
-                          <SelectOption
-                              key={i}
-                              value={{ id: test.id, owner: test.owner, toString: () => test.name } as SelectedTest}
-                          />
-                      ))
-                    : []),
+                ...groupedTests.map((group, i) => (
+                    <SelectGroup key={i} label={group[0].folder || "(root folder)"}>
+                        {group.map((test: Test, j) => (
+                            <SelectOption
+                                key={j}
+                                value={{ id: test.id, owner: test.owner, toString: () => test.name } as SelectedTest}
+                            />
+                        ))}
+                    </SelectGroup>
+                )),
             ]}
         </Select>
     )

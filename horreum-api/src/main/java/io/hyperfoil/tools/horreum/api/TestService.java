@@ -105,6 +105,7 @@ public interface TestService {
    class TestSummary {
       public int id;
       public String name;
+      public String folder;
       public String description;
       public Number count; // SQL count(*) returns BigInteger
       public String owner;

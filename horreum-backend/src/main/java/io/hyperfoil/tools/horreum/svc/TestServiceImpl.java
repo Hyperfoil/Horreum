@@ -203,32 +203,43 @@ public class TestServiceImpl implements TestService {
          folder = folder.substring(0, folder.length() - 1);
       }
       StringBuilder testSql = new StringBuilder();
-      testSql.append("SELECT test.id,test.name,test.description,count(run.id) AS count,test.owner,test.access ");
+      testSql.append("SELECT test.id,test.name,test.folder,test.description,count(run.id) AS count,test.owner,test.access ");
       testSql.append("FROM test LEFT JOIN run ON run.testid = test.id AND (run.trashed = false OR run.trashed IS NULL)");
-      testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')");
-      Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
+      boolean anyFolder = "*".equals(folder);
+      if (anyFolder) {
+         Roles.addRolesSql(identity, "test", testSql, roles, 1, " WHERE");
+      } else {
+         testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')");
+         Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
+      }
       testSql.append(" GROUP BY test.id ORDER BY test.name");
       Query testQuery = em.createNativeQuery(testSql.toString());
-      testQuery.setParameter(1, folder);
-      Roles.addRolesParam(identity, testQuery, 2, roles);
+      if (anyFolder) {
+         Roles.addRolesParam(identity, testQuery, 1, roles);
+      } else {
+         testQuery.setParameter(1, folder);
+         Roles.addRolesParam(identity, testQuery, 2, roles);
+      }
       SqlServiceImpl.setResultTransformer(testQuery, Transformers.aliasToBean(TestSummary.class));
 
       TestListing listing = new TestListing();
       //noinspection unchecked
       listing.tests = testQuery.getResultList();
 
-      StringBuilder folderSql = new StringBuilder("SELECT DISTINCT ON (f) regexp_replace(substr(folder, ?1), '/.*', '') AS f FROM test WHERE ")
-         .append("starts_with(folder, ?2)");
-      Roles.addRolesSql(identity, "test", folderSql, roles, 3, " AND");
-      folderSql.append(" ORDER BY f");
-      Query folderQuery = em.createNativeQuery(folderSql.toString());
-      // PostgreSQL counts posititions from 1, and we want to remove the / as well
-      folderQuery.setParameter(1, folder == null ? 0 : folder.length() + 2);
-      folderQuery.setParameter(2, folder == null ? "" : folder + "/");
-      Roles.addRolesParam(identity, folderQuery, 3, roles);
+      if (!anyFolder) {
+         StringBuilder folderSql = new StringBuilder("SELECT DISTINCT ON (f) regexp_replace(substr(folder, ?1), '/.*', '') AS f FROM test WHERE ")
+               .append("starts_with(folder, ?2)");
+         Roles.addRolesSql(identity, "test", folderSql, roles, 3, " AND");
+         folderSql.append(" ORDER BY f");
+         Query folderQuery = em.createNativeQuery(folderSql.toString());
+         // PostgreSQL counts posititions from 1, and we want to remove the / as well
+         folderQuery.setParameter(1, folder == null ? 0 : folder.length() + 2);
+         folderQuery.setParameter(2, folder == null ? "" : folder + "/");
+         Roles.addRolesParam(identity, folderQuery, 3, roles);
 
-      //noinspection unchecked
-      listing.folders = folderQuery.getResultList();
+         //noinspection unchecked
+         listing.folders = folderQuery.getResultList();
+      }
       return listing;
    }
 
