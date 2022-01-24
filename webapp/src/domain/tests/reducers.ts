@@ -229,8 +229,8 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             // the byId has only the entries from current page, and if we're moving the
             // test elsewhere we're effectively removing it from the current view
             state.byId = state.byId?.remove(action.testId)
-            if (action.newFolder.startsWith(action.prevFolder + "/")) {
-                const len = action.prevFolder.length + 1
+            if (action.newFolder.startsWith(action.prevFolder + "/") || action.prevFolder === "") {
+                const len = action.prevFolder === "" ? 0 : action.prevFolder.length + 1
                 const end = action.newFolder.indexOf("/", len)
                 state.currentFolders.push(action.newFolder.substring(len, end < 0 ? undefined : end))
                 state.currentFolders = [...new Set(state.currentFolders)].sort()
