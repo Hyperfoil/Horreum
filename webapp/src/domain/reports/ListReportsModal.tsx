@@ -20,12 +20,12 @@ export default function ListReportsModal(props: ListReportsModalProps) {
     const [deleteId, setDeleteId] = useState<number>()
     return (
         <Modal
-            title={"Reports for " + props?.summary?.config?.title}
+            title={"Reports for " + props?.summary?.title}
             variant="small"
             isOpen={props.isOpen}
             onClose={props.onClose}
         >
-            <div style={{ overflowY: "auto", maxHeight: "60vh" }}>
+            <div style={{ overflowY: "auto", minHeight: "40vh", maxHeight: "60vh" }}>
                 {!props.summary && (
                     <Bullseye>
                         <Spinner size="xl" />
@@ -52,7 +52,9 @@ export default function ListReportsModal(props: ListReportsModalProps) {
                                     </Td>
                                     <Td>{formatDateTime(created * 1000)}</Td>
                                     <Td>
-                                        <Button onClick={() => setDeleteId(id)}>Delete</Button>
+                                        <Button onClick={() => setDeleteId(id)} variant="danger">
+                                            Delete
+                                        </Button>
                                     </Td>
                                 </Tr>
                             ))}

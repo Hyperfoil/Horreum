@@ -15,6 +15,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
@@ -33,7 +34,7 @@ public class TableReport extends PanacheEntityBase {
    @GeneratedValue
    public Integer id;
 
-   @ManyToOne(fetch = FetchType.LAZY)
+   @OneToOne(fetch = FetchType.EAGER)
    @JoinColumn(name = "config_id")
    public TableReportConfig config;
 

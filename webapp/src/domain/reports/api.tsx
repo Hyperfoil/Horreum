@@ -65,8 +65,10 @@ export type AllTableReports = {
 }
 
 export type TableReportSummary = {
-    config: TableReportConfig
-    reports: { id: number; created: number }[]
+    testId: number
+    testName: string
+    title: string
+    reports: { id: number; configId: number; created: number }[]
 }
 
 const base = "/api/report"

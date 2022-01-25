@@ -60,13 +60,15 @@ public interface ReportService {
    }
 
    class TableReportSummary {
-      public TableReportConfig config;
+      public int testId;
+      public String testName;
+      public String title;
       public List<TableReportSummaryItem> reports;
    }
 
    class TableReportSummaryItem {
       public int id;
-
+      public int configId;
       public Instant created;
    }
 }

@@ -2031,5 +2031,22 @@
             <column name="folder" type="text" />
         </addColumn>
     </changeSet>
+
+    <changeSet id="44" author="rvansa">
+        <comment>Duplicate the config for each report</comment>
+        <sql>
+            CREATE TEMPORARY TABLE tempconfig AS SELECT tr.id AS reportid, c.* FROM tablereportconfig c JOIN tablereport tr ON tr.config_id = c.id;
+            CREATE TEMPORARY TABLE tempcomponent AS SELECT tr.id AS reportid, rc.* FROM reportcomponent rc JOIN tablereport tr ON rc.reportconfig_id = tr.config_id;
+            UPDATE tempconfig SET id = nextval('hibernate_sequence');
+            UPDATE tempcomponent tc SET id = nextval('hibernate_sequence'), reportconfig_id = (SELECT id FROM tempconfig WHERE tempconfig.reportid = tc.reportid);
+            INSERT INTO tablereportconfig SELECT id, title, testid, filteraccessors, filterfunction, categoryaccessors, categoryfunction, categoryformatter, seriesaccessors, seriesfunction, seriesformatter, labelaccessors, labelfunction, labelformatter, labeldescription FROM tempconfig;
+            INSERT INTO reportcomponent SELECT id, reportconfig_id, name, component_order, accessors, function, unit FROM tempcomponent;
+            UPDATE tablereport tr SET config_id = (SELECT id FROM tempconfig WHERE reportid = tr.id);
+            DELETE FROM reportcomponent WHERE id NOT IN (SELECT id from tempcomponent);
+            DELETE FROM tablereportconfig WHERE id NOT IN (SELECT id from tempconfig);
+            DROP TABLE tempconfig;
+            DROP TABLE tempcomponent;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

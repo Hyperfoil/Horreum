@@ -190,6 +190,29 @@ export default function TableReportConfigPage() {
         })
 
     const isTester = useTester(config?.test?.owner)
+
+    function saveButton(reportId: number | undefined, label: string, variant: "primary" | "secondary") {
+        return (
+            <Button
+                isDisabled={!configValid || saving}
+                variant={variant}
+                onClick={() => {
+                    // TODO save locally for faster reload...
+                    setSaving(true)
+                    api.updateTableConfig(config, reportId)
+                        .then(
+                            report => history.push("/reports/table/" + report.id),
+                            error => dispatch(alertAction("SAVE_CONFIG", "Failed to save report configuration.", error))
+                        )
+                        .finally(() => setSaving(false))
+                }}
+            >
+                {label}
+                {saving && <Spinner size="md" />}
+            </Button>
+        )
+    }
+
     if (loading) {
         return (
             <Bullseye>
@@ -522,29 +545,8 @@ export default function TableReportConfigPage() {
                         </FormSection>
                         {isTester && (
                             <ActionGroup>
-                                <Button
-                                    isDisabled={!configValid || saving}
-                                    onClick={() => {
-                                        // TODO save locally for faster reload...
-                                        setSaving(true)
-                                        api.updateTableConfig(config, reportId)
-                                            .then(
-                                                report => history.push("/reports/table/" + report.id),
-                                                error =>
-                                                    dispatch(
-                                                        alertAction(
-                                                            "SAVE_CONFIG",
-                                                            "Failed to save report configuration.",
-                                                            error
-                                                        )
-                                                    )
-                                            )
-                                            .finally(() => setSaving(false))
-                                    }}
-                                >
-                                    {reportId ? "Save & update report " + reportId : "Save & create new report"}
-                                    {saving && <Spinner size="md" />}
-                                </Button>
+                                {reportId && saveButton(reportId, "Update report " + reportId, "primary")}
+                                {saveButton(undefined, "Create new report", reportId ? "secondary" : "primary")}
                                 <Button
                                     variant="secondary"
                                     isDisabled={!configValid || saving}

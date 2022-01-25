@@ -5,6 +5,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,9 @@ import io.quarkus.vertx.ConsumeEvent;
 @WithRoles
 public class ReportServiceImpl implements ReportService {
    private static final Logger log = Logger.getLogger(ReportServiceImpl.class);
+
+   private static final Comparator<TableReportSummaryItem> REPORT_COMPARATOR = Comparator.<TableReportSummaryItem, Instant>comparing(item -> item.created).reversed();
+
    //@formatter:off
    private static final String SELECT_BY_ACCESSOR = "SELECT run.id, (" +
             "CASE WHEN :accessors LIKE '%[]' THEN " +
@@ -85,7 +89,7 @@ public class ReportServiceImpl implements ReportService {
       StringBuilder queryBuilder = new StringBuilder();
       Map<String, Object> params = new HashMap<>();
       if (testId != null) {
-         queryBuilder.append("test.id = :test");
+         queryBuilder.append("config.test.id = :test");
          params.put("test", testId);
       }
       Set<String> rolesList = Roles.expandRoles(roles, identity);
@@ -93,33 +97,57 @@ public class ReportServiceImpl implements ReportService {
          if (queryBuilder.length() > 0) {
             queryBuilder.append(" AND ");
          }
-         queryBuilder.append(" owner IN :roles");
+         queryBuilder.append(" config.test.owner IN :roles");
          params.put("roles", rolesList);
       }
       String query = queryBuilder.toString();
-      Sort querySort = sort == null ? null : Sort.by(sort, direction == null ? Sort.Direction.Ascending : direction);
-      PanacheQuery<TableReportConfig> pQuery = TableReportConfig.find(query, querySort, params);
+      PanacheQuery<TableReport> pQuery = TableReport.find(query, params);
       if (page != null && limit != null) {
          pQuery.page(page - 1, limit);
       }
       AllTableReports result = new AllTableReports();
       result.count = TableReportConfig.count(query, params);
-      List<TableReportConfig> configs = pQuery.list();
-      Map<TableReportConfig, TableReportSummary> summaryLookup = new HashMap<>();
-      result.reports = configs.stream().map(config -> {
-         TableReportSummary summary = new TableReportSummary();
-         summary.config = config;
-         summary.reports = new ArrayList<>();
-         summaryLookup.put(config, summary);
-         return summary;
-      }).collect(Collectors.toList());
-      for (TableReport report : TableReport.<TableReport>find("config IN :configs", Sort.by("created").descending(), Map.of("configs", configs)).list()) {
-         TableReportSummary summary = summaryLookup.get(report.config);
+      List<TableReport> reports = pQuery.list();
+      Map<Map.Entry<Integer, String>, TableReportSummary> summaryLookup = new HashMap<>();
+      for (TableReport report : reports) {
+         int summaryTestId = report.config.test == null ? -1 : report.config.test.id;
          TableReportSummaryItem item = new TableReportSummaryItem();
          item.id = report.id;
+         item.configId = report.config.id;
          item.created = report.created;
+         TableReportSummary summary = summaryLookup.computeIfAbsent(Map.entry(summaryTestId, report.config.title), k -> {
+            TableReportSummary newSummary = new TableReportSummary();
+            newSummary.testId = summaryTestId;
+            if (report.config.test != null) {
+               newSummary.testName = report.config.test.name;
+            }
+            newSummary.title = report.config.title;
+            newSummary.reports = new ArrayList<>();
+            return newSummary;
+         });
          summary.reports.add(item);
       }
+      result.reports = new ArrayList<>(summaryLookup.values());
+      result.reports.forEach(summary -> summary.reports.sort(REPORT_COMPARATOR));
+      Comparator<TableReportSummary> comparator;
+      switch (sort) {
+         case "title":
+         default:
+            comparator = Comparator.comparing(s -> s.title);
+            break;
+         case "testname":
+            comparator = Comparator.comparing(s -> s.testName != null ? s.testName : "");
+            break;
+         case "last report":
+            comparator = Comparator.comparing(s -> s.reports.get(0).created);
+            break;
+         case "report count":
+            comparator = Comparator.comparing(s -> s.reports.size());
+      }
+      if (direction == Sort.Direction.Descending) {
+         comparator = comparator.reversed();
+      }
+      result.reports.sort(comparator);
       return result;
    }
 
@@ -136,8 +164,13 @@ public class ReportServiceImpl implements ReportService {
       if (config.id != null && config.id < 0) {
          config.id = null;
       }
+      boolean createNewConfig = reportId == null || reportId < 0;
+      if (createNewConfig) {
+         // We are going to create a new report, therefore we'll use a new config
+         config.id = null;
+      }
       for (var component : config.components) {
-         if (component.id != null && component.id < 0) {
+         if (component.id != null && component.id < 0 || createNewConfig) {
             component.id = null;
          }
       }
@@ -203,7 +236,12 @@ public class ReportServiceImpl implements ReportService {
    @Transactional
    @Override
    public void deleteTableReport(Integer id) {
-      TableReport.deleteById(id);
+      TableReport report = TableReport.findById(id);
+      if (report == null) {
+         throw ServiceException.notFound("Report " + id + " does not exist.");
+      }
+      report.delete();
+      report.config.delete();
    }
 
    @RolesAllowed(Roles.TESTER)

@@ -30,13 +30,18 @@ import ListReportsModal from "./ListReportsModal"
 
 type C = CellProps<TableReportSummary>
 
+type ReportGroup = {
+    testId: number
+    title: string
+}
+
 export default function Reports() {
     document.title = "Reports | Horreum"
 
     const dispatch = useDispatch()
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
-    const [sort, setSort] = useState("test.id")
+    const [sort, setSort] = useState("title")
     const [direction, setDirection] = useState("Descending")
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
     const [roles, setRoles] = useState<Team>()
@@ -46,7 +51,7 @@ export default function Reports() {
     const [tableReportsReloadCounter, setTableReportsReloadCounter] = useState(0)
     const [loading, setLoading] = useState(false)
 
-    const [tableReportConfigId, setTableReportConfigId] = useState<number>()
+    const [tableReportGroup, setTableReportGroup] = useState<ReportGroup>()
 
     useEffect(() => {
         setLoading(true)
@@ -61,14 +66,16 @@ export default function Reports() {
             {
                 Header: "Title",
                 id: "title",
-                accessor: r => r.config.id,
+                accessor: r => (r.reports && r.reports.length > 0 ? r.reports[0].configId : undefined),
                 Cell: (arg: C) => {
                     const {
-                        cell: { value: id },
+                        cell: { value: configId },
                     } = arg
-                    return (
-                        <NavLink to={`/reports/table/config/${id}`}>
-                            {arg.row.original.config.title} <EditIcon />
+                    return configId === undefined ? (
+                        arg.row.original.title
+                    ) : (
+                        <NavLink to={`/reports/table/config/${configId}`}>
+                            {arg.row.original.title} <EditIcon />
                         </NavLink>
                     )
                 },
@@ -76,14 +83,13 @@ export default function Reports() {
             {
                 Header: "Test",
                 id: "testname",
-                disableSortBy: true,
-                accessor: r => r.config.test?.id,
+                accessor: r => r.testId,
                 Cell: (arg: C) => {
                     const {
-                        cell: { value: testid },
+                        cell: { value: testId },
                     } = arg
-                    return arg.row.original.config.test ? (
-                        <NavLink to={`/test/${testid}`}>{arg.row.original.config.test.name}</NavLink>
+                    return testId !== undefined && testId >= 0 ? (
+                        <NavLink to={`/test/${testId}`}>{arg.row.original.testName}</NavLink>
                     ) : (
                         "<deleted test>"
                     )
@@ -91,8 +97,9 @@ export default function Reports() {
             },
             {
                 Header: "Last report",
+                id: "last report",
                 accessor: "reports",
-                disableSortBy: true,
+                disableSortBy: true, // TODO: fix client-side sorting
                 Cell: (arg: C) => {
                     const reports = arg.cell.value
                     if (reports && reports.length > 0) {
@@ -113,10 +120,15 @@ export default function Reports() {
                 Header: "Total reports",
                 id: "report count",
                 accessor: "reports",
-                disableSortBy: true,
+                disableSortBy: true, // TODO: fix client-side sorting
                 Cell: (arg: C) => {
                     return (
-                        <Button variant="link" onClick={() => setTableReportConfigId(arg.row.original.config.id)}>
+                        <Button
+                            variant="link"
+                            onClick={() =>
+                                setTableReportGroup({ testId: arg.row.original.testId, title: arg.row.original.title })
+                            }
+                        >
                             {arg.cell.value.length}
                             {"\u00A0"}
                             <FolderOpenIcon />
@@ -130,9 +142,10 @@ export default function Reports() {
 
     const isTester = useTester()
     const tableReportSummary =
-        (tableReportConfigId !== undefined &&
-            tableReports &&
-            tableReports.reports.find(summary => summary.config.id === tableReportConfigId)) ||
+        (tableReportGroup !== undefined &&
+            tableReports?.reports.find(
+                summary => summary.testId === tableReportGroup.testId && summary.title === tableReportGroup.title
+            )) ||
         undefined
     return (
         <PageSection>
@@ -190,9 +203,9 @@ export default function Reports() {
                 </CardFooter>
             </Card>
             <ListReportsModal
-                isOpen={tableReportConfigId !== undefined}
-                onClose={() => setTableReportConfigId(undefined)}
-                summary={loading ? undefined : tableReportSummary}
+                isOpen={tableReportSummary !== undefined}
+                onClose={() => setTableReportGroup(undefined)}
+                summary={tableReportSummary}
                 onReload={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
             />
         </PageSection>
