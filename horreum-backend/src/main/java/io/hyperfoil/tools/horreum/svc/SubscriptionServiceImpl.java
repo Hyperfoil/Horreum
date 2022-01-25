@@ -18,8 +18,11 @@ import javax.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SubscriptionService;
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
+import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.vertx.ConsumeEvent;
 
 @WithRoles
 @ApplicationScoped
@@ -48,9 +51,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       Set<String> teams = identity.getRoles().stream().filter(role -> role.endsWith("-team")).collect(Collectors.toSet());
       List<Watch> team = Watch.list("FROM watch w LEFT JOIN w.teams teams WHERE teams IN ?1", teams);
       Map<Integer, Set<String>> result = new HashMap<>();
-      personal.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, username)));
-      optout.forEach(w -> result.compute(w.testId, (i, set) -> merge(set, "!" + username)));
-      team.forEach(w -> result.compute(w.testId, (i, set) -> {
+      personal.forEach(w -> result.compute(w.test.id, (i, set) -> merge(set, username)));
+      optout.forEach(w -> result.compute(w.test.id, (i, set) -> merge(set, "!" + username)));
+      team.forEach(w -> result.compute(w.test.id, (i, set) -> {
          Set<String> nset = new HashSet<>(w.teams);
          nset.retainAll(teams);
          if (set != null) {
@@ -68,10 +71,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
    public Watch get(Integer testId) {
-      Watch watch = Watch.find("testId = ?1", testId).firstResult();
+      Watch watch = Watch.find("test.id = ?1", testId).firstResult();
       if (watch == null) {
          watch = new Watch();
-         watch.testId = testId;
+         watch.test = em.getReference(Test.class, testId);
          watch.teams = Collections.emptyList();
          watch.users = Collections.emptyList();
          watch.optout = Collections.emptyList();
@@ -117,7 +120,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       Watch watch = Watch.find("testid", testId).firstResult();
       if (watch == null) {
          watch = new Watch();
-         watch.testId = testId;
+         watch.test = em.getReference(Test.class, testId);
       }
       if (isOptout) {
          watch.optout = add(watch.optout, userOrTeam);
@@ -186,7 +189,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       Watch existing = Watch.find("testid", testId).firstResult();
       if (existing == null) {
          watch.id = null;
-         watch.testId = testId;
+         watch.test = em.getReference(Test.class, testId);
          watch.persistAndFlush();
       } else {
          existing.users = watch.users;
@@ -212,5 +215,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
          all.add("!" + username);
       }
       return all;
+   }
+
+   @ConsumeEvent(value = Test.EVENT_DELETED, blocking = true)
+   @Transactional
+   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   public void onTestDelete(Test test) {
+      for (Watch w : Watch.<Watch>find("testid = ?1", test.id).list()) {
+         w.delete();
+      }
    }
 }

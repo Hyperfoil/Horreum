@@ -2048,5 +2048,15 @@
             DROP TABLE tempcomponent;
         </sql>
     </changeSet>
+
+    <changeSet id="45" author="rvansa">
+        <comment>Remove leaked watches</comment>
+        <sql>
+            DELETE FROM watch_users WHERE watch_id IN (SELECT id FROM watch WHERE testid NOT IN (SELECT id FROM test));
+            DELETE FROM watch_teams WHERE watch_id IN (SELECT id FROM watch WHERE testid NOT IN (SELECT id FROM test));
+            DELETE FROM watch_optout WHERE watch_id IN (SELECT id FROM watch WHERE testid NOT IN (SELECT id FROM test));
+            DELETE FROM watch WHERE testid NOT IN (SELECT id FROM test);
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
