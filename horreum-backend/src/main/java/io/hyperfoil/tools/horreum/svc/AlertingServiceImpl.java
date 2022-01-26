@@ -592,7 +592,6 @@ public class AlertingServiceImpl implements AlertingService {
             } else {
                current.name = matching.name;
                current.group = matching.group;
-               current.order = matching.order;
                current.accessors = matching.accessors;
                current.calculation = matching.calculation;
                current.maxDifferenceLastDatapoint = matching.maxDifferenceLastDatapoint;
@@ -656,7 +655,7 @@ public class AlertingServiceImpl implements AlertingService {
          dashboard.annotations.list.add(new Dashboard.Annotation(variable.name, variable.id + ";" + tags));
       }
       for (Map.Entry<String, List<Variable>> entry : byGroup.entrySet()) {
-         entry.getValue().sort(Comparator.comparing(v -> v.order));
+         entry.getValue().sort(Comparator.comparing(v -> v.name));
          Dashboard.Panel panel = new Dashboard.Panel(entry.getKey(), new Dashboard.GridPos(12 * (i % 2), 9 * (i / 2), 12, 9));
          info.panels.add(new PanelInfo(entry.getKey(), entry.getValue()));
          for (Variable variable : entry.getValue()) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useHistory } from "react-router"
 
@@ -10,24 +10,27 @@ import { Variable } from "../alerting/types"
 
 import {
     Alert,
+    AlertActionCloseButton,
     Bullseye,
     Button,
-    DataList,
-    DataListAction,
-    DataListItem,
-    DataListItemRow,
-    DataListItemCells,
-    DataListCell,
+    EmptyState,
     ExpandableSection,
     Form,
     FormGroup,
     Modal,
     Select,
     SelectOption,
+    SimpleList,
+    SimpleListGroup,
+    SimpleListItem,
     Spinner,
+    Split,
+    SplitItem,
     TextInput,
     Title,
 } from "@patternfly/react-core"
+
+import { PlusCircleIcon } from "@patternfly/react-icons"
 
 import Accessors from "../../components/Accessors"
 import LogSlider from "../../components/LogSlider"
@@ -176,12 +179,11 @@ const RenameGroupModal = (props: RenameGroupModalProps) => {
 }
 
 type VariableFormProps = {
-    index: number
-    variables: Variable[]
+    variable: Variable
     isTester: boolean
     groups: string[]
     setGroups(gs: string[]): void
-    onChange(): void
+    onChange(v: Variable): void
 }
 
 function checkVariable(v: Variable) {
@@ -194,22 +196,18 @@ function checkVariable(v: Variable) {
     }
 }
 
-const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups }: VariableFormProps) => {
-    const variable = variables[index]
+const VariableForm = (props: VariableFormProps) => {
     const [isExpanded, setExpanded] = useState(false)
     const [groupOpen, setGroupOpen] = useState(false)
     return (
-        <Form id={`variable-${variable.id}`} isHorizontal={true}>
+        <Form id={`variable-${props.variable.id}`} isHorizontal={true}>
             <FormGroup label="Name" fieldId="name">
                 <TextInput
-                    value={variable.name || ""}
+                    value={props.variable.name || ""}
                     id="name"
-                    onChange={value => {
-                        variable.name = value
-                        onChange()
-                    }}
-                    validated={!!variable.name && variable.name.trim() !== "" ? "default" : "error"}
-                    isReadOnly={!isTester}
+                    onChange={value => props.onChange({ ...props.variable, name: value })}
+                    validated={!!props.variable.name && props.variable.name.trim() !== "" ? "default" : "error"}
+                    isReadOnly={!props.isTester}
                 />
             </FormGroup>
             <FormGroup label="Group" fieldId="group">
@@ -218,27 +216,21 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
                     typeAheadAriaLabel="Select group"
                     onToggle={setGroupOpen}
                     onSelect={(e, group, isPlaceholder) => {
-                        if (isPlaceholder) {
-                            variable.group = undefined
-                        } else {
-                            variable.group = group.toString()
-                        }
                         setGroupOpen(false)
-                        onChange()
+                        props.onChange({ ...props.variable, group: isPlaceholder ? undefined : group.toString() })
                     }}
                     onClear={() => {
-                        variable.group = undefined
-                        onChange()
+                        props.onChange({ ...props.variable, group: undefined })
                     }}
-                    selections={variable.group}
+                    selections={props.variable.group}
                     isOpen={groupOpen}
                     placeholderText="-none-"
                     isCreatable={true}
                     onCreateOption={option => {
-                        setGroups([...groups, option].sort())
+                        props.setGroups([...props.groups, option].sort())
                     }}
                 >
-                    {groups.map((g, index) => (
+                    {props.groups.map((g, index) => (
                         <SelectOption key={index} value={g} />
                     ))}
                 </Select>
@@ -246,32 +238,28 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
             <FormGroup label="Accessors" fieldId="accessor">
                 <Accessors
                     value={
-                        (variable.accessors &&
-                            variable.accessors
+                        (props.variable.accessors &&
+                            props.variable.accessors
                                 .split(/[,;] */)
                                 .map(a => a.trim())
                                 .filter(a => a.length !== 0)) ||
                         []
                     }
-                    error={checkVariable(variable)}
+                    error={checkVariable(props.variable)}
                     onChange={value => {
-                        variable.accessors = value.join(";")
-                        onChange()
+                        props.onChange({ ...props.variable, accessors: value.join(";") })
                     }}
-                    isReadOnly={!isTester}
+                    isReadOnly={!props.isTester}
                 />
             </FormGroup>
             <FormGroup label="Calculation" fieldId="calculation">
                 <OptionalFunction
-                    func={variable.calculation === undefined ? undefined : variable.calculation.toString()}
-                    onChange={value => {
-                        variable.calculation = value
-                        onChange()
-                    }}
+                    func={props.variable.calculation === undefined ? undefined : props.variable.calculation.toString()}
+                    onChange={value => props.onChange({ ...props.variable, calculation: value })}
                     defaultFunc="value => value"
                     addText="Add calculation function..."
                     undefinedText="No calculation function"
-                    readOnly={!isTester}
+                    readOnly={!props.isTester}
                 />
             </FormGroup>
             <ExpandableSection
@@ -285,12 +273,11 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
                     helperText="Maximum difference between the last value and the mean of preceding values."
                 >
                     <LogSlider
-                        value={variable.maxDifferenceLastDatapoint * 100}
-                        onChange={value => {
-                            variable.maxDifferenceLastDatapoint = value / 100
-                            onChange()
-                        }}
-                        isDisabled={!isTester}
+                        value={props.variable.maxDifferenceLastDatapoint * 100}
+                        onChange={value =>
+                            props.onChange({ ...props.variable, maxDifferenceLastDatapoint: value / 100 })
+                        }
+                        isDisabled={!props.isTester}
                         min={1}
                         max={1000}
                         unit="%"
@@ -302,13 +289,10 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
                     helperText="Minimum number of datapoints after last change to run tests against."
                 >
                     <LogSlider
-                        value={variable.minWindow}
-                        onChange={value => {
-                            variable.minWindow = value
-                            onChange()
-                        }}
+                        value={props.variable.minWindow}
+                        onChange={minWindow => props.onChange({ ...props.variable, minWindow })}
                         isDiscrete={true}
-                        isDisabled={!isTester}
+                        isDisabled={!props.isTester}
                         min={1}
                         max={1000}
                         unit={"\u00A0"}
@@ -320,12 +304,11 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
                     helperText="Maximum difference between the mean of last N datapoints in the floating window and the mean of preceding values."
                 >
                     <LogSlider
-                        value={variable.maxDifferenceFloatingWindow * 100}
+                        value={props.variable.maxDifferenceFloatingWindow * 100}
                         onChange={value => {
-                            variable.maxDifferenceFloatingWindow = value / 100
-                            onChange()
+                            props.onChange({ ...props.variable, maxDifferenceFloatingWindow: value / 100 })
                         }}
-                        isDisabled={!isTester}
+                        isDisabled={!props.isTester}
                         min={1}
                         max={1000}
                         unit="%"
@@ -337,12 +320,11 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
                     helperText="Limit the number of datapoints considered when testing for a change."
                 >
                     <LogSlider
-                        value={variable.floatingWindow}
+                        value={props.variable.floatingWindow}
                         onChange={value => {
-                            variable.floatingWindow = value
-                            onChange()
+                            props.onChange({ ...props.variable, floatingWindow: value })
                         }}
-                        isDisabled={!isTester}
+                        isDisabled={!props.isTester}
                         isDiscrete={true}
                         min={1}
                         max={1000}
@@ -354,12 +336,6 @@ const VariableForm = ({ index, variables, isTester, onChange, groups, setGroups 
     )
 }
 
-function swap(array: any[], i1: number, i2: number) {
-    const temp = array[i1]
-    array[i1] = array[i2]
-    array[i2] = temp
-}
-
 type VariablesProps = {
     testName: string
     testId: number
@@ -368,23 +344,10 @@ type VariablesProps = {
     onModified(modified: boolean): void
 }
 
-function sortByOrder(v1: Variable, v2: Variable) {
-    if (v1.group === v2.group) {
-        return v1.order - v2.order
-    } else if (!v1.group) {
-        return -1
-    } else if (!v2.group) {
-        return 1
-    } else {
-        return v1.group.localeCompare(v2.group)
-    }
-}
-
 type ActionsProps = {
     isTester: boolean
     testName: string
     canRename: boolean
-    onAdd(): void
     onCopy(): void
     onRenameGroup(): void
     onRecalculate(): void
@@ -394,9 +357,11 @@ type ActionsProps = {
 const Actions = (props: ActionsProps) => {
     return (
         <div>
+            <NavLink className="pf-c-button pf-m-primary" to={"/series?test=" + props.testName}>
+                Go to series
+            </NavLink>
             {props.isTester && (
                 <>
-                    <Button onClick={props.onAdd}>Add variable</Button>
                     <Button variant="secondary" onClick={props.onCopy}>
                         Copy...
                     </Button>
@@ -411,9 +376,6 @@ const Actions = (props: ActionsProps) => {
                     </Button>
                 </>
             )}
-            <NavLink className="pf-c-button pf-m-secondary" to={"/series?test=" + props.testName}>
-                Go to series
-            </NavLink>
         </div>
     )
 }
@@ -432,7 +394,9 @@ function groupNames(vars: Variable[]) {
 export default function Variables({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) {
     const [variables, setVariables] = useState<Variable[]>([])
     const [groups, setGroups] = useState<string[]>([])
+    const [selectedVariable, setSelectedVariable] = useState<Variable>()
     const [recalcConfirm, setRecalcConfirm] = useState<(_: any) => void>()
+    const [ignoreNoSubscriptions, setIgnoreNoSubscriptions] = useState(false)
     const dispatch = useDispatch()
     // dummy variable to cause reloading of variables
     const [reload, setReload] = useState(0)
@@ -442,7 +406,14 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
         }
         api.fetchVariables(testId).then(
             response => {
-                setVariables(response.sort(sortByOrder))
+                response.forEach((v: Variable) => {
+                    // convert nulls to undefined
+                    if (!v.group) v.group = undefined
+                })
+                setVariables(response)
+                if (response.length > 0) {
+                    setSelectedVariable(response[0])
+                }
                 setGroups(groupNames(response))
             },
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
@@ -451,8 +422,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
     const isTester = useTester(testOwner)
     funcsRef.current = {
         save: () => {
-            variables.forEach((v, i) => {
-                v.order = i
+            variables.forEach(v => {
                 if (v.calculation === "") {
                     v.calculation = undefined
                 }
@@ -482,8 +452,8 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
     const [recalculateOpen, setRecalculateOpen] = useState(false)
     const [copyOpen, setCopyOpen] = useState(false)
     const addVariable = () => {
-        variables?.push({
-            id: -1,
+        const newVar = {
+            id: Math.min(-1, ...variables.map(v => v.id - 1)),
             testid: testId,
             name: "",
             order: variables.length,
@@ -492,8 +462,9 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             minWindow: 5,
             maxDifferenceFloatingWindow: 0.1,
             floatingWindow: 5,
-        })
-        setVariables([...variables])
+        }
+        setVariables([...variables, newVar])
+        setSelectedVariable(newVar)
         onModified(true)
     }
 
@@ -512,6 +483,22 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             }
         }
     }, [])
+
+    const groupedVariables = useMemo(() => {
+        const grouped = variables
+            .reduce((a: Variable[][], v: Variable) => {
+                const group = a.find(g => g[0].group === v.group)
+                if (group === undefined) {
+                    a.push([v])
+                } else {
+                    group.push(v)
+                }
+                return a
+            }, [])
+            .sort((g1, g2) => (g1[0].group || "").localeCompare(g2[0].group || ""))
+        grouped.forEach(g => g.sort((v1, v2) => v1.name.localeCompare(v2.name)))
+        return grouped
+    }, [variables])
 
     if (!variables) {
         return (
@@ -536,15 +523,18 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                     isTester={isTester}
                     testName={testName}
                     canRename={!groups || groups.length === 0}
-                    onAdd={addVariable}
                     onCopy={() => setCopyOpen(true)}
                     onRenameGroup={() => setRenameGroupOpen(true)}
                     onRecalculate={() => setRecalculateOpen(true)}
                     onShowLog={() => setLogOpen(true)}
                 />
             </div>
-            {isTester && !hasSubscription && variables.length > 0 && (
-                <Alert variant="warning" title="This test has no subscriptions">
+            {isTester && !hasSubscription && !ignoreNoSubscriptions && variables.length > 0 && (
+                <Alert
+                    variant="warning"
+                    title="This test has no subscriptions"
+                    actionClose={<AlertActionCloseButton onClose={() => setIgnoreNoSubscriptions(true)} />}
+                >
                     This test is configured to run regression analysis but nobody is listening to change notifications.
                     Please configure interested parties in the Subscriptions tab.
                 </Alert>
@@ -597,14 +587,10 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                             const copied = group ? response.filter((v: Variable) => v.group === group) : response
                             setVariables([
                                 ...variables,
-                                ...copied.sort(sortByOrder).map((v: Variable) => ({
+                                ...copied.map((v: Variable) => ({
                                     ...v,
                                     id: -1,
                                     testid: testId,
-                                    maxDifferenceLastDatapointStr: String(v.maxDifferenceLastDatapoint),
-                                    minWindowStr: String(v.minWindow),
-                                    maxDifferenceFloatingWindowStr: String(v.maxDifferenceFloatingWindow),
-                                    floatingWindowStr: String(v.floatingWindow),
                                 })),
                             ])
                         },
@@ -618,91 +604,68 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                 testId={testId}
                 source="variables"
             />
-            <DataList aria-label="List of variables">
-                {variables?.map((_, i) => (
-                    <DataListItem key={i} aria-labelledby="">
-                        <DataListItemRow>
-                            <DataListItemCells
-                                dataListCells={[
-                                    <DataListCell key="content">
-                                        <VariableForm
-                                            index={i}
-                                            variables={variables}
-                                            isTester={isTester}
-                                            onChange={() => {
-                                                setVariables([...variables])
-                                                onModified(true)
-                                            }}
-                                            groups={groups}
-                                            setGroups={setGroups}
-                                        />
-                                    </DataListCell>,
-                                ]}
-                            />
-                            {isTester && (
-                                <DataListAction
-                                    style={{
-                                        flexDirection: "column",
-                                        justifyContent: "center",
+            <Split hasGutter>
+                <SplitItem>
+                    {groupedVariables && groupedVariables.length > 0 && (
+                        <SimpleList
+                            onSelect={(_, props) => setSelectedVariable(variables.find(v => v.id === props.itemId))}
+                            isControlled={false}
+                        >
+                            {groupedVariables.map((g, j) => (
+                                <SimpleListGroup key={j} title={g[0].group || "(no group)"}>
+                                    {g.map((v, i) => (
+                                        <SimpleListItem key={i} itemId={v.id} isActive={selectedVariable?.id === v.id}>
+                                            {v.name || (
+                                                <span style={{ color: "#888" }}>(please set variable name)</span>
+                                            )}
+                                        </SimpleListItem>
+                                    ))}
+                                </SimpleListGroup>
+                            ))}
+                            <Button variant="link" onClick={addVariable}>
+                                <PlusCircleIcon />
+                                {"\u00A0"}Add new variable...
+                            </Button>
+                        </SimpleList>
+                    )}
+                </SplitItem>
+                <SplitItem isFilled>
+                    {!selectedVariable && (
+                        <Bullseye>
+                            <EmptyState>No variables</EmptyState>
+                        </Bullseye>
+                    )}
+                    {selectedVariable && (
+                        <>
+                            <div style={{ textAlign: "right" }}>
+                                <Button
+                                    variant="danger"
+                                    onClick={() => {
+                                        const newVars = variables.filter(v => v !== selectedVariable)
+                                        setVariables(newVars)
+                                        setSelectedVariable(newVars.length > 0 ? newVars[0] : undefined)
                                     }}
-                                    id="delete"
-                                    aria-labelledby="delete"
-                                    aria-label="Settings actions"
-                                    isPlainButtonAction
                                 >
-                                    <Button
-                                        style={{ width: "51%" }}
-                                        isDisabled={i === 0}
-                                        variant="control"
-                                        onClick={() => {
-                                            swap(variables, i - 1, i)
-                                            setVariables([...variables])
-                                            onModified(true)
-                                        }}
-                                    >
-                                        Move up
-                                    </Button>
-                                    <Button
-                                        style={{ width: "51%" }}
-                                        variant="primary"
-                                        onClick={() => {
-                                            variables.splice(i, 1)
-                                            setVariables([...variables])
-                                            onModified(true)
-                                        }}
-                                    >
-                                        Delete
-                                    </Button>
-                                    <Button
-                                        style={{ width: "51%" }}
-                                        isDisabled={i === variables.length - 1}
-                                        variant="control"
-                                        onClick={() => {
-                                            swap(variables, i + 1, i)
-                                            setVariables([...variables])
-                                            onModified(true)
-                                        }}
-                                    >
-                                        Move down
-                                    </Button>
-                                </DataListAction>
-                            )}
-                        </DataListItemRow>
-                    </DataListItem>
-                ))}
-            </DataList>
-            <div style={{ textAlign: "right", marginTop: "16px" }}>
-                <Actions
-                    isTester={isTester}
-                    testName={testName}
-                    canRename={!groups || groups.length === 0}
-                    onAdd={addVariable}
-                    onCopy={() => setCopyOpen(true)}
-                    onRenameGroup={() => setRenameGroupOpen(true)}
-                    onRecalculate={() => setRecalculateOpen(true)}
-                    onShowLog={() => setLogOpen(true)}
-                />
-            </div>
+                                    Delete
+                                </Button>
+                            </div>
+                            <VariableForm
+                                variable={selectedVariable}
+                                isTester={isTester}
+                                onChange={value => {
+                                    setSelectedVariable(value)
+                                    const newVars = variables.filter(v => v.id !== value.id)
+                                    newVars.push(value)
+                                    setVariables(newVars)
+                                    onModified(true)
+                                }}
+                                groups={groups}
+                                setGroups={setGroups}
+                            />
+                        </>
+                    )}
+                </SplitItem>
+            </Split>
         </>
     )
 }
