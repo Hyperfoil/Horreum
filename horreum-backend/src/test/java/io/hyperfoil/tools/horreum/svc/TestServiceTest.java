@@ -38,25 +38,18 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testCreateDelete(TestInfo info) {
 
-      // create test
-      Test test = createExampleTest(getTestName(info));
-      Test response = createTest(test);
+      Test test = createTest(createExampleTest(getTestName(info)));
       try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
-         assertNotNull(Test.findById(response.id));
+         assertNotNull(Test.findById(test.id));
       }
 
-      // add run to the test
-      long timestamp = System.currentTimeMillis();
-      int runId = uploadRun(timestamp, timestamp, "{ \"foo\" : \"bar\" }", test.name);
 
-      // delete run
-      RestAssured.given().auth().oauth2(TESTER_TOKEN)
-            .delete("/api/test/" + response.id)
-            .then()
-            .statusCode(204);
+      int runId = uploadRun("{ \"foo\" : \"bar\" }", test.name);
+
+      deleteTest(test);
       em.clear();
       try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
-         assertNull(Test.findById(response.id));
+         assertNull(Test.findById(test.id));
          // There's no constraint between runs and tests; therefore the run is not deleted
          Run run = Run.findById(runId);
          assertNotNull(run);

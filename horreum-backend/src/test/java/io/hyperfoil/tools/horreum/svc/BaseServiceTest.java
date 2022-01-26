@@ -8,6 +8,12 @@ import javax.ws.rs.core.HttpHeaders;
 
 import org.junit.jupiter.api.TestInfo;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import io.hyperfoil.tools.horreum.api.SchemaService;
+import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
@@ -26,7 +32,7 @@ public class BaseServiceTest {
       test.name = testName;
       test.description = "Bar";
       test.tags = "";
-      test.owner = "foo-team";
+      test.owner = TESTER_ROLES[0];
       View defaultView = new View();
       defaultView.name = "Default";
       defaultView.components = new ArrayList<>();
@@ -43,6 +49,11 @@ public class BaseServiceTest {
             .jws()
             .keyId("1")
             .sign();
+   }
+
+   protected int uploadRun(Object runJson, String test) {
+      long timestamp = System.currentTimeMillis();
+      return uploadRun(timestamp, timestamp, runJson, test);
    }
 
    protected int uploadRun(long start, long stop, Object runJson, String test) {
@@ -65,6 +76,13 @@ public class BaseServiceTest {
             .extract().body().as(Test.class);
    }
 
+   protected void deleteTest(Test test) {
+      RestAssured.given().auth().oauth2(TESTER_TOKEN)
+            .delete("/api/test/" + test.id)
+            .then()
+            .statusCode(204);
+   }
+
    protected RequestSpecification jsonRequest() {
       return RestAssured.given().auth().oauth2(TESTER_TOKEN)
             .header(HttpHeaders.CONTENT_TYPE, "application/json");
@@ -72,5 +90,31 @@ public class BaseServiceTest {
 
    protected String getTestName(TestInfo info) {
       return info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
+   }
+
+   protected Schema createExampleSchema(TestInfo info) {
+      Schema schema = new Schema();
+      schema.owner = TESTER_ROLES[0];
+      schema.name = info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
+      schema.uri = "urn:" + info.getTestClass().map(Class::getName).orElse("<unknown>") + ":" + info.getDisplayName() + ":1.0";
+      jsonRequest().body(schema).post("/api/schema").then().statusCode(200);
+
+      SchemaService.ExtractorUpdate extractor = new SchemaService.ExtractorUpdate();
+      extractor.id = -1;
+      extractor.accessor = "value";
+      extractor.jsonpath = ".value";
+      extractor.schema = schema.uri;
+      jsonRequest().body(extractor).post("/api/schema/extractor").then().statusCode(200);
+      return schema;
+   }
+
+   protected void addVariableToTest(Test test, String name, String accessors) {
+      ArrayNode variables = JsonNodeFactory.instance.arrayNode();
+      ObjectNode variable = JsonNodeFactory.instance.objectNode();
+      variable.set("testid", JsonNodeFactory.instance.numberNode(test.id));
+      variable.set("name", JsonNodeFactory.instance.textNode(name));
+      variable.set("accessors", JsonNodeFactory.instance.textNode(accessors));
+      variables.add(variable);
+      jsonRequest().body(variables.toString()).post("/api/alerting/variables?test=" + test.id).then().statusCode(204);
    }
 }

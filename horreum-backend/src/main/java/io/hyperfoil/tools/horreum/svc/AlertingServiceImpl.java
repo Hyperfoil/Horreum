@@ -43,7 +43,6 @@ import io.hyperfoil.tools.horreum.regression.RegressionModel;
 import io.hyperfoil.tools.horreum.regression.StatisticalVarianceRegressionModel;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.context.ThreadContext;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
@@ -66,14 +65,12 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
-import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
-import io.smallrye.context.SmallRyeContextManagerProvider;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
@@ -464,7 +461,8 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void logCalculationMessage(int testId, int runId, int level, String format, Object... args) {
-      new CalculationLog(testId, runId, level, "variables", String.format(format, args)).persist();
+      new CalculationLog(em.getReference(Test.class, testId), em.getReference(Run.class, runId),
+            level, "variables", String.format(format, args)).persist();
    }
 
    private void appendValue(StringBuilder code, Object value) {

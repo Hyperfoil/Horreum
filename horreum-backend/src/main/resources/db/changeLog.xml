@@ -2058,5 +2058,11 @@
             DELETE FROM watch WHERE testid NOT IN (SELECT id FROM test);
         </sql>
     </changeSet>
+
+    <changeSet id="46" author="rvansa">
+        <sql>
+            DELETE FROM calculationlog WHERE testid NOT IN (SELECT id FROM test) OR runid NOT IN (SELECT id FROM run);
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

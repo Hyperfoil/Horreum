@@ -216,7 +216,7 @@ public class RunServiceImpl implements RunService {
       if (run == null) {
          log.errorf("Cannot find run %d! Cannot log message : %s", runId, message);
       } else {
-         new CalculationLog(run.testid, run.id, severity, "tags", message).persistAndFlush();
+         new CalculationLog(em.getReference(Test.class, run.testid), em.getReference(Run.class, run.id), severity, "tags", message).persistAndFlush();
       }
    }
 

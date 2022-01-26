@@ -11,9 +11,11 @@ import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.LogService;
 import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
+import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
+import io.quarkus.vertx.ConsumeEvent;
 
 public class LogServiceImpl implements LogService {
    private static final Logger log = Logger.getLogger(LogServiceImpl.class);
@@ -58,4 +60,10 @@ public class LogServiceImpl implements LogService {
       log.debugf("Deleted %d logs for test %s", deleted, testId);
    }
 
+   @ConsumeEvent(value = Test.EVENT_DELETED, blocking = true)
+   @Transactional
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   public void onTestDelete(Test test) {
+      CalculationLog.delete("testid", test.id);
+   }
 }
