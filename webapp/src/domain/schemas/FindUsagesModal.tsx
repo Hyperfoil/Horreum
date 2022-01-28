@@ -205,13 +205,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                                 .filter(d => d.accessor !== accessor)
                                 .map(d => (
                                     <ListItem key={d.id}>
-                                        <Button
-                                            variant="link"
-                                            onClick={() => {
-                                                console.log(d.accessor)
-                                                setAccessor(d.accessor)
-                                            }}
-                                        >
+                                        <Button variant="link" onClick={() => setAccessor(d.accessor)}>
                                             {d.accessor}
                                         </Button>
                                     </ListItem>

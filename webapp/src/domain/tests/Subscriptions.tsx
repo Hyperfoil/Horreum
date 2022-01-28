@@ -114,7 +114,9 @@ export default function Subscriptions(props: SubscriptionsProps) {
             <DualListSelector
                 availableOptions={availableUsers}
                 availableOptionsTitle="Users to opt-out"
-                availableOptionsActions={isTester ? [<UserSearch onUsers={users => updateUsers(users)} />] : []}
+                availableOptionsActions={
+                    isTester ? [<UserSearch key="usersearch" onUsers={users => updateUsers(users)} />] : []
+                }
                 chosenOptions={optoutUsers}
                 chosenOptionsTitle="Opted out users"
                 onListChange={(newAvailable, newChosen) => {

@@ -377,7 +377,6 @@ export default function Extractors(props: ExtractorsProps) {
                     rename.accessor = name
                     rename.changed = true
                     props.setExtractors([...props.extractors])
-                    console.log(props.extractors)
                 }}
                 onClose={() => setRename(undefined)}
             />

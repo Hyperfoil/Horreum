@@ -36,7 +36,10 @@ const store = createStore(appReducers, enhancer)
 
 export function enableDevMode(): StoreEnhancer {
     if (!process.env.NODE_ENV || process.env.NODE_ENV === "development") {
-        return (window as any).__REDUX_DEVTOOLS_EXTENSION__ && (window as any).__REDUX_DEVTOOLS_EXTENSION__()
+        return (
+            ((window as any).__REDUX_DEVTOOLS_EXTENSION__ && (window as any).__REDUX_DEVTOOLS_EXTENSION__()) ||
+            (creator => creator)
+        )
     } else {
         return creator => creator
     }

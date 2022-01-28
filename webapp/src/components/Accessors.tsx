@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useDispatch } from "react-redux"
 
 import { NavLink } from "react-router-dom"
@@ -243,12 +243,12 @@ export default function Accessors({
                             </span>{" "}
                             is valid for schemas:{"\u00A0"}
                             {distinctSchemaOptions.map((o, i) => (
-                                <>
+                                <React.Fragment key={i}>
                                     <Tooltip maxWidth="80vw" content={<code>{o.jsonpath}</code>}>
                                         <NavLink to={`/schema/${o.schemaId}`}>{o.schema}</NavLink>
                                     </Tooltip>
                                     {i != distinctSchemaOptions.length - 1 && ",\u00A0"}
-                                </>
+                                </React.Fragment>
                             ))}
                             {!isReadOnly && s !== "" && (
                                 <Button

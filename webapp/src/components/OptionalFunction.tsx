@@ -1,4 +1,5 @@
 import { Button } from "@patternfly/react-core"
+import { AddCircleOIcon } from "@patternfly/react-icons"
 import Editor from "./Editor/monaco/Editor"
 
 type OptionalFunctionProps = {
@@ -17,12 +18,14 @@ export default function OptionalFunction(props: OptionalFunctionProps) {
         } else {
             return (
                 <Button
-                    style={{ padding: 0, marginTop: "16px" }}
+                    style={{ padding: 0, marginTop: "4px" }}
                     variant="link"
                     onClick={() => {
                         props.onChange(props.defaultFunc)
                     }}
                 >
+                    <AddCircleOIcon />
+                    {"\u00A0"}
                     {props.addText}
                 </Button>
             )
