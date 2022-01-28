@@ -6,17 +6,26 @@ import { useTester } from "../../auth"
 import { alertAction } from "../../alerts"
 import * as api from "../alerting/api"
 import { NavLink } from "react-router-dom"
-import { Variable } from "../alerting/types"
+import {
+    EnumProperties,
+    LogSliderProperties,
+    RegressionDetection,
+    RegressionModelConfig,
+    Variable,
+} from "../alerting/types"
 
 import {
+    ActionList,
     Alert,
     AlertActionCloseButton,
     Bullseye,
     Button,
     EmptyState,
-    ExpandableSection,
     Form,
     FormGroup,
+    Hint,
+    HintBody,
+    HintTitle,
     Modal,
     Select,
     SelectOption,
@@ -26,11 +35,15 @@ import {
     Spinner,
     Split,
     SplitItem,
+    Tab,
+    Tabs,
+    TabTitleIcon,
+    TabTitleText,
     TextInput,
     Title,
 } from "@patternfly/react-core"
 
-import { PlusCircleIcon } from "@patternfly/react-icons"
+import { AddCircleOIcon, PlusCircleIcon } from "@patternfly/react-icons"
 
 import Accessors from "../../components/Accessors"
 import LogSlider from "../../components/LogSlider"
@@ -178,12 +191,41 @@ const RenameGroupModal = (props: RenameGroupModalProps) => {
     )
 }
 
+type EnumSelectProps = {
+    options: any
+    selected: string | undefined
+    onSelect(option: string): void
+}
+
+function EnumSelect(props: EnumSelectProps) {
+    const [isOpen, setOpen] = useState(false)
+    return (
+        <Select
+            isOpen={isOpen}
+            onToggle={setOpen}
+            placeholderText="Please select..."
+            selections={props.selected}
+            onSelect={(_, value) => {
+                props.onSelect(value as string)
+                setOpen(false)
+            }}
+        >
+            {Object.entries(props.options).map(([name, title]) => (
+                <SelectOption key={name} value={name}>
+                    {title as string}
+                </SelectOption>
+            ))}
+        </Select>
+    )
+}
+
 type VariableFormProps = {
     variable: Variable
     isTester: boolean
     groups: string[]
     setGroups(gs: string[]): void
     onChange(v: Variable): void
+    models: RegressionModelConfig[]
 }
 
 function checkVariable(v: Variable) {
@@ -197,8 +239,28 @@ function checkVariable(v: Variable) {
 }
 
 const VariableForm = (props: VariableFormProps) => {
-    const [isExpanded, setExpanded] = useState(false)
     const [groupOpen, setGroupOpen] = useState(false)
+    const [regressionDetection, setRegressionDetection] = useState<RegressionDetection>()
+    const [adding, setAdding] = useState(false)
+    const [newModel, setNewModel] = useState<string>()
+    useEffect(() => {
+        if (!regressionDetection && !adding) {
+            const rds = props.variable.regressionDetection
+            setRegressionDetection(rds.length > 0 ? rds[0] : undefined)
+        }
+    }, [props.variable, props.variable.regressionDetection, regressionDetection])
+    const usedModel = props.models.find(m => m.name === regressionDetection?.model)
+    const update = (rd: RegressionDetection) => {
+        const newArray = [...props.variable.regressionDetection]
+        const index = newArray.findIndex(o => o.id === rd.id)
+        if (index < 0) {
+            newArray.push(rd)
+        } else {
+            newArray[index] = rd
+        }
+        props.onChange({ ...props.variable, regressionDetection: newArray })
+        setRegressionDetection(rd)
+    }
     return (
         <Form id={`variable-${props.variable.id}`} isHorizontal={true}>
             <FormGroup label="Name" fieldId="name">
@@ -262,76 +324,126 @@ const VariableForm = (props: VariableFormProps) => {
                     readOnly={!props.isTester}
                 />
             </FormGroup>
-            <ExpandableSection
-                toggleText={isExpanded ? "Hide settings" : "Show advanced settings"}
-                onToggle={setExpanded}
-                isExpanded={isExpanded}
+            <Title headingLevel="h3">Regression analysis</Title>
+            <Tabs
+                activeKey={
+                    regressionDetection ? props.variable.regressionDetection.indexOf(regressionDetection) : "__add"
+                }
+                onSelect={(_, index) => {
+                    if (index === "__add") {
+                        setRegressionDetection(undefined)
+                        setAdding(true)
+                    } else {
+                        setRegressionDetection(props.variable.regressionDetection[index as number])
+                        setAdding(false)
+                    }
+                }}
             >
-                <FormGroup
-                    label="Max difference for last datapoint"
-                    fieldId="maxDifferenceLastDatapoint"
-                    helperText="Maximum difference between the last value and the mean of preceding values."
-                >
-                    <LogSlider
-                        value={props.variable.maxDifferenceLastDatapoint * 100}
-                        onChange={value =>
-                            props.onChange({ ...props.variable, maxDifferenceLastDatapoint: value / 100 })
+                {props.variable.regressionDetection.map((rd, i) => (
+                    <Tab
+                        key={i}
+                        eventKey={i}
+                        title={(props.models.find(m => m.name === rd.model)?.title || rd.model) + ` (${i + 1})`}
+                    />
+                ))}
+                {props.isTester && (
+                    <Tab
+                        eventKey="__add"
+                        title={
+                            <>
+                                <TabTitleIcon>
+                                    <AddCircleOIcon />
+                                </TabTitleIcon>
+                                <TabTitleText>Add...</TabTitleText>
+                            </>
                         }
-                        isDisabled={!props.isTester}
-                        min={1}
-                        max={1000}
-                        unit="%"
-                    />
-                </FormGroup>
-                <FormGroup
-                    label="Min window"
-                    fieldId="minWindow"
-                    helperText="Minimum number of datapoints after last change to run tests against."
-                >
-                    <LogSlider
-                        value={props.variable.minWindow}
-                        onChange={minWindow => props.onChange({ ...props.variable, minWindow })}
-                        isDiscrete={true}
-                        isDisabled={!props.isTester}
-                        min={1}
-                        max={1000}
-                        unit={"\u00A0"}
-                    />
-                </FormGroup>
-                <FormGroup
-                    label="Max difference for floating window"
-                    fieldId="maxDifferenceFloatingWindow"
-                    helperText="Maximum difference between the mean of last N datapoints in the floating window and the mean of preceding values."
-                >
-                    <LogSlider
-                        value={props.variable.maxDifferenceFloatingWindow * 100}
-                        onChange={value => {
-                            props.onChange({ ...props.variable, maxDifferenceFloatingWindow: value / 100 })
-                        }}
-                        isDisabled={!props.isTester}
-                        min={1}
-                        max={1000}
-                        unit="%"
-                    />
-                </FormGroup>
-                <FormGroup
-                    label="Floating window size"
-                    fieldId="floatingWindow"
-                    helperText="Limit the number of datapoints considered when testing for a change."
-                >
-                    <LogSlider
-                        value={props.variable.floatingWindow}
-                        onChange={value => {
-                            props.onChange({ ...props.variable, floatingWindow: value })
-                        }}
-                        isDisabled={!props.isTester}
-                        isDiscrete={true}
-                        min={1}
-                        max={1000}
-                        unit={"\u00A0"}
-                    />
-                </FormGroup>
-            </ExpandableSection>
+                    >
+                        <ActionList>
+                            <EnumSelect
+                                options={props.models.reduce((acc, m) => {
+                                    acc[m.name] = m.title
+                                    return acc
+                                }, {} as any)}
+                                selected={newModel}
+                                onSelect={setNewModel}
+                            />
+                            <Button
+                                isDisabled={!newModel}
+                                onClick={() => {
+                                    update({
+                                        id: Math.min(-1, ...props.variable.regressionDetection.map(rd => rd.id - 1)),
+                                        model: newModel || "",
+                                        config: JSON.parse(
+                                            JSON.stringify(props.models.find(m => m.name === newModel)?.defaults)
+                                        ),
+                                    })
+                                    setNewModel(undefined)
+                                }}
+                            >
+                                Add new regression detection
+                            </Button>
+                        </ActionList>
+                    </Tab>
+                )}
+            </Tabs>
+
+            {usedModel && regressionDetection && (
+                <>
+                    <Hint>
+                        <HintTitle>{usedModel.title}</HintTitle>
+                        <HintBody>{usedModel.description}</HintBody>
+                    </Hint>
+                    {props.isTester && (
+                        <div style={{ textAlign: "right" }}>
+                            <Button
+                                variant="danger"
+                                onClick={() => {
+                                    const newArray = props.variable.regressionDetection.filter(
+                                        rd => rd !== regressionDetection
+                                    )
+                                    props.onChange({ ...props.variable, regressionDetection: newArray })
+                                    setRegressionDetection(newArray.length > 0 ? newArray[0] : undefined)
+                                }}
+                            >
+                                Delete regression detection
+                            </Button>
+                        </div>
+                    )}
+                    {usedModel.ui.map(comp => (
+                        <FormGroup fieldId={comp.name} key={comp.name} label={comp.title} helperText={comp.description}>
+                            {comp.type == "LOG_SLIDER" && (
+                                <LogSlider
+                                    value={
+                                        regressionDetection.config[comp.name] *
+                                        ((comp.properties as LogSliderProperties).scale || 1)
+                                    }
+                                    onChange={value => {
+                                        const scale = (comp.properties as LogSliderProperties).scale
+                                        const copy = { ...regressionDetection }
+                                        copy.config[comp.name] = scale ? value / scale : value
+                                        update(copy)
+                                    }}
+                                    isDisabled={!props.isTester}
+                                    min={(comp.properties as LogSliderProperties).min}
+                                    max={(comp.properties as LogSliderProperties).max}
+                                    unit={(comp.properties as LogSliderProperties).unit}
+                                />
+                            )}
+                            {comp.type == "ENUM" && (
+                                <EnumSelect
+                                    options={(comp.properties as EnumProperties).options}
+                                    selected={regressionDetection.config[comp.name]}
+                                    onSelect={value => {
+                                        const copy = { ...regressionDetection }
+                                        copy.config[comp.name] = value
+                                        update(copy)
+                                    }}
+                                />
+                            )}
+                        </FormGroup>
+                    ))}
+                </>
+            )}
         </Form>
     )
 }
@@ -397,6 +509,8 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
     const [selectedVariable, setSelectedVariable] = useState<Variable>()
     const [recalcConfirm, setRecalcConfirm] = useState<(_: any) => void>()
     const [ignoreNoSubscriptions, setIgnoreNoSubscriptions] = useState(false)
+    const [defaultRegressionConfigs, setDefaultRegressionConfigs] = useState<RegressionDetection[]>([])
+    const [regressionModels, setRegressionModels] = useState<RegressionModelConfig[]>([])
     const dispatch = useDispatch()
     // dummy variable to cause reloading of variables
     const [reload, setReload] = useState(0)
@@ -419,6 +533,14 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
         )
     }, [testId, reload, dispatch])
+    useEffect(() => {
+        api.models().then(setRegressionModels, error =>
+            dispatch(alertAction("FETCH_MODELS", "Failed to fetch available regression models.", error))
+        )
+        api.defaultRegressionConfigs().then(setDefaultRegressionConfigs, error =>
+            dispatch(alertAction("FETCH_MODELS", "Failed to fetch available regression models.", error))
+        )
+    }, [])
     const isTester = useTester(testOwner)
     funcsRef.current = {
         save: () => {
@@ -458,10 +580,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             name: "",
             order: variables.length,
             accessors: "",
-            maxDifferenceLastDatapoint: 0.2,
-            minWindow: 5,
-            maxDifferenceFloatingWindow: 0.1,
-            floatingWindow: 5,
+            regressionDetection: JSON.parse(JSON.stringify(defaultRegressionConfigs)) as RegressionDetection[],
         }
         setVariables([...variables, newVar])
         setSelectedVariable(newVar)
@@ -605,7 +724,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                 source="variables"
             />
             <Split hasGutter>
-                <SplitItem>
+                <SplitItem style={{ minWidth: "20vw", maxWidth: "20vw", overflow: "clip" }}>
                     {groupedVariables && groupedVariables.length > 0 && (
                         <SimpleList
                             onSelect={(_, props) => setSelectedVariable(variables.find(v => v.id === props.itemId))}
@@ -637,18 +756,20 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                     )}
                     {selectedVariable && (
                         <>
-                            <div style={{ textAlign: "right" }}>
-                                <Button
-                                    variant="danger"
-                                    onClick={() => {
-                                        const newVars = variables.filter(v => v !== selectedVariable)
-                                        setVariables(newVars)
-                                        setSelectedVariable(newVars.length > 0 ? newVars[0] : undefined)
-                                    }}
-                                >
-                                    Delete
-                                </Button>
-                            </div>
+                            {isTester && (
+                                <div style={{ textAlign: "right" }}>
+                                    <Button
+                                        variant="danger"
+                                        onClick={() => {
+                                            const newVars = variables.filter(v => v !== selectedVariable)
+                                            setVariables(newVars)
+                                            setSelectedVariable(newVars.length > 0 ? newVars[0] : undefined)
+                                        }}
+                                    >
+                                        Delete variable
+                                    </Button>
+                                </div>
+                            )}
                             <VariableForm
                                 variable={selectedVariable}
                                 isTester={isTester}
@@ -661,6 +782,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                                 }}
                                 groups={groups}
                                 setGroups={setGroups}
+                                models={regressionModels}
                             />
                         </>
                     )}

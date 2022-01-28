@@ -3,6 +3,8 @@ package io.hyperfoil.tools.horreum.svc;
 import java.io.ByteArrayOutputStream;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -15,6 +17,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -36,11 +40,13 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
+import io.hyperfoil.tools.horreum.api.RegressionModelConfig;
 import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
+import io.hyperfoil.tools.horreum.entity.alerting.RegressionDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.LastMissingRunNotification;
 import io.hyperfoil.tools.horreum.regression.RegressionModel;
-import io.hyperfoil.tools.horreum.regression.StatisticalVarianceRegressionModel;
+import io.hyperfoil.tools.horreum.regression.RelativeDifferenceRegressionModel;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -53,6 +59,7 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.vladmihalcea.hibernate.type.array.IntArrayType;
 
@@ -66,6 +73,7 @@ import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.scheduler.Scheduled;
@@ -107,6 +115,8 @@ public class AlertingServiceImpl implements AlertingService {
    // the :::: is used instead of :: as Hibernate converts four-dot into colon
    private static final String UPLOAD_RUN = "CREATE TEMPORARY TABLE current_run AS SELECT * FROM (VALUES (?::::jsonb)) as t(data);";
    private static final Sort SORT_BY_TIMESTAMP_DESCENDING = Sort.by("timestamp", Sort.Direction.Descending);
+
+   private static Map<String, RegressionModel> MODELS = Map.of(RelativeDifferenceRegressionModel.NAME, new RelativeDifferenceRegressionModel());
 
    @Inject
    TestServiceImpl testService;
@@ -360,10 +370,7 @@ public class AlertingServiceImpl implements AlertingService {
       Set<String> missingValueVariables = new HashSet<>();
       for (VarInfo var : vars.values()) {
          DataPoint dataPoint = new DataPoint();
-         // TODO: faking the variable
-         Variable variable = new Variable();
-         variable.id = var.id;
-         dataPoint.variable = variable;
+         dataPoint.variable = em.getReference(Variable.class, var.id);
          dataPoint.runId = run.id;
          dataPoint.timestamp = run.start;
 
@@ -553,13 +560,29 @@ public class AlertingServiceImpl implements AlertingService {
          query = DataPoint.find("variable = ?1 AND timestamp >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.timestamp);
       }
       List<DataPoint> dataPoints = query.list();
+      // Last datapoint is already in the list
+      if (dataPoints.isEmpty()) {
+         log.error("The published datapoint should be already in the list");
+         return;
+      }
+      DataPoint firstDatapoint = dataPoints.get(0);
+      if (!firstDatapoint.id.equals(dataPoint.id)) {
+         log.debugf("Ignoring datapoint %d from %s as there's a newer datapoint %d from %s",
+               dataPoint.id, dataPoint.timestamp, firstDatapoint.id, firstDatapoint.timestamp);
+         return;
+      }
 
-      RegressionModel regressionModel = new StatisticalVarianceRegressionModel();
-
-      regressionModel.analyze(dataPoint, dataPoints, change -> {
-         em.persist(change);
-         Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, event.notify));
-      });
+      for (RegressionDetection detection : RegressionDetection.<RegressionDetection>find("variable", variable).list()) {
+         RegressionModel model = MODELS.get(detection.model);
+         if (model == null) {
+            log.errorf("Cannot find regression model %s", detection.model);
+            continue;
+         }
+         model.analyze(dataPoints, detection.config, change -> {
+            em.persist(change);
+            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, event.notify));
+         });
+      }
    }
 
    @Override
@@ -583,33 +606,37 @@ public class AlertingServiceImpl implements AlertingService {
       }
       try {
          List<Variable> currentVariables = Variable.list("testid", testId);
-         for (Variable current : currentVariables) {
-            Variable matching = variables.stream().filter(v -> current.id.equals(v.id)).findFirst().orElse(null);
-            if (matching == null) {
-               DataPoint.delete("variable_id", current.id);
-               Change.delete("variable_id", current.id);
-               current.delete();
-            } else {
-               current.name = matching.name;
-               current.group = matching.group;
-               current.accessors = matching.accessors;
-               current.calculation = matching.calculation;
-               current.maxDifferenceLastDatapoint = matching.maxDifferenceLastDatapoint;
-               current.minWindow = matching.minWindow;
-               current.maxDifferenceFloatingWindow = matching.maxDifferenceFloatingWindow;
-               current.floatingWindow = matching.floatingWindow;
-               current.persist();
+         updateCollection(currentVariables, variables, v -> v.id, item -> {
+            if (item.id != null && item.id <= 0) {
+               item.id = null;
             }
-         }
-         for (Variable variable : variables) {
-            if (currentVariables.stream().noneMatch(v -> v.id.equals(variable.id))) {
-               if (variable.id == null || variable.id <= 0) {
-                  variable.id = null;
+            ensureDefaults(item.regressionDetection);
+            item.regressionDetection.forEach(rd -> rd.variable = item);
+            item.testId = testId;
+            item.persist(); // insert
+         }, (current, matching) -> {
+            current.name = matching.name;
+            current.group = matching.group;
+            current.accessors = matching.accessors;
+            current.calculation = matching.calculation;
+            ensureDefaults(matching.regressionDetection);
+            updateCollection(current.regressionDetection, matching.regressionDetection, rd -> rd.id, item -> {
+               if (item.id != null && item.id <= 0) {
+                  item.id = null;
                }
-               variable.testId = testId;
-               variable.persist(); // insert
-            }
-         }
+               item.variable = current;
+               item.persist();
+               current.regressionDetection.add(item);
+            }, (crd, mrd) -> {
+               crd.model = mrd.model;
+               crd.config = mrd.config;
+            }, PanacheEntityBase::delete);
+            current.persist();
+         }, current -> {
+            DataPoint.delete("variable_id", current.id);
+            Change.delete("variable_id", current.id);
+            current.delete();
+         });
 
          if (grafanaBaseUrl.isPresent()) {
             try {
@@ -624,6 +651,42 @@ public class AlertingServiceImpl implements AlertingService {
          em.flush();
       } catch (PersistenceException e) {
          throw new WebApplicationException(e, Response.serverError().build());
+      }
+   }
+
+   private void ensureDefaults(Set<RegressionDetection> rds) {
+      rds.forEach(rd -> {
+         RegressionModel model = MODELS.get(rd.model);
+         if (model == null) {
+            throw ServiceException.badRequest("Unknown model " + rd.model);
+         }
+         if (!(rd.config instanceof ObjectNode)) {
+            throw ServiceException.badRequest("Invalid config for model " + rd.model + " - not an object: " + rd.config);
+         }
+         for (var entry : model.config().defaults.entrySet()) {
+            JsonNode property = rd.config.get(entry.getKey());
+            if (property == null || property.isNull()) {
+               ((ObjectNode) rd.config).set(entry.getKey(), entry.getValue());
+            }
+         }
+      });
+   }
+
+   private <T> void updateCollection(Collection<T> currentList, Collection<T> newList, Function<T, Object> idSelector, Consumer<T> create, BiConsumer<T, T> update, Consumer<T> delete) {
+      for (Iterator<T> iterator = currentList.iterator(); iterator.hasNext(); ) {
+         T current = iterator.next();
+         T matching = newList.stream().filter(v -> idSelector.apply(current).equals(idSelector.apply(v))).findFirst().orElse(null);
+         if (matching == null) {
+            delete.accept(current);
+            iterator.remove();
+         } else {
+            update.accept(current, matching);
+         }
+      }
+      for (T item : newList) {
+         if (currentList.stream().noneMatch(v -> idSelector.apply(v).equals(idSelector.apply(item)))) {
+            create.accept(item);
+         }
       }
    }
 
@@ -784,7 +847,7 @@ public class AlertingServiceImpl implements AlertingService {
             for (int runId : recalculation.runs) {
                // Since the evaluation might take few moments and we're dealing potentially with thousands
                // of runs we'll process each run in a separate transaction
-               self.recalulateRun(runId, debug, recalculation);
+               self.recalulateRun(runId, notify, debug, recalculation);
                recalculation.progress = 100 * ++completed / numRuns;
             }
 
@@ -818,9 +881,9 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
-   void recalulateRun(Integer runId, boolean debug, Recalculation recalculation) {
+   void recalulateRun(Integer runId, boolean notify, boolean debug, Recalculation recalculation) {
       Run run = Run.findById(runId);
-      onNewRun(run, false, debug, recalculation);
+      onNewRun(run, notify, debug, recalculation);
    }
 
    @Override
@@ -916,6 +979,26 @@ public class AlertingServiceImpl implements AlertingService {
       return RunExpectation.listAll();
    }
 
+   @PermitAll
+   @Override
+   public List<RegressionModelConfig> models() {
+      return MODELS.values().stream().map(RegressionModel::config).collect(Collectors.toList());
+   }
+
+   @PermitAll
+   @Override
+   public List<RegressionDetection> defaultRegressionConfigs() {
+      RegressionDetection lastDatapoint = new RegressionDetection();
+      lastDatapoint.model = RelativeDifferenceRegressionModel.NAME;
+      lastDatapoint.config = JsonNodeFactory.instance.objectNode()
+            .put("window", 1).put("filter", "mean").put("threshold", 0.2).put("minPrevious", 5);
+      RegressionDetection floatingWindow = new RegressionDetection();
+      floatingWindow.model = RelativeDifferenceRegressionModel.NAME;
+      floatingWindow.config = JsonNodeFactory.instance.objectNode()
+            .put("window", 5).put("filter", "mean").put("threshold", 0.1).put("minPrevious", 5);
+      return Arrays.asList(lastDatapoint, floatingWindow);
+   }
+
    @ConsumeEvent(value = Run.EVENT_TAGS_CREATED, blocking = true)
    @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
@@ -954,5 +1037,18 @@ public class AlertingServiceImpl implements AlertingService {
       public int errors;
       Set<Integer> runsWithoutAccessor = new HashSet<>();
       Set<Integer> runsWithoutValue = new HashSet<>();
+   }
+
+   public static class VarInfo {
+      public final int id;
+      public final String name;
+      public final String calculation;
+      public final Set<String> accessors = new HashSet<>();
+
+      public VarInfo(int id, String name, String calculation) {
+         this.id = id;
+         this.name = name;
+         this.calculation = calculation;
+      }
    }
 }

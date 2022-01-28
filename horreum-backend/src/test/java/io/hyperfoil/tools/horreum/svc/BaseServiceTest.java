@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.SchemaService;
+import io.hyperfoil.tools.horreum.entity.alerting.RegressionDetection;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
@@ -108,12 +109,19 @@ public class BaseServiceTest {
       return schema;
    }
 
-   protected void addVariableToTest(Test test, String name, String accessors) {
+   protected void setTestVariables(Test test, String name, String accessors, RegressionDetection... rds) {
       ArrayNode variables = JsonNodeFactory.instance.arrayNode();
       ObjectNode variable = JsonNodeFactory.instance.objectNode();
-      variable.set("testid", JsonNodeFactory.instance.numberNode(test.id));
-      variable.set("name", JsonNodeFactory.instance.textNode(name));
-      variable.set("accessors", JsonNodeFactory.instance.textNode(accessors));
+      variable.put("testid", test.id);
+      variable.put("name", name);
+      variable.put("accessors", accessors);
+      if (rds.length > 0) {
+         ArrayNode rdsArray = JsonNodeFactory.instance.arrayNode();
+         for (RegressionDetection rd : rds) {
+            rdsArray.add(JsonNodeFactory.instance.objectNode().put("model", rd.model).set("config", rd.config));
+         }
+         variable.set("regressionDetection", rdsArray);
+      }
       variables.add(variable);
       jsonRequest().body(variables.toString()).post("/api/alerting/variables?test=" + test.id).then().statusCode(204);
    }

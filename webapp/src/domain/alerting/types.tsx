@@ -1,5 +1,11 @@
 export {}
 
+export type RegressionDetection = {
+    id: number
+    model: string
+    config: any
+}
+
 export type Variable = {
     id: number
     name: string
@@ -7,10 +13,7 @@ export type Variable = {
     testid: number
     accessors: string
     calculation?: string
-    maxDifferenceLastDatapoint: number
-    minWindow: number
-    maxDifferenceFloatingWindow: number
-    floatingWindow: number
+    regressionDetection: RegressionDetection[]
 }
 
 export type Panel = {
@@ -41,4 +44,31 @@ export type Change = {
     variable?: Variable
     runId: number
     timestamp: number
+}
+
+export type RegressionModelConfig = {
+    name: string
+    title: string
+    description: string
+    ui: RegressionModelConfigComponent[]
+    defaults: any
+}
+
+export type RegressionModelConfigComponent = {
+    name: string
+    title: string
+    description: string
+    type: "LOG_SLIDER" | "ENUM"
+    properties: LogSliderProperties | EnumProperties
+}
+
+export type LogSliderProperties = {
+    scale: number
+    min: number
+    max: number
+    unit: string
+}
+
+export type EnumProperties = {
+    options: Map<string, string>
 }

@@ -2064,5 +2064,67 @@
             DELETE FROM calculationlog WHERE testid NOT IN (SELECT id FROM test) OR runid NOT IN (SELECT id FROM run);
         </sql>
     </changeSet>
+
+    <changeSet id="47" author="rvansa">
+        <createTable tableName="regressiondetection">
+            <column name="id" type="integer">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="variable_id" type="integer">
+                <constraints nullable="false" foreignKeyName="fk_regression_variable_id" referencedTableName="variable" referencedColumnNames="id"/>
+            </column>
+            <column name="model" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="config" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>
+            INSERT INTO regressiondetection (SELECT nextval('hibernate_sequence') AS id, id AS variable_id,
+                'relativeDifference' AS model, jsonb_build_object(
+                    'threshold', maxdifferencelastdatapoint,
+                    'minPrevious', minwindow,
+                    'window', 1,
+                    'filter', 'mean'
+                ) as config FROM variable);
+            INSERT INTO regressiondetection (SELECT nextval('hibernate_sequence') AS id, id AS variable_id,
+                'relativeDifference' AS model, jsonb_build_object(
+                    'threshold', maxdifferencefloatingwindow,
+                    'minPrevious', floatingwindow,
+                    'window', floatingwindow,
+                    'filter', 'mean'
+                ) AS config FROM variable);
+        </sql>
+        <dropColumn tableName="variable" columnName="minwindow"/>
+        <dropColumn tableName="variable" columnName="maxdifferencelastdatapoint"/>
+        <dropColumn tableName="variable" columnName="floatingwindow"/>
+        <dropColumn tableName="variable" columnName="maxdifferencefloatingwindow"/>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE regressiondetection TO "${quarkus.datasource.username}";
+            ALTER TABLE regressiondetection ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY rd_access ON regressiondetection USING (has_role('horreum.alerting'));
+            CREATE POLICY rd_select ON regressiondetection FOR SELECT
+                USING (
+                    exists(SELECT 1 FROM test JOIN variable ON test.id = variable.testid WHERE variable.id = variable_id
+                        AND (can_view2(test.access, test.owner) OR has_read_token(testid)))
+                );
+            CREATE POLICY rd_insert ON regressiondetection FOR INSERT
+                WITH CHECK (
+                    exists (SELECT 1 FROM test JOIN variable ON test.id = variable.testid WHERE variable.id = variable_id
+                        AND (has_role2(test.owner, 'tester') OR has_modify_token(variable.testid)))
+                );
+            CREATE POLICY rd_update ON regressiondetection FOR UPDATE
+                USING (
+                    exists (SELECT 1 FROM test JOIN variable ON test.id = variable.testid WHERE variable.id = variable_id
+                        AND (has_role2(test.owner, 'tester') OR has_modify_token(variable.testid)))
+                );
+            CREATE POLICY rd_delete ON regressiondetection FOR DELETE
+                USING (
+                    exists (SELECT 1 FROM test JOIN variable ON test.id = variable.testid WHERE variable.id = variable_id
+                        AND (has_role2(test.owner, 'tester') OR has_modify_token(variable.testid)))
+                );
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

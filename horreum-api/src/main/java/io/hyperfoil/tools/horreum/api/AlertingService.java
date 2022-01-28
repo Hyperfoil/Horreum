@@ -15,8 +15,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
+import io.hyperfoil.tools.horreum.entity.alerting.RegressionDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 
@@ -74,6 +74,14 @@ public interface AlertingService {
    @Path("/expectations")
    List<RunExpectation> expectations();
 
+   @GET
+   @Path("/models")
+   List<RegressionModelConfig> models();
+
+   @GET
+   @Path("/defaultRegressionConfigs")
+   List<RegressionDetection> defaultRegressionConfigs();
+
    class DashboardInfo {
       public int testId;
       public String uid;
@@ -111,19 +119,6 @@ public interface AlertingService {
       @Override
       public int hashCode() {
          return schema.hashCode();
-      }
-   }
-
-   class VarInfo {
-      public final int id;
-      public final String name;
-      public final String calculation;
-      public final Set<String> accessors = new HashSet<>();
-
-      public VarInfo(int id, String name, String calculation) {
-         this.id = id;
-         this.name = name;
-         this.calculation = calculation;
       }
    }
 

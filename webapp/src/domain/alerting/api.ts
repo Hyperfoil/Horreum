@@ -11,6 +11,8 @@ const endPoints = {
     recalculate: (testId: number, debug: boolean, from?: number, to?: number) =>
         `${base}/recalculate?test=${testId}&debug=${debug}${from ? "&from=" + from : ""}${to ? "&to=" + to : ""}`,
     lastDatapoints: () => `${base}/datapoint/last`,
+    models: () => `${base}/models`,
+    defaultRegressionConfigs: () => `${base}/defaultRegressionConfigs`,
 }
 
 export const fetchVariables = (testId: number) => {
@@ -47,4 +49,12 @@ export const recalculateProgress = (testId: number) => {
 
 export const findLastDatapoints = (variableIds: number[], tags: string) => {
     return fetchApi(endPoints.lastDatapoints(), { variables: variableIds, tags }, "post")
+}
+
+export function models() {
+    return fetchApi(endPoints.models(), null, "get")
+}
+
+export function defaultRegressionConfigs() {
+    return fetchApi(endPoints.defaultRegressionConfigs(), null, "get")
 }
