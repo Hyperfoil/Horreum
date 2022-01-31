@@ -8,9 +8,11 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
+import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -24,8 +26,9 @@ public class DataPoint extends PanacheEntityBase {
    @Column(columnDefinition = "SERIAL")
    public Integer id;
 
-   @NotNull
-   public int runId;
+   @ManyToOne(fetch = FetchType.LAZY, optional = false)
+   @JoinColumn(name = "runid")
+   public Run run;
 
    @NotNull
    @Column(columnDefinition = "timestamp")

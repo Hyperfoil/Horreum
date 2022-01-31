@@ -352,7 +352,7 @@ public class AlertingServiceImpl implements AlertingService {
       for (VarInfo var : vars.values()) {
          DataPoint dataPoint = new DataPoint();
          dataPoint.variable = em.getReference(Variable.class, var.id);
-         dataPoint.runId = run.id;
+         dataPoint.run = run;
          dataPoint.timestamp = run.start;
 
          if (var.calculation == null || var.calculation.isEmpty()) {
@@ -524,7 +524,7 @@ public class AlertingServiceImpl implements AlertingService {
       DataPoint dataPoint = event.dataPoint;
       // The variable referenced by datapoint is a fake
       Variable variable = Variable.findById(dataPoint.variable.id);
-      log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.runId,
+      log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.run.id,
             dataPoint.variable.id, variable != null ? variable.name : "<unknown>", dataPoint.value);
       Change lastChange = Change.find("variable = ?1", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, 0).firstResult();
       PanacheQuery<DataPoint> query;
@@ -593,8 +593,8 @@ public class AlertingServiceImpl implements AlertingService {
             }
             if (item.regressionDetection != null) {
                ensureDefaults(item.regressionDetection);
+               item.regressionDetection.forEach(rd -> rd.variable = item);
             }
-            item.regressionDetection.forEach(rd -> rd.variable = item);
             item.testId = testId;
             item.persist(); // insert
          }, (current, matching) -> {
@@ -602,7 +602,9 @@ public class AlertingServiceImpl implements AlertingService {
             current.group = matching.group;
             current.accessors = matching.accessors;
             current.calculation = matching.calculation;
-            ensureDefaults(matching.regressionDetection);
+            if (matching.regressionDetection != null) {
+               ensureDefaults(matching.regressionDetection);
+            }
             updateCollection(current.regressionDetection, matching.regressionDetection, rd -> rd.id, item -> {
                if (item.id != null && item.id <= 0) {
                   item.id = null;

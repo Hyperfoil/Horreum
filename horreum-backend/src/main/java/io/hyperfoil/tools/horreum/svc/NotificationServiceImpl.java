@@ -80,9 +80,9 @@ public class NotificationServiceImpl implements NotificationService {
       Test test = Test.findById(variable.testId);
       // Test might be null when it's private
       String testName = test == null ? "unknown" : test.name;
-      log.infof("Received new change in test %d (%s), run %d, variable %d (%s)", variable.testId, testName, event.change.runId, variable.id, variable.name);
+      log.infof("Received new change in test %d (%s), run %d, variable %d (%s)", variable.testId, testName, event.change.run.id, variable.id, variable.name);
 
-      String tags = getTags(event.change.runId);
+      String tags = getTags(event.change.run.id);
 
       notifyAll(variable.testId, n -> n.notifyChange(testName, tags, event.change));
    }

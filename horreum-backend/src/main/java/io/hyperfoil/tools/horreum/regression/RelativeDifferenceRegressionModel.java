@@ -99,10 +99,10 @@ public class RelativeDifferenceRegressionModel implements RegressionModel {
             Change change = new Change();
             change.variable = dp.variable;
             change.timestamp = dp.timestamp;
-            change.runId = dp.runId;
+            change.run = dp.run;
             change.description = String.format("Change detected, runs %d (%s) - %d (%s): %s %f, previous mean %f (stddev %f)",
-                    dataPoints.get(window - 1).runId, dataPoints.get(window - 1).timestamp,
-                    dataPoints.get(0).runId, dataPoints.get(0).timestamp, filter, filteredValue,
+                    dataPoints.get(window - 1).run.id, dataPoints.get(window - 1).timestamp,
+                    dataPoints.get(0).run.id, dataPoints.get(0).timestamp, filter, filteredValue,
                     previousStats.getMean(), previousStats.getStandardDeviation());
 
             log.debug(change.description);

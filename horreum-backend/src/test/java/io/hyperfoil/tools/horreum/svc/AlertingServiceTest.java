@@ -168,7 +168,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent1);
       // The change is detected already at run 4 because it's > than the previous mean
-      assertEquals(run4, changeEvent1.change.runId);
+      assertEquals(run4, changeEvent1.change.run.id);
 
       ((ObjectNode) rd.config).put("filter", "min");
       setTestVariables(test, "Value", "value", rd);
@@ -184,7 +184,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       // now we'll find a change already at run3
       Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent2);
-      assertEquals(run3, changeEvent2.change.runId);
+      assertEquals(run3, changeEvent2.change.run.id);
 
       int run6 = uploadRun(ts + 5, ts + 5, runWithValue(schema, 1.5), test.name);
       assertValue(datapointQueue, 1.5);
@@ -198,7 +198,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       // mean of previous is 2, the last value doesn't matter (1.5 is lower than 2 - 10%)
       Change.Event changeEvent3 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent3);
-      assertEquals(run6, changeEvent3.change.runId);
+      assertEquals(run6, changeEvent3.change.run.id);
    }
 
    private void assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {

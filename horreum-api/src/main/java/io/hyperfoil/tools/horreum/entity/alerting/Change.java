@@ -4,11 +4,14 @@ import java.time.Instant;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
+import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -29,8 +32,9 @@ public class Change extends PanacheEntityBase {
    @ManyToOne
    public Variable variable;
 
-   @NotNull
-   public int runId;
+   @ManyToOne(fetch = FetchType.LAZY, optional = false)
+   @JoinColumn(name = "runid")
+   public Run run;
 
    @NotNull
    @Column(columnDefinition = "timestamp")

@@ -133,7 +133,7 @@ public class HookServiceImpl implements HookService {
    @Transactional
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
    public void newChange(Change.Event changeEvent) {
-      Integer runId = changeEvent.change.runId;
+      Integer runId = changeEvent.change.run.id;
       Run run =  Run.find("id", runId).firstResult();
       tellHooks(Change.EVENT_NEW, run.testid, changeEvent.change);
    }

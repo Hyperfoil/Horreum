@@ -88,7 +88,7 @@ public class GrafanaServiceImpl implements GrafanaService {
          @SuppressWarnings("unchecked")
          List<DataPoint> datapoints = nativeQuery.getResultList();
          for (DataPoint dp : datapoints) {
-            tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli(), /* non-standard! */ dp.runId });
+            tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli(), /* non-standard! */ dp.run.id });
          }
       }
       return result;
@@ -153,8 +153,8 @@ public class GrafanaServiceImpl implements GrafanaService {
          content.append(" (group ").append(change.variable.group).append(")");
       }
       content.append("<br>").append(change.description).append("<br>Confirmed: ").append(change.confirmed);
-      return new AnnotationDefinition("Change in run " + change.runId, content.toString(), false,
-            change.timestamp.toEpochMilli(), 0, new String[0], change.id, change.variable.id, change.runId);
+      return new AnnotationDefinition("Change in run " + change.run.id, content.toString(), false,
+            change.timestamp.toEpochMilli(), 0, new String[0], change.id, change.variable.id, change.run.id);
    }
 
 }
