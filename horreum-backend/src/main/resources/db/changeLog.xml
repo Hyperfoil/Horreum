@@ -2126,5 +2126,14 @@
                 );
         </sql>
     </changeSet>
+
+    <changeSet id="48" author="rvansa">
+        <sql>
+            DROP TRIGGER rt_before_update ON test;
+            DROP TRIGGER rt_after_insert ON test;
+            CREATE TRIGGER rt_before_update BEFORE UPDATE OF tags ON test FOR EACH ROW EXECUTE FUNCTION rt_before_update_test_func();
+            CREATE TRIGGER rt_after_insert AFTER INSERT OR UPDATE OF tags ON test FOR EACH ROW EXECUTE FUNCTION rt_after_insert_test_func();
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

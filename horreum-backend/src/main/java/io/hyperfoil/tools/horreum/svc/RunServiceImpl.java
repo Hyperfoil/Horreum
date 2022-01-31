@@ -189,11 +189,11 @@ public class RunServiceImpl implements RunService {
             log.errorf("Failed to insert run tags for run %d (invalid update count - maybe missing privileges?)", runId);
             wrappedLogCalculation(CalculationLog.ERROR, runId, "Failed to insert run tags (maybe missing privileges?)");
          }
-         eventBus.publish(Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, tags));
+         Util.publishLater(tm, eventBus, Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, tags));
       } catch (NoResultException e) {
          log.infof("Run %d does not create any tags.", runId);
          wrappedLogCalculation(CalculationLog.INFO, runId, "Run does not create any tags");
-         eventBus.publish(Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, null));
+         Util.publishLater(tm, eventBus, Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, null));
       } catch (Throwable e) {
          log.errorf(e, "Failed to calculate tags for run %d", runId);
          wrappedLogCalculation(CalculationLog.ERROR, runId, "Failed to calculate tags: " + Util.explainCauses(e));

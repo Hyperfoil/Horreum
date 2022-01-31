@@ -31,7 +31,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
@@ -112,8 +111,6 @@ public class AlertingServiceImpl implements AlertingService {
          "   AND (lmrn.lastnotification IS NULL OR " +
          "       (EXTRACT(EPOCH FROM current_timestamp) - EXTRACT(EPOCH FROM lmrn.lastnotification))* 1000 > ts.maxstaleness)";
    //@formatter:on
-   // the :::: is used instead of :: as Hibernate converts four-dot into colon
-   private static final String UPLOAD_RUN = "CREATE TEMPORARY TABLE current_run AS SELECT * FROM (VALUES (?::::jsonb)) as t(data);";
    private static final Sort SORT_BY_TIMESTAMP_DESCENDING = Sort.by("timestamp", Sort.Direction.Descending);
 
    private static Map<String, RegressionModel> MODELS = Map.of(RelativeDifferenceRegressionModel.NAME, new RelativeDifferenceRegressionModel());
@@ -164,18 +161,17 @@ public class AlertingServiceImpl implements AlertingService {
       System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
    }
 
-   public static class OwnerFromRun implements Function<Object[], String[]> {
-      @Override
-      public String[] apply(Object[] objects) {
-         return new String[] { ((Run) objects[0]).owner };
-      }
-   }
-
-   @WithRoles(extras = Roles.HORREUM_ALERTING, fromParams = OwnerFromRun.class)
+   @WithRoles(extras = { Roles.HORREUM_ALERTING, Roles.HORREUM_SYSTEM })
    @Transactional
-   @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
-   public void onNewRun(Run run) {
+   @ConsumeEvent(value = Run.EVENT_TAGS_CREATED, blocking = true)
+   public void onNewRun(Run.TagsEvent event) {
       boolean sendNotifications;
+      Run run = Run.findById(event.runId);
+      if (run == null) {
+         // The run is not committed yet?
+         vertx.setTimer(1000, timerId -> onNewRun(event));
+         return;
+      }
       try {
          sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
                .setParameter(1, run.testid).getSingleResult();
@@ -226,26 +222,11 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void onNewRun(Run run, boolean notify, boolean debug, Recalculation recalculation) {
-      log.infof("Received run ID %d", run.id);
-
-      // TODO: We will have the JSONPaths in PostgreSQL format while the Run
-      // itself is available here in the application.
-      // We'll use the database as a library function
-      Query setRun = em.createNativeQuery(UPLOAD_RUN);
-      setRun.setParameter(1, run.data.toString());
-      setRun.executeUpdate();
+      log.infof("Analyzing run ID %d", run.id);
       try {
          emitDatapoints(run, notify, debug, recalculation);
       } catch (Throwable t) {
          log.error("Failed to create new datapoints", t);
-      } finally {
-         try {
-            if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
-               em.createNativeQuery("DROP TABLE current_run").executeUpdate();
-            }
-         } catch (SystemException e) {
-            log.error("Failure getting current transaction status.", e);
-         }
       }
    }
 
@@ -343,9 +324,9 @@ public class AlertingServiceImpl implements AlertingService {
       }
 
       if (index > 0) {
-         extractionQuery.append(" FROM current_run");
+         extractionQuery.append(" FROM run WHERE id = ?");
          Query extraction = em.createNativeQuery(extractionQuery.toString());
-
+         extraction.setParameter(1, run.id);
          Object[] result;
          try {
             result = (Object[]) extraction.getSingleResult();
@@ -610,7 +591,9 @@ public class AlertingServiceImpl implements AlertingService {
             if (item.id != null && item.id <= 0) {
                item.id = null;
             }
-            ensureDefaults(item.regressionDetection);
+            if (item.regressionDetection != null) {
+               ensureDefaults(item.regressionDetection);
+            }
             item.regressionDetection.forEach(rd -> rd.variable = item);
             item.testId = testId;
             item.persist(); // insert
