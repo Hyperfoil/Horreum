@@ -12,13 +12,16 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * For each {@link Variable} a datapoint will be created for each run.
  */
-@Entity(name = "datapoint")
+@Entity
 public class DataPoint extends PanacheEntityBase {
    public static final String EVENT_NEW = "datapoint/new";
    @Id
@@ -28,6 +31,7 @@ public class DataPoint extends PanacheEntityBase {
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
    @JoinColumn(name = "runid")
+   @JsonIgnore
    public Run run;
 
    @NotNull
@@ -45,6 +49,11 @@ public class DataPoint extends PanacheEntityBase {
    @NotNull
    @ManyToOne(fetch = FetchType.LAZY)
    public Variable variable;
+
+   @JsonProperty("runId")
+   public int getRunId() {
+      return run.id;
+   }
 
    public static class Event {
       public DataPoint dataPoint;

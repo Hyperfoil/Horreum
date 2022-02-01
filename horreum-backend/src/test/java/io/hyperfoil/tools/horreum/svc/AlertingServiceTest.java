@@ -141,10 +141,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testRegressionDetection(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      RegressionDetection rd = new RegressionDetection();
-      rd.model = RelativeDifferenceRegressionModel.NAME;
-      rd.config = JsonNodeFactory.instance.objectNode().put("threshold", 0.1).put("minPrevious", 2).put("window", 2).put("filter", "mean");
-      setTestVariables(test, "Value", "value", rd);
+      RegressionDetection rd = addRegressionVariable(test);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
@@ -199,6 +196,50 @@ public class AlertingServiceTest extends BaseServiceTest {
       Change.Event changeEvent3 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent3);
       assertEquals(run6, changeEvent3.change.run.id);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testRegressionWithTags(TestInfo info) throws InterruptedException {
+      Test test = createExampleTest(getTestName(info));
+      test.tags = "tags";
+      test = createTest(test);
+      Schema schema = createExampleSchema(info);
+      addExtractor(schema, "tags", ".tags");
+
+      addRegressionVariable(test);
+
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
+
+      long ts = System.currentTimeMillis();
+      for (int i = 0; i < 12; i+= 3) {
+         uploadRun(ts + i, ts + i, runWithValue(schema, 1).put("tags", "foo"), test.name);
+         assertValue(datapointQueue, 1);
+         uploadRun(ts + i + 1, ts + i + 1, runWithValue(schema, 2).put("tags", "bar"), test.name);
+         assertValue(datapointQueue, 2);
+         uploadRun(ts + i + 2, ts + i + 2, runWithValue(schema, 3), test.name);
+         assertValue(datapointQueue, 3);
+      }
+      assertNull(changeQueue.poll(50, TimeUnit.MILLISECONDS));
+
+      int run13 = uploadRun(ts + 12, ts + 12, runWithValue(schema, 2).put("tags", "foo"), test.name);
+      Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(changeEvent1);
+      assertEquals(run13, changeEvent1.change.run.id);
+
+      int run14 = uploadRun(ts + 13, ts + 13, runWithValue(schema, 2), test.name);
+      Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(changeEvent2);
+      assertEquals(run14, changeEvent2.change.run.id);
+   }
+
+   private RegressionDetection addRegressionVariable(Test test) {
+      RegressionDetection rd = new RegressionDetection();
+      rd.model = RelativeDifferenceRegressionModel.NAME;
+      rd.config = JsonNodeFactory.instance.objectNode().put("threshold", 0.1).put("minPrevious", 2).put("window", 2).put("filter", "mean");
+      setTestVariables(test, "Value", "value", rd);
+
+      return rd;
    }
 
    private void assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {

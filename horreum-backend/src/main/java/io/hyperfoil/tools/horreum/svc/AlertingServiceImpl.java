@@ -73,8 +73,6 @@ import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
-import io.quarkus.panache.common.Sort;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
@@ -111,7 +109,7 @@ public class AlertingServiceImpl implements AlertingService {
          "   AND (lmrn.lastnotification IS NULL OR " +
          "       (EXTRACT(EPOCH FROM current_timestamp) - EXTRACT(EPOCH FROM lmrn.lastnotification))* 1000 > ts.maxstaleness)";
    //@formatter:on
-   private static final Sort SORT_BY_TIMESTAMP_DESCENDING = Sort.by("timestamp", Sort.Direction.Descending);
+   private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
 
    private static Map<String, RegressionModel> MODELS = Map.of(RelativeDifferenceRegressionModel.NAME, new RelativeDifferenceRegressionModel());
 
@@ -519,18 +517,20 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
-   @ConsumeEvent(value = DataPoint.EVENT_NEW, blocking = true)
+   @ConsumeEvent(value = DataPoint.EVENT_NEW, blocking = true, ordered = true)
    public void onNewDataPoint(DataPoint.Event event) {
       DataPoint dataPoint = event.dataPoint;
       // The variable referenced by datapoint is a fake
       Variable variable = Variable.findById(dataPoint.variable.id);
       log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.run.id,
             dataPoint.variable.id, variable != null ? variable.name : "<unknown>", dataPoint.value);
-      Change lastChange = Change.find("variable = ?1", SORT_BY_TIMESTAMP_DESCENDING, variable).range(0, 0).firstResult();
-      PanacheQuery<DataPoint> query;
-      if (lastChange == null) {
-         query = DataPoint.find("variable", SORT_BY_TIMESTAMP_DESCENDING, variable);
-      } else {
+      Change lastChange = em.createQuery("SELECT c FROM Change c LEFT JOIN RunTags rt ON c.run.id = rt.runId " +
+            "WHERE c.variable = ?1 AND TRUE = function('json_equals', rt.tags, (SELECT tags FROM RunTags WHERE runId = ?2)) " +
+            "ORDER by c.timestamp DESC", Change.class)
+            .setParameter(1, variable).setParameter(2, event.dataPoint.run.id).setMaxResults(1)
+            .getResultStream().findFirst().orElse(null);
+      Instant changeTimestamp = LONG_TIME_AGO;
+      if (lastChange != null) {
          if (lastChange.timestamp.compareTo(dataPoint.timestamp) > 0) {
             // We won't revision changes until next variable recalculation
             log.debugf("Ignoring datapoint %d from %s as there is a newer change %d from %s.",
@@ -538,18 +538,23 @@ public class AlertingServiceImpl implements AlertingService {
             return;
          }
          log.debugf("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
-         query = DataPoint.find("variable = ?1 AND timestamp >= ?2", SORT_BY_TIMESTAMP_DESCENDING, variable, lastChange.timestamp);
+         changeTimestamp = lastChange.timestamp;
       }
-      List<DataPoint> dataPoints = query.list();
+      List<DataPoint> dataPoints = em.createQuery("SELECT dp FROM DataPoint dp LEFT JOIN RunTags rt ON dp.run.id = rt.runId " +
+            "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 AND " +
+            "TRUE = function('json_equals', rt.tags, (SELECT tags FROM RunTags WHERE runId = ?4)) " +
+            "ORDER BY dp.timestamp DESC", DataPoint.class)
+            .setParameter(1, variable).setParameter(2, changeTimestamp)
+            .setParameter(3, dataPoint.timestamp).setParameter(4, dataPoint.run.id).getResultList();
       // Last datapoint is already in the list
       if (dataPoints.isEmpty()) {
          log.error("The published datapoint should be already in the list");
          return;
       }
-      DataPoint firstDatapoint = dataPoints.get(0);
-      if (!firstDatapoint.id.equals(dataPoint.id)) {
-         log.debugf("Ignoring datapoint %d from %s as there's a newer datapoint %d from %s",
-               dataPoint.id, dataPoint.timestamp, firstDatapoint.id, firstDatapoint.timestamp);
+      DataPoint lastDatapoint = dataPoints.get(0);
+      if (!lastDatapoint.id.equals(dataPoint.id)) {
+         log.warnf("Ignoring datapoint %d from %s - it is not the last datapoint (%d from %s)",
+               dataPoint.id, dataPoint.timestamp, lastDatapoint.id, lastDatapoint.timestamp);
          return;
       }
 

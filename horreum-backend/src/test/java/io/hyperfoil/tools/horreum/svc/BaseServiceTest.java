@@ -100,13 +100,17 @@ public class BaseServiceTest {
       schema.uri = "urn:" + info.getTestClass().map(Class::getName).orElse("<unknown>") + ":" + info.getDisplayName() + ":1.0";
       jsonRequest().body(schema).post("/api/schema").then().statusCode(200);
 
+      addExtractor(schema, "value", ".value");
+      return schema;
+   }
+
+   protected void addExtractor(Schema schema, String accessor, String jsonpath) {
       SchemaService.ExtractorUpdate extractor = new SchemaService.ExtractorUpdate();
       extractor.id = -1;
-      extractor.accessor = "value";
-      extractor.jsonpath = ".value";
+      extractor.accessor = accessor;
+      extractor.jsonpath = jsonpath;
       extractor.schema = schema.uri;
       jsonRequest().body(extractor).post("/api/schema/extractor").then().statusCode(200);
-      return schema;
    }
 
    protected void setTestVariables(Test test, String name, String accessors, RegressionDetection... rds) {

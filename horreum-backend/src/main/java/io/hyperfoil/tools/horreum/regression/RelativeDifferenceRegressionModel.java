@@ -82,6 +82,7 @@ public class RelativeDifferenceRegressionModel implements RegressionModel {
         }
 
         double ratio = filteredValue / previousStats.getMean();
+        log.tracef("Previous mean %f, filtered value %f, ratio %f", previousStats.getMean(), filteredValue, ratio);
         if (ratio < 1 - threshold || ratio > 1 + threshold) {
             DataPoint dp = null;
             // We cannot know which datapoint is first with the regression; as a heuristic approach

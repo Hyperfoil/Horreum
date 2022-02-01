@@ -11,6 +11,9 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -20,7 +23,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * a change to faciliate correct testing of subsequent runs.
  * Eventually the change should be manually confirmed (approved) with an explanatory description.
  */
-@Entity(name = "change")
+@Entity
 public class Change extends PanacheEntityBase {
    public static final String EVENT_NEW = "change/new";
 
@@ -34,6 +37,7 @@ public class Change extends PanacheEntityBase {
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
    @JoinColumn(name = "runid")
+   @JsonIgnore
    public Run run;
 
    @NotNull
@@ -44,6 +48,23 @@ public class Change extends PanacheEntityBase {
    public boolean confirmed;
 
    public String description;
+
+   @JsonProperty("runId")
+   public int getRunId() {
+      return run.id;
+   }
+
+   @Override
+   public String toString() {
+      return "Change{" +
+            "id=" + id +
+            ", variable=" + variable +
+            ", runId=" + run.id +
+            ", timestamp=" + timestamp +
+            ", confirmed=" + confirmed +
+            ", description='" + description + '\'' +
+            '}';
+   }
 
    public static class Event {
       public Change change;

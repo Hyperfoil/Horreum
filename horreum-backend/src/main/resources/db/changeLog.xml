@@ -2135,5 +2135,15 @@
             CREATE TRIGGER rt_after_insert AFTER INSERT OR UPDATE OF tags ON test FOR EACH ROW EXECUTE FUNCTION rt_after_insert_test_func();
         </sql>
     </changeSet>
+
+    <changeSet id="49" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION json_equals(a jsonb, b jsonb) RETURNS boolean AS $$
+            BEGIN
+                RETURN ((a IS NULL AND b IS NULL) OR (a @> b AND b @> a));
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+    </changeSet>
 </databaseChangeLog>
 
