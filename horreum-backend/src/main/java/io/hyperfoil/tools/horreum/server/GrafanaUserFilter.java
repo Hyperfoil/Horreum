@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.server;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
@@ -38,8 +40,16 @@ public class GrafanaUserFilter extends HttpFilter {
    @Inject @RestClient
    Provider<GrafanaClient> grafana;
 
+   @ConfigProperty(name = "horreum.grafana.url")
+   Optional<String> grafanaBaseUrl;
+
    @Override
    protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
+      if (grafanaBaseUrl.orElse("").isEmpty()) {
+         // ignore in tests if Grafana is disabled
+         chain.doFilter(req, res);
+         return;
+      }
       if (!(identity.getPrincipal() instanceof JWTCallerPrincipal)) {
          // ignore anonymous access
          log.debug("Anonymouse access, ignoring.");
