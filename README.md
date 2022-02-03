@@ -1,5 +1,5 @@
 # Hyperfoil Horreum
-A service for storing performance data and regression analysis. Curently under early development.
+A service for storing performance data and regression analysis. Currently, under early development.
 
 Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io).
 
@@ -19,7 +19,7 @@ If you are using Podman (and podman-compose) rather than Docker, please use
 podman-compose -f podman-compose.yml -t hostnet up -d 
 ```                                     
 
-> :warning: **If postgres fails to start**: clear any cached data in the postgresl container mounted volume `podman volume inspect Horreum_horreum_pg12  | jq -r '.[0].Mountpoint'`
+> :warning: **If postgres fails to start**: clear any cached data in the postgres container mounted volume `podman volume inspect Horreum_horreum_pg12  | jq -r '.[0].Mountpoint'`
 
 Due to subtleties in Podman's rootless network configuration it's not possible to use `docker-compose.yaml`
 and we have to use host networking - otherwise Grafana wouldn't be able to connect to Horreum.
@@ -67,7 +67,7 @@ Start the server with `java -jar horreum-${version}-runner.jar` after docker is 
 ## Security
 
 Security uses RBAC with authz and authn provided by Keycloak server, and heavily relies on row-level security (RLS) in the database.
-The should be two DB users (roles); `dbadmin` who has full access to the database, and `appuser` with limited access.
+There should be two DB users (roles); `dbadmin` who has full access to the database, and `appuser` with limited access.
 `dbadmin` should set up DB structure - tables with RLS policies and grant RW access to all tables but `dbsecret` to `appuser`.
 When the application performs a database query, impersonating the authenticated user, it invokes `SET horreum.userroles = '...'`
 to declare all roles the user has based on information from Keycloak. RLS policies makes sure that the user cannot read or modify
@@ -104,7 +104,7 @@ Similar to that testers should get a `engineers-tester` role which is a composit
 
 ## Running in dev mode over HTTPS
 
-By default the local setup uses plain HTTP. If you need to test HTTPS, run the docker-compose/podman-compose as usual (in this setup the other containers won't be secured) and then run:
+By default, the local setup uses plain HTTP. If you need to test HTTPS, run the docker-compose/podman-compose as usual (in this setup the other containers won't be secured) and then run:
 ```bash
 ./enable-https.sh
 ```      
