@@ -74,7 +74,7 @@ public class UserServiceImpl implements UserService {
             .serverUrl(ConfigProvider.getConfig().getValue("horreum.keycloak.url", String.class))
             .realm(REALM)
             .clientId("horreum")
-            .clientSecret(ConfigProvider.getConfig().getValue("QUARKUS_OIDC_CREDENTIALS_SECRET", String.class))
+            .clientSecret(ConfigProvider.getConfig().getValue("quarkus.oidc.credentials.secret", String.class))
             .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
             .build();
 
