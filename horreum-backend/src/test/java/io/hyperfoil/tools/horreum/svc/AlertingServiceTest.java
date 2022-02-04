@@ -26,11 +26,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
-import io.hyperfoil.tools.horreum.entity.alerting.RegressionDetection;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.regression.RelativeDifferenceRegressionModel;
+import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
@@ -138,10 +138,10 @@ public class AlertingServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testRegressionDetection(TestInfo info) throws InterruptedException {
+   public void testChangeDetection(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      RegressionDetection rd = addRegressionVariable(test);
+      ChangeDetection cd = addChangeDetectionVariable(test);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
@@ -167,8 +167,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       // The change is detected already at run 4 because it's > than the previous mean
       assertEquals(run4, changeEvent1.change.run.id);
 
-      ((ObjectNode) rd.config).put("filter", "min");
-      setTestVariables(test, "Value", "value", rd);
+      ((ObjectNode) cd.config).put("filter", "min");
+      setTestVariables(test, "Value", "value", cd);
       // After changing the variable the past datapoints and changes are removed; we need to recalculate them again
       jsonRequest().post("/api/alerting/recalculate?test=" + test.id).then().statusCode(204);
 
@@ -199,14 +199,14 @@ public class AlertingServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testRegressionWithTags(TestInfo info) throws InterruptedException {
+   public void testChangeDetectionWithTags(TestInfo info) throws InterruptedException {
       Test test = createExampleTest(getTestName(info));
       test.tags = "tags";
       test = createTest(test);
       Schema schema = createExampleSchema(info);
       addExtractor(schema, "tags", ".tags");
 
-      addRegressionVariable(test);
+      addChangeDetectionVariable(test);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
@@ -233,9 +233,9 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(run14, changeEvent2.change.run.id);
    }
 
-   private RegressionDetection addRegressionVariable(Test test) {
-      RegressionDetection rd = new RegressionDetection();
-      rd.model = RelativeDifferenceRegressionModel.NAME;
+   private ChangeDetection addChangeDetectionVariable(Test test) {
+      ChangeDetection rd = new ChangeDetection();
+      rd.model = RelativeDifferenceChangeDetectionModel.NAME;
       rd.config = JsonNodeFactory.instance.objectNode().put("threshold", 0.1).put("minPrevious", 2).put("window", 2).put("filter", "mean");
       setTestVariables(test, "Value", "value", rd);
 

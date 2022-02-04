@@ -2145,5 +2145,9 @@
             $$ LANGUAGE plpgsql;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="50" author="rvansa">
+        <renameTable oldTableName="regressiondetection" newTableName="changedetection" />
+    </changeSet>
 </databaseChangeLog>
 

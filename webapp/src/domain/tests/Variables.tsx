@@ -9,8 +9,8 @@ import { NavLink } from "react-router-dom"
 import {
     EnumProperties,
     LogSliderProperties,
-    RegressionDetection,
-    RegressionModelConfig,
+    ChangeDetection,
+    ChangeDetectionModelConfig,
     Variable,
 } from "../alerting/types"
 
@@ -77,7 +77,7 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm }: TestSelectModalProps) => 
         <Modal
             className="foobar"
             variant="small"
-            title="Copy regression variables from..."
+            title="Copy variables from..."
             isOpen={isOpen}
             onClose={reset}
             actions={[
@@ -225,7 +225,7 @@ type VariableFormProps = {
     groups: string[]
     setGroups(gs: string[]): void
     onChange(v: Variable): void
-    models: RegressionModelConfig[]
+    models: ChangeDetectionModelConfig[]
 }
 
 function checkVariable(v: Variable) {
@@ -240,26 +240,26 @@ function checkVariable(v: Variable) {
 
 const VariableForm = (props: VariableFormProps) => {
     const [groupOpen, setGroupOpen] = useState(false)
-    const [regressionDetection, setRegressionDetection] = useState<RegressionDetection>()
+    const [changeDetection, setChangeDetection] = useState<ChangeDetection>()
     const [adding, setAdding] = useState(false)
     const [newModel, setNewModel] = useState<string>()
     useEffect(() => {
-        if (!regressionDetection && !adding) {
-            const rds = props.variable.regressionDetection
-            setRegressionDetection(rds.length > 0 ? rds[0] : undefined)
+        if (!changeDetection && !adding) {
+            const rds = props.variable.changeDetection
+            setChangeDetection(rds.length > 0 ? rds[0] : undefined)
         }
-    }, [props.variable, props.variable.regressionDetection, regressionDetection])
-    const usedModel = props.models.find(m => m.name === regressionDetection?.model)
-    const update = (rd: RegressionDetection) => {
-        const newArray = [...props.variable.regressionDetection]
+    }, [props.variable, props.variable.changeDetection, changeDetection])
+    const usedModel = props.models.find(m => m.name === changeDetection?.model)
+    const update = (rd: ChangeDetection) => {
+        const newArray = [...props.variable.changeDetection]
         const index = newArray.findIndex(o => o.id === rd.id)
         if (index < 0) {
             newArray.push(rd)
         } else {
             newArray[index] = rd
         }
-        props.onChange({ ...props.variable, regressionDetection: newArray })
-        setRegressionDetection(rd)
+        props.onChange({ ...props.variable, changeDetection: newArray })
+        setChangeDetection(rd)
     }
     return (
         <Form id={`variable-${props.variable.id}`} isHorizontal={true}>
@@ -324,22 +324,20 @@ const VariableForm = (props: VariableFormProps) => {
                     readOnly={!props.isTester}
                 />
             </FormGroup>
-            <Title headingLevel="h3">Regression analysis</Title>
+            <Title headingLevel="h3">Conditions</Title>
             <Tabs
-                activeKey={
-                    regressionDetection ? props.variable.regressionDetection.indexOf(regressionDetection) : "__add"
-                }
+                activeKey={changeDetection ? props.variable.changeDetection.indexOf(changeDetection) : "__add"}
                 onSelect={(_, index) => {
                     if (index === "__add") {
-                        setRegressionDetection(undefined)
+                        setChangeDetection(undefined)
                         setAdding(true)
                     } else {
-                        setRegressionDetection(props.variable.regressionDetection[index as number])
+                        setChangeDetection(props.variable.changeDetection[index as number])
                         setAdding(false)
                     }
                 }}
             >
-                {props.variable.regressionDetection.map((rd, i) => (
+                {props.variable.changeDetection.map((rd, i) => (
                     <Tab
                         key={i}
                         eventKey={i}
@@ -371,7 +369,7 @@ const VariableForm = (props: VariableFormProps) => {
                                 isDisabled={!newModel}
                                 onClick={() => {
                                     update({
-                                        id: Math.min(-1, ...props.variable.regressionDetection.map(rd => rd.id - 1)),
+                                        id: Math.min(-1, ...props.variable.changeDetection.map(rd => rd.id - 1)),
                                         model: newModel || "",
                                         config: JSON.parse(
                                             JSON.stringify(props.models.find(m => m.name === newModel)?.defaults)
@@ -380,14 +378,14 @@ const VariableForm = (props: VariableFormProps) => {
                                     setNewModel(undefined)
                                 }}
                             >
-                                Add new regression detection
+                                Add new condition
                             </Button>
                         </ActionList>
                     </Tab>
                 )}
             </Tabs>
 
-            {usedModel && regressionDetection && (
+            {usedModel && changeDetection && (
                 <>
                     <Hint>
                         <HintTitle>{usedModel.title}</HintTitle>
@@ -398,14 +396,12 @@ const VariableForm = (props: VariableFormProps) => {
                             <Button
                                 variant="danger"
                                 onClick={() => {
-                                    const newArray = props.variable.regressionDetection.filter(
-                                        rd => rd !== regressionDetection
-                                    )
-                                    props.onChange({ ...props.variable, regressionDetection: newArray })
-                                    setRegressionDetection(newArray.length > 0 ? newArray[0] : undefined)
+                                    const newArray = props.variable.changeDetection.filter(rd => rd !== changeDetection)
+                                    props.onChange({ ...props.variable, changeDetection: newArray })
+                                    setChangeDetection(newArray.length > 0 ? newArray[0] : undefined)
                                 }}
                             >
-                                Delete regression detection
+                                Delete condition
                             </Button>
                         </div>
                     )}
@@ -414,12 +410,12 @@ const VariableForm = (props: VariableFormProps) => {
                             {comp.type == "LOG_SLIDER" && (
                                 <LogSlider
                                     value={
-                                        regressionDetection.config[comp.name] *
+                                        changeDetection.config[comp.name] *
                                         ((comp.properties as LogSliderProperties).scale || 1)
                                     }
                                     onChange={value => {
                                         const scale = (comp.properties as LogSliderProperties).scale
-                                        const copy = { ...regressionDetection }
+                                        const copy = { ...changeDetection }
                                         copy.config[comp.name] = scale ? value / scale : value
                                         update(copy)
                                     }}
@@ -432,9 +428,9 @@ const VariableForm = (props: VariableFormProps) => {
                             {comp.type == "ENUM" && (
                                 <EnumSelect
                                     options={(comp.properties as EnumProperties).options}
-                                    selected={regressionDetection.config[comp.name]}
+                                    selected={changeDetection.config[comp.name]}
                                     onSelect={value => {
-                                        const copy = { ...regressionDetection }
+                                        const copy = { ...changeDetection }
                                         copy.config[comp.name] = value
                                         update(copy)
                                     }}
@@ -469,8 +465,8 @@ type ActionsProps = {
 const Actions = (props: ActionsProps) => {
     return (
         <div>
-            <NavLink className="pf-c-button pf-m-primary" to={"/series?test=" + props.testName}>
-                Go to series
+            <NavLink className="pf-c-button pf-m-primary" to={"/changes?test=" + props.testName}>
+                Go to changes
             </NavLink>
             {props.isTester && (
                 <>
@@ -509,8 +505,8 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
     const [selectedVariable, setSelectedVariable] = useState<Variable>()
     const [recalcConfirm, setRecalcConfirm] = useState<(_: any) => void>()
     const [ignoreNoSubscriptions, setIgnoreNoSubscriptions] = useState(false)
-    const [defaultRegressionConfigs, setDefaultRegressionConfigs] = useState<RegressionDetection[]>([])
-    const [regressionModels, setRegressionModels] = useState<RegressionModelConfig[]>([])
+    const [defaultChangeDetectionConfigs, setDefaultChangeDetectionConfigs] = useState<ChangeDetection[]>([])
+    const [changeDetectionModels, setChangeDetectionModels] = useState<ChangeDetectionModelConfig[]>([])
     const dispatch = useDispatch()
     // dummy variable to cause reloading of variables
     const [reload, setReload] = useState(0)
@@ -530,15 +526,15 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                 }
                 setGroups(groupNames(response))
             },
-            error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
+            error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch change detection variables", error))
         )
     }, [testId, reload, dispatch])
     useEffect(() => {
-        api.models().then(setRegressionModels, error =>
-            dispatch(alertAction("FETCH_MODELS", "Failed to fetch available regression models.", error))
+        api.models().then(setChangeDetectionModels, error =>
+            dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
         )
-        api.defaultRegressionConfigs().then(setDefaultRegressionConfigs, error =>
-            dispatch(alertAction("FETCH_MODELS", "Failed to fetch available regression models.", error))
+        api.defaultChangeDetectionConfigs().then(setDefaultChangeDetectionConfigs, error =>
+            dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
         )
     }, [])
     const isTester = useTester(testOwner)
@@ -552,7 +548,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             return api
                 .updateVariables(testId, variables)
                 .catch(error => {
-                    dispatch(alertAction("VARIABLE_UPDATE", "Failed to update regression variables", error))
+                    dispatch(alertAction("VARIABLE_UPDATE", "Failed to update change detection variables", error))
                     return Promise.reject()
                 })
                 .then(_ => {
@@ -580,7 +576,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             name: "",
             order: variables.length,
             accessors: "",
-            regressionDetection: JSON.parse(JSON.stringify(defaultRegressionConfigs)) as RegressionDetection[],
+            changeDetection: JSON.parse(JSON.stringify(defaultChangeDetectionConfigs)) as ChangeDetection[],
         }
         setVariables([...variables, newVar])
         setSelectedVariable(newVar)
@@ -654,7 +650,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                     title="This test has no subscriptions"
                     actionClose={<AlertActionCloseButton onClose={() => setIgnoreNoSubscriptions(true)} />}
                 >
-                    This test is configured to run regression analysis but nobody is listening to change notifications.
+                    This test is configured to run change detection but nobody is listening to change notifications.
                     Please configure interested parties in the Subscriptions tab.
                 </Alert>
             )}
@@ -713,7 +709,8 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                                 })),
                             ])
                         },
-                        error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch regression variables", error))
+                        error =>
+                            dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch change detection variables", error))
                     )
                 }}
             />
@@ -782,7 +779,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                                 }}
                                 groups={groups}
                                 setGroups={setGroups}
-                                models={regressionModels}
+                                models={changeDetectionModels}
                             />
                         </>
                     )}

@@ -12,7 +12,7 @@ const endPoints = {
         `${base}/recalculate?test=${testId}&debug=${debug}${from ? "&from=" + from : ""}${to ? "&to=" + to : ""}`,
     lastDatapoints: () => `${base}/datapoint/last`,
     models: () => `${base}/models`,
-    defaultRegressionConfigs: () => `${base}/defaultRegressionConfigs`,
+    defaultChangeDetectionConfigs: () => `${base}/defaultChangeDetectionConfigs`,
 }
 
 export const fetchVariables = (testId: number) => {
@@ -55,6 +55,6 @@ export function models() {
     return fetchApi(endPoints.models(), null, "get")
 }
 
-export function defaultRegressionConfigs() {
-    return fetchApi(endPoints.defaultRegressionConfigs(), null, "get")
+export function defaultChangeDetectionConfigs() {
+    return fetchApi(endPoints.defaultChangeDetectionConfigs(), null, "get")
 }

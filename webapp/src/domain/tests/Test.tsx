@@ -122,7 +122,7 @@ export default function Test() {
                                 />
                             </SavedTab>
                             <SavedTab
-                                title="Regression variables"
+                                title="Change detection"
                                 fragment="vars"
                                 isHidden={testId <= 0}
                                 onSave={saveFunc(variablesFuncsRef)}

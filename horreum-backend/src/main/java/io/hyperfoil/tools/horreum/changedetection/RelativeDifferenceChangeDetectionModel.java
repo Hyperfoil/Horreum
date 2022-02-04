@@ -1,9 +1,9 @@
-package io.hyperfoil.tools.horreum.regression;
+package io.hyperfoil.tools.horreum.changedetection;
 
-import static io.hyperfoil.tools.horreum.api.RegressionModelConfig.ComponentType.ENUM;
-import static io.hyperfoil.tools.horreum.api.RegressionModelConfig.ComponentType.LOG_SLIDER;
+import static io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig.ComponentType.ENUM;
+import static io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig.ComponentType.LOG_SLIDER;
 
-import io.hyperfoil.tools.horreum.api.RegressionModelConfig;
+import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 
@@ -17,14 +17,14 @@ import java.util.function.Consumer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
-public class RelativeDifferenceRegressionModel implements RegressionModel {
+public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionModel {
 
     public static final String NAME = "relativeDifference";
-    private static final Logger log = Logger.getLogger(RelativeDifferenceRegressionModel.class);
+    private static final Logger log = Logger.getLogger(RelativeDifferenceChangeDetectionModel.class);
 
     @Override
-    public RegressionModelConfig config() {
-        return new RegressionModelConfig(NAME, "Relative difference of means",
+    public ChangeDetectionModelConfig config() {
+        return new ChangeDetectionModelConfig(NAME, "Relative difference of means",
             "This is a generic filter that splits the dataset into two subsets: the 'floating window' " +
                   "and preceding datapoints. It calculates the mean of preceding datapoints and applies " +
                   "the 'filter' function on the window of last datapoints; it compares these two values and " +
@@ -46,7 +46,7 @@ public class RelativeDifferenceRegressionModel implements RegressionModel {
     }
 
     @Override
-    public void analyze(List<DataPoint> dataPoints, JsonNode configuration, Consumer<Change> regressionCallback) {
+    public void analyze(List<DataPoint> dataPoints, JsonNode configuration, Consumer<Change> changeConsumer) {
         DataPoint dataPoint = dataPoints.get(0);
 
         double threshold = Math.max(0, configuration.get("threshold").asDouble());
@@ -107,7 +107,7 @@ public class RelativeDifferenceRegressionModel implements RegressionModel {
                     previousStats.getMean(), previousStats.getStandardDeviation());
 
             log.debug(change.description);
-            regressionCallback.accept(change);
+            changeConsumer.accept(change);
         }
 
     }

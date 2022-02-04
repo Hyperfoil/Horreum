@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.api;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -16,7 +15,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.entity.alerting.RegressionDetection;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 
@@ -76,11 +75,11 @@ public interface AlertingService {
 
    @GET
    @Path("/models")
-   List<RegressionModelConfig> models();
+   List<ChangeDetectionModelConfig> models();
 
    @GET
-   @Path("/defaultRegressionConfigs")
-   List<RegressionDetection> defaultRegressionConfigs();
+   @Path("/defaultChangeDetectionConfigs")
+   List<ChangeDetection> defaultChangeDetectionConfigs();
 
    class DashboardInfo {
       public int testId;

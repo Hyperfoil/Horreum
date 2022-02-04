@@ -1,255 +1,395 @@
-import React, { useState, useEffect } from "react"
-import { useDispatch } from "react-redux"
-import {
-    ActionGroup,
-    Button,
-    Dropdown,
-    DropdownItem,
-    KebabToggle,
-    ExpandableSection,
-    Form,
-    FormGroup,
-    Modal,
-    Tab,
-    Tabs,
-    TextArea,
-    Switch,
-} from "@patternfly/react-core"
-import { CheckIcon } from "@patternfly/react-icons"
-import { NavLink } from "react-router-dom"
-import * as api from "./api"
-import { Change, Variable } from "./types"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import { fetchDashboard } from "./api"
+import { Panel } from "./types"
+import { ChangesTabs } from "./ChangeTable"
 import { alertAction } from "../../alerts"
-import { formatDateTime } from "../../utils"
-import { Column, UseSortByColumnOptions } from "react-table"
-import Table from "../../components/Table"
-import { useTester } from "../../auth"
+import TestSelect, { SelectedTest } from "../../components/TestSelect"
+import TagsSelect, { SelectedTags } from "../../components/TagsSelect"
+import PanelChart from "./PanelChart"
+import { formatDate } from "../../utils"
+import { DateTime } from "luxon"
+import { teamsSelector } from "../../auth"
 
-type ChangeMenuProps = {
-    change: Change
-    onDelete(id: number): void
-    onUpdate(change: Change): void
+import {
+    Button,
+    Card,
+    CardBody,
+    CardHeader,
+    ClipboardCopy,
+    DataList,
+    DataListItem,
+    DataListItemRow,
+    DataListItemCells,
+    DataListCell,
+    DatePicker,
+    EmptyState,
+    EmptyStateBody,
+    Modal,
+    PageSection,
+    Select,
+    SelectOption,
+    SelectOptionObject,
+    Spinner,
+    Title,
+} from "@patternfly/react-core"
+import { NavLink, useHistory } from "react-router-dom"
+
+type TimespanSelectProps = {
+    onChange(span: number): void
 }
 
-const ChangeMenu = ({ change, onDelete, onUpdate }: ChangeMenuProps) => {
-    const [open, setOpen] = useState(false)
-    const [modalChange, setModalChange] = useState<Change>()
-    return (
-        <>
-            <Dropdown
-                toggle={<KebabToggle onToggle={() => setOpen(!open)} />}
-                isOpen={open}
-                isPlain
-                dropdownItems={[
-                    <DropdownItem
-                        key="confirm"
-                        isDisabled={change.confirmed}
-                        onClick={() => {
-                            setOpen(false)
-                            setModalChange({ ...change, confirmed: true })
-                        }}
-                    >
-                        Confirm
-                    </DropdownItem>,
-                    <DropdownItem
-                        key="delete"
-                        isDisabled={change.confirmed}
-                        onClick={() => {
-                            onDelete(change.id)
-                            setOpen(false)
-                        }}
-                    >
-                        Delete
-                    </DropdownItem>,
-                    <DropdownItem
-                        key="update"
-                        onClick={() => {
-                            setOpen(false)
-                            setModalChange(change)
-                        }}
-                    >
-                        Edit
-                    </DropdownItem>,
-                ]}
-            />
-            <ChangeModal
-                change={modalChange}
-                isOpen={!!modalChange}
-                onClose={() => setModalChange(undefined)}
-                onUpdate={onUpdate}
-            />
-        </>
-    )
+type Timespan = SelectOptionObject & {
+    seconds: number
 }
 
-type C = Column<Change> & UseSortByColumnOptions<Change>
-
-type ChangeModalProps = {
-    change?: Change
-    isOpen: boolean
-    onClose(): void
-    onUpdate(change: Change): void
+function makeTimespan(title: string, seconds: number): Timespan {
+    return { seconds, toString: () => title }
 }
 
-const ChangeModal = ({ change, isOpen, onClose, onUpdate }: ChangeModalProps) => {
-    const [description, setDescription] = useState(change?.description)
-    const [confirmed, setConfirmed] = useState(change?.confirmed)
-    useEffect(() => {
-        setDescription(change?.description)
-        setConfirmed(change?.confirmed)
-    }, [change])
-    return (
-        <Modal title={change?.confirmed ? "Confirm change" : "Edit change"} isOpen={isOpen} onClose={onClose}>
-            <Form>
-                <FormGroup label="Confirmed" fieldId="confirmed">
-                    <Switch
-                        id="confirmed"
-                        isChecked={confirmed}
-                        onChange={setConfirmed}
-                        label="Confirmed"
-                        labelOff="Not confirmed"
-                    />
-                </FormGroup>
-                <FormGroup label="Description" fieldId="description">
-                    <TextArea
-                        value={description || ""}
-                        type="text"
-                        id="description"
-                        aria-describedby="description-helper"
-                        name="description"
-                        onChange={setDescription}
-                    />
-                </FormGroup>
-            </Form>
-            <ActionGroup>
-                <Button
-                    variant="primary"
-                    onClick={() => {
-                        if (change) {
-                            onUpdate({ ...change, description: description || "", confirmed: !!confirmed })
-                        }
-                        onClose()
-                    }}
-                >
-                    Save
-                </Button>
-                <Button variant="secondary" onClick={onClose}>
-                    Cancel
-                </Button>
-            </ActionGroup>
-        </Modal>
-    )
-}
-
-type ChangesProps = {
-    varId: number
-    testOwner?: string
-    selectedChangeId?: number
-}
-
-export const Changes = ({ varId, testOwner, selectedChangeId }: ChangesProps) => {
-    const dispatch = useDispatch()
-    const [changes, setChanges] = useState<Change[]>([])
-    useEffect(() => {
-        api.fetchChanges(varId).then(
-            response => setChanges(response),
-            error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
-        )
-    }, [varId, dispatch])
-    const isTester = useTester(testOwner)
-    const columns: C[] = [
-        {
-            Header: "Confirmed",
-            accessor: "confirmed",
-            Cell: (arg: any) => (arg.cell.value ? <CheckIcon id={"change_" + arg.row.original.id} /> : ""),
-        },
-        {
-            Header: "Time",
-            accessor: "timestamp",
-            Cell: (arg: any) => formatDateTime(arg.cell.value),
-        },
-        {
-            Header: "Run ID",
-            accessor: "runId",
-            Cell: (arg: any) => <NavLink to={"/run/" + arg.cell.value}>{arg.cell.value}</NavLink>,
-        },
-        {
-            Header: "Description",
-            accessor: "description",
-            Cell: (arg: any) => <div dangerouslySetInnerHTML={{ __html: arg.cell.value }} />,
-        },
-    ]
-    if (isTester) {
-        columns.push({
-            Header: "",
-            accessor: "id",
-            disableSortBy: true,
-            Cell: (arg: any) => {
-                return (
-                    <ChangeMenu
-                        change={arg.row.original}
-                        onDelete={changeId =>
-                            api.deleteChange(changeId).then(
-                                _ => setChanges(changes.filter(c => c.id !== changeId)),
-                                error =>
-                                    dispatch(alertAction("CHANGE_DELETE", "Failed to delete change " + changeId, error))
-                            )
-                        }
-                        onUpdate={change =>
-                            api.updateChange(change).then(
-                                _ => setChanges(changes.map(c => (c.id === change.id ? change : c))),
-                                error =>
-                                    dispatch(
-                                        alertAction("CHANGE_UPDATE", "Failed to update change " + change.id, error)
-                                    )
-                            )
-                        }
-                    />
-                )
-            },
-        })
-    }
-    // TODO: this doesn't work, table won't get updated when selected changes
-    const selected = { [changes.findIndex(c => c.id === selectedChangeId)]: true }
-    return <Table columns={columns} data={changes} selected={selected} />
-}
-
-type ChangesTabsProps = {
-    variables: Variable[]
-    testOwner?: string
-    selectedChangeId?: number
-    selectedVariableId?: number
-}
-
-export const ChangesTabs = ({ variables, testOwner, selectedChangeId, selectedVariableId }: ChangesTabsProps) => {
+const TimespanSelect = (props: TimespanSelectProps) => {
     const [isExpanded, setExpanded] = useState(false)
-    const [activeTab, setActiveTab] = useState<number | string>(0)
-    useEffect(() => {
-        const index = variables.findIndex(v => v.id === selectedVariableId)
-        if (index >= 0) {
-            setExpanded(true)
-            setActiveTab(index)
-        }
-    }, [selectedVariableId, variables])
-    const name = variables[0].group || variables[0].name
+    const options = useMemo(
+        () => [
+            makeTimespan("all", 2000000000),
+            makeTimespan("1 year", 366 * 86400),
+            makeTimespan("6 months", 183 * 86400),
+            makeTimespan("3 months", 92 * 86400),
+            makeTimespan("1 month", 31 * 86400),
+            makeTimespan("1 week", 7 * 86400),
+            makeTimespan("1 day", 86400),
+            makeTimespan("6 hours", 6 * 3600),
+        ],
+        []
+    )
+    const [selected, setSelected] = useState(options[4])
     return (
-        <ExpandableSection
-            toggleText={isExpanded ? "Hide changes in " + name : "Show changes in " + name}
+        <Select
+            isOpen={isExpanded}
+            selections={selected}
             onToggle={setExpanded}
-            isExpanded={isExpanded}
+            onSelect={(_, value) => {
+                const timespan = value as Timespan
+                setSelected(timespan)
+                setExpanded(false)
+                props.onChange(timespan.seconds)
+            }}
         >
-            <Tabs
-                activeKey={activeTab}
-                onSelect={(e, index) => {
-                    setActiveTab(index)
-                }}
-            >
-                {variables.map((v, index) => (
-                    <Tab key={v.name} eventKey={index} title={v.name}>
-                        <Changes varId={v.id} testOwner={testOwner} selectedChangeId={selectedChangeId} />
-                    </Tab>
-                ))}
-            </Tabs>
-        </ExpandableSection>
+            {options.map((timespan, i) => (
+                <SelectOption key={i} value={timespan}>
+                    {timespan.toString()}
+                </SelectOption>
+            ))}
+        </Select>
+    )
+}
+
+type LineTypeSelectProps = {
+    onChange(type: string): void
+}
+
+type LineType = SelectOptionObject & {
+    type: string
+}
+
+function makeLineType(title: string, type: string): LineType {
+    return { type, toString: () => title }
+}
+
+const LineTypeSelect = (props: LineTypeSelectProps) => {
+    const [isExpanded, setExpanded] = useState(false)
+    const options = useMemo(
+        () => [
+            makeLineType("steps", "stepAfter"),
+            makeLineType("straight", "linear"),
+            makeLineType("curve", "monotone"),
+        ],
+        []
+    )
+    const [selected, setSelected] = useState(options[1])
+    return (
+        <Select
+            isOpen={isExpanded}
+            selections={selected}
+            onToggle={setExpanded}
+            onSelect={(_, value) => {
+                const linetype = value as LineType
+                setSelected(linetype)
+                setExpanded(false)
+                props.onChange(linetype.type)
+            }}
+        >
+            {options.map((timespan, i) => (
+                <SelectOption key={i} value={timespan}>
+                    {timespan.toString()}
+                </SelectOption>
+            ))}
+        </Select>
+    )
+}
+
+const MONTH = 31 * 86400
+
+function toNumber(value: any) {
+    const n = parseInt(value)
+    return isNaN(n) ? undefined : n
+}
+
+export default function Changes() {
+    const history = useHistory()
+    const params = new URLSearchParams(history.location.search)
+    // eslint-disable-next-line
+    const paramTest = useMemo(() => params.get("test") || undefined, [])
+    const paramTags = params.get("tags")
+    const dispatch = useDispatch()
+    const teams = useSelector(teamsSelector)
+    const [selectedTest, setSelectedTest] = useState<SelectedTest>()
+    const [currentTags, setCurrentTags] = useState<SelectedTags | undefined>(
+        paramTags ? { toString: () => paramTags } : undefined
+    )
+    const [dashboardUrl, setDashboardUrl] = useState("")
+    const [panels, setPanels] = useState<Panel[]>([])
+    const [loadingPanels, setLoadingPanels] = useState(false)
+    const [loadingTags, setLoadingTags] = useState(false)
+    const [requiresTags, setRequiresTags] = useState(false)
+
+    const firstNow = useMemo(() => Date.now(), [])
+    const [endTime, setEndTime] = useState(toNumber(params.get("end")) || firstNow)
+    const [date, setDate] = useState(formatDate(firstNow))
+    const [timespan, setTimespan] = useState<number>(toNumber(params.get("timespan")) || MONTH)
+    const [lineType, setLineType] = useState(params.get("line") || "linear")
+
+    const createQuery = (alwaysEndTime: boolean) => {
+        let query = "?test=" + selectedTest
+        if (currentTags) {
+            query += "&tags=" + currentTags
+        }
+        if (endTime !== firstNow || alwaysEndTime) {
+            query += "&end=" + endTime
+        }
+        if (timespan !== MONTH) {
+            query += "&timespan=" + timespan
+        }
+        if (lineType !== "linear") {
+            query += "&line=" + lineType
+        }
+        return query
+    }
+    useEffect(() => {
+        if (!selectedTest) {
+            document.title = "Changes | Horreum"
+            return
+        }
+        document.title = `${selectedTest} | Horreum`
+        history.replace(history.location.pathname + createQuery(false))
+    }, [selectedTest, currentTags, endTime, timespan, lineType, firstNow, history])
+    useEffect(() => {
+        setPanels([])
+        setDashboardUrl("")
+        // We need to prevent fetching dashboard until we are sure if we need the tags
+        if (selectedTest && !loadingTags) {
+            setLoadingPanels(true)
+            fetchDashboard(selectedTest.id, currentTags?.toString())
+                .then(
+                    response => {
+                        setDashboardUrl(response.url)
+                        setPanels(response.panels)
+                    },
+                    error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
+                )
+                .finally(() => setLoadingPanels(false))
+        }
+    }, [selectedTest, currentTags, teams, dispatch])
+    useEffect(() => {
+        const newDate = formatDate(endTime)
+        if (newDate !== date) {
+            setDate(newDate)
+        }
+    }, [endTime /* date omitted intentionally */])
+    const [selectedChange, setSelectedChange] = useState<number>()
+    const [selectedVariable, setSelectedVariable] = useState<number>()
+
+    const onSelectTest = useCallback((selection, isInitial) => {
+        if (selectedTest !== selection) {
+            setSelectedTest(selection as SelectedTest)
+        }
+        if (!isInitial) {
+            setCurrentTags(undefined)
+        }
+    }, [])
+    const beforeTagsLoading = useCallback(() => setLoadingTags(true), [])
+    const onTagsLoaded = useCallback(tags => {
+        setLoadingTags(false)
+        setRequiresTags(!!tags && tags.length > 1)
+    }, [])
+    const [linkCopyOpen, setLinkCopyOpen] = useState(false)
+    return (
+        <PageSection>
+            <Card>
+                <CardHeader>
+                    {
+                        <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                            <div style={{ display: "flex" }}>
+                                <TestSelect
+                                    placeholderText="Choose test..."
+                                    initialTestName={paramTest}
+                                    onSelect={onSelectTest}
+                                    selection={selectedTest}
+                                />
+                                {selectedTest && (
+                                    <TagsSelect
+                                        testId={selectedTest?.id}
+                                        selection={currentTags}
+                                        onSelect={setCurrentTags}
+                                        showIfNoTags={false}
+                                        beforeTagsLoading={beforeTagsLoading}
+                                        onTagsLoaded={onTagsLoaded}
+                                    />
+                                )}
+                                {selectedTest && (
+                                    <>
+                                        <NavLink
+                                            className="pf-c-button pf-m-primary"
+                                            to={"/test/" + selectedTest.id + "#vars"}
+                                        >
+                                            Variable definitions
+                                        </NavLink>
+                                        <Button variant="secondary" onClick={() => window.open(dashboardUrl, "_blank")}>
+                                            Open Grafana
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            isDisabled={!selectedTest || loadingTags || (requiresTags && !currentTags)}
+                                            onClick={() => setLinkCopyOpen(true)}
+                                        >
+                                            Copy link
+                                        </Button>
+                                        <Modal
+                                            variant="small"
+                                            title="Copy link to this chart"
+                                            isOpen={linkCopyOpen}
+                                            onClose={() => setLinkCopyOpen(false)}
+                                            actions={[
+                                                <Button key="cancel" onClick={() => setLinkCopyOpen(false)}>
+                                                    Close
+                                                </Button>,
+                                            ]}
+                                        >
+                                            <ClipboardCopy
+                                                isReadOnly={true}
+                                                onCopy={() => setTimeout(() => setLinkCopyOpen(false), 1000)}
+                                            >
+                                                {window.location.origin + window.location.pathname + createQuery(true)}
+                                            </ClipboardCopy>
+                                        </Modal>
+                                    </>
+                                )}
+                            </div>
+                            <div style={{ display: "flex" }}>
+                                <DatePicker
+                                    value={date}
+                                    onChange={value => {
+                                        setDate(value)
+                                        const dateTime = DateTime.fromFormat(value, "yyyy-MM-dd")
+                                        if (dateTime.isValid) {
+                                            setEndTime(dateTime.toMillis())
+                                        }
+                                    }}
+                                />
+                                <TimespanSelect onChange={setTimespan} />
+                                <LineTypeSelect onChange={setLineType} />
+                            </div>
+                        </div>
+                    }
+                </CardHeader>
+                <CardBody>
+                    {!selectedTest && (
+                        <EmptyState>
+                            <Title headingLevel="h2">No test selected</Title>
+                            <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
+                        </EmptyState>
+                    )}
+                    {selectedTest && loadingTags && (
+                        <EmptyState>
+                            <EmptyStateBody>
+                                Loading tags... <Spinner size="md" />
+                            </EmptyStateBody>
+                        </EmptyState>
+                    )}
+                    {selectedTest && !loadingTags && requiresTags && !currentTags && (
+                        <EmptyState>
+                            <Title headingLevel="h2">Please select tags filtering test runs.</Title>
+                        </EmptyState>
+                    )}
+                    {selectedTest && !loadingPanels && !requiresTags && panels.length === 0 && (
+                        <EmptyState>
+                            <Title headingLevel="h2">
+                                Test {selectedTest.toString()} does not define any change detection variables
+                            </Title>
+                            <NavLink className="pf-c-button pf-m-primary" to={"/test/" + selectedTest.id + "#vars"}>
+                                Define change detection variables
+                            </NavLink>
+                        </EmptyState>
+                    )}
+                    {!loadingTags &&
+                        (!requiresTags || currentTags) &&
+                        panels &&
+                        panels.map((p, i) => (
+                            <DataList key={i} aria-label="test variables">
+                                <DataListItem aria-labelledby="variable-name">
+                                    {dashboardUrl && (
+                                        <DataListItemRow>
+                                            <DataListItemCells
+                                                dataListCells={[
+                                                    <DataListCell key="chart">
+                                                        <PanelChart
+                                                            title={p.name}
+                                                            variables={p.variables.map(v => v.id)}
+                                                            tags={currentTags?.toString() || ""}
+                                                            endTime={endTime}
+                                                            setEndTime={setEndTime}
+                                                            timespan={timespan}
+                                                            lineType={lineType}
+                                                            onChangeSelected={(changeId, variableId) => {
+                                                                setSelectedChange(changeId)
+                                                                setSelectedVariable(variableId)
+                                                                // we cannot scroll to an element that's not visible yet
+                                                                window.setTimeout(() => {
+                                                                    const element = document.getElementById(
+                                                                        "change_" + changeId
+                                                                    )
+                                                                    if (element && element !== null) {
+                                                                        element.scrollIntoView()
+                                                                    }
+                                                                    // this is hacky way to reopen tabs on subsequent click
+                                                                    setSelectedVariable(undefined)
+                                                                }, 100)
+                                                            }}
+                                                        />
+                                                    </DataListCell>,
+                                                ]}
+                                            />
+                                        </DataListItemRow>
+                                    )}
+                                    <DataListItemRow>
+                                        <DataListItemCells
+                                            dataListCells={[
+                                                <DataListCell key="changes">
+                                                    <ChangesTabs
+                                                        variables={p.variables}
+                                                        testOwner={selectedTest?.owner}
+                                                        selectedChangeId={selectedChange}
+                                                        selectedVariableId={selectedVariable}
+                                                    />
+                                                </DataListCell>,
+                                            ]}
+                                        />
+                                    </DataListItemRow>
+                                </DataListItem>
+                            </DataList>
+                        ))}
+                </CardBody>
+            </Card>
+        </PageSection>
     )
 }

@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity
-public class RegressionDetection extends PanacheEntityBase {
+public class ChangeDetection extends PanacheEntityBase {
    @Id
    @GeneratedValue
    public Integer id;

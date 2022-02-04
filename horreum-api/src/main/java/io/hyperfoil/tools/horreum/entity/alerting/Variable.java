@@ -48,5 +48,5 @@ public class Variable extends PanacheEntityBase {
    public String calculation;
 
    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "variable")
-   public Set<RegressionDetection> regressionDetection;
+   public Set<ChangeDetection> changeDetection;
 }

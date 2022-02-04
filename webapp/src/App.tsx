@@ -25,7 +25,7 @@ import Schema from "./domain/schemas/Schema"
 import AllHooks from "./domain/hooks/AllHooks"
 import Alerts from "./alerts"
 
-import Series from "./domain/alerting/Series"
+import Changes from "./domain/alerting/Changes"
 
 import Reports from "./domain/reports/Reports"
 import Banner, { BannerConfig } from "./Banner"
@@ -97,10 +97,10 @@ function Main() {
                                     </NavItem>
                                     <NavItem itemId={4}>
                                         <NavLink
-                                            to="/series"
+                                            to="/changes"
                                             style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                         >
-                                            Series
+                                            Changes
                                         </NavLink>
                                     </NavItem>
                                     <NavItem itemId={5}>
@@ -149,7 +149,7 @@ function Main() {
                     <Route exact path="/schema" component={AllSchema} />
                     <Route path="/schema/:schemaId" component={Schema} />
 
-                    <Route exact path="/series" component={Series} />
+                    <Route exact path="/changes" component={Changes} />
 
                     <Route exact path="/reports" component={Reports} />
                     <Route exact path="/reports/table/config/:configId" component={TableReportConfigPage} />

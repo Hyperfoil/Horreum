@@ -39,13 +39,13 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
-import io.hyperfoil.tools.horreum.api.RegressionModelConfig;
+import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
 import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
-import io.hyperfoil.tools.horreum.entity.alerting.RegressionDetection;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.LastMissingRunNotification;
-import io.hyperfoil.tools.horreum.regression.RegressionModel;
-import io.hyperfoil.tools.horreum.regression.RelativeDifferenceRegressionModel;
+import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModel;
+import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -111,7 +111,7 @@ public class AlertingServiceImpl implements AlertingService {
    //@formatter:on
    private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
 
-   private static Map<String, RegressionModel> MODELS = Map.of(RelativeDifferenceRegressionModel.NAME, new RelativeDifferenceRegressionModel());
+   private static Map<String, ChangeDetectionModel> MODELS = Map.of(RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel());
 
    @Inject
    TestServiceImpl testService;
@@ -278,7 +278,7 @@ public class AlertingServiceImpl implements AlertingService {
          accessors.add(new AccessorInfo(schema, jsonpath));
       }
       if (allAccessors.isEmpty()) {
-         log.infof("No regression vars for run %d, skipping.", run.id);
+         log.infof("No change detection variables for run %d, skipping.", run.id);
          return;
       }
 
@@ -332,7 +332,7 @@ public class AlertingServiceImpl implements AlertingService {
             log.errorf("Run %d does not exist in the database!", run.id);
             return;
          } catch (PersistenceException e) {
-            log.errorf(e, "Failed to extract regression variables for run %d", run.id);
+            log.errorf(e, "Failed to extract change detection variables for run %d", run.id);
             self.logFailure(run);
             return;
          }
@@ -426,7 +426,7 @@ public class AlertingServiceImpl implements AlertingService {
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    @WithRoles(extras = Roles.HORREUM_ALERTING)
    void logFailure(Run run) {
-      logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Failed to extract regression variables from database. This is likely due to a malformed JSONPath in one of extractors.");
+      logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Failed to extract change detection variables from database. This is likely due to a malformed JSONPath in one of extractors.");
    }
 
    private void appendPathQuery(StringBuilder query, Object topKey, boolean isArray, String jsonpath) {
@@ -558,10 +558,10 @@ public class AlertingServiceImpl implements AlertingService {
          return;
       }
 
-      for (RegressionDetection detection : RegressionDetection.<RegressionDetection>find("variable", variable).list()) {
-         RegressionModel model = MODELS.get(detection.model);
+      for (ChangeDetection detection : ChangeDetection.<ChangeDetection>find("variable", variable).list()) {
+         ChangeDetectionModel model = MODELS.get(detection.model);
          if (model == null) {
-            log.errorf("Cannot find regression model %s", detection.model);
+            log.errorf("Cannot find change detection model %s", detection.model);
             continue;
          }
          model.analyze(dataPoints, detection.config, change -> {
@@ -596,9 +596,9 @@ public class AlertingServiceImpl implements AlertingService {
             if (item.id != null && item.id <= 0) {
                item.id = null;
             }
-            if (item.regressionDetection != null) {
-               ensureDefaults(item.regressionDetection);
-               item.regressionDetection.forEach(rd -> rd.variable = item);
+            if (item.changeDetection != null) {
+               ensureDefaults(item.changeDetection);
+               item.changeDetection.forEach(rd -> rd.variable = item);
             }
             item.testId = testId;
             item.persist(); // insert
@@ -607,16 +607,16 @@ public class AlertingServiceImpl implements AlertingService {
             current.group = matching.group;
             current.accessors = matching.accessors;
             current.calculation = matching.calculation;
-            if (matching.regressionDetection != null) {
-               ensureDefaults(matching.regressionDetection);
+            if (matching.changeDetection != null) {
+               ensureDefaults(matching.changeDetection);
             }
-            updateCollection(current.regressionDetection, matching.regressionDetection, rd -> rd.id, item -> {
+            updateCollection(current.changeDetection, matching.changeDetection, rd -> rd.id, item -> {
                if (item.id != null && item.id <= 0) {
                   item.id = null;
                }
                item.variable = current;
                item.persist();
-               current.regressionDetection.add(item);
+               current.changeDetection.add(item);
             }, (crd, mrd) -> {
                crd.model = mrd.model;
                crd.config = mrd.config;
@@ -644,9 +644,9 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   private void ensureDefaults(Set<RegressionDetection> rds) {
+   private void ensureDefaults(Set<ChangeDetection> rds) {
       rds.forEach(rd -> {
-         RegressionModel model = MODELS.get(rd.model);
+         ChangeDetectionModel model = MODELS.get(rd.model);
          if (model == null) {
             throw ServiceException.badRequest("Unknown model " + rd.model);
          }
@@ -971,19 +971,19 @@ public class AlertingServiceImpl implements AlertingService {
 
    @PermitAll
    @Override
-   public List<RegressionModelConfig> models() {
-      return MODELS.values().stream().map(RegressionModel::config).collect(Collectors.toList());
+   public List<ChangeDetectionModelConfig> models() {
+      return MODELS.values().stream().map(ChangeDetectionModel::config).collect(Collectors.toList());
    }
 
    @PermitAll
    @Override
-   public List<RegressionDetection> defaultRegressionConfigs() {
-      RegressionDetection lastDatapoint = new RegressionDetection();
-      lastDatapoint.model = RelativeDifferenceRegressionModel.NAME;
+   public List<ChangeDetection> defaultChangeDetectionConfigs() {
+      ChangeDetection lastDatapoint = new ChangeDetection();
+      lastDatapoint.model = RelativeDifferenceChangeDetectionModel.NAME;
       lastDatapoint.config = JsonNodeFactory.instance.objectNode()
             .put("window", 1).put("filter", "mean").put("threshold", 0.2).put("minPrevious", 5);
-      RegressionDetection floatingWindow = new RegressionDetection();
-      floatingWindow.model = RelativeDifferenceRegressionModel.NAME;
+      ChangeDetection floatingWindow = new ChangeDetection();
+      floatingWindow.model = RelativeDifferenceChangeDetectionModel.NAME;
       floatingWindow.config = JsonNodeFactory.instance.objectNode()
             .put("window", 5).put("filter", "mean").put("threshold", 0.1).put("minPrevious", 5);
       return Arrays.asList(lastDatapoint, floatingWindow);

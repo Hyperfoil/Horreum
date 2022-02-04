@@ -1,6 +1,6 @@
 export {}
 
-export type RegressionDetection = {
+export type ChangeDetection = {
     id: number
     model: string
     config: any
@@ -13,7 +13,7 @@ export type Variable = {
     testid: number
     accessors: string
     calculation?: string
-    regressionDetection: RegressionDetection[]
+    changeDetection: ChangeDetection[]
 }
 
 export type Panel = {
@@ -46,15 +46,15 @@ export type Change = {
     timestamp: number
 }
 
-export type RegressionModelConfig = {
+export type ChangeDetectionModelConfig = {
     name: string
     title: string
     description: string
-    ui: RegressionModelConfigComponent[]
+    ui: ChangeDetectionModelConfigComponent[]
     defaults: any
 }
 
-export type RegressionModelConfigComponent = {
+export type ChangeDetectionModelConfigComponent = {
     name: string
     title: string
     description: string

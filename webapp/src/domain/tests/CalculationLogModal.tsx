@@ -73,7 +73,7 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
         }
         getLogCount(props.testId, props.source).then(
             response => setCount(response),
-            error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
+            error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get change detection calculation logs.", error))
         )
     }, [props.isOpen, props.testId, props.source, dispatch, updateCounter])
     useEffect(() => {
@@ -92,7 +92,7 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
                         ],
                     }))
                 ),
-            error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get regression calculation logs.", error))
+            error => dispatch(alertAction("CALCULATIONS_LOG", "Cannot get change detection calculation logs.", error))
         )
     }, [page, limit, props.isOpen, props.testId, props.source, dispatch, updateCounter])
     const timeRangeOptions: TimeRange[] = useMemo(

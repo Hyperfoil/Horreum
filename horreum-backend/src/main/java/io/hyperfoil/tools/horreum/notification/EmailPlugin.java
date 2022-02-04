@@ -88,7 +88,7 @@ public class EmailPlugin implements NotificationPlugin {
 
       @Override
       public void notifyMissingRunValues(String testName, String tags, MissingRunValuesEvent event) {
-         String subject = subjectPrefix + " Missing regression values for " + testName + "/" + tags + ", run " + event.runId;
+         String subject = subjectPrefix + " Missing change detection values for " + testName + "/" + tags + ", run " + event.runId;
          String content = missingValuesNotificationEmail
                .data("username", username)
                .data("testName", testName)

@@ -7,14 +7,14 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-public class RegressionModelConfig {
+public class ChangeDetectionModelConfig {
    public String name;
    public String title;
    public String description;
    public List<Component> ui = new ArrayList<>();
    public Map<String, JsonNode> defaults = new HashMap<>();
 
-   public RegressionModelConfig(String name, String title, String description) {
+   public ChangeDetectionModelConfig(String name, String title, String description) {
       this.name = name;
       this.title = title;
       this.description = description;
@@ -48,8 +48,8 @@ public class RegressionModelConfig {
          return this;
       }
 
-      public RegressionModelConfig end() {
-         return RegressionModelConfig.this;
+      public ChangeDetectionModelConfig end() {
+         return ChangeDetectionModelConfig.this;
       }
    }
 
