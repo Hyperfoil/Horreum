@@ -26,6 +26,7 @@ import io.hyperfoil.tools.horreum.api.NotificationService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
+import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.notification.Notification;
@@ -194,8 +195,11 @@ public class NotificationServiceImpl implements NotificationService {
    void notifyMissingRun(int testId, JsonNode tagsJson, long maxStaleness, int runId, long runTimestamp) {
       String tags = tagsToString(tagsJson);
       Test test = Test.findById(testId);
-      String name = test != null ? test.name : "<unknown test>";
-      notifyAll(testId, n -> n.notifyMissingRun(name, testId, tags, maxStaleness, runId, runTimestamp));
+      Watch watch = Watch.find("testId = ?1", testId).firstResult();
+      if (!watch.mutemissingruns) {
+         String name = test != null ? test.name : "<unknown test>";
+         notifyAll(testId, n -> n.notifyMissingRun(name, testId, tags, maxStaleness, runId, runTimestamp));
+      }
    }
 
    public void notifyExpectedRun(int testId, JsonNode tagsJson, long expectedBefore, String expectedBy, String backlink) {

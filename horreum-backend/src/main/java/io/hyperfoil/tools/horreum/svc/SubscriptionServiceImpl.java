@@ -14,6 +14,7 @@ import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.RollbackException;
 import javax.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SubscriptionService;
@@ -78,6 +79,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
          watch.teams = Collections.emptyList();
          watch.users = Collections.emptyList();
          watch.optout = Collections.emptyList();
+         watch.mutemissingruns = false;
       }
       return watch;
    }
@@ -185,18 +187,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @RolesAllowed({Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Transactional
    @Override
-   public void update(Integer testId, Watch watch) {
-      Watch existing = Watch.find("testid", testId).firstResult();
-      if (existing == null) {
-         watch.id = null;
-         watch.test = em.getReference(Test.class, testId);
-         watch.persistAndFlush();
-      } else {
-         existing.users = watch.users;
-         existing.optout = watch.optout;
-         existing.teams = watch.teams;
-         existing.persistAndFlush();
-      }
+   public void update(Integer testId, Watch watch) throws RollbackException {
+      Watch existing = get(testId);
+      existing.users = watch.users;
+      existing.optout = watch.optout;
+      existing.teams = watch.teams;
+      existing.mutemissingruns = watch.mutemissingruns;
+      existing.persistAndFlush();
    }
 
    private List<String> currentWatches(Watch watch) {

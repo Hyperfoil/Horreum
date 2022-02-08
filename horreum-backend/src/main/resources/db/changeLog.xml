@@ -538,6 +538,9 @@
             <column name="testid" type="integer">
                 <constraints nullable="false"/>
             </column>
+            <column name="mutemissingruns" type="boolean">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
         <addUniqueConstraint tableName="watch" columnNames="testid"/>
         <createTable tableName="watch_users">
@@ -645,6 +648,7 @@
             CREATE POLICY watch_delete ON watch FOR DELETE USING (has_role('horreum.alerting'));
             CREATE POLICY watch_teams_policies ON watch_teams FOR ALL USING (has_role('horreum.alerting') OR has_role(teams));
             CREATE POLICY watch_users_policies ON watch_users FOR ALL USING (has_role('horreum.alerting') OR has_role(users));
+            ALTER POLICY watch_update ON watch USING (true);
         </sql>
     </changeSet>
 

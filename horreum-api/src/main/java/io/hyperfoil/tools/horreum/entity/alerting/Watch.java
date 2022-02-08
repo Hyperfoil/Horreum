@@ -41,6 +41,8 @@ public class Watch extends PanacheEntityBase {
    @JsonIgnore
    public Test test;
 
+   public boolean mutemissingruns;
+
    @ElementCollection(fetch = FetchType.EAGER)
    @Fetch(FetchMode.SELECT)
    public List<String> users;
