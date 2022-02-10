@@ -162,14 +162,14 @@ public class NotificationServiceImpl implements NotificationService {
       return plugins.keySet();
    }
 
-   @WithRoles
+   @WithRoles(addUsername = true)
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
    public List<NotificationSettings> settings(String name, boolean team) {
       return NotificationSettings.list("name = ?1 AND isTeam = ?2", name, team);
    }
 
-   @WithRoles
+   @WithRoles(addUsername = true)
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Transactional
    @Override

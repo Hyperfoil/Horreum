@@ -64,6 +64,9 @@ const NotificationSettings = ({ settings, methods, onChange }: NotificationSetti
                         settings.data = value
                         onChange()
                     }}
+                    onKeyDown={e => {
+                        if (e.key === "Enter") e.preventDefault()
+                    }}
                 />
             </FormGroup>
         </Form>
