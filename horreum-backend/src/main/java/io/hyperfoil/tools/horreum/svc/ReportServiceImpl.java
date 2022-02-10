@@ -254,7 +254,7 @@ public class ReportServiceImpl implements ReportService {
          if (comment.comment != null && !comment.comment.isEmpty()) {
             comment.persistAndFlush();
          }
-      } else if (comment.comment == null || comment.comment.isEmpty()){
+      } else if (nullOrEmpty(comment.comment)){
          ReportComment.deleteById(comment.id);
          return null;
       } else {
@@ -294,7 +294,7 @@ public class ReportServiceImpl implements ReportService {
       report.config = config;
       List<Object[]> runCategories = null, series, labels = null;
       Query timestampQuery;
-      if (config.filterAccessors != null) {
+      if (!nullOrEmpty(config.filterAccessors)) {
          List<Integer> runIds = filterRunIds(config);
          log.debugf("Table report %s(%d) includes runs %s", config.title, config.id, runIds);
          series = selectByRuns(config.seriesAccessors, runIds);
@@ -312,7 +312,7 @@ public class ReportServiceImpl implements ReportService {
          log.debugf("Table report %s(%d) includes all runs for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
          series = selectByTest(config.seriesAccessors, config.test.id);
          log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
-         if (config.labelAccessors != null) {
+         if (!nullOrEmpty(config.labelAccessors)) {
             labels = selectByTest(config.labelAccessors, config.test.id);
             log.debugf("Labels: %s", labels.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
          }
@@ -352,7 +352,7 @@ public class ReportServiceImpl implements ReportService {
             for (Object[] row : valuesForComponent) {
                Integer runId = (Integer) row[0];
                TableReport.RunData data = runData.get(runId);
-               if (component.function == null || component.function.trim().isEmpty()) {
+               if (nullOrEmpty(component.function)) {
                   if (row[1] == null) {
                      data.values.addNull();
                   } else {
@@ -541,7 +541,7 @@ public class ReportServiceImpl implements ReportService {
    private List<Integer> filterRunIds(TableReportConfig config) {
       List<Object[]> list = selectByTest(config.filterAccessors, config.test.id);
       List<Integer> runIds = new ArrayList<>(list.size());
-      if (config.filterFunction == null) {
+      if (nullOrEmpty(config.filterFunction)) {
          for (Object[] row : list) {
             Integer runId = (Integer) row[0];
             String result = (String) row[1];
