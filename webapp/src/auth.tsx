@@ -128,9 +128,12 @@ export const useTester = (owner?: string) => {
     return roles.includes("tester") && (!owner || roles.includes(owner.slice(0, -4) + "tester"))
 }
 
+export function managedTeamsSelector(state: State) {
+    return state.auth.roles.filter(role => role.endsWith("-manager")).map(role => role.slice(0, -7) + "team")
+}
+
 export function useManagedTeams(): string[] {
-    const roles = useSelector(rolesSelector)
-    return roles.filter(role => role.endsWith("-manager")).map(role => role.slice(0, -4) + "team")
+    return useSelector(managedTeamsSelector)
 }
 
 export const defaultTeamSelector = (state: State) => {

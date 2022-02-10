@@ -16,7 +16,7 @@ import {
 
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import TeamSelect, { createTeam, Team } from "../../components/TeamSelect"
-import { defaultTeamSelector, teamToName } from "../../auth"
+import { defaultTeamSelector, managedTeamsSelector, teamToName } from "../../auth"
 import { alertAction, dispatchError, dispatchInfo } from "../../alerts"
 import UserSearch from "../../components/UserSearch"
 import { User, teamMembers, info, createUser, updateTeamMembers } from "./api"
@@ -118,7 +118,11 @@ function member(user: User, memberRoles: Map<string, string[]>, setModified: (_:
 }
 
 export default function ManagedTeams(props: ManagedTeamsProps) {
-    const defaultTeam = useSelector(defaultTeamSelector)
+    let defaultTeam = useSelector(defaultTeamSelector)
+    const managedTeams = useSelector(managedTeamsSelector)
+    if (!defaultTeam || !managedTeams.includes(defaultTeam)) {
+        defaultTeam = managedTeams.length > 0 ? managedTeams[0] : undefined
+    }
     const [team, setTeam] = useState<Team>(createTeam(defaultTeam))
     const [nextTeam, setNextTeam] = useState<Team>()
     const [availableUsers, setAvailableUsers] = useState<ReactElement[]>([])
@@ -178,6 +182,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
                     <TeamSelect
                         includeGeneral={false}
                         selection={team}
+                        teamsSelector={managedTeamsSelector}
                         onSelect={anotherTeam => {
                             if (modified) {
                                 setNextTeam(anotherTeam)

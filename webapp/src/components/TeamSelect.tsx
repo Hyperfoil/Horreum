@@ -1,10 +1,10 @@
 import { useState } from "react"
-
+import { State } from "../store"
 import { Select, SelectGroup, SelectOption, SelectVariant, SelectOptionObject } from "@patternfly/react-core"
 
 import { useSelector } from "react-redux"
 
-import { isAuthenticatedSelector, teamsSelector, teamToName } from "../auth"
+import { isAuthenticatedSelector, teamsSelector as allTeamsSelector, teamToName } from "../auth"
 
 export interface Team extends SelectOptionObject {
     key: string
@@ -23,18 +23,19 @@ export const SHOW_ALL: Team = { key: "__all", toString: () => "Show all" }
 type TeamSelectProps = {
     includeGeneral: boolean
     selection: string | Team
+    teamsSelector?(state: State): string[]
     onSelect(selection: Team): void
 }
 
-export default function TeamSelect({ includeGeneral, selection, onSelect }: TeamSelectProps) {
-    const teams = useSelector(teamsSelector)
+export default function TeamSelect({ includeGeneral, selection, teamsSelector, onSelect }: TeamSelectProps) {
+    const teams = useSelector(teamsSelector || allTeamsSelector)
     const isAuthenticated = useSelector(isAuthenticatedSelector)
     const generalOptions = [<SelectOption key="__all" value={SHOW_ALL} />]
     if (isAuthenticated) {
         generalOptions.push(<SelectOption key="__my" value={ONLY_MY_OWN} />)
     }
     const teamsAsSelectOptions = () => {
-        return teams ? teams.map(team => <SelectOption key={team} value={createTeam(team)} />) : []
+        return teams?.map(team => <SelectOption key={team} value={createTeam(team)} />) || []
     }
     const [expanded, setExpanded] = useState(false)
     return (
