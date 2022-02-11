@@ -27,7 +27,7 @@ public class RouteFilter extends HttpFilter {
       HttpServletResponse response = (HttpServletResponse) res;
       chain.doFilter(request, response);
 
-      if (response.getStatus() == 404) {
+      if (response.getStatus() == 404 && !response.isCommitted()) {
          String path = request.getRequestURI().substring(
             request.getContextPath().length()).replaceAll("[/]+$", "");
          if (Stream.of(PATH_PREFIXES).noneMatch(prefix -> path.startsWith(prefix)) && !FILE_NAME_PATTERN.matcher(path).matches()) {
