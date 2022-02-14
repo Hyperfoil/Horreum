@@ -292,7 +292,7 @@ public class ReportServiceImpl implements ReportService {
          }
       }
       report.config = config;
-      List<Object[]> runCategories = null, series, labels = null;
+      List<Object[]> runCategories = Collections.emptyList(), series, labels = Collections.emptyList();
       Query timestampQuery;
       if (!nullOrEmpty(config.filterAccessors)) {
          List<Integer> runIds = filterRunIds(config);
@@ -322,13 +322,13 @@ public class ReportServiceImpl implements ReportService {
          }
          timestampQuery = em.createNativeQuery("SELECT id, start FROM run WHERE testid = ?").setParameter(1, config.test.id);
       }
-      if (runCategories == null || runCategories.isEmpty()) {
+      if (runCategories.isEmpty()) {
          assert config.categoryAccessors == null;
          assert config.categoryFunction == null;
          assert config.categoryFormatter == null;
          runCategories = series.stream().map(row -> new Object[]{ row[0], "" }).collect(Collectors.toList());
       }
-      if (labels == null || labels.isEmpty()) {
+      if (labels.isEmpty()) {
          assert config.labelAccessors == null;
          assert config.labelFunction == null;
          assert config.labelFormatter == null;

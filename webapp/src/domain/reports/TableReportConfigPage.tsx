@@ -50,6 +50,7 @@ function ReportConfigComponent(props: ReportConfigComponentProps) {
             <FlexItem grow={{ default: "grow" }}>
                 <FormGroup label="Name" fieldId="name">
                     <TextInput
+                        id="name"
                         value={props.component.name}
                         onChange={name => props.onChange({ ...props.component, name })}
                         isRequired
@@ -58,6 +59,7 @@ function ReportConfigComponent(props: ReportConfigComponentProps) {
                 </FormGroup>
                 <FormGroup label="Unit" fieldId="unit">
                     <TextInput
+                        id="unit"
                         value={props.component.unit}
                         onChange={unit => props.onChange({ ...props.component, unit })}
                         placeholder="E.g. milliseconds, requests/sec..."
@@ -505,6 +507,7 @@ export default function TableReportConfigPage() {
                             </FormGroup>
                             <FormGroup label="Description" fieldId="labelDescription">
                                 <TextInput
+                                    id="description"
                                     value={config?.labelDescription}
                                     onChange={labelDescription => setConfig({ ...config, labelDescription })}
                                     placeholder="Name of the property that this report is scaling."
@@ -574,7 +577,7 @@ export default function TableReportConfigPage() {
                         )}
                     </Form>
                     {preview && (
-                        <Modal isOpen={!!preview} onClose={() => setPreview(undefined)}>
+                        <Modal title="Preview" isOpen={!!preview} onClose={() => setPreview(undefined)}>
                             <div
                                 style={{
                                     overflowY: "auto",
