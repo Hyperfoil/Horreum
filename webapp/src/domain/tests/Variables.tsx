@@ -738,12 +738,12 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                                     ))}
                                 </SimpleListGroup>
                             ))}
-                            <Button variant="link" onClick={addVariable}>
-                                <PlusCircleIcon />
-                                {"\u00A0"}Add new variable...
-                            </Button>
                         </SimpleList>
                     )}
+                    <Button variant="link" onClick={addVariable}>
+                        <PlusCircleIcon />
+                        {"\u00A0"}Add new variable...
+                    </Button>
                 </SplitItem>
                 <SplitItem isFilled>
                     {!selectedVariable && (
