@@ -46,7 +46,7 @@ INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (15,13,2,'20
 INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (16,13,3,'2020-07-30 12:00:54.678',205);
 INSERT INTO change(id, confirmed, description, variable_id, runid, timestamp) VALUES (17, false, 'Test annotation <a href="http://localhost:3000/" target="_parent">with a link</a>', 13, 3, '2020-07-30 12:00:54.678');
 
-INSERT INTO watch(id, testid, mutemissingruns) VALUES (18, 2, false);
+INSERT INTO watch(id, testid, missingruns) VALUES (18, 1, false);
 INSERT INTO watch_users(watch_id, users) VALUES (18, 'user');
 INSERT INTO watch_teams(watch_id, teams) VALUES (18, 'dev-team');
 INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (19, false, 'user', 'email', 'john@example.com');

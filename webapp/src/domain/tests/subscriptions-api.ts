@@ -6,7 +6,7 @@ export type Watch = {
     users: string[]
     optout: string[]
     teams: string[]
-    mutemissingruns: boolean
+    missingruns: boolean
 }
 
 const base = "/api/subscriptions"

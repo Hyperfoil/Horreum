@@ -79,7 +79,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
          watch.teams = Collections.emptyList();
          watch.users = Collections.emptyList();
          watch.optout = Collections.emptyList();
-         watch.mutemissingruns = false;
+         watch.missingruns = true;
       }
       return watch;
    }
@@ -192,8 +192,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       existing.users = watch.users;
       existing.optout = watch.optout;
       existing.teams = watch.teams;
-      existing.mutemissingruns = watch.mutemissingruns;
-      existing.persistAndFlush();
+      existing.missingruns = watch.missingruns;
+      existing.persist();
    }
 
    private List<String> currentWatches(Watch watch) {

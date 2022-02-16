@@ -196,7 +196,7 @@ public class NotificationServiceImpl implements NotificationService {
       String tags = tagsToString(tagsJson);
       Test test = Test.findById(testId);
       Watch watch = Watch.find("testId = ?1", testId).firstResult();
-      if (!watch.mutemissingruns) {
+      if (watch.missingruns) {
          String name = test != null ? test.name : "<unknown test>";
          notifyAll(testId, n -> n.notifyMissingRun(name, testId, tags, maxStaleness, runId, runTimestamp));
       }

@@ -165,7 +165,7 @@ export default function Test() {
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
                                     funcsRef={subscriptionsFuncsRef}
-                                    mutemissingruns={"false"}
+                                    missingruns={false}
                                 />
                             </SavedTab>
                         </SavedTabs>

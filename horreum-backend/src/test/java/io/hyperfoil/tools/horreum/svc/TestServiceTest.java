@@ -70,13 +70,13 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createExampleTest(getTestName(info));
       Test response = createTest(test);
       Watch watch = new Watch();
-      test = checkTestAsExpected(test, response, watch);
+      test = checkTestAsExpectedThenAddWatch(test, response, watch);
       watch = checkWatchAsExpected(test, watch);
-      watch.mutemissingruns = true;
+      watch.missingruns = true;
       updateWatch(test, watch);
    }
 
-   private Test checkTestAsExpected(Test test, Test response, Watch watch) {
+   private Test checkTestAsExpectedThenAddWatch(Test test, Test response, Watch watch) {
       assertNotNull(response.id);
       Test t = null;
       try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
@@ -97,7 +97,7 @@ public class TestServiceTest extends BaseServiceTest {
       try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
          Watch existing = Watch.find("testid", t.id).firstResult();
          assertNotNull(existing);
-         assertFalse(existing.mutemissingruns);
+         assertFalse(existing.missingruns);
          assertNotNull(existing.id);
          assertNotNull(existing.test.id);
          watch.id = existing.id;

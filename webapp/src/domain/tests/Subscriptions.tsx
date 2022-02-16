@@ -9,12 +9,13 @@ import { alertAction } from "../../alerts"
 import { teamToName, useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { Checkbox } from "@patternfly/react-core"
+import { Switch } from "@patternfly/react-core"
 import UserSearch from "../../components/UserSearch"
 
 type SubscriptionsProps = {
     testId: number
     testOwner?: string
-    mutemissingruns: string
+    missingruns: boolean
     onModified(modified: boolean): void
     funcsRef: TabFunctionsRef
 }
@@ -49,10 +50,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
     const [watchingTeams, setWatchingTeams] = useState<ReactElement[]>([])
 
     const [reloadCounter, setReloadCounter] = useState(0)
-    const [isCheckedMissingRuns, setIsCheckedMissingRuns] = useState(props.mutemissingruns == "false")
-    const handleChangeMissingRuns = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setIsCheckedMissingRuns(e.target.value == "false")
-    }
+    const [isCheckedMissingRuns, setIsCheckedMissingRuns] = useState(props.missingruns == true)
     const updateUsers = (users: User[]) =>
         setAvailableUsers(users.filter(u => !watchingUsers.some(w => w && w.key === u.username)).map(userElement))
     useEffect(() => {
@@ -77,7 +75,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 setOptoutUsers([])
             }
             setWatchingTeams(watch.teams.map(teamElement))
-            setIsCheckedMissingRuns(watch.mutemissingruns)
+            setIsCheckedMissingRuns(watch.missingruns)
         }, noop)
         teams().then(
             // We will filter in the component to not recompute this on watchingTeams change
@@ -94,7 +92,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
                     users: watchingUsers.map(u => u.key as string),
                     optout: optoutUsers.map(u => u.key as string),
                     teams: watchingTeams.map(t => t.key as string),
-                    mutemissingruns: isCheckedMissingRuns,
+                    missingruns: isCheckedMissingRuns,
                 })
             ),
         reset: () => setReloadCounter(reloadCounter + 1),
@@ -150,15 +148,16 @@ export default function Subscriptions(props: SubscriptionsProps) {
             <br />
             <Divider />
             <br />
-            <Checkbox
+            <Switch
                 onChange={(checked, ev) => {
                     setIsCheckedMissingRuns(checked)
                     ev.currentTarget.value = checked.toString()
-                    props.onModified(true)
+                    props.onModified(false)
                 }}
                 isChecked={isCheckedMissingRuns}
-                label="Mute missing runs"
-                id="checkmutemissingruns"
+                label="Missing run notifications enabled"
+                labelOff="Missing run run notifications disabled"
+                id="switchmissingruns"
             />
         </>
     )

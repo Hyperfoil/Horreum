@@ -41,7 +41,7 @@ public class Watch extends PanacheEntityBase {
    @JsonIgnore
    public Test test;
 
-   public boolean mutemissingruns;
+   public boolean missingruns;
 
    @ElementCollection(fetch = FetchType.EAGER)
    @Fetch(FetchMode.SELECT)
