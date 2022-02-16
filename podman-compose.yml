@@ -10,6 +10,7 @@ services:
     - POSTGRES_PASSWORD=secret
     ports:
     - 5432:5432
+    network_mode: host
     volumes:
     - horreum_pg12:/var/lib/postgresql/data
   db-init:
@@ -38,6 +39,7 @@ services:
       if ! psql -t -c "SELECT 1 FROM pg_roles WHERE rolname = 'appuser';" | grep -q 1; then
           psql -c "CREATE ROLE appuser noinherit login password 'secret';"
       fi
+    network_mode: host
   keycloak:
     depends_on:
     - postgres
@@ -57,6 +59,7 @@ services:
     - CONTAINER_RUNTIME=podman
     ports:
     - 8180:8180
+    network_mode: host
     volumes:
     - ./horreum-backend/src/main/resources:/etc/keycloak/imports:ro,z
     - ./:/cwd:rw,z
@@ -97,6 +100,7 @@ services:
     - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=false
     ports:
     - 4040:4040
+    network_mode: host
     user: "0:0"
     volumes:
     - ./:/cwd/:ro,z
