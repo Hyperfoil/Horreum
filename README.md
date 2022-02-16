@@ -21,6 +21,12 @@ podman-compose -f podman-compose.yml -t hostnet up -d
 
 > :warning: **If postgres fails to start**: clear any cached data in the postgres container mounted volume `podman volume inspect Horreum_horreum_pg12  | jq -r '.[0].Mountpoint'`
 
+> ** Using podman-compose > 1.x ? **: Install the optional dependency `podman-plugins`. Then follow the instructions here to set-up https://github.com/containers/podman-compose/issues/397#issuecomment-1004816431
+
+```bash
+podman-compose -f podman-compose.yml up -d 
+```
+
 Due to subtleties in Podman's rootless network configuration it's not possible to use `docker-compose.yaml`
 and we have to use host networking - otherwise Grafana wouldn't be able to connect to Horreum.
 
