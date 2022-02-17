@@ -19,7 +19,7 @@ services:
     image: docker.io/postgres:12
     restart: on-failure
     environment:
-    - PGHOST=postgres
+    - PGHOST=localhost
     - PGPORT=5432
     - PGDATABASE=horreum
     - PGUSER=dbadmin
@@ -51,7 +51,7 @@ services:
     #- KEYCLOAK_LOGLEVEL=DEBUG
     - ROOT_LOGLEVEL=INFO
     - DB_VENDOR=postgres
-    - DB_ADDR=postgres
+    - DB_ADDR=localhost
     - DB_PORT=5432
     - DB_DATABASE=keycloak
     - DB_USER=keycloak
@@ -74,6 +74,7 @@ services:
     - /cwd/app-init.sh
     environment:
     - CONTAINER_RUNTIME=podman
+    network_mode: host
     volumes:
     - ./:/cwd:rw,z
   grafana:
