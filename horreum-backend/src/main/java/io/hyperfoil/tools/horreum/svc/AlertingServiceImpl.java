@@ -364,7 +364,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (recalculation != null) {
                   recalculation.runsWithoutValue.add(run.id);
                }
-               missingValueVariables.add(var.name);
+               missingValueVariables.add(getMissingVariableString(var.name, dataPoint.variable.group));
                continue;
             }
             Double number = Util.toDoubleOrNull(value);
@@ -373,7 +373,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (recalculation != null) {
                   recalculation.errors++;
                }
-               missingValueVariables.add(var.name);
+               missingValueVariables.add(getMissingVariableString(var.name, dataPoint.variable.group));
                continue;
             } else {
                dataPoint.value = number;
@@ -410,7 +410,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (recalculation != null) {
                   recalculation.runsWithoutValue.add(run.id);
                }
-               missingValueVariables.add(var.name);
+               missingValueVariables.add(getMissingVariableString(var.name, dataPoint.variable.group));
                continue;
             }
             dataPoint.value = value;
@@ -421,6 +421,10 @@ public class AlertingServiceImpl implements AlertingService {
       if (!missingValueVariables.isEmpty()) {
          Util.publishLater(tm, eventBus, Run.EVENT_MISSING_VALUES, new MissingRunValuesEvent(run.id, run.testid, missingValueVariables, notify));
       }
+   }
+
+   private String getMissingVariableString(String name, String group) {
+      return (group.isEmpty()) ? name : group + "/" + name;
    }
 
    @Transactional(Transactional.TxType.REQUIRES_NEW)
