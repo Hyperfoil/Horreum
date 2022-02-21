@@ -1,4 +1,4 @@
 <p>Hello {username},</p>
-<p>there has been a recent change in results for test <a href="{baseUrl}/test/{testId}">{testName}</a>, change detection variable {group}/{variable}, introduced with run {runId}.</p>
+<p>there has been a recent change in results for test <a href="{baseUrl}/test/{testId}">{testName}</a>, change detection variable {#if group != null}{group}/{/if}{variable}, introduced with run {runId}.</p>
 <p>Please <a href="{baseUrl}/series?test={testId}&tags={tags}">check it out</a> and provide an explanatory description</p>
 Horreum Alerting
