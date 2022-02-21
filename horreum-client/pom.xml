@@ -157,15 +157,16 @@
             </excludes>
         </testResource>
         <testResource>
-            <directory>../</directory>
+            <directory>../infra</directory>
             <targetPath>docker-compose</targetPath>
             <includes>
+                <include>*.env</include>
                 <include>*.sh</include>
                 <include>*.yml</include>
             </includes>
         </testResource>
         <testResource>
-            <directory>../horreum-backend/src/main/resources/</directory>
+            <directory>../horreum-backend/src/main/resources</directory>
             <targetPath>docker-compose</targetPath>
             <includes>
                 <include>keycloak-horreum.json</include>

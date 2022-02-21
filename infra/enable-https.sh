@@ -1,9 +1,11 @@
 #!/bin/bash
 
-echo QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_FILE=/home/rvansa/workspace/horreum/src/test/resources/keystore.jks >> .env
-echo QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_PASSWORD=secret >> .env
-echo QUARKUS_HTTP_INSECURE_REQUESTS=disabled >> .env
-echo HORREUM_URL=https://localhost:8443 >> .env
+ROOT=$(dirname $0)/..
+
+echo QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_FILE=/home/rvansa/workspace/horreum/src/test/resources/keystore.jks >> $ROOT/horreum-backend/.env
+echo QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_PASSWORD=secret >> $ROOT/horreum-backend/.env
+echo QUARKUS_HTTP_INSECURE_REQUESTS=disabled >> $ROOT/horreum-backend/.env
+echo HORREUM_URL=https://localhost:8443 >> $ROOT/horreum-backend/.env
 
 # The 'real' Docker responds with capital D
 if docker -v | grep "Docker"; then

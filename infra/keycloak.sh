@@ -5,7 +5,7 @@ delete_grafana() {
 }
 trap delete_grafana SIGTERM SIGINT SIGQUIT
 
-if [ $CONTAINER_RUNTIME = "podman" ]; then
+if [ "$CONTAINER_RUNTIME" = "podman" ]; then
    EXTRA_OPTIONS="-Djboss.bind.address=127.0.0.1 -Djboss.bind.address.private=127.0.0.1"
 fi
 

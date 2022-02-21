@@ -20,8 +20,6 @@ echo "QUARKUS_OIDC_AUTH_SERVER_URL=http://$IP_ADDR:$KEYCLOAK_PORT/auth/realms/ho
 KEYCLOAK_HOST="$IP_ADDR:$KEYCLOAK_PORT"
 # Keycloak URL must match QUARKUS_OIDC_AUTH_SERVER_URL or we have to set QUARKUS_OIDC_TOKEN_ISSUER
 echo "HORREUM_KEYCLOAK_URL=http://"$KEYCLOAK_HOST"/auth" >> /cwd/horreum-backend/.env
-HORREUM_URL="http://$IP_ADDR:$HORREUM_PORT"
-
 
 while ! curl -s --fail $KEYCLOAK_HOST; do
   echo 'Waiting for Keycloak to start.'

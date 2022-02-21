@@ -1,13 +1,17 @@
 # Hyperfoil Horreum
+
 A service for storing performance data and regression analysis. Currently, under early development.
 
 Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io).
 
 ## Prerequisites
+
 We have prepared a Docker-compose script to set up PosgreSQL database, Keycloak and create some example users. Therefore you can simply run
+
 ```bash
-docker-compose up -d
-```              
+docker-compose -p horreum -f infra/docker-compose.yml up -d
+```
+
 and after a few moments everything should be up and ready. You can later configure Keycloak on [localhost:8180](http://localhost:8180) using credentials `admin`/`secret`.
 The `horreum` realm already has some roles (`dev-team`) and single user with credentials `user`/`secret` you can use once you start up Horreum.
 
@@ -16,16 +20,12 @@ Note that this docker-compose script is intended for developer use; for producti
 If you are using Podman (and podman-compose) rather than Docker, please use
 
 ```bash
-podman-compose -f podman-compose.yml -t hostnet up -d 
-```                                     
-
-> :warning: **If postgres fails to start**: clear any cached data in the postgres container mounted volume `podman volume inspect Horreum_horreum_pg12  | jq -r '.[0].Mountpoint'`
-
-> ** Using podman-compose > 1.x ? **: Install the optional dependency `podman-plugins`. Then follow the instructions here to set-up https://github.com/containers/podman-compose/issues/397#issuecomment-1004816431
-
-```bash
-podman-compose -f podman-compose.yml up -d 
+infra/podman-compose.sh
 ```
+
+Due to rootless Podman networking we need to run the containers using `host` networking; There's a bug in recent podman-compose (1.0.3) that won't let you use it through simple `podman-compose up`.
+> Note that with podman-compose > 1.x you might also need to install `podman-plugins`.
+> :warning: **If postgres fails to start**: remove the volume using `podman volume rm Horreum_horreum_pg12`
 
 Due to subtleties in Podman's rootless network configuration it's not possible to use `docker-compose.yaml`
 and we have to use host networking - otherwise Grafana wouldn't be able to connect to Horreum.
@@ -37,6 +37,7 @@ PGPASSWORD=secret psql -h localhost -U dbadmin horreum -f example-data.sql
 ```
 
 ## Getting Started
+
 ```bash
 cd webapp && npm install && cd ..
 ./mvnw compile quarkus:dev -Dui.dev
@@ -54,12 +55,14 @@ podman push quay.io/hyperfoil/horreum-base:latest
 podman run --rm --name horreum_app --env-file .env --network=host quay.io/hyperfoil/horreum
 ```
 
-> :warning: *If npm install fails*: please try clearing the node module cache `npm cache clean`
+> :warning: _If npm install fails_: please try clearing the node module cache `npm cache clean`
 
 ## Build tooling set-up
+
 ```bash
 mvn -N io.takari:maven:wrapper
 ```
+
 This set's up your environment with the maven wrapper tool
 
 ## Creating jar
@@ -67,6 +70,7 @@ This set's up your environment with the maven wrapper tool
 ```bash
 ./mvnw clean package -Dui
 ```
+
 This builds the webapp and adds it to the `horreum-${version}-runner.jar`.
 Start the server with `java -jar horreum-${version}-runner.jar` after docker is already running
 
@@ -83,12 +87,13 @@ As a precaution against bug leaving SQL-level access open the `horreum.userroles
 the format of the setting is `role1:seed1:hash1,role2:seed2:hash2,...` where the `hash` is SHA-256 of combination of role, seed
 and hidden passphrase. This passphrase is set in `application.properties` under key `horreum.db.secret`, and in database as the only
 record in table `dbsecret`. The user `appuser` does not have access to that table, but the security-defined functions used
-in table policies can fetch it, compute the hash again and validate its correctness.    
+in table policies can fetch it, compute the hash again and validate its correctness.
 
 We define 3 levels of access to each row:
-* public: available even to non-authenticated users (for reading)
-* protected: available to all authenticated users that have `viewer` role (see below)
-* private: available only to users who 'own' this data.
+
+- public: available even to non-authenticated users (for reading)
+- protected: available to all authenticated users that have `viewer` role (see below)
+- private: available only to users who 'own' this data.
 
 In addition to these 3 levels, each row defines a random 'token': everyone who knows this token can read the record.
 This token should be reset any time the restriction level changes. On database level the token is set using `SET horreum.token = ...`
@@ -97,27 +102,31 @@ and the table policies allow read access when the token matches.
 It is assumed that the repo will host data for multiple teams; each user is a member of one or more teams.
 There are few generic roles that mostly help the UI and serve as an early line of defense by annotating API methods:
 
-* viewer: general permission to view non-public runs
-* uploader: permission to upload new runs, useful for bot accounts (CI)
-* tester: common user that can define tests, modify or delete data.
-* admin: permission both see and change application-wide configuration such as hooks
+- viewer: general permission to view non-public runs
+- uploader: permission to upload new runs, useful for bot accounts (CI)
+- tester: common user that can define tests, modify or delete data.
+- admin: permission both see and change application-wide configuration such as hooks
 
 Each team should have a role with `-team` suffix that will be the owner of the tests/runs, e.g. `engineers-team`.
 Uploaders for team's data have `engineers-uploader` which is a composite role, including `engineers-team` and `uploader`.
 Bot accounts that only upload data do not need read access that is represented by the `viewer` role; if the account
-needs to update a run it needs this role, though (this role is not sufficient to delete anything, though; that requires the `tester` role).   
+needs to update a run it needs this role, though (this role is not sufficient to delete anything, though; that requires the `tester` role).
 Similar to that testers should get a `engineers-tester` role which is a composite role, including `engineers-team`, `tester` and `viewer`.
 
 ## Running in dev mode over HTTPS
 
 By default, the local setup uses plain HTTP. If you need to test HTTPS, run the docker-compose/podman-compose as usual (in this setup the other containers won't be secured) and then run:
+
 ```bash
 ./enable-https.sh
-```      
+```
+
 This script will amend `.env` file with few extra variables and configure Keycloak to redirect to secured ports. Then you can run
+
 ```bash
 HTTPS=true mvn compile quarkus:dev -Dui.dev
 ```
+
 as usual - the `HTTPS=true` will use secured connections on the live-reload proxy on port 3000.
 
 When you want to revert back to plain HTTP, run `./disable-https.sh` and drop the `HTTPS=true` env var.

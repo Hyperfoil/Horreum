@@ -1,0 +1,64 @@
+version: '3.1'
+volumes:
+  horreum_pg12: {}
+services:
+  postgres:
+    image: docker.io/postgres:12
+    env_file: postgres.env
+    network_mode: host
+    volumes:
+    - horreum_pg12:/var/lib/postgresql/data
+  db-init:
+    depends_on:
+    - postgres
+    image: docker.io/postgres:12
+    restart: on-failure
+    env_file: postgres.env
+    environment:
+    - PGHOST=${CONTAINER_HOST_IP:-172.17.0.1}
+    - PGPORT=${POSTGRES_PORT:-5432}
+    volumes:
+    - "${WORKING_PATH:-../}:/cwd:ro,z"
+    command:
+    - bash
+    - -x
+    - /cwd/infra/create-db.sh
+    network_mode: host
+  keycloak:
+    depends_on:
+    - postgres
+    image: quay.io/keycloak/keycloak
+    entrypoint: /cwd/infra/keycloak.sh
+    env_file: keycloak.env
+    environment:
+    - CONTAINER_RUNTIME=podman
+    - DB_ADDR=127.0.0.1
+    network_mode: host
+    volumes:
+    - ../horreum-backend/src/main/resources:/etc/keycloak/imports:ro,z
+    - ../:/cwd:rw,z
+  app-init:
+    depends_on:
+    - keycloak
+    image: docker.io/dwdraju/alpine-curl-jq
+    restart: on-failure
+    command:
+    - bash
+    - -x
+    - /cwd/infra/app-init.sh
+    environment:
+    - CONTAINER_RUNTIME=podman
+    network_mode: host
+    volumes:
+    - ../:/cwd:rw,z
+  grafana:
+    depends_on:
+    - keycloak
+    - app-init
+    image: grafana/grafana
+    entrypoint: /cwd/infra/grafana.sh
+    env_file: grafana.env
+    network_mode: host
+    user: "0:0"
+    volumes:
+    - ../:/cwd:ro,z

@@ -159,7 +159,7 @@ public class HorreumTestBase {
 
             prepareDockerCompose();
 
-            infrastructureContainer = new TestContainer("target/docker-compose/docker-compose.yml", envVariables);
+            infrastructureContainer = new TestContainer("target/docker-compose/infra/docker-compose.yml", envVariables);
             horreumContainer = new TestContainer("target/docker-compose/horreum-compose.yml", envVariables);
 
             log.info("Waiting for Horreum infrastructure to start");
@@ -177,6 +177,7 @@ public class HorreumTestBase {
     private static void prepareDockerCompose() throws URISyntaxException, IOException {
         // this is where .env will be written
         Path.of("target/docker-compose/horreum-backend").toFile().mkdirs();
+        Path.of("target/docker-compose/infra").toFile().mkdirs();
         URI root = HorreumTestBase.class.getClassLoader().getResource("docker-compose").toURI();
         Path source;
         if ("file".equals(root.getScheme())) {
@@ -188,7 +189,7 @@ public class HorreumTestBase {
         Files.walkFileTree(source, Collections.emptySet(), 1, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                Path destPath = Path.of("target/docker-compose/", file.getFileName().toString());
+                Path destPath = Path.of("target/docker-compose/infra/", file.getFileName().toString());
                 Files.copy(file, destPath,
                       StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
                 if(file.toString().endsWith(".sh")){

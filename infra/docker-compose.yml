@@ -1,0 +1,68 @@
+version: '3.1'
+volumes:
+  horreum_pg12: {}
+services:
+  postgres:
+    image: docker.io/postgres:12
+    env_file: postgres.env
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+    - horreum_pg12:/var/lib/postgresql/data
+  db-init:
+    depends_on:
+    - postgres
+    image: docker.io/postgres:12
+    restart: on-failure
+    env_file: postgres.env
+    environment:
+    - PGHOST=${CONTAINER_HOST_IP:-172.17.0.1}
+    - PGPORT=${POSTGRES_PORT:-5432}
+    volumes:
+    - "${WORKING_PATH:-../}:/cwd:ro,z"
+    command:
+    - bash
+    - -x
+    - /cwd/infra/create-db.sh
+  keycloak:
+    depends_on:
+    - postgres
+    image: quay.io/keycloak/keycloak
+    entrypoint: /cwd/infra/keycloak.sh
+    env_file: keycloak.env
+    environment:
+    - DB_ADDR=${CONTAINER_HOST_IP:-postgres}
+    - DB_PORT=${POSTGRES_PORT:-5432}
+    ports:
+    - "${KEYCLOAK_HTTP_PORT:-8180}:8180"
+    volumes:
+    - "${RESOURCES_PATH:-../horreum-backend/src/main/resources}:/etc/keycloak/imports:ro,z"
+    - "${WORKING_PATH:-../}:/cwd:ro,z"
+  app-init:
+    depends_on:
+    - keycloak
+    image: docker.io/dwdraju/alpine-curl-jq
+    restart: on-failure
+    command:
+    - bash
+    - -x
+    - /cwd/infra/app-init.sh
+    - "${PORT_OFFSET:-0}"
+    volumes:
+    - "${WORKING_PATH:-../}:/cwd:rw,z"
+  grafana:
+    depends_on:
+    - keycloak
+    - app-init
+    image: grafana/grafana
+    entrypoint: /cwd/infra/grafana.sh
+    env_file: grafana.env
+    environment:
+    - GF_SERVER_ROOT_URL=${GRAFANA_GF_SERVER_ROOT_URL:-http://localhost:4040/}
+    - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=${GF_AUTH_GENERIC_OAUTH_TOKEN_URL:-http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/token}
+    - GF_AUTH_GENERIC_OAUTH_API_URL=${GF_AUTH_GENERIC_OAUTH_API_URL:-http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/userinfo}
+    - GF_AUTH_GENERIC_OAUTH_AUTH_URL=${GF_AUTH_GENERIC_OAUTH_AUTH_URL:-http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/auth}
+    ports:
+    - "${GRAFANA_HTTP_PORT:-4040}:4040"
+    volumes:
+    - "${WORKING_PATH:-../}:/cwd:ro,z"

@@ -1,7 +1,9 @@
 #!/bin/bash
 
-sed -i '/QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_FILE\|QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_PASSWORD\|QUARKUS_HTTP_INSECURE_REQUESTS\|HORREUM_URL/d' .env
-echo HORREUM_URL=https://localhost:8080 >> .env
+ROOT=$(dirname $0)/..
+
+sed -i '/QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_FILE\|QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_PASSWORD\|QUARKUS_HTTP_INSECURE_REQUESTS\|HORREUM_URL/d' $ROOT/horreum-backend/.env
+echo HORREUM_URL=https://localhost:8080 >> $ROOT/horreum-backend/.env
 
 # The 'real' Docker responds with capital D
 if docker -v | grep "Docker"; then
