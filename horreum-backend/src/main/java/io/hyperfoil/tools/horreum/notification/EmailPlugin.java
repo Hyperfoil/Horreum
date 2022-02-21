@@ -64,6 +64,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("testId", String.valueOf(change.variable.testId))
                .data("variable", change.variable.name)
                .data("runId", String.valueOf(change.run.id))
+               .data("group", change.variable.group)
                .render();
          mailer.send(Mail.withHtml(data, subject, content));
       }
