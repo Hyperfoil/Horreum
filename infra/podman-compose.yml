@@ -15,10 +15,10 @@ services:
     restart: on-failure
     env_file: postgres.env
     environment:
-    - PGHOST=${CONTAINER_HOST_IP:-172.17.0.1}
-    - PGPORT=${POSTGRES_PORT:-5432}
+    - PGHOST=localhost
+    - PGPORT=5432
     volumes:
-    - "${WORKING_PATH:-../}:/cwd:ro,z"
+    - ../:/cwd:ro,z
     command:
     - bash
     - -x
