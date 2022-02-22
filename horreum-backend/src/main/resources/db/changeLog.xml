@@ -2149,5 +2149,14 @@
     <changeSet id="50" author="rvansa">
         <renameTable oldTableName="regressiondetection" newTableName="changedetection" />
     </changeSet>
+
+    <changeSet id="51" author="rvansa">
+        <sql>
+            DROP TRIGGER before_run_update ON run;
+            DROP TRIGGER after_run_update ON run;
+            CREATE TRIGGER before_run_update BEFORE UPDATE OF data ON run FOR EACH ROW EXECUTE FUNCTION before_run_update_func();
+            CREATE TRIGGER after_run_update AFTER INSERT OR UPDATE OF data ON run FOR EACH ROW EXECUTE FUNCTION after_run_update_func();
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

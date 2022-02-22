@@ -169,6 +169,9 @@ public class AlertingServiceImpl implements AlertingService {
          // The run is not committed yet?
          vertx.setTimer(1000, timerId -> onNewRun(event));
          return;
+      } else if (run.trashed) {
+         log.errorf("Received new tags for a trashed run %d - ignori ng.", run.id);
+         return;
       }
       try {
          sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
