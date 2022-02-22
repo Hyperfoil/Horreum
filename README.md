@@ -17,6 +17,8 @@ The `horreum` realm already has some roles (`dev-team`) and single user with cre
 
 Note that this docker-compose script is intended for developer use; for production, check out [Horreum operator](https://github.com/Hyperfoil/horreum-operator).
 
+If you are having problems with Grafana login after restarting the infrastructure run `rm horreum-backend/.env .grafana` to wipe out old environment files.
+
 If you are using Podman (and podman-compose) rather than Docker, please use
 
 ```bash
@@ -24,6 +26,7 @@ infra/podman-compose.sh
 ```
 
 Due to rootless Podman networking we need to run the containers using `host` networking; There's a bug in recent podman-compose (1.0.3) that won't let you use it through simple `podman-compose up`.
+
 > Note that with podman-compose > 1.x you might also need to install `podman-plugins`.
 > :warning: **If postgres fails to start**: remove the volume using `podman volume rm Horreum_horreum_pg12`
 

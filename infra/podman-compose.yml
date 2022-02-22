@@ -31,7 +31,7 @@ services:
     entrypoint: /cwd/infra/keycloak.sh
     env_file: keycloak.env
     environment:
-    - CONTAINER_RUNTIME=podman
+    - EXTRA_OPTIONS=-Djboss.bind.address=127.0.0.1\ -Djboss.bind.address.private=127.0.0.1
     - DB_ADDR=127.0.0.1
     network_mode: host
     volumes:
@@ -47,7 +47,8 @@ services:
     - -x
     - /cwd/infra/app-init.sh
     environment:
-    - CONTAINER_RUNTIME=podman
+    - POSTGRES_HOST=127.0.0.1
+    - KEYCLOAK_HOST=127.0.0.1
     network_mode: host
     volumes:
     - ../:/cwd:rw,z

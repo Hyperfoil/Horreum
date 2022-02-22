@@ -16,7 +16,7 @@ services:
     restart: on-failure
     env_file: postgres.env
     environment:
-    - PGHOST=${CONTAINER_HOST_IP:-172.17.0.1}
+    - PGHOST=${CONTAINER_HOST_IP:-postgres}
     - PGPORT=${POSTGRES_PORT:-5432}
     volumes:
     - "${WORKING_PATH:-../}:/cwd:ro,z"
@@ -43,6 +43,10 @@ services:
     - keycloak
     image: docker.io/dwdraju/alpine-curl-jq
     restart: on-failure
+    environment:
+    # We cannot use postgres/keycloak here because the address is relayed to Horreum app
+    - POSTGRES_HOST=${CONTAINER_HOST_IP:-172.17.0.1}
+    - KEYCLOAK_HOST=${CONTAINER_HOST_IP:-172.17.0.1}
     command:
     - bash
     - -x
