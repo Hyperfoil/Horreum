@@ -128,6 +128,9 @@ public class TestServiceImpl implements TestService {
          test.notificationsEnabled = true;
       }
       test.folder = normalizeFolderName(test.folder);
+      if ("*".equals(test.folder)) {
+         throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
+      }
       test.ensureLinked();
       if (existing != null) {
          if (!identity.hasRole(existing.owner)) {
@@ -256,8 +259,6 @@ public class TestServiceImpl implements TestService {
       folder = folder.trim();
       if (folder.isEmpty()) {
          folder = null;
-      } else if ("*".equals(folder)) {
-         throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
       }
       return folder;
    }
@@ -394,6 +395,9 @@ public class TestServiceImpl implements TestService {
    @Transactional
    @Override
    public void updateFolder(Integer id, String folder) {
+      if ("*".equals(folder)) {
+         throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
+      }
       Test test = Test.findById(id);
       if (test == null) {
          throw ServiceException.notFound("Cannot find test id " + id);
