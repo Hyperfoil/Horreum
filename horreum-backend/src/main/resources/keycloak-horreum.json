@@ -2297,5 +2297,32 @@
     "offlineSessionMaxLifespanEnabled": "false"
   },
   "keycloakVersion": "8.0.1",
-  "userManagedAccessAllowed": false
+  "userManagedAccessAllowed": false,
+  "users": [
+    {
+      "username": "service-account-horreum",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": false,
+      "serviceAccountClientId": "horreum",
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-horreum"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "view-users",
+          "manage-realm",
+          "manage-users",
+          "view-realm"
+        ],
+        "horreum": [
+          "uma_protection"
+        ]
+      },
+      "notBefore": 0,
+      "groups": []
+    }
+  ]
 }
