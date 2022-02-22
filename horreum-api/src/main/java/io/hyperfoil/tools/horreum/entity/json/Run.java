@@ -1,6 +1,8 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -16,6 +18,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity(name = "run")
 @RegisterForReflection
+@DynamicUpdate // We don't want to trigger schema analysis when trashing the run
 public class Run extends ProtectedBaseEntity {
    public static final String EVENT_NEW = "run/new";
    public static final String EVENT_TRASHED = "run/trashed";
