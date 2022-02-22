@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.hibernate.Hibernate;
 import org.hibernate.transform.Transformers;
@@ -126,6 +127,7 @@ public class TestServiceImpl implements TestService {
       if (test.notificationsEnabled == null) {
          test.notificationsEnabled = true;
       }
+      test.folder = normalizeFolderName(test.folder);
       test.ensureLinked();
       if (existing != null) {
          if (!identity.hasRole(existing.owner)) {
@@ -201,9 +203,7 @@ public class TestServiceImpl implements TestService {
    @Override
    @PermitAll
    public TestListing summary(String roles, String folder) {
-      if (folder != null && folder.endsWith("/")) {
-         folder = folder.substring(0, folder.length() - 1);
-      }
+      folder = normalizeFolderName(folder);
       StringBuilder testSql = new StringBuilder();
       testSql.append("SELECT test.id,test.name,test.folder,test.description,count(run.id) AS count,test.owner,test.access ");
       testSql.append("FROM test LEFT JOIN run ON run.testid = test.id AND (run.trashed = false OR run.trashed IS NULL)");
@@ -240,9 +240,26 @@ public class TestServiceImpl implements TestService {
          Roles.addRolesParam(identity, folderQuery, 3, roles);
 
          //noinspection unchecked
-         listing.folders = folderQuery.getResultList();
+         listing.folders = ((List<String>) folderQuery.getResultList()).stream()
+               .filter(f -> f != null && !f.isBlank()).collect(Collectors.toList());
       }
       return listing;
+   }
+
+   private static String normalizeFolderName(String folder) {
+      if (folder == null) {
+         return null;
+      }
+      if (folder.endsWith("/")) {
+         folder = folder.substring(0, folder.length() - 1);
+      }
+      folder = folder.trim();
+      if (folder.isEmpty()) {
+         folder = null;
+      } else if ("*".equals(folder)) {
+         throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
+      }
+      return folder;
    }
 
    @Override
@@ -256,7 +273,7 @@ public class TestServiceImpl implements TestService {
       @SuppressWarnings("unchecked")
       List<String> folders = query.getResultList();
       for (String folder : folders) {
-         if (folder == null) {
+         if (folder == null || folder.isEmpty()) {
             continue;
          }
          int index = -1;
@@ -381,12 +398,7 @@ public class TestServiceImpl implements TestService {
       if (test == null) {
          throw ServiceException.notFound("Cannot find test id " + id);
       }
-      if (folder != null && folder.endsWith("/")) {
-         folder = folder.substring(0, folder.length() - 1);
-      } else if (folder != null && folder.isEmpty()) {
-         folder = null;
-      }
-      test.folder = folder;
+      test.folder = normalizeFolderName(folder);
       test.persist();
    }
 
