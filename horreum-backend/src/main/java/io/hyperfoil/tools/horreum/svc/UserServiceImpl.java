@@ -1,11 +1,14 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,9 +72,15 @@ public class UserServiceImpl implements UserService {
 
 
    @PostConstruct
-   public void init() {
+   public void init() throws MalformedURLException {
+      // horreum.keycloak.url is the URL advertised to clients; we need the url on internal network
+      String serverUrl = ConfigProvider.getConfig().getOptionalValue("horreum.keycloak.internal.url", String.class).orElse(null);
+      if (serverUrl == null) {
+         URL url = new URL(ConfigProvider.getConfig().getValue("quarkus.oidc.auth-server-url", String.class));
+         serverUrl = url.getProtocol() + "://" + url.getAuthority() + "/auth";
+      }
       keycloak = KeycloakBuilder.builder()
-            .serverUrl(ConfigProvider.getConfig().getValue("horreum.keycloak.url", String.class))
+            .serverUrl(serverUrl)
             .realm(REALM)
             .clientId("horreum")
             .clientSecret(ConfigProvider.getConfig().getValue("quarkus.oidc.credentials.secret", String.class))
