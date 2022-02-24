@@ -35,7 +35,9 @@ public interface TestService {
    @Path("{id}")
    Test get(@PathParam("id") Integer id, @QueryParam("token") String token);
 
-   Test getByNameOrId(String input);
+   @GET
+   @Path("byName/{name}")
+   Test getByNameOrId(@PathParam("name") String input);
 
    @POST
    Test add(Test test);
