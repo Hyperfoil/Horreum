@@ -2158,5 +2158,59 @@
             CREATE TRIGGER after_run_update AFTER INSERT OR UPDATE OF data ON run FOR EACH ROW EXECUTE FUNCTION after_run_update_func();
         </sql>
     </changeSet>
+
+    <changeSet id="52" author="rvansa">
+        <createTable tableName="transformer">
+            <column name="id" type="integer">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="schema_id" type="integer">
+                <constraints foreignKeyName="transformer_schema_id" referencedTableName="schema" referencedColumnNames="id" nullable="false"/>
+            </column>
+            <column name="function" type="text"/>
+            <column name="owner" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="access" type="integer">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="transformer_extractors">
+            <column name="transformer_id" type="integer">
+                <constraints foreignKeyName="transformer_id" referencedTableName="transformer" referencedColumnNames="id" />
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="jsonpath" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="transformer_extractors" columnNames="transformer_id,name" />
+        <createIndex tableName="transformer_extractors" indexName="transformer_index">
+            <column name="transformer_id" />
+        </createIndex>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE transformer, transformer_extractors TO "${quarkus.datasource.username}";
+            ALTER TABLE transformer ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE transformer_extractors ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY tf_select ON transformer FOR SELECT USING (can_view2(access, owner) OR has_role('horreum.system'));
+            CREATE POLICY tf_insert ON transformer FOR INSERT WITH CHECK (has_role2(owner, 'tester'));
+            CREATE POLICY tf_update ON transformer FOR UPDATE USING (has_role2(owner, 'tester'));
+            CREATE POLICY tf_delete ON transformer FOR DELETE USING (has_role2(owner, 'tester'));
+            CREATE POLICY te_select ON transformer_extractors FOR SELECT
+                USING (exists(SELECT 1 FROM transformer tf WHERE tf.id = transformer_id AND can_view2(tf.access, tf.owner)) OR has_role('horreum.system'));
+            CREATE POLICY te_insert ON transformer_extractors FOR INSERT
+                WITH CHECK (exists (SELECT 1 FROM transformer tf WHERE tf.id = transformer_id AND has_role2(tf.owner, 'tester')));
+            CREATE POLICY te_update ON transformer_extractors FOR UPDATE
+                USING (exists (SELECT 1 FROM transformer tf WHERE tf.id = transformer_id AND has_role2(tf.owner, 'tester')));
+            CREATE POLICY te_delete ON transformer_extractors FOR DELETE
+                USING (exists (SELECT 1 FROM transformer tf WHERE tf.id = transformer_id AND has_role2(tf.owner, 'tester')));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 

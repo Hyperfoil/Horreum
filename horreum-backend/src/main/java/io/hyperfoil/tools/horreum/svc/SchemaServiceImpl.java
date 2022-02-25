@@ -4,12 +4,14 @@ import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
+import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.scheduler.Scheduled;
+import io.quarkus.security.identity.SecurityIdentity;
 
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -93,6 +95,9 @@ public class SchemaServiceImpl implements SchemaService {
    @Inject
    EntityManager em;
 
+   @Inject
+   SecurityIdentity identity;
+
    @WithToken
    @PermitAll
    @Override
@@ -121,11 +126,6 @@ public class SchemaServiceImpl implements SchemaService {
       }
       em.flush();//manually flush to validate constraints
       return schema.id;
-   }
-
-   @Override
-   public List<Schema> all(){
-      return list(null,null,"name", Sort.Direction.Ascending);
    }
 
    @PermitAll
@@ -413,6 +413,47 @@ public class SchemaServiceImpl implements SchemaService {
          result.add(new AccessorInReport((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], "component", (String) columns[4]));
       }
       return result;
+   }
+
+   @PermitAll
+   @WithRoles
+   @Override
+   public List<Transformer> listTransformers(Integer schemaId) {
+      return Transformer.find("schema_id", Sort.by("name"), schemaId).list();
+   }
+
+   @RolesAllowed(Roles.TESTER)
+   @WithRoles
+   @Transactional
+   @Override
+   public Integer addOrUpdateTransformer(Integer schemaId, Transformer transformer) {
+      if (!identity.hasRole(transformer.owner)) {
+         throw ServiceException.forbidden("This user is not a member of team " + transformer.owner);
+      }
+      if (transformer.id == null || transformer.id < 0) {
+         transformer.id = null;
+         transformer.schema = em.getReference(Schema.class, schemaId);
+         transformer.persistAndFlush();
+         return transformer.id;
+      } else {
+         Transformer existing = Transformer.findById(transformer.id);
+         if (!Objects.equals(existing.schema.id, schemaId)) {
+            throw ServiceException.badRequest("Transformer id=" + transformer.id + ", name=" + existing.name +
+                  " belongs to a different schema: " + existing.schema.id + "(" + existing.schema.uri + ")");
+         }
+         if (!identity.hasRole(existing.owner)) {
+            throw ServiceException.forbidden("Cannot transfer ownership: this user is not a member of team " + existing.owner);
+         }
+         existing.name = transformer.name;
+         existing.description = transformer.description;
+         existing.owner = transformer.owner;
+         existing.access = transformer.access;
+         existing.function = transformer.function;
+         existing.extractors.clear();
+         existing.extractors.addAll(transformer.extractors);
+         existing.persist();
+         return existing.id;
+      }
    }
 
    private void addPart(StringBuilder where, String column, String accessor, String type) {

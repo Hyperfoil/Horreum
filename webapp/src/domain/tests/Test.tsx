@@ -9,7 +9,7 @@ import * as selectors from "./selectors"
 import { TestDispatch } from "./reducers"
 
 import ButtonLink from "../../components/ButtonLink"
-import SavedTabs, { SavedTab, TabFunctions, TabFunctionsRef } from "../../components/SavedTabs"
+import SavedTabs, { SavedTab, TabFunctions, saveFunc, resetFunc } from "../../components/SavedTabs"
 
 import { useTester, teamsSelector } from "../../auth"
 import { dispatchInfo } from "../../alerts"
@@ -55,10 +55,6 @@ export default function Test() {
     }, [test, testId])
     const isTester = useTester(test ? test.owner : undefined)
 
-    // We need to return () => ref.current...() because this component is rendered before the child component
-    // that modifies ref.current.save, using the last values - otherwise we would send old values to the server
-    const saveFunc = (ref: TabFunctionsRef) => () => ref.current ? ref.current.save() : Promise.resolve()
-    const resetFunc = (ref: TabFunctionsRef) => () => ref.current?.reset()
     return (
         <PageSection>
             <Card>

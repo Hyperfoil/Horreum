@@ -15,6 +15,7 @@ const endPoints = {
     deprecated: (id: number) => `${base}/extractor/${id}/deprecated`,
     findUsages: (accessor: string) => `${base}/findUsages?accessor=${encodeURIComponent(accessor)}`,
     testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${encodeURIComponent(jsonpath)}`,
+    transformers: (schemaId: number) => `${base}/${schemaId}/transformers`,
 }
 export const all = () => {
     return fetchApi(endPoints.base(), null, "get")
@@ -62,6 +63,14 @@ export function findUsages(accessor: string) {
 
 export function findDeprecated(extractorId: number) {
     return fetchApi(endPoints.deprecated(extractorId), null, "get")
+}
+
+export function listTransformers(schemaId: number) {
+    return fetchApi(endPoints.transformers(schemaId), null, "get")
+}
+
+export function addOrUpdateTransformer(transformer: Transformer) {
+    return fetchApi(endPoints.transformers(transformer.schemaId), transformer, "post")
 }
 
 export type ValidationResult = {
@@ -112,4 +121,24 @@ export interface AccessorInReport extends AccessorLocation {
     title: string
     where: "component" | "filter" | "category" | "series" | "label"
     name: string | null
+}
+
+export type NamedJsonPath = {
+    name: string
+    jsonpath: string
+    validationTimer?: any
+    validationResult?: ValidationResult
+}
+
+export type Transformer = {
+    id: number
+    schemaId: number
+    name: string
+    description: string
+    targetSchemaUri?: string
+    extractors: NamedJsonPath[]
+    function?: string
+    owner: string
+    access: Access
+    modified?: boolean
 }

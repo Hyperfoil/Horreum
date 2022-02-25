@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useParams } from "react-router"
 import { useSelector, useDispatch } from "react-redux"
 
@@ -30,11 +30,12 @@ import { toString } from "../../components/Editor"
 import Editor from "../../components/Editor/monaco/Editor"
 import AccessIcon from "../../components/AccessIcon"
 import AccessChoice from "../../components/AccessChoice"
-import SavedTabs, { SavedTab } from "../../components/SavedTabs"
+import SavedTabs, { SavedTab, TabFunctions, modifiedFunc, resetFunc, saveFunc } from "../../components/SavedTabs"
 import TeamSelect from "../../components/TeamSelect"
 import { Extractor } from "./api"
 import { Schema as SchemaDef, SchemaDispatch } from "./reducers"
 import Extractors from "./Extractors"
+import Transformers from "./Transformers"
 
 type SchemaParams = {
     schemaId: string
@@ -279,6 +280,7 @@ export default function Schema() {
                 )
             )
     }
+    const transformersFuncsRef = useRef<TabFunctions>()
     return (
         <PageSection>
             {loading && (
@@ -409,6 +411,19 @@ export default function Schema() {
                                         )}
                                     </>
                                 )}
+                            </SavedTab>
+                            <SavedTab
+                                title="Transformers"
+                                fragment="transformers"
+                                onSave={saveFunc(transformersFuncsRef)}
+                                onReset={resetFunc(transformersFuncsRef)}
+                                isModified={modifiedFunc(transformersFuncsRef)}
+                            >
+                                <Transformers
+                                    schemaId={schemaId}
+                                    schemaUri={schema?.uri || ""}
+                                    funcsRef={transformersFuncsRef}
+                                />
                             </SavedTab>
                         </SavedTabs>
                     </CardBody>

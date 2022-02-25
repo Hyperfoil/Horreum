@@ -19,6 +19,7 @@ import com.networknt.schema.ValidationMessage;
 
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
+import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.quarkus.panache.common.Sort;
 
 @Path("api/schema")
@@ -31,8 +32,6 @@ public interface SchemaService {
    @POST
    @Consumes(MediaType.APPLICATION_JSON)
    Integer add(Schema schema);
-
-   List<Schema> all();
 
    @GET
    List<Schema> list(@QueryParam("limit") Integer limit,
@@ -87,6 +86,16 @@ public interface SchemaService {
    @Path("findUsages")
    @Produces(MediaType.APPLICATION_JSON)
    List<AccessorLocation> findUsages(@QueryParam("accessor") String accessor);
+
+   @GET
+   @Path("{schemaId}/transformers")
+   @Produces(MediaType.APPLICATION_JSON)
+   List<Transformer> listTransformers(@PathParam("schemaId") Integer schemaId);
+
+   @POST
+   @Path("{schemaId}/transformers")
+   @Consumes(MediaType.APPLICATION_JSON)
+   Integer addOrUpdateTransformer(@PathParam("schemaId") Integer schemaId, Transformer transformer);
 
    class ExtractorUpdate {
       public int id;

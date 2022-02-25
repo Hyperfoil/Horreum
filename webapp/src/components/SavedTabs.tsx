@@ -8,9 +8,20 @@ import { noop } from "../utils"
 export type TabFunctions = {
     save(): Promise<any>
     reset(): void
+    modified?(): boolean
 }
 
 export type TabFunctionsRef = MutableRefObject<TabFunctions | undefined>
+
+export function saveFunc(ref: TabFunctionsRef) {
+    return () => (ref.current ? ref.current.save() : Promise.resolve())
+}
+export function resetFunc(ref: TabFunctionsRef) {
+    return () => ref.current?.reset()
+}
+export function modifiedFunc(ref: TabFunctionsRef) {
+    return () => ref.current?.modified?.() || false
+}
 
 type SavedTabProps = {
     title: string
