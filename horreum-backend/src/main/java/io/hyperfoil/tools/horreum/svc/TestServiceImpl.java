@@ -1,11 +1,9 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.TestService;
-import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.*;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -450,5 +448,21 @@ public class TestServiceImpl implements TestService {
          result.add(tags == null ? Util.EMPTY_OBJECT : Util.toJsonNode(tags));
       }
       return result;
+   }
+
+   @WithRoles
+   @Transactional
+   @Override
+   public void updateTransformers(Integer testId, List<Integer> transformerIds) {
+      if (transformerIds == null) {
+         throw ServiceException.badRequest("Null transformer IDs");
+      }
+      Test test = Test.findById(testId);
+      if (test == null) {
+         throw ServiceException.notFound("Cannot load test " + testId);
+      }
+      test.transformers.clear();
+      test.transformers.addAll(Transformer.list("id IN ?1", transformerIds));
+      test.persistAndFlush();
    }
 }

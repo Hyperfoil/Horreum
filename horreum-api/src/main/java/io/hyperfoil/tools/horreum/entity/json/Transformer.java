@@ -54,4 +54,9 @@ public class Transformer extends PanacheEntityBase {
    public String getSchemaUri() {
       return schema.uri;
    }
+
+   @JsonProperty("schemaName")
+   public String getSchemaName() {
+      return schema.name;
+   }
 }

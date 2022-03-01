@@ -16,8 +16,10 @@ import {
     RevokeTokenAction,
     UpdateFoldersAction,
     UpdateFolderAction,
+    UpdateTransformersAction,
 } from "./reducers"
 import { Dispatch } from "redux"
+import { Transformer } from "../schemas/api"
 import * as subscriptions from "./subscriptions-api"
 import { Map } from "immutable"
 import { alertAction, AddAlertAction, constraintValidationFormatter, dispatchError } from "../../alerts"
@@ -292,5 +294,25 @@ export function fetchFolders() {
                 }),
             error => dispatchError(dispatch, error, "UPDATE_FOLDERS", "Failed to retrieve a list of existing folders")
         )
+    }
+}
+
+export function updateTransformers(testId: number, transformers: Transformer[]) {
+    return (dispatch: Dispatch<UpdateTransformersAction | AddAlertAction>) => {
+        return api
+            .updateTransformers(
+                testId,
+                transformers.map(t => t.id)
+            )
+            .then(
+                () => dispatch({ type: actionTypes.UPDATE_TRANSFORMERS, testId, transformers }),
+                error =>
+                    dispatchError(
+                        dispatch,
+                        error,
+                        "UPDATE_TRANSFORMERS",
+                        "Failed to update transformers for test " + testId
+                    )
+            )
     }
 }

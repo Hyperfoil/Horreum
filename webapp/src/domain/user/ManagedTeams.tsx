@@ -239,7 +239,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
                                     return member(user, memberRoles.current, onModify)
                                 })
                             )
-                            onModify
+                            onModify()
                         }}
                     />
                 </FormGroup>

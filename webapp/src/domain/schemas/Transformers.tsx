@@ -84,6 +84,8 @@ export default function Transformers(props: TransformersProps) {
         const newTransformer: Transformer = {
             id: Math.min(...transformers.map(t => t.id - 1), -1),
             schemaId: props.schemaId,
+            schemaUri: "",
+            schemaName: "",
             name: "",
             description: "",
             extractors: [],

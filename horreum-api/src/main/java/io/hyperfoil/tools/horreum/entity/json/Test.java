@@ -10,9 +10,12 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
@@ -67,6 +70,10 @@ public class Test extends PanacheEntityBase {
    @ElementCollection
    @CollectionTable(name = "test_stalenesssettings")
    public Collection<StalenessSettings> stalenessSettings;
+
+   @OneToMany(fetch = FetchType.EAGER)
+   @JoinTable(name = "test_transformers", joinColumns = @JoinColumn(name = "test_id"), inverseJoinColumns = @JoinColumn(name = "transformer_id"))
+   public Collection<Transformer> transformers;
 
    @NotNull
    @Column(columnDefinition = "boolean default true")

@@ -22,6 +22,7 @@ const endPoints = {
     updateAccess: (id: number, owner: string, access: string) =>
         `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
     tags: (testId: number, trashed: boolean) => `${base}/${testId}/tags?trashed=${trashed}`,
+    transformers: (testId: number) => `${base}/${testId}/transformers`,
 }
 
 export const updateView = (testId: number, view: View) => {
@@ -80,4 +81,8 @@ export const deleteTest = (id: number) => fetchApi(endPoints.crud(id), null, "de
 
 export const fetchTags = (testId: number, trashed: boolean) => {
     return fetchApi(endPoints.tags(testId, trashed), null, "get")
+}
+
+export function updateTransformers(testId: number, transformerIds: number[]) {
+    return fetchApi(endPoints.transformers(testId), transformerIds, "post")
 }

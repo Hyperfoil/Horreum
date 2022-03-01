@@ -97,6 +97,11 @@ public interface SchemaService {
    @Consumes(MediaType.APPLICATION_JSON)
    Integer addOrUpdateTransformer(@PathParam("schemaId") Integer schemaId, Transformer transformer);
 
+   @GET
+   @Path("allTransformers")
+   @Produces(MediaType.APPLICATION_JSON)
+   List<TransformerInfo> allTransformers();
+
    class ExtractorUpdate {
       public int id;
       public String accessor;
@@ -162,5 +167,13 @@ public interface SchemaService {
          this.where = where;
          this.name = name;
       }
+   }
+
+   class TransformerInfo {
+      public int schemaId;
+      public String schemaUri;
+      public String schemaName;
+      public int transformerId;
+      public String transformerName;
    }
 }

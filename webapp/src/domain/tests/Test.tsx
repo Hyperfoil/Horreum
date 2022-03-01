@@ -9,7 +9,7 @@ import * as selectors from "./selectors"
 import { TestDispatch } from "./reducers"
 
 import ButtonLink from "../../components/ButtonLink"
-import SavedTabs, { SavedTab, TabFunctions, saveFunc, resetFunc } from "../../components/SavedTabs"
+import SavedTabs, { SavedTab, TabFunctions, saveFunc, resetFunc, modifiedFunc } from "../../components/SavedTabs"
 
 import { useTester, teamsSelector } from "../../auth"
 import { dispatchInfo } from "../../alerts"
@@ -20,6 +20,7 @@ import Variables from "./Variables"
 import Hooks from "./Hooks"
 import Access from "./Access"
 import Subscriptions from "./Subscriptions"
+import Transformers from "./Transformers"
 
 type Params = {
     testId: string
@@ -36,6 +37,7 @@ export default function Test() {
     const variablesFuncsRef = useRef<TabFunctions>()
     const hooksFuncsRef = useRef<TabFunctions>()
     const subscriptionsFuncsRef = useRef<TabFunctions>()
+    const transformersFuncsRef = useRef<TabFunctions>()
     const [loaded, setLoaded] = useState(false)
 
     const dispatch = useDispatch<TestDispatch>()
@@ -161,6 +163,23 @@ export default function Test() {
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
                                     funcsRef={subscriptionsFuncsRef}
+                                />
+                            </SavedTab>
+                            <SavedTab
+                                title="Transformers"
+                                fragment="transformers"
+                                isHidden={testId <= 0}
+                                onSave={saveFunc(transformersFuncsRef)}
+                                onReset={resetFunc(transformersFuncsRef)}
+                                isModified={modifiedFunc(transformersFuncsRef)}
+                            >
+                                <Transformers
+                                    testId={testId}
+                                    originalTransformers={(test && test.transformers) || []}
+                                    updateTransformers={ts => {
+                                        if (test) test.transformers = ts
+                                    }}
+                                    funcsRef={transformersFuncsRef}
                                 />
                             </SavedTab>
                         </SavedTabs>

@@ -16,6 +16,7 @@ const endPoints = {
     findUsages: (accessor: string) => `${base}/findUsages?accessor=${encodeURIComponent(accessor)}`,
     testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${encodeURIComponent(jsonpath)}`,
     transformers: (schemaId: number) => `${base}/${schemaId}/transformers`,
+    allTransformers: () => `${base}/allTransformers`,
 }
 export const all = () => {
     return fetchApi(endPoints.base(), null, "get")
@@ -71,6 +72,10 @@ export function listTransformers(schemaId: number) {
 
 export function addOrUpdateTransformer(transformer: Transformer) {
     return fetchApi(endPoints.transformers(transformer.schemaId), transformer, "post")
+}
+
+export function allTransformers(): Promise<TransformerInfo[]> {
+    return fetchApi(endPoints.allTransformers(), null, "get")
 }
 
 export type ValidationResult = {
@@ -133,6 +138,8 @@ export type NamedJsonPath = {
 export type Transformer = {
     id: number
     schemaId: number
+    schemaUri: string
+    schemaName: string
     name: string
     description: string
     targetSchemaUri?: string
@@ -141,4 +148,12 @@ export type Transformer = {
     owner: string
     access: Access
     modified?: boolean
+}
+
+export type TransformerInfo = {
+    schemaId: number
+    schemaUri: string
+    schemaName: string
+    transformerId: number
+    transformerName: string
 }

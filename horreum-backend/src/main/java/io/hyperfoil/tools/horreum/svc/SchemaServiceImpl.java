@@ -456,6 +456,25 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
+   @PermitAll
+   @WithRoles
+   @Override
+   public List<TransformerInfo> allTransformers() {
+      List<TransformerInfo> transformers = new ArrayList<>();
+      @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(
+            "SELECT s.id as sid, s.uri, s.name as schemaName, t.id as tid, t.name as transformerName FROM schema s JOIN transformer t ON s.id = t.schema_id").getResultList();
+      for (Object[] row: rows) {
+         TransformerInfo info = new TransformerInfo();
+         info.schemaId = (int) row[0];
+         info.schemaUri = (String) row[1];
+         info.schemaName = (String) row[2];
+         info.transformerId = (int) row[3];
+         info.transformerName = (String)  row[4];
+         transformers.add(info);
+      }
+      return transformers;
+   }
+
    private void addPart(StringBuilder where, String column, String accessor, String type) {
       if (Arrays.asList(column.replaceAll("\\[]", "").split(",")).contains(accessor)) {
          if (where.length() > 0) {

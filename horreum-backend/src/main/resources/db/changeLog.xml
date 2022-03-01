@@ -2252,6 +2252,29 @@
                 WITH CHECK (has_role2(owner, 'uploader') OR has_upload_token(testid));
             CREATE POLICY dataset_delete ON dataset FOR DELETE
                 USING (has_role('horreum.system'));
+	    </sql>
+    </changeSet>
+
+    <changeSet id="54" author="rvansa">
+        <createTable tableName="test_transformers">
+            <column name="test_id" type="integer">
+                <constraints foreignKeyName="fk_test_id" referencedTableName="test" referencedColumnNames="id" nullable="false"/>
+            </column>
+            <column name="transformer_id" type="integer">
+                <constraints foreignKeyName="fk_transformer_id" referencedTableName="transformer" referencedColumnNames="id" nullable="false"/>
+            </column>
+        </createTable>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE test_transformers TO "${quarkus.datasource.username}";
+            ALTER TABLE test_transformers ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY tt_select ON test_transformers FOR SELECT
+                USING (exists(SELECT 1 FROM test WHERE test.id = test_id AND can_view2(test.access, test.owner)) OR has_role('horreum.system'));
+            CREATE POLICY tt_insert ON test_transformers FOR INSERT
+                WITH CHECK (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
+            CREATE POLICY tt_update ON test_transformers FOR UPDATE
+                USING (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
+            CREATE POLICY tt_delete ON test_transformers FOR DELETE
+                USING (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
         </sql>
     </changeSet>
 </databaseChangeLog>

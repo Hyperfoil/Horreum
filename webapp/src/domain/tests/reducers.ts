@@ -4,6 +4,7 @@ import { Access } from "../../auth"
 import { ThunkDispatch } from "redux-thunk"
 import { Hook } from "../hooks/reducers"
 import { Run } from "../runs/reducers"
+import { Transformer } from "../schemas/api"
 import { AddAlertAction } from "../../alerts"
 
 export interface Token {
@@ -50,6 +51,7 @@ export interface Test {
     watching?: string[]
     notificationsEnabled: boolean
     stalenessSettings?: StalenessSettings[]
+    transformers: Transformer[]
 }
 
 export class TestsState {
@@ -131,6 +133,12 @@ export interface UpdateFolderAction {
     newFolder: string
 }
 
+export interface UpdateTransformersAction {
+    type: typeof actionTypes.UPDATE_TRANSFORMERS
+    testId: number
+    transformers: Transformer[]
+}
+
 export type TestAction =
     | LoadingAction
     | LoadedSummaryAction
@@ -144,6 +152,7 @@ export type TestAction =
     | RevokeTokenAction
     | UpdateFoldersAction
     | UpdateFolderAction
+    | UpdateTransformersAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction | AddAlertAction>
 
@@ -234,6 +243,13 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
                 const end = action.newFolder.indexOf("/", len)
                 state.currentFolders.push(action.newFolder.substring(len, end < 0 ? undefined : end))
                 state.currentFolders = [...new Set(state.currentFolders)].sort()
+            }
+            break
+        }
+        case actionTypes.UPDATE_TRANSFORMERS: {
+            const test = state.byId?.get(action.testId)
+            if (test) {
+                state.byId = state.byId?.set(action.testId, { ...test, transformers: action.transformers })
             }
             break
         }

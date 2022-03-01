@@ -20,6 +20,7 @@ import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.TestToken;
+import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.quarkus.panache.common.Sort;
 
@@ -98,6 +99,10 @@ public interface TestService {
    @GET
    @Path("{id}/tags")
    List<JsonNode> tags(@PathParam("id") Integer testId, @QueryParam("trashed") Boolean trashed);
+
+   @POST
+   @Path("{id}/transformers")
+   void updateTransformers(@PathParam("id") Integer testId, List<Integer> transformerIds);
 
    class TestListing {
       public List<String> folders;
