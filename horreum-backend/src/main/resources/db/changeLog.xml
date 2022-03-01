@@ -2212,5 +2212,47 @@
                 USING (exists (SELECT 1 FROM transformer tf WHERE tf.id = transformer_id AND has_role2(tf.owner, 'tester')));
         </sql>
     </changeSet>
+
+    <changeSet id="53" author="jwhiting">
+        <createSequence sequenceName="dataset_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
+        <createTable tableName="dataset">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="data" type="jsonb">
+                <constraints nullable="false" />
+            </column>
+            <column name="start" type="timestamp without time zone">
+                <constraints nullable="false" />
+            </column>
+            <column name="stop" type="timestamp without time zone">
+                <constraints nullable="false" />
+            </column>
+            <column name="description" type="text" />
+            <column name="testid" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="runid" type="integer">
+                <constraints nullable="false" foreignKeyName="fk_dataset_run_id" references="run(id)"/>
+            </column>
+            <column name="owner" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="access" type="integer">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <sql>
+            GRANT ALL ON SEQUENCE dataset_id_seq TO "${quarkus.datasource.username}";
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE dataset TO "${quarkus.datasource.username}";
+            ALTER TABLE dataset ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY dataset_select ON dataset FOR SELECT
+                USING (has_role2(owner, 'uploader') OR has_upload_token(testid));
+            CREATE POLICY dataset_insert ON dataset FOR INSERT
+                WITH CHECK (has_role2(owner, 'uploader') OR has_upload_token(testid));
+            CREATE POLICY dataset_delete ON dataset FOR DELETE
+                USING (has_role('horreum.system'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
