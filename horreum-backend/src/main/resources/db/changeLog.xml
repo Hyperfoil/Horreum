@@ -2247,7 +2247,7 @@
             GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE dataset TO "${quarkus.datasource.username}";
             ALTER TABLE dataset ENABLE ROW LEVEL SECURITY;
             CREATE POLICY dataset_select ON dataset FOR SELECT
-                USING (has_role2(owner, 'uploader') OR has_upload_token(testid));
+                USING (can_view2(access, owner) OR has_role('horreum.system'));
             CREATE POLICY dataset_insert ON dataset FOR INSERT
                 WITH CHECK (has_role2(owner, 'uploader') OR has_upload_token(testid));
             CREATE POLICY dataset_delete ON dataset FOR DELETE
