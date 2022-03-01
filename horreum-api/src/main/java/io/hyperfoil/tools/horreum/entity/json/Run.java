@@ -5,14 +5,17 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.validation.constraints.NotNull;
 import java.time.Instant;
+import java.util.Collection;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -53,6 +56,9 @@ public class Run extends ProtectedBaseEntity {
    @NotNull
    @Column(columnDefinition = "boolean default false")
    public boolean trashed;
+
+   @OneToMany(mappedBy = "run", cascade = CascadeType.ALL, orphanRemoval = true)
+   public Collection<DataSet> datasets;
 
    public static class TagsEvent {
       public final int runId;
