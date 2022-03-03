@@ -20,8 +20,6 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 
 	Keycloak keycloak;
 
-	String clientName = "horreum";
-
 	public KeycloakClientRequestFilter(String keycloakBaseUrl,
 			String keycloakRealm,
 			String username,
@@ -36,7 +34,7 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 		clientBuilder.register(new ResteasyJackson2Provider());
 
 		keycloak = KeycloakBuilder.builder()
-				.serverUrl(keycloakBaseUrl + "/auth")
+				.serverUrl(keycloakBaseUrl)
 				.realm(keycloakRealm)
 				.username(username)
 				.password(password)

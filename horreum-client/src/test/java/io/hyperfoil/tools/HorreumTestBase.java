@@ -147,12 +147,12 @@ public class HorreumTestBase {
             envVariables.put("HORREUM_HORREUM_INTERNAL_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(HORREUM_HTTPS_PORT));
             envVariables.put("HORREUM_HORREUM_KEYCLOAK_URL",  KEYCLOAK_URL_ROOT + "/auth");
             envVariables.put("HORREUM_HORREUM_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(HORREUM_HTTP_PORT));
-            envVariables.put("HORREUM_QUARKUS_OIDC_AUTH_SERVER_URL", KEYCLOAK_URL_ROOT + "/auth/realms/horreum");
+            envVariables.put("HORREUM_QUARKUS_OIDC_AUTH_SERVER_URL", KEYCLOAK_URL_ROOT + "/realms/horreum");
             envVariables.put("HORREUM_QUARKUS_DATASOURCE_JDBC_URL", "jdbc:postgresql://" + CONTAINER_HOST_IP + ":" + getOffsetPort(POSTGRES_PORT) + "/horreum");
 
             envVariables.put("GRAFANA_GF_SERVER_ROOT_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(GRAFANA_HTTP_PORT ) + "/");
 
-            String GF_AUTH_URL_ROOT = KEYCLOAK_URL_ROOT + "/auth/realms/horreum/protocol/openid-connect";
+            String GF_AUTH_URL_ROOT = KEYCLOAK_URL_ROOT + "/realms/horreum/protocol/openid-connect";
             envVariables.put("GF_AUTH_GENERIC_OAUTH_AUTH_URL", GF_AUTH_URL_ROOT + "/auth");
             envVariables.put("GF_AUTH_GENERIC_OAUTH_TOKEN_URL", GF_AUTH_URL_ROOT + "/token");
             envVariables.put("GF_AUTH_GENERIC_OAUTH_API_URL", GF_AUTH_URL_ROOT + "/userinfo");

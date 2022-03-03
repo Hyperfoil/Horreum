@@ -27,7 +27,7 @@ services:
   keycloak:
     depends_on:
     - postgres
-    image: quay.io/keycloak/keycloak
+    image: quay.io/keycloak/keycloak:17.0.0
     entrypoint: /cwd/infra/keycloak.sh
     env_file: keycloak.env
     environment:
@@ -63,9 +63,9 @@ services:
     env_file: grafana.env
     environment:
     - GF_SERVER_ROOT_URL=${GRAFANA_GF_SERVER_ROOT_URL:-http://localhost:4040/}
-    - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=${GF_AUTH_GENERIC_OAUTH_TOKEN_URL:-http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/token}
-    - GF_AUTH_GENERIC_OAUTH_API_URL=${GF_AUTH_GENERIC_OAUTH_API_URL:-http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/userinfo}
-    - GF_AUTH_GENERIC_OAUTH_AUTH_URL=${GF_AUTH_GENERIC_OAUTH_AUTH_URL:-http://172.17.0.1:8180/auth/realms/horreum/protocol/openid-connect/auth}
+    - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=${GF_AUTH_GENERIC_OAUTH_TOKEN_URL:-http://172.17.0.1:8180/realms/horreum/protocol/openid-connect/token}
+    - GF_AUTH_GENERIC_OAUTH_API_URL=${GF_AUTH_GENERIC_OAUTH_API_URL:-http://172.17.0.1:8180/realms/horreum/protocol/openid-connect/userinfo}
+    - GF_AUTH_GENERIC_OAUTH_AUTH_URL=${GF_AUTH_GENERIC_OAUTH_AUTH_URL:-http://172.17.0.1:8180/realms/horreum/protocol/openid-connect/auth}
     ports:
     - "${GRAFANA_HTTP_PORT:-4040}:4040"
     volumes:

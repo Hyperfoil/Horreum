@@ -11,10 +11,10 @@ if docker -v | grep "Docker"; then
 else
   KEYCLOAK_HOST=127.0.0.1
 fi
-KEYCLOAK_ADMIN_TOKEN=$(curl -s $KEYCLOAK_HOST:8180/auth/realms/master/protocol/openid-connect/token -X POST -H 'content-type: application/x-www-form-urlencoded' -d 'username=admin&password=secret&grant_type=password&client_id=admin-cli' | jq -r .access_token)
+KEYCLOAK_ADMIN_TOKEN=$(curl -s $KEYCLOAK_HOST:8180/realms/master/protocol/openid-connect/token -X POST -H 'content-type: application/x-www-form-urlencoded' -d 'username=admin&password=secret&grant_type=password&client_id=admin-cli' | jq -r .access_token)
 [ -n "$KEYCLOAK_ADMIN_TOKEN" -a "$KEYCLOAK_ADMIN_TOKEN" != "null" ] || exit 1
 AUTH='Authorization: Bearer '$KEYCLOAK_ADMIN_TOKEN
-KEYCLOAK_BASEURL=$KEYCLOAK_HOST:8180/auth/admin/realms/horreum
+KEYCLOAK_BASEURL=$KEYCLOAK_HOST:8180/admin/realms/horreum
 
 HORREUM_CLIENTID=$(curl -s $KEYCLOAK_BASEURL/clients -H "$AUTH" | jq -r '.[] | select(.clientId=="horreum") | .id')
 curl -s $KEYCLOAK_BASEURL/clients/$HORREUM_CLIENTID -H "$AUTH" | jq '.rootUrl |= "http://localhost:8080" | .adminUrl |= "http://localhost:8080" | .redirectUris |= [ "http://localhost:8080/*"] | .webOrigins |= [ "http://localhost:8080" ]' > /tmp/horreum.client
