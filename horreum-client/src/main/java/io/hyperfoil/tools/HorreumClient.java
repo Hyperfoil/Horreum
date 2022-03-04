@@ -103,15 +103,8 @@ public class HorreumClient {
 
             MpClientBuilderImpl clientBuilder = new MpClientBuilderImpl();
 
-            ResteasyJackson2Provider customJsonProvider = new ResteasyJackson2Provider();
-            ObjectMapper customJsonMapper = new ObjectMapper();
-            // This is useful if the client is old and we have added some new properties
-            customJsonMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-            customJsonMapper.registerModule(new JavaTimeModule());
-            customJsonProvider.setMapper(customJsonMapper);
-
             //Override default ObjectMapper Provider
-            clientBuilder.register(customJsonProvider, 100);
+            clientBuilder.register(new CustomResteasyJackson2Provider(), 100);
 
             //Register Keycloak Request Filter
             clientBuilder.register(requestFilter);

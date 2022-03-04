@@ -13,6 +13,8 @@ import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 
+import io.hyperfoil.tools.CustomResteasyJackson2Provider;
+
 public class KeycloakClientRequestFilter implements ClientRequestFilter {
 
 	private static final Logger LOG = Logger.getLogger(KeycloakClientRequestFilter.class);
@@ -31,7 +33,7 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 		// We need to register the necessary providers manually in case this is used in Jenkins
 		// where the hierarchical classloader structure prevents provider lookup via ServiceLoader
 		clientBuilder.register(new FormUrlEncodedProvider());
-		clientBuilder.register(new ResteasyJackson2Provider());
+		clientBuilder.register(new CustomResteasyJackson2Provider());
 
 		keycloak = KeycloakBuilder.builder()
 				.serverUrl(keycloakBaseUrl)
