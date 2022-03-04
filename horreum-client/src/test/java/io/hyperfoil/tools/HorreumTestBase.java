@@ -145,7 +145,7 @@ public class HorreumTestBase {
             envVariables.put("KEYCLOAK_HTTP_PORT", KEYCLOAK_OFFSET_PORT);
             envVariables.put("POSTGRES_PORT", getOffsetPort(POSTGRES_PORT));
             envVariables.put("HORREUM_HORREUM_INTERNAL_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(HORREUM_HTTPS_PORT));
-            envVariables.put("HORREUM_HORREUM_KEYCLOAK_URL",  KEYCLOAK_URL_ROOT + "/auth");
+            envVariables.put("HORREUM_HORREUM_KEYCLOAK_URL",  KEYCLOAK_URL_ROOT);
             envVariables.put("HORREUM_HORREUM_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(HORREUM_HTTP_PORT));
             envVariables.put("HORREUM_QUARKUS_OIDC_AUTH_SERVER_URL", KEYCLOAK_URL_ROOT + "/realms/horreum");
             envVariables.put("HORREUM_QUARKUS_DATASOURCE_JDBC_URL", "jdbc:postgresql://" + CONTAINER_HOST_IP + ":" + getOffsetPort(POSTGRES_PORT) + "/horreum");
@@ -180,27 +180,34 @@ public class HorreumTestBase {
         Path.of("target/docker-compose/infra").toFile().mkdirs();
         URI root = HorreumTestBase.class.getClassLoader().getResource("docker-compose").toURI();
         Path source;
-        if ("file".equals(root.getScheme())) {
-            source = Path.of(root);
-        } else {
-            FileSystem fileSystem = FileSystems.newFileSystem(root, Collections.emptyMap());
-            source = fileSystem.getPath("docker-compose");
-        }
-        Files.walkFileTree(source, Collections.emptySet(), 1, new SimpleFileVisitor<>() {
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                Path destPath = Path.of("target/docker-compose/infra/", file.getFileName().toString());
-                Files.copy(file, destPath,
-                      StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
-                if(file.toString().endsWith(".sh")){
-                    destPath.toFile().setExecutable(true);
-                }
-                return FileVisitResult.CONTINUE;
+        FileSystem fileSystem = null;
+        try {
+            if ("file".equals(root.getScheme())) {
+                source = Path.of(root);
+            } else {
+                fileSystem = FileSystems.newFileSystem(root, Collections.emptyMap());
+                source = fileSystem.getPath("docker-compose");
             }
-        });
-        //noinspection ConstantConditions
-        Files.copy(HorreumTestBase.class.getClassLoader().getResourceAsStream("testcontainers/horreum-compose.yml"),
-              Path.of("target/docker-compose/horreum-compose.yml"), StandardCopyOption.REPLACE_EXISTING);
+            Files.walkFileTree(source, Collections.emptySet(), 1, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    Path destPath = Path.of("target/docker-compose/infra/", file.getFileName().toString());
+                    Files.copy(file, destPath,
+                          StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+                    if (file.toString().endsWith(".sh")) {
+                        destPath.toFile().setExecutable(true);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+            //noinspection ConstantConditions
+            Files.copy(HorreumTestBase.class.getClassLoader().getResourceAsStream("testcontainers/horreum-compose.yml"),
+                  Path.of("target/docker-compose/horreum-compose.yml"), StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            if (fileSystem != null) {
+                fileSystem.close();
+            }
+        }
     }
 
     private static void waitForContainerReady(DockerComposeContainer composeContainer, String serviceName, String pattern){
