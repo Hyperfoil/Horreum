@@ -4,6 +4,7 @@ import io.hyperfoil.tools.horreum.api.RunService;
 import io.hyperfoil.tools.horreum.api.SqlService;
 import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.json.Access;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -128,6 +129,7 @@ public class RunServiceImpl implements RunService {
    @PostConstruct
    public void init() {
       sqlService.registerListener("calculate_tags", this::onCalculateTags);
+      sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
    }
 
    private void onCalculateTags(String param) {
@@ -855,5 +857,47 @@ public class RunServiceImpl implements RunService {
       Object schemas = query.getSingleResult();
       em.flush();
       return schemas;
+   }
+
+   private void onCalculateDataSets(String param) {
+      String[] parts = param.split(";", 3);
+      if (parts.length < 3) {
+         log.errorf("Received notification to calculate dataset %s but cannot extract run ID.", param);
+         return;
+      }
+      int runId;
+      try {
+         runId = Integer.parseInt(parts[0]);
+      } catch (NumberFormatException e) {
+         log.errorf("Received notification to calculate dataset for run but cannot parse as run ID.", parts[0]);
+         return;
+      }
+      log.debug("Calculate_dataset for run with id [" +runId+ "]");
+
+      String token = parts[1];
+      String role = parts[2];
+
+      try (CloseMe h1 = closeMe(roleManager.withRoles(em, role));
+            CloseMe h2 = closeMe(roleManager.withToken(em, token))){
+         Run run = Run.findById(runId);
+         if (run != null) {
+            DataSet dataSet = new DataSet();
+            dataSet.start = run.start;
+            dataSet.stop = run.stop;
+            dataSet.description = run.description;
+            dataSet.testid = run.testid;
+            dataSet.run = run;
+            dataSet.data = run.data;
+            dataSet.owner = run.owner;
+            dataSet.access = run.access;
+            dataSet.persist();
+            Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, dataSet);
+         }
+      }
+   }
+
+   @SuppressWarnings("unused") 
+   private CloseMe closeMe(CloseMe me) {
+      return me;
    }
 }

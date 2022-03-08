@@ -4,15 +4,14 @@ import java.time.Instant;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.ConstraintMode;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
-import javax.persistence.ForeignKey;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.NamedQuery;
 import javax.persistence.SequenceGenerator;
 
 import org.hibernate.annotations.Type;
@@ -23,6 +22,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.smallrye.common.constraint.NotNull;
 
+@NamedQuery(name = DataSet.FIND_BY_RUNID,
+   query = "SELECT ds FROM dataset ds WHERE runid = ?1")
 @Entity(name="dataset")
 @RegisterForReflection
 /**
@@ -30,7 +31,7 @@ import io.smallrye.common.constraint.NotNull;
  */
 public class DataSet extends OwnedEntityBase {
 
-   public static final String FIND_RUN_BY_ID = "DataSet.findRunById";
+   public static final String FIND_BY_RUNID = "DataSet.findByRunId";
    public static final String EVENT_NEW = "dataset/new";
    public static final String EVENT_TRASHED = "dataset/trashed";
 
@@ -64,4 +65,8 @@ public class DataSet extends OwnedEntityBase {
    @JoinColumn(name = "runid")
    @JsonIgnore
    public Run run;
+
+   public static DataSet findByRunId(int runId) {
+      return find("#DataSet.findByRunId", runId).firstResult();
+   }
 }

@@ -2252,7 +2252,7 @@
                 WITH CHECK (has_role2(owner, 'uploader') OR has_upload_token(testid));
             CREATE POLICY dataset_delete ON dataset FOR DELETE
                 USING (has_role('horreum.system'));
-	    </sql>
+        </sql>
     </changeSet>
 
     <changeSet id="54" author="rvansa">
@@ -2276,6 +2276,63 @@
             CREATE POLICY tt_delete ON test_transformers FOR DELETE
                 USING (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
         </sql>
+    </changeSet>
+
+    <changeSet id="55" author="jwhiting">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION after_run_update_func() RETURNS TRIGGER AS $$
+            DECLARE
+                v_schema text;
+                v_schemaid integer;
+                v_has_schema boolean := false;
+            BEGIN
+                FOR v_schema IN (SELECT jsonb_path_query(NEW.data, '$.\$schema'::jsonpath)#>>'{}') LOOP
+                    v_schemaid := (SELECT id FROM schema WHERE uri = v_schema);
+                    IF v_schemaid IS NOT NULL THEN
+                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid)
+                            VALUES (NEW.id, NEW.testid, '$', v_schema, v_schemaid);
+                        v_has_schema := true;
+                    END IF;
+                END LOOP;
+                FOR v_schema IN (SELECT jsonb_path_query(NEW.data, '$.*.\$schema'::jsonpath)#>>'{}') LOOP
+                    v_schemaid := (SELECT id FROM schema WHERE uri = v_schema);
+                    IF v_schemaid IS NOT NULL THEN
+                        INSERT INTO run_schemas (runid, testid, prefix, uri, schemaid)
+                            VALUES (NEW.id, NEW.testid, '$.*', v_schema, v_schemaid);
+                        v_has_schema := true;
+                    END IF;
+                END LOOP;
+                IF NOT v_has_schema THEN
+                    PERFORM pg_notify('calculate_tags', auth_suffix(NEW.id::text) );
+                END IF;
+                DELETE FROM dataset WHERE runid = OLD.id;
+                PERFORM pg_notify('calculate_datasets', auth_suffix(NEW.id::text) );
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION after_run_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM dataset WHERE runid = OLD.id;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE TRIGGER after_run_delete AFTER DELETE ON run FOR EACH ROW EXECUTE FUNCTION after_run_delete_func();
+            INSERT INTO dataset (id, data, start, stop, description, testid, runid, owner, access)
+               SELECT nextval('dataset_id_seq') as id, data, start, stop, description, testid, id as runid, owner, access FROM run;
+        </sql>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION before_run_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_schemas WHERE runid = OLD.id;
+                DELETE FROM dataset WHERE runid = OLD.id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
     </changeSet>
 </databaseChangeLog>
 

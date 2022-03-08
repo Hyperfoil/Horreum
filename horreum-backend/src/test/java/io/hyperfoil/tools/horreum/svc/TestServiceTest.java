@@ -43,7 +43,6 @@ public class TestServiceTest extends BaseServiceTest {
          assertNotNull(Test.findById(test.id));
       }
 
-
       int runId = uploadRun("{ \"foo\" : \"bar\" }", test.name);
 
       deleteTest(test);
