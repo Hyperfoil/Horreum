@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux"
 import { Bullseye, DualListSelector, DualListSelectorTreeItemData, Spinner } from "@patternfly/react-core"
 
 import { dispatchError } from "../../alerts"
+import { noop } from "../../utils"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { Transformer, TransformerInfo, allTransformers } from "../schemas/api"
 import { TestDispatch } from "./reducers"
@@ -108,7 +109,8 @@ export default function Transformers(props: TransformersProps) {
                     setOptions(items)
                     setCounter(counter + 1)
                 },
-                error => dispatchError(dispatch, error, "FETCH_TRANSFORMERS", "Failed to fetch all transformers")
+                error =>
+                    dispatchError(dispatch, error, "FETCH_TRANSFORMERS", "Failed to fetch all transformers").catch(noop)
             )
             .finally(() => setLoading(false))
     }, [])

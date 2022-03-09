@@ -25,6 +25,7 @@ import { EditIcon, HelpIcon, PlusCircleIcon } from "@patternfly/react-icons"
 
 import { Access, defaultTeamSelector, teamToName, useTester } from "../../auth"
 import { dispatchError } from "../../alerts"
+import { noop } from "../../utils"
 import { checkAccessorName, INVALID_ACCESSOR_HELPER } from "../../components/Accessors"
 import AccessIcon from "../../components/AccessIcon"
 import ChangeAccessModal from "../../components/ChangeAccessModal"
@@ -144,7 +145,7 @@ export default function Transformers(props: TransformersProps) {
                         error,
                         "LIST_TRANSFORMERS",
                         "Failed to fetch transformers for schema " + props.schemaUri
-                    )
+                    ).catch(noop)
             )
             .finally(() => setLoading(false))
     }, [props.schemaId, resetCounter])
