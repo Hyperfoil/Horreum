@@ -86,9 +86,9 @@ public class AlertingServiceImpl implements AlertingService {
    //@formatter:off
    private static final String LOOKUP_VARS =
          "WITH vars AS (" +
-         "   SELECT id, name, calculation, unnest(string_to_array(accessors, ';')) as accessor FROM variable" +
+         "   SELECT id, name, calculation, \"group\", unnest(string_to_array(accessors, ';')) as accessor FROM variable" +
          "   WHERE testid = ?" +
-         ") SELECT vars.id as vid, vars.name as name, vars.calculation, vars.accessor, se.jsonpath, schema.uri  FROM vars " +
+         ") SELECT vars.id as vid, vars.name as name, vars.group, vars.calculation, vars.accessor, se.jsonpath, schema.uri  FROM vars " +
          "JOIN schemaextractor se ON se.accessor = replace(vars.accessor, '[]', '') " +
          "JOIN schema ON schema.id = se.schema_id;";
 
@@ -270,11 +270,12 @@ public class AlertingServiceImpl implements AlertingService {
       for (Object[] row : varSelection) {
          int id = (Integer) row[0];
          String name = (String) row[1];
-         String calc = (String) row[2];
-         String accessor = (String) row[3];
-         String jsonpath = (String) row[4];
-         String schema = (String) row[5];
-         VarInfo var = vars.computeIfAbsent(id, i -> new VarInfo(id, name, calc));
+         String group = (String) row[2];
+         String calc = (String) row[3];
+         String accessor = (String) row[4];
+         String jsonpath = (String) row[5];
+         String schema = (String) row[6];
+         VarInfo var = vars.computeIfAbsent(id, i -> new VarInfo(id, name, group, calc));
          var.accessors.add(accessor);
          Set<AccessorInfo> accessors = allAccessors.computeIfAbsent(accessor, a -> new HashSet<>());
          // note that as we do single query there may be array and non-array variant for different variables
@@ -367,7 +368,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (recalculation != null) {
                   recalculation.runsWithoutValue.add(run.id);
                }
-               missingValueVariables.add(getMissingVariableString(var.name, dataPoint.variable.group));
+               missingValueVariables.add(var.getFullName());
                continue;
             }
             Double number = Util.toDoubleOrNull(value);
@@ -376,7 +377,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (recalculation != null) {
                   recalculation.errors++;
                }
-               missingValueVariables.add(getMissingVariableString(var.name, dataPoint.variable.group));
+               missingValueVariables.add(var.getFullName());
                continue;
             } else {
                dataPoint.value = number;
@@ -413,7 +414,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (recalculation != null) {
                   recalculation.runsWithoutValue.add(run.id);
                }
-               missingValueVariables.add(getMissingVariableString(var.name, dataPoint.variable.group));
+               missingValueVariables.add(var.getFullName());
                continue;
             }
             dataPoint.value = value;
@@ -424,10 +425,6 @@ public class AlertingServiceImpl implements AlertingService {
       if (!missingValueVariables.isEmpty()) {
          Util.publishLater(tm, eventBus, Run.EVENT_MISSING_VALUES, new MissingRunValuesEvent(run.id, run.testid, missingValueVariables, notify));
       }
-   }
-
-   private String getMissingVariableString(String name, String group) {
-      return (group.isEmpty()) ? name : group + "/" + name;
    }
 
    @Transactional(Transactional.TxType.REQUIRES_NEW)
@@ -1039,13 +1036,19 @@ public class AlertingServiceImpl implements AlertingService {
    public static class VarInfo {
       public final int id;
       public final String name;
+      public final String group;
       public final String calculation;
       public final Set<String> accessors = new HashSet<>();
 
-      public VarInfo(int id, String name, String calculation) {
+      public VarInfo(int id, String name, String group, String calculation) {
          this.id = id;
          this.name = name;
+         this.group = group;
          this.calculation = calculation;
+      }
+
+      public String getFullName() {
+         return (group == null || group.isEmpty()) ? name : group + "/" + name;
       }
    }
 }
