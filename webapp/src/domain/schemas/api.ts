@@ -4,7 +4,8 @@ import { Access, accessName } from "../../auth"
 const base = "/api/schema"
 const endPoints = {
     base: () => `${base}`,
-    crud: (id: number | string) => `${base}/${id}/`,
+    crud: (id: number) => `${base}/${id}/`,
+    byUri: (uri: string) => `${base}/idByUri/${encodeURIComponent(uri)}`,
     resetToken: (id: number) => `${base}/${id}/resetToken`,
     dropToken: (id: number) => `${base}/${id}/dropToken`,
     updateAccess: (id: number, owner: string, access: Access) =>
@@ -24,11 +25,12 @@ export const all = () => {
 export const add = (payload: Schema) => {
     return fetchApi(endPoints.base(), payload, "post")
 }
-export const getByName = (name: string) => {
-    return fetchApi(endPoints.crud(name), null, "get")
-}
 export const getById = (id: number) => {
     return fetchApi(endPoints.crud(id), null, "get")
+}
+
+export function getIdByUri(uri: string): Promise<number> {
+    return fetchApi(endPoints.byUri(uri), null, "get")
 }
 
 export const resetToken = (id: number) => fetchApi(endPoints.resetToken(id), null, "post", {}, "text")

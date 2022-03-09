@@ -244,9 +244,29 @@ public class RunServiceImpl implements RunService {
    @Override
    public Object getRun(Integer id, String token) {
       return runQuery("SELECT (to_jsonb(run) ||" +
-            "jsonb_set('{}', '{schema}', (SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = ?)::::jsonb, true) || " +
-            "jsonb_set('{}', '{testname}', to_jsonb((SELECT name FROM test WHERE test.id = run.testid)), true)" +
-            ")::::text FROM run where id = ?", id, id);
+            "jsonb_set('{}', '{schema}', (SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = run.id)::::jsonb, true) || " +
+            "jsonb_set('{}', '{testname}', to_jsonb((SELECT name FROM test WHERE test.id = run.testid)), true) || " +
+            "jsonb_set('{}', '{datasets}', (SELECT jsonb_agg(id ORDER BY id) FROM dataset WHERE runid = run.id), true)" +
+            ")::::text FROM run where id = ?", id);
+   }
+
+   @Override
+   public RunSummary getRunSummary(Integer id, String token) {
+      // TODO: define the result set mapping properly without transforming jsonb and int[] to text
+      Query query = em.createNativeQuery("SELECT run.id, run.start, run.stop, run.testid, " +
+            "run.owner, run.access, run.token, run.trashed, run.description, " +
+            "(SELECT name FROM test WHERE test.id = run.testid) as testname, " +
+            "(SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = run.id)::::text as schema, " +
+            "(SELECT json_agg(id ORDER BY id) FROM dataset WHERE runid = run.id)::::text as datasets " +
+            " FROM run where id = ?").setParameter(1, id);
+      query.unwrap(org.hibernate.query.Query.class);
+
+      Object[] row = (Object[]) query.getSingleResult();
+      RunSummary summary = new RunSummary();
+      initSummary(row, summary);
+      summary.schema = Util.toJsonNode((String) row[10]);
+      summary.datasets = (ArrayNode) Util.toJsonNode((String) row[11]);
+      return summary;
    }
 
    @PermitAll
@@ -259,8 +279,8 @@ public class RunServiceImpl implements RunService {
    @PermitAll
    @WithToken
    @Override
-   public QueryResult queryData(Integer id, String jsonpath, String schemaUri, Boolean array) {
-      String func = array != null && array ? "jsonb_path_query_array" : "jsonb_path_query_first";
+   public QueryResult queryData(Integer id, String jsonpath, String schemaUri, boolean array) {
+      String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";
       QueryResult result = new QueryResult();
       result.jsonpath = jsonpath;
       try {
@@ -555,8 +575,8 @@ public class RunServiceImpl implements RunService {
    public RunsSummary list(String query, boolean matchAll, String roles, boolean trashed,
                            Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
-         .append("run.owner, run.access, run.token, ")
-         .append("test.name AS testname, run.trashed, run.description, run_tags.tags::::text AS tags ")
+         .append("run.owner, run.access, run.token, run.trashed, run.description, ")
+         .append("test.name AS testname, run_tags.tags::::text AS tags ")
          .append("FROM run JOIN test ON test.id = run.testId LEFT JOIN run_tags ON run_tags.runid = run.id WHERE ");
       String[] queryParts;
       boolean whereStarted = false;
@@ -612,16 +632,7 @@ public class RunServiceImpl implements RunService {
          summary.total = trashed ? Run.count() : Run.count("trashed = false");
          summary.runs = runs.stream().map(row -> {
             RunSummary run = new RunSummary();
-            run.id = (int) row[0];
-            run.start = ((Timestamp) row[1]).getTime();
-            run.stop = ((Timestamp) row[2]).getTime();
-            run.testid = (int) row[3];
-            run.owner = (String) row[4];
-            run.access = (int) row[5];
-            run.token = (String) row[6];
-            run.testname = (String) row[7];
-            run.trashed = (boolean) row[8];
-            run.description = (String) row[9];
+            initSummary(row, run);
             String tags = (String) row[10];
             run.tags = tags == null || tags.isEmpty() ? Util.EMPTY_ARRAY : Util.toJsonNode(tags);
             return run;
@@ -646,6 +657,19 @@ public class RunServiceImpl implements RunService {
          }
          throw new WebApplicationException(pe, 500);
       }
+   }
+
+   private void initSummary(Object[] row, RunSummary run) {
+      run.id = (int) row[0];
+      run.start = ((Timestamp) row[1]).getTime();
+      run.stop = ((Timestamp) row[2]).getTime();
+      run.testid = (int) row[3];
+      run.owner = (String) row[4];
+      run.access = (int) row[5];
+      run.token = (String) row[6];
+      run.trashed = (boolean) row[7];
+      run.description = (String) row[8];
+      run.testname = (String) row[9];
    }
 
    @PermitAll
@@ -878,8 +902,8 @@ public class RunServiceImpl implements RunService {
       String token = parts[1];
       String role = parts[2];
 
-      try (CloseMe h1 = closeMe(roleManager.withRoles(em, role));
-            CloseMe h2 = closeMe(roleManager.withToken(em, token))){
+      try (@SuppressWarnings("unused") CloseMe h1 = roleManager.withRoles(em, role);
+           @SuppressWarnings("unused") CloseMe h2 = roleManager.withToken(em, token)){
          Run run = Run.findById(runId);
          if (run != null) {
             DataSet dataSet = new DataSet();
@@ -905,8 +929,26 @@ public class RunServiceImpl implements RunService {
       // elsewhere.
    }
 
-   @SuppressWarnings("unused") 
-   private CloseMe closeMe(CloseMe me) {
-      return me;
+   @PermitAll
+   @WithToken
+   @WithRoles
+   @Override
+   public DataSet getDataSet(Integer datasetId) {
+      return DataSet.findById(datasetId);
+   }
+
+   @Override
+   public QueryResult queryDataSet(Integer datasetId, String jsonpath, boolean array) {
+      String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";
+      QueryResult result = new QueryResult();
+      result.jsonpath = jsonpath;
+      try {
+         String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ?";
+         result.value = String.valueOf(runQuery(sqlQuery, jsonpath, datasetId));
+         result.valid = true;
+      } catch (PersistenceException pe) {
+         SqlServiceImpl.setFromException(pe, result);
+      }
+      return result;
    }
 }

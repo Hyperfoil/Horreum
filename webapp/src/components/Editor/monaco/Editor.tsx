@@ -8,6 +8,7 @@ type EditorProps = {
     language?: string
     options: any
     onChange?(value: string | undefined): void
+    height?: number | string
 }
 
 export default function Editor(props: EditorProps) {
@@ -42,7 +43,10 @@ export default function Editor(props: EditorProps) {
                 //renderLineHighlight : 'none',
                 ...props.options,
                 language: props.language || "json",
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
             }}
+            height={props.height}
             onMount={onMount}
             onChange={props.onChange}
         />

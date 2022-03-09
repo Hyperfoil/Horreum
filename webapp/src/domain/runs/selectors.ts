@@ -47,9 +47,9 @@ export const testRuns = (id: number, pagination: PaginationInfo, trashed: boolea
 
 export const get = (id: number) => (state: State) => {
     if (!state.runs.byId) {
-        return false
+        return undefined
     }
-    return state.runs.byId.get(id) || false
+    return state.runs.byId.get(id)
 }
 
 export const filter = (pagination: PaginationInfo) => (state: State) => {

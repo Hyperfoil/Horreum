@@ -17,6 +17,7 @@ import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
 
@@ -107,6 +108,15 @@ public class SchemaServiceImpl implements SchemaService {
          throw ServiceException.notFound("Schema not found");
       }
       return schema;
+   }
+
+   @Override
+   public int idByUri(String uri) {
+      try {
+         return (Integer) em.createNativeQuery("SELECT id FROM schema WHERE uri = ?").setParameter(1, uri).getSingleResult();
+      } catch (NoResultException e) {
+         throw ServiceException.notFound("Schema with given uri not found: " + uri);
+      }
    }
 
    @RolesAllowed(Roles.TESTER)

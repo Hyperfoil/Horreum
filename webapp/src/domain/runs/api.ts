@@ -4,7 +4,9 @@ import { PaginationInfo, paginationParams } from "../../utils"
 
 const base = "/api/run"
 const endPoints = {
-    getRun: (runId: number, token?: string) => `${base}/${runId}${token ? "?token=" + token : ""}`,
+    // getRun: (runId: number, token?: string) => `${base}/${runId}${token ? "?token=" + token : ""}`,
+    getData: (runId: number, token?: string) => `${base}/${runId}/data${token ? "?token=" + token : ""}`,
+    getSummary: (runId: number, token?: string) => `${base}/${runId}/summary${token ? "?token=" + token : ""}`,
     addRun: () => `${base}/`,
     query: (runId: number, query: string, array: boolean, schemaUri?: string) =>
         `${base}/${runId}/query?query=${encodeURIComponent(query)}&array=${array}${
@@ -27,13 +29,30 @@ const endPoints = {
     description: (runId: number) => `${base}/${runId}/description`,
     count: (testId: number) => `${base}/count?testId=${testId}`,
     schema: (runId: number, path?: string) => `${base}/${runId}/schema${(path && "?path=" + path) || ""}`,
+    dataset: (datasetId: number) => `${base}/dataset/${datasetId}`,
+    queryDataset: (datasetId: number, query: string, array: boolean) =>
+        `${base}/dataset/${datasetId}/query?query=${encodeURIComponent(query)}&array=${array}`,
 }
 
 export const get = (id: number, token?: string) => {
-    return fetchApi(endPoints.getRun(id, token), null, "get")
+    return fetchApi(endPoints.getSummary(id, token), null, "get")
 }
 
-export function query(id: number, query: string, array: boolean, schemaUri?: string) {
+export const getData = (id: number, token?: string) => {
+    return fetchApi(endPoints.getData(id, token), null, "get")
+}
+
+export type QueryResult = {
+    value: string
+    valid: boolean
+    jsonpath: string
+    errorCode: number
+    sqlState: string
+    reason: string
+    sql: string
+}
+
+export function query(id: number, query: string, array: boolean, schemaUri?: string): Promise<QueryResult> {
     return fetchApi(endPoints.query(id, query, array, schemaUri), null, "get")
 }
 
@@ -78,4 +97,12 @@ export const runCount = (testId: number): Promise<RunCount> => fetchApi(endPoint
 
 export const updateSchema = (id: number, path: string | undefined, schema: string) => {
     return fetchApi(endPoints.schema(id, path), schema, "post", { "Content-Type": "text/plain" })
+}
+
+export function getDataset(datasetId: number) {
+    return fetchApi(endPoints.dataset(datasetId), null, "get")
+}
+
+export function queryDataset(datasetId: number, query: string, array: boolean) {
+    return fetchApi(endPoints.queryDataset(datasetId, query, array), null, "get")
 }

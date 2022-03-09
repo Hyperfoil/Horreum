@@ -21,9 +21,9 @@ export interface Run {
     owner: string
     access: Access
     token: string | null
-    data: any
     testname?: string
     schema?: RunSchemas
+    datasets?: number[]
     // TODO - this could rather be a map<view_id, viewcomponent[]>
     view?: any[]
     trashed: boolean
@@ -210,24 +210,8 @@ export const reducer = (state = new RunsState(), action: RunsAction) => {
         }
         case actionTypes.UPDATE_SCHEMA: {
             state = updateRun(state, action.id, action.testid, run => {
-                const copy = { ...run }
+                const copy = { ...run, schema: action.schemas }
                 copy.schema = action.schemas
-                if (action.schema) {
-                    if (action.path) {
-                        copy.data = { ...run.data }
-                        copy.data[action.path]["$schema"] = action.schema
-                    } else {
-                        copy.data = { ...run.data, $schema: action.schema }
-                    }
-                } else {
-                    copy.data = { ...run.data }
-                    if (action.path) {
-                        const sub = (copy.data[action.path] = { ...copy.data[action.path] })
-                        delete sub["$schema"]
-                    } else {
-                        delete copy.data["$schema"]
-                    }
-                }
                 return copy
             })
             break

@@ -14,7 +14,6 @@ import java.sql.Types;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RegisterForReflection
 public class JsonUserType implements UserType {
@@ -67,9 +66,8 @@ public class JsonUserType implements UserType {
       }
       try {
          preparedStatement.setObject(i, o.toString().replaceAll("\n", ""), Types.OTHER);
-      } catch(Exception e) {
-         System.out.println("WTF nullSafeSet"+e.getMessage());
-         e.printStackTrace();
+      } catch (Exception e) {
+         throw new HibernateException(e);
       }
    }
 

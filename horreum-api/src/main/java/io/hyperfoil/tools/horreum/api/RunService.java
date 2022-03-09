@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -12,8 +13,10 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import io.hyperfoil.tools.horreum.entity.json.Access;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 
@@ -27,6 +30,10 @@ public interface RunService {
                  @QueryParam("token") String token);
 
    @GET
+   @Path("{id}/summary")
+   RunSummary getRunSummary(@PathParam("id") Integer id, @QueryParam("token") String token);
+
+   @GET
    @Path("{id}/data")
    Object getData(@PathParam("id") Integer id, @QueryParam("token") String token);
 
@@ -35,7 +42,7 @@ public interface RunService {
    QueryResult queryData(@PathParam("id") Integer id,
                          @QueryParam("query") String jsonpath,
                          @QueryParam("uri") String schemaUri,
-                         @QueryParam("array") Boolean array);
+                         @QueryParam("array") @DefaultValue("false") boolean array);
 
    @POST
    @Path("{id}/resetToken")
@@ -124,6 +131,16 @@ public interface RunService {
    @Consumes(MediaType.TEXT_PLAIN)
    Object updateSchema(@PathParam("id") Integer id, @QueryParam("path") String path, String schemaUri);
 
+   @Path("dataset/{id}")
+   @GET
+   DataSet getDataSet(@PathParam("id") Integer datasetId);
+
+   @Path("dataset/{id}/query")
+   @GET
+   QueryResult queryDataSet(@PathParam("id") Integer datasetId,
+                            @QueryParam("query") String jsonpath,
+                            @QueryParam("array") @DefaultValue("false") boolean array);
+
    class RunSummary {
       public int id;
       public long start;
@@ -136,6 +153,8 @@ public interface RunService {
       public boolean trashed;
       public String description;
       public JsonNode tags;
+      public JsonNode schema; // id -> uri mapping
+      public ArrayNode datasets;
    }
 
    class RunsSummary {

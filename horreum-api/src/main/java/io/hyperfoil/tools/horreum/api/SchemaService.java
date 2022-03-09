@@ -29,6 +29,10 @@ public interface SchemaService {
    @Produces(MediaType.APPLICATION_JSON)
    Schema getSchema(@PathParam("id") int id, @QueryParam("token") String token);
 
+   @GET
+   @Path("idByUri/{uri}")
+   int idByUri(@PathParam("uri") String uri);
+
    @POST
    @Consumes(MediaType.APPLICATION_JSON)
    Integer add(Schema schema);
