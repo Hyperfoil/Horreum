@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Run;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 
 @Path("/api/run")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -68,7 +69,7 @@ public interface RunService {
                          @QueryParam("test") String test,
                          @QueryParam("owner") String owner,
                          @QueryParam("access") Access access,
-                         @QueryParam("token") String token, @QueryParam("schema") String schemaUri,
+                         @Parameter(description = "Horreum internal token. Incompatible with Keycloak") @QueryParam("token") String token, @QueryParam("schema") String schemaUri,
                          @QueryParam("description") String description,
                          JsonNode data);
 
