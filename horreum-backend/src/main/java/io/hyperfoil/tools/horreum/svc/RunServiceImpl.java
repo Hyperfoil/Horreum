@@ -16,6 +16,7 @@ import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.eventbus.EventBus;
 
 import org.graalvm.polyglot.PolyglotException;
@@ -894,6 +895,14 @@ public class RunServiceImpl implements RunService {
             Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, dataSet);
          }
       }
+   }
+
+   @ConsumeEvent(value = DataSet.EVENT_NEW)
+   public void consume(DataSet dataSet) {
+      // This empty method is here to let Quarkus register a local codec for Dataset
+      // - otherwise publishing the event would log warnings and the event would not
+      // be received in tests. This method can be removed once we start handling the event
+      // elsewhere.
    }
 
    @SuppressWarnings("unused") 
