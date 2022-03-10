@@ -1,7 +1,10 @@
 import { useState } from "react"
 import { Button, Chip, DropdownItem, Modal, TextInput, Tooltip } from "@patternfly/react-core"
+import { WarningTriangleIcon } from "@patternfly/react-icons"
 import moment from "moment"
 import { useDispatch } from "react-redux"
+
+import { RenderFunction } from "../tests/reducers"
 
 import { Run, RunsDispatch } from "./reducers"
 import { resetToken, dropToken, updateAccess, trash, updateDescription } from "./actions"
@@ -33,7 +36,12 @@ export function Description(description: string) {
     )
 }
 
-export const ExecutionTime = (run: Run) => (
+interface StartStop {
+    start: number | string | Date
+    stop: number | string | Date
+}
+
+export const ExecutionTime = (timestamps: StartStop) => (
     <Tooltip
         isContentLeftAligned
         content={
@@ -41,17 +49,17 @@ export const ExecutionTime = (run: Run) => (
                 <tbody>
                     <tr>
                         <td>Started:</td>
-                        <td>{formatDateTime(run.start)}</td>
+                        <td>{formatDateTime(timestamps.start)}</td>
                     </tr>
                     <tr>
                         <td>Finished:</td>
-                        <td>{formatDateTime(run.stop)}</td>
+                        <td>{formatDateTime(timestamps.stop)}</td>
                     </tr>
                 </tbody>
             </table>
         }
     >
-        <span>{moment(toEpochMillis(run.stop)).fromNow()}</span>
+        <span>{moment(toEpochMillis(timestamps.stop)).fromNow()}</span>
     </Tooltip>
 )
 
@@ -200,4 +208,59 @@ export const RunTags = (tags: any) => {
             </Chip>
         </Tooltip>
     ))
+}
+
+export function renderCell(render: string | RenderFunction | undefined, token: string | undefined) {
+    return (arg: any) => {
+        const {
+            cell: {
+                value,
+                row: { index },
+            },
+            data,
+            column,
+        } = arg
+        if (!render) {
+            if (value === null || value === undefined) {
+                return "--"
+            } else if (typeof value === "object") {
+                return JSON.stringify(value)
+            } else if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://"))) {
+                return (
+                    <a href={value} target="_blank ">
+                        {value}
+                    </a>
+                )
+            }
+            return value
+        } else if (typeof render === "string") {
+            return (
+                <Tooltip content={"Render failure: " + render}>
+                    <WarningTriangleIcon style={{ color: "#a30000" }} />
+                </Tooltip>
+            )
+        }
+        const useValue = value === null || value === undefined ? (data[index] as any)[column.id.toLowerCase()] : value
+        try {
+            const rendered = render(useValue, data[index], token)
+            if (!rendered) {
+                return "--"
+            } else if (typeof rendered === "string") {
+                //this is a hacky way to see if it looks like html :)
+                if (rendered.trim().startsWith("<") && rendered.trim().endsWith(">")) {
+                    //render it as html
+                    return <div dangerouslySetInnerHTML={{ __html: rendered }} />
+                } else {
+                    return rendered
+                }
+            } else if (typeof rendered === "object") {
+                return JSON.stringify(rendered)
+            } else {
+                return rendered + ""
+            }
+        } catch (e) {
+            console.warn("Error in render function %s trying to render %O: %O", render.toString(), useValue, e)
+            return "--"
+        }
+    }
 }

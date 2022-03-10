@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.api;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
@@ -86,14 +87,14 @@ public interface RunService {
 
    @GET
    @Path("list")
-   RunsSummary list(@QueryParam("query") String query,
-                    @QueryParam("matchAll") boolean matchAll,
-                    @QueryParam("roles") String roles,
-                    @QueryParam("trashed") boolean trashed,
-                    @QueryParam("limit") Integer limit,
-                    @QueryParam("page") Integer page,
-                    @QueryParam("sort") String sort,
-                    @QueryParam("direction") String direction);
+   RunsSummary listAllRuns(@QueryParam("query") String query,
+                           @QueryParam("matchAll") boolean matchAll,
+                           @QueryParam("roles") String roles,
+                           @QueryParam("trashed") boolean trashed,
+                           @QueryParam("limit") Integer limit,
+                           @QueryParam("page") Integer page,
+                           @QueryParam("sort") String sort,
+                           @QueryParam("direction") String direction);
 
    @GET
    @Path("count")
@@ -101,13 +102,13 @@ public interface RunService {
 
    @GET
    @Path("list/{testId}/")
-   TestRunsSummary testList(@PathParam("testId") Integer testId,
-                            @QueryParam("trashed") boolean trashed,
-                            @QueryParam("tags") String tags,
-                            @QueryParam("limit") Integer limit,
-                            @QueryParam("page") Integer page,
-                            @QueryParam("sort") String sort,
-                            @QueryParam("direction") String direction);
+   TestRunsSummary listTestRuns(@PathParam("testId") Integer testId,
+                                @QueryParam("trashed") boolean trashed,
+                                @QueryParam("tags") String tags,
+                                @QueryParam("limit") Integer limit,
+                                @QueryParam("page") Integer page,
+                                @QueryParam("sort") String sort,
+                                @QueryParam("direction") String direction);
 
    @GET
    @Path("bySchema")
@@ -134,6 +135,14 @@ public interface RunService {
    @Path("dataset/{id}")
    @GET
    DataSet getDataSet(@PathParam("id") Integer datasetId);
+
+   @Path("dataset/list/{testId}")
+   @GET
+   DatasetList listTestDatasets(@PathParam("testId") int testId,
+                                @QueryParam("limit") Integer limit,
+                                @QueryParam("page") Integer page,
+                                @QueryParam("sort") String sort,
+                                @QueryParam("direction") String direction);
 
    @Path("dataset/{id}/query")
    @GET
@@ -176,6 +185,25 @@ public interface RunService {
    class TestRunsSummary {
       public long total;
       public List<TestRunSummary> runs;
+   }
+
+   class DatasetSummary {
+      public int id;
+      public int runId;
+      public int ordinal;
+      public int testId;
+      public String testname;
+      public String description;
+      public long start;
+      public long stop;
+      public String owner;
+      public int access;
+      public ArrayNode schemas; // list of URIs
+   }
+
+   class DatasetList {
+      public long total;
+      public List<DatasetSummary> datasets = new ArrayList<>();
    }
 
    class QueryResult extends SqlService.JsonpathValidation {

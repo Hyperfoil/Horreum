@@ -32,6 +32,8 @@ const endPoints = {
     dataset: (datasetId: number) => `${base}/dataset/${datasetId}`,
     queryDataset: (datasetId: number, query: string, array: boolean) =>
         `${base}/dataset/${datasetId}/query?query=${encodeURIComponent(query)}&array=${array}`,
+    testDatasets: (testId: number, pagination: PaginationInfo) =>
+        `${base}/dataset/list/${testId}?${paginationParams(pagination)}`,
 }
 
 export const get = (id: number, token?: string) => {
@@ -105,4 +107,27 @@ export function getDataset(datasetId: number) {
 
 export function queryDataset(datasetId: number, query: string, array: boolean) {
     return fetchApi(endPoints.queryDataset(datasetId, query, array), null, "get")
+}
+
+export interface Dataset {
+    id: number
+    ordinal: number
+    runId: number
+    testId: number
+    testname: string
+    description?: string
+    start: number
+    stop: number
+    owner: string
+    access: number
+    schemas: string[]
+}
+
+export interface DatasetList {
+    total: number
+    datasets: Dataset[]
+}
+
+export function listTestDatasets(testId: number, pagination: PaginationInfo): Promise<DatasetList> {
+    return fetchApi(endPoints.testDatasets(testId, pagination), null, "get")
 }

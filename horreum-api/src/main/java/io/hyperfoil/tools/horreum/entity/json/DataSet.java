@@ -66,6 +66,9 @@ public class DataSet extends OwnedEntityBase {
    @JsonIgnore
    public Run run;
 
+   @NotNull
+   public int ordinal;
+
    public static DataSet findByRunId(int runId) {
       return find("#DataSet.findByRunId", runId).firstResult();
    }

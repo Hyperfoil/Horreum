@@ -14,10 +14,9 @@ import {
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
-    Tooltip,
     Checkbox,
 } from "@patternfly/react-core"
-import { ArrowRightIcon, TrashIcon, WarningTriangleIcon } from "@patternfly/react-icons"
+import { ArrowRightIcon, TrashIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
@@ -43,65 +42,10 @@ import {
     UseSortByColumnOptions,
 } from "react-table"
 import { Run, RunsDispatch } from "./reducers"
-import { Description, ExecutionTime, Menu, RunTags } from "./components"
-import { RenderFunction, Test } from "../tests/reducers"
+import { Description, ExecutionTime, Menu, RunTags, renderCell } from "./components"
+import { Test } from "../tests/reducers"
 
 type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row: UseRowSelectRowProps<Run> }
-
-//TODO how to prevent rendering before the data is loaded? (we just have start,stop,id)
-const renderCell = (render: string | RenderFunction | undefined) => (arg: C) => {
-    const {
-        cell: {
-            value,
-            row: { index },
-        },
-        data,
-        column,
-    } = arg
-    if (!render) {
-        if (value === null || value === undefined) {
-            return "--"
-        } else if (typeof value === "object") {
-            return JSON.stringify(value)
-        } else if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://"))) {
-            return (
-                <a href={value} target="_blank ">
-                    {value}
-                </a>
-            )
-        }
-        return value
-    } else if (typeof render === "string") {
-        return (
-            <Tooltip content={"Render failure: " + render}>
-                <WarningTriangleIcon style={{ color: "#a30000" }} />
-            </Tooltip>
-        )
-    }
-    const token = useSelector(tokenSelector)
-    const useValue = value === null || value === undefined ? (data[index] as any)[column.id.toLowerCase()] : value
-    try {
-        const rendered = render(useValue, data[index], token)
-        if (!rendered) {
-            return "--"
-        } else if (typeof rendered === "string") {
-            //this is a hacky way to see if it looks like html :)
-            if (rendered.trim().startsWith("<") && rendered.trim().endsWith(">")) {
-                //render it as html
-                return <div dangerouslySetInnerHTML={{ __html: rendered }} />
-            } else {
-                return rendered
-            }
-        } else if (typeof rendered === "object") {
-            return JSON.stringify(rendered)
-        } else {
-            return rendered + ""
-        }
-    } catch (e) {
-        console.warn("Error in render function %s trying to render %O: %O", render.toString(), useValue, e)
-        return "--"
-    }
-}
 
 type RunColumn = Column<Run> & UseSortByColumnOptions<Run>
 
@@ -221,6 +165,7 @@ export default function TestRuns() {
     const [direction, setDirection] = useState("Descending")
     const [tags, setTags] = useState<SelectedTags>()
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
+    const token = useSelector(tokenSelector)
     const tableColumns = useMemo(() => {
         const rtrn = [...staticColumns]
         columns.forEach((col, index) => {
@@ -231,12 +176,12 @@ export default function TestRuns() {
                 // in database, or fetch all runs and sort in server doing the rendering
                 disableSortBy: (!!col.render && col.render !== "") || !test || hasNonTrivialAccessor(test, index),
                 id: test ? "view_data:" + index + ":" + test.defaultView?.components[index].accessors : undefined,
-                Cell: renderCell(col.render),
+                Cell: renderCell(col.render, token),
             })
         })
         rtrn.push(menuColumn)
         return rtrn
-    }, [columns, test])
+    }, [columns, test, token])
 
     const dispatch = useDispatch<RunsDispatch>()
     const [showTrashed, setShowTrashed] = useState(false)

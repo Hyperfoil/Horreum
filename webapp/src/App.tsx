@@ -13,8 +13,8 @@ import store, { history } from "./store"
 import { initKeycloak, isAdminSelector, LoginLogout } from "./auth"
 import { UserProfileLink, UserSettings } from "./domain/user/UserSettings"
 
-import AllRuns from "./domain/runs/AllRuns"
 import TestRuns from "./domain/runs/TestRuns"
+import TestDatasets from "./domain/runs/TestDatasets"
 import Run from "./domain/runs/Run"
 import AllTests from "./domain/tests/AllTests"
 import Test from "./domain/tests/Test"
@@ -67,14 +67,6 @@ function Main() {
                                             style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                         >
                                             Tests
-                                        </NavLink>
-                                    </NavItem>
-                                    <NavItem itemId={1}>
-                                        <NavLink
-                                            to="/run"
-                                            style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
-                                        >
-                                            Runs
                                         </NavLink>
                                     </NavItem>
                                     {isAdmin && (
@@ -140,8 +132,8 @@ function Main() {
                     <Route exact path="/test" component={AllTests} />
                     <Route exact path="/test/:testId" component={Test} />
 
-                    <Route exact path="/run" component={AllRuns} />
                     <Route exact path="/run/list/:testId" component={TestRuns} />
+                    <Route exact path="/run/dataset/list/:testId" component={TestDatasets} />
                     <Route exact path="/run/:id" component={Run} />
 
                     <Route exact path="/hook" component={AllHooks} />

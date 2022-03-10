@@ -206,8 +206,11 @@ public class TestServiceImpl implements TestService {
    public TestListing summary(String roles, String folder) {
       folder = normalizeFolderName(folder);
       StringBuilder testSql = new StringBuilder();
-      testSql.append("SELECT test.id,test.name,test.folder,test.description,count(run.id) AS count,test.owner,test.access ");
-      testSql.append("FROM test LEFT JOIN run ON run.testid = test.id AND (run.trashed = false OR run.trashed IS NULL)");
+      // TODO: materialize the counts in a table for quicker lookup
+      testSql.append("WITH runs AS (SELECT testid, count(id) as count FROM run WHERE run.trashed = false OR run.trashed IS NULL GROUP BY testid), ");
+      testSql.append("datasets AS (SELECT testid, count(id) as count FROM dataset GROUP BY testid) ");
+      testSql.append("SELECT test.id,test.name,test.folder,test.description, datasets.count AS datasets, runs.count AS runs,test.owner,test.access ");
+      testSql.append("FROM test LEFT JOIN runs ON runs.testid = test.id LEFT JOIN datasets ON datasets.testid = test.id");
       boolean anyFolder = "*".equals(folder);
       if (anyFolder) {
          Roles.addRolesSql(identity, "test", testSql, roles, 1, " WHERE");
@@ -215,7 +218,7 @@ public class TestServiceImpl implements TestService {
          testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')");
          Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
       }
-      testSql.append(" GROUP BY test.id ORDER BY test.name");
+      testSql.append(" ORDER BY test.name");
       Query testQuery = em.createNativeQuery(testSql.toString());
       if (anyFolder) {
          Roles.addRolesParam(identity, testQuery, 1, roles);

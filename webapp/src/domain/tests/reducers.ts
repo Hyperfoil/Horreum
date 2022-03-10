@@ -47,7 +47,8 @@ export interface Test {
     access: Access
     tokens: Token[]
     defaultView?: View
-    count?: number // run count in AllTests
+    datasets?: number // dataset count in AllTests
+    runs?: number // run count in AllTests
     watching?: string[]
     notificationsEnabled: boolean
     stalenessSettings?: StalenessSettings[]

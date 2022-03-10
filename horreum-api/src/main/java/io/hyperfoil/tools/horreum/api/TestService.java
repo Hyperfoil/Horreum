@@ -114,7 +114,9 @@ public interface TestService {
       public String name;
       public String folder;
       public String description;
-      public Number count; // SQL count(*) returns BigInteger
+      // SQL count(*) returns BigInteger
+      public Number datasets;
+      public Number runs;
       public String owner;
       public int access;
    }

@@ -2334,5 +2334,15 @@
             $$ LANGUAGE plpgsql;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="56" author="rvansa">
+        <addColumn tableName="dataset">
+            <column name="ordinal" type="integer" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+        <addUniqueConstraint tableName="dataset" columnNames="runid,ordinal"/>
+        <dropDefaultValue tableName="dataset" columnName="ordinal"/>
+    </changeSet>
 </databaseChangeLog>
 

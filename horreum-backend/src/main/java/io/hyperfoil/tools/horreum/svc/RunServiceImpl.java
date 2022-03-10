@@ -572,8 +572,8 @@ public class RunServiceImpl implements RunService {
    @PermitAll
    @WithToken
    @Override
-   public RunsSummary list(String query, boolean matchAll, String roles, boolean trashed,
-                           Integer limit, Integer page, String sort, String direction) {
+   public RunsSummary listAllRuns(String query, boolean matchAll, String roles, boolean trashed,
+                                  Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
          .append("run.owner, run.access, run.token, run.trashed, run.description, ")
          .append("test.name AS testname, run_tags.tags::::text AS tags ")
@@ -689,8 +689,8 @@ public class RunServiceImpl implements RunService {
    @PermitAll
    @WithToken
    @Override
-   public TestRunsSummary testList(Integer testId, boolean trashed, String tags,
-                                   Integer limit, Integer page, String sort, String direction) {
+   public TestRunsSummary listTestRuns(Integer testId, boolean trashed, String tags,
+                                       Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
             .append("    SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') AS schemas, rs.runid FROM run_schemas rs GROUP BY rs.runid")
             .append("), view_agg AS (")
@@ -765,8 +765,6 @@ public class RunServiceImpl implements RunService {
                }
             }
          }
-         String schemas = (String) row[5];
-         String runTags = (String) row[9];
          TestRunSummary run = new TestRunSummary();
          run.id = (int) row[0];
          run.start = ((Timestamp) row[1]).getTime();
@@ -774,11 +772,11 @@ public class RunServiceImpl implements RunService {
          run.testid = testId;
          run.access = (int) row[3];
          run.owner = (String) row[4];
-         run.schema = Util.toJsonNode(schemas);
+         run.schema = Util.toJsonNode((String) row[5]);
          run.view = view;
          run.trashed = (boolean) row[7];
          run.description = (String) row[8];
-         run.tags = Util.toJsonNode(runTags);
+         run.tags = Util.toJsonNode((String) row[9]);
          runs.add(run);
       }
       TestRunsSummary summary = new TestRunsSummary();
@@ -935,6 +933,40 @@ public class RunServiceImpl implements RunService {
    @Override
    public DataSet getDataSet(Integer datasetId) {
       return DataSet.findById(datasetId);
+   }
+
+   @PermitAll
+   @WithRoles
+   @Override
+   public DatasetList listTestDatasets(int testId, Integer limit, Integer page, String sort, String direction) {
+      StringBuilder sql = new StringBuilder("SELECT ds.id, ds.runid, ds.ordinal, ds.testid, test.name, ")
+         .append("ds.description, ds.start, ds.stop, ds.owner, ds.access, ")
+         .append("jsonb_concat(jsonb_path_query_array(ds.data, '$.\\$schema'::::jsonpath), jsonb_path_query_array(ds.data, '$.*.\\$schema'::::jsonpath))::::text as schemas ")
+         .append("FROM dataset ds LEFT JOIN test ON test.id = ds.testid WHERE testid = ?");
+      // TODO: filtering by fingerprint
+      Util.addPaging(sql, limit, page, sort, direction);
+      @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(sql.toString())
+            .setParameter(1, testId).getResultList();
+      DatasetList list = new DatasetList();
+      for (Object[] row : rows) {
+         DatasetSummary summary = new DatasetSummary();
+         summary.id = (Integer) row[0];
+         summary.runId = (Integer) row[1];
+         summary.ordinal = (Integer) row[2];
+         summary.testId = (Integer) row[3];
+         summary.testname = (String) row[4];
+         summary.description = (String) row[5];
+         summary.start = ((Timestamp) row[6]).getTime();
+         summary.stop = ((Timestamp) row[7]).getTime();
+         summary.owner = (String) row[8];
+         summary.access = (Integer) row[9];
+         summary.schemas = (ArrayNode) Util.toJsonNode((String) row[10]);
+         // TODO: all the 'views'
+         list.datasets.add(summary);
+      }
+
+      list.total = DataSet.count("testid = ?1", testId);
+      return list;
    }
 
    @Override

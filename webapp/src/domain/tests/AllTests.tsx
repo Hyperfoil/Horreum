@@ -279,8 +279,27 @@ export default function AllTests() {
             },
             { Header: "Description", accessor: "description" },
             {
-                Header: "Run Count",
-                accessor: "count",
+                Header: "Datasets",
+                accessor: "datasets",
+                Cell: (arg: C) => {
+                    const {
+                        cell: {
+                            value,
+                            row: { index },
+                        },
+                        data,
+                    } = arg
+                    return (
+                        <NavLink to={`/run/dataset/list/${data[index].id}`}>
+                            {value === undefined ? "(unknown)" : value}&nbsp;
+                            <FolderOpenIcon />
+                        </NavLink>
+                    )
+                },
+            },
+            {
+                Header: "Runs",
+                accessor: "runs",
                 Cell: (arg: C) => {
                     const {
                         cell: {
@@ -291,7 +310,7 @@ export default function AllTests() {
                     } = arg
                     return (
                         <NavLink to={`/run/list/${data[index].id}`}>
-                            {value}&nbsp;
+                            {value === undefined ? "(unknown)" : value}&nbsp;
                             <FolderOpenIcon />
                         </NavLink>
                     )

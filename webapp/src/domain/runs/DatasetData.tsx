@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from "react"
 import { useDispatch } from "react-redux"
-import { useHistory } from "react-router-dom"
-import { Bullseye, Button, Form, FormGroup, Spinner } from "@patternfly/react-core"
+import { Bullseye, Form, FormGroup, Spinner } from "@patternfly/react-core"
 
 import { dispatchError } from "../../alerts"
 import { interleave, noop } from "../../utils"
 import { toString } from "../../components/Editor"
 import Editor from "../../components/Editor/monaco/Editor"
+import SchemaLink from "../schemas/SchemaLink"
 
 import * as api from "./api"
-import { getIdByUri } from "../schemas/api"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 
 type DatasetDataProps = {
@@ -37,7 +36,6 @@ export default function DatasetData(props: DatasetDataProps) {
             )
             .finally(() => setLoading(false))
     }, [props.datasetId])
-    const history = useHistory()
     const schemas = useMemo(() => {
         if (originalData) {
             return [
@@ -61,27 +59,7 @@ export default function DatasetData(props: DatasetDataProps) {
                         {(schemas &&
                             schemas.length > 0 &&
                             interleave(
-                                schemas.map((uri, i) => (
-                                    <Button
-                                        variant="link"
-                                        key={2 * i}
-                                        style={{ padding: 0, fontWeight: "var(--pf-global--link--FontWeight)" }}
-                                        onClick={() =>
-                                            getIdByUri(uri).then(
-                                                id => history.push(`/schema/${id}`),
-                                                error =>
-                                                    dispatchError(
-                                                        dispatch,
-                                                        error,
-                                                        "FIND_SCHEMA",
-                                                        "Cannot find schema with URI " + uri
-                                                    ).catch(noop)
-                                            )
-                                        }
-                                    >
-                                        {uri}
-                                    </Button>
-                                )),
+                                schemas.map((uri, i) => <SchemaLink uri={uri} key={2 * i} />),
                                 i => <br key={2 * i + 1} />
                             )) ||
                             "(no schema)"}

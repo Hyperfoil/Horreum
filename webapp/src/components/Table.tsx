@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Spinner, Bullseye } from "@patternfly/react-core"
+import { Bullseye, Skeleton, Spinner } from "@patternfly/react-core"
 import {
     useTable,
     useSortBy,
@@ -68,6 +68,32 @@ function Table<D extends object>({ columns, data, sortBy, isLoading, selected, o
             onSortBy(sortState.sortBy)
         }
     }, [sortState.sortBy, onSortBy])
+    if (isLoading) {
+        return (
+            <table className="pf-c-table pf-m-compact pf-m-grid-md" {...getTableProps()}>
+                <thead>
+                    <tr>
+                        <th className={clsx("pf-c-table__sort")}>
+                            <button className="pf-c-button pf-m-plain" type="button">
+                                Loading... <Spinner size="sm" />
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {[...Array(10).keys()].map(_ => {
+                        return (
+                            <tr>
+                                <td>
+                                    <Skeleton screenreaderText="Loading..." />
+                                </td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
+        )
+    }
     if (!data) {
         return (
             <Bullseye>
@@ -123,13 +149,6 @@ function Table<D extends object>({ columns, data, sortBy, isLoading, selected, o
                     })}
                 </thead>
                 <tbody {...getTableBodyProps()}>
-                    {isLoading && (
-                        <tr key="loading">
-                            <td key="loading" colSpan={columns.length} style={{ textAlign: "center" }}>
-                                <Spinner size="lg" />
-                            </td>
-                        </tr>
-                    )}
                     {rows.map(row => {
                         prepareRow(row)
                         const rowProps = row.getRowProps()
