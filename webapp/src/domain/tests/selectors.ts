@@ -31,7 +31,3 @@ export function subscriptions(id: number) {
 export function allFolders() {
     return (state: State) => state.tests.allFolders
 }
-
-export function currentFolders() {
-    return (state: State) => state.tests.currentFolders
-}

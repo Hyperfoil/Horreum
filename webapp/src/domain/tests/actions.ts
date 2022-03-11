@@ -33,7 +33,7 @@ export function fetchSummary(roles?: string, folder?: string) {
     return (dispatch: Dispatch<LoadingAction | LoadedSummaryAction | AddAlertAction>) => {
         dispatch(loading(true))
         return api.summary(roles, folder).then(
-            listing => dispatch({ type: actionTypes.LOADED_SUMMARY, tests: listing.tests, folders: listing.folders }),
+            listing => dispatch({ type: actionTypes.LOADED_SUMMARY, tests: listing.tests }),
             error => {
                 dispatch(loading(false))
                 return dispatchError(dispatch, error, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")

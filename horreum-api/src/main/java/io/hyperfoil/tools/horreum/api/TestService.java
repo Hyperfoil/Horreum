@@ -105,7 +105,6 @@ public interface TestService {
    void updateTransformers(@PathParam("id") Integer testId, List<Integer> transformerIds);
 
    class TestListing {
-      public List<String> folders;
       public List<TestSummary> tests;
    }
 

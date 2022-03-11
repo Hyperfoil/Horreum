@@ -11,14 +11,12 @@ import {
     Dropdown,
     DropdownToggle,
     DropdownItem,
-    List,
-    ListItem,
     Modal,
     PageSection,
     Spinner,
 } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
-import { EyeIcon, EyeSlashIcon, FolderIcon, FolderOpenIcon } from "@patternfly/react-icons"
+import { EyeIcon, EyeSlashIcon, FolderOpenIcon } from "@patternfly/react-icons"
 
 import {
     fetchSummary,
@@ -36,6 +34,7 @@ import AccessIcon from "../../components/AccessIcon"
 import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from "../../components/ActionMenu"
 import TeamSelect, { Team, ONLY_MY_OWN } from "../../components/TeamSelect"
 import FolderSelect from "../../components/FolderSelect"
+import FoldersTree from "./FoldersTree"
 import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
 
 import { Access, isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
@@ -233,16 +232,10 @@ export function useMoveToFolder(config: MoveToFolderConfig): MenuItem<MoveToFold
     return [MoveToFolderProvider, config]
 }
 
-function parent(folder: string) {
-    const index = folder.lastIndexOf("/")
-    if (index < 0) return ""
-    return folder.substr(0, index)
-}
-
 export default function AllTests() {
     const history = useHistory()
     const params = new URLSearchParams(history.location.search)
-    const folder = params.get("folder")
+    const [folder, setFolder] = useState(params.get("folder"))
 
     document.title = "Tests | Horreum"
     const dispatch = useDispatch<TestDispatch>()
@@ -348,7 +341,7 @@ export default function AllTests() {
         ],
         [dispatch, folder]
     )
-    const folders = useSelector(selectors.currentFolders())
+
     // This selector causes re-render on any state update as the returned list is always new.
     // We would need deepEquals for a proper comparison - the selector combines tests and watches
     // and modifies the Test objects - that wouldn't trigger shallowEqual, though
@@ -392,18 +385,13 @@ export default function AllTests() {
                     )}
                 </CardHeader>
                 <CardBody style={{ overflowX: "auto" }}>
-                    <List isPlain iconSize="large" style={{ paddingLeft: "16px" }}>
-                        {folder && (
-                            <NavLink key=".." to={`/test?folder=${parent(folder)}`}>
-                                <ListItem icon={<FolderIcon />}>.. (parent folder)</ListItem>
-                            </NavLink>
-                        )}
-                        {folders.map(f => (
-                            <NavLink key={f} to={folder ? `/test?folder=${folder}/${f}` : `/test?folder=${f}`}>
-                                <ListItem icon={<FolderIcon />}>{f}</ListItem>
-                            </NavLink>
-                        ))}
-                    </List>
+                    <FoldersTree
+                        folder={folder || ""}
+                        onChange={f => {
+                            setFolder(f)
+                            history.replace(f ? `/test?folder=${f}` : "/test")
+                        }}
+                    />
                     <Table columns={columns} data={allTests || []} isLoading={isLoading} />
                 </CardBody>
             </Card>

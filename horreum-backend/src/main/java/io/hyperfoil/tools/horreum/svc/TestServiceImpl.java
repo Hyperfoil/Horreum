@@ -231,22 +231,6 @@ public class TestServiceImpl implements TestService {
       TestListing listing = new TestListing();
       //noinspection unchecked
       listing.tests = testQuery.getResultList();
-
-      if (!anyFolder) {
-         StringBuilder folderSql = new StringBuilder("SELECT DISTINCT ON (f) regexp_replace(substr(folder, ?1), '/.*', '') AS f FROM test WHERE ")
-               .append("starts_with(folder, ?2)");
-         Roles.addRolesSql(identity, "test", folderSql, roles, 3, " AND");
-         folderSql.append(" ORDER BY f");
-         Query folderQuery = em.createNativeQuery(folderSql.toString());
-         // PostgreSQL counts posititions from 1, and we want to remove the / as well
-         folderQuery.setParameter(1, folder == null ? 0 : folder.length() + 2);
-         folderQuery.setParameter(2, folder == null ? "" : folder + "/");
-         Roles.addRolesParam(identity, folderQuery, 3, roles);
-
-         //noinspection unchecked
-         listing.folders = ((List<String>) folderQuery.getResultList()).stream()
-               .filter(f -> f != null && !f.isBlank()).collect(Collectors.toList());
-      }
       return listing;
    }
 
