@@ -239,6 +239,9 @@ export default function TestRuns() {
                                 <NavLink className="pf-c-button pf-m-primary" to={`/test/${testId}`}>
                                     Edit test
                                 </NavLink>
+                                <NavLink className="pf-c-button pf-m-secondary" to={`/run/dataset/list/${testId}`}>
+                                    View datasets
+                                </NavLink>
                             </ToolbarItem>
                         </ToolbarGroup>
                         {test && test.compareUrl && (

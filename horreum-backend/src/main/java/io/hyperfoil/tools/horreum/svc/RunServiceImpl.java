@@ -842,7 +842,6 @@ public class RunServiceImpl implements RunService {
       if (run == null) {
          throw ServiceException.notFound("Run not found");
       }
-      run.datasets.clear();
       consumer.accept(run);
       run.persistAndFlush();
    }

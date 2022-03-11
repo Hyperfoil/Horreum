@@ -171,6 +171,9 @@ export default function TestDatasets() {
                                 <NavLink className="pf-c-button pf-m-primary" to={`/test/${testId}`}>
                                     Edit test
                                 </NavLink>
+                                <NavLink className="pf-c-button pf-m-secondary" to={`/run/list/${testId}`}>
+                                    View runs
+                                </NavLink>
                             </ToolbarItem>
                         </ToolbarGroup>
                     </Toolbar>

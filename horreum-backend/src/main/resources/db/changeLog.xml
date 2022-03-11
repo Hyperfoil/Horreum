@@ -2344,5 +2344,21 @@
         <addUniqueConstraint tableName="dataset" columnNames="runid,ordinal"/>
         <dropDefaultValue tableName="dataset" columnName="ordinal"/>
     </changeSet>
+
+    <changeSet id="57" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION after_run_update_non_data_func() RETURNS TRIGGER AS $$
+            BEGIN
+                UPDATE dataset SET owner = NEW.owner, access = NEW.access, description = NEW.description WHERE runid = NEW.id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE TRIGGER after_run_update_non_data AFTER UPDATE OF owner, access, description ON run FOR EACH ROW EXECUTE FUNCTION after_run_update_non_data_func();
+            <!-- It would be nice to prevent updates of other fields but we don't do that right now -->
+            CREATE POLICY dataset_update ON dataset FOR UPDATE USING (has_role2(owner, 'tester'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
