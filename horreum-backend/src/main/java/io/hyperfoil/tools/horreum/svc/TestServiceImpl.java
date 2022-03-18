@@ -97,12 +97,17 @@ public class TestServiceImpl implements TestService {
 
    @Override
    public Test getByNameOrId(String input){
+      Test test;
       if (input.matches("-?\\d+")) {
          int id = Integer.parseInt(input);
-         return Test.find("name = ?1 or id = ?2", input, id).firstResult();
+         test =  Test.find("name = ?1 or id = ?2", input, id).firstResult();
       } else {
-         return Test.find("name", input).firstResult();
+         test =  Test.find("name", input).firstResult();
       }
+      if (test == null) {
+         throw ServiceException.notFound("No test with name " + input);
+      }
+      return test;
    }
 
    @Override
