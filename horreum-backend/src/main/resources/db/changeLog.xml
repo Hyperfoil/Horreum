@@ -2360,5 +2360,65 @@
             CREATE POLICY dataset_update ON dataset FOR UPDATE USING (has_role2(owner, 'tester'));
         </sql>
     </changeSet>
-</databaseChangeLog>
 
+    <changeSet id="58" author="jwhiting">
+       <createSequence sequenceName="label_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
+       <createTable tableName="label">
+           <column name="id" type="bigint">
+               <constraints primaryKey="true" nullable="false" />
+           </column>
+           <column name="label" type="text">
+               <constraints nullable="false" />
+           </column>
+           <column name="value" type="text">
+               <constraints nullable="false" />
+           </column>
+           <column name="datasetid" type="integer" />
+           <column name="filtering" type="boolean" defaultValue="true"/>
+           <column name="metrics" type="boolean" defaultValue="true"/>
+       </createTable>
+       <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE label TO "${quarkus.datasource.username}";
+            ALTER TABLE label ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY l_select ON label FOR SELECT
+                USING (exists(SELECT 1 FROM test WHERE test.id = test_id AND can_view2(test.access, test.owner)) OR has_role('horreum.system'));
+            CREATE POLICY l_insert ON label FOR INSERT
+                WITH CHECK (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
+            CREATE POLICY l_update ON label FOR UPDATE
+                USING (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
+            CREATE POLICY l_delete ON label FOR DELETE
+                USING (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
+       </sql>
+
+       <createSequence sequenceName="label_functions_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
+       <createTable tableName="label_functions">
+           <column name="id" type="bigint">
+               <constraints primaryKey="true" nullable="false" />
+           </column>
+           <column name="label_id" type="bigint">
+               <constraints nullable="false" foreignKeyName="fk_label_id" references="label(id)"/>
+           </column>
+           <column name="is_array" type="boolean">
+               <constraints nullable="false" />
+           </column>
+           <column name="name" type="text">
+               <constraints nullable="false" />
+           </column>
+           <column name="jsonpath" type="text">
+               <constraints nullable="false" />
+           </column>
+       </createTable>
+       <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE label_functions TO "${quarkus.datasource.username}";
+            ALTER TABLE label_functions ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY lf_select ON label_functions FOR SELECT
+                USING (exists(SELECT 1 FROM test WHERE test.id = test_id AND can_view2(test.access, test.owner)) OR has_role('horreum.system'));
+            CREATE POLICY lf_insert ON label_functions FOR INSERT
+                WITH CHECK (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
+            CREATE POLICY lf_update ON label_functions FOR UPDATE
+                USING (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
+            CREATE POLICY lf_delete ON label_functions FOR DELETE
+                USING (exists (SELECT 1 FROM test WHERE test.id = test_id AND has_role2(test.owner, 'tester')));
+       </sql>
+    </changeSet>
+</databaseChangeLog>
