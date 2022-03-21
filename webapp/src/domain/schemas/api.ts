@@ -92,7 +92,7 @@ export function listLabels(schemaId: number) {
 }
 
 export function addOrUpdateLabel(label: Label) {
-    return fetchApi(endPoints.labels(label.schemaId), null, "post")
+    return fetchApi(endPoints.labels(label.schemaId), label, "post")
 }
 
 export function deleteLabel(label: Label) {

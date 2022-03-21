@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.json.Access;
+import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
@@ -448,18 +449,11 @@ public class SchemaServiceImpl implements SchemaService {
       if (transformer.name == null || transformer.name.isBlank()) {
          throw ServiceException.badRequest("Transformer must have a name!");
       }
-      for (NamedJsonPath extractor : transformer.extractors) {
-         if (extractor.name == null || extractor.name.isBlank()) {
-            throw ServiceException.badRequest("One of the extractors does not have a name!");
-         } else if (extractor.jsonpath == null || extractor.jsonpath.isBlank()) {
-            throw ServiceException.badRequest("One of the extractors is missing JSONPath!");
-         }
-      }
+      validateExtractors(transformer.extractors);
       if (transformer.id == null || transformer.id < 0) {
          transformer.id = null;
          transformer.schema = em.getReference(Schema.class, schemaId);
          transformer.persistAndFlush();
-         return transformer.id;
       } else {
          Transformer existing = Transformer.findById(transformer.id);
          if (!Objects.equals(existing.schema.id, schemaId)) {
@@ -477,7 +471,17 @@ public class SchemaServiceImpl implements SchemaService {
          existing.extractors.clear();
          existing.extractors.addAll(transformer.extractors);
          existing.persist();
-         return existing.id;
+      }
+      return transformer.id;
+   }
+
+   private void validateExtractors(Collection<NamedJsonPath> extractors) {
+      for (NamedJsonPath extractor : extractors) {
+         if (extractor.name == null || extractor.name.isBlank()) {
+            throw ServiceException.badRequest("One of the extractors does not have a name!");
+         } else if (extractor.jsonpath == null || extractor.jsonpath.isBlank()) {
+            throw ServiceException.badRequest("One of the extractors is missing JSONPath!");
+         }
       }
    }
 
@@ -500,20 +504,68 @@ public class SchemaServiceImpl implements SchemaService {
       t.delete();
    }
 
+   @WithRoles
    @Override
-   public List<Object> labels(int schemaId) {
-      // TODO
-      return Collections.emptyList();
+   public List<Label> labels(int schemaId) {
+      return Label.find("schema_id", schemaId).list();
    }
 
+   @WithRoles
+   @Transactional
    @Override
-   public Integer addOrUpdateLabel(int schemaId, Object label) {
-      // TODO
-      return -1;
+   public Integer addOrUpdateLabel(int schemaId, Label label) {
+      if (label == null) {
+         throw ServiceException.badRequest("No label?");
+      }
+      if (!identity.hasRole(label.owner)) {
+         throw ServiceException.forbidden("This user is not a member of team " + label.owner);
+      }
+      if (label.name == null || label.name.isBlank()) {
+         throw ServiceException.badRequest("Label must have a non-blank name");
+      }
+      validateExtractors(label.extractors);
+
+      if (label.id == null || label.id < 0) {
+         label.id = null;
+         label.schema = em.getReference(Schema.class, schemaId);
+         label.persistAndFlush();
+      } else {
+         Label existing = Label.findById(label.id);
+         if (!Objects.equals(existing.schema.id, schemaId)) {
+            throw ServiceException.badRequest("Label id=" + label.id + ", name=" + existing.name +
+                  " belongs to a different schema: " + existing.schema.id + "(" + existing.schema.uri + ")");
+         }
+         if (!identity.hasRole(existing.owner)) {
+            throw ServiceException.forbidden("Cannot transfer ownership: this user is not a member of team " + existing.owner);
+         }
+         existing.name = label.name;
+         existing.extractors.clear();
+         existing.extractors.addAll(label.extractors);
+         existing.function = label.function;
+         existing.owner = label.owner;
+         existing.access = label.access;
+         existing.filtering = label.filtering;
+         existing.metrics = label.metrics;
+      }
+      return label.id;
    }
 
+   @WithRoles
+   @Transactional
+   @Override
    public void deleteLabel(int schemaId, int labelId) {
-      // TODO
+      Label label = Label.findById(labelId);
+      if (label == null) {
+         throw ServiceException.notFound("Label " + labelId + " not found");
+      }
+      if (label.schema.id != schemaId) {
+         throw ServiceException.badRequest("Label " + labelId + " does not belong to schema " + schemaId);
+      }
+      String testerRole = label.owner.substring(0, label.owner.length() - 5) + "-tester";
+      if (!identity.hasRole(testerRole)) {
+         throw ServiceException.forbidden("You are not an owner of label " + labelId + "(" + label.owner + "); missing role " + testerRole + ", available roles: " + identity.getRoles());
+      }
+      label.delete();
    }
 
    @PermitAll

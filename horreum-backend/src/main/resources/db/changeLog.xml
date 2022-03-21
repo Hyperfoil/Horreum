@@ -2360,7 +2360,7 @@
             CREATE POLICY dataset_update ON dataset FOR UPDATE USING (has_role2(owner, 'tester'));
         </sql>
     </changeSet>
-    
+
     <changeSet id="58" author="rvansa">
         <addColumn tableName="transformer_extractors">
             <column name="isarray" type="boolean" defaultValue="false">
@@ -2372,5 +2372,71 @@
             <column name="targetschemauri" type="text" />
         </addColumn>
     </changeSet>
+
+    <changeSet id="59" author="jwhiting,rvansa">
+        <createSequence sequenceName="label_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
+        <createTable tableName="label">
+            <column name="id" type="integer">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="schema_id" type="integer">
+                <constraints nullable="false" referencedTableName="schema" referencedColumnNames="id" foreignKeyName="label_schema_id"/>
+            </column>
+            <column name="function" type="text"/>
+            <column name="filtering" type="boolean" defaultValue="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="metrics" type="boolean" defaultValue="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="access" type="integer">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="label_extractors">
+            <column name="label_id" type="integer">
+                <constraints foreignKeyName="label_id" referencedTableName="label" referencedColumnNames="id" />
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="jsonpath" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="isarray" type="boolean">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="label_extractors" columnNames="label_id,name" />
+        <createIndex tableName="label_extractors" indexName="label_index">
+            <column name="label_id" />
+        </createIndex>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE label, label_extractors TO "${quarkus.datasource.username}";
+            GRANT ALL ON SEQUENCE label_id_seq TO "${quarkus.datasource.username}";
+            ALTER TABLE label ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE label_extractors ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY l_select ON label FOR SELECT USING (can_view2(access, owner) OR has_role('horreum.system'));
+            CREATE POLICY l_insert ON label FOR INSERT WITH CHECK (has_role2(owner, 'tester'));
+            CREATE POLICY l_update ON label FOR UPDATE USING (has_role2(owner, 'tester'));
+            CREATE POLICY l_delete ON label FOR DELETE USING (has_role2(owner, 'tester'));
+
+            CREATE POLICY le_select ON label_extractors FOR SELECT
+                USING (exists(SELECT 1 FROM label WHERE label.id = label_id AND can_view2(label.access, label.owner)) OR has_role('horreum.system'));
+            CREATE POLICY le_insert ON label_extractors FOR INSERT
+                WITH CHECK (exists (SELECT 1 FROM label WHERE label.id = label_id AND has_role2(label.owner, 'tester')));
+            CREATE POLICY le_update ON label_extractors FOR UPDATE
+                USING (exists(SELECT 1 FROM label WHERE label.id = label_id AND has_role2(label.owner, 'tester')));
+            CREATE POLICY le_delete ON label_extractors FOR DELETE
+                USING (exists(SELECT 1 FROM label WHERE label.id = label_id AND has_role2(label.owner, 'tester')));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
+
 

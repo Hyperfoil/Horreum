@@ -97,6 +97,7 @@ export default function Transformers(props: TransformersProps) {
                 .finally(() => setDeleted([])),
         reset: () => {
             setResetCounter(resetCounter + 1)
+            setSelected(undefined)
             setDeleted([])
         },
         modified: () => transformers.some(t => t.modified) || deleted.length > 0,
@@ -112,7 +113,7 @@ export default function Transformers(props: TransformersProps) {
             .then(
                 ts => {
                     setTransformers(ts)
-                    if (selected === undefined && ts.length > 0) {
+                    if (ts.length > 0) {
                         setSelected(ts[0])
                     }
                 },

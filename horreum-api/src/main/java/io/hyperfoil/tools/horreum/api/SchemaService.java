@@ -17,6 +17,7 @@ import javax.ws.rs.core.MediaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.ValidationMessage;
 
+import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
@@ -108,14 +109,12 @@ public interface SchemaService {
    @GET
    @Path("{schemaId}/labels")
    @Produces(MediaType.APPLICATION_JSON)
-   // TODO return labels
-   List<Object> labels(@PathParam("schemaId") int schemaId);
+   List<Label> labels(@PathParam("schemaId") int schemaId);
 
    @POST
    @Path("{schemaId}/labels")
    @Consumes(MediaType.APPLICATION_JSON)
-   // TODO use labels
-   Integer addOrUpdateLabel(@PathParam("schemaId") int schemaId, Object label);
+   Integer addOrUpdateLabel(@PathParam("schemaId") int schemaId, Label label);
 
    @DELETE
    @Path("{schemaId}/labels/{labelId}")

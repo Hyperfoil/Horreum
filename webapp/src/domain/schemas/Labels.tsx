@@ -68,6 +68,7 @@ export default function Labels(props: LabelsProps) {
                 .finally(() => setDeleted([])),
         reset: () => {
             setResetCounter(resetCounter + 1)
+            setSelected(undefined)
             setDeleted([])
         },
         modified: () => labels.some(t => t.modified) || deleted.length > 0,
@@ -88,7 +89,7 @@ export default function Labels(props: LabelsProps) {
             .then(
                 labels => {
                     setLabels(labels)
-                    if (selected === undefined && labels.length > 0) {
+                    if (labels.length > 0) {
                         setSelected(labels[0])
                     }
                 },

@@ -45,9 +45,7 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
     const addItem = () => {
         const newItem = props.newItem(Math.min(...props.items.map(l => l.id - 1), -1))
         props.onChange([...(props.items || []), newItem])
-        if (props.selected === undefined) {
-            props.onSelected(newItem)
-        }
+        props.onSelected(newItem)
     }
     return (
         <Split hasGutter>
