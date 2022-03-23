@@ -5,14 +5,17 @@ import { Bullseye, Button, Flex, FlexItem, Modal, Pagination, Spinner, TextInput
 import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 import { NavLink } from "react-router-dom"
 
-import { listBySchema, query } from "../runs/api"
+import { Dataset, listBySchema, datasetsBySchema, query, queryDataset, QueryResult } from "../runs/api"
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
 import Editor from "../../components/Editor/monaco/Editor"
 import { Run } from "../runs/reducers"
 import { alertAction } from "../../alerts"
 
+export type JsonPathTarget = "run" | "dataset"
+
 type TryJsonPathModalProps = {
     uri: string
+    target: JsonPathTarget
     jsonpath?: string
     onChange(jsonpath: string): void
     onClose(): void
@@ -20,35 +23,55 @@ type TryJsonPathModalProps = {
 
 export default function TryJsonPathModal(props: TryJsonPathModalProps) {
     const [runs, setRuns] = useState<Run[]>()
-    const [runCount, setRunCount] = useState(0) // total runs, not runs.length
+    const [datasets, setDatasets] = useState<Dataset[]>()
+    const [count, setCount] = useState(0) // total runs/datasets, not runs.length
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [valid, setValid] = useState(true)
     const [result, setResult] = useState<string>()
-    const [resultRunId, setResultRunId] = useState<number>()
+    const [target, setTarget] = useState<Run | Dataset>()
     const pagination = useMemo(() => ({ page, perPage, sort: "start", direction: "Descending" }), [page, perPage])
     const dispatch = useDispatch()
     useEffect(() => {
         if (!props.jsonpath) {
             return
         }
-        listBySchema(props.uri, pagination).then(
-            response => {
-                setRuns(response.runs)
-                setRunCount(response.total)
-            },
-            error => {
-                dispatch(alertAction("FETCH_RUNS_BY_URI", "Failed to fetch runs by Schema URI.", error))
-                props.onClose()
-            }
-        )
+        if (props.target === "run") {
+            listBySchema(props.uri, pagination).then(
+                response => {
+                    setRuns(response.runs)
+                    setCount(response.total)
+                },
+                error => {
+                    dispatch(alertAction("FETCH_RUNS_BY_URI", "Failed to fetch runs by Schema URI.", error))
+                    props.onClose()
+                }
+            )
+        } else {
+            // target === dataset
+            datasetsBySchema(props.uri, pagination).then(
+                response => {
+                    setDatasets(response.datasets)
+                    setCount(response.total)
+                },
+                error => {
+                    dispatch(alertAction("FETCH_DATASETS_BY_URI", "Failed to fetch datasets by Schema URI.", error))
+                    props.onClose()
+                }
+            )
+        }
     }, [props.uri, props.jsonpath, dispatch, props.onClose])
-    const executeQuery = (runId: number) => {
+    const executeQuery = () => {
         if (!props.jsonpath) {
             return ""
         }
-        setResultRunId(runId)
-        return query(runId, props.jsonpath, false, props.uri).then(
+        let response: Promise<QueryResult>
+        if (props.target === "run") {
+            response = query((target as Run).id, props.jsonpath, false, props.uri)
+        } else {
+            response = queryDataset((target as Dataset).id, props.jsonpath, false, props.uri)
+        }
+        return response.then(
             result => {
                 setValid(result.valid)
                 if (result.valid) {
@@ -78,7 +101,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                 setPage(1)
                 setPerPage(20)
                 setResult(undefined)
-                setResultRunId(undefined)
+                setTarget(undefined)
                 props.onClose()
             }}
         >
@@ -99,42 +122,96 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     />
                 </FlexItem>
             </Flex>
-            {runs === undefined && (
+            {runs === undefined && datasets === undefined && (
                 <Bullseye>
                     <Spinner size="xl" />
                 </Bullseye>
             )}
-            {runs && result === undefined && (
+            {(runs || datasets) && result === undefined && (
                 <>
                     {/* TODO FIXME */}
                     <div style={{ display: "block", overflowY: "scroll", maxHeight: "50vh" }}>
-                        <Table
-                            aria-label="Available runs"
-                            variant="compact"
-                            cells={["Test", "Run", "Description", ""]}
-                            rows={runs.map(r => ({
-                                cells: [
-                                    r.testname,
-                                    {
-                                        title: (
-                                            <NavLink
-                                                to={`/run/${r.id}?query=${encodeURIComponent(props.jsonpath || "")}`}
-                                            >
-                                                {r.id}
-                                            </NavLink>
-                                        ),
-                                    },
-                                    r.description,
-                                    { title: <Button onClick={() => executeQuery(r.id)}>Execute</Button> },
-                                ],
-                            }))}
-                        >
-                            <TableHeader />
-                            <TableBody />
-                        </Table>
+                        {runs && (
+                            <Table
+                                aria-label="Available runs"
+                                variant="compact"
+                                cells={["Test", "Run", "Description", ""]}
+                                rows={runs.map(r => ({
+                                    cells: [
+                                        r.testname,
+                                        {
+                                            title: (
+                                                <NavLink
+                                                    to={`/run/${r.id}?query=${encodeURIComponent(
+                                                        props.jsonpath || ""
+                                                    )}`}
+                                                >
+                                                    {r.id}
+                                                </NavLink>
+                                            ),
+                                        },
+                                        r.description,
+                                        {
+                                            title: (
+                                                <Button
+                                                    onClick={() => {
+                                                        setTarget(r)
+                                                        executeQuery()
+                                                    }}
+                                                >
+                                                    Execute
+                                                </Button>
+                                            ),
+                                        },
+                                    ],
+                                }))}
+                            >
+                                <TableHeader />
+                                <TableBody />
+                            </Table>
+                        )}
+                        {datasets && (
+                            <Table
+                                aria-label="Available datasets"
+                                variant="compact"
+                                cells={["Test", "Dataset", "Description", ""]}
+                                rows={datasets.map(d => ({
+                                    cells: [
+                                        d.testname,
+                                        {
+                                            title: (
+                                                <NavLink
+                                                    to={`/run/${d.runId}?query=${encodeURIComponent(
+                                                        props.jsonpath || ""
+                                                    )}#dataset${d.ordinal}`}
+                                                >
+                                                    {d.runId} #{d.ordinal + 1}
+                                                </NavLink>
+                                            ),
+                                        },
+                                        d.description,
+                                        {
+                                            title: (
+                                                <Button
+                                                    onClick={() => {
+                                                        setTarget(d)
+                                                        executeQuery()
+                                                    }}
+                                                >
+                                                    Execute
+                                                </Button>
+                                            ),
+                                        },
+                                    ],
+                                }))}
+                            >
+                                <TableHeader />
+                                <TableBody />
+                            </Table>
+                        )}
                     </div>
                     <Pagination
-                        itemCount={runCount}
+                        itemCount={count}
                         perPage={perPage}
                         page={page}
                         onSetPage={(e, p) => setPage(p)}
@@ -143,28 +220,40 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                 </>
             )}
             {result !== undefined && (
-                <>
-                    <div style={{ minHeight: "100px", height: "250px", resize: "vertical", overflow: "auto" }}>
-                        <Editor value={result} options={{ readOnly: true }} />
-                    </div>
-                    <div style={{ textAlign: "right", paddingTop: "10px" }}>
-                        <Button
-                            onClick={() => {
-                                setResult(undefined)
-                                setResultRunId(undefined)
-                            }}
-                        >
-                            Dismiss
-                        </Button>
-                        {"\u00A0"}
+                <div style={{ minHeight: "100px", height: "250px", resize: "vertical", overflow: "auto" }}>
+                    <Editor value={result} options={{ readOnly: true }} />
+                </div>
+            )}
+            {target !== undefined && (
+                <div style={{ textAlign: "right", paddingTop: "10px" }}>
+                    <Button
+                        onClick={() => {
+                            setResult(undefined)
+                            setTarget(undefined)
+                        }}
+                    >
+                        Dismiss
+                    </Button>
+                    {"\u00A0"}
+                    {props.target === "run" && (
                         <NavLink
                             className="pf-c-button pf-m-secondary"
-                            to={`/run/${resultRunId}?query=${encodeURIComponent(props.jsonpath || "")}`}
+                            to={`/run/${target?.id}?query=${encodeURIComponent(props.jsonpath || "")}`}
                         >
-                            Go to run {resultRunId}
+                            Go to run {target?.id}
                         </NavLink>
-                    </div>
-                </>
+                    )}
+                    {props.target === "run" && (
+                        <NavLink
+                            className="pf-c-button pf-m-secondary"
+                            to={`/run/${(target as Dataset).runId}?query=${encodeURIComponent(
+                                props.jsonpath || ""
+                            )}#dataset${(target as Dataset).ordinal}`}
+                        >
+                            Go to dataset {(target as Dataset).runId} #{(target as Dataset).ordinal + 1}
+                        </NavLink>
+                    )}
+                </div>
             )}
         </Modal>
     )

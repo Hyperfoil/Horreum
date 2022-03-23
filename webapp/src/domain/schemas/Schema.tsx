@@ -36,6 +36,7 @@ import { Extractor } from "./api"
 import { Schema as SchemaDef, SchemaDispatch } from "./reducers"
 import Extractors from "./Extractors"
 import Transformers from "./Transformers"
+import Labels from "./Labels"
 
 type SchemaParams = {
     schemaId: string
@@ -281,6 +282,7 @@ export default function Schema() {
             )
     }
     const transformersFuncsRef = useRef<TabFunctions>()
+    const labelsFuncsRef = useRef<TabFunctions>()
     return (
         <PageSection>
             {loading && (
@@ -424,6 +426,15 @@ export default function Schema() {
                                     schemaUri={schema?.uri || ""}
                                     funcsRef={transformersFuncsRef}
                                 />
+                            </SavedTab>
+                            <SavedTab
+                                title="Labels"
+                                fragment="labels"
+                                onSave={saveFunc(labelsFuncsRef)}
+                                onReset={resetFunc(labelsFuncsRef)}
+                                isModified={modifiedFunc(labelsFuncsRef)}
+                            >
+                                <Labels schemaId={schemaId} schemaUri={schema?.uri || ""} funcsRef={labelsFuncsRef} />
                             </SavedTab>
                         </SavedTabs>
                     </CardBody>

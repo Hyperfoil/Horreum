@@ -102,6 +102,22 @@ public interface SchemaService {
    Integer addOrUpdateTransformer(@PathParam("schemaId") Integer schemaId, Transformer transformer);
 
    @GET
+   @Path("{schemaId}/labels")
+   @Produces(MediaType.APPLICATION_JSON)
+   // TODO return labels
+   List<Object> labels(@PathParam("schemaId") int schemaId);
+
+   @POST
+   @Path("{schemaId}/labels")
+   @Consumes(MediaType.APPLICATION_JSON)
+   // TODO use labels
+   Integer addOrUpdateLabel(@PathParam("schemaId") int schemaId, Object label);
+
+   @DELETE
+   @Path("{schemaId}/labels/{labelId}")
+   void deleteLabel(@PathParam("schemaId") int schemaId, @PathParam("labelId") int labelId);
+
+   @GET
    @Path("allTransformers")
    @Produces(MediaType.APPLICATION_JSON)
    List<TransformerInfo> allTransformers();

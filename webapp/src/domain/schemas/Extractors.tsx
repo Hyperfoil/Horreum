@@ -174,6 +174,7 @@ export default function Extractors(props: ExtractorsProps) {
                 })}
             <TryJsonPathModal
                 uri={props.uri}
+                target="run"
                 jsonpath={testExtractor?.jsonpath}
                 onChange={jsonpath => {
                     if (!testExtractor) {

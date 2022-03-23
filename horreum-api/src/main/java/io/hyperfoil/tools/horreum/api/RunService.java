@@ -148,7 +148,15 @@ public interface RunService {
    @GET
    QueryResult queryDataSet(@PathParam("id") Integer datasetId,
                             @QueryParam("query") String jsonpath,
-                            @QueryParam("array") @DefaultValue("false") boolean array);
+                            @QueryParam("array") @DefaultValue("false") boolean array, @QueryParam("schemaUri") String schemaUri);
+
+   @GET
+   @Path("dataset/bySchema")
+   DatasetList listDatasetsBySchema(@QueryParam("uri") String uri,
+                            @QueryParam("limit") Integer limit,
+                            @QueryParam("page") Integer page,
+                            @QueryParam("sort") String sort,
+                            @QueryParam("direction") String direction);
 
    class RunSummary {
       public int id;

@@ -18,6 +18,8 @@ const endPoints = {
     testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${encodeURIComponent(jsonpath)}`,
     transformers: (schemaId: number) => `${base}/${schemaId}/transformers`,
     allTransformers: () => `${base}/allTransformers`,
+    labels: (schemaId: number, labelId?: number) =>
+        `${base}/${schemaId}/labels${labelId !== undefined ? "/" + labelId : ""}`,
 }
 export const all = () => {
     return fetchApi(endPoints.base(), null, "get")
@@ -80,6 +82,18 @@ export function allTransformers(): Promise<TransformerInfo[]> {
     return fetchApi(endPoints.allTransformers(), null, "get")
 }
 
+export function listLabels(schemaId: number) {
+    return fetchApi(endPoints.labels(schemaId), null, "get")
+}
+
+export function addOrUpdateLabel(label: Label) {
+    return fetchApi(endPoints.labels(label.schemaId), null, "post")
+}
+
+export function deleteLabel(label: Label) {
+    return fetchApi(endPoints.labels(label.schemaId, label.id), null, "delete")
+}
+
 export type ValidationResult = {
     valid: boolean
     reason: string
@@ -100,6 +114,18 @@ export interface Extractor {
     oldName?: string
     validationTimer?: any
     validationResult?: ValidationResult
+}
+
+export interface Label {
+    id: number
+    name: string
+    extractors: NamedJsonPath[]
+    function?: string
+    owner: string
+    access: Access
+    schemaId: number
+    // temporary fields
+    modified?: boolean
 }
 
 export interface AccessorLocation {

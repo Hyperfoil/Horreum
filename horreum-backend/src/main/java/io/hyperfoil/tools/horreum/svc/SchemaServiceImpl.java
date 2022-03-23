@@ -466,6 +466,22 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
+   @Override
+   public List<Object> labels(int schemaId) {
+      // TODO
+      return Collections.emptyList();
+   }
+
+   @Override
+   public Integer addOrUpdateLabel(int schemaId, Object label) {
+      // TODO
+      return -1;
+   }
+
+   public void deleteLabel(int schemaId, int labelId) {
+      // TODO
+   }
+
    @PermitAll
    @WithRoles
    @Override

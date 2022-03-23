@@ -73,7 +73,7 @@ export default function Run() {
                             <FragmentTabs>
                                 {[
                                     ...(run.datasets || []).map((id, i) => (
-                                        <FragmentTab title={`Dataset #${i + 1}`} key={id} fragment={`dataset${id}`}>
+                                        <FragmentTab title={`Dataset #${i + 1}`} key={id} fragment={`dataset${i}`}>
                                             <DatasetData runId={run.id} datasetId={id} />
                                         </FragmentTab>
                                     )),

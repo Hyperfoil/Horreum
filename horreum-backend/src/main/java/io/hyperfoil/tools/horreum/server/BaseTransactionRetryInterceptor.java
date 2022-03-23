@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.server;
 
 import java.util.HashSet;
-import java.util.Set;
 
 import javax.annotation.Priority;
 import javax.inject.Inject;
@@ -13,12 +12,11 @@ import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
 import org.jboss.logging.Logger;
-import org.postgresql.util.PSQLException;
+
+import io.hyperfoil.tools.horreum.svc.Util;
 
 public class BaseTransactionRetryInterceptor {
    private static final Logger log = Logger.getLogger(BaseTransactionRetryInterceptor.class);
-   private static final String HINT = "The transaction might succeed if retried";
-   private static final int MAX_RETRIES = 10;
 
    @Inject
    TransactionManager tm;
@@ -29,7 +27,7 @@ public class BaseTransactionRetryInterceptor {
          try {
             return ctx.proceed();
          } catch (Throwable t) {
-            if (i > MAX_RETRIES) {
+            if (i > Util.MAX_TRANSACTION_RETRIES) {
                log.error("Exceeded maximum number of retries.");
                throw t;
             }
@@ -37,33 +35,14 @@ public class BaseTransactionRetryInterceptor {
                log.debugf("This is not the outermost invocation, propagating.");
                throw t;
             }
-            Throwable ex = t;
-            Set<Throwable> causes = new HashSet<>();
-            if (!lookupHint(ex, causes)) {
+            if (!Util.lookupRetryHint(t, new HashSet<>())) {
                throw t;
             }
             Thread.yield(); // give the other transaction a bit more chance to complete
-            log.infof("Retrying failed transaction, status attempt %d/%d", i, MAX_RETRIES);
+            log.infof("Retrying failed transaction, status attempt %d/%d", i, Util.MAX_TRANSACTION_RETRIES);
             log.trace("This is the exception that caused retry: ", t);
          }
       }
-   }
-
-   private boolean lookupHint(Throwable ex, Set<Throwable> causes) {
-      while (ex != null && causes.add(ex)) {
-         if (ex instanceof PSQLException) {
-            if (ex.getMessage().contains(HINT)) {
-               return true;
-            }
-         }
-         for (Throwable suppressed: ex.getSuppressed()) {
-            if (lookupHint(suppressed, causes)) {
-               return true;
-            }
-         }
-         ex = ex.getCause();
-      }
-      return false;
    }
 
    @Interceptor

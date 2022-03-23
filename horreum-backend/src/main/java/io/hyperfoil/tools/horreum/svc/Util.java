@@ -22,6 +22,7 @@ import javax.transaction.TransactionManager;
 import org.eclipse.microprofile.context.ThreadContext;
 import org.graalvm.polyglot.Value;
 import org.jboss.logging.Logger;
+import org.postgresql.util.PSQLException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -52,6 +53,9 @@ public class Util {
          .options(Option.SUPPRESS_EXCEPTIONS,Option.DEFAULT_PATH_LEAF_TO_NULL).build();
    static final JsonNode EMPTY_ARRAY = JsonNodeFactory.instance.arrayNode();
    static final JsonNode EMPTY_OBJECT = JsonNodeFactory.instance.objectNode();
+
+   public static final int MAX_TRANSACTION_RETRIES = 10;
+   private static final String RETRY_HINT = "The transaction might succeed if retried";
 
    static {
       OBJECT_MAPPER.registerModule(new JavaTimeModule());
@@ -359,22 +363,34 @@ public class Util {
    }
 
    static <T> T withTx(TransactionManager tm, Supplier<T> supplier) {
-      try {
-         tm.begin();
+      for (int retry = 1;; ++retry) {
          try {
-            return supplier.get();
-         } catch (Throwable t) {
-            tm.setRollbackOnly();
-            throw t;
-         } finally {
-            if (tm.getStatus() == Status.STATUS_ACTIVE) {
-               tm.commit();
-            } else {
-               tm.rollback();
+            tm.begin();
+            try {
+               return supplier.get();
+            } catch (Throwable t) {
+               tm.setRollbackOnly();
+               // Similar code is in BaseTransactionRetryInterceptor
+               if (retry > Util.MAX_TRANSACTION_RETRIES) {
+                  log.error("Exceeded maximum number of retries.");
+                  throw t;
+               }
+               if (!lookupRetryHint(t, new HashSet<>())) {
+                  throw t;
+               }
+               Thread.yield(); // give the other transaction a bit more chance to complete
+               log.infof("Retrying failed transaction, status attempt %d/%d", retry, Util.MAX_TRANSACTION_RETRIES);
+               log.trace("This is the exception that caused retry: ", t);
+            } finally {
+               if (tm.getStatus() == Status.STATUS_ACTIVE) {
+                  tm.commit();
+               } else {
+                  tm.rollback();
+               }
             }
+         } catch (SystemException | RollbackException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException ex) {
+            throw new RuntimeException("Failed to run transaction", ex);
          }
-      } catch (SystemException | RollbackException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException ex) {
-         throw new RuntimeException("Failed to run transaction", ex);
       }
    }
 
@@ -414,5 +430,22 @@ public class Util {
             promise.complete();
          }
       }, result -> {});
+   }
+
+   public static boolean lookupRetryHint(Throwable ex, Set<Throwable> causes) {
+      while (ex != null && causes.add(ex)) {
+         if (ex instanceof PSQLException) {
+            if (ex.getMessage().contains(RETRY_HINT)) {
+               return true;
+            }
+         }
+         for (Throwable suppressed: ex.getSuppressed()) {
+            if (lookupRetryHint(suppressed, causes)) {
+               return true;
+            }
+         }
+         ex = ex.getCause();
+      }
+      return false;
    }
 }

@@ -30,10 +30,14 @@ const endPoints = {
     count: (testId: number) => `${base}/count?testId=${testId}`,
     schema: (runId: number, path?: string) => `${base}/${runId}/schema${(path && "?path=" + path) || ""}`,
     dataset: (datasetId: number) => `${base}/dataset/${datasetId}`,
-    queryDataset: (datasetId: number, query: string, array: boolean) =>
-        `${base}/dataset/${datasetId}/query?query=${encodeURIComponent(query)}&array=${array}`,
+    queryDataset: (datasetId: number, query: string, array: boolean, schemaUri?: string) =>
+        `${base}/dataset/${datasetId}/query?query=${encodeURIComponent(query)}&array=${array}${
+            schemaUri ? "&uri=" + schemaUri : ""
+        }`,
     testDatasets: (testId: number, pagination: PaginationInfo) =>
         `${base}/dataset/list/${testId}?${paginationParams(pagination)}`,
+    datasetsBySchema: (uri: string, pagination: PaginationInfo) =>
+        `${base}/dataset/bySchema?uri=${encodeURIComponent(uri)}&${paginationParams(pagination)}`,
 }
 
 export const get = (id: number, token?: string) => {
@@ -105,8 +109,12 @@ export function getDataset(datasetId: number) {
     return fetchApi(endPoints.dataset(datasetId), null, "get")
 }
 
-export function queryDataset(datasetId: number, query: string, array: boolean) {
-    return fetchApi(endPoints.queryDataset(datasetId, query, array), null, "get")
+export function queryDataset(datasetId: number, query: string, array: boolean, schemaUri?: string) {
+    return fetchApi(endPoints.queryDataset(datasetId, query, array, schemaUri), null, "get")
+}
+
+export function datasetsBySchema(uri: string, pagination: PaginationInfo) {
+    return fetchApi(endPoints.datasetsBySchema(uri, pagination), null, "get")
 }
 
 export interface Dataset {

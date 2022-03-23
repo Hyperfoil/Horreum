@@ -123,9 +123,13 @@ function rolesSelector(state: State) {
     return state.auth.roles
 }
 
-export const useTester = (owner?: string) => {
+function isTester(owner: string, roles: string[]) {
+    return roles.includes(owner.slice(0, -4) + "tester")
+}
+
+export function useTester(owner?: string) {
     const roles = useSelector(rolesSelector)
-    return roles.includes("tester") && (!owner || roles.includes(owner.slice(0, -4) + "tester"))
+    return roles.includes("tester") && (!owner || isTester(owner, roles))
 }
 
 export function managedTeamsSelector(state: State) {
