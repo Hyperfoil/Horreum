@@ -918,7 +918,7 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   @ConsumeEvent(value = DataSet.EVENT_NEW)
+   @ConsumeEvent(value = DataSet.EVENT_NEW, blocking = true)
    public void consume(DataSet dataSet) {
       // This empty method is here to let Quarkus register a local codec for Dataset
       // - otherwise publishing the event would log warnings and the event would not
