@@ -101,6 +101,10 @@ public interface SchemaService {
    @Consumes(MediaType.APPLICATION_JSON)
    Integer addOrUpdateTransformer(@PathParam("schemaId") Integer schemaId, Transformer transformer);
 
+   @DELETE
+   @Path("{schemaId}/transformers/{transformerId}")
+   void deleteTransformer(@PathParam("schemaId") int schemaId, @PathParam("transformerId") int transformerId);
+
    @GET
    @Path("{schemaId}/labels")
    @Produces(MediaType.APPLICATION_JSON)

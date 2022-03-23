@@ -16,7 +16,8 @@ const endPoints = {
     deprecated: (id: number) => `${base}/extractor/${id}/deprecated`,
     findUsages: (accessor: string) => `${base}/findUsages?accessor=${encodeURIComponent(accessor)}`,
     testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${encodeURIComponent(jsonpath)}`,
-    transformers: (schemaId: number) => `${base}/${schemaId}/transformers`,
+    transformers: (schemaId: number, transformerId?: number) =>
+        `${base}/${schemaId}/transformers${transformerId !== undefined ? "/" + transformerId : ""}`,
     allTransformers: () => `${base}/allTransformers`,
     labels: (schemaId: number, labelId?: number) =>
         `${base}/${schemaId}/labels${labelId !== undefined ? "/" + labelId : ""}`,
@@ -76,6 +77,10 @@ export function listTransformers(schemaId: number) {
 
 export function addOrUpdateTransformer(transformer: Transformer) {
     return fetchApi(endPoints.transformers(transformer.schemaId), transformer, "post")
+}
+
+export function deleteTransformer(transformer: Transformer) {
+    return fetchApi(endPoints.transformers(transformer.schemaId, transformer.id), null, "delete")
 }
 
 export function allTransformers(): Promise<TransformerInfo[]> {

@@ -466,6 +466,25 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
+   @RolesAllowed(Roles.TESTER)
+   @WithRoles
+   @Transactional
+   @Override
+   public void deleteTransformer(int schemaId, int transformerId) {
+      Transformer t = Transformer.findById(transformerId);
+      if (t == null) {
+         throw ServiceException.notFound("Transformer " + transformerId + " not found");
+      }
+      if (t.schema.id != schemaId) {
+         throw ServiceException.badRequest("Transformer " + transformerId + " does not belong to schema " + schemaId);
+      }
+      String testerRole = t.owner.substring(0, t.owner.length() - 5) + "-tester";
+      if (!identity.hasRole(testerRole)) {
+         throw ServiceException.forbidden("You are not an owner of transfomer " + transformerId + "(" + t.owner + "); missing role " + testerRole + ", available roles: " + identity.getRoles());
+      }
+      t.delete();
+   }
+
    @Override
    public List<Object> labels(int schemaId) {
       // TODO

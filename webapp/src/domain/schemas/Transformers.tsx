@@ -12,7 +12,7 @@ import FunctionFormItem from "../../components/FunctionFormItem"
 import SchemaSelect from "../../components/SchemaSelect"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
-import { listTransformers, addOrUpdateTransformer, Transformer } from "./api"
+import { listTransformers, addOrUpdateTransformer, deleteTransformer, Transformer } from "./api"
 import JsonExtractor from "./JsonExtractor"
 
 const TARGET_SCHEMA_HELP = (
@@ -52,6 +52,7 @@ export default function Transformers(props: TransformersProps) {
     const [loading, setLoading] = useState(false)
     const [transformers, setTransformers] = useState<Transformer[]>([])
     const [selected, setSelected] = useState<Transformer>()
+    const [deleted, setDeleted] = useState<Transformer[]>([])
     const defaultTeam = useSelector(defaultTeamSelector)
     const isTester = useTester()
     const isTesterForTransformer = useTester(selected?.owner)
@@ -66,18 +67,27 @@ export default function Transformers(props: TransformersProps) {
     const [resetCounter, setResetCounter] = useState(0)
     props.funcsRef.current = {
         save: () =>
-            Promise.all(
-                transformers
+            Promise.all([
+                ...transformers
                     .filter(t => t.modified)
                     .map(t =>
-                        addOrUpdateTransformer(t).then(_ => {
+                        addOrUpdateTransformer(t).then(id => {
+                            t.id = id
                             t.modified = false
                         })
-                    )
-            ).catch(error => {
-                dispatchError(dispatch, error, "TRANSFORMER_UPDATE", "Failed to update one or more transformers")
-                return Promise.reject(error)
-            }),
+                    ),
+                ...deleted.map(t =>
+                    deleteTransformer(t).catch(e => {
+                        setTransformers([...transformers, t])
+                        throw e
+                    })
+                ),
+            ])
+                .catch(error => {
+                    dispatchError(dispatch, error, "TRANSFORMER_UPDATE", "Failed to update one or more transformers")
+                    return Promise.reject(error)
+                })
+                .finally(() => setDeleted([])),
         reset: () => {
             setResetCounter(resetCounter + 1)
         },
@@ -132,8 +142,10 @@ export default function Transformers(props: TransformersProps) {
             })}
             loading={loading}
             canDelete={isTesterForTransformer}
-            onDelete={() => {
-                /* FIXME! */
+            onDelete={t => {
+                if (t.id >= 0) {
+                    setDeleted([...deleted, t])
+                }
             }}
         >
             {selected && (

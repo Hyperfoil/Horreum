@@ -49,7 +49,8 @@ export default function Labels(props: LabelsProps) {
                 ...labels
                     .filter(l => l.modified)
                     .map(l =>
-                        addOrUpdateLabel(l).then(_ => {
+                        addOrUpdateLabel(l).then(id => {
+                            l.id = id
                             l.modified = false
                         })
                     ),
@@ -121,7 +122,11 @@ export default function Labels(props: LabelsProps) {
             })}
             loading={loading}
             canDelete={isTesterForLabel}
-            onDelete={label => setDeleted([...deleted, label])}
+            onDelete={label => {
+                if (label.id >= 0) {
+                    setDeleted([...deleted, label])
+                }
+            }}
         >
             {selected && (
                 <>
