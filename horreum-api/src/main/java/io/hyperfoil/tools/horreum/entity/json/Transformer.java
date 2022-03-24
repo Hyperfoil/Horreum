@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.entity.json;
 import java.util.Collection;
 
 import javax.persistence.CollectionTable;
+import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -27,6 +28,9 @@ public class Transformer extends PanacheEntityBase {
    public String name;
 
    public String description;
+
+   @Column(name = "targetschemauri")
+   public String targetSchemaUri;
 
    @JsonIgnore
    @ManyToOne(optional = false)

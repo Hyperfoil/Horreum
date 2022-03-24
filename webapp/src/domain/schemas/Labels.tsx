@@ -175,7 +175,10 @@ export default function Labels(props: LabelsProps) {
                                     variant="primary"
                                     onClick={() => {
                                         update({
-                                            extractors: [...selected.extractors, { name: "", jsonpath: "" }],
+                                            extractors: [
+                                                ...selected.extractors,
+                                                { name: "", jsonpath: "", array: false },
+                                            ],
                                         })
                                     }}
                                 >

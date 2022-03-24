@@ -164,6 +164,7 @@ export interface AccessorInReport extends AccessorLocation {
 export type NamedJsonPath = {
     name: string
     jsonpath: string
+    array: boolean
     validationTimer?: any
     validationResult?: ValidationResult
 }

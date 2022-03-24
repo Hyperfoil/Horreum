@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.json.Access;
+import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
@@ -439,6 +440,20 @@ public class SchemaServiceImpl implements SchemaService {
    public Integer addOrUpdateTransformer(Integer schemaId, Transformer transformer) {
       if (!identity.hasRole(transformer.owner)) {
          throw ServiceException.forbidden("This user is not a member of team " + transformer.owner);
+      }
+      if (transformer.extractors == null) {
+         // Transformer without an extractor is an edge case, but replacing the schema with explicit null/undefined could make sense.
+         transformer.extractors = Collections.emptyList();
+      }
+      if (transformer.name == null || transformer.name.isBlank()) {
+         throw ServiceException.badRequest("Transformer must have a name!");
+      }
+      for (NamedJsonPath extractor : transformer.extractors) {
+         if (extractor.name == null || extractor.name.isBlank()) {
+            throw ServiceException.badRequest("One of the extractors does not have a name!");
+         } else if (extractor.jsonpath == null || extractor.jsonpath.isBlank()) {
+            throw ServiceException.badRequest("One of the extractors is missing JSONPath!");
+         }
       }
       if (transformer.id == null || transformer.id < 0) {
          transformer.id = null;

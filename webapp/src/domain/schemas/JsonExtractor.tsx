@@ -1,6 +1,20 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
-import { Button, Flex, FlexItem, FormGroup, Split, SplitItem, TextInput } from "@patternfly/react-core"
+import {
+    Button,
+    Flex,
+    FlexItem,
+    FormGroup,
+    List,
+    ListItem,
+    Popover,
+    Radio,
+    Split,
+    SplitItem,
+    TextInput,
+} from "@patternfly/react-core"
+import { HelpIcon } from "@patternfly/react-icons"
+import { v4 as uuidv4 } from "uuid"
 
 import { checkAccessorName, INVALID_ACCESSOR_HELPER } from "../../components/Accessors"
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
@@ -20,6 +34,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
     const [modalOpen, setModalOpen] = useState(false)
     const extractor = props.extractor
     const nameValid = checkAccessorName(extractor.name)
+    const variantName = useMemo(() => uuidv4(), [])
     return (
         <>
             <Split hasGutter>
@@ -72,6 +87,59 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                             }}
                             isReadOnly={props.readOnly}
                         />
+                    </FormGroup>
+                    <FormGroup
+                        label="Variant"
+                        labelIcon={
+                            <Popover
+                                bodyContent={
+                                    <List>
+                                        <ListItem>
+                                            First match: only the first JSON node matching to the path will be returned.
+                                            When there's no match the value will be <code>undefined</code>.
+                                        </ListItem>
+                                        <ListItem>
+                                            All matches: the property will be an array with all matching JSON nodes
+                                            (potentially empty).
+                                        </ListItem>
+                                    </List>
+                                }
+                            >
+                                <Button variant="plain" onClick={e => e.preventDefault()}>
+                                    <HelpIcon />
+                                </Button>
+                            </Popover>
+                        }
+                        fieldId="variant"
+                    >
+                        <Flex style={{ paddingTop: "var(--pf-c-form--m-horizontal__group-label--md--PaddingTop)" }}>
+                            <FlexItem>
+                                <Radio
+                                    name={variantName}
+                                    id="first"
+                                    label="First match"
+                                    isChecked={!extractor.array}
+                                    isDisabled={props.readOnly}
+                                    onChange={checked => {
+                                        extractor.array = !checked
+                                        props.onUpdate()
+                                    }}
+                                />
+                            </FlexItem>
+                            <FlexItem>
+                                <Radio
+                                    name={variantName}
+                                    id="all"
+                                    label="All matches"
+                                    isChecked={extractor.array}
+                                    isDisabled={props.readOnly}
+                                    onChange={checked => {
+                                        extractor.array = checked
+                                        props.onUpdate()
+                                    }}
+                                />
+                            </FlexItem>
+                        </Flex>
                     </FormGroup>
                 </SplitItem>
                 <SplitItem>

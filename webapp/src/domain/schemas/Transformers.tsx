@@ -19,6 +19,8 @@ const TARGET_SCHEMA_HELP = (
     <>
         If the result object (or an element of the result array) does not have the <code>$schema</code> property this
         URI will be used to autofill that.
+        <br />
+        Note that if the result of transformer has no schema it cannot be used by Horreum as there won't be any Labels.
     </>
 )
 const TRANSFORMER_FUNCTION_HELP = (
@@ -38,6 +40,11 @@ const TRANSFORMER_FUNCTION_HELP = (
             index in the array returned from this function. If this transformer creates only single object (not an array
             with single object!) and other transformer returns an array (creating several DataSets) the result of this
             transformer is included in each of those DataSets.
+        </p>
+        <br />
+        <p>
+            When the function definition is left empty the input object will be returned (this will work as identity
+            function), attaching <i>Target schema URI</i> as <code>$schema</code> (if present).
         </p>
     </>
 )
@@ -230,7 +237,10 @@ export default function Transformers(props: TransformersProps) {
                                     variant="primary"
                                     onClick={() => {
                                         update({
-                                            extractors: [...selected.extractors, { name: "", jsonpath: "" }],
+                                            extractors: [
+                                                ...selected.extractors,
+                                                { name: "", jsonpath: "", array: false },
+                                            ],
                                         })
                                     }}
                                 >

@@ -2360,5 +2360,17 @@
             CREATE POLICY dataset_update ON dataset FOR UPDATE USING (has_role2(owner, 'tester'));
         </sql>
     </changeSet>
+    
+    <changeSet id="58" author="rvansa">
+        <addColumn tableName="transformer_extractors">
+            <column name="isarray" type="boolean" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <dropDefaultValue tableName="transformer_extractors" columnName="isarray"/>
+        <addColumn tableName="transformer">
+            <column name="targetschemauri" type="text" />
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
 
