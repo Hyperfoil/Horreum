@@ -97,8 +97,9 @@ export default function Transformers(props: TransformersProps) {
                 .finally(() => setDeleted([])),
         reset: () => {
             setResetCounter(resetCounter + 1)
+            setDeleted([])
         },
-        modified: () => transformers.some(t => t.modified),
+        modified: () => transformers.some(t => t.modified) || deleted.length > 0,
     }
     const dispatch = useDispatch()
     useEffect(() => {
@@ -146,6 +147,7 @@ export default function Transformers(props: TransformersProps) {
                 extractors: [],
                 owner: defaultTeam || "",
                 access: 0 as Access,
+                modified: true,
             })}
             loading={loading}
             canDelete={isTesterForTransformer}

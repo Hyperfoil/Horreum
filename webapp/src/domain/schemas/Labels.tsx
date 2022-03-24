@@ -68,6 +68,7 @@ export default function Labels(props: LabelsProps) {
                 .finally(() => setDeleted([])),
         reset: () => {
             setResetCounter(resetCounter + 1)
+            setDeleted([])
         },
         modified: () => labels.some(t => t.modified) || deleted.length > 0,
     }
@@ -119,6 +120,7 @@ export default function Labels(props: LabelsProps) {
                 owner: defaultTeam || "",
                 access: 0 as Access,
                 schemaId: props.schemaId,
+                modified: true,
             })}
             loading={loading}
             canDelete={isTesterForLabel}

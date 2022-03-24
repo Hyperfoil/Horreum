@@ -108,7 +108,7 @@ export default function SavedTabs(props: SavedTabsProps) {
                 navigate={(current, _) => {
                     if (children[current].props.isModified()) {
                         return new Promise((resolve, _) => {
-                            setRequestedNavigation(resolve)
+                            setRequestedNavigation(() => resolve)
                         })
                     } else {
                         return Promise.resolve()
