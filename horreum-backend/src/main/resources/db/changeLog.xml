@@ -2437,6 +2437,193 @@
                 USING (exists(SELECT 1 FROM label WHERE label.id = label_id AND has_role2(label.owner, 'tester')));
         </sql>
     </changeSet>
+    
+    <changeSet id="60" author="rvansa">
+        <createTable tableName="label_values">
+            <column name="dataset_id" type="integer">
+                <!-- No FK constraint: the row will be removed via trigger -->
+                <constraints nullable="false"/>
+            </column>
+            <column name="label_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <!-- null value is not represented as JSON null but as null column value -->
+            <column name="value" type="jsonb" />
+        </createTable>
+        <addUniqueConstraint tableName="label_values" columnNames="dataset_id,label_id" />
+        <createIndex tableName="label_values" indexName="by_dataset">
+            <column name="dataset_id" />
+        </createIndex>
+        <createTable tableName="dataset_schemas">
+            <column name="dataset_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="schema_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uri" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="index" type="integer">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <!-- This is an intermediate table for combining all updates to a label/label extractors into one notification -->
+        <createTable tableName="label_recalc_queue">
+            <column name="schema_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="label_id" type="integer">
+                <constraints nullable="false" unique="true" uniqueConstraintName="unique_label"/>
+            </column>
+        </createTable>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION lv_before_dataset_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM label_values WHERE dataset_id = OLD.id;
+                DELETE FROM dataset_schemas WHERE dataset_id = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION lv_before_label_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM label_values WHERE label_id = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION lv_before_label_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM label_values WHERE label_id = OLD.id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION lv_before_le_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM label_values WHERE label_id = OLD.label_id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION lv_before_le_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM label_values WHERE label_id = OLD.label_id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION ds_after_dataset_insert_func() RETURNS TRIGGER AS $$
+            BEGIN
+                <!-- This should not happen after #148 -->
+                IF jsonb_path_query(NEW.data, '$.type() != "array"') THEN
+                    RETURN NEW;
+                END IF;
+                WITH uris AS (
+                    SELECT jsonb_array_elements(NEW.data)->>'$schema' AS uri
+                ), indexed as (
+                    SELECT uri, row_number() over () - 1 as index FROM uris
+                ) INSERT INTO dataset_schemas(dataset_id, uri, index, schema_id)
+                    SELECT NEW.id as dataset_id, indexed.uri, indexed.index, schema.id FROM indexed JOIN schema ON schema.uri = indexed.uri;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION lv_after_label_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                INSERT INTO label_recalc_queue(schema_id, label_id) VALUES
+                    (NEW.schema_id, NEW.id) ON CONFLICT (label_id) DO NOTHING;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION lv_after_le_update_func() RETURNS TRIGGER AS $$
+            DECLARE
+                v_schema integer;
+            BEGIN
+                SELECT schema_id INTO v_schema FROM label WHERE id = NEW.label_id;
+                IF v_schema IS NOT NULL THEN
+                    INSERT INTO label_recalc_queue(schema_id, label_id) VALUES
+                        (v_schema, NEW.label_id) ON CONFLICT (label_id) DO NOTHING;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION lv_after_le_delete_func() RETURNS TRIGGER AS $$
+            DECLARE
+                v_schema integer;
+            BEGIN
+                SELECT schema_id INTO v_schema FROM label WHERE id = NEW.label_id;
+                IF v_schema IS NOT NULL THEN
+                    INSERT INTO label_recalc_queue(schema_id, label_id) VALUES
+                        (v_schema, OLD.label_id) ON CONFLICT (label_id) DO NOTHING;
+                END IF;
+            RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            <!-- Note: labels are deleted before schema, so these clear label_values -->
+            CREATE OR REPLACE FUNCTION before_schema_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_schemas WHERE schemaid = OLD.id;
+                DELETE FROM dataset_schemas WHERE schema_id = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION recalc_label_values() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM pg_notify('calculate_labels', dataset_id::text || ';' || NEW.label_id) FROM dataset_schemas
+                    WHERE dataset_schemas.schema_id = NEW.schema_id;
+                DELETE FROM label_recalc_queue WHERE label_id = NEW.label_id;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            <!-- dataset.data should not be updated -->
+            CREATE TRIGGER ds_after_insert AFTER INSERT ON dataset FOR EACH ROW EXECUTE FUNCTION ds_after_dataset_insert_func();
+            CREATE TRIGGER lv_before_delete BEFORE DELETE ON dataset FOR EACH ROW EXECUTE FUNCTION lv_before_dataset_delete_func();
+            CREATE TRIGGER lv_before_delete BEFORE DELETE ON label FOR EACH ROW EXECUTE FUNCTION lv_before_label_delete_func();
+            CREATE TRIGGER lv_before_update BEFORE UPDATE OF function ON label FOR EACH ROW EXECUTE FUNCTION lv_before_label_update_func();
+            CREATE TRIGGER lv_before_delete BEFORE DELETE OR UPDATE ON label_extractors FOR EACH ROW EXECUTE FUNCTION lv_before_le_delete_func();
+            CREATE TRIGGER lv_before_update BEFORE UPDATE ON label_extractors FOR EACH ROW EXECUTE FUNCTION lv_before_le_update_func();
+            <!-- These triggers need to be deferred until the transaction completes because we likely execute update to both label extractor(s) and function -->
+            CREATE CONSTRAINT TRIGGER lv_after_update AFTER INSERT OR UPDATE OF function ON label DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION lv_after_label_update_func();
+            CREATE CONSTRAINT TRIGGER lv_after_update AFTER INSERT OR UPDATE ON label_extractors DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION lv_after_le_update_func();
+            CREATE CONSTRAINT TRIGGER lv_after_delete AFTER DELETE ON label_extractors DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION lv_after_le_delete_func();
+            CREATE CONSTRAINT TRIGGER recalc_labels AFTER INSERT ON label_recalc_queue DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION recalc_label_values();
+
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE label_values, dataset_schemas, label_recalc_queue TO "${quarkus.datasource.username}";
+            ALTER TABLE label_values ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE dataset_schemas ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY ds_select ON dataset_schemas FOR SELECT
+                USING (exists(SELECT 1 FROM dataset WHERE id = dataset_id AND can_view2(access, owner)));
+            CREATE POLICY ds_insert ON dataset_schemas FOR INSERT
+                WITH CHECK (has_role('horreum.system') OR exists(SELECT 1 FROM dataset WHERE id = dataset_id AND (has_role2(owner, 'uploader') OR has_role2(owner, 'tester'))));
+            CREATE POLICY ds_delete ON dataset_schemas FOR DELETE
+                USING (has_role('horreum.system') OR exists(SELECT 1 FROM dataset WHERE id = dataset_id AND has_role2(owner, 'tester')));
+            CREATE POLICY lv_select ON label_values FOR SELECT
+                USING (exists(SELECT 1 FROM dataset WHERE dataset.id = dataset_id AND can_view2(access, owner)));
+            CREATE POLICY lv_insert ON label_values FOR INSERT WITH CHECK (has_role('horreum.system'));
+            CREATE POLICY lv_delete ON label_values FOR DELETE
+                USING (has_role('horreum.system') OR exists(SELECT 1 FROM dataset WHERE dataset.id = dataset_id AND has_role2(owner, 'tester')));
+            ALTER POLICY dataset_delete ON dataset
+                USING (has_role('horreum.system') OR has_role2(owner, 'tester'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
 

@@ -15,4 +15,13 @@ public class NamedJsonPath {
    @NotNull
    @Column(name = "isarray")
    public boolean array;
+
+   public NamedJsonPath() {
+   }
+
+   public NamedJsonPath(String name, String jsonpath, boolean array) {
+      this.name = name;
+      this.jsonpath = jsonpath;
+      this.array = array;
+   }
 }

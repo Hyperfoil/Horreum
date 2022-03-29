@@ -376,6 +376,10 @@ public class SchemaServiceImpl implements SchemaService {
       if (schema == null) {
          throw ServiceException.notFound("Schema not found");
       } else {
+         em.createNativeQuery("DELETE FROM label_extractors WHERE label_id IN (SELECT id FROM label WHERE schema_id = ?1)")
+               .setParameter(1, id).executeUpdate();
+         Label.delete("schema_id", id);
+         Transformer.delete("schema_id", id);
          SchemaExtractor.delete("schema_id", id);
          schema.delete();
       }
@@ -546,6 +550,7 @@ public class SchemaServiceImpl implements SchemaService {
          existing.access = label.access;
          existing.filtering = label.filtering;
          existing.metrics = label.metrics;
+         existing.persistAndFlush();
       }
       return label.id;
    }

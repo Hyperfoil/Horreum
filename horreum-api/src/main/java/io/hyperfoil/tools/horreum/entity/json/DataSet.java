@@ -33,7 +33,7 @@ public class DataSet extends OwnedEntityBase {
 
    public static final String FIND_BY_RUNID = "DataSet.findByRunId";
    public static final String EVENT_NEW = "dataset/new";
-   public static final String EVENT_TRASHED = "dataset/trashed";
+   public static final String EVENT_LABELS_UPDATED = "dataset/updatedlabels";
 
    @Id
    @SequenceGenerator(
@@ -71,5 +71,13 @@ public class DataSet extends OwnedEntityBase {
 
    public static DataSet findByRunId(int runId) {
       return find("#DataSet.findByRunId", runId).firstResult();
+   }
+
+   public static class LabelsUpdatedEvent {
+      public final int datasetId;
+
+      public LabelsUpdatedEvent(int datasetId) {
+         this.datasetId = datasetId;
+      }
    }
 }

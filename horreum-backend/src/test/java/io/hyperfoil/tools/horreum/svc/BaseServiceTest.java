@@ -14,11 +14,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
+import io.hyperfoil.tools.horreum.entity.json.Access;
+import io.hyperfoil.tools.horreum.entity.json.Label;
+import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.restassured.RestAssured;
+import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import io.smallrye.jwt.build.Jwt;
 
@@ -94,14 +98,29 @@ public class BaseServiceTest {
    }
 
    protected Schema createExampleSchema(TestInfo info) {
-      Schema schema = new Schema();
-      schema.owner = TESTER_ROLES[0];
-      schema.name = info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
-      schema.uri = "urn:" + info.getTestClass().map(Class::getName).orElse("<unknown>") + ":" + info.getDisplayName() + ":1.0";
-      jsonRequest().body(schema).post("/api/schema").then().statusCode(200);
-
+      String name = info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
+      Schema schema = createSchema(name, uriForTest(info, "1.0"));
       addExtractor(schema, "value", ".value");
       return schema;
+   }
+
+   protected Schema createSchema(String name, String uri) {
+      Schema schema = new Schema();
+      schema.owner = TESTER_ROLES[0];
+      schema.name = name;
+      schema.uri = uri;
+      Response response = jsonRequest().body(schema).post("/api/schema");
+      response.then().statusCode(200);
+      schema.id = Integer.parseInt(response.body().asString());
+      return schema;
+   }
+
+   protected void deleteSchema(Schema schema) {
+      jsonRequest().delete("/api/schema/" + schema.id).then().statusCode(204);
+   }
+
+   protected String uriForTest(TestInfo info, String suffix) {
+      return "urn:" + info.getTestClass().map(Class::getName).orElse("<unknown>") + ":" + info.getDisplayName() + ":" + suffix;
    }
 
    protected void addExtractor(Schema schema, String accessor, String jsonpath) {
@@ -111,6 +130,32 @@ public class BaseServiceTest {
       extractor.jsonpath = jsonpath;
       extractor.schema = schema.uri;
       jsonRequest().body(extractor).post("/api/schema/extractor").then().statusCode(200);
+   }
+
+   protected int addLabel(Schema schema, String name, String function, NamedJsonPath... extractors) {
+      return postLabel(schema, name, function, new Label(), extractors);
+   }
+
+   protected int updateLabel(Schema schema, int labelId, String name, String function, NamedJsonPath... extractors) {
+      Label l = new Label();
+      l.id = labelId;
+      return postLabel(schema, name, function, l, extractors);
+   }
+
+   private int postLabel(Schema schema, String name, String function, Label l, NamedJsonPath[] extractors) {
+      l.name = name;
+      l.function = function;
+      l.schema = schema;
+      l.owner = TESTER_ROLES[0];
+      l.access = Access.PUBLIC;
+      l.extractors = Arrays.asList(extractors);
+      Response response = jsonRequest().body(l).post("/api/schema/" + schema.id + "/labels");
+      response.then().statusCode(200);
+      return Integer.parseInt(response.body().asString());
+   }
+
+   protected void deleteLabel(Schema schema, int labelId) {
+      jsonRequest().delete("/api/schema/" + schema.id + "/labels/" + labelId).then().statusCode(204);
    }
 
    protected void setTestVariables(Test test, String name, String accessors, ChangeDetection... rds) {

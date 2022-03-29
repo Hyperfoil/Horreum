@@ -5,6 +5,7 @@ import io.hyperfoil.tools.horreum.api.SqlService;
 import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
+import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -93,6 +94,27 @@ public class RunServiceImpl implements RunService {
          "SELECT tagscalculation, " +
             "json_object_agg(tags.accessor, tags.value)::::text AS tags, " +
             "json_agg(tags.extractor_id)::::text AS extractor_ids FROM tags GROUP BY runid, tagscalculation;";
+   private static final String LABEL_QUERY =
+         "WITH used_labels AS (" +
+            "SELECT le.label_id, label.name, ds.schema_id, count(le) > 1 AS multi FROM dataset_schemas ds " +
+            "JOIN label ON label.schema_id = ds.schema_id " +
+            "JOIN label_extractors le ON le.label_id = label.id " +
+            "WHERE ds.dataset_id = ?1 AND (?2 < 0 OR label.id = ?2) GROUP BY le.label_id, label.name, ds.schema_id" +
+         "), lvalues AS (" +
+            "SELECT le.label_id, le.name, (CASE WHEN le.isarray THEN " +
+                  "jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath::::jsonpath) " +
+               "ELSE " +
+                  "jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath::::jsonpath) " +
+               "END) AS value " +
+            "FROM dataset JOIN dataset_schemas ds ON dataset.id = ds.dataset_id " +
+            "JOIN used_labels ul ON ul.schema_id = ds.schema_id " +
+            "JOIN label_extractors le ON ul.label_id = le.label_id " +
+            "WHERE dataset.id = ?1" +
+         ") SELECT lvalues.label_id, ul.name, function, (CASE WHEN ul.multi THEN jsonb_object_agg(lvalues.name, lvalues.value) " +
+            "ELSE jsonb_agg(lvalues.value) -> 0 END)#>>'{}' AS value FROM label " +
+            "JOIN lvalues ON lvalues.label_id = label.id " +
+            "JOIN used_labels ul ON label.id = ul.label_id " +
+            "GROUP BY lvalues.label_id, ul.name, function, ul.multi";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -131,6 +153,7 @@ public class RunServiceImpl implements RunService {
    public void init() {
       sqlService.registerListener("calculate_tags", this::onCalculateTags);
       sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
+      sqlService.registerListener("calculate_labels", this::onLabelChanged);
    }
 
    private void onCalculateTags(String param) {
@@ -201,6 +224,80 @@ public class RunServiceImpl implements RunService {
          log.errorf(e, "Failed to calculate tags for run %d", runId);
          wrappedLogCalculation(CalculationLog.ERROR, runId, "Failed to calculate tags: " + Util.explainCauses(e));
       }
+   }
+
+   private void onLabelChanged(String param) {
+      String[] parts = param.split(";");
+      if (parts.length != 2) {
+         log.errorf("Invalid parameter to onLabelChanged: %s", param);
+         return;
+      }
+      int datasetId = Integer.parseInt(parts[0]);
+      int labelId = Integer.parseInt(parts[1]);
+      try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+         calculateLabels(datasetId, labelId);
+      }
+   }
+
+   private void calculateLabels(int datasetId, int queryLabelId) {
+      log.infof("Calculating labels for dataset %d, label %d", datasetId, queryLabelId);
+      // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
+      // to the uploading user. However, the uploader should not have rights to fetch these anyway...
+      @SuppressWarnings("unchecked") List<Object[]> extracted =
+            (List<Object[]>) em.createNativeQuery(LABEL_QUERY).setParameter(1, datasetId).setParameter(2, queryLabelId).getResultList();
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
+         context.enter();
+         try {
+            for (int i = 0; i < extracted.size(); i++) {
+               Object[] row = extracted.get(i);
+               int labelId = (Integer) row[0];
+               String name = (String) row[1];
+               String function = (String) row[2];
+               String obj = (String) row[3];
+               JsonNode result;
+               if (function != null && !function.isBlank()) {
+                  StringBuilder jsCode = new StringBuilder("const __obj").append(i).append(" = ").append(obj).append(";\n");
+                  jsCode.append("const __func").append(i).append(" = ").append(function).append(";\n");
+                  jsCode.append("__func").append(i).append("(__obj").append(i).append(")");
+                  System.err.println(jsCode.toString());
+                  try {
+                     Value value = context.eval("js", jsCode);
+                     result = Util.convertToJson(value);
+                  } catch (PolyglotException e) {
+                     logMessage(datasetId, CalculationLog.ERROR, "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
+                     continue;
+                  }
+               } else {
+                  result = Util.toJsonNode(obj);
+               }
+               Label.Value value = new Label.Value();
+               value.datasetId = datasetId;
+               value.labelId = labelId;
+               value.value = result;
+               value.persist();
+            }
+            Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId));
+         } finally {
+            if (out.size() > 0) {
+               logMessage(datasetId, CalculationLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out.toString());
+            }
+            context.leave();
+         }
+      }
+   }
+
+   @ConsumeEvent(value = DataSet.EVENT_LABELS_UPDATED, blocking = true)
+   public void consumeUpdateLabels(DataSet.LabelsUpdatedEvent event) {
+      // An empty method is necessary to register codecs
+   }
+
+   private void logMessage(int datasetId, int level, String message, Object... params) {
+      String msg = String.format(message, params);
+      if (level == CalculationLog.ERROR) {
+         log.errorf("Calculating labels for DS %d: %s", datasetId, msg);
+      }
+      // TODO log in DB
    }
 
    private void wrappedLogCalculation(int severity, int runId, String message) {
@@ -919,11 +1016,10 @@ public class RunServiceImpl implements RunService {
    }
 
    @ConsumeEvent(value = DataSet.EVENT_NEW, blocking = true)
-   public void consume(DataSet dataSet) {
-      // This empty method is here to let Quarkus register a local codec for Dataset
-      // - otherwise publishing the event would log warnings and the event would not
-      // be received in tests. This method can be removed once we start handling the event
-      // elsewhere.
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   public void onNewDataset(DataSet dataSet) {
+      calculateLabels(dataSet.id, -1);
    }
 
    @PermitAll
