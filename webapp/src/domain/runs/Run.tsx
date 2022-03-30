@@ -6,9 +6,9 @@ import * as actions from "./actions"
 import * as selectors from "./selectors"
 import { RunsDispatch } from "./reducers"
 import { formatDateTime, noop } from "../../utils"
-import { teamsSelector } from "../../auth"
+import { teamsSelector, useTester } from "../../auth"
 
-import { Bullseye, Card, CardHeader, CardBody, PageSection, Spinner } from "@patternfly/react-core"
+import { Bullseye, Button, Card, CardHeader, CardBody, PageSection, Spinner } from "@patternfly/react-core"
 import { TableComposable, Thead, Tr, Th, Tbody, Td } from "@patternfly/react-table"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
 import { NavLink } from "react-router-dom"
@@ -23,6 +23,7 @@ export default function Run() {
 
     const run = useSelector(selectors.get(id))
     const [loading, setLoading] = useState(false)
+    const [recalculating, setRecalculating] = useState(false)
 
     const dispatch = useDispatch<RunsDispatch>()
     const teams = useSelector(teamsSelector)
@@ -34,6 +35,7 @@ export default function Run() {
             .catch(noop)
             .finally(() => setLoading(false))
     }, [dispatch, id, teams])
+    const isTester = useTester(run?.owner)
 
     return (
         <PageSection>
@@ -54,6 +56,7 @@ export default function Run() {
                                         <Th>Start</Th>
                                         <Th>Stop</Th>
                                         <Th>Description</Th>
+                                        <Th>Actions</Th>
                                     </Tr>
                                 </Thead>
                                 <Tbody>
@@ -65,6 +68,21 @@ export default function Run() {
                                         <Td>{formatDateTime(run.start)}</Td>
                                         <Td>{formatDateTime(run.stop)}</Td>
                                         <Td>{Description(run.description)}</Td>
+                                        <Td>
+                                            {isTester && (
+                                                <Button
+                                                    isDisabled={recalculating}
+                                                    onClick={() => {
+                                                        setRecalculating(true)
+                                                        dispatch(actions.recalculateDatasets(run.id, run.testid))
+                                                            .catch(noop)
+                                                            .finally(() => setRecalculating(false))
+                                                    }}
+                                                >
+                                                    Recalculate datasets {recalculating && <Spinner size="md" />}
+                                                </Button>
+                                            )}
+                                        </Td>
                                     </Tr>
                                 </Tbody>
                             </TableComposable>

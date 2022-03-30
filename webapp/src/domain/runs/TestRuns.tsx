@@ -134,6 +134,11 @@ const staticColumns: RunColumn[] = [
         accessor: "description",
         Cell: (arg: C) => Description(arg.cell.value),
     },
+    {
+        Header: "Datasets",
+        accessor: "datasets",
+        Cell: (arg: C) => arg.cell.value.length,
+    },
 ]
 
 const menuColumn: RunColumn = {

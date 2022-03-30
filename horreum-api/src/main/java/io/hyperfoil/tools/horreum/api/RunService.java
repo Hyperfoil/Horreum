@@ -132,6 +132,10 @@ public interface RunService {
    @Consumes(MediaType.TEXT_PLAIN)
    Object updateSchema(@PathParam("id") Integer id, @QueryParam("path") String path, String schemaUri);
 
+   @POST
+   @Path("{id}/recalculate")
+   List<Integer> recalculateDatasets(@PathParam("id") int runId);
+
    @Path("dataset/{id}")
    @GET
    DataSet getDataSet(@PathParam("id") Integer datasetId);

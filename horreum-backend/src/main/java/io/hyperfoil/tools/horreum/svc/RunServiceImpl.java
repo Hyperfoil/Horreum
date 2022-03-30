@@ -15,6 +15,7 @@ import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
+import io.quarkus.panache.common.Sort;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
@@ -792,11 +793,14 @@ public class RunServiceImpl implements RunService {
             .append("    SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') AS schemas, rs.runid FROM run_schemas rs GROUP BY rs.runid")
             .append("), view_agg AS (")
             .append("    SELECT jsonb_object_agg(coalesce(vd.vcid, 0), vd.object) AS view, vd.runid FROM view_data vd GROUP BY vd.runid")
+            .append("), dataset_agg AS (")
+            .append("    SELECT runid, jsonb_agg(id ORDER BY id)::::text as datasets FROM dataset WHERE testid = ?1 GROUP BY runid")
             .append(") SELECT run.id, run.start, run.stop, run.access, run.owner, schema_agg.schemas::::text AS schemas, view_agg.view#>>'{}' AS view, ")
-            .append("run.trashed, run.description, run_tags.tags::::text FROM run ")
+            .append("run.trashed, run.description, run_tags.tags::::text, COALESCE(dataset_agg.datasets, '[]') FROM run ")
             .append("LEFT JOIN schema_agg ON schema_agg.runid = run.id ")
             .append("LEFT JOIN view_agg ON view_agg.runid = run.id ")
             .append("LEFT JOIN run_tags ON run_tags.runid = run.id ")
+            .append("LEFT JOIN dataset_agg ON dataset_agg.runid = run.id ")
             .append("WHERE run.testid = ?1 ");
       if (!trashed) {
          sql.append(" AND NOT run.trashed ");
@@ -874,6 +878,7 @@ public class RunServiceImpl implements RunService {
          run.trashed = (boolean) row[7];
          run.description = (String) row[8];
          run.tags = Util.toJsonNode((String) row[9]);
+         run.datasets = (ArrayNode) Util.toJsonNode((String) row[10]);
          runs.add(run);
       }
       TestRunsSummary summary = new TestRunsSummary();
@@ -978,12 +983,20 @@ public class RunServiceImpl implements RunService {
       return schemas;
    }
 
+   @WithRoles
+   @Transactional
+   @Override
+   public List<Integer> recalculateDatasets(int runId) {
+      DataSet.delete("runid", runId);
+      transform(runId);
+      //noinspection unchecked
+      return em.createNativeQuery("SELECT id FROM dataset WHERE runid = ? ORDER BY ordinal")
+            .setParameter(1, runId).getResultList();
+   }
+
    private void onCalculateDataSets(String param) {
+      // TODO: remove the auth_suffix from database notification
       String[] parts = param.split(";", 3);
-      if (parts.length < 3) {
-         log.errorf("Received notification to calculate dataset %s but cannot extract run ID.", param);
-         return;
-      }
       int runId;
       try {
          runId = Integer.parseInt(parts[0]);
@@ -992,26 +1005,25 @@ public class RunServiceImpl implements RunService {
          return;
       }
       log.debug("Calculate_dataset for run with id [" +runId+ "]");
+      try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))){
+         transform(runId);
+      }
+   }
 
-      String token = parts[1];
-      String role = parts[2];
-
-      try (@SuppressWarnings("unused") CloseMe h1 = roleManager.withRoles(em, role);
-           @SuppressWarnings("unused") CloseMe h2 = roleManager.withToken(em, token)){
-         Run run = Run.findById(runId);
-         if (run != null) {
-            DataSet dataSet = new DataSet();
-            dataSet.start = run.start;
-            dataSet.stop = run.stop;
-            dataSet.description = run.description;
-            dataSet.testid = run.testid;
-            dataSet.run = run;
-            dataSet.data = run.data;
-            dataSet.owner = run.owner;
-            dataSet.access = run.access;
-            dataSet.persist();
-            Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, dataSet);
-         }
+   private void transform(int runId) {
+      Run run = Run.findById(runId);
+      if (run != null) {
+         DataSet dataSet = new DataSet();
+         dataSet.start = run.start;
+         dataSet.stop = run.stop;
+         dataSet.description = run.description;
+         dataSet.testid = run.testid;
+         dataSet.run = run;
+         dataSet.data = run.data;
+         dataSet.owner = run.owner;
+         dataSet.access = run.access;
+         dataSet.persist();
+         Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, dataSet);
       }
    }
 

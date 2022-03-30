@@ -2624,6 +2624,14 @@
                 USING (has_role('horreum.system') OR has_role2(owner, 'tester'));
         </sql>
     </changeSet>
+
+    <changeSet id="61" author="rvansa">
+        <sql>
+            ALTER POLICY dataset_insert ON dataset
+                WITH CHECK (has_role('horreum.system') OR (has_role2(owner, 'tester') AND
+                    exists((SELECT 1 FROM run WHERE run.id = runid AND has_role2(run.owner, 'tester')))));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
 

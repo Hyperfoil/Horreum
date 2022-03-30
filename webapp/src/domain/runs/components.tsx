@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Button, Chip, DropdownItem, Modal, TextInput, Tooltip } from "@patternfly/react-core"
+import { Button, Chip, DropdownItem, Modal, Spinner, TextInput, Tooltip } from "@patternfly/react-core"
 import { WarningTriangleIcon } from "@patternfly/react-icons"
 import moment from "moment"
 import { useDispatch } from "react-redux"
@@ -7,7 +7,7 @@ import { useDispatch } from "react-redux"
 import { RenderFunction } from "../tests/reducers"
 
 import { Run, RunsDispatch } from "./reducers"
-import { resetToken, dropToken, updateAccess, trash, updateDescription } from "./actions"
+import { resetToken, dropToken, updateAccess, trash, updateDescription, recalculateDatasets } from "./actions"
 import ActionMenu, {
     ActionMenuProps,
     MenuItem,
@@ -79,7 +79,37 @@ function useRestore(run: Run): MenuItem<Run> {
                         Restore
                     </DropdownItem>
                 ),
-                modal: <></>,
+                modal: null,
+            }
+        },
+        run,
+    ]
+}
+
+function useRecalculateDatasets(run: Run): MenuItem<Run> {
+    const dispatch = useDispatch<RunsDispatch>()
+    const [recalculating, setRecalculating] = useState(false)
+    return [
+        (props: ActionMenuProps, isOwner: boolean, close: () => void) => {
+            return {
+                item: (
+                    <DropdownItem
+                        key="recalculate"
+                        isDisabled={!isOwner || recalculating}
+                        onClick={() => {
+                            setRecalculating(true)
+                            dispatch(recalculateDatasets(props.id, run.testid))
+                                .catch(noop)
+                                .finally(() => {
+                                    setRecalculating(false)
+                                    close()
+                                })
+                        }}
+                    >
+                        Recalculate datasets {recalculating && <Spinner size="md" />}
+                    </DropdownItem>
+                ),
+                modal: null,
             }
         },
         run,
@@ -131,8 +161,9 @@ export function Menu(run: Run) {
     const del = useDelete({
         onDelete: id => dispatch(trash(id, run.testid)).catch(noop),
     })
+    const recalculate = useRecalculateDatasets(run)
     const restore = useRestore(run)
-    const menuItems: MenuItem<any>[] = [shareLink, changeAccess]
+    const menuItems: MenuItem<any>[] = [shareLink, changeAccess, recalculate]
     menuItems.push(run.trashed ? restore : del)
 
     const isTester = useTester(run.owner)

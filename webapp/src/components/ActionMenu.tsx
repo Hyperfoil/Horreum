@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ReactElement } from "react"
+import { useState, useEffect, ReactElement, ReactNode } from "react"
 
 import { useSelector } from "react-redux"
 
@@ -13,7 +13,7 @@ import ConfirmDeleteModal from "./ConfirmDeleteModal"
 interface MenuItemProvider<C> {
     (props: ActionMenuProps, isOwner: boolean, close: () => void, config: C): {
         item: ReactElement
-        modal: ReactElement
+        modal: ReactNode
     }
 }
 

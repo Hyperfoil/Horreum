@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -166,7 +167,11 @@ public class RunServiceTest extends BaseServiceTest {
          tm.begin();
          Throwable error = null;
          try (CloseMe ignored = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
-            DataSet.findById(ds.id).delete();
+            DataSet oldDs = DataSet.findById(ds.id);
+            if (oldDs != null) {
+               oldDs.delete();
+            }
+            DataSet.delete("runid", run.id);
             Run.findById(run.id).delete();
          } catch (Throwable t) {
             error = t;
@@ -344,5 +349,43 @@ public class RunServiceTest extends BaseServiceTest {
       } finally {
          Arrays.stream(instances).forEach(this::deleteSchema);
       }
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testRecalculateDatasets() {
+      withExampleDataset(JsonNodeFactory.instance.objectNode(), ds -> {
+         Util.withTx(tm, () -> {
+            try (CloseMe ignored = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+               DataSet dbDs = DataSet.findById(ds.id);
+               assertNotNull(dbDs);
+               dbDs.delete();
+               em.flush();
+               em.clear();
+            }
+            return null;
+         });
+         List<Integer> dsIds1 = recalculateDataset(ds.run.id);
+         assertEquals(1, dsIds1.size());
+         try (CloseMe ignored = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+            List<DataSet> dataSets = DataSet.find("runid", ds.run.id).list();
+            assertEquals(1, dataSets.size());
+            assertEquals(dsIds1.get(0), dataSets.get(0).id);
+            em.clear();
+         }
+         List<Integer> dsIds2 = recalculateDataset(ds.run.id);
+         try (CloseMe ignored = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+            List<DataSet> dataSets = DataSet.find("runid", ds.run.id).list();
+            assertEquals(1, dataSets.size());
+            assertEquals(dsIds2.get(0), dataSets.get(0).id);
+         }
+         return null;
+      });
+   }
+
+   protected List<Integer> recalculateDataset(int runId) {
+      ArrayNode json = jsonRequest().post("/api/run/" + runId + "/recalculate").then().statusCode(200).extract().body().as(ArrayNode.class);
+      ArrayList<Integer> list = new ArrayList<>(json.size());
+      json.forEach(item -> list.add(item.asInt()));
+      return list;
    }
 }

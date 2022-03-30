@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
 import java.time.Instant;
+import java.util.List;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -22,16 +23,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.smallrye.common.constraint.NotNull;
 
-@NamedQuery(name = DataSet.FIND_BY_RUNID,
-   query = "SELECT ds FROM dataset ds WHERE runid = ?1")
 @Entity(name="dataset")
 @RegisterForReflection
 /**
  * Purpose of this object is to represent derived run data.
  */
 public class DataSet extends OwnedEntityBase {
-
-   public static final String FIND_BY_RUNID = "DataSet.findByRunId";
    public static final String EVENT_NEW = "dataset/new";
    public static final String EVENT_LABELS_UPDATED = "dataset/updatedlabels";
 
@@ -68,10 +65,6 @@ public class DataSet extends OwnedEntityBase {
 
    @NotNull
    public int ordinal;
-
-   public static DataSet findByRunId(int runId) {
-      return find("#DataSet.findByRunId", runId).firstResult();
-   }
 
    public static class LabelsUpdatedEvent {
       public final int datasetId;

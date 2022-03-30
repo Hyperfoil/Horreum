@@ -14,6 +14,7 @@ import {
     TrashAction,
     UpdateDescriptionAction,
     UpdateSchemaAction,
+    UpdateDatasetsAction,
 } from "../runs/reducers"
 import * as actionTypes from "./actionTypes"
 import * as api from "./api"
@@ -221,5 +222,19 @@ export function updateSchema(id: number, testid: number, path: string | undefine
                     schemas,
                 }),
             error => dispatchError(dispatch, error, "SCHEME_UPDATE_FAILED", "Failed to update run schema")
+        )
+}
+
+export function recalculateDatasets(id: number, testid: number) {
+    return (dispatch: Dispatch<UpdateDatasetsAction | AddAlertAction>) =>
+        api.recalculateDatasets(id).then(
+            datasets =>
+                dispatch({
+                    type: actionTypes.UPDATE_DATASETS,
+                    id,
+                    testid,
+                    datasets,
+                }),
+            error => dispatchError(dispatch, error, "RECALCULATE_DATASETS", "Failed to recalculate datasets")
         )
 }

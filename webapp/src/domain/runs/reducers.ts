@@ -111,6 +111,13 @@ export interface UpdateSchemaAction {
     schemas: RunSchemas
 }
 
+export interface UpdateDatasetsAction {
+    type: typeof actionTypes.UPDATE_DATASETS
+    id: number
+    testid: number
+    datasets: number[]
+}
+
 type RunsAction =
     | LoadingAction
     | LoadedAction
@@ -123,6 +130,7 @@ type RunsAction =
     | TrashAction
     | UpdateDescriptionAction
     | UpdateSchemaAction
+    | UpdateDatasetsAction
 
 export type RunsDispatch = ThunkDispatch<any, unknown, RunsAction | AddAlertAction>
 
@@ -214,6 +222,10 @@ export const reducer = (state = new RunsState(), action: RunsAction) => {
                 copy.schema = action.schemas
                 return copy
             })
+            break
+        }
+        case actionTypes.UPDATE_DATASETS: {
+            state = updateRun(state, action.id, action.testid, { datasets: action.datasets })
             break
         }
         default:
