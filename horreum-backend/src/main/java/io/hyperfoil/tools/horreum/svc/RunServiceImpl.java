@@ -261,7 +261,6 @@ public class RunServiceImpl implements RunService {
                   StringBuilder jsCode = new StringBuilder("const __obj").append(i).append(" = ").append(obj).append(";\n");
                   jsCode.append("const __func").append(i).append(" = ").append(function).append(";\n");
                   jsCode.append("__func").append(i).append("(__obj").append(i).append(")");
-                  System.err.println(jsCode.toString());
                   try {
                      Value value = context.eval("js", jsCode);
                      result = Util.convertToJson(value);
