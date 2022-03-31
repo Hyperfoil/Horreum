@@ -214,7 +214,7 @@ public class TestServiceImpl implements TestService {
       // TODO: materialize the counts in a table for quicker lookup
       testSql.append("WITH runs AS (SELECT testid, count(id) as count FROM run WHERE run.trashed = false OR run.trashed IS NULL GROUP BY testid), ");
       testSql.append("datasets AS (SELECT testid, count(id) as count FROM dataset GROUP BY testid) ");
-      testSql.append("SELECT test.id,test.name,test.folder,test.description, datasets.count AS datasets, runs.count AS runs,test.owner,test.access ");
+      testSql.append("SELECT test.id,test.name,test.folder,test.description, COALESCE(datasets.count, 0) AS datasets, COALESCE(runs.count, 0) AS runs,test.owner,test.access ");
       testSql.append("FROM test LEFT JOIN runs ON runs.testid = test.id LEFT JOIN datasets ON datasets.testid = test.id");
       boolean anyFolder = "*".equals(folder);
       if (anyFolder) {
