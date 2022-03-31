@@ -2632,6 +2632,100 @@
                     exists((SELECT 1 FROM run WHERE run.id = runid AND has_role2(run.owner, 'tester')))));
         </sql>
     </changeSet>
+
+    <changeSet id="62" author="rvansa">
+        <sql>
+            WITH vca AS (
+                SELECT id, unnest(string_to_array(accessors, ';')) AS accessor, headername, render from viewcomponent
+            ), vca2 AS (
+                SELECT id, replace(vca.accessor, '[]', '') as accessor, vca.accessor like '%[]' as isarray, headername, render FROM vca
+            ), le AS (
+                SELECT row_number() OVER () AS label_id, vca2.headername, schema_id, vca2.render AS function,
+                    array_agg(vca2.accessor) AS accessors, array_agg(isarray) AS isarrays, array_agg('$' || jsonpath) AS jsonpaths, owner, access FROM vca2
+                JOIN schemaextractor se ON vca2.accessor = se.accessor
+                JOIN schema ON schema.id = schema_id
+                GROUP BY schema_id, vca2.id, vca2.headername, function, owner, access
+            ), label_insert AS (
+                INSERT INTO label (id, name, schema_id, function, filtering, metrics, owner, access)
+                SELECT label_id, headername, schema_id, function, false, true, owner, access FROM le
+            ) INSERT INTO label_extractors (label_id, name, jsonpath, isarray)
+                SELECT label_id, unnest(accessors), unnest(jsonpaths), unnest(isarrays) FROM le;
+
+            WITH var AS (
+                SELECT id, unnest(string_to_array(accessors, ';')) AS accessor, name, calculation from variable
+            ), var2 AS (
+                SELECT id, replace(var.accessor, '[]', '') as accessor, var.accessor like '%[]' as isarray, name, calculation FROM var
+            ), le AS (
+                SELECT row_number() OVER () + (SELECT count(*) FROM label) AS label_id, var2.name, schema_id, var2.calculation AS function,
+                    array_agg(var2.accessor) AS accessors, array_agg(isarray) AS isarrays, array_agg('$' || jsonpath) AS jsonpaths, owner, access FROM var2
+                JOIN schemaextractor se ON var2.accessor = se.accessor
+                JOIN schema ON schema.id = schema_id
+                GROUP BY schema_id, var2.id, var2.name, function, owner, access
+            ), label_insert AS (
+                INSERT INTO label (id, name, schema_id, function, filtering, metrics, owner, access)
+                SELECT label_id, name, schema_id, function, false, true, owner, access FROM le
+            ) INSERT INTO label_extractors (label_id, name, jsonpath, isarray)
+                SELECT label_id, unnest(accessors), unnest(jsonpaths), unnest(isarrays) FROM le;
+
+            WITH rc AS (
+                SELECT id, unnest(string_to_array(accessors, ';')) AS accessor, name, function from reportcomponent
+            ), rc2 AS (
+                SELECT id, replace(rc.accessor, '[]', '') as accessor, rc.accessor like '%[]' as isarray, name, function FROM rc
+            ), le AS (
+                SELECT row_number() OVER () + (SELECT count(*) FROM label) AS label_id, rc2.name, schema_id, rc2.function,
+                    array_agg(rc2.accessor) AS accessors, array_agg(isarray) AS isarrays, array_agg('$' || jsonpath) AS jsonpaths, owner, access FROM rc2
+                JOIN schemaextractor se ON rc2.accessor = se.accessor
+                JOIN schema ON schema.id = schema_id
+                GROUP BY schema_id, rc2.id, rc2.name, function, owner, access
+            ), label_insert AS (
+                INSERT INTO label (id, name, schema_id, function, filtering, metrics, owner, access)
+                SELECT label_id, name, schema_id, function, false, true, owner, access FROM le
+            ) INSERT INTO label_extractors (label_id, name, jsonpath, isarray)
+                SELECT label_id, unnest(accessors), unnest(jsonpaths), unnest(isarrays) FROM le;
+
+            WITH tt AS (
+                SELECT id, unnest(string_to_array(tags, ';')) AS accessor, name, tagscalculation as function from test
+            ), tt2 AS (
+                SELECT id, replace(tt.accessor, '[]', '') as accessor, tt.accessor like '%[]' as isarray, name, function FROM tt
+            ), le AS (
+                SELECT row_number() OVER () + (SELECT count(*) FROM label) AS label_id, tt2.name || '_tags' AS name, schema_id, tt2.function,
+                    array_agg(tt2.accessor) AS accessors, array_agg(isarray) AS isarrays, array_agg('$' || jsonpath) AS jsonpaths, owner, access FROM tt2
+                JOIN schemaextractor se ON tt2.accessor = se.accessor
+                JOIN schema ON schema.id = schema_id
+                GROUP BY schema_id, tt2.id, tt2.name, function, owner, access
+            ), label_insert AS (
+                INSERT INTO label (id, name, schema_id, function, filtering, metrics, owner, access)
+                SELECT label_id, name, schema_id, function, true, false, owner, access FROM le
+            ) INSERT INTO label_extractors (label_id, name, jsonpath, isarray)
+                SELECT label_id, unnest(accessors), unnest(jsonpaths), unnest(isarrays) FROM le;
+
+            WITH acs AS (
+                SELECT DISTINCT unnest(string_to_array(filteraccessors, ';') ||
+                    string_to_array(categoryaccessors, ';') || string_to_array(labelaccessors, ';')) AS accessor FROM tablereportconfig
+            ), le AS (
+                SELECT row_number() over () + (SELECT count(*) FROM label) AS label_id, acs.accessor, array_agg('$' || jsonpath) as jsonpaths, schema_id, owner, access FROM acs
+                JOIN schemaextractor se ON acs.accessor = se.accessor
+                JOIN schema ON schema.id = schema_id
+                GROUP BY schema_id, acs.accessor, owner, access
+            ), label_insert AS (
+                INSERT INTO label (id, name, schema_id, function, filtering, metrics, owner, access)
+                SELECT label_id, accessor, schema_id, NULL, true, false, owner, access FROM le
+            ) INSERT INTO label_extractors (label_id, name, jsonpath, isarray)
+                SELECT label_id, accessor, unnest(jsonpaths), false FROM le;
+
+            <!-- Remove duplicate labels -->
+            WITH ids AS (
+                SELECT l1.id FROM label l1 JOIN label l2 ON l1.name = l2.name AND l1.schema_id = l2.schema_id WHERE l1.id > l2.id
+            ), drop_extractors AS (
+                DELETE FROM label_extractors USING ids WHERE label_id = ids.id
+            ) DELETE FROM label USING ids WHERE label.id = ids.id;
+        </sql>
+    </changeSet>
+
+    <!-- We need a new transaction to alter the table due to triggers -->
+    <changeSet id="63" author="rvansa">
+        <addUniqueConstraint tableName="label" columnNames="name,schema_id"/>
+    </changeSet>
 </databaseChangeLog>
 
 

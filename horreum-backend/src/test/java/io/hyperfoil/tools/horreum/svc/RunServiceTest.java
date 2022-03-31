@@ -265,11 +265,11 @@ public class RunServiceTest extends BaseServiceTest {
                new NamedJsonPath("value", "$.thisPathDoesNotExist", false));
          int labelSingleArray = addLabel(schemas[0], "SingleArray", "x => Array.isArray(x) && x.length === 0",
                new NamedJsonPath("value", "$.thisPathDoesNotExist", true));
-         int labelMulti = addLabel(schemas[0], "value", null, new NamedJsonPath("a", "$.a", false),
+         int labelMulti = addLabel(schemas[0], "Multi", null, new NamedJsonPath("a", "$.a", false),
                new NamedJsonPath("value", "$.thisPathDoesNotExist", false));
-         int labelMultiFunc = addLabel(schemas[0], "value", "({a, value}) => a === 1 && value === null",
+         int labelMultiFunc = addLabel(schemas[0], "MultiFunc", "({a, value}) => a === 1 && value === null",
                new NamedJsonPath("a", "$.a", false), new NamedJsonPath("value", "$.thisPathDoesNotExist", false));
-         int labelMultiArray = addLabel(schemas[0], "value", "({a, value}) => a === 1 && Array.isArray(value) && value.length === 0",
+         int labelMultiArray = addLabel(schemas[0], "MultiArray", "({a, value}) => a === 1 && Array.isArray(value) && value.length === 0",
                new NamedJsonPath("a", "$.a", false), new NamedJsonPath("value", "$.thisPathDoesNotExist", true));
 
          List<Label.Value> values = withLabelValues(createXYData());
@@ -288,9 +288,9 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testDatasetLabelChanged() {
       withExampleSchemas((schemas) -> {
-         int labelA = addLabel(schemas[0], "value", null, new NamedJsonPath("value", "$.value", false));
-         int labelB = addLabel(schemas[1], "value", "v => v + 1", new NamedJsonPath("value", "$.value", false));
-         int labelC = addLabel(schemas[1], "value", null, new NamedJsonPath("value", "$.value", false));
+         int labelA = addLabel(schemas[0], "A", null, new NamedJsonPath("value", "$.value", false));
+         int labelB = addLabel(schemas[1], "B", "v => v + 1", new NamedJsonPath("value", "$.value", false));
+         int labelC = addLabel(schemas[1], "C", null, new NamedJsonPath("value", "$.value", false));
          BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
          withExampleDataset(createABData(), ds -> {
             try {
