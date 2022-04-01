@@ -77,7 +77,7 @@ public class UserServiceImpl implements UserService {
       String serverUrl = ConfigProvider.getConfig().getOptionalValue("horreum.keycloak.internal.url", String.class).orElse(null);
       if (serverUrl == null) {
          URL url = new URL(ConfigProvider.getConfig().getValue("quarkus.oidc.auth-server-url", String.class));
-         serverUrl = url.getProtocol() + "://" + url.getAuthority() + "/auth";
+         serverUrl = url.getProtocol() + "://" + url.getAuthority();
       }
       keycloak = KeycloakBuilder.builder()
             .serverUrl(serverUrl)
