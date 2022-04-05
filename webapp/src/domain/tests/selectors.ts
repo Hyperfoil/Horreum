@@ -19,7 +19,7 @@ export function all(state: State) {
 
 export const get = (id: number) => (state: State) => {
     if (!state.tests.byId) {
-        return false
+        return undefined
     }
     return state.tests.byId.get(id)
 }

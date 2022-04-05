@@ -609,7 +609,7 @@ public class AlertingServiceImpl implements AlertingService {
          }, (current, matching) -> {
             current.name = matching.name;
             current.group = matching.group;
-            current.accessors = matching.accessors;
+            current.labels = matching.labels;
             current.calculation = matching.calculation;
             if (matching.changeDetection != null) {
                ensureDefaults(matching.changeDetection);

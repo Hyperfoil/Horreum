@@ -88,6 +88,8 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 notificationsEnabled,
                 tags: tags.join(";"),
                 tagsCalculation: tagsCalculation || undefined,
+                fingerprintLabels: [],
+                fingerprintFilter: null,
                 owner: test?.owner || defaultRole || "__test_created_without_a_role__",
                 access: test ? test.access : 2, // || notation does not work well with 0
                 tokens: [],

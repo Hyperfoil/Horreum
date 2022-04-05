@@ -23,7 +23,6 @@ import {
     Spinner,
     TextInput,
 } from "@patternfly/react-core"
-import { HelpIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 
 import * as api from "./api"
@@ -31,6 +30,7 @@ import { TableReport, TableReportConfig, ReportComponent } from "./api"
 import TableReportView from "./TableReportView"
 
 import Accessors from "../../components/Accessors"
+import HelpButton from "../../components/HelpButton"
 import OptionalFunction from "../../components/OptionalFunction"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
 
@@ -109,20 +109,6 @@ function ReportConfigComponent(props: ReportConfigComponentProps) {
                 </FlexItem>
             )}
         </Flex>
-    )
-}
-
-function HelpButton() {
-    return (
-        <button
-            type="button"
-            aria-label="More info"
-            onClick={e => e.preventDefault()}
-            aria-describedby="simple-form-name-01"
-            className="pf-c-form__group-label-help"
-        >
-            <HelpIcon noVerticalAlign />
-        </button>
     )
 }
 

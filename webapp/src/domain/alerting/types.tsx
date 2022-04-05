@@ -11,8 +11,8 @@ export type Variable = {
     name: string
     group?: string
     testid: number
-    accessors: string
-    calculation?: string
+    labels: string[]
+    calculation: string | null
     changeDetection: ChangeDetection[]
 }
 

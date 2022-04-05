@@ -43,6 +43,8 @@ export interface Test {
     compareUrl: string | CompareFunction | undefined
     tags: string
     tagsCalculation?: string
+    fingerprintLabels: string[]
+    fingerprintFilter: string | null
     owner: string
     access: Access
     tokens: Token[]
@@ -138,6 +140,13 @@ export interface UpdateTransformersAction {
     transformers: Transformer[]
 }
 
+export interface UpdateFingerprintAction {
+    type: typeof actionTypes.UPDATE_FINGERPRINT
+    testId: number
+    labels: string[]
+    filter: string | null
+}
+
 export type TestAction =
     | LoadingAction
     | LoadedSummaryAction
@@ -152,6 +161,7 @@ export type TestAction =
     | UpdateFoldersAction
     | UpdateFolderAction
     | UpdateTransformersAction
+    | UpdateFingerprintAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction | AddAlertAction>
 
@@ -242,6 +252,17 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             const test = state.byId?.get(action.testId)
             if (test) {
                 state.byId = state.byId?.set(action.testId, { ...test, transformers: action.transformers })
+            }
+            break
+        }
+        case actionTypes.UPDATE_FINGERPRINT: {
+            const test = state.byId?.get(action.testId)
+            if (test) {
+                state.byId = state.byId?.set(action.testId, {
+                    ...test,
+                    fingerprintLabels: action.labels,
+                    fingerprintFilter: action.filter,
+                })
             }
             break
         }

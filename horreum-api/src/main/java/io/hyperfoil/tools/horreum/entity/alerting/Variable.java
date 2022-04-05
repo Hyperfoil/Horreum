@@ -11,8 +11,11 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.validation.constraints.NotNull;
 
+import org.hibernate.annotations.Type;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -42,7 +45,8 @@ public class Variable extends PanacheEntityBase {
    public int order;
 
    @NotNull
-   public String accessors;
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public JsonNode labels;
 
    @JsonInclude(Include.NON_NULL)
    public String calculation;

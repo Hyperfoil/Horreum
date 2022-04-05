@@ -395,20 +395,6 @@ public class SchemaServiceImpl implements SchemaService {
          Object[] columns = (Object[]) row;
          result.add(new AccessorInTags((int) columns[0], (String) columns[1]));
       }
-      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, v.id as varid, v.name as varname FROM variable v " +
-            "JOIN test ON test.id = v.testid " +
-            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ';'));")
-            .setParameter(1, accessor).getResultList()) {
-         Object[] columns = (Object[]) row;
-         result.add(new AccessorInVariable((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3]));
-      }
-      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, view.id as viewid, view.name as viewname, vc.id as componentid, vc.headername FROM viewcomponent vc " +
-            "JOIN view ON vc.view_id = view.id JOIN test ON test.id = view.test_id " +
-            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ';'));")
-            .setParameter(1, accessor).getResultList()) {
-         Object[] columns = (Object[]) row;
-         result.add(new AccessorInView((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], (int) columns[4], (String) columns[5]));
-      }
       for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, trc.id as configid, trc.title, " +
             "filteraccessors, categoryaccessors, seriesaccessors, labelaccessors FROM tablereportconfig trc " +
             "JOIN test ON test.id = trc.testid " +
@@ -629,7 +615,6 @@ public class SchemaServiceImpl implements SchemaService {
       try {
          int deleted = em.createNativeQuery("DELETE FROM schemaextractor WHERE id IN (SELECT se.id FROM schemaextractor se FULL OUTER JOIN (" +
                      "SELECT unnest(string_to_array(replace(tags, '[]', ''), ';')) FROM test UNION " +
-                     "SELECT unnest(string_to_array(replace(accessors, '[]', ''), ';')) FROM variable UNION " +
                      "SELECT unnest(string_to_array(replace(filteraccessors || ',' || categoryaccessors || ',' || seriesaccessors || ',' || labelaccessors, '[]', ''), ',')) FROM tablereportconfig UNION " +
                      "SELECT unnest(string_to_array(replace(accessors, '[]', ''), ',')) FROM reportcomponent" +
                ") AS a ON se.accessor = a.unnest WHERE (se.deleted OR se.deprecatedby_id IS NOT NULL) AND a.unnest IS NULL);").executeUpdate();

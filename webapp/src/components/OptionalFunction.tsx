@@ -3,7 +3,7 @@ import { AddCircleOIcon } from "@patternfly/react-icons"
 import Editor from "./Editor/monaco/Editor"
 
 type OptionalFunctionProps = {
-    func: string | undefined
+    func: string | undefined | null
     onChange(value: string): void
     readOnly: boolean
     undefinedText: string
@@ -18,7 +18,7 @@ export default function OptionalFunction(props: OptionalFunctionProps) {
         } else {
             return (
                 <Button
-                    style={{ padding: 0, marginTop: "4px" }}
+                    style={{ padding: 0, marginTop: "6px" }}
                     variant="link"
                     onClick={() => {
                         props.onChange(props.defaultFunc)

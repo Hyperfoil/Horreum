@@ -14,6 +14,7 @@ import {
     UpdateHookAction,
     UpdateTokensAction,
     RevokeTokenAction,
+    UpdateFingerprintAction,
     UpdateFoldersAction,
     UpdateFolderAction,
     UpdateTransformersAction,
@@ -314,5 +315,15 @@ export function updateTransformers(testId: number, transformers: Transformer[]) 
                         "Failed to update transformers for test " + testId
                     )
             )
+    }
+}
+
+export function updateFingerprint(testId: number, labels: string[], filter: string | null) {
+    return (dispatch: Dispatch<UpdateFingerprintAction | AddAlertAction>) => {
+        return api.updateFingerprint(testId, labels, filter).then(
+            () => dispatch({ type: actionTypes.UPDATE_FINGERPRINT, testId, labels, filter }),
+            error =>
+                dispatchError(dispatch, error, "UPDATE_FINGERPRINT", "Failed to update fingerprint for test " + testId)
+        )
     }
 }

@@ -6,16 +6,9 @@ import { useTester } from "../../auth"
 import { alertAction } from "../../alerts"
 import * as api from "../alerting/api"
 import { NavLink } from "react-router-dom"
-import {
-    EnumProperties,
-    LogSliderProperties,
-    ChangeDetection,
-    ChangeDetectionModelConfig,
-    Variable,
-} from "../alerting/types"
+import { ChangeDetection, ChangeDetectionModelConfig, Variable } from "../alerting/types"
 
 import {
-    ActionList,
     Alert,
     AlertActionCloseButton,
     Bullseye,
@@ -23,10 +16,8 @@ import {
     EmptyState,
     Form,
     FormGroup,
-    Hint,
-    HintBody,
-    HintTitle,
     Modal,
+    Popover,
     Select,
     SelectOption,
     SimpleList,
@@ -35,24 +26,23 @@ import {
     Spinner,
     Split,
     SplitItem,
-    Tab,
-    Tabs,
-    TabTitleIcon,
-    TabTitleText,
     TextInput,
     Title,
 } from "@patternfly/react-core"
 
-import { AddCircleOIcon, PlusCircleIcon } from "@patternfly/react-icons"
+import { PlusCircleIcon } from "@patternfly/react-icons"
 
-import Accessors from "../../components/Accessors"
-import LogSlider from "../../components/LogSlider"
+import HelpButton from "../../components/HelpButton"
+import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
 import RecalculateModal from "../alerting/RecalculateModal"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
 import CalculationLogModal from "./CalculationLogModal"
 import { subscriptions as subscriptionsSelector } from "./selectors"
+import { updateFingerprint } from "./actions"
 import { TabFunctionsRef } from "../../components/SavedTabs"
+import { Test } from "./reducers"
+import VariableForm from "./VariableForm"
 
 type TestSelectModalProps = {
     isOpen: boolean
@@ -191,263 +181,8 @@ const RenameGroupModal = (props: RenameGroupModalProps) => {
     )
 }
 
-type EnumSelectProps = {
-    options: any
-    selected: string | undefined
-    onSelect(option: string): void
-}
-
-function EnumSelect(props: EnumSelectProps) {
-    const [isOpen, setOpen] = useState(false)
-    return (
-        <Select
-            isOpen={isOpen}
-            onToggle={setOpen}
-            placeholderText="Please select..."
-            selections={props.selected}
-            onSelect={(_, value) => {
-                props.onSelect(value as string)
-                setOpen(false)
-            }}
-        >
-            {Object.entries(props.options).map(([name, title]) => (
-                <SelectOption key={name} value={name}>
-                    {title as string}
-                </SelectOption>
-            ))}
-        </Select>
-    )
-}
-
-type VariableFormProps = {
-    variable: Variable
-    isTester: boolean
-    groups: string[]
-    setGroups(gs: string[]): void
-    onChange(v: Variable): void
-    models: ChangeDetectionModelConfig[]
-}
-
-function checkVariable(v: Variable) {
-    if (!v.accessors || v.accessors.length === 0) {
-        return "Variable requires at least one accessor"
-    } else if (v.accessors.split(";").length > 1 && !v.calculation) {
-        return "Variable defines multiple accessors but does not define any function to combine these."
-    } else if (v.accessors.endsWith("[]") && !v.calculation) {
-        return "Variable fetches all matches but does not define any function to combine these."
-    }
-}
-
-const VariableForm = (props: VariableFormProps) => {
-    const [groupOpen, setGroupOpen] = useState(false)
-    const [changeDetection, setChangeDetection] = useState<ChangeDetection>()
-    const [adding, setAdding] = useState(false)
-    const [newModel, setNewModel] = useState<string>()
-    useEffect(() => {
-        if (!changeDetection && !adding) {
-            const rds = props.variable.changeDetection
-            setChangeDetection(rds.length > 0 ? rds[0] : undefined)
-        }
-    }, [props.variable, props.variable.changeDetection, changeDetection])
-    const usedModel = props.models.find(m => m.name === changeDetection?.model)
-    const update = (rd: ChangeDetection) => {
-        const newArray = [...props.variable.changeDetection]
-        const index = newArray.findIndex(o => o.id === rd.id)
-        if (index < 0) {
-            newArray.push(rd)
-        } else {
-            newArray[index] = rd
-        }
-        props.onChange({ ...props.variable, changeDetection: newArray })
-        setChangeDetection(rd)
-    }
-    return (
-        <Form id={`variable-${props.variable.id}`} isHorizontal={true}>
-            <FormGroup label="Name" fieldId="name">
-                <TextInput
-                    value={props.variable.name || ""}
-                    id="name"
-                    onChange={value => props.onChange({ ...props.variable, name: value })}
-                    validated={!!props.variable.name && props.variable.name.trim() !== "" ? "default" : "error"}
-                    isReadOnly={!props.isTester}
-                />
-            </FormGroup>
-            <FormGroup label="Group" fieldId="group">
-                <Select
-                    variant="typeahead"
-                    typeAheadAriaLabel="Select group"
-                    onToggle={setGroupOpen}
-                    onSelect={(e, group, isPlaceholder) => {
-                        setGroupOpen(false)
-                        props.onChange({ ...props.variable, group: isPlaceholder ? undefined : group.toString() })
-                    }}
-                    onClear={() => {
-                        props.onChange({ ...props.variable, group: undefined })
-                    }}
-                    selections={props.variable.group}
-                    isOpen={groupOpen}
-                    placeholderText="-none-"
-                    isCreatable={true}
-                    onCreateOption={option => {
-                        props.setGroups([...props.groups, option].sort())
-                    }}
-                >
-                    {props.groups.map((g, index) => (
-                        <SelectOption key={index} value={g} />
-                    ))}
-                </Select>
-            </FormGroup>
-            <FormGroup label="Accessors" fieldId="accessor">
-                <Accessors
-                    value={
-                        (props.variable.accessors &&
-                            props.variable.accessors
-                                .split(/[,;] */)
-                                .map(a => a.trim())
-                                .filter(a => a.length !== 0)) ||
-                        []
-                    }
-                    error={checkVariable(props.variable)}
-                    onChange={value => {
-                        props.onChange({ ...props.variable, accessors: value.join(";") })
-                    }}
-                    isReadOnly={!props.isTester}
-                />
-            </FormGroup>
-            <FormGroup label="Calculation" fieldId="calculation">
-                <OptionalFunction
-                    func={props.variable.calculation === undefined ? undefined : props.variable.calculation.toString()}
-                    onChange={value => props.onChange({ ...props.variable, calculation: value })}
-                    defaultFunc="value => value"
-                    addText="Add calculation function..."
-                    undefinedText="No calculation function"
-                    readOnly={!props.isTester}
-                />
-            </FormGroup>
-            <Title headingLevel="h3">Conditions</Title>
-            <Tabs
-                activeKey={changeDetection ? props.variable.changeDetection.indexOf(changeDetection) : "__add"}
-                onSelect={(_, index) => {
-                    if (index === "__add") {
-                        setChangeDetection(undefined)
-                        setAdding(true)
-                    } else {
-                        setChangeDetection(props.variable.changeDetection[index as number])
-                        setAdding(false)
-                    }
-                }}
-            >
-                {props.variable.changeDetection.map((rd, i) => (
-                    <Tab
-                        key={i}
-                        eventKey={i}
-                        title={(props.models.find(m => m.name === rd.model)?.title || rd.model) + ` (${i + 1})`}
-                    />
-                ))}
-                {props.isTester && (
-                    <Tab
-                        eventKey="__add"
-                        title={
-                            <>
-                                <TabTitleIcon>
-                                    <AddCircleOIcon />
-                                </TabTitleIcon>
-                                <TabTitleText>Add...</TabTitleText>
-                            </>
-                        }
-                    >
-                        <ActionList>
-                            <EnumSelect
-                                options={props.models.reduce((acc, m) => {
-                                    acc[m.name] = m.title
-                                    return acc
-                                }, {} as any)}
-                                selected={newModel}
-                                onSelect={setNewModel}
-                            />
-                            <Button
-                                isDisabled={!newModel}
-                                onClick={() => {
-                                    update({
-                                        id: Math.min(-1, ...props.variable.changeDetection.map(rd => rd.id - 1)),
-                                        model: newModel || "",
-                                        config: JSON.parse(
-                                            JSON.stringify(props.models.find(m => m.name === newModel)?.defaults)
-                                        ),
-                                    })
-                                    setNewModel(undefined)
-                                }}
-                            >
-                                Add new condition
-                            </Button>
-                        </ActionList>
-                    </Tab>
-                )}
-            </Tabs>
-
-            {usedModel && changeDetection && (
-                <>
-                    <Hint>
-                        <HintTitle>{usedModel.title}</HintTitle>
-                        <HintBody>{usedModel.description}</HintBody>
-                    </Hint>
-                    {props.isTester && (
-                        <div style={{ textAlign: "right" }}>
-                            <Button
-                                variant="danger"
-                                onClick={() => {
-                                    const newArray = props.variable.changeDetection.filter(rd => rd !== changeDetection)
-                                    props.onChange({ ...props.variable, changeDetection: newArray })
-                                    setChangeDetection(newArray.length > 0 ? newArray[0] : undefined)
-                                }}
-                            >
-                                Delete condition
-                            </Button>
-                        </div>
-                    )}
-                    {usedModel.ui.map(comp => (
-                        <FormGroup fieldId={comp.name} key={comp.name} label={comp.title} helperText={comp.description}>
-                            {comp.type == "LOG_SLIDER" && (
-                                <LogSlider
-                                    value={
-                                        changeDetection.config[comp.name] *
-                                        ((comp.properties as LogSliderProperties).scale || 1)
-                                    }
-                                    onChange={value => {
-                                        const scale = (comp.properties as LogSliderProperties).scale
-                                        const copy = { ...changeDetection }
-                                        copy.config[comp.name] = scale ? value / scale : value
-                                        update(copy)
-                                    }}
-                                    isDisabled={!props.isTester}
-                                    min={(comp.properties as LogSliderProperties).min}
-                                    max={(comp.properties as LogSliderProperties).max}
-                                    unit={(comp.properties as LogSliderProperties).unit}
-                                />
-                            )}
-                            {comp.type == "ENUM" && (
-                                <EnumSelect
-                                    options={(comp.properties as EnumProperties).options}
-                                    selected={changeDetection.config[comp.name]}
-                                    onSelect={value => {
-                                        const copy = { ...changeDetection }
-                                        copy.config[comp.name] = value
-                                        update(copy)
-                                    }}
-                                />
-                            )}
-                        </FormGroup>
-                    ))}
-                </>
-            )}
-        </Form>
-    )
-}
-
-type VariablesProps = {
-    testName: string
-    testId: number
-    testOwner?: string
+type ChangeDetectionFormProps = {
+    test: Test | undefined
     funcsRef: TabFunctionsRef
     onModified(modified: boolean): void
 }
@@ -499,7 +234,9 @@ function groupNames(vars: Variable[]) {
     ].sort()
 }
 
-export default function Variables({ testName, testId, testOwner, onModified, funcsRef }: VariablesProps) {
+export default function ChangeDetectionForm({ test, onModified, funcsRef }: ChangeDetectionFormProps) {
+    const [labels, setLabels] = useState<string[]>([])
+    const [filter, setFilter] = useState<string>()
     const [variables, setVariables] = useState<Variable[]>([])
     const [groups, setGroups] = useState<string[]>([])
     const [selectedVariable, setSelectedVariable] = useState<Variable>()
@@ -511,10 +248,12 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
     // dummy variable to cause reloading of variables
     const [reload, setReload] = useState(0)
     useEffect(() => {
-        if (!testId) {
+        if (!test?.id) {
             return
         }
-        api.fetchVariables(testId).then(
+        setLabels(test.fingerprintLabels)
+        setFilter(test.fingerprintFilter || undefined)
+        api.fetchVariables(test.id).then(
             response => {
                 response.forEach((v: Variable) => {
                     // convert nulls to undefined
@@ -528,7 +267,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             },
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch change detection variables", error))
         )
-    }, [testId, reload, dispatch])
+    }, [test, reload, dispatch])
     useEffect(() => {
         api.models().then(setChangeDetectionModels, error =>
             dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
@@ -537,29 +276,35 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
         )
     }, [])
-    const isTester = useTester(testOwner)
+    const isTester = useTester(test?.owner || "__no_owner__")
     funcsRef.current = {
         save: () => {
             variables.forEach(v => {
                 if (v.calculation === "") {
-                    v.calculation = undefined
+                    v.calculation = null
                 }
             })
-            return api
-                .updateVariables(testId, variables)
-                .catch(error => {
-                    dispatch(alertAction("VARIABLE_UPDATE", "Failed to update change detection variables", error))
-                    return Promise.reject()
-                })
-                .then(_ => {
-                    return new Promise(resolve => {
-                        // we have to pass this using function, otherwise it would call the resolve function
-                        setRecalcConfirm(() => resolve)
+            if (!test) {
+                return Promise.reject("No test!")
+            }
+            return Promise.all([
+                dispatch(updateFingerprint(test?.id || -1, labels, filter || null)),
+                api
+                    .updateVariables(test.id, variables)
+                    .catch(error => {
+                        dispatch(alertAction("VARIABLE_UPDATE", "Failed to update change detection variables", error))
+                        return Promise.reject()
                     })
-                })
-                .then(_ => {
-                    Promise.resolve()
-                })
+                    .then(_ => {
+                        return new Promise(resolve => {
+                            // we have to pass this using function, otherwise it would call the resolve function
+                            setRecalcConfirm(() => resolve)
+                        })
+                    })
+                    .then(_ => {
+                        Promise.resolve()
+                    }),
+            ])
         },
         reset: () => {
             setVariables([])
@@ -572,10 +317,11 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
     const addVariable = () => {
         const newVar = {
             id: Math.min(-1, ...variables.map(v => v.id - 1)),
-            testid: testId,
+            testid: test?.id || -1,
             name: "",
             order: variables.length,
-            accessors: "",
+            labels: [],
+            calculation: null,
             changeDetection: JSON.parse(JSON.stringify(defaultChangeDetectionConfigs)) as ChangeDetection[],
         }
         setVariables([...variables, newVar])
@@ -585,8 +331,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
 
     const [renameGroupOpen, setRenameGroupOpen] = useState(false)
     const [isLogOpen, setLogOpen] = useState(false)
-    const subscriptions = useSelector(subscriptionsSelector(testId))?.filter(s => !s.startsWith("!"))
-    const hasSubscription = subscriptions && subscriptions.length > 0
+    const subscriptions = useSelector(subscriptionsSelector(test?.id || -1))?.filter(s => !s.startsWith("!"))
 
     const history = useHistory()
     useEffect(() => {
@@ -615,7 +360,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
         return grouped
     }, [variables])
 
-    if (!variables) {
+    if (!variables || !test) {
         return (
             <Bullseye>
                 <Spinner />
@@ -624,6 +369,70 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
     }
     return (
         <>
+            <Form isHorizontal>
+                <FormGroup
+                    fieldId="fingerprintLabels"
+                    label="Fingerprint labels"
+                    labelIcon={
+                        <Popover
+                            headerContent="Labels used to extract fingerprint"
+                            bodyContent={
+                                <div>
+                                    Set of labels that identifies a unique configuration of the test. Datasets will be
+                                    categorized according to the values in this fingerprint and each combination will
+                                    produce its own series of results that are subject to change detection.
+                                </div>
+                            }
+                        >
+                            <HelpButton />
+                        </Popover>
+                    }
+                >
+                    <Labels
+                        labels={labels}
+                        onChange={labels => {
+                            setLabels(labels)
+                            onModified(true)
+                        }}
+                        isReadOnly={!isTester}
+                        defaultMetrics={false}
+                        defaultFiltering={true}
+                    />
+                </FormGroup>
+                <FormGroup
+                    fieldId="fingerprintFilter"
+                    label="Fingerprint filter"
+                    labelIcon={
+                        <Popover
+                            headerContent="Labels used to extract fingerprint"
+                            bodyContent={
+                                <div>
+                                    This function will receive the label value or object with properties matching labels
+                                    as its sole argument. If the result of this function is truthy the dataset will be
+                                    subject to change detection; otherwise it will be ignored.
+                                    <br />
+                                    If this function is not defined all fingerprints are allowed to run change
+                                    detection.
+                                </div>
+                            }
+                        >
+                            <HelpButton />
+                        </Popover>
+                    }
+                >
+                    <OptionalFunction
+                        func={filter}
+                        onChange={func => {
+                            setFilter(func)
+                            onModified(true)
+                        }}
+                        readOnly={!isTester}
+                        defaultFunc={"value => value"}
+                        undefinedText="No fingerprint filter"
+                        addText="Add fingerprint filter"
+                    />
+                </FormGroup>
+            </Form>
             <div
                 style={{
                     marginTop: "16px",
@@ -636,7 +445,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                 <Title headingLevel="h3">Variables</Title>
                 <Actions
                     isTester={isTester}
-                    testName={testName}
+                    testName={test.name}
                     canRename={!groups || groups.length === 0}
                     onCopy={() => setCopyOpen(true)}
                     onRenameGroup={() => setRenameGroupOpen(true)}
@@ -644,16 +453,20 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                     onShowLog={() => setLogOpen(true)}
                 />
             </div>
-            {isTester && !hasSubscription && !ignoreNoSubscriptions && variables.length > 0 && (
-                <Alert
-                    variant="warning"
-                    title="This test has no subscriptions"
-                    actionClose={<AlertActionCloseButton onClose={() => setIgnoreNoSubscriptions(true)} />}
-                >
-                    This test is configured to run change detection but nobody is listening to change notifications.
-                    Please configure interested parties in the Subscriptions tab.
-                </Alert>
-            )}
+            {isTester &&
+                subscriptions !== undefined &&
+                subscriptions.length == 0 &&
+                !ignoreNoSubscriptions &&
+                variables.length > 0 && (
+                    <Alert
+                        variant="warning"
+                        title="This test has no subscriptions"
+                        actionClose={<AlertActionCloseButton onClose={() => setIgnoreNoSubscriptions(true)} />}
+                    >
+                        This test is configured to run change detection but nobody is listening to change notifications.
+                        Please configure interested parties in the Subscriptions tab.
+                    </Alert>
+                )}
             <RenameGroupModal
                 isOpen={renameGroupOpen}
                 groups={groups}
@@ -677,7 +490,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                     setRecalcConfirm(undefined)
                 }}
                 showLog={() => setLogOpen(true)}
-                testId={testId}
+                testId={test.id}
                 title="Proceed with recalculation"
                 recalculate="Recalculate"
                 cancel="Skip"
@@ -687,7 +500,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                 isOpen={recalculateOpen}
                 onClose={() => setRecalculateOpen(false)}
                 showLog={() => setLogOpen(true)}
-                testId={testId}
+                testId={test.id}
                 title="Confirm recalculation"
                 recalculate="Recalculate"
                 cancel="Cancel"
@@ -705,7 +518,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
                                 ...copied.map((v: Variable) => ({
                                     ...v,
                                     id: -1,
-                                    testid: testId,
+                                    testid: test.id,
                                 })),
                             ])
                         },
@@ -717,7 +530,7 @@ export default function Variables({ testName, testId, testOwner, onModified, fun
             <CalculationLogModal
                 isOpen={isLogOpen}
                 onClose={() => setLogOpen(false)}
-                testId={testId}
+                testId={test.id}
                 source="variables"
             />
             <Split hasGutter>

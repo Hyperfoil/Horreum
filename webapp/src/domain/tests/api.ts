@@ -23,6 +23,7 @@ const endPoints = {
         `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
     tags: (testId: number, trashed: boolean) => `${base}/${testId}/tags?trashed=${trashed}`,
     transformers: (testId: number) => `${base}/${testId}/transformers`,
+    fingerprint: (testId: number) => `${base}/${testId}/fingerprint`,
 }
 
 export const updateView = (testId: number, view: View) => {
@@ -85,4 +86,8 @@ export const fetchTags = (testId: number, trashed: boolean) => {
 
 export function updateTransformers(testId: number, transformerIds: number[]) {
     return fetchApi(endPoints.transformers(testId), transformerIds, "post")
+}
+
+export function updateFingerprint(testId: number, labels: string[], filter: string | null) {
+    return fetchApi(endPoints.fingerprint(testId), { labels, filter }, "post")
 }

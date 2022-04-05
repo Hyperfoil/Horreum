@@ -154,11 +154,11 @@ export default function TestDatasets() {
             .finally(() => setLoading(false))
     }, [dispatch, testId, pagination, teams])
     useEffect(() => {
-        document.title = (test ? test.name : "Loading...") + " | Horreum"
+        document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
     const columns = useMemo(() => {
         const allColumns = [...staticColumns]
-        const components = (test && test.defaultView?.components) || []
+        const components = test?.defaultView?.components || []
         components.forEach(vc => {
             allColumns.push({
                 Header: vc.headerName,
@@ -182,7 +182,7 @@ export default function TestDatasets() {
                     >
                         <ToolbarGroup style={{ flexGrow: 100 }}>
                             <ToolbarItem>
-                                <Title headingLevel="h2">Test: {`${(test && test.name) || testId}`}</Title>
+                                <Title headingLevel="h2">Test: {`${test?.name || testId}`}</Title>
                             </ToolbarItem>
                             <ToolbarItem>
                                 <NavLink className="pf-c-button pf-m-primary" to={`/test/${testId}`}>

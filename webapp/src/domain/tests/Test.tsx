@@ -16,7 +16,7 @@ import { dispatchInfo } from "../../alerts"
 import { noop } from "../../utils"
 import General from "./General"
 import Views from "./Views"
-import Variables from "./Variables"
+import ChangeDetectionForm from "./ChangeDetectionForm"
 import Hooks from "./Hooks"
 import Access from "./Access"
 import Subscriptions from "./Subscriptions"
@@ -130,10 +130,8 @@ export default function Test() {
                                 onReset={resetFunc(variablesFuncsRef)}
                                 isModified={() => modified}
                             >
-                                <Variables
-                                    testId={testId}
-                                    testName={(test && test.name) || ""}
-                                    testOwner={test ? test.owner : undefined}
+                                <ChangeDetectionForm
+                                    test={test}
                                     onModified={setModified}
                                     funcsRef={variablesFuncsRef}
                                 />

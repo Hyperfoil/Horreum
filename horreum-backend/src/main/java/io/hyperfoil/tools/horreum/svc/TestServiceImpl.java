@@ -38,6 +38,8 @@ import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 @WithRoles
 public class TestServiceImpl implements TestService {
@@ -291,10 +293,7 @@ public class TestServiceImpl implements TestService {
       if (token.hasUpload() && !token.hasRead()) {
          throw ServiceException.badRequest("Upload permission requires read permission as well.");
       }
-      Test test = Test.findById(testId);
-      if (test == null) {
-         throw ServiceException.notFound("Test not found");
-      }
+      Test test = getTestForUpdate(testId);
       token.test = test;
       test.tokens.add(token);
       test.persistAndFlush();
@@ -313,10 +312,7 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @Transactional
    public void dropToken(Integer testId, Integer tokenId) {
-      Test test = Test.findById(testId);
-      if (test == null) {
-         throw ServiceException.notFound("Test not found.");
-      }
+      Test test = getTestForUpdate(testId);
       test.tokens.removeIf(t -> Objects.equals(t.id, tokenId));
       test.persist();
    }
@@ -345,10 +341,7 @@ public class TestServiceImpl implements TestService {
          throw ServiceException.badRequest("Missing test id");
       }
       try {
-         Test test = Test.findById(testId);
-         if (test == null) {
-            throw ServiceException.notFound("Test not found");
-         }
+         Test test = getTestForUpdate(testId);
          view.ensureLinked();
          view.test = test;
          if (test.defaultView != null) {
@@ -388,10 +381,7 @@ public class TestServiceImpl implements TestService {
       if ("*".equals(folder)) {
          throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
       }
-      Test test = Test.findById(id);
-      if (test == null) {
-         throw ServiceException.notFound("Cannot find test id " + id);
-      }
+      Test test = getTestForUpdate(id);
       test.folder = normalizeFolderName(folder);
       test.persist();
    }
@@ -403,10 +393,7 @@ public class TestServiceImpl implements TestService {
       if (testId == null || testId <= 0) {
          throw ServiceException.badRequest("Missing test id");
       }
-      Test test = Test.findById(testId);
-      if (test == null) {
-         throw ServiceException.notFound("Test not found.");
-      }
+      Test test = getTestForUpdate(testId);
       hook.target = testId;
 
       if (hook.id == null) {
@@ -449,12 +436,30 @@ public class TestServiceImpl implements TestService {
       if (transformerIds == null) {
          throw ServiceException.badRequest("Null transformer IDs");
       }
-      Test test = Test.findById(testId);
-      if (test == null) {
-         throw ServiceException.notFound("Cannot load test " + testId);
-      }
+      Test test = getTestForUpdate(testId);
       test.transformers.clear();
       test.transformers.addAll(Transformer.list("id IN ?1", transformerIds));
       test.persistAndFlush();
+   }
+
+   @WithRoles
+   @Transactional
+   @Override
+   public void updateFingerprint(int testId, FingerprintUpdate update) {
+      Test test = getTestForUpdate(testId);
+      test.fingerprintLabels = update.labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll);
+      test.fingerprintFilter = update.filter;
+      test.persistAndFlush();
+   }
+
+   private Test getTestForUpdate(int testId) {
+      Test test = Test.findById(testId);
+      if (test == null) {
+         throw ServiceException.notFound("Test " + testId + " was not found");
+      }
+      if (!identity.hasRole(test.owner) || !identity.hasRole(test.owner.substring(0, test.owner.length() - 4) + "tester")) {
+         throw ServiceException.forbidden("This user is not an owner/tester for " + test.owner);
+      }
+      return test;
    }
 }

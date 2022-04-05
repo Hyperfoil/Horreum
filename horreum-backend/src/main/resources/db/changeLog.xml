@@ -2856,6 +2856,26 @@
             CREATE CONSTRAINT TRIGGER recalc_dataset_view AFTER INSERT ON view_recalc_queue DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION recalc_dataset_view();
         </sql>
     </changeSet>
+
+    <changeSet id="66" author="rvansa">
+        <addColumn tableName="test">
+            <column name="fingerprint_labels" type="jsonb" />
+        </addColumn>
+        <addColumn tableName="test">
+            <column name="fingerprint_filter" type="text" />
+        </addColumn>
+
+        <dropColumn tableName="variable" columnName="accessors"/>
+        <addColumn tableName="variable">
+            <column name="labels" type="jsonb" defaultValue="[]">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>
+            UPDATE variable SET labels = jsonb_build_array(name);
+        </sql>
+        <dropDefaultValue tableName="variable" columnName="labels"/>
+    </changeSet>
 </databaseChangeLog>
 
 

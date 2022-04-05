@@ -21,7 +21,10 @@ import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.validation.constraints.NotNull;
 
+import org.hibernate.annotations.Type;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity(name="test")
 @RegisterForReflection
@@ -61,6 +64,13 @@ public class Test extends PanacheEntityBase {
 
    @JsonInclude(JsonInclude.Include.NON_NULL)
    public String tagsCalculation;
+
+   @Column(name = "fingerprint_labels")
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public JsonNode fingerprintLabels;
+
+   @Column(name = "fingerprint_filter")
+   public String fingerprintFilter;
 
    @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE }, orphanRemoval = true)
    public View defaultView;

@@ -172,11 +172,11 @@ export default function TestRuns() {
         dispatch(byTest(testId, pagination, showTrashed, tags?.toString() || "")).catch(noop)
     }, [dispatch, showTrashed, page, perPage, sort, direction, tags, pagination, testId])
     useEffect(() => {
-        document.title = (test ? test.name : "Loading...") + " | Horreum"
+        document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
     const isLoading = useSelector(selectors.isLoading)
 
-    const compareUrl = test ? test?.compareUrl : undefined
+    const compareUrl = test?.compareUrl
     const [actualCompareUrl, compareError] = useMemo(() => {
         if (compareUrl && typeof compareUrl === "function") {
             try {

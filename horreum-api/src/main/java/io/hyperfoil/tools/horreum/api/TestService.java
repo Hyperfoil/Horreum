@@ -104,6 +104,10 @@ public interface TestService {
    @Path("{id}/transformers")
    void updateTransformers(@PathParam("id") Integer testId, List<Integer> transformerIds);
 
+   @POST
+   @Path("{id}/fingerprint")
+   void updateFingerprint(@PathParam("id") int testId, FingerprintUpdate update);
+
    class TestListing {
       public List<TestSummary> tests;
    }
@@ -118,5 +122,10 @@ public interface TestService {
       public Number runs;
       public String owner;
       public int access;
+   }
+
+   class FingerprintUpdate {
+      public List<String> labels;
+      public String filter;
    }
 }
