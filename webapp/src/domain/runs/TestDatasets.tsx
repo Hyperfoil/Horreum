@@ -21,7 +21,7 @@ import { Duration } from "luxon"
 import { toEpochMillis, interleave, noop } from "../../utils"
 
 import { dispatchError } from "../../alerts"
-import { teamsSelector, teamToName } from "../../auth"
+import { teamsSelector, teamToName, tokenSelector } from "../../auth"
 
 import { fetchTest } from "../tests/actions"
 import { get } from "../tests/selectors"
@@ -37,8 +37,8 @@ import {
     UseSortByColumnOptions,
 } from "react-table"
 import { listTestDatasets, Dataset, DatasetList } from "./api"
-import { Description, ExecutionTime } from "./components"
-import { TestDispatch } from "../tests/reducers"
+import { Description, ExecutionTime, renderCell } from "./components"
+import { Test, TestDispatch } from "../tests/reducers"
 import SchemaLink from "../schemas/SchemaLink"
 
 type C = CellProps<Dataset> &
@@ -139,9 +139,10 @@ export default function TestDatasets() {
     const [loading, setLoading] = useState(false)
     const [datasets, setDatasets] = useState<DatasetList>()
     const teams = useSelector(teamsSelector)
+    const token = useSelector(tokenSelector)
     useEffect(() => {
         dispatch(fetchTest(testId)).catch(noop)
-    }, [dispatch, testId, teams])
+    }, [dispatch, testId, teams, token])
     useEffect(() => {
         setLoading(true)
         listTestDatasets(testId, pagination)
@@ -151,10 +152,26 @@ export default function TestDatasets() {
                 )
             )
             .finally(() => setLoading(false))
-    }, [dispatch, testId, pagination])
+    }, [dispatch, testId, pagination, teams])
     useEffect(() => {
         document.title = (test ? test.name : "Loading...") + " | Horreum"
     }, [test])
+    const columns = useMemo(() => {
+        const allColumns = [...staticColumns]
+        const components = (test && test.defaultView?.components) || []
+        components.forEach(vc => {
+            allColumns.push({
+                Header: vc.headerName,
+                accessor: (dataset: Dataset) => dataset.view && dataset.view[vc.id],
+                // In general case we would have to calculate the final sortable cell value
+                // in database, or fetch all runs and sort in server doing the rendering
+                disableSortBy: (!!vc.render && vc.render !== "") || vc.labels.length > 1,
+                id: test ? "view_data:" + vc.id + ":" + vc.labels[0] : undefined,
+                Cell: renderCell(vc.render, vc.labels.length == 1 ? vc.labels[0] : undefined, token),
+            })
+        })
+        return allColumns
+    }, [test, token])
     return (
         <PageSection>
             <Card>
@@ -187,7 +204,7 @@ export default function TestDatasets() {
                 </CardHeader>
                 <CardBody style={{ overflowX: "auto" }}>
                     <Table
-                        columns={staticColumns}
+                        columns={columns}
                         data={datasets?.datasets || []}
                         sortBy={[{ id: sort, desc: direction === "Descending" }]}
                         onSortBy={order => {

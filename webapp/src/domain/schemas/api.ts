@@ -21,6 +21,7 @@ const endPoints = {
     allTransformers: () => `${base}/allTransformers`,
     labels: (schemaId: number, labelId?: number) =>
         `${base}/${schemaId}/labels${labelId !== undefined ? "/" + labelId : ""}`,
+    allLabels: () => `${base}/allLabels`,
 }
 export const all = () => {
     return fetchApi(endPoints.base(), null, "get")
@@ -99,6 +100,10 @@ export function deleteLabel(label: Label) {
     return fetchApi(endPoints.labels(label.schemaId, label.id), null, "delete")
 }
 
+export function listAllLabels(): Promise<LabelInfo[]> {
+    return fetchApi(endPoints.allLabels(), null, "get")
+}
+
 export type ValidationResult = {
     valid: boolean
     reason: string
@@ -131,6 +136,17 @@ export interface Label {
     schemaId: number
     // temporary fields
     modified?: boolean
+}
+
+export interface SchemaDescriptor {
+    name: string
+    uri: string
+    id: number
+}
+
+export interface LabelInfo {
+    name: string
+    schemas: SchemaDescriptor[]
 }
 
 export interface AccessorLocation {

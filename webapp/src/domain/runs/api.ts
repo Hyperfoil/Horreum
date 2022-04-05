@@ -134,6 +134,7 @@ export interface Dataset {
     owner: string
     access: number
     schemas: string[]
+    view: any
 }
 
 export interface DatasetList {

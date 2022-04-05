@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.api;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -121,6 +122,11 @@ public interface SchemaService {
    void deleteLabel(@PathParam("schemaId") int schemaId, @PathParam("labelId") int labelId);
 
    @GET
+   @Path("allLabels")
+   @Produces(MediaType.APPLICATION_JSON)
+   Collection<LabelInfo> allLabels();
+
+   @GET
    @Path("allTransformers")
    @Produces(MediaType.APPLICATION_JSON)
    List<TransformerInfo> allTransformers();
@@ -198,5 +204,26 @@ public interface SchemaService {
       public String schemaName;
       public int transformerId;
       public String transformerName;
+   }
+
+   class SchemaDescriptor {
+      public int id;
+      public String name;
+      public String uri;
+
+      public SchemaDescriptor(int id, String name, String uri) {
+         this.id = id;
+         this.name = name;
+         this.uri = uri;
+      }
+   }
+
+   class LabelInfo {
+      public String name;
+      public List<SchemaDescriptor> schemas = new ArrayList<>();
+
+      public LabelInfo(String name) {
+         this.name = name;
+      }
    }
 }

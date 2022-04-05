@@ -2726,6 +2726,136 @@
     <changeSet id="63" author="rvansa">
         <addUniqueConstraint tableName="label" columnNames="name,schema_id"/>
     </changeSet>
+
+    <changeSet id="64" author="rvansa">
+        <addColumn tableName="viewcomponent">
+            <column name="labels" type="jsonb" />
+        </addColumn>
+        <sql>
+            UPDATE viewcomponent SET labels = jsonb_build_array(headername);
+
+            DROP TRIGGER vd_before_delete ON run_schemas;
+            DROP TRIGGER vd_after_insert ON run_schemas;
+            DROP TRIGGER vd_before_update ON schemaextractor;
+            DROP TRIGGER vd_before_delete ON schemaextractor;
+            DROP TRIGGER vd_after_update ON schemaextractor;
+            DROP TRIGGER vd_before_delete ON viewcomponent;
+            DROP TRIGGER vd_before_update ON viewcomponent;
+            DROP TRIGGER vd_after_update ON viewcomponent;
+
+            DROP FUNCTION vd_before_delete_run_func;
+            DROP FUNCTION vd_after_insert_run_func;
+            DROP FUNCTION vd_before_update_extractor_func;
+            DROP FUNCTION vd_before_delete_extractor_func;
+            DROP FUNCTION vd_after_update_extractor_func;
+            DROP FUNCTION vd_before_delete_vc_func;
+            DROP FUNCTION vd_before_update_vc_func;
+            DROP FUNCTION vd_after_update_vc_func;
+        </sql>
+        <addNotNullConstraint tableName="viewcomponent" columnName="labels"/>
+        <dropColumn tableName="viewcomponent" columnName="accessors"/>
+        <dropTable tableName="view_data"/>
+    </changeSet>
+
+    <changeSet id="65" author="rvansa">
+        <createTable tableName="dataset_view">
+            <column name="dataset_id" type="integer" />
+            <column name="view_id" type="integer" />
+            <column name="label_ids" type="int[]" />
+            <column name="value" type="jsonb" />
+        </createTable>
+        <addPrimaryKey tableName="dataset_view" columnNames="dataset_id,view_id"/>
+        <createTable tableName="view_recalc_queue">
+            <column name="dataset_id" type="integer">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="view_id" type="integer" />
+            <column name="roles" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE dataset_view TO "${quarkus.datasource.username}";
+            ALTER TABLE dataset_view ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY dsv_select ON dataset_view FOR SELECT
+                USING (exists(SELECT 1 FROM dataset WHERE id = dataset_id AND can_view2(access, owner)));
+            CREATE POLICY dsv_insert ON dataset_view FOR INSERT
+                WITH CHECK (has_role('horreum.system') OR exists(SELECT 1 FROM dataset WHERE id = dataset_id AND has_role2(owner, 'tester')));
+            CREATE POLICY dsv_delete ON dataset_view FOR DELETE
+                USING (has_role('horreum.system') OR exists(SELECT 1 FROM dataset WHERE id = dataset_id AND has_role2(owner, 'tester')));
+
+            <!-- As the view is calculated in the deferred trigger the horreum.userroles is already unset;
+                 we need to persist the permissions in the roles column but this must not be readable by others -->
+            GRANT INSERT, DELETE ON TABLE view_recalc_queue TO "${quarkus.datasource.username}";
+            GRANT SELECT (dataset_id, view_id) ON TABLE view_recalc_queue TO "${quarkus.datasource.username}";
+        </sql>
+
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION dsv_after_lv_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM dataset_view WHERE dataset_id = OLD.dataset_id;
+                INSERT INTO view_recalc_queue(dataset_id, roles) VALUES (OLD.dataset_id, current_setting('horreum.userroles', true)) ON CONFLICT DO NOTHING;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION dsv_after_lv_insert_func() RETURNS TRIGGER AS $$
+            BEGIN
+            INSERT INTO view_recalc_queue(dataset_id, roles) VALUES (NEW.dataset_id, current_setting('horreum.userroles', true)) ON CONFLICT DO NOTHING;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION dsv_after_vc_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH ds AS (
+                    DELETE FROM dataset_view WHERE view_id = OLD.view_id RETURNING dataset_id, view_id
+                ) INSERT INTO view_recalc_queue(dataset_id, view_id, roles) SELECT dataset_id, view_id, current_setting('horreum.userroles', true) FROM ds ON CONFLICT DO NOTHING;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION dsv_after_vc_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH ds AS (
+                    DELETE FROM dataset_view WHERE view_id = OLD.view_id OR view_id = NEW.view_id RETURNING dataset_id, view_id
+                ) INSERT INTO view_recalc_queue(dataset_id, view_id, roles) SELECT dataset_id, view_id, current_setting('horreum.userroles', true) FROM ds ON CONFLICT DO NOTHING;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            <!-- This is invoked as deferrd trigger and horreum.userroles is already unset
+                 - we can pass it to the trigger using a non-readable column -->
+            CREATE OR REPLACE FUNCTION recalc_dataset_view() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM set_config('horreum.userroles', NEW.roles, true);
+                WITH view_agg AS (
+                    SELECT vc.view_id, vc.id as vcid, array_agg(DISTINCT label.id) as label_ids, jsonb_object_agg(label.name, lv.value) as value FROM dataset_schemas ds
+                    JOIN label ON label.schema_id = ds.schema_id
+                    JOIN viewcomponent vc ON vc.labels ? label.name
+                    JOIN label_values lv ON lv.label_id = label.id
+                    WHERE ds.dataset_id = NEW.dataset_id AND (NEW.view_id IS NULL OR NEW.view_id = vc.view_id)
+                    GROUP BY vc.view_id, vcid
+                ) INSERT INTO dataset_view (dataset_id, view_id, label_ids, value)
+                    SELECT NEW.dataset_id, view_id, array_agg(DISTINCT label_id), jsonb_object_agg(vcid, value) FROM view_agg, unnest(label_ids) as label_id
+                    GROUP BY view_id;
+                DELETE FROM view_recalc_queue WHERE dataset_id = NEW.dataset_id AND (view_id IS NULL OR view_id = NEW.view_id);
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE TRIGGER dsv_after_delete AFTER DELETE ON label_values FOR EACH ROW EXECUTE FUNCTION dsv_after_lv_delete_func();
+            CREATE TRIGGER dsv_after_insert AFTER INSERT ON label_values FOR EACH ROW EXECUTE FUNCTION dsv_after_lv_insert_func();
+            CREATE TRIGGER dsv_after_delete AFTER DELETE ON viewcomponent FOR EACH ROW EXECUTE FUNCTION dsv_after_vc_delete_func();
+            CREATE TRIGGER dsv_after_update AFTER INSERT OR UPDATE OF labels ON viewcomponent FOR EACH ROW EXECUTE FUNCTION dsv_after_vc_update_func();
+            CREATE CONSTRAINT TRIGGER recalc_dataset_view AFTER INSERT ON view_recalc_queue DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION recalc_dataset_view();
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
 

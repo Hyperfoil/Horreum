@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -576,6 +577,24 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @WithRoles
    @Override
+   public Collection<LabelInfo> allLabels() {
+      @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(
+            "SELECT label.name, schema_id, schema.name as schemaName, schema.uri FROM label JOIN schema ON schema.id = label.schema_id").getResultList();
+      Map<String, LabelInfo> labels = new TreeMap<>();
+      for (Object[] row : rows) {
+         String name = (String) row[0];
+         int schemaId = (int) row[1];
+         String schemaName = (String) row[2];
+         String uri = (String) row[3];
+         LabelInfo info = labels.computeIfAbsent(name, LabelInfo::new);
+         info.schemas.add(new SchemaDescriptor(schemaId, schemaName, uri));
+      }
+      return labels.values();
+   }
+
+   @PermitAll
+   @WithRoles
+   @Override
    public List<TransformerInfo> allTransformers() {
       List<TransformerInfo> transformers = new ArrayList<>();
       @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(
@@ -609,7 +628,6 @@ public class SchemaServiceImpl implements SchemaService {
          int deleted = em.createNativeQuery("DELETE FROM schemaextractor WHERE id IN (SELECT se.id FROM schemaextractor se FULL OUTER JOIN (" +
                      "SELECT unnest(string_to_array(replace(tags, '[]', ''), ';')) FROM test UNION " +
                      "SELECT unnest(string_to_array(replace(accessors, '[]', ''), ';')) FROM variable UNION " +
-                     "SELECT unnest(string_to_array(replace(accessors, '[]', ''), ';')) FROM viewcomponent UNION " +
                      "SELECT unnest(string_to_array(replace(filteraccessors || ',' || categoryaccessors || ',' || seriesaccessors || ',' || labelaccessors, '[]', ''), ',')) FROM tablereportconfig UNION " +
                      "SELECT unnest(string_to_array(replace(accessors, '[]', ''), ',')) FROM reportcomponent" +
                ") AS a ON se.accessor = a.unnest WHERE (se.deleted OR se.deprecatedby_id IS NOT NULL) AND a.unnest IS NULL);").executeUpdate();

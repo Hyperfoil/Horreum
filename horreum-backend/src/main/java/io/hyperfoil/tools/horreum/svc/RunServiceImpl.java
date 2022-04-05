@@ -7,15 +7,12 @@ import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Run;
-import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
-import io.quarkus.panache.common.Sort;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
@@ -112,10 +109,20 @@ public class RunServiceImpl implements RunService {
             "JOIN label_extractors le ON ul.label_id = le.label_id " +
             "WHERE dataset.id = ?1" +
          ") SELECT lvalues.label_id, ul.name, function, (CASE WHEN ul.multi THEN jsonb_object_agg(lvalues.name, lvalues.value) " +
-            "ELSE jsonb_agg(lvalues.value) -> 0 END)#>>'{}' AS value FROM label " +
+            "ELSE jsonb_agg(lvalues.value) -> 0 END)::::text AS value FROM label " +
             "JOIN lvalues ON lvalues.label_id = label.id " +
             "JOIN used_labels ul ON label.id = ul.label_id " +
             "GROUP BY lvalues.label_id, ul.name, function, ul.multi";
+   private static final String LIST_TEST_DATASETS =
+         "WITH schema_agg AS (" +
+            "SELECT dataset_id, jsonb_agg(uri) as schemas FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id " +
+            "WHERE testid = ?1 GROUP BY dataset_id" +
+         ") SELECT ds.id, ds.runid, ds.ordinal, ds.testid, test.name, ds.description, ds.start, ds.stop, ds.owner, ds.access, " +
+               "dv.value::::text as view, schema_agg.schemas::::text as schemas " +
+         "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
+         "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
+         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id " +
+         "WHERE testid = ?1";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -790,14 +797,11 @@ public class RunServiceImpl implements RunService {
                                        Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
             .append("    SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') AS schemas, rs.runid FROM run_schemas rs GROUP BY rs.runid")
-            .append("), view_agg AS (")
-            .append("    SELECT jsonb_object_agg(coalesce(vd.vcid, 0), vd.object) AS view, vd.runid FROM view_data vd GROUP BY vd.runid")
             .append("), dataset_agg AS (")
             .append("    SELECT runid, jsonb_agg(id ORDER BY id)::::text as datasets FROM dataset WHERE testid = ?1 GROUP BY runid")
-            .append(") SELECT run.id, run.start, run.stop, run.access, run.owner, schema_agg.schemas::::text AS schemas, view_agg.view#>>'{}' AS view, ")
+            .append(") SELECT run.id, run.start, run.stop, run.access, run.owner, schema_agg.schemas::::text AS schemas, ")
             .append("run.trashed, run.description, run_tags.tags::::text, COALESCE(dataset_agg.datasets, '[]') FROM run ")
             .append("LEFT JOIN schema_agg ON schema_agg.runid = run.id ")
-            .append("LEFT JOIN view_agg ON view_agg.runid = run.id ")
             .append("LEFT JOIN run_tags ON run_tags.runid = run.id ")
             .append("LEFT JOIN dataset_agg ON dataset_agg.runid = run.id ")
             .append("WHERE run.testid = ?1 ");
@@ -808,18 +812,7 @@ public class RunServiceImpl implements RunService {
       if (tagsMap != null) {
          Tags.addTagQuery(tagsMap, sql, 2);
       }
-      if (sort != null && sort.startsWith("view_data:")) {
-         String accessor = sort.substring(sort.indexOf(':', 10) + 1);
-         sql.append(" ORDER BY");
-         // TODO: use view ID in the sort format rather than wildcards below
-         // prefer numeric sort
-         sql.append(" to_double(jsonb_path_query_first(view_agg.view, '$.*.").append(accessor).append("')#>>'{}')");
-         Util.addDirection(sql, direction);
-         sql.append(", jsonb_path_query_first(view_agg.view, '$.*.").append(accessor).append("')#>>'{}'");
-         Util.addDirection(sql, direction);
-      } else {
-         Util.addOrderBy(sql, sort, direction);
-      }
+      Util.addOrderBy(sql, sort, direction);
       Util.addLimitOffset(sql, limit, page);
       Test test = Test.find("id", testId).firstResult();
       if (test == null) {
@@ -832,39 +825,6 @@ public class RunServiceImpl implements RunService {
       List<Object[]> resultList = query.getResultList();
       List<TestRunSummary> runs = new ArrayList<>();
       for (Object[] row : resultList) {
-         String viewString = (String) row[6];
-         JsonNode unorderedView = viewString == null ? Util.EMPTY_OBJECT : Util.toJsonNode(viewString);
-         ArrayNode view = JsonNodeFactory.instance.arrayNode();
-         if (test.defaultView != null) {
-            for (ViewComponent c : test.defaultView.components) {
-               JsonNode componentData = unorderedView.get(String.valueOf(c.id));
-               String[] accessors = c.accessors();
-               if (componentData == null) {
-                  if (accessors.length == 1) {
-                     view.addNull();
-                  } else {
-                     ObjectNode builder = view.addObject();
-                     for (String accessor: accessors) {
-                        if (SchemaExtractor.isArray(accessor)) {
-                           builder.set(SchemaExtractor.arrayName(accessor), JsonNodeFactory.instance.nullNode());
-                        } else {
-                           builder.set(accessor, JsonNodeFactory.instance.nullNode());
-                        }
-                     }
-                  }
-               } else {
-                  if (accessors.length == 1) {
-                     String accessor = accessors[0];
-                     if (SchemaExtractor.isArray(accessors[0])) {
-                        accessor = SchemaExtractor.arrayName(accessor);
-                     }
-                     view.add(componentData.get(accessor));
-                  } else {
-                     view.add(componentData);
-                  }
-               }
-            }
-         }
          TestRunSummary run = new TestRunSummary();
          run.id = (int) row[0];
          run.start = ((Timestamp) row[1]).getTime();
@@ -873,11 +833,10 @@ public class RunServiceImpl implements RunService {
          run.access = (int) row[3];
          run.owner = (String) row[4];
          run.schema = Util.toJsonNode((String) row[5]);
-         run.view = view;
-         run.trashed = (boolean) row[7];
-         run.description = (String) row[8];
-         run.tags = Util.toJsonNode((String) row[9]);
-         run.datasets = (ArrayNode) Util.toJsonNode((String) row[10]);
+         run.trashed = (boolean) row[6];
+         run.description = (String) row[7];
+         run.tags = Util.toJsonNode((String) row[8]);
+         run.datasets = (ArrayNode) Util.toJsonNode((String) row[9]);
          runs.add(run);
       }
       TestRunsSummary summary = new TestRunsSummary();
@@ -1018,7 +977,12 @@ public class RunServiceImpl implements RunService {
          dataSet.description = run.description;
          dataSet.testid = run.testid;
          dataSet.run = run;
-         dataSet.data = run.data;
+         // FIXME: quick and dirty
+         if (run.data.isArray()) {
+            dataSet.data = run.data;
+         } else {
+            dataSet.data = JsonNodeFactory.instance.arrayNode().add(run.data);
+         }
          dataSet.owner = run.owner;
          dataSet.access = run.access;
          dataSet.persist();
@@ -1045,12 +1009,23 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @Override
    public DatasetList listTestDatasets(int testId, Integer limit, Integer page, String sort, String direction) {
-      StringBuilder sql = new StringBuilder("SELECT ds.id, ds.runid, ds.ordinal, ds.testid, test.name, ")
-         .append("ds.description, ds.start, ds.stop, ds.owner, ds.access, ")
-         .append("jsonb_concat(jsonb_path_query_array(ds.data, '$.\\$schema'::::jsonpath), jsonb_path_query_array(ds.data, '$.*.\\$schema'::::jsonpath))::::text as schemas ")
-         .append("FROM dataset ds LEFT JOIN test ON test.id = ds.testid WHERE testid = ?");
+      StringBuilder sql = new StringBuilder(LIST_TEST_DATASETS);
       // TODO: filtering by fingerprint
-      Util.addPaging(sql, limit, page, sort, direction);
+      if (sort != null && sort.startsWith("view_data:")) {
+         String[] parts = sort.split(":", 3);
+         String vcid = parts[1];
+         String label = parts[2];
+         sql.append(" ORDER BY");
+         // TODO: use view ID in the sort format rather than wildcards below
+         // prefer numeric sort
+         sql.append(" to_double(dv.value->'").append(vcid).append("'->>'").append(label).append("')");
+         Util.addDirection(sql, direction);
+         sql.append(", dv.value->'").append(vcid).append("'->>'").append(label).append("'");
+         Util.addDirection(sql, direction);
+      } else {
+         Util.addOrderBy(sql, sort, direction);
+      }
+      Util.addLimitOffset(sql, limit, page);
       @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(sql.toString())
             .setParameter(1, testId).getResultList();
       DatasetList list = new DatasetList();
@@ -1066,7 +1041,8 @@ public class RunServiceImpl implements RunService {
          summary.stop = ((Timestamp) row[7]).getTime();
          summary.owner = (String) row[8];
          summary.access = (Integer) row[9];
-         summary.schemas = (ArrayNode) Util.toJsonNode((String) row[10]);
+         summary.view = (ObjectNode) Util.toJsonNode((String) row[10]);
+         summary.schemas = (ArrayNode) Util.toJsonNode((String) row[11]);
          // TODO: all the 'views'
          list.datasets.add(summary);
       }

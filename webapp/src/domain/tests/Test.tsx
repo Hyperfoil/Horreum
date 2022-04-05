@@ -61,7 +61,7 @@ export default function Test() {
         <PageSection>
             <Card>
                 <CardHeader>
-                    <ButtonLink to={`/run/dataset/list/${testId}`}>Dataset list list</ButtonLink>
+                    <ButtonLink to={`/run/dataset/list/${testId}`}>Dataset list</ButtonLink>
                     <ButtonLink to={`/run/list/${testId}`} variant="secondary">
                         Run list
                     </ButtonLink>

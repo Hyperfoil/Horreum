@@ -24,8 +24,6 @@ export interface Run {
     testname?: string
     schema?: RunSchemas
     datasets?: number[]
-    // TODO - this could rather be a map<view_id, viewcomponent[]>
-    view?: any[]
     trashed: boolean
 }
 

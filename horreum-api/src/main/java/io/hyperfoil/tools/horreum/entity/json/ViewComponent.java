@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
 import java.util.Objects;
-import java.util.stream.Stream;
 
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -13,8 +12,13 @@ import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
+import org.hibernate.annotations.Type;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -44,7 +48,8 @@ public class ViewComponent extends PanacheEntityBase {
    public String headerName;
 
    @NotNull
-   public String accessors;
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public JsonNode labels;
 
    /**
     * When this is <code>null</code> defaults to rendering as plain text.
@@ -55,14 +60,14 @@ public class ViewComponent extends PanacheEntityBase {
    public ViewComponent() {
    }
 
-   public ViewComponent(String headerName, String accessors, String render) {
+   public ViewComponent(String headerName, String render, String... labels) {
       this.headerName = headerName;
-      this.accessors = accessors;
+      ArrayNode labelsNode = JsonNodeFactory.instance.arrayNode();
+      for (String l : labels) {
+         labelsNode.add(l);
+      }
+      this.labels = labelsNode;
       this.render = render;
-   }
-
-   public String[] accessors() {
-      return Stream.of(accessors.split("[,;] *")).map(String::trim).toArray(String[]::new);
    }
 
    @Override
@@ -73,12 +78,12 @@ public class ViewComponent extends PanacheEntityBase {
       return headerOrder == that.headerOrder &&
             Objects.equals(id, that.id) &&
             Objects.equals(headerName, that.headerName) &&
-            Objects.equals(accessors, that.accessors) &&
+            Objects.equals(labels, that.labels) &&
             Objects.equals(render, that.render);
    }
 
    @Override
    public int hashCode() {
-      return Objects.hash(id, headerOrder, headerName, accessors, render);
+      return Objects.hash(id, headerOrder, headerName, labels, render);
    }
 }

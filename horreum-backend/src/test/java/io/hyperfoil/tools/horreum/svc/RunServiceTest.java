@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -10,17 +9,18 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
-import javax.persistence.EntityManager;
 import javax.transaction.Status;
-import javax.transaction.TransactionManager;
 
 import org.junit.jupiter.api.TestInfo;
 
@@ -37,8 +37,9 @@ import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.entity.json.View;
+import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
-import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -52,15 +53,6 @@ import io.vertx.core.eventbus.EventBus;
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(NoGrafanaProfile.class)
 public class RunServiceTest extends BaseServiceTest {
-
-   @Inject
-   EntityManager em;
-
-   @Inject
-   TransactionManager tm;
-
-   @Inject
-   RoleManager roleManager;
 
    @Inject
    RunService runService;
@@ -275,7 +267,7 @@ public class RunServiceTest extends BaseServiceTest {
          List<Label.Value> values = withLabelValues(createXYData());
          assertEquals(6, values.size());
          Label.Value singleValue = values.stream().filter(v -> v.labelId == labelSingle).findFirst().orElseThrow();
-         assertNull(singleValue.value);
+         assertEquals(JsonNodeFactory.instance.nullNode(), singleValue.value);
          BooleanNode trueNode = JsonNodeFactory.instance.booleanNode(true);
          assertEquals(trueNode, values.stream().filter(v -> v.labelId == labelSingleFunc).map(v -> v.value).findFirst().orElse(null));
          assertEquals(trueNode, values.stream().filter(v -> v.labelId == labelSingleArray).map(v -> v.value).findFirst().orElse(null));
@@ -293,29 +285,25 @@ public class RunServiceTest extends BaseServiceTest {
          int labelC = addLabel(schemas[1], "C", null, new NamedJsonPath("value", "$.value", false));
          BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
          withExampleDataset(createABData(), ds -> {
-            try {
-               waitForUpdate(updateQueue, ds);
-               List<Label.Value> values = Label.Value.<Label.Value>find("dataset_id", ds.id).list();
-               assertEquals(3, values.size());
-               assertEquals(24, values.stream().filter(v -> v.labelId == labelA).map(v -> v.value.numberValue()).findFirst().orElse(null));
-               assertEquals(43, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
-               assertEquals(42, values.stream().filter(v -> v.labelId == labelC).map(v -> v.value.numberValue()).findFirst().orElse(null));
-               em.clear();
+            waitForUpdate(updateQueue, ds);
+            List<Label.Value> values = Label.Value.<Label.Value>find("dataset_id", ds.id).list();
+            assertEquals(3, values.size());
+            assertEquals(24, values.stream().filter(v -> v.labelId == labelA).map(v -> v.value.numberValue()).findFirst().orElse(null));
+            assertEquals(43, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
+            assertEquals(42, values.stream().filter(v -> v.labelId == labelC).map(v -> v.value.numberValue()).findFirst().orElse(null));
+            em.clear();
 
-               updateLabel(schemas[0], labelA, "value", null, new NamedJsonPath("value", "$.value", true));
-               updateLabel(schemas[1], labelB, "value", "({ x, y }) => x + y", new NamedJsonPath("x", "$.value", false), new NamedJsonPath("y", "$.value", false));
-               deleteLabel(schemas[1], labelC);
-               waitForUpdate(updateQueue, ds);
-               waitForUpdate(updateQueue, ds);
-               // delete does not cause any update
+            updateLabel(schemas[0], labelA, "value", null, new NamedJsonPath("value", "$.value", true));
+            updateLabel(schemas[1], labelB, "value", "({ x, y }) => x + y", new NamedJsonPath("x", "$.value", false), new NamedJsonPath("y", "$.value", false));
+            deleteLabel(schemas[1], labelC);
+            waitForUpdate(updateQueue, ds);
+            waitForUpdate(updateQueue, ds);
+            // delete does not cause any update
 
-               values = Label.Value.<Label.Value>find("dataset_id", ds.id).list();
-               assertEquals(2, values.size());
-               assertEquals(JsonNodeFactory.instance.arrayNode().add(24), values.stream().filter(v -> v.labelId == labelA).map(v -> v.value).findFirst().orElse(null));
-               assertEquals(84, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
-            } catch (InterruptedException e) {
-               fail(e);
-            }
+            values = Label.Value.<Label.Value>find("dataset_id", ds.id).list();
+            assertEquals(2, values.size());
+            assertEquals(JsonNodeFactory.instance.arrayNode().add(24), values.stream().filter(v -> v.labelId == labelA).map(v -> v.value).findFirst().orElse(null));
+            assertEquals(84, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
             return null;
          });
 
@@ -323,22 +311,21 @@ public class RunServiceTest extends BaseServiceTest {
       }, "A", "B");
    }
 
-   private void waitForUpdate(BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue, DataSet ds) throws InterruptedException {
-      DataSet.LabelsUpdatedEvent event = updateQueue.poll(10, TimeUnit.SECONDS);
-      assertNotNull(event);
-      assertEquals(ds.id, event.datasetId);
+   private void waitForUpdate(BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue, DataSet ds) {
+      try {
+         DataSet.LabelsUpdatedEvent event = updateQueue.poll(10, TimeUnit.SECONDS);
+         assertNotNull(event);
+         assertEquals(ds.id, event.datasetId);
+      } catch (InterruptedException e) {
+         fail(e);
+      }
    }
 
    private List<Label.Value> withLabelValues(ArrayNode data) {
       BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
       return withExampleDataset(data, ds -> {
-         try {
-            waitForUpdate(updateQueue, ds);
-            return Label.Value.<Label.Value>find("dataset_id", ds.id).list();
-         } catch (InterruptedException e) {
-            fail(e);
-            return null;
-         }
+         waitForUpdate(updateQueue, ds);
+         return Label.Value.<Label.Value>find("dataset_id", ds.id).list();
       });
    }
 
@@ -387,5 +374,85 @@ public class RunServiceTest extends BaseServiceTest {
       ArrayList<Integer> list = new ArrayList<>(json.size());
       json.forEach(item -> list.add(item.asInt()));
       return list;
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testDatasetView() {
+      Util.withTx(tm, () -> {
+         try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+            // we insert test directly to let it have ID=0, for simplicity
+            em.createNativeQuery("INSERT INTO test(id, name, owner, access) VALUES (0, 'foo', ?1, 0)")
+                  .setParameter(1, TESTER_ROLES[0]).executeUpdate();
+            View view = new View();
+            view.test = em.getReference(Test.class, 0);
+            view.name = "default";
+            view.components = new ArrayList<>();
+            ViewComponent vc1 = new ViewComponent();
+            vc1.view = view;
+            vc1.headerName = "X";
+            vc1.labels = JsonNodeFactory.instance.arrayNode().add("a");
+            view.components.add(vc1);
+            ViewComponent vc2 = new ViewComponent();
+            vc2.view = view;
+            vc2.headerName = "Y";
+            vc2.headerOrder = 1;
+            vc2.labels = JsonNodeFactory.instance.arrayNode().add("a").add("b");
+            view.components.add(vc2);
+            view.persistAndFlush();
+            em.createNativeQuery("UPDATE test SET defaultview_id = ?1 WHERE id = 0").setParameter(1, view.id).executeUpdate();
+            em.flush();
+         }
+         return null;
+      });
+      withExampleSchemas((schemas) -> {
+         NamedJsonPath valuePath = new NamedJsonPath("value", "$.value", false);
+         int labelA = addLabel(schemas[0], "a", null, valuePath);
+         int labelB = addLabel(schemas[1], "b", null, valuePath);
+         // view update should happen in the same transaction as labels update so we can use the event
+         BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+         withExampleDataset(createABData(), ds -> {
+            waitForUpdate(updateQueue, ds);
+            JsonNode datasets = fetchDatasetsByTest(0);
+            assertEquals(1, datasets.get("total").asInt());
+            assertEquals(1, datasets.get("datasets").size());
+            JsonNode dsJson = datasets.get("datasets").get(0);
+            assertEquals(2, dsJson.get("schemas").size());
+            JsonNode view = dsJson.get("view");
+            assertEquals(2, view.size());
+            JsonNode vc1 = StreamSupport.stream(view.spliterator(), false).filter(vc -> vc.size() == 1).findFirst().orElseThrow();
+            assertEquals(24, vc1.get("a").asInt());
+            JsonNode vc2 = StreamSupport.stream(view.spliterator(), false).filter(vc -> vc.size() == 2).findFirst().orElseThrow();
+            assertEquals(24, vc2.get("a").asInt());
+            assertEquals(42, vc2.get("b").asInt());
+
+            String labelIds = (String) em.createNativeQuery("SELECT to_json(label_ids)::::text FROM dataset_view WHERE dataset_id = ?1").setParameter(1, ds.id).getSingleResult();
+            Set<Integer> ids = new HashSet<>();
+            StreamSupport.stream(Util.toJsonNode(labelIds).spliterator(), false).mapToInt(JsonNode::asInt).forEach(ids::add);
+            assertEquals(2, ids.size());
+            assertTrue(ids.contains(labelA));
+            assertTrue(ids.contains(labelB));
+
+            Util.withTx(tm, () -> {
+               try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+                  int vcs = em.createNativeQuery("UPDATE viewcomponent SET labels = '[\"a\",\"b\"]'").executeUpdate();
+                  assertEquals(2, vcs);
+               }
+               return null;
+            });
+
+            JsonNode updated = fetchDatasetsByTest(0);
+            JsonNode updatedView = updated.get("datasets").get(0).get("view");
+            assertEquals(2, updatedView.size());
+            assertTrue(StreamSupport.stream(updatedView.spliterator(), false).allMatch(vc -> vc.size() == 2), updated.toPrettyString());
+
+            return null;
+         });
+      }, "A", "B");
+   }
+
+   private JsonNode fetchDatasetsByTest(int testId) {
+      JsonNode datasets = Util.toJsonNode(jsonRequest().get("/api/run/dataset/list/" + testId).then().statusCode(200).extract().body().asString());
+      assertNotNull(datasets);
+      return datasets;
    }
 }

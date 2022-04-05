@@ -241,16 +241,24 @@ export const RunTags = (tags: any) => {
     ))
 }
 
-export function renderCell(render: string | RenderFunction | undefined, token: string | undefined) {
+export function renderCell(
+    render: string | RenderFunction | undefined,
+    sub: string | undefined,
+    token: string | undefined
+) {
     return (arg: any) => {
         const {
             cell: {
-                value,
+                value: cellValue,
                 row: { index },
             },
             data,
             column,
         } = arg
+        let value = cellValue
+        if (sub && value && typeof value === "object") {
+            value = value[sub]
+        }
         if (!render) {
             if (value === null || value === undefined) {
                 return "--"

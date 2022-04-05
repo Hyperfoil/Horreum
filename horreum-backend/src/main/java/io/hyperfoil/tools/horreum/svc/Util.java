@@ -378,9 +378,7 @@ public class Util {
                if (!lookupRetryHint(t, new HashSet<>())) {
                   throw t;
                }
-               Thread.yield(); // give the other transaction a bit more chance to complete
-               log.infof("Retrying failed transaction, status attempt %d/%d", retry, Util.MAX_TRANSACTION_RETRIES);
-               log.trace("This is the exception that caused retry: ", t);
+               yieldAndLog(retry, t);
             } finally {
                if (tm.getStatus() == Status.STATUS_ACTIVE) {
                   tm.commit();
@@ -389,9 +387,18 @@ public class Util {
                }
             }
          } catch (SystemException | RollbackException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException ex) {
-            throw new RuntimeException("Failed to run transaction", ex);
+            if (!lookupRetryHint(ex, new HashSet<>())) {
+               throw new RuntimeException("Failed to run transaction", ex);
+            }
+            yieldAndLog(retry, ex);
          }
       }
+   }
+
+   private static void yieldAndLog(int retry, Throwable t) {
+      Thread.yield(); // give the other transaction a bit more chance to complete
+      log.infof("Retrying failed transaction, status attempt %d/%d", retry, Util.MAX_TRANSACTION_RETRIES);
+      log.trace("This is the exception that caused retry: ", t);
    }
 
    public static <T extends Annotation> T getAnnotation(Method method, Class<T> annotationClass) {

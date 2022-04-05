@@ -18,7 +18,7 @@ export type RenderFunction = (value: any, row: any, token: string | undefined) =
 export interface ViewComponent {
     id: number
     headerName: string
-    accessors: string
+    labels: string[]
     render: string | RenderFunction | undefined
     headerOrder: number
 }

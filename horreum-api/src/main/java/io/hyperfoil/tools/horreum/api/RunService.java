@@ -15,6 +15,7 @@ import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
@@ -191,7 +192,6 @@ public interface RunService {
 
    class TestRunSummary extends RunSummary {
       public JsonNode schema;
-      public JsonNode view;
    }
 
    class TestRunsSummary {
@@ -210,6 +210,7 @@ public interface RunService {
       public long stop;
       public String owner;
       public int access;
+      public ObjectNode view;
       public ArrayNode schemas; // list of URIs
    }
 

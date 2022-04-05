@@ -4,8 +4,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 
+import javax.inject.Inject;
+import javax.persistence.EntityManager;
+import javax.transaction.TransactionManager;
 import javax.ws.rs.core.HttpHeaders;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -21,6 +25,8 @@ import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
+import io.hyperfoil.tools.horreum.server.CloseMe;
+import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
@@ -32,6 +38,31 @@ public class BaseServiceTest {
    static final String TESTER_TOKEN = BaseServiceTest.getAccessToken("alice", TESTER_ROLES);
    static final String UPLOADER_TOKEN = BaseServiceTest.getAccessToken("alice", UPLOADER_ROLES);
 
+   @Inject
+   EntityManager em;
+   @Inject
+   TransactionManager tm;
+   @Inject
+   RoleManager roleManager;
+
+   @AfterEach
+   public void afterMethod() {
+      dropAllViewsAndTests();
+   }
+
+   protected void dropAllViewsAndTests() {
+      Util.withTx(tm, () -> {
+         try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+            em.createNativeQuery("UPDATE test SET defaultview_id = NULL").executeUpdate();
+            ViewComponent.deleteAll();
+            View.deleteAll();
+            em.flush();
+            Test.deleteAll();
+         }
+         return null;
+      });
+   }
+
    public static Test createExampleTest(String testName) {
       Test test = new Test();
       test.name = testName;
@@ -41,7 +72,7 @@ public class BaseServiceTest {
       View defaultView = new View();
       defaultView.name = "Default";
       defaultView.components = new ArrayList<>();
-      defaultView.components.add(new ViewComponent("Some column", "foo", null));
+      defaultView.components.add(new ViewComponent("Some column", null, "foo"));
       test.defaultView = defaultView;
       return test;
    }

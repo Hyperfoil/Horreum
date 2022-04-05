@@ -81,9 +81,9 @@ function Table<D extends object>({ columns, data, sortBy, isLoading, selected, o
                     </tr>
                 </thead>
                 <tbody>
-                    {[...Array(10).keys()].map(_ => {
+                    {[...Array(10).keys()].map(i => {
                         return (
-                            <tr>
+                            <tr key={i}>
                                 <td>
                                     <Skeleton screenreaderText="Loading..." />
                                 </td>

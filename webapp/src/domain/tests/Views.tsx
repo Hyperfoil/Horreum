@@ -19,7 +19,7 @@ import { useHistory } from "react-router"
 
 import { useTester } from "../../auth"
 
-import Accessors from "../../components/Accessors"
+import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
 import { View, ViewComponent, TestDispatch } from "./reducers"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -38,12 +38,10 @@ type ViewComponentFormProps = {
 }
 
 function checkComponent(v: ViewComponent) {
-    if (!v.accessors || v.accessors.length === 0) {
-        return "View component requires at least one accessor"
-    } else if (v.accessors.split(";").length > 1 && !v.render) {
+    if (!v.labels || v.labels.length === 0) {
+        return "View component requires at least one label"
+    } else if (v.labels.length > 1 && !v.render) {
         return "View component defines multiple accessors but does not define any function to combine these."
-    } else if (v.accessors.endsWith("[]") && !v.render) {
-        return "View component fetches all matches but does not define any function to combine these."
     }
 }
 
@@ -67,18 +65,11 @@ const ViewComponentForm = ({ c, onChange, isTester }: ViewComponentFormProps) =>
                     isReadOnly={!isTester}
                 />
             </FormGroup>
-            <FormGroup label="Accessors" fieldId="accessor">
-                <Accessors
-                    value={
-                        (c.accessors &&
-                            c.accessors
-                                .split(/[,;] */)
-                                .map(a => a.trim())
-                                .filter(a => a.length !== 0)) ||
-                        []
-                    }
-                    onChange={value => {
-                        c.accessors = value.join(";")
+            <FormGroup label="Labels" fieldId="labels">
+                <Labels
+                    labels={c.labels}
+                    onChange={labels => {
+                        c.labels = labels
                         onChange()
                     }}
                     error={checkComponent(c)}
@@ -156,7 +147,7 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                             components.push({
                                 id: -1,
                                 headerName: "",
-                                accessors: "",
+                                labels: [],
                                 render: "",
                                 headerOrder: components.length,
                             })

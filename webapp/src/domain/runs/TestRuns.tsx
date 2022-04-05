@@ -24,7 +24,7 @@ import { toEpochMillis, interleave, noop } from "../../utils"
 
 import { byTest } from "./actions"
 import * as selectors from "./selectors"
-import { tokenSelector, teamsSelector, teamToName } from "../../auth"
+import { teamsSelector, teamToName } from "../../auth"
 import { alertAction } from "../../alerts"
 
 import { fetchTest } from "../tests/actions"
@@ -42,14 +42,13 @@ import {
     UseSortByColumnOptions,
 } from "react-table"
 import { Run, RunsDispatch } from "./reducers"
-import { Description, ExecutionTime, Menu, RunTags, renderCell } from "./components"
-import { Test } from "../tests/reducers"
+import { Description, ExecutionTime, Menu, RunTags } from "./components"
 
 type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row: UseRowSelectRowProps<Run> }
 
 type RunColumn = Column<Run> & UseSortByColumnOptions<Run>
 
-const staticColumns: RunColumn[] = [
+const tableColumns: RunColumn[] = [
     {
         Header: "",
         id: "selection",
@@ -139,30 +138,20 @@ const staticColumns: RunColumn[] = [
         accessor: "datasets",
         Cell: (arg: C) => arg.cell.value.length,
     },
+    {
+        Header: "Actions",
+        id: "actions",
+        accessor: "id",
+        disableSortBy: true,
+        Cell: (arg: CellProps<Run, number>) => Menu(arg.row.original),
+    },
 ]
-
-const menuColumn: RunColumn = {
-    Header: "Actions",
-    id: "actions",
-    accessor: "id",
-    disableSortBy: true,
-    Cell: (arg: CellProps<Run, number>) => Menu(arg.row.original),
-}
-
-function hasNonTrivialAccessor(test: Test, vcIndex: number) {
-    if (!test.defaultView) {
-        return false
-    }
-    const vc = test.defaultView.components[vcIndex]
-    return vc.accessors.indexOf("[]") >= 0 || vc.accessors.indexOf(";") >= 0 || vc.accessors.indexOf(",") >= 0
-}
 
 export default function TestRuns() {
     const { testId: stringTestId } = useParams<any>()
     const testId = parseInt(stringTestId)
 
     const test = useSelector(get(testId))
-    const [columns, setColumns] = useState(test && test.defaultView ? test.defaultView.components : [])
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
@@ -170,23 +159,6 @@ export default function TestRuns() {
     const [direction, setDirection] = useState("Descending")
     const [tags, setTags] = useState<SelectedTags>()
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
-    const token = useSelector(tokenSelector)
-    const tableColumns = useMemo(() => {
-        const rtrn = [...staticColumns]
-        columns.forEach((col, index) => {
-            rtrn.push({
-                Header: col.headerName,
-                accessor: (run: Run) => run.view && run.view[index],
-                // In general case we would have to calculate the final sortable cell value
-                // in database, or fetch all runs and sort in server doing the rendering
-                disableSortBy: (!!col.render && col.render !== "") || !test || hasNonTrivialAccessor(test, index),
-                id: test ? "view_data:" + index + ":" + test.defaultView?.components[index].accessors : undefined,
-                Cell: renderCell(col.render, token),
-            })
-        })
-        rtrn.push(menuColumn)
-        return rtrn
-    }, [columns, test, token])
 
     const dispatch = useDispatch<RunsDispatch>()
     const [showTrashed, setShowTrashed] = useState(false)
@@ -201,9 +173,6 @@ export default function TestRuns() {
     }, [dispatch, showTrashed, page, perPage, sort, direction, tags, pagination, testId])
     useEffect(() => {
         document.title = (test ? test.name : "Loading...") + " | Horreum"
-        if (test && test.defaultView) {
-            setColumns(test.defaultView.components)
-        }
     }, [test])
     const isLoading = useSelector(selectors.isLoading)
 

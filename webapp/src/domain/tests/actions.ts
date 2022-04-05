@@ -86,7 +86,7 @@ export function sendTest(test: Test) {
 export function updateView(testId: number, view: View) {
     return (dispatch: Dispatch<UpdateViewAction | AddAlertAction>) => {
         for (const c of view.components) {
-            if (c.accessors.trim() === "") {
+            if (c.labels.length === 0) {
                 dispatch(
                     alertAction(
                         "VIEW_UPDATE",
