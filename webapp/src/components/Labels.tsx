@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { RefObject, useRef, useState, useEffect } from "react"
 import { useDispatch } from "react-redux"
 
 import { NavLink } from "react-router-dom"
@@ -6,29 +6,45 @@ import { listAllLabels, LabelInfo } from "../domain/schemas/api"
 
 import { dispatchError } from "../alerts"
 
-import { Select, SelectOption, Tooltip } from "@patternfly/react-core"
+import { Checkbox, Select, SelectOption, Tooltip } from "@patternfly/react-core"
 
 type LabelsProps = {
     labels: string[]
     onChange(labels: string[]): void
     isReadOnly: boolean
     error?: string
+    defaultMetrics?: boolean
+    defaultFiltering?: boolean
 }
 
-export default function Labels({ labels: value, onChange, isReadOnly, error }: LabelsProps) {
+export default function Labels({ labels, onChange, isReadOnly, error, defaultMetrics, defaultFiltering }: LabelsProps) {
     const [isExpanded, setExpanded] = useState(false)
     const [options, setOptions] = useState<LabelInfo[]>([])
+    const [metrics, setMetrics] = useState(defaultMetrics === undefined || defaultMetrics)
+    const [filtering, setFiltering] = useState(defaultFiltering === undefined || defaultFiltering)
     const dispatch = useDispatch()
     useEffect(() => {
         listAllLabels().then(setOptions, error =>
             dispatchError(dispatch, error, "LIST_ALL_LABELS", "Failed to list available labels.")
         )
     }, [])
-    const selected = value
+    const selected = labels
         .map(l => options.find(l2 => l2.name === l))
         .filter(o => o !== undefined)
         .map(o => o as LabelInfo)
         .map(o => ({ ...o, toString: () => o.name }))
+    const footerRef = useRef<HTMLDivElement>()
+    function ensureFooterInView() {
+        setTimeout(() => {
+            console.log(footerRef)
+            if (footerRef.current) {
+                const { bottom } = footerRef.current.getBoundingClientRect()
+                if (bottom > (window.innerHeight || document.documentElement.clientHeight)) {
+                    footerRef.current.scrollIntoView({ behavior: "smooth", block: "end" })
+                }
+            }
+        }, 300)
+    }
     return (
         <>
             <Select
@@ -37,7 +53,13 @@ export default function Labels({ labels: value, onChange, isReadOnly, error }: L
                 validated={error ? "error" : "default"}
                 placeholderText="Select label(s)"
                 isOpen={isExpanded}
-                onToggle={setExpanded}
+                maxHeight={"50vh"}
+                onToggle={expanded => {
+                    setExpanded(expanded)
+                    if (expanded) {
+                        ensureFooterInView()
+                    }
+                }}
                 selections={selected}
                 isDisabled={isReadOnly}
                 onClear={() => {
@@ -46,12 +68,38 @@ export default function Labels({ labels: value, onChange, isReadOnly, error }: L
                 }}
                 onSelect={(e, newValue) => {
                     setExpanded(false)
-                    onChange([...value, newValue.toString()])
+                    const label = newValue.toString()
+                    onChange(labels.includes(label) ? labels.filter(l => l !== label) : [...labels, label])
                 }}
+                footer={
+                    <div ref={footerRef as RefObject<HTMLDivElement>}>
+                        <Checkbox
+                            id="metrics"
+                            label="Include metrics labels"
+                            isChecked={metrics}
+                            onChange={checked => {
+                                setMetrics(checked)
+                                ensureFooterInView()
+                            }}
+                        />
+                        <Checkbox
+                            id="filtering"
+                            label="Include filtering labels"
+                            isChecked={filtering}
+                            onChange={checked => {
+                                setFiltering(checked)
+                                ensureFooterInView()
+                            }}
+                        />
+                    </div>
+                }
             >
-                {[...options.filter(o => value.includes(o.name))].sort().map((o, index) => (
-                    <SelectOption key={index} value={o.name} />
-                ))}
+                {options
+                    .filter(o => !labels.includes(o.name) && ((o.metrics && metrics) || (o.filtering && filtering)))
+                    .sort()
+                    .map((o, index) => (
+                        <SelectOption key={index} value={o.name} />
+                    ))}
             </Select>
             {error && (
                 <span

@@ -220,6 +220,8 @@ public interface SchemaService {
 
    class LabelInfo {
       public String name;
+      public boolean metrics;
+      public boolean filtering;
       public List<SchemaDescriptor> schemas = new ArrayList<>();
 
       public LabelInfo(String name) {

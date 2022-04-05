@@ -38,7 +38,7 @@ import {
 } from "react-table"
 import { listTestDatasets, Dataset, DatasetList } from "./api"
 import { Description, ExecutionTime, renderCell } from "./components"
-import { Test, TestDispatch } from "../tests/reducers"
+import { TestDispatch } from "../tests/reducers"
 import SchemaLink from "../schemas/SchemaLink"
 
 type C = CellProps<Dataset> &

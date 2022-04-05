@@ -146,6 +146,8 @@ export interface SchemaDescriptor {
 
 export interface LabelInfo {
     name: string
+    metrics: boolean
+    filtering: boolean
     schemas: SchemaDescriptor[]
 }
 

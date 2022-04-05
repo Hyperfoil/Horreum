@@ -579,14 +579,16 @@ public class SchemaServiceImpl implements SchemaService {
    @Override
    public Collection<LabelInfo> allLabels() {
       @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(
-            "SELECT label.name, schema_id, schema.name as schemaName, schema.uri FROM label JOIN schema ON schema.id = label.schema_id").getResultList();
+            "SELECT label.name, label.metrics, label.filtering, schema_id, schema.name as schemaName, schema.uri FROM label JOIN schema ON schema.id = label.schema_id").getResultList();
       Map<String, LabelInfo> labels = new TreeMap<>();
       for (Object[] row : rows) {
          String name = (String) row[0];
-         int schemaId = (int) row[1];
-         String schemaName = (String) row[2];
-         String uri = (String) row[3];
          LabelInfo info = labels.computeIfAbsent(name, LabelInfo::new);
+         info.metrics = info.metrics || (boolean) row[1];
+         info.filtering = info.filtering || (boolean) row[2];
+         int schemaId = (int) row[3];
+         String schemaName = (String) row[4];
+         String uri = (String) row[5];
          info.schemas.add(new SchemaDescriptor(schemaId, schemaName, uri));
       }
       return labels.values();
