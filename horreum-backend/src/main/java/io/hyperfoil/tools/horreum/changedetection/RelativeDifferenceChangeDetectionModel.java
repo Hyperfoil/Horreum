@@ -101,10 +101,11 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
             change.variable = dp.variable;
             change.timestamp = dp.timestamp;
             change.run = dp.run;
-            change.description = String.format("Change detected, runs %d (%s) - %d (%s): %s %f, previous mean %f (stddev %f)",
+            change.description = String.format("Change detected, runs %d (%s) - %d (%s): %s %f, previous mean %f (stddev %f), CH %f",
                     dataPoints.get(window - 1).run.id, dataPoints.get(window - 1).timestamp,
                     dataPoints.get(0).run.id, dataPoints.get(0).timestamp, filter, filteredValue,
-                    previousStats.getMean(), previousStats.getStandardDeviation());
+                    previousStats.getMean(), previousStats.getStandardDeviation(),
+                    ratio - 1);
 
             log.debug(change.description);
             changeConsumer.accept(change);
