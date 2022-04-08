@@ -37,7 +37,7 @@ import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
 import RecalculateModal from "../alerting/RecalculateModal"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
-import CalculationLogModal from "./CalculationLogModal"
+import DatasetLogModal from "./DatasetLogModal"
 import { subscriptions as subscriptionsSelector } from "./selectors"
 import { updateFingerprint } from "./actions"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -251,7 +251,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
         if (!test?.id) {
             return
         }
-        setLabels(test.fingerprintLabels)
+        setLabels(test.fingerprintLabels || [])
         setFilter(test.fingerprintFilter || undefined)
         api.fetchVariables(test.id).then(
             response => {
@@ -527,12 +527,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                     )
                 }}
             />
-            <CalculationLogModal
-                isOpen={isLogOpen}
-                onClose={() => setLogOpen(false)}
-                testId={test.id}
-                source="variables"
-            />
+            <DatasetLogModal isOpen={isLogOpen} onClose={() => setLogOpen(false)} testId={test.id} source="variables" />
             <Split hasGutter>
                 <SplitItem style={{ minWidth: "20vw", maxWidth: "20vw", overflow: "clip" }}>
                     {groupedVariables && groupedVariables.length > 0 && (
@@ -553,10 +548,12 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                             ))}
                         </SimpleList>
                     )}
-                    <Button variant="link" onClick={addVariable}>
-                        <PlusCircleIcon />
-                        {"\u00A0"}Add new variable...
-                    </Button>
+                    {isTester && (
+                        <Button variant="link" onClick={addVariable}>
+                            <PlusCircleIcon />
+                            {"\u00A0"}Add new variable...
+                        </Button>
+                    )}
                 </SplitItem>
                 <SplitItem isFilled>
                     {!selectedVariable && (

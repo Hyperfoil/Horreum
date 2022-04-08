@@ -105,7 +105,6 @@ public interface RunService {
    @Path("list/{testId}/")
    TestRunsSummary listTestRuns(@PathParam("testId") Integer testId,
                                 @QueryParam("trashed") boolean trashed,
-                                @QueryParam("tags") String tags,
                                 @QueryParam("limit") Integer limit,
                                 @QueryParam("page") Integer page,
                                 @QueryParam("sort") String sort,

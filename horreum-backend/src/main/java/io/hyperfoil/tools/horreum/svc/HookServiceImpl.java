@@ -133,9 +133,9 @@ public class HookServiceImpl implements HookService {
    @Transactional
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
    public void newChange(Change.Event changeEvent) {
-      Integer runId = changeEvent.change.run.id;
-      Run run =  Run.find("id", runId).firstResult();
-      tellHooks(Change.EVENT_NEW, run.testid, changeEvent.change);
+      int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
+            .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
+      tellHooks(Change.EVENT_NEW, testId, changeEvent.change);
    }
 
    @RolesAllowed({ Roles.ADMIN, Roles.TESTER})

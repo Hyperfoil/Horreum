@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.entity.json;
 import java.time.Instant;
 import java.util.List;
 
+import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -31,6 +32,7 @@ import io.smallrye.common.constraint.NotNull;
 public class DataSet extends OwnedEntityBase {
    public static final String EVENT_NEW = "dataset/new";
    public static final String EVENT_LABELS_UPDATED = "dataset/updatedlabels";
+   public static final String EVENT_MISSING_VALUES = "dataset/missing_values";
 
    @Id
    @SequenceGenerator(
@@ -56,6 +58,7 @@ public class DataSet extends OwnedEntityBase {
 
    @NotNull
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   @Basic(fetch = FetchType.LAZY)
    public JsonNode data;
 
    @ManyToOne(cascade = CascadeType.DETACH, fetch = FetchType.LAZY)

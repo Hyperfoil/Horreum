@@ -1,8 +1,8 @@
 package io.hyperfoil.tools.horreum.api;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -13,6 +13,8 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
@@ -33,7 +35,7 @@ public interface AlertingService {
 
    @GET
    @Path("dashboard")
-   DashboardInfo dashboard(@QueryParam("test") Integer testId, @QueryParam("tags") String tags);
+   DashboardInfo dashboard(@QueryParam("test") Integer testId, @QueryParam("fingerprint") String fingerprint);
 
    @GET
    @Path("changes")
@@ -126,9 +128,33 @@ public interface AlertingService {
       public boolean done;
       public Integer totalRuns;
       public Integer errors;
-      public Set<Integer> runsWithoutAccessor;
-      public Set<Integer> runsWithoutValue;
+      public Collection<DatasetInfo> datasetsWithoutValue;
    }
+
+   class DatasetInfo {
+      public int id;
+      public int runId;
+      public int ordinal;
+
+      public DatasetInfo() {
+      }
+
+      public DatasetInfo(int id, int runId, int ordinal) {
+         this.id = id;
+         this.runId = runId;
+         this.ordinal = ordinal;
+      }
+
+      @Override
+      public String toString() {
+         return "DatasetInfo{" +
+               "id=" + id +
+               ", runId=" + runId +
+               ", ordinal=" + ordinal +
+               '}';
+      }
+   }
+
 
    class DatapointLastTimestamp {
       public int variable;
@@ -137,6 +163,6 @@ public interface AlertingService {
 
    class LastDatapointsParams {
       public int[] variables;
-      public String tags;
+      public String fingerprint;
    }
 }

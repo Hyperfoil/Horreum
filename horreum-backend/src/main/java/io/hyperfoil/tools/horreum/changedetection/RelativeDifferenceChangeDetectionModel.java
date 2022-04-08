@@ -100,12 +100,13 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
             Change change = new Change();
             change.variable = dp.variable;
             change.timestamp = dp.timestamp;
-            change.run = dp.run;
-            change.description = String.format("Change detected, runs %d (%s) - %d (%s): %s %f, previous mean %f (stddev %f), CH %f",
-                    dataPoints.get(window - 1).run.id, dataPoints.get(window - 1).timestamp,
-                    dataPoints.get(0).run.id, dataPoints.get(0).timestamp, filter, filteredValue,
-                    previousStats.getMean(), previousStats.getStandardDeviation(),
-                    ratio - 1);
+            change.dataset = dp.dataset;
+            DataPoint prevDataPoint = dataPoints.get(window - 1);
+            DataPoint lastDataPoint = dataPoints.get(0);
+            change.description = String.format("Change detected, datasets %d/%d (%s) - %d/%d (%s): %s %f, previous mean %f (stddev %f), relative change %.2f%%",
+                    prevDataPoint.dataset.run.id, prevDataPoint.dataset.ordinal, prevDataPoint.timestamp,
+                    lastDataPoint.dataset.run.id, lastDataPoint.dataset.ordinal, lastDataPoint.timestamp,
+                    filter, filteredValue, previousStats.getMean(), previousStats.getStandardDeviation(), 100 * (ratio - 1));
 
             log.debug(change.description);
             changeConsumer.accept(change);

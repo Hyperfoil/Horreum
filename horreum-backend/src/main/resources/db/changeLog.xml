@@ -2876,6 +2876,156 @@
         </sql>
         <dropDefaultValue tableName="variable" columnName="labels"/>
     </changeSet>
+
+    <changeSet id="67" author="rvansa">
+        <!-- We will need to recompute them all anyway -->
+        <sql>
+            DELETE FROM datapoint;
+            DELETE FROM change;
+            DELETE FROM calculationlog;
+            UPDATE test SET fingerprint_labels = jsonb_build_array(name || '_tags');
+        </sql>
+        <renameColumn tableName="datapoint" oldColumnName="runid" newColumnName="dataset_id"/>
+        <renameColumn tableName="change" oldColumnName="runid" newColumnName="dataset_id"/>
+        <renameColumn tableName="calculationlog" oldColumnName="runid" newColumnName="dataset_id"/>
+        <renameTable oldTableName="calculationlog" newTableName="datasetlog" />
+        <sql>
+            ALTER POLICY cl_all ON datasetlog
+                USING (has_role('horreum.system') OR (exists(
+                    SELECT 1 FROM test WHERE test.id = testid AND has_role(test.owner)
+                ) AND exists(
+                    SELECT 1 FROM dataset WHERE id = dataset_id AND has_role(owner)
+                )
+            ));
+            ALTER POLICY datapoint_select ON datapoint
+                USING (has_role('horreum.system') OR exists(
+                    SELECT 1 FROM dataset WHERE dataset.id = dataset_id AND can_view2(dataset.access, dataset.owner)
+                ));
+            ALTER POLICY datapoint_insert ON datapoint WITH CHECK (has_role('horreum.system'));
+            ALTER POLICY datapoint_update ON datapoint USING (has_role('horreum.system'));
+            ALTER POLICY datapoint_delete ON datapoint
+                USING (has_role('horreum.system') OR has_role2((SELECT owner FROM dataset WHERE dataset.id = dataset_id), 'tester'));
+
+            ALTER POLICY change_select ON change
+                USING (has_role('horreum.system') OR exists(
+                    SELECT 1 FROM dataset WHERE dataset.id = dataset_id AND can_view2(dataset.access, dataset.owner)
+                ));
+            ALTER POLICY change_insert ON change WITH CHECK (has_role('horreum.system'));
+            ALTER POLICY change_update ON change USING (has_role2((SELECT owner FROM dataset WHERE dataset.id = dataset_id), 'tester'));
+            ALTER POLICY change_delete ON change
+                USING (has_role('horreum.system') OR has_role2((SELECT owner FROM dataset WHERE dataset.id = dataset_id), 'tester'));
+
+            ALTER POLICY variable_access ON variable USING (has_role('horreum.system') OR has_role('horreum.alerting'));
+            ALTER POLICY rd_access ON changedetection USING (has_role('horreum.system') OR has_role('horreum.alerting'));
+            ALTER POLICY test_select ON test
+                USING (can_view2(access, owner) OR has_read_token(id) OR has_role('horreum.system'));
+            ALTER POLICY lv_select ON label_values
+                USING (exists(SELECT 1 FROM dataset WHERE dataset.id = dataset_id AND can_view2(access, owner)) OR has_role('horreum.system'));
+
+        </sql>
+
+        <createTable tableName="fingerprint">
+            <column name="dataset_id" type="integer">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="fingerprint" type="jsonb" />
+        </createTable>
+        <createTable tableName="fingerprint_recalc_queue">
+            <column name="dataset_id" type="integer">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="roles" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION fp_after_lv_delete_func() RETURNS TRIGGER AS $$
+            DECLARE
+                labels jsonb;
+            BEGIN
+                labels := (SELECT fingerprint_labels FROM test JOIN dataset ON test.id = dataset.testid WHERE dataset.id = OLD.dataset_id);
+                IF labels ? (SELECT name FROM label WHERE id = OLD.label_id) THEN
+                    DELETE FROM fingerprint WHERE dataset_id = OLD.dataset_id;
+                    INSERT INTO fingerprint_recalc_queue(dataset_id, roles) VALUES (OLD.dataset_id, current_setting('horreum.userroles', true)) ON CONFLICT DO NOTHING;
+                END IF;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION fp_after_lv_insert_func() RETURNS TRIGGER AS $$
+            DECLARE
+                labels jsonb;
+            BEGIN
+                labels := (SELECT fingerprint_labels FROM test JOIN dataset ON test.id = dataset.testid WHERE dataset.id = NEW.dataset_id);
+                IF labels ? (SELECT name FROM label WHERE id = NEW.label_id) THEN
+                    DELETE FROM fingerprint WHERE dataset_id = NEW.dataset_id;
+                    INSERT INTO fingerprint_recalc_queue(dataset_id, roles) VALUES (NEW.dataset_id, current_setting('horreum.userroles', true)) ON CONFLICT DO NOTHING;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION fp_after_test_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM fingerprint USING dataset WHERE dataset.testid = NEW.id AND dataset.id = dataset_id;
+                WITH ds AS (
+                    SELECT id FROM dataset WHERE testid = NEW.id
+                ) INSERT INTO fingerprint_recalc_queue(dataset_id, roles)
+                    SELECT id, current_setting('horreum.userroles', true) FROM ds ON CONFLICT DO NOTHING;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            <!-- This is invoked as deferrd trigger and horreum.userroles is already unset
+                 - we can pass it to the trigger using a non-readable column -->
+            CREATE OR REPLACE FUNCTION recalc_fingerprint() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM set_config('horreum.userroles', NEW.roles, true);
+                WITH fps AS (
+                    SELECT NEW.dataset_id, jsonb_object_agg(label.name, lv.value) AS fingerprint, count(DISTINCT label.name) > 1 AS multi FROM test
+                    LEFT JOIN label ON test.fingerprint_labels ? label.name
+                    LEFT JOIN label_values lv ON label.id = lv.label_id
+                    WHERE test.id = (SELECT testid FROM dataset WHERE id = NEW.dataset_id) AND lv.dataset_id = NEW.dataset_id
+                ) INSERT INTO fingerprint(dataset_id, fingerprint)
+                    SELECT dataset_id, (CASE WHEN fps.multi THEN fingerprint ELSE (SELECT value FROM jsonb_each(fingerprint)) END)
+                        FROM fps WHERE fingerprint IS NOT NULL;
+                DELETE FROM fingerprint_recalc_queue WHERE dataset_id = NEW.dataset_id;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE fingerprint TO "${quarkus.datasource.username}";
+            ALTER TABLE fingerprint ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY fp_select ON fingerprint FOR SELECT
+                USING (has_role('horreum.system') OR exists(SELECT 1 FROM dataset WHERE id = dataset_id AND can_view2(access, owner)));
+            CREATE POLICY fp_insert ON fingerprint FOR INSERT
+                WITH CHECK (has_role('horreum.system') OR exists(SELECT 1 FROM dataset WHERE id = dataset_id AND has_role2(owner, 'tester')));
+            CREATE POLICY fp_delete ON fingerprint FOR DELETE
+                USING (has_role('horreum.system') OR exists(SELECT 1 FROM dataset WHERE id = dataset_id AND has_role2(owner, 'tester')));
+
+            <!-- As the view is calculated in the deferred trigger the horreum.userroles is already unset;
+                 we need to persist the permissions in the roles column but this must not be readable by others -->
+            GRANT INSERT, DELETE ON TABLE fingerprint_recalc_queue TO "${quarkus.datasource.username}";
+            GRANT SELECT (dataset_id) ON TABLE fingerprint_recalc_queue TO "${quarkus.datasource.username}";
+
+            CREATE TRIGGER fp_after_delete AFTER DELETE ON label_values FOR EACH ROW EXECUTE FUNCTION fp_after_lv_delete_func();
+            CREATE TRIGGER fp_after_insert AFTER INSERT ON label_values FOR EACH ROW EXECUTE FUNCTION fp_after_lv_insert_func();
+            CREATE TRIGGER fp_after_update AFTER UPDATE OF fingerprint_labels ON test FOR EACH ROW EXECUTE FUNCTION fp_after_test_update_func();
+            CREATE CONSTRAINT TRIGGER recalc_fingerprint AFTER INSERT ON fingerprint_recalc_queue DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION recalc_fingerprint();
+        </sql>
+        <!-- Because the ? operator won't be parsed for native query correctly-->
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION json_contains(container jsonb, element text) RETURNS boolean AS $$
+            BEGIN
+                RETURN container ? element;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+    </changeSet>
 </databaseChangeLog>
 
 

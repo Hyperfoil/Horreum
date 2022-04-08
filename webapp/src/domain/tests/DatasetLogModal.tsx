@@ -15,19 +15,21 @@ import ConfirmDeleteModal from "../../components/ConfirmDeleteModal"
 import { fetchApi } from "../../services/api/index"
 import { alertAction } from "../../alerts"
 import { formatDateTime } from "../../utils"
-import "./CalculationLogModal.css"
+import "./DatasetLogModal.css"
 
-type CalculationLogModalProps = {
+type DatasetLogModalProps = {
     isOpen: boolean
     onClose(): void
     testId: number
     source: string
 }
 
-type CalculationLog = {
+type DatasetLog = {
     id: number
     testId: number
     runId: number
+    datasetId: number
+    datasetOrdinal: number
     level: number
     timestamp: number
     message: string
@@ -58,7 +60,7 @@ function deleteLogs(testId: number, source: string, fromMs?: number, toMs?: numb
     )
 }
 
-export default function CalculationLogModal(props: CalculationLogModalProps) {
+export default function DatasetLogModal(props: DatasetLogModalProps) {
     const [count, setCount] = useState(0)
     const [page, setPage] = useState(0)
     const [limit, setLimit] = useState(25)
@@ -83,11 +85,17 @@ export default function CalculationLogModal(props: CalculationLogModalProps) {
         fetchLog(props.testId, props.source, page, limit).then(
             response =>
                 setRows(
-                    (response as CalculationLog[]).map(log => ({
+                    (response as DatasetLog[]).map(log => ({
                         cells: [
                             { title: level[log.level] },
                             { title: formatDateTime(log.timestamp * 1000) },
-                            { title: <NavLink to={`/run/${log.runId}`}>{log.runId}</NavLink> },
+                            {
+                                title: (
+                                    <NavLink to={`/run/${log.runId}#dataset${log.datasetOrdinal}`}>
+                                        {log.runId}/{log.datasetOrdinal + 1}
+                                    </NavLink>
+                                ),
+                            },
                             { title: <div dangerouslySetInnerHTML={{ __html: log.message }}></div> },
                         ],
                     }))

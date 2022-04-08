@@ -89,8 +89,9 @@ public interface GrafanaService {
       public int changeId;
       public int variableId;
       public int runId;
+      public int datasetOrdinal;
 
-      public AnnotationDefinition(String title, String text, boolean isRegion, long time, long timeEnd, String[] tags, int changeId, int variableId, int runId) {
+      public AnnotationDefinition(String title, String text, boolean isRegion, long time, long timeEnd, String[] tags, int changeId, int variableId, int runId, int datasetOrdinal) {
          this.title = title;
          this.text = text;
          this.isRegion = isRegion;
@@ -100,6 +101,7 @@ public interface GrafanaService {
          this.changeId = changeId;
          this.variableId = variableId;
          this.runId = runId;
+         this.datasetOrdinal = datasetOrdinal;
       }
    }
 }

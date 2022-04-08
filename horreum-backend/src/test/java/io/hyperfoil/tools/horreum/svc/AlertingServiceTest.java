@@ -20,14 +20,18 @@ import javax.persistence.EntityManager;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.TestInfo;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
+import io.hyperfoil.tools.horreum.api.AlertingService;
+import io.hyperfoil.tools.horreum.entity.Fingerprint;
+import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
-import io.hyperfoil.tools.horreum.entity.json.Run;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
+import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
@@ -116,13 +120,13 @@ public class AlertingServiceTest extends BaseServiceTest {
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
       runJson.put("$schema", schema.uri);
 
-      BlockingQueue<MissingRunValuesEvent> missingQueue = eventConsumerQueue(MissingRunValuesEvent.class, Run.EVENT_MISSING_VALUES);
+      BlockingQueue<MissingValuesEvent> missingQueue = eventConsumerQueue(MissingValuesEvent.class, DataSet.EVENT_MISSING_VALUES);
       int runId = uploadRun(runJson, test.name);
 
       assertNotNull(missingQueue.poll(10, TimeUnit.SECONDS));
 
       try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
-         List<CalculationLog> logs = CalculationLog.find("runid", runId).list();
+         List<DatasetLog> logs = DatasetLog.find("dataset.run.id", runId).list();
          // If this fails this might be a race - I thought it's fixed with quarkus.datasource.jdbc.transaction-isolation-level=serializable
          assertTrue(logs.size() > 0);
 
@@ -132,7 +136,7 @@ public class AlertingServiceTest extends BaseServiceTest {
          vertx.executeBlocking(Promise::complete, true).toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS);
 
          em.clear();
-         logs = CalculationLog.find("runid", runId).list();
+         logs = DatasetLog.find("dataset.run.id", runId).list();
          assertEquals(0, logs.size());
       }
    }
@@ -165,7 +169,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent1);
       // The change is detected already at run 4 because it's > than the previous mean
-      assertEquals(run4, changeEvent1.change.run.id);
+      assertEquals(run4, changeEvent1.change.dataset.id);
 
       ((ObjectNode) cd.config).put("filter", "min");
       setTestVariables(test, "Value", "value", cd);
@@ -181,7 +185,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       // now we'll find a change already at run3
       Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent2);
-      assertEquals(run3, changeEvent2.change.run.id);
+      assertEquals(run3, changeEvent2.change.dataset.id);
 
       int run6 = uploadRun(ts + 5, ts + 5, runWithValue(schema, 1.5), test.name);
       assertValue(datapointQueue, 1.5);
@@ -195,16 +199,16 @@ public class AlertingServiceTest extends BaseServiceTest {
       // mean of previous is 2, the last value doesn't matter (1.5 is lower than 2 - 10%)
       Change.Event changeEvent3 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent3);
-      assertEquals(run6, changeEvent3.change.run.id);
+      assertEquals(run6, changeEvent3.change.dataset.id);
    }
 
    @org.junit.jupiter.api.Test
-   public void testChangeDetectionWithTags(TestInfo info) throws InterruptedException {
+   public void testChangeDetectionWithFingerprint(TestInfo info) throws InterruptedException {
       Test test = createExampleTest(getTestName(info));
-      test.tags = "tags";
+      test.fingerprintLabels = JsonNodeFactory.instance.arrayNode().add("config");
       test = createTest(test);
       Schema schema = createExampleSchema(info);
-      addExtractor(schema, "tags", ".tags");
+      addLabel(schema, "config", null, new NamedJsonPath("config", "$.config", false));
 
       addChangeDetectionVariable(test);
 
@@ -212,25 +216,25 @@ public class AlertingServiceTest extends BaseServiceTest {
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
 
       long ts = System.currentTimeMillis();
-      for (int i = 0; i < 12; i+= 3) {
-         uploadRun(ts + i, ts + i, runWithValue(schema, 1).put("tags", "foo"), test.name);
+      for (int i = 0; i < 12; i += 3) {
+         uploadRun(ts + i, ts + i, runWithValue(schema, 1).put("config", "foo"), test.name);
          assertValue(datapointQueue, 1);
-         uploadRun(ts + i + 1, ts + i + 1, runWithValue(schema, 2).put("tags", "bar"), test.name);
+         uploadRun(ts + i + 1, ts + i + 1, runWithValue(schema, 2).put("config", "bar"), test.name);
          assertValue(datapointQueue, 2);
          uploadRun(ts + i + 2, ts + i + 2, runWithValue(schema, 3), test.name);
          assertValue(datapointQueue, 3);
       }
       assertNull(changeQueue.poll(50, TimeUnit.MILLISECONDS));
 
-      int run13 = uploadRun(ts + 12, ts + 12, runWithValue(schema, 2).put("tags", "foo"), test.name);
+      int run13 = uploadRun(ts + 12, ts + 12, runWithValue(schema, 2).put("config", "foo"), test.name);
       Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent1);
-      assertEquals(run13, changeEvent1.change.run.id);
+      assertEquals(run13, changeEvent1.change.dataset.id);
 
       int run14 = uploadRun(ts + 13, ts + 13, runWithValue(schema, 2), test.name);
       Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent2);
-      assertEquals(run14, changeEvent2.change.run.id);
+      assertEquals(run14, changeEvent2.change.dataset.id);
    }
 
    private ChangeDetection addChangeDetectionVariable(Test test) {
@@ -238,7 +242,6 @@ public class AlertingServiceTest extends BaseServiceTest {
       rd.model = RelativeDifferenceChangeDetectionModel.NAME;
       rd.config = JsonNodeFactory.instance.objectNode().put("threshold", 0.1).put("minPrevious", 2).put("window", 2).put("filter", "mean");
       setTestVariables(test, "Value", "value", rd);
-
       return rd;
    }
 
@@ -246,7 +249,96 @@ public class AlertingServiceTest extends BaseServiceTest {
       DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(dpe);
       assertEquals(value, dpe.dataPoint.value);
-
    }
 
+   @org.junit.jupiter.api.Test
+   public void testFingerprintLabelsChange(TestInfo info) throws Exception {
+      Test test = createExampleTest(getTestName(info));
+      test.fingerprintLabels = JsonNodeFactory.instance.arrayNode().add("foo");
+      test = createTest(test);
+      addChangeDetectionVariable(test);
+      Schema schema = createExampleSchema(info);
+      addLabel(schema, "foo", null, new NamedJsonPath("foo", "$.foo", false));
+      addLabel(schema, "bar", null, new NamedJsonPath("bar", "$.bar", false));
+
+      uploadRun(runWithValue(schema, 42).put("foo", "aaa").put("bar", "bbb"), test.name);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      assertValue(datapointQueue, 42);
+
+      List<Fingerprint> fingerprintsBefore = Fingerprint.listAll();
+      assertEquals(1, fingerprintsBefore.size());
+      // When there's just a single label the fingerprint doesn't contain the label name
+      assertEquals(JsonNodeFactory.instance.textNode("aaa"), fingerprintsBefore.get(0).fingerprint);
+
+      test.fingerprintLabels = ((ArrayNode) test.fingerprintLabels).add("bar");
+      // We'll change the filter here but we do NOT expect to be applied to existing datapoints
+      test.fingerprintFilter = "value => false";
+      test = createTest(test); // this is update
+      // the fingerprint should be updated within the same transaction as test update
+      em.clear();
+      List<Fingerprint> fingerprintsAfter = Fingerprint.listAll();
+      assertEquals(1, fingerprintsAfter.size());
+      assertEquals(JsonNodeFactory.instance.objectNode().put("foo", "aaa").put("bar", "bbb"), fingerprintsAfter.get(0).fingerprint);
+      assertEquals(fingerprintsBefore.get(0).datasetId, fingerprintsAfter.get(0).datasetId);
+
+      assertEquals(1L, DataPoint.findAll().count());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testFingerprintFilter(TestInfo info) throws Exception {
+      Test test = createExampleTest(getTestName(info));
+      test.fingerprintLabels = JsonNodeFactory.instance.arrayNode().add("foo");
+      test.fingerprintFilter = "value => value === 'aaa'";
+      test = createTest(test);
+      addChangeDetectionVariable(test);
+      Schema schema = createExampleSchema(info);
+      addLabel(schema, "foo", null, new NamedJsonPath("foo", "$.foo", false));
+      addLabel(schema, "bar", null, new NamedJsonPath("bar", "$.bar", false));
+
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+
+      uploadRun(runWithValue(schema, 1).put("foo", "aaa").put("bar", "bbb"), test.name);
+      assertValue(datapointQueue, 1);
+
+      // no fingerprint, should not match
+      uploadRun(runWithValue(schema, 2), test.name);
+
+      uploadRun(runWithValue(schema, 3).put("foo", "bbb"), test.name);
+      assertNull(datapointQueue.poll(50, TimeUnit.MILLISECONDS));
+      assertEquals(3, DataSet.count());
+      assertEquals(1, DataPoint.count());
+      em.clear();
+
+      test.fingerprintLabels = ((ArrayNode) test.fingerprintLabels).add("bar");
+      test.fingerprintFilter = "({foo, bar}) => bar !== 'bbb'";
+      createTest(test); // update
+
+      uploadRun(runWithValue(schema, 4).put("foo", "bbb").put("bar", "aaa"), test.name);
+      assertValue(datapointQueue, 4);
+      assertEquals(4, DataSet.count());
+      assertEquals(2, DataPoint.count());
+
+      recalculate(test.id);
+
+      List<DataPoint> datapoints = DataPoint.listAll();
+      assertEquals(3, datapoints.size());
+      assertTrue(datapoints.stream().anyMatch(dp -> dp.value == 2));
+      assertTrue(datapoints.stream().anyMatch(dp -> dp.value == 3));
+      assertTrue(datapoints.stream().anyMatch(dp -> dp.value == 4));
+   }
+
+   private void recalculate(int testId) throws InterruptedException {
+      jsonRequest()
+            .queryParam("test", testId).queryParam("notify", true).queryParam("debug", true)
+            .post("/api/alerting/recalculate")
+            .then().statusCode(204);
+      for (int i = 0; i < 200; ++i) {
+         AlertingService.RecalculationStatus status = jsonRequest().queryParam("test", testId).get("/api/alerting/recalculate")
+               .then().statusCode(200).extract().body().as(AlertingService.RecalculationStatus.class);
+         if (status.done) {
+            break;
+         }
+         Thread.sleep(20);
+      }
+   }
 }

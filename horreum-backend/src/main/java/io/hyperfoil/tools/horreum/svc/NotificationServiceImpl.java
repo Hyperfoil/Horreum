@@ -26,7 +26,7 @@ import io.hyperfoil.tools.horreum.api.NotificationService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
-import io.hyperfoil.tools.horreum.entity.json.Run;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
@@ -67,8 +67,7 @@ public class NotificationServiceImpl implements NotificationService {
       notificationPlugins.forEach(plugin -> plugins.put(plugin.method(), plugin));
    }
 
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
-   @Transactional
+   @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
    public void onMissingRunValues(Change.Event event) {
       if (!event.notify) {
@@ -80,43 +79,40 @@ public class NotificationServiceImpl implements NotificationService {
       Test test = Test.findById(variable.testId);
       // Test might be null when it's private
       String testName = test == null ? "unknown" : test.name;
-      log.infof("Received new change in test %d (%s), run %d, variable %d (%s)", variable.testId, testName, event.change.run.id, variable.id, variable.name);
+      String fingerprint = getFingerprint(event.change.dataset.id);
+      log.infof("Received new change in test %d (%s), dataset %d/%d (fingerprint: %s), variable %d (%s)",
+            variable.testId, testName, event.dataset.runId, event.dataset.ordinal, fingerprint, variable.id, variable.name);
 
-      String tags = getTags(event.change.run.id);
-
-      notifyAll(variable.testId, n -> n.notifyChange(testName, tags, event.change));
+      notifyAll(variable.testId, n -> n.notifyChange(testName, fingerprint, event));
    }
 
-   private String getTags(int runId) {
+   private String getFingerprint(int datasetId) {
       @SuppressWarnings("rawtypes")
-      List tagsList = em.createNativeQuery("SELECT tags::::text FROM run_tags WHERE runid = ?")
-              .setParameter(1, runId)
+      List fingerprintList = em.createNativeQuery("SELECT fingerprint::::text FROM fingerprint WHERE dataset_id = ?")
+              .setParameter(1, datasetId)
               .getResultList();
-      String tags;
-      if (tagsList.size() > 0) {
-         Object tagsResult = tagsList.stream().findFirst().get();
-         tags = tagsToString(Util.toJsonNode(String.valueOf(tagsResult)));
+      if (fingerprintList.size() > 0) {
+         Object fingerprintResult = fingerprintList.stream().findFirst().get();
+         return fingerprintToString(Util.toJsonNode(String.valueOf(fingerprintResult)));
       } else {
-         tags = "";
+         return "";
       }
-      return tags;
    }
 
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
-   @Transactional
-   @ConsumeEvent(value = Run.EVENT_MISSING_VALUES, blocking = true)
-   public void onMissingRunValues(MissingRunValuesEvent event) {
+   @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
+   @ConsumeEvent(value = DataSet.EVENT_MISSING_VALUES, blocking = true)
+   public void onMissingRunValues(MissingValuesEvent event) {
       if (!event.notify) {
-         log.debugf("Skipping notification for missing run values on test %d, run %d", event.testId, event.runId);
+         log.debugf("Skipping notification for missing run values on test %d, run %d", event.testId, event.datasetId);
          return;
       }
       // TODO: breaks storage/alerting separation!
       Test test = Test.findById(event.testId);
       String testName = test == null ? "unknown" : test.name;
-      log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.testId, testName, event.runId, event.variables);
+      log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.testId, testName, event.datasetId, event.variables);
 
-      String tags = getTags(event.runId);
-      notifyAll(event.testId, n -> n.notifyMissingRunValues(testName, tags, event));
+      String fingerprint = getFingerprint(event.datasetId);
+      notifyAll(event.testId, n -> n.notifyMissingRunValues(testName, fingerprint, event));
    }
 
    private void notifyAll(int testId, Consumer<Notification> consumer) {
@@ -142,12 +138,12 @@ public class NotificationServiceImpl implements NotificationService {
       }
    }
 
-   private static String tagsToString(JsonNode tagsObject) {
-      if (tagsObject == null) {
+   private static String fingerprintToString(JsonNode fpObject) {
+      if (fpObject == null) {
          return null;
       }
       StringBuilder sb = new StringBuilder();
-      Util.toMap(tagsObject).forEach((key, value) -> {
+      Util.toMap(fpObject).forEach((key, value) -> {
          if (sb.length() != 0) {
             sb.append(';');
          }
@@ -192,14 +188,14 @@ public class NotificationServiceImpl implements NotificationService {
 
    // must be called with sqlService.withRole
    void notifyMissingRun(int testId, JsonNode tagsJson, long maxStaleness, int runId, long runTimestamp) {
-      String tags = tagsToString(tagsJson);
+      String tags = fingerprintToString(tagsJson);
       Test test = Test.findById(testId);
       String name = test != null ? test.name : "<unknown test>";
       notifyAll(testId, n -> n.notifyMissingRun(name, testId, tags, maxStaleness, runId, runTimestamp));
    }
 
    public void notifyExpectedRun(int testId, JsonNode tagsJson, long expectedBefore, String expectedBy, String backlink) {
-      String tags = tagsToString(tagsJson);
+      String tags = fingerprintToString(tagsJson);
       Test test = Test.findById(testId);
       String name = test != null ? test.name : "<unknown test>";
       notifyAll(testId, n -> n.notifyExpectedRun(name, testId, tags, expectedBefore, expectedBy, backlink));

@@ -65,7 +65,6 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      setTestVariables(test, "Value", "value");
 
       uploadRun(runWithValue(schema, 42).toString(), test.name);
 

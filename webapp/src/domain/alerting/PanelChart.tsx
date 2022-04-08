@@ -81,7 +81,7 @@ function ellipsis(str: string) {
 type PanelProps = {
     title: string
     variables: number[]
-    tags: string
+    fingerprint: unknown
     timespan: number
     endTime: number
     setEndTime(endTime: number): void
@@ -99,7 +99,7 @@ export default function PanelChart(props: PanelProps) {
     const [gettingLast, setGettingLast] = useState(false)
     const startTime = props.endTime - props.timespan * 1000
     useEffect(() => {
-        fetchDatapoints(props.variables, props.tags, startTime, props.endTime).then(response => {
+        fetchDatapoints(props.variables, props.fingerprint, startTime, props.endTime).then(response => {
             setLegend(
                 response.map((tt, i) => ({
                     id: tt.target,
@@ -122,10 +122,10 @@ export default function PanelChart(props: PanelProps) {
             )
             setDatapoints(response)
         })
-    }, [startTime, props.endTime, props.variables, props.tags, props.lineType])
+    }, [startTime, props.endTime, props.variables, props.fingerprint, props.lineType])
     useEffect(() => {
-        fetchAllAnnotations(props.variables, props.tags, startTime, props.endTime).then(setAnnotations)
-    }, [startTime, props.endTime, props.variables, props.tags])
+        fetchAllAnnotations(props.variables, props.fingerprint, startTime, props.endTime).then(setAnnotations)
+    }, [startTime, props.endTime, props.variables, props.fingerprint])
 
     const chartData = useMemo(() => {
         if (!datapoints) {
@@ -198,7 +198,7 @@ export default function PanelChart(props: PanelProps) {
                                 isDisabled={gettingLast}
                                 onClick={() => {
                                     setGettingLast(true)
-                                    findLastDatapoints(props.variables, props.tags)
+                                    findLastDatapoints(props.variables, props.fingerprint)
                                         .then(
                                             response => {
                                                 if (Array.isArray(response) && response.length > 0) {

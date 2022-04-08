@@ -5,11 +5,12 @@ import { Panel } from "./types"
 import { ChangesTabs } from "./ChangeTable"
 import { alertAction } from "../../alerts"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
-import TagsSelect, { SelectedTags } from "../../components/TagsSelect"
+import LabelsSelect, { convertLabels, SelectedLabels } from "../../components/LabelsSelect"
 import PanelChart from "./PanelChart"
 import { formatDate } from "../../utils"
 import { DateTime } from "luxon"
 import { teamsSelector } from "../../auth"
+import { listFingerprints } from "../../domain/tests/api"
 
 import {
     Button,
@@ -140,18 +141,23 @@ export default function Changes() {
     const params = new URLSearchParams(history.location.search)
     // eslint-disable-next-line
     const paramTest = useMemo(() => params.get("test") || undefined, [])
-    const paramTags = params.get("tags")
+    const paramFingerprint = params.get("fingerprint")
     const dispatch = useDispatch()
     const teams = useSelector(teamsSelector)
     const [selectedTest, setSelectedTest] = useState<SelectedTest>()
-    const [currentTags, setCurrentTags] = useState<SelectedTags | undefined>(
-        paramTags ? { toString: () => paramTags } : undefined
-    )
+    const [selectedFingerprint, setSelectedFingerprint] = useState<SelectedLabels | undefined>(() => {
+        if (!paramFingerprint) {
+            return undefined
+        }
+        const fingerprint = JSON.parse(paramFingerprint)
+        const str = convertLabels(fingerprint)
+        return { ...fingerprint, toString: () => str }
+    })
     const [dashboardUrl, setDashboardUrl] = useState("")
     const [panels, setPanels] = useState<Panel[]>([])
     const [loadingPanels, setLoadingPanels] = useState(false)
-    const [loadingTags, setLoadingTags] = useState(false)
-    const [requiresTags, setRequiresTags] = useState(false)
+    const [loadingFingerprints, setLoadingFingerprints] = useState(false)
+    const [requiresFingerprint, setRequiresFingerprint] = useState(false)
 
     const firstNow = useMemo(() => Date.now(), [])
     const [endTime, setEndTime] = useState(toNumber(params.get("end")) || firstNow)
@@ -161,8 +167,8 @@ export default function Changes() {
 
     const createQuery = (alwaysEndTime: boolean) => {
         let query = "?test=" + selectedTest
-        if (currentTags) {
-            query += "&tags=" + currentTags
+        if (selectedFingerprint) {
+            query += "&fingerprint=" + encodeURIComponent(JSON.stringify(selectedFingerprint))
         }
         if (endTime !== firstNow || alwaysEndTime) {
             query += "&end=" + endTime
@@ -182,14 +188,14 @@ export default function Changes() {
         }
         document.title = `${selectedTest} | Horreum`
         history.replace(history.location.pathname + createQuery(false))
-    }, [selectedTest, currentTags, endTime, timespan, lineType, firstNow, history])
+    }, [selectedTest, selectedFingerprint, endTime, timespan, lineType, firstNow, history])
     useEffect(() => {
         setPanels([])
         setDashboardUrl("")
-        // We need to prevent fetching dashboard until we are sure if we need the tags
-        if (selectedTest && !loadingTags) {
+        // We need to prevent fetching dashboard until we are sure if we need the fingerprint
+        if (selectedTest && !loadingFingerprints) {
             setLoadingPanels(true)
-            fetchDashboard(selectedTest.id, currentTags?.toString())
+            fetchDashboard(selectedTest.id, selectedFingerprint ? JSON.stringify(selectedFingerprint) : undefined)
                 .then(
                     response => {
                         setDashboardUrl(response.url)
@@ -199,7 +205,7 @@ export default function Changes() {
                 )
                 .finally(() => setLoadingPanels(false))
         }
-    }, [selectedTest, currentTags, teams, dispatch])
+    }, [selectedTest, selectedFingerprint, teams, dispatch])
     useEffect(() => {
         const newDate = formatDate(endTime)
         if (newDate !== date) {
@@ -214,15 +220,31 @@ export default function Changes() {
             setSelectedTest(selection as SelectedTest)
         }
         if (!isInitial) {
-            setCurrentTags(undefined)
+            setSelectedFingerprint(undefined)
         }
     }, [])
-    const beforeTagsLoading = useCallback(() => setLoadingTags(true), [])
-    const onTagsLoaded = useCallback(tags => {
-        setLoadingTags(false)
-        setRequiresTags(!!tags && tags.length > 1)
-    }, [])
+
     const [linkCopyOpen, setLinkCopyOpen] = useState(false)
+    const fingerprintSource = useCallback(() => {
+        if (!selectedTest) {
+            return Promise.resolve([])
+        }
+        setLoadingFingerprints(true)
+        return listFingerprints(selectedTest?.id)
+            .then(
+                (response: any[]) => {
+                    setRequiresFingerprint(!!response && response.length > 1)
+                    return response
+                },
+                error => {
+                    dispatch(alertAction("FINGERPRINT_FETCH", "Failed to fetch test fingerprints", error))
+                    return error
+                }
+            )
+            .finally(() => {
+                setLoadingFingerprints(false)
+            })
+    }, [selectedTest])
     return (
         <PageSection>
             <Card>
@@ -237,13 +259,11 @@ export default function Changes() {
                                     selection={selectedTest}
                                 />
                                 {selectedTest && (
-                                    <TagsSelect
-                                        testId={selectedTest?.id}
-                                        selection={currentTags}
-                                        onSelect={setCurrentTags}
-                                        showIfNoTags={false}
-                                        beforeTagsLoading={beforeTagsLoading}
-                                        onTagsLoaded={onTagsLoaded}
+                                    <LabelsSelect
+                                        selection={selectedFingerprint}
+                                        onSelect={setSelectedFingerprint}
+                                        showIfNoLabels={false}
+                                        source={fingerprintSource}
                                     />
                                 )}
                                 {selectedTest && (
@@ -259,7 +279,11 @@ export default function Changes() {
                                         </Button>
                                         <Button
                                             variant="secondary"
-                                            isDisabled={!selectedTest || loadingTags || (requiresTags && !currentTags)}
+                                            isDisabled={
+                                                !selectedTest ||
+                                                loadingFingerprints ||
+                                                (requiresFingerprint && !selectedFingerprint)
+                                            }
                                             onClick={() => setLinkCopyOpen(true)}
                                         >
                                             Copy link
@@ -309,19 +333,19 @@ export default function Changes() {
                             <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
                         </EmptyState>
                     )}
-                    {selectedTest && loadingTags && (
+                    {selectedTest && loadingFingerprints && (
                         <EmptyState>
                             <EmptyStateBody>
-                                Loading tags... <Spinner size="md" />
+                                Loading fingerprints... <Spinner size="md" />
                             </EmptyStateBody>
                         </EmptyState>
                     )}
-                    {selectedTest && !loadingTags && requiresTags && !currentTags && (
+                    {selectedTest && !loadingFingerprints && requiresFingerprint && !selectedFingerprint && (
                         <EmptyState>
-                            <Title headingLevel="h2">Please select tags filtering test runs.</Title>
+                            <Title headingLevel="h2">Please select datasets fingerprint.</Title>
                         </EmptyState>
                     )}
-                    {selectedTest && !loadingPanels && !requiresTags && panels.length === 0 && (
+                    {selectedTest && !loadingPanels && !requiresFingerprint && panels.length === 0 && (
                         <EmptyState>
                             <Title headingLevel="h2">
                                 Test {selectedTest.toString()} does not define any change detection variables
@@ -331,8 +355,8 @@ export default function Changes() {
                             </NavLink>
                         </EmptyState>
                     )}
-                    {!loadingTags &&
-                        (!requiresTags || currentTags) &&
+                    {!loadingFingerprints &&
+                        (!requiresFingerprint || selectedFingerprint) &&
                         panels &&
                         panels.map((p, i) => (
                             <DataList key={i} aria-label="test variables">
@@ -345,7 +369,7 @@ export default function Changes() {
                                                         <PanelChart
                                                             title={p.name}
                                                             variables={p.variables.map(v => v.id)}
-                                                            tags={currentTags?.toString() || ""}
+                                                            fingerprint={selectedFingerprint}
                                                             endTime={endTime}
                                                             setEndTime={setEndTime}
                                                             timespan={timespan}

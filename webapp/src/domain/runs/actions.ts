@@ -48,10 +48,10 @@ export function get(id: number, token?: string) {
         )
 }
 
-export function byTest(id: number, pagination: PaginationInfo, trashed: boolean, tags: string) {
+export function byTest(id: number, pagination: PaginationInfo, trashed: boolean) {
     return (dispatch: Dispatch<LoadingAction | TestIdAction | AddAlertAction>) => {
         dispatch({ type: actionTypes.LOADING })
-        return api.byTest(id, pagination, trashed, tags).then(
+        return api.byTest(id, pagination, trashed).then(
             response => dispatch(testId(id, response.runs, response.total)),
             error => {
                 dispatch(alertAction("FETCH_RUNS", "Failed to fetch runs for test " + id, error))

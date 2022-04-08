@@ -43,7 +43,7 @@ export interface Test {
     compareUrl: string | CompareFunction | undefined
     tags: string
     tagsCalculation?: string
-    fingerprintLabels: string[]
+    fingerprintLabels: string[] | null
     fingerprintFilter: string | null
     owner: string
     access: Access

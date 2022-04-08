@@ -84,6 +84,10 @@ export const fetchTags = (testId: number, trashed: boolean) => {
     return fetchApi(endPoints.tags(testId, trashed), null, "get")
 }
 
+export function listFingerprints(testId: number) {
+    return fetchApi(endPoints.fingerprint(testId), null, "get")
+}
+
 export function updateTransformers(testId: number, transformerIds: number[]) {
     return fetchApi(endPoints.transformers(testId), transformerIds, "post")
 }

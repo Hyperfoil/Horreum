@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class Run extends ProtectedBaseEntity {
    public static final String EVENT_NEW = "run/new";
    public static final String EVENT_TRASHED = "run/trashed";
-   public static final String EVENT_MISSING_VALUES = "run/missing_value";
    public static final String EVENT_TAGS_CREATED = "run/tags_created";
 
    @Id

@@ -2,6 +2,8 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -454,5 +456,13 @@ public class Util {
          ex = ex.getCause();
       }
       return false;
+   }
+
+   public static JsonNode parseFingerprint(String fpString) {
+      if (fpString == null || fpString.isEmpty()) {
+         // all tags
+         return null;
+      }
+      return toJsonNode(URLDecoder.decode(fpString.replace("+", "%2B"), StandardCharsets.UTF_8));
    }
 }

@@ -14,7 +14,8 @@ import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.hyperfoil.tools.horreum.entity.json.Run;
+import io.hyperfoil.tools.horreum.api.AlertingService;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -36,9 +37,9 @@ public class Change extends PanacheEntityBase {
    public Variable variable;
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-   @JoinColumn(name = "runid")
+   @JoinColumn(name = "dataset_id")
    @JsonIgnore
-   public Run run;
+   public DataSet dataset;
 
    @NotNull
    @Column(columnDefinition = "timestamp")
@@ -51,7 +52,7 @@ public class Change extends PanacheEntityBase {
 
    @JsonProperty("runId")
    public int getRunId() {
-      return run.id;
+      return dataset.id;
    }
 
    @Override
@@ -59,7 +60,7 @@ public class Change extends PanacheEntityBase {
       return "Change{" +
             "id=" + id +
             ", variable=" + variable +
-            ", runId=" + run.id +
+            ", runId=" + dataset.id +
             ", timestamp=" + timestamp +
             ", confirmed=" + confirmed +
             ", description='" + description + '\'' +
@@ -68,10 +69,12 @@ public class Change extends PanacheEntityBase {
 
    public static class Event {
       public Change change;
+      public AlertingService.DatasetInfo dataset;
       public boolean notify;
 
-      public Event(Change change, boolean notify) {
+      public Event(Change change, AlertingService.DatasetInfo dataset, boolean notify) {
          this.change = change;
+         this.dataset = dataset;
          this.notify = notify;
       }
 
@@ -79,6 +82,7 @@ public class Change extends PanacheEntityBase {
       public String toString() {
          return "Change.Event{" +
                "change=" + change +
+               ", dataset=" + dataset +
                ", notify=" + notify +
                '}';
       }

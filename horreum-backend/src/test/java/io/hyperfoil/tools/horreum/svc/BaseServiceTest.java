@@ -2,7 +2,9 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -17,10 +19,14 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.SchemaService;
+import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
+import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.json.Access;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
+import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
@@ -58,6 +64,10 @@ public class BaseServiceTest {
             View.deleteAll();
             em.flush();
             Test.deleteAll();
+            Change.deleteAll();
+            DataPoint.deleteAll();
+            DataSet.deleteAll();
+            Run.deleteAll();
          }
          return null;
       });
@@ -132,6 +142,7 @@ public class BaseServiceTest {
       String name = info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
       Schema schema = createSchema(name, uriForTest(info, "1.0"));
       addExtractor(schema, "value", ".value");
+      addLabel(schema, "value", null, new NamedJsonPath("value", "$.value", false));
       return schema;
    }
 
@@ -189,12 +200,16 @@ public class BaseServiceTest {
       jsonRequest().delete("/api/schema/" + schema.id + "/labels/" + labelId).then().statusCode(204);
    }
 
-   protected void setTestVariables(Test test, String name, String accessors, ChangeDetection... rds) {
+   protected void setTestVariables(Test test, String name, String label, ChangeDetection... rds) {
+      setTestVariables(test, name, Collections.singletonList(label), rds);
+   }
+
+   protected void setTestVariables(Test test, String name, List<String> labels, ChangeDetection... rds) {
       ArrayNode variables = JsonNodeFactory.instance.arrayNode();
       ObjectNode variable = JsonNodeFactory.instance.objectNode();
       variable.put("testid", test.id);
       variable.put("name", name);
-      variable.put("accessors", accessors);
+      variable.set("labels", labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll));
       if (rds.length > 0) {
          ArrayNode rdsArray = JsonNodeFactory.instance.arrayNode();
          for (ChangeDetection rd : rds) {

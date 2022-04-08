@@ -10,27 +10,27 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
+import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 
 @Produces(MediaType.APPLICATION_JSON)
 @Path("/api/log")
 public interface LogService {
    @GET
-   @Path("{source}/{testId}")
-   List<CalculationLog> getCalculationLog(@PathParam("source") String source,
-                                          @PathParam("testId") Integer testId,
-                                          @QueryParam("page") Integer page,
-                                          @QueryParam("limit") Integer limit);
+   @Path("{source}/{testId}/dataset")
+   List<DatasetLog> getDatasetLog(@PathParam("source") String source,
+                                  @PathParam("testId") Integer testId,
+                                  @QueryParam("page") Integer page,
+                                  @QueryParam("limit") Integer limit);
 
    @GET
-   @Path("{source}/{testId}/count")
-   long getLogCount(@PathParam("source") String source, @PathParam("testId") Integer testId);
+   @Path("{source}/{testId}/dataset/count")
+   long getDatasetLogCount(@PathParam("source") String source, @PathParam("testId") Integer testId);
 
    @DELETE
-   @Path("{source}/{testId}")
-   void deleteLogs(@PathParam("source") String source,
-                   @PathParam("testId") Integer testId,
-                   @QueryParam("from") Long from,
-                   @QueryParam("to") Long to);
+   @Path("{source}/{testId}/dataset")
+   void deleteDatasetLogs(@PathParam("source") String source,
+                          @PathParam("testId") Integer testId,
+                          @QueryParam("from") Long from,
+                          @QueryParam("to") Long to);
 
 }

@@ -9,7 +9,7 @@ import javax.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.svc.MissingRunValuesEvent;
+import io.hyperfoil.tools.horreum.svc.MissingValuesEvent;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 import io.quarkus.qute.Location;
@@ -54,17 +54,18 @@ public class EmailPlugin implements NotificationPlugin {
       }
 
       @Override
-      public void notifyChange(String testName, String tags, Change change) {
-         String subject = subjectPrefix + " Change in " + testName + "/" + change.variable.name;
+      public void notifyChange(String testName, String fingerprint, Change.Event event) {
+         String subject = subjectPrefix + " Change in " + testName + "/" + event.change.variable.name;
          String content = changeNotificationEmail
                .data("username", username)
                .data("testName", testName)
-               .data("tags", tags)
+               .data("fingerprint", fingerprint)
                .data("baseUrl", baseUrl)
-               .data("testId", String.valueOf(change.variable.testId))
-               .data("variable", change.variable.name)
-               .data("runId", String.valueOf(change.run.id))
-               .data("group", change.variable.group)
+               .data("testId", String.valueOf(event.change.variable.testId))
+               .data("variable", event.change.variable.name)
+               .data("group", event.change.variable.group)
+               .data("runId", event.dataset.runId)
+               .data("datasetOrdinal", event.dataset.ordinal)
                .render();
          mailer.send(Mail.withHtml(data, subject, content));
       }
@@ -88,15 +89,16 @@ public class EmailPlugin implements NotificationPlugin {
       }
 
       @Override
-      public void notifyMissingRunValues(String testName, String tags, MissingRunValuesEvent event) {
-         String subject = subjectPrefix + " Missing change detection values for " + testName + "/" + tags + ", run " + event.runId;
+      public void notifyMissingRunValues(String testName, String fingerprint, MissingValuesEvent event) {
+         String subject = subjectPrefix + " Missing change detection values for " + testName + "/" + fingerprint + ", run " + event.datasetId;
          String content = missingValuesNotificationEmail
                .data("username", username)
                .data("testName", testName)
                .data("testId", String.valueOf(event.testId))
-               .data("tags", tags)
+               .data("fingerprint", fingerprint)
                .data("baseUrl", baseUrl)
                .data("runId", event.runId)
+               .data("datasetOrdinal", event.datasetOrdinal)
                .data("variables", String.join(", ", event.variables))
                .render();
          mailer.send(Mail.withHtml(data, subject, content));

@@ -15,7 +15,7 @@ import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.hyperfoil.tools.horreum.entity.json.Run;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -30,9 +30,9 @@ public class DataPoint extends PanacheEntityBase {
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-   @JoinColumn(name = "runid")
+   @JoinColumn(name = "dataset_id")
    @JsonIgnore
-   public Run run;
+   public DataSet dataset;
 
    @NotNull
    @Column(columnDefinition = "timestamp")
@@ -50,9 +50,9 @@ public class DataPoint extends PanacheEntityBase {
    @ManyToOne(fetch = FetchType.LAZY)
    public Variable variable;
 
-   @JsonProperty("runId")
-   public int getRunId() {
-      return run.id;
+   @JsonProperty("datasetId")
+   public int getDatasetId() {
+      return dataset.id;
    }
 
    public static class Event {

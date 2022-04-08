@@ -127,7 +127,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                     {o.schemas.map((d, i) => (
                         <React.Fragment key={i}>
                             <Tooltip maxWidth="80vw" content={<code>{d.uri}</code>}>
-                                <NavLink to={`/schema/${d.id}`}>{d.name}</NavLink>
+                                <NavLink to={`/schema/${d.id}#labels`}>{d.name}</NavLink>
                             </Tooltip>
                             {i != o.schemas.length - 1 && ",\u00A0"}
                         </React.Fragment>

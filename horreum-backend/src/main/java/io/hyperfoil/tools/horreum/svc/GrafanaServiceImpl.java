@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
@@ -11,13 +10,14 @@ import javax.persistence.EntityManager;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.hyperfoil.tools.horreum.api.GrafanaService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.grafana.Target;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.quarkus.security.identity.SecurityIdentity;
 
 /**
  * This service works as a backend for calls from Grafana (using
@@ -53,10 +53,10 @@ public class GrafanaServiceImpl implements GrafanaService {
             throw ServiceException.badRequest("Tables are not implemented");
          }
          String tq = target.target;
-         Map<String, String> tags = null;
+         JsonNode fingerprint = null;
          int semicolon = tq.indexOf(';');
          if (semicolon >= 0) {
-            tags = Tags.parseTags(tq.substring(semicolon + 1));
+            fingerprint = Util.parseFingerprint(tq.substring(semicolon + 1));
             tq = tq.substring(0, semicolon);
          }
          int variableId = parseVariableId(tq);
@@ -74,21 +74,25 @@ public class GrafanaServiceImpl implements GrafanaService {
          result.add(tt);
 
          StringBuilder sql = new StringBuilder("SELECT datapoint.* FROM datapoint ");
-         if (tags != null) {
-            sql.append(" LEFT JOIN run_tags ON run_tags.runid = datapoint.runid ");
+         if (fingerprint != null) {
+            sql.append("LEFT JOIN fingerprint fp ON fp.dataset_id = datapoint.dataset_id ");
          }
          sql.append(" WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3 ");
-         Tags.addTagQuery(tags, sql, 4);
-         sql.append(" ORDER BY timestamp ASC");
+         if (fingerprint != null) {
+            sql.append("AND json_equals(fp.fingerprint, (?4)::::jsonb) ");
+         }
+         sql.append("ORDER BY timestamp ASC");
          javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), DataPoint.class)
                .setParameter(1, variableId)
                .setParameter(2, query.range.from)
                .setParameter(3, query.range.to);
-         Tags.addTagValues(tags, nativeQuery, 4);
+         if (fingerprint != null) {
+            nativeQuery.setParameter(4, fingerprint.toString());
+         }
          @SuppressWarnings("unchecked")
          List<DataPoint> datapoints = nativeQuery.getResultList();
          for (DataPoint dp : datapoints) {
-            tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli(), /* non-standard! */ dp.run.id });
+            tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli(), /* non-standard! */ dp.dataset.id });
          }
       }
       return result;
@@ -117,10 +121,10 @@ public class GrafanaServiceImpl implements GrafanaService {
       // https://github.com/grafana/grafana/issues/717
       List<AnnotationDefinition> annotations = new ArrayList<>();
       String tq = query.annotation.query;
-      Map<String, String> tags = null;
+      JsonNode fingerprint = null;
       int semicolon = tq.indexOf(';');
       if (semicolon >= 0) {
-         tags = Tags.parseTags(tq.substring(semicolon + 1));
+         fingerprint = Util.parseFingerprint(tq.substring(semicolon + 1));
          tq = tq.substring(0, semicolon);
       }
       int variableId = parseVariableId(tq);
@@ -128,16 +132,20 @@ public class GrafanaServiceImpl implements GrafanaService {
          throw ServiceException.badRequest("Query must be variable ID");
       }
       StringBuilder sql = new StringBuilder("SELECT change.* FROM change ");
-      if (tags != null) {
-         sql.append(" JOIN run_tags ON run_tags.runid = change.runid ");
+      if (fingerprint != null) {
+         sql.append(" JOIN fingerprint fp ON fp.dataset_id = change.dataset_id ");
       }
       sql.append(" WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3 ");
-      Tags.addTagQuery(tags, sql, 4);
+      if (fingerprint != null) {
+         sql.append("AND json_equals(fp.fingerprint, (?4)::::jsonb)");
+      }
       javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), Change.class)
             .setParameter(1, variableId)
             .setParameter(2, query.range.from)
             .setParameter(3, query.range.to);
-      Tags.addTagValues(tags, nativeQuery, 4);
+      if (fingerprint != null) {
+         nativeQuery.setParameter(4, fingerprint.toString());
+      }
 
       @SuppressWarnings("unchecked")
       List<Change> changes = nativeQuery.getResultList();
@@ -153,8 +161,8 @@ public class GrafanaServiceImpl implements GrafanaService {
          content.append(" (group ").append(change.variable.group).append(")");
       }
       content.append("<br>").append(change.description).append("<br>Confirmed: ").append(change.confirmed);
-      return new AnnotationDefinition("Change in run " + change.run.id, content.toString(), false,
-            change.timestamp.toEpochMilli(), 0, new String[0], change.id, change.variable.id, change.run.id);
+      return new AnnotationDefinition("Change in run " + change.dataset.run.id + "/" + change.dataset.ordinal, content.toString(), false,
+            change.timestamp.toEpochMilli(), 0, new String[0], change.id, change.variable.id, change.dataset.run.id, change.dataset.ordinal);
    }
 
 }

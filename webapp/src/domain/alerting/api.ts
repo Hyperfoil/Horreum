@@ -1,11 +1,13 @@
 import { fetchApi } from "../../services/api"
 import { Change, Variable } from "./types"
+import { fingerprintToString } from "./grafanaapi"
 
 const base = "/api/alerting"
 const endPoints = {
     base: () => `${base}`,
     variables: (testId: number) => `${base}/variables?test=${testId}`,
-    dashboard: (testId: number, tags?: string) => `${base}/dashboard?test=${testId}&tags=${tags || ""}`,
+    dashboard: (testId: number, fingerprint?: string) =>
+        `${base}/dashboard?test=${testId}&fingerprint=${fingerprint ? encodeURIComponent(fingerprint) : ""}`,
     changes: (varId: number) => `${base}/changes?var=${varId}`,
     change: (changeId: number) => `${base}/change/${changeId}`,
     recalculate: (testId: number, debug: boolean, from?: number, to?: number) =>
@@ -23,8 +25,8 @@ export const updateVariables = (testId: number, variables: Variable[]) => {
     return fetchApi(endPoints.variables(testId), variables, "post", {}, "response")
 }
 
-export const fetchDashboard = (testId: number, tags?: string) => {
-    return fetchApi(endPoints.dashboard(testId, tags), null, "get")
+export const fetchDashboard = (testId: number, fingerprint?: string) => {
+    return fetchApi(endPoints.dashboard(testId, fingerprint), null, "get")
 }
 
 export const fetchChanges = (varId: number) => {
@@ -47,8 +49,12 @@ export const recalculateProgress = (testId: number) => {
     return fetchApi(endPoints.recalculate(testId, false), null, "get")
 }
 
-export const findLastDatapoints = (variableIds: number[], tags: string) => {
-    return fetchApi(endPoints.lastDatapoints(), { variables: variableIds, tags }, "post")
+export const findLastDatapoints = (variableIds: number[], fingerprint: unknown) => {
+    return fetchApi(
+        endPoints.lastDatapoints(),
+        { variables: variableIds, fingerprint: fingerprintToString(fingerprint) },
+        "post"
+    )
 }
 
 export function models() {

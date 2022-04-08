@@ -185,7 +185,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                                                         props.jsonpath || ""
                                                     )}#dataset${d.ordinal}`}
                                                 >
-                                                    {d.runId} #{d.ordinal + 1}
+                                                    {d.runId}/{d.ordinal + 1}
                                                 </NavLink>
                                             ),
                                         },

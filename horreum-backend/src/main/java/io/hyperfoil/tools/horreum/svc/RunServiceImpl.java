@@ -2,7 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.RunService;
 import io.hyperfoil.tools.horreum.api.SqlService;
-import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
+import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
@@ -52,7 +52,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -207,7 +206,7 @@ public class RunServiceImpl implements RunService {
                } catch (PolyglotException e) {
                   log.errorf(e, "Failed to evaluate tags function on run %d.", runId);
                   log.infof("Offending code: %s", jsCode);
-                  wrappedLogCalculation(CalculationLog.ERROR, runId, "Failed to evaluate tags function with code: <pre>" + jsCode + "</pre>");
+                  wrappedLogCalculation(DatasetLog.ERROR, runId, "Failed to evaluate tags function with code: <pre>" + jsCode + "</pre>");
                   return;
                } finally {
                   if (out.size() > 0) {
@@ -221,16 +220,16 @@ public class RunServiceImpl implements RunService {
          insert.setParameter(1, runId).setParameter(2, tags).setParameter(3, extractorIds);
          if (insert.executeUpdate() != 1) {
             log.errorf("Failed to insert run tags for run %d (invalid update count - maybe missing privileges?)", runId);
-            wrappedLogCalculation(CalculationLog.ERROR, runId, "Failed to insert run tags (maybe missing privileges?)");
+            wrappedLogCalculation(DatasetLog.ERROR, runId, "Failed to insert run tags (maybe missing privileges?)");
          }
          Util.publishLater(tm, eventBus, Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, tags));
       } catch (NoResultException e) {
          log.infof("Run %d does not create any tags.", runId);
-         wrappedLogCalculation(CalculationLog.INFO, runId, "Run does not create any tags");
+         wrappedLogCalculation(DatasetLog.INFO, runId, "Run does not create any tags");
          Util.publishLater(tm, eventBus, Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, null));
       } catch (Throwable e) {
          log.errorf(e, "Failed to calculate tags for run %d", runId);
-         wrappedLogCalculation(CalculationLog.ERROR, runId, "Failed to calculate tags: " + Util.explainCauses(e));
+         wrappedLogCalculation(DatasetLog.ERROR, runId, "Failed to calculate tags: " + Util.explainCauses(e));
       }
    }
 
@@ -272,7 +271,7 @@ public class RunServiceImpl implements RunService {
                      Value value = context.eval("js", jsCode);
                      result = Util.convertToJson(value);
                   } catch (PolyglotException e) {
-                     logMessage(datasetId, CalculationLog.ERROR, "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
+                     logMessage(datasetId, DatasetLog.ERROR, "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
                      continue;
                   }
                } else {
@@ -287,21 +286,16 @@ public class RunServiceImpl implements RunService {
             Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId));
          } finally {
             if (out.size() > 0) {
-               logMessage(datasetId, CalculationLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out.toString());
+               logMessage(datasetId, DatasetLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out.toString());
             }
             context.leave();
          }
       }
    }
 
-   @ConsumeEvent(value = DataSet.EVENT_LABELS_UPDATED, blocking = true)
-   public void consumeUpdateLabels(DataSet.LabelsUpdatedEvent event) {
-      // An empty method is necessary to register codecs
-   }
-
    private void logMessage(int datasetId, int level, String message, Object... params) {
       String msg = String.format(message, params);
-      if (level == CalculationLog.ERROR) {
+      if (level == DatasetLog.ERROR) {
          log.errorf("Calculating labels for DS %d: %s", datasetId, msg);
       }
       // TODO log in DB
@@ -319,12 +313,13 @@ public class RunServiceImpl implements RunService {
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    void logCalculation(int severity, int runId, String message) {
-      Run run = Run.findById(runId);
-      if (run == null) {
-         log.errorf("Cannot find run %d! Cannot log message : %s", runId, message);
-      } else {
-         new CalculationLog(em.getReference(Test.class, run.testid), em.getReference(Run.class, run.id), severity, "tags", message).persistAndFlush();
-      }
+      // TODO: split log for datasets and runs?
+//      Run run = Run.findById(runId);
+//      if (run == null) {
+//         log.errorf("Cannot find run %d! Cannot log message : %s", runId, message);
+//      } else {
+//         new CalculationLog(em.getReference(Test.class, run.testid), em.getReference(Run.class, run.id), severity, "tags", message).persistAndFlush();
+//      }
    }
 
    private Object runQuery(String query, Object... params) {
@@ -793,7 +788,7 @@ public class RunServiceImpl implements RunService {
    @PermitAll
    @WithToken
    @Override
-   public TestRunsSummary listTestRuns(Integer testId, boolean trashed, String tags,
+   public TestRunsSummary listTestRuns(Integer testId, boolean trashed,
                                        Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
             .append("    SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') AS schemas, rs.runid FROM run_schemas rs GROUP BY rs.runid")
@@ -808,10 +803,6 @@ public class RunServiceImpl implements RunService {
       if (!trashed) {
          sql.append(" AND NOT run.trashed ");
       }
-      Map<String, String> tagsMap = Tags.parseTags(tags);
-      if (tagsMap != null) {
-         Tags.addTagQuery(tagsMap, sql, 2);
-      }
       Util.addOrderBy(sql, sort, direction);
       Util.addLimitOffset(sql, limit, page);
       Test test = Test.find("id", testId).firstResult();
@@ -820,7 +811,6 @@ public class RunServiceImpl implements RunService {
       }
       Query query = em.createNativeQuery(sql.toString());
       query.setParameter(1, testId);
-      Tags.addTagValues(tagsMap, query, 2);
       @SuppressWarnings("unchecked")
       List<Object[]> resultList = query.getResultList();
       List<TestRunSummary> runs = new ArrayList<>();

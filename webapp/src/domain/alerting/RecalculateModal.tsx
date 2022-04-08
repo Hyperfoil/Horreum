@@ -28,27 +28,34 @@ function isEmpty(value: any) {
 type RecalculationResult = {
     totalRuns?: number
     errors?: number
-    runsWithoutAccessor?: number[]
-    runsWithoutValue?: number[]
+    datasetsWithoutValue?: DatasetInfo[]
 }
 
-function runsToLinks(ids: number[] | undefined | null) {
-    if (!ids) {
+type DatasetInfo = {
+    id: number
+    runId: number
+    ordinal: number
+}
+
+function datasetsToLinks(datasets: DatasetInfo[] | undefined | null) {
+    if (!datasets) {
         return null
     }
     // reverse sort
     return (
         <>
-            {ids
-                .sort((a, b) => a - b)
+            {datasets
+                .sort((a, b) => a.id - b.id)
                 .slice(0, 10)
-                .map((id, i) => (
+                .map((ds, i) => (
                     <>
                         {i !== 0 && ", "}
-                        <NavLink to={`/run/${id}`}>{id}</NavLink>
+                        <NavLink to={`/run/${ds.runId}#dataset${ds.ordinal}`}>
+                            {ds.runId}/{ds.ordinal + 1}
+                        </NavLink>
                     </>
                 ))}
-            {ids.length > 10 && "..."}
+            {datasets.length > 10 && "..."}
         </>
     )
 }
@@ -72,11 +79,7 @@ export default function RecalculateModal(props: RecalculateModalProps) {
             response => {
                 if (response.done) {
                     close()
-                    if (
-                        response.errors !== 0 ||
-                        !isEmpty(response.runsWithoutAccessor) ||
-                        !isEmpty(response.runsWithoutValue)
-                    ) {
+                    if (response.errors !== 0 || !isEmpty(response.runsWithoutValue)) {
                         setResult(response)
                     }
                 } else {
@@ -184,8 +187,7 @@ export default function RecalculateModal(props: RecalculateModalProps) {
                         cells={["Category", "Value"]}
                         rows={[
                             ["Total number of runs", result.totalRuns],
-                            ["Runs without accessor", runsToLinks(result.runsWithoutAccessor)],
-                            ["Runs without value", runsToLinks(result.runsWithoutValue)],
+                            ["Datasets without value", datasetsToLinks(result.datasetsWithoutValue)],
                             ["Value parsing errors", result.errors],
                         ]}
                     >

@@ -21,16 +21,23 @@ function range(from: number, to: number) {
     }
 }
 
+export function fingerprintToString(fingerprint: unknown) {
+    if (!fingerprint) {
+        return ""
+    }
+    return encodeURIComponent(JSON.stringify(fingerprint))
+}
+
 export const fetchDatapoints = (
     variableIds: number[],
-    tags: string,
+    fingerprint: unknown,
     from: number,
     to: number
 ): Promise<TimeseriesTarget[]> => {
     const query = {
         range: range(from, to),
         targets: variableIds.map(id => ({
-            target: `${id};${tags}`,
+            target: `${id};${fingerprintToString(fingerprint)}`,
             type: "timeseries",
             refId: "ignored",
         })),
@@ -51,11 +58,16 @@ export type Annotation = {
     runId?: number
 }
 
-export const fetchAnnotations = (variableId: number, tags: string, from: number, to: number): Promise<Annotation[]> => {
+export const fetchAnnotations = (
+    variableId: number,
+    fingerprint: unknown,
+    from: number,
+    to: number
+): Promise<Annotation[]> => {
     const query = {
         range: range(from, to),
         annotation: {
-            query: variableId + ";" + tags,
+            query: variableId + ";" + fingerprintToString(fingerprint),
         },
     }
     return fetchApi(endPoints.annotations(), query, "post")
@@ -63,9 +75,12 @@ export const fetchAnnotations = (variableId: number, tags: string, from: number,
 
 export const fetchAllAnnotations = (
     variableIds: number[],
-    tags: string,
+    fingerprint: unknown,
     from: number,
     to: number
 ): Promise<Annotation[]> => {
-    return Promise.all(variableIds.map(id => fetchAnnotations(id, tags, from, to))).then(results => results.flat())
+    // TODO: let's create a bulk operation for these
+    return Promise.all(variableIds.map(id => fetchAnnotations(id, fingerprint, from, to))).then(results =>
+        results.flat()
+    )
 }

@@ -40,7 +40,7 @@ import javax.ws.rs.core.Response;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
-import io.hyperfoil.tools.horreum.entity.alerting.CalculationLog;
+import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.LastMissingRunNotification;
@@ -57,7 +57,6 @@ import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.vladmihalcea.hibernate.type.array.IntArrayType;
@@ -65,8 +64,8 @@ import com.vladmihalcea.hibernate.type.array.IntArrayType;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Run;
-import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.grafana.Dashboard;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
@@ -84,13 +83,11 @@ public class AlertingServiceImpl implements AlertingService {
    private static final Logger log = Logger.getLogger(AlertingServiceImpl.class);
 
    //@formatter:off
-   private static final String LOOKUP_VARS =
-         "WITH vars AS (" +
-         "   SELECT id, name, calculation, \"group\", unnest(string_to_array(accessors, ';')) as accessor FROM variable" +
-         "   WHERE testid = ?" +
-         ") SELECT vars.id as vid, vars.name as name, vars.group, vars.calculation, vars.accessor, se.jsonpath, schema.uri  FROM vars " +
-         "JOIN schemaextractor se ON se.accessor = replace(vars.accessor, '[]', '') " +
-         "JOIN schema ON schema.id = se.schema_id;";
+   private static final String LOOKUP_VARIABLES =
+         "SELECT var.id, var.name, var.\"group\", var.calculation, jsonb_object_agg(label.name, lv.value)::::text " +
+         "FROM variable var LEFT JOIN label ON json_contains(var.labels, label.name) LEFT JOIN label_values lv ON label.id = lv.label_id " +
+         "WHERE var.testid = ?1 AND lv.dataset_id = ?2 " +
+         "GROUP BY var.id, var.name, var.\"group\", var.calculation";
 
    private static final String LOOKUP_STALE =
          "WITH last_run AS (" +
@@ -108,10 +105,17 @@ public class AlertingServiceImpl implements AlertingService {
          "   AND timestamp < EXTRACT(EPOCH FROM current_timestamp) * 1000 - ts.maxstaleness " +
          "   AND (lmrn.lastnotification IS NULL OR " +
          "       (EXTRACT(EPOCH FROM current_timestamp) - EXTRACT(EPOCH FROM lmrn.lastnotification))* 1000 > ts.maxstaleness)";
+
+   private static final String FIND_LAST_DATAPOINTS =
+         "SELECT DISTINCT ON(variable_id) variable_id AS variable, EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp " +
+         "FROM datapoint dp LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id " +
+         "WHERE ((fp.fingerprint IS NULL AND ?1 IS NULL) OR json_equals(fp.fingerprint, (?1)::::jsonb)) AND variable_id = ANY(?2) " +
+         "ORDER BY variable_id, timestamp DESC;";
    //@formatter:on
    private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
 
-   private static Map<String, ChangeDetectionModel> MODELS = Map.of(RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel());
+   private static final Map<String, ChangeDetectionModel> MODELS =
+         Map.of(RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel());
 
    @Inject
    TestServiceImpl testService;
@@ -149,9 +153,6 @@ public class AlertingServiceImpl implements AlertingService {
    @Inject
    NotificationServiceImpl notificationService;
 
-   @Inject
-   AlertingServiceImpl self;
-
    // entries can be removed from timer thread while normally this is updated from one of blocking threads
    private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
 
@@ -159,27 +160,24 @@ public class AlertingServiceImpl implements AlertingService {
       System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
    }
 
-   @WithRoles(extras = { Roles.HORREUM_ALERTING, Roles.HORREUM_SYSTEM })
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   @ConsumeEvent(value = Run.EVENT_TAGS_CREATED, blocking = true)
-   public void onNewRun(Run.TagsEvent event) {
+   @ConsumeEvent(value = DataSet.EVENT_LABELS_UPDATED, blocking = true)
+   public void onLabelsUpdated(DataSet.LabelsUpdatedEvent event) {
       boolean sendNotifications;
-      Run run = Run.findById(event.runId);
-      if (run == null) {
+      DataSet dataset = DataSet.findById(event.datasetId);
+      if (dataset == null) {
          // The run is not committed yet?
-         vertx.setTimer(1000, timerId -> onNewRun(event));
-         return;
-      } else if (run.trashed) {
-         log.errorf("Received new tags for a trashed run %d - ignori ng.", run.id);
+         vertx.setTimer(1000, timerId -> onLabelsUpdated(event));
          return;
       }
       try {
          sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
-               .setParameter(1, run.testid).getSingleResult();
+               .setParameter(1, dataset.testid).getSingleResult();
       } catch (NoResultException e) {
          sendNotifications = true;
       }
-      onNewRun(run, sendNotifications, false, null);
+      recalculateForDataset(dataset, sendNotifications, false, null);
    }
 
    @PostConstruct
@@ -222,199 +220,149 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   private void onNewRun(Run run, boolean notify, boolean debug, Recalculation recalculation) {
-      log.infof("Analyzing run ID %d", run.id);
+   private void recalculateForDataset(DataSet dataset, boolean notify, boolean debug, Recalculation recalculation) {
+      log.infof("Analyzing dataset %d (%d/%d)", dataset.id, dataset.run.id, dataset.ordinal);
       try {
-         emitDatapoints(run, notify, debug, recalculation);
+         Test test = Test.findById(dataset.testid);
+         if (test == null) {
+            log.errorf("Cannot load test ID %d", dataset.testid);
+            return;
+         }
+         if (!testFingerprint(dataset, test.fingerprintFilter)) {
+            return;
+         }
+
+         emitDatapoints(dataset, notify, debug, recalculation);
       } catch (Throwable t) {
          log.error("Failed to create new datapoints", t);
       }
    }
 
-   private void emitDatapoints(Run run, boolean notify, boolean debug, Recalculation recalculation) {
-      Map<String, Object> schemas = new HashMap<>();
-      JsonNode firstLevelSchema = run.data.get("$schema");
-      if (firstLevelSchema != null && firstLevelSchema.isTextual()) {
-         schemas.put(firstLevelSchema.asText(), null);
+   private boolean testFingerprint(DataSet dataset, String filter) {
+      if (filter == null || filter.isBlank()) {
+         return true;
       }
-      if (run.data instanceof ObjectNode) {
-         Iterator<Map.Entry<String, JsonNode>> it = run.data.fields();
-         while (it.hasNext()) {
-            var entry = it.next();
-            JsonNode schemaNode = entry.getValue().get("$schema");
-            if (schemaNode != null && schemaNode.isTextual()) {
-               schemas.put(schemaNode.asText(), entry.getKey());
-            }
+      @SuppressWarnings("unchecked") Optional<String> result =
+            em.createNativeQuery("SELECT fp.fingerprint::::text FROM fingerprint fp WHERE dataset_id = ?1")
+                  .setParameter(1, dataset.id).getResultStream().findFirst();
+      JsonNode fingerprint;
+      if (result.isPresent()) {
+         fingerprint = Util.toJsonNode(result.get());
+         if (fingerprint != null && fingerprint.size() == 1) {
+            fingerprint = fingerprint.elements().next();
          }
-      } else if (run.data instanceof ArrayNode) {
-         int index = 0;
-         for (JsonNode node : run.data) {
-            JsonNode schemaNode = node.get("$schema");
-            if (schemaNode != null && schemaNode.isTextual()) {
-               schemas.put(schemaNode.asText(), index);
+      } else {
+         fingerprint = JsonNodeFactory.instance.nullNode();
+      }
+      StringBuilder jsCode = new StringBuilder("const __obj = ").append(fingerprint).append(";\n");
+      jsCode.append("const __func = ").append(filter).append(";\n");
+      jsCode.append("!!__func(__obj)");
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      try (Context context = Context.newBuilder("js").out(out).err(out).build()) {
+         context.enter();
+         try {
+            Value value = context.eval("js", jsCode);
+            if (!value.isBoolean()) {
+               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.ERROR, "Evaluation of fingerprint failed: '%s' is not a boolean", value);
+            } else if (!value.asBoolean()) {
+               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.DEBUG, "Fingerprint %s was filtered out.", fingerprint);
+               return false;
             }
-            ++index;
+            return true;
+         } catch (PolyglotException e) {
+            logCalculationMessage(dataset.testid, dataset.id, DatasetLog.ERROR, "Evaluation of fingerprint filter failed: '%s' Code:<pre>%s</pre>", e.getMessage(), jsCode);
+            return false;
+         } finally {
+            if (out.size() > 0) {
+               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.DEBUG, "Output while evaluating fingerprint filter: <pre>%s</pre>", out.toString());
+            }
+            context.leave();
          }
       }
+   }
 
-      // Make sure that the return type will be Object[]
-      StringBuilder extractionQuery = new StringBuilder("SELECT 1");
-      Map<Integer, VarInfo> vars = new HashMap<>();
-      Map<String, Set<AccessorInfo>> allAccessors = new HashMap<>();
-
-      Query lookup = em.createNativeQuery(LOOKUP_VARS);
-      lookup.setParameter(1, run.testid);
+   private void emitDatapoints(DataSet dataset, boolean notify, boolean debug, Recalculation recalculation) {
+      Set<String> missingValueVariables = new HashSet<>();
       @SuppressWarnings("unchecked")
-      List<Object[]> varSelection = lookup.getResultList();
-
-      for (Object[] row : varSelection) {
+      List<Object[]> values = em.createNativeQuery(LOOKUP_VARIABLES)
+            .setParameter(1, dataset.testid).setParameter(2, dataset.id).getResultList();
+      for (Object[] row : values) {
          int id = (Integer) row[0];
          String name = (String) row[1];
          String group = (String) row[2];
          String calc = (String) row[3];
-         String accessor = (String) row[4];
-         String jsonpath = (String) row[5];
-         String schema = (String) row[6];
-         VarInfo var = vars.computeIfAbsent(id, i -> new VarInfo(id, name, group, calc));
-         var.accessors.add(accessor);
-         Set<AccessorInfo> accessors = allAccessors.computeIfAbsent(accessor, a -> new HashSet<>());
-         // note that as we do single query there may be array and non-array variant for different variables
-         accessors.add(new AccessorInfo(schema, jsonpath));
-      }
-      if (allAccessors.isEmpty()) {
-         log.infof("No change detection variables for run %d, skipping.", run.id);
-         return;
-      }
+         ObjectNode object = (ObjectNode) Util.toJsonNode((String) row[4]);
 
-      Map<String, Object> extracted = new HashMap<>();
-      String[] names = new String[allAccessors.size()];
-      int index = 0;
-      for (var entry: allAccessors.entrySet()) {
-         String accessor = entry.getKey();
-         names[index++] = accessor;
-         boolean isArray = SchemaExtractor.isArray(accessor);
-         List<AccessorInfo> matching = entry.getValue().stream().filter(ai -> schemas.containsKey(ai.schema)).collect(Collectors.toList());
-         if (matching.isEmpty()) {
-            if (recalculation != null) {
-               recalculation.runsWithoutAccessor.add(run.id);
-            }
-            logCalculationMessage(run.testid, run.id, CalculationLog.WARN,
-                  "Accessor %s referenced from variables %s cannot be extracted: requires one of these schemas: %s", accessor,
-                  vars.values().stream().filter(var -> var.accessors.contains(accessor)).map(var -> var.name).collect(Collectors.toList()),
-                  entry.getValue().stream().map(ai -> ai.schema).collect(Collectors.toList()));
-            extractionQuery.append(", NULL as _").append(index);
-         } else if (matching.size() > 1) {
-            // we want deterministic order (at least)
-            matching.sort(Comparator.comparing(ai -> ai.schema));
-            logCalculationMessage(run.testid, run.id, CalculationLog.WARN,
-                  "Accessor %s referenced from variables %s is used for multiple schemas: %s", accessor,
-                  vars.values().stream().filter(var -> var.accessors.contains(accessor)).map(var -> var.name).collect(Collectors.toList()),
-                  matching.stream().map(ai -> ai.schema).collect(Collectors.toList()));
-            extractionQuery.append(", to_json(array[");
-            for (int i = 0; i < matching.size(); i++) {
-               AccessorInfo ai = matching.get(i);
-               if (i != 0) extractionQuery.append(", ");
-               appendPathQuery(extractionQuery, schemas.get(ai.schema), isArray, ai.jsonpath);
-            }
-            extractionQuery.append("])::::text as _").append(index);
-         } else {
-            extractionQuery.append(", ");
-            AccessorInfo ai = matching.get(0);
-            appendPathQuery(extractionQuery, schemas.get(ai.schema), isArray, ai.jsonpath);
-            extractionQuery.append("::::text as _").append(index);
+         String fullName = (group == null || group.isEmpty()) ? name : group + "/" + name;
+
+         if (debug) {
+            logCalculationMessage(dataset.testid, dataset.id, DatasetLog.DEBUG, "Fetched value for variable %s: <pre>%s</pre>", fullName, object);
          }
-      }
 
-      if (index > 0) {
-         extractionQuery.append(" FROM run WHERE id = ?");
-         Query extraction = em.createNativeQuery(extractionQuery.toString());
-         extraction.setParameter(1, run.id);
-         Object[] result;
-         try {
-            result = (Object[]) extraction.getSingleResult();
-         } catch (NoResultException e) {
-            log.errorf("Run %d does not exist in the database!", run.id);
-            return;
-         } catch (PersistenceException e) {
-            log.errorf(e, "Failed to extract change detection variables for run %d", run.id);
-            self.logFailure(run);
-            return;
-         }
-         for (int i = 0; i < names.length; i++) {
-            extracted.put(names[i], result[i + 1]);
-         }
-      }
-
-      if (debug) {
-         String data = extracted.isEmpty() ? "&lt;no data&gt;" : extracted.entrySet().stream().map(e -> (e.getKey() + " -> " + e.getValue())).collect(Collectors.joining("\n"));
-         logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Fetched values for these accessors:<pre>%s</pre>", data);
-      }
-
-      Set<String> missingValueVariables = new HashSet<>();
-      for (VarInfo var : vars.values()) {
          DataPoint dataPoint = new DataPoint();
-         dataPoint.variable = em.getReference(Variable.class, var.id);
-         dataPoint.run = run;
-         dataPoint.timestamp = run.start;
+         dataPoint.variable = em.getReference(Variable.class, id);
+         dataPoint.dataset = dataset;
+         dataPoint.timestamp = dataset.start;
 
-         if (var.calculation == null || var.calculation.isEmpty()) {
-            if (var.accessors.size() > 1) {
-               logCalculationMessage(run.testid, run.id, CalculationLog.WARN, "Variable %s has more than one accessor (%s) but no calculation function.", var.name, var.accessors);
+         if (object == null || object.isEmpty()) {
+            logCalculationMessage(dataset.testid, dataset.id, DatasetLog.ERROR, "Variable %s does not have any label values!.", fullName);
+            missingValueVariables.add(fullName);
+            continue;
+         }
+         if (calc == null || calc.isEmpty()) {
+            if (object.size() > 1) {
+               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.WARN, "Variable %s has more than one label (%s) but no calculation function.", fullName, object.fieldNames());
             }
-            String accessor = var.accessors.stream().findFirst().orElseThrow();
-            Object value = extracted.get(accessor);
-            if (value == null) {
-               logCalculationMessage(run.testid, run.id, CalculationLog.INFO, "Null value for variable %s, accessor %s - datapoint is not created", var.name, accessor);
+            JsonNode value = object.elements().next();
+            if (value == null || value.isNull()) {
+               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.INFO, "Null value for variable %s, label %s - datapoint is not created", fullName, object.fieldNames().next());
                if (recalculation != null) {
-                  recalculation.runsWithoutValue.add(run.id);
+                  recalculation.datasetsWithoutValue.put(dataset.id, new DatasetInfo(dataset.id, dataset.run.id, dataset.ordinal));
                }
-               missingValueVariables.add(var.getFullName());
+               missingValueVariables.add(fullName);
                continue;
             }
-            Double number = Util.toDoubleOrNull(value);
+
+            Double number = null;
+            if (value.isNumber()) {
+               number = value.asDouble();
+            } else if (value.isTextual()) {
+               try {
+                  number = Double.parseDouble(value.asText());
+               } catch (NumberFormatException e) {
+                  // ignore
+               }
+            }
             if (number == null) {
-               logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Cannot turn %s into a floating-point value for variable %s", value, var.name);
+               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.ERROR, "Cannot turn %s into a floating-point value for variable %s", value, fullName);
                if (recalculation != null) {
                   recalculation.errors++;
                }
-               missingValueVariables.add(var.getFullName());
+               missingValueVariables.add(fullName);
                continue;
             } else {
                dataPoint.value = number;
             }
          } else {
             StringBuilder code = new StringBuilder();
-            if (var.accessors.size() > 1) {
-               code.append("const __obj = {\n");
-               for (String accessor : var.accessors) {
-                  Object value = extracted.get(accessor);
-                  if (SchemaExtractor.isArray(accessor)) {
-                     code.append(SchemaExtractor.arrayName(accessor));
-                  } else {
-                     code.append(accessor);
-                  }
-                  code.append(": ");
-                  appendValue(code, value);
-                  code.append(",\n");
-               }
-               code.append("};\n");
+            code.append("const __obj = ");
+            if (object.size() > 1) {
+               code.append(object);
             } else {
-               code.append("const __obj = ");
-               Object value = extracted.get(var.accessors.stream().findFirst().orElseThrow());
-               appendValue(code, value);
-               code.append(";\n");
+               code.append(object.elements().next());
             }
-            code.append("const __func = ").append(var.calculation).append(";\n");
+            code.append(";\n");
+            code.append("const __func = ").append(calc).append(";\n");
             code.append("__func(__obj)");
             if (debug) {
-               logCalculationMessage(run.testid, run.id, CalculationLog.DEBUG, "Variable %s, <pre>%s</pre>" , var.name, code.toString());
+               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.DEBUG, "Variable %s, <pre>%s</pre>" , fullName, code.toString());
             }
-            Double value = execute(run.testid, run.id, code.toString(), var.name);
+            Double value = execute(dataset.testid, dataset.id, code.toString(), fullName);
             if (value == null) {
                if (recalculation != null) {
-                  recalculation.runsWithoutValue.add(run.id);
+                  recalculation.datasetsWithoutValue.put(dataset.id, new DatasetInfo(dataset.id, dataset.run.id, dataset.ordinal));
                }
-               missingValueVariables.add(var.getFullName());
+               missingValueVariables.add(fullName);
                continue;
             }
             dataPoint.value = value;
@@ -423,115 +371,60 @@ public class AlertingServiceImpl implements AlertingService {
          Util.publishLater(tm, eventBus, DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
       }
       if (!missingValueVariables.isEmpty()) {
-         Util.publishLater(tm, eventBus, Run.EVENT_MISSING_VALUES, new MissingRunValuesEvent(run.id, run.testid, missingValueVariables, notify));
+         Util.publishLater(tm, eventBus, DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.run.id, dataset.id, dataset.ordinal, dataset.testid, missingValueVariables, notify));
       }
    }
 
-   @Transactional(Transactional.TxType.REQUIRES_NEW)
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
-   void logFailure(Run run) {
-      logCalculationMessage(run.testid, run.id, CalculationLog.ERROR, "Failed to extract change detection variables from database. This is likely due to a malformed JSONPath in one of extractors.");
-   }
-
-   private void appendPathQuery(StringBuilder query, Object topKey, boolean isArray, String jsonpath) {
-      if (isArray) {
-         query.append("jsonb_path_query_array(data, '");
-      } else {
-         query.append("jsonb_path_query_first(data, '");
-      }
-      if (topKey == null) {
-         query.append("$");
-      } else if (topKey instanceof Integer) {
-         query.append("$[").append((int) topKey).append("]");
-      } else {
-         query.append("$.\"").append(String.valueOf(topKey).replaceAll("\"", "\\\"")).append('"');
-      }
-      // four colons to escape it for Hibernate
-      query.append(jsonpath).append("'::::jsonpath)");
-   }
-
-   private void logCalculationMessage(int testId, int runId, int level, String format, Object... args) {
-      new CalculationLog(em.getReference(Test.class, testId), em.getReference(Run.class, runId),
+   private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
+      new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "variables", String.format(format, args)).persist();
    }
 
-   private void appendValue(StringBuilder code, Object value) {
-      if (value == null) {
-         code.append("undefined");
-         return;
-      }
-      if (value instanceof Long) {
-         code.append((long) value);
-      } else if (value instanceof Integer) {
-         code.append((int) value);
-      } else if (value instanceof Number){
-         code.append(((Number) value).doubleValue());
-      } else {
-         String str = value.toString();
-         if (str.charAt(0) == '"' && str.charAt(str.length() - 1) == '"') {
-            String maybeNumber = str.substring(1, str.length() - 1);
-            try {
-               code.append(Integer.parseInt(maybeNumber));
-               return;
-            } catch (NumberFormatException e1) {
-               try {
-                  code.append(Double.parseDouble(maybeNumber));
-                  return;
-               } catch (NumberFormatException e2) {
-                  // ignore
-               }
-            }
-         }
-         code.append(value);
-      }
-   }
-
-   private Double execute(int testId, int runId, String jsCode, String name) {
+   private Double execute(int testId, int datasetId, String jsCode, String name) {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       try (Context context = Context.newBuilder("js").out(out).err(out).build()) {
          context.enter();
          try {
             Value value = context.eval("js", jsCode);
             return Util.toDoubleOrNull(value, error -> {
-               logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation of variable %s failed: %s", name, error);
+               logCalculationMessage(testId, datasetId, DatasetLog.ERROR, "Evaluation of variable %s failed: %s", name, error);
             }, info -> {
-               logCalculationMessage(testId, runId, CalculationLog.INFO, "Evaluation of variable %s: %s", name, info);
+               logCalculationMessage(testId, datasetId, DatasetLog.INFO, "Evaluation of variable %s: %s", name, info);
             });
          } catch (PolyglotException e) {
-            logCalculationMessage(testId, runId, CalculationLog.ERROR, "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
+            logCalculationMessage(testId, datasetId, DatasetLog.ERROR, "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
             return null;
          } finally {
             if (out.size() > 0) {
-               logCalculationMessage(testId, runId, CalculationLog.DEBUG, "Output while calculating variable %s: <pre>%s</pre>", name, out.toString());
+               logCalculationMessage(testId, datasetId, DatasetLog.DEBUG, "Output while calculating variable %s: <pre>%s</pre>", name, out.toString());
             }
             context.leave();
          }
       }
    }
 
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    @ConsumeEvent(value = Run.EVENT_TRASHED, blocking = true)
    public void onRunTrashed(Integer runId) {
       log.infof("Trashing datapoints for run %d", runId);
-      Query deleteChanges = em.createNativeQuery("DELETE FROM change WHERE runid = ?");
-      deleteChanges.setParameter(1, runId).executeUpdate();
-      DataPoint.delete("runid", runId);
+      Change.delete("dataset.run.id", runId);
+      DataPoint.delete("dataset.run.id", runId);
    }
 
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    @ConsumeEvent(value = DataPoint.EVENT_NEW, blocking = true, ordered = true)
    public void onNewDataPoint(DataPoint.Event event) {
       DataPoint dataPoint = event.dataPoint;
       // The variable referenced by datapoint is a fake
       Variable variable = Variable.findById(dataPoint.variable.id);
-      log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.run.id,
+      log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.dataset.id,
             dataPoint.variable.id, variable != null ? variable.name : "<unknown>", dataPoint.value);
-      Change lastChange = em.createQuery("SELECT c FROM Change c LEFT JOIN RunTags rt ON c.run.id = rt.runId " +
-            "WHERE c.variable = ?1 AND TRUE = function('json_equals', rt.tags, (SELECT tags FROM RunTags WHERE runId = ?2)) " +
+      Change lastChange = em.createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
+            "WHERE c.variable = ?1 AND TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?2)) " +
             "ORDER by c.timestamp DESC", Change.class)
-            .setParameter(1, variable).setParameter(2, event.dataPoint.run.id).setMaxResults(1)
+            .setParameter(1, variable).setParameter(2, event.dataPoint.dataset.id).setMaxResults(1)
             .getResultStream().findFirst().orElse(null);
       Instant changeTimestamp = LONG_TIME_AGO;
       if (lastChange != null) {
@@ -544,12 +437,12 @@ public class AlertingServiceImpl implements AlertingService {
          log.debugf("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
          changeTimestamp = lastChange.timestamp;
       }
-      List<DataPoint> dataPoints = em.createQuery("SELECT dp FROM DataPoint dp LEFT JOIN RunTags rt ON dp.run.id = rt.runId " +
+      List<DataPoint> dataPoints = em.createQuery("SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
             "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 AND " +
-            "TRUE = function('json_equals', rt.tags, (SELECT tags FROM RunTags WHERE runId = ?4)) " +
+            "TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?4)) " +
             "ORDER BY dp.timestamp DESC", DataPoint.class)
             .setParameter(1, variable).setParameter(2, changeTimestamp)
-            .setParameter(3, dataPoint.timestamp).setParameter(4, dataPoint.run.id).getResultList();
+            .setParameter(3, dataPoint.timestamp).setParameter(4, dataPoint.dataset.id).getResultList();
       // Last datapoint is already in the list
       if (dataPoints.isEmpty()) {
          log.error("The published datapoint should be already in the list");
@@ -569,8 +462,11 @@ public class AlertingServiceImpl implements AlertingService {
             continue;
          }
          model.analyze(dataPoints, detection.config, change -> {
+            Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal FROM dataset WHERE id = ?1");
+            SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DatasetInfo.class));
+            DatasetInfo datasetInfo = (DatasetInfo) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
             em.persist(change);
-            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, event.notify));
+            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, datasetInfo, event.notify));
          });
       }
    }
@@ -684,39 +580,39 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   private GrafanaClient.GetDashboardResponse findDashboard(int testId, String tags) {
+   private GrafanaClient.GetDashboardResponse findDashboard(int testId, String fingerprint) {
       try {
-         List<GrafanaClient.DashboardSummary> list = grafana.searchDashboard("", testId + ":" + tags);
+         List<GrafanaClient.DashboardSummary> list = grafana.searchDashboard("", testId + ":" + fingerprint);
          if (list.isEmpty()) {
             return null;
          } else {
             return grafana.getDashboard(list.get(0).uid);
          }
       } catch (ProcessingException | WebApplicationException e) {
-         log.debugf(e, "Error looking up dashboard for test %d, tags %s", testId, tags);
+         log.debugf(e, "Error looking up dashboard for test %d, fingerprint %s", testId, fingerprint);
          return null;
       }
    }
 
-   private DashboardInfo createDashboard(int testId, String tags, List<Variable> variables) {
+   private DashboardInfo createDashboard(int testId, String fingerprint, List<Variable> variables) {
       DashboardInfo info = new DashboardInfo();
       info.testId = testId;
       Dashboard dashboard = new Dashboard();
       dashboard.title = Test.<Test>findByIdOptional(testId).map(t -> t.name).orElse("Test " + testId)
-            + (tags.isEmpty() ? "" : ", " + tags);
-      dashboard.tags.add(testId + ";" + tags);
+            + (fingerprint.isEmpty() ? "" : ", " + fingerprint);
+      dashboard.tags.add(testId + ";" + fingerprint);
       dashboard.tags.add("testId=" + testId);
       int i = 0;
       Map<String, List<Variable>> byGroup = groupedVariables(variables);
       for (Variable variable : variables) {
-         dashboard.annotations.list.add(new Dashboard.Annotation(variable.name, variable.id + ";" + tags));
+         dashboard.annotations.list.add(new Dashboard.Annotation(variable.name, variable.id + ";" + fingerprint));
       }
       for (Map.Entry<String, List<Variable>> entry : byGroup.entrySet()) {
          entry.getValue().sort(Comparator.comparing(v -> v.name));
          Dashboard.Panel panel = new Dashboard.Panel(entry.getKey(), new Dashboard.GridPos(12 * (i % 2), 9 * (i / 2), 12, 9));
          info.panels.add(new PanelInfo(entry.getKey(), entry.getValue()));
          for (Variable variable : entry.getValue()) {
-            panel.targets.add(new Target(variable.id + ";" + tags, "timeseries", "T" + i));
+            panel.targets.add(new Target(variable.id + ";" + fingerprint, "timeseries", "T" + i));
          }
          dashboard.panels.add(panel);
          ++i;
@@ -749,18 +645,18 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles
    @PermitAll
    @Transactional
-   public DashboardInfo dashboard(Integer testId, String tags) {
+   public DashboardInfo dashboard(Integer testId, String fingerprint) {
       if (testId == null) {
          throw ServiceException.badRequest("Missing param 'test'");
       }
-      if (tags == null) {
-         tags = "";
+      if (fingerprint == null) {
+         fingerprint = "";
       }
-      GrafanaClient.GetDashboardResponse response = findDashboard(testId, tags);
+      GrafanaClient.GetDashboardResponse response = findDashboard(testId, fingerprint);
       List<Variable> variables = Variable.list("testid", testId);
       DashboardInfo dashboard;
       if (response == null) {
-         dashboard = createDashboard(testId, tags, variables);
+         dashboard = createDashboard(testId, fingerprint, variables);
          if (dashboard == null) {
             throw new ServiceException(Response.Status.SERVICE_UNAVAILABLE, "Cannot update Grafana dashboard.");
          }
@@ -833,15 +729,15 @@ public class AlertingServiceImpl implements AlertingService {
             return;
          }
          try {
-            recalculation.runs = self.getRunsForRecalculation(testId, from, to);
-            int numRuns = recalculation.runs.size();
+            recalculation.datasets = getDatasetsForRecalculation(testId, from, to);
+            int numRuns = recalculation.datasets.size();
             log.infof("Starting recalculation of test %d, %d runs", testId, numRuns);
             int completed = 0;
             recalcProgress.put(testId, recalculation);
-            for (int runId : recalculation.runs) {
+            for (int datasetId : recalculation.datasets) {
                // Since the evaluation might take few moments and we're dealing potentially with thousands
                // of runs we'll process each run in a separate transaction
-               self.recalulateRun(runId, notify, debug, recalculation);
+               recalulateForDataset(datasetId, notify, debug, recalculation);
                recalculation.progress = 100 * ++completed / numRuns;
             }
 
@@ -857,27 +753,27 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles
    @Transactional
-   List<Integer> getRunsForRecalculation(Integer testId, Long from, Long to) {
-      Query query = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) AND NOT run.trashed ORDER BY start")
+   List<Integer> getDatasetsForRecalculation(Integer testId, Long from, Long to) {
+      Query query = em.createNativeQuery("SELECT id FROM dataset WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) ORDER BY start")
             .setParameter(1, testId)
             .setParameter(2, from == null ? Long.MIN_VALUE : from)
             .setParameter(3, to == null ? Long.MAX_VALUE : to);
       @SuppressWarnings("unchecked")
       List<Integer> ids = query.getResultList();
-      DataPoint.delete("runId in ?1", ids);
-      Change.delete("runId in ?1 AND confirmed = false", ids);
+      DataPoint.delete("dataset_id in ?1", ids);
+      Change.delete("dataset_id in ?1 AND confirmed = false", ids);
       if (ids.size() > 0) {
          // Due to RLS policies we cannot add a record to a run we don't own
-         logCalculationMessage(testId, ids.get(0), CalculationLog.INFO, "Starting recalculation of %d runs.", ids.size());
+         logCalculationMessage(testId, ids.get(0), DatasetLog.INFO, "Starting recalculation of %d runs.", ids.size());
       }
       return ids;
    }
 
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
-   void recalulateRun(Integer runId, boolean notify, boolean debug, Recalculation recalculation) {
-      Run run = Run.findById(runId);
-      onNewRun(run, notify, debug, recalculation);
+   void recalulateForDataset(Integer datasetId, boolean notify, boolean debug, Recalculation recalculation) {
+      DataSet dataset = DataSet.findById(datasetId);
+      recalculateForDataset(dataset, notify, debug, recalculation);
    }
 
    @Override
@@ -891,10 +787,9 @@ public class AlertingServiceImpl implements AlertingService {
       status.percentage = recalculation == null ? 100 : recalculation.progress;
       status.done = recalculation == null || recalculation.done;
       if (recalculation != null) {
-         status.totalRuns = recalculation.runs.size();
+         status.totalRuns = recalculation.datasets.size();
          status.errors = recalculation.errors;
-         status.runsWithoutAccessor = recalculation.runsWithoutAccessor;
-         status.runsWithoutValue = recalculation.runsWithoutValue;
+         status.datasetsWithoutValue = recalculation.datasetsWithoutValue.values();
       }
       return status;
    }
@@ -927,14 +822,9 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles
    @PermitAll
    public List<DatapointLastTimestamp> findLastDatapoints(LastDatapointsParams params) {
-      Map<String, String> tags = Tags.parseTags(params.tags);
-      StringBuilder sql = new StringBuilder("SELECT DISTINCT ON(variable_id) variable_id AS variable, EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp")
-         .append(" FROM datapoint LEFT JOIN run_tags on run_tags.runid = datapoint.runid ");
-      int counter = Tags.addTagQuery(tags, sql, 1);
-      sql.append(" WHERE variable_id = ANY(?").append(counter).append(") ORDER BY variable_id, timestamp DESC;");
-      Query query = em.createNativeQuery(sql.toString());
-      counter = Tags.addTagValues(tags, query, 1);
-      query.setParameter(counter, new TypedParameterValue(IntArrayType.INSTANCE, params.variables));
+      Query query = em.createNativeQuery(FIND_LAST_DATAPOINTS)
+            .setParameter(1, String.valueOf(Util.parseFingerprint(params.fingerprint)))
+            .setParameter(2, new TypedParameterValue(IntArrayType.INSTANCE, params.variables));
       SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(DatapointLastTimestamp.class));
       //noinspection unchecked
       return query.getResultList();
@@ -1025,12 +915,11 @@ public class AlertingServiceImpl implements AlertingService {
    // Note: this class must be public - otherwise when this is used as a parameter to
    // a method in AlertingServiceImpl the interceptors would not be invoked.
    public static class Recalculation {
-      List<Integer> runs = Collections.emptyList();
+      List<Integer> datasets = Collections.emptyList();
       int progress;
       boolean done;
       public int errors;
-      Set<Integer> runsWithoutAccessor = new HashSet<>();
-      Set<Integer> runsWithoutValue = new HashSet<>();
+      Map<Integer, DatasetInfo> datasetsWithoutValue = new HashMap<>();
    }
 
    public static class VarInfo {
@@ -1047,8 +936,6 @@ public class AlertingServiceImpl implements AlertingService {
          this.calculation = calculation;
       }
 
-      public String getFullName() {
-         return (group == null || group.isEmpty()) ? name : group + "/" + name;
-      }
+
    }
 }

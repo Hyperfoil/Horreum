@@ -16,12 +16,17 @@ import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
+/**
+ * This table is meant to host logged events with relation to {@link DataSet datasets},
+ * as opposed to events related directly to {@link Run runs}.
+ */
 @Entity
-public class CalculationLog extends PanacheEntityBase {
+public class DatasetLog extends PanacheEntityBase {
    public static final int DEBUG = 0;
    public static final int INFO = 1;
    public static final int WARN = 2;
@@ -36,10 +41,10 @@ public class CalculationLog extends PanacheEntityBase {
    @JsonIgnore
    public Test test;
 
-   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-   @JoinColumn(name = "runid", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+   @ManyToOne(fetch = FetchType.EAGER, optional = false)
+   @JoinColumn(name = "dataset_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
    @JsonIgnore
-   public Run run;
+   public DataSet dataset;
 
    @NotNull
    public int level;
@@ -54,12 +59,12 @@ public class CalculationLog extends PanacheEntityBase {
    @NotNull
    public String message;
 
-   public CalculationLog() {
+   public DatasetLog() {
    }
 
-   public CalculationLog(Test test, Run run, int level, String source, String message) {
+   public DatasetLog(Test test, DataSet dataset, int level, String source, String message) {
       this.test = test;
-      this.run = run;
+      this.dataset = dataset;
       this.level = level;
       this.timestamp = Instant.now();
       this.source = source;
@@ -73,6 +78,16 @@ public class CalculationLog extends PanacheEntityBase {
 
    @JsonProperty("runId")
    private int getRunId() {
-      return run.id;
+      return dataset.run.id;
+   }
+
+   @JsonProperty("datasetId")
+   private int getDatasetId() {
+      return dataset.id;
+   }
+
+   @JsonProperty("datasetOrdinal")
+   private int getDatasetOrdinal() {
+      return dataset.ordinal;
    }
 }

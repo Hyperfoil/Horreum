@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.hibernate.Hibernate;
 import org.hibernate.transform.Transformers;
@@ -427,6 +428,16 @@ public class TestServiceImpl implements TestService {
          result.add(tags == null ? Util.EMPTY_OBJECT : Util.toJsonNode(tags));
       }
       return result;
+   }
+
+   @WithRoles
+   @Override
+   public List<JsonNode> listFingerprints(int testId) {
+      @SuppressWarnings("unchecked") Stream<String> stream = em.createNativeQuery(
+            "SELECT DISTINCT fingerprint::::text FROM fingerprint fp " +
+            "JOIN dataset ON dataset.id = dataset_id WHERE dataset.testid = ?1")
+         .setParameter(1, testId).getResultStream();
+      return stream.map(Util::toJsonNode).collect(Collectors.toList());
    }
 
    @WithRoles

@@ -100,6 +100,10 @@ public interface TestService {
    @Path("{id}/tags")
    List<JsonNode> tags(@PathParam("id") Integer testId, @QueryParam("trashed") Boolean trashed);
 
+   @GET
+   @Path("{id}/fingerprint")
+   List<JsonNode> listFingerprints(@PathParam("id") int testId);
+
    @POST
    @Path("{id}/transformers")
    void updateTransformers(@PathParam("id") Integer testId, List<Integer> transformerIds);

@@ -23,7 +23,7 @@ import FolderSelect from "../../components/FolderSelect"
 import TagsSelect, { convertTags, SelectedTags } from "../../components/TagsSelect"
 import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
-import CalculationLogModal from "./CalculationLogModal"
+import DatasetLogModal from "./DatasetLogModal"
 
 import { Test, TestDispatch, StalenessSettings } from "./reducers"
 import { subscriptions as subscriptionsSelector } from "./selectors"
@@ -307,7 +307,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                     )}
                 </FormGroup>
             </Form>
-            <CalculationLogModal
+            <DatasetLogModal
                 isOpen={isLogOpen}
                 onClose={() => setLogOpen(false)}
                 testId={test?.id || -1}

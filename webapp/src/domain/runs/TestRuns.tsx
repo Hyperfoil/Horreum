@@ -32,7 +32,6 @@ import { get } from "../tests/selectors"
 
 import AccessIcon from "../../components/AccessIcon"
 import Table from "../../components/Table"
-import TagsSelect, { SelectedTags } from "../../components/TagsSelect"
 import {
     CellProps,
     UseTableOptions,
@@ -157,7 +156,6 @@ export default function TestRuns() {
     const [perPage, setPerPage] = useState(20)
     const [sort, setSort] = useState("start")
     const [direction, setDirection] = useState("Descending")
-    const [tags, setTags] = useState<SelectedTags>()
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
 
     const dispatch = useDispatch<RunsDispatch>()
@@ -169,8 +167,8 @@ export default function TestRuns() {
         dispatch(fetchTest(testId)).catch(noop)
     }, [dispatch, testId, teams])
     useEffect(() => {
-        dispatch(byTest(testId, pagination, showTrashed, tags?.toString() || "")).catch(noop)
-    }, [dispatch, showTrashed, page, perPage, sort, direction, tags, pagination, testId])
+        dispatch(byTest(testId, pagination, showTrashed)).catch(noop)
+    }, [dispatch, showTrashed, page, perPage, sort, direction, pagination, testId])
     useEffect(() => {
         document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
@@ -234,15 +232,6 @@ export default function TestRuns() {
                             </ToolbarGroup>
                         )}
                         <ToolbarGroup>
-                            <ToolbarItem>
-                                <TagsSelect
-                                    testId={testId}
-                                    selection={tags}
-                                    onSelect={setTags}
-                                    addAllTagsOption={true}
-                                    includeTrashed={showTrashed}
-                                />
-                            </ToolbarItem>
                             <ToolbarItem>
                                 <Checkbox
                                     id="showTrashed"
