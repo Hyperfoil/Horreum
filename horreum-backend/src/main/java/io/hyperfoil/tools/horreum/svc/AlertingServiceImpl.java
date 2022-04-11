@@ -621,6 +621,7 @@ public class AlertingServiceImpl implements AlertingService {
          GrafanaClient.DashboardSummary response = grafana.createOrUpdateDashboard(new GrafanaClient.PostDashboardRequest(dashboard, true));
          info.uid = response.uid;
          info.url = grafanaBaseUrl.get() + response.url;
+         info.unit = Test.<Test>findByIdOptional(testId).map(t -> t.unit).orElse("");
          return info;
       } catch (WebApplicationException e) {
          log.errorf(e, "Failed to create/update dashboard %s", dashboard.uid);

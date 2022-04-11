@@ -52,6 +52,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     const [stalenessSettings, setStalenessSettings] = useState<StalenessSettingsDisplay[]>([])
     const [newStalenessTags, setNewStalenessTags] = useState<SelectedTags>()
     const [isLogOpen, setLogOpen] = useState(false)
+    const [unit, setUnit] = useState("")
 
     const updateState = (test?: Test) => {
         setName(test?.name || "")
@@ -61,6 +62,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
         setTagsCalculation(() => test?.tagsCalculation)
         setCompareUrl(test?.compareUrl?.toString() || undefined)
         setNotificationsEnabled(!test || test.notificationsEnabled)
+        setUnit(test?.unit || "")
         setStalenessSettings(
             test?.stalenessSettings?.map(ss => ({
                 ...ss,
@@ -90,6 +92,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 tagsCalculation: tagsCalculation || undefined,
                 fingerprintLabels: [],
                 fingerprintFilter: null,
+                unit,
                 owner: test?.owner || defaultRole || "__test_created_without_a_role__",
                 access: test ? test.access : 2, // || notation does not work well with 0
                 tokens: [],
@@ -305,6 +308,25 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                             </Button>
                         </div>
                     )}
+                </FormGroup>
+                <FormGroup
+                    label="Unit"
+                    isRequired={false}
+                    fieldId="unit"
+                    helperText="What is the unit of the score"
+                >
+                    <TextInput
+                        value={unit || ""}
+                        type="text"
+                        id="unit"
+                        aria-describedby="unit-helper"
+                        name="unit"
+                        isReadOnly={!isTester}
+                        onChange={n => {
+                            setUnit(n)
+                            onModified(true)
+                        }}
+                    />
                 </FormGroup>
             </Form>
             <DatasetLogModal

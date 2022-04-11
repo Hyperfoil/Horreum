@@ -11,6 +11,7 @@ import {
     Tooltip,
     XAxis,
     YAxis,
+    Label,
 } from "recharts"
 import { Button, EmptyState, Spinner, Title } from "@patternfly/react-core"
 import { DateTime } from "luxon"
@@ -87,6 +88,7 @@ type PanelProps = {
     setEndTime(endTime: number): void
     lineType: string
     onChangeSelected(changeId: number, variableId: number, runId: number): void
+    unit: string
 }
 
 const colors = ["#4caf50", "#FF0000", "#CC0066", "#0066FF", "#42a5f5", "#f1c40f"]
@@ -255,7 +257,9 @@ export default function PanelChart(props: PanelProps) {
                                     tickFormatter={formatValue}
                                     tick={{ fontSize: 12 }}
                                     domain={["dataMin", "dataMax"]}
-                                />
+                                >
+                                <Label value={props.unit} position= "insideTopLeft" angle={45} />
+                                </YAxis>
                                 <Legend iconType="line" payload={legend} align="left" />
                                 <Tooltip
                                     content={({ active, payload, label }) => {

@@ -77,6 +77,8 @@ public class Test extends PanacheEntityBase {
 
    public String compareUrl;
 
+   public String unit;
+
    @ElementCollection
    @CollectionTable(name = "test_stalenesssettings")
    public Collection<StalenessSettings> stalenessSettings;

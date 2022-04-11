@@ -46,6 +46,7 @@ export interface Test {
     fingerprintLabels: string[] | null
     fingerprintFilter: string | null
     owner: string
+    unit: string
     access: Access
     tokens: Token[]
     defaultView?: View

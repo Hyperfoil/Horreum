@@ -87,6 +87,7 @@ public interface AlertingService {
       public int testId;
       public String uid;
       public String url;
+      public String unit;
       public List<PanelInfo> panels = new ArrayList<>();
    }
 

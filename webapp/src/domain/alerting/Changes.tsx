@@ -153,6 +153,7 @@ export default function Changes() {
         const str = convertLabels(fingerprint)
         return { ...fingerprint, toString: () => str }
     })
+    const [unit, setUnit] = useState("")
     const [dashboardUrl, setDashboardUrl] = useState("")
     const [panels, setPanels] = useState<Panel[]>([])
     const [loadingPanels, setLoadingPanels] = useState(false)
@@ -200,6 +201,7 @@ export default function Changes() {
                     response => {
                         setDashboardUrl(response.url)
                         setPanels(response.panels)
+                        setUnit(response.unit)
                     },
                     error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
                 )
@@ -374,6 +376,7 @@ export default function Changes() {
                                                             setEndTime={setEndTime}
                                                             timespan={timespan}
                                                             lineType={lineType}
+                                                            unit={unit}
                                                             onChangeSelected={(changeId, variableId) => {
                                                                 setSelectedChange(changeId)
                                                                 setSelectedVariable(variableId)
