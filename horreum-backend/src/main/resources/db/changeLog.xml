@@ -3026,6 +3026,53 @@
             $$ LANGUAGE plpgsql;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="68" author="rvansa">
+        <addColumn tableName="tablereportconfig">
+            <column name="filterlabels" type="jsonb" />
+            <column name="categorylabels" type="jsonb" />
+            <column name="serieslabels" type="jsonb" />
+            <column name="scalelabels" type="jsonb" />
+        </addColumn>
+        <sql>
+            UPDATE tablereportconfig SET
+                filterlabels = to_jsonb(string_to_array(filteraccessors, ';')),
+                categorylabels = to_jsonb(string_to_array(categoryaccessors, ';')),
+                serieslabels = to_jsonb(string_to_array(seriesaccessors, ';')),
+                scalelabels = to_jsonb(string_to_array(labelaccessors, ';'));
+        </sql>
+        <addNotNullConstraint tableName="tablereportconfig" columnName="serieslabels" />
+        <dropColumn tableName="tablereportconfig" columnName="filteraccessors"/>
+        <dropColumn tableName="tablereportconfig" columnName="categoryaccessors"/>
+        <dropColumn tableName="tablereportconfig" columnName="seriesaccessors"/>
+        <dropColumn tableName="tablereportconfig" columnName="labelaccessors"/>
+        <renameColumn tableName="tablereportconfig" oldColumnName="labelfunction" newColumnName="scalefunction"/>
+        <renameColumn tableName="tablereportconfig" oldColumnName="labelformatter" newColumnName="scaleformatter"/>
+        <renameColumn tableName="tablereportconfig" oldColumnName="labeldescription" newColumnName="scaledescription"/>
+
+        <addColumn tableName="reportcomponent">
+            <column name="labels" type="jsonb"/>
+        </addColumn>
+        <sql>
+            UPDATE reportcomponent SET labels = jsonb_build_array(name);
+        </sql>
+        <dropColumn tableName="reportcomponent" columnName="accessors"/>
+        <addNotNullConstraint tableName="reportcomponent" columnName="labels"/>
+
+        <renameTable oldTableName="tablereport_rundata" newTableName="tablereport_data" />
+        <addColumn tableName="tablereport_data">
+            <column name="dataset_id" type="integer" />
+            <column name="ordinal" type="integer" />
+        </addColumn>
+        <renameColumn tableName="tablereport_data" oldColumnName="label" newColumnName="scale" />
+        <sql>
+            UPDATE tablereport_data trd SET dataset_id = (SELECT id FROM dataset WHERE dataset.runid = trd.runid LIMIT 1), ordinal = 0;
+        </sql>
+        <dropUniqueConstraint tableName="tablereport_data" constraintName="tablereport_rundata_report_id_runid_key"/>
+        <addNotNullConstraint tableName="tablereport_data" columnName="dataset_id"/>
+        <addNotNullConstraint tableName="tablereport_data" columnName="ordinal"/>
+        <addUniqueConstraint tableName="tablereport_data" columnNames="report_id,dataset_id,ordinal" />
+    </changeSet>
 </databaseChangeLog>
 
 

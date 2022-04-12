@@ -7,21 +7,21 @@ export type TableReportConfig = {
     title: string
     test?: Partial<Test>
 
-    filterAccessors?: string
+    filterLabels: string[] | null
     filterFunction?: string
 
-    categoryAccessors: string
+    categoryLabels: string[] | null
     categoryFunction?: string
     categoryFormatter?: string
 
-    seriesAccessors: string
+    seriesLabels: string[] | null
     seriesFunction?: string
     seriesFormatter?: string
 
-    labelAccessors: string
-    labelFunction?: string
-    labelFormatter?: string
-    labelDescription?: string
+    scaleLabels: string[] | null
+    scaleFunction?: string
+    scaleFormatter?: string
+    scaleDescription?: string
 
     components: ReportComponent[]
 }
@@ -30,7 +30,7 @@ export type ReportComponent = {
     id: number
     name: string
     order: number
-    accessors: string
+    labels: string[]
     function?: string
     unit?: string
 }
@@ -47,15 +47,17 @@ export type TableReport = {
     id: number
     config: TableReportConfig
     created: number
-    runData: RunData[]
+    data: TableReportData[]
     comments: ReportComment[]
 }
 
-export type RunData = {
+export type TableReportData = {
+    datasetId: number
     runId: number
+    ordinal: number
     category: string
     series: string
-    label: string
+    scale: string
     values: any[]
 }
 

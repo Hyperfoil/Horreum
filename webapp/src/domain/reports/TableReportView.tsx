@@ -17,7 +17,7 @@ import { NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import ReactMarkdown from "react-markdown"
 
-import { RunData, TableReport, TableReportConfig, ReportComment, updateComment } from "./api"
+import { TableReportData, TableReport, TableReportConfig, ReportComment, updateComment } from "./api"
 import { formatDateTime } from "../../utils"
 import "./TableReportView.css"
 import "github-markdown-css"
@@ -27,15 +27,15 @@ function formatter(func: string | undefined) {
     return func ? new Function(func) : (x: string) => x
 }
 
-type RunDataViewProps = {
+type DataViewProps = {
     config: TableReportConfig
-    data?: RunData
+    data?: TableReportData
     unit?: string
-    selector(d: RunData): number
-    siblingSelector(d: RunData, index: number): number
+    selector(d: TableReportData): number
+    siblingSelector(d: TableReportData, index: number): number
 }
 
-function RunDataView(props: RunDataViewProps) {
+function DataView(props: DataViewProps) {
     if (props.data === undefined) {
         return <>(no data)</>
     }
@@ -44,7 +44,10 @@ function RunDataView(props: RunDataViewProps) {
         <Popover
             headerContent={
                 <>
-                    Run <NavLink to={"/run/" + data.runId}>{data.runId}</NavLink>
+                    Dataset{" "}
+                    <NavLink to={`/run/${data.runId}#dataset${data.ordinal}`}>
+                        {data.runId}/{data.ordinal + 1}
+                    </NavLink>
                 </>
             }
             bodyContent={
@@ -70,10 +73,10 @@ function RunDataView(props: RunDataViewProps) {
 
 type ComponentTableProps = {
     config: TableReportConfig
-    data: RunData[]
+    data: TableReportData[]
     unit?: string
-    selector(d: RunData): number
-    siblingSelector(d: RunData, index: number): number
+    selector(d: TableReportData): number
+    siblingSelector(d: TableReportData, index: number): number
 }
 
 const colors = ["#4caf50", "#FF0000", "#CC0066", "#0066FF", "#42a5f5", "#f1c40f"]
@@ -97,12 +100,12 @@ function numericCompare(a: any, b: any) {
 
 function ComponentTable(props: ComponentTableProps) {
     const series = [...new Set(props.data.map(d => d.series))].sort(numericCompare)
-    const labels = [...new Set(props.data.map(d => d.label))].sort(numericCompare)
+    const scales = [...new Set(props.data.map(d => d.scale))].sort(numericCompare)
     const seriesFormatter = formatter(props.config.seriesFormatter)
-    const labelFormatter = formatter(props.config.labelFormatter)
-    const chartData: Record<string, string | number>[] = labels.map(label => ({ label }))
+    const scaleFormatter = formatter(props.config.scaleFormatter)
+    const chartData: Record<string, string | number>[] = scales.map(scale => ({ scale }))
     props.data.forEach(d => {
-        const matching = chartData.find(item => item.label === d.label)
+        const matching = chartData.find(item => item.scale === d.scale)
         if (matching) {
             matching[d.series] = props.selector(d)
         }
@@ -147,21 +150,21 @@ function ComponentTable(props: ComponentTableProps) {
                 <TableComposable variant="compact">
                     <Thead>
                         <Tr>
-                            <Th>{props.config.labelDescription}</Th>
+                            <Th>{props.config.scaleDescription}</Th>
                             {series.map(s => (
                                 <Th key={s}>{seriesFormatter(s)}</Th>
                             ))}
                         </Tr>
                     </Thead>
                     <Tbody>
-                        {labels.map(l => (
-                            <Tr key={l}>
-                                <Th>{labelFormatter(l)}</Th>
+                        {scales.map(sc => (
+                            <Tr key={sc}>
+                                <Th>{scaleFormatter(sc)}</Th>
                                 {series.map(s => (
                                     <Td key={s}>
-                                        <RunDataView
+                                        <DataView
                                             config={props.config}
-                                            data={props.data.find(d => d.series === s && d.label === l)}
+                                            data={props.data.find(d => d.series === s && d.scale === sc)}
                                             unit={props.unit}
                                             selector={props.selector}
                                             siblingSelector={props.siblingSelector}
@@ -183,16 +186,16 @@ function ComponentTable(props: ComponentTableProps) {
                     />
                 </div>
                 <ResponsiveContainer width="100%" height="100%">
-                    {labels.length > 1 ? (
+                    {scales.length > 1 ? (
                         <LineChart data={chartData} style={{ userSelect: "none" }}>
                             {commonChartElements}
                             <XAxis
                                 allowDataOverflow={true}
-                                name={props.config.labelDescription}
+                                name={props.config.scaleDescription}
                                 type="category"
                                 textAnchor="end"
                                 height={50}
-                                dataKey="label"
+                                dataKey="scale"
                                 tick={{ fontSize: 12 }}
                                 padding={{ left: 16, right: 16 }}
                             />
@@ -358,7 +361,7 @@ function selectByKey(value: any, key: string) {
 
 export default function TableReportView(props: TableReportViewProps) {
     const config = props.report.config
-    const categories = [...new Set(props.report.runData.map(d => d.category))].sort(numericCompare)
+    const categories = [...new Set(props.report.data.map(d => d.category))].sort(numericCompare)
     const singleCategory = categories.length === 0 || (categories.length === 1 && categories[0] === "")
     const categoryFormatter = formatter(config.categoryFormatter)
     const comment0 = props.report.comments.find(c => c.level === 0)
@@ -393,7 +396,7 @@ export default function TableReportView(props: TableReportViewProps) {
                             const comment2 = props.report.comments.find(
                                 c => c.level === 2 && c.category === cat && c.componentId === comp.id
                             )
-                            const categoryData = props.report.runData.filter(d => d.category === cat)
+                            const categoryData = props.report.data.filter(d => d.category === cat)
                             if (categoryData.some(d => typeof d.values[i2] == "object")) {
                                 const set = new Set<string>()
                                 categoryData.forEach(d => {

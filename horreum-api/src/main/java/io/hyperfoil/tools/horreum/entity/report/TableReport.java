@@ -13,7 +13,6 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
@@ -41,27 +40,33 @@ public class TableReport extends PanacheEntityBase {
    @NotNull
    public Instant created;
 
-   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-   @JoinColumn(name = "report_id")
+   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, mappedBy = "report")
    @Fetch(FetchMode.SELECT)
    public Collection<ReportComment> comments;
 
    @ElementCollection(fetch = FetchType.EAGER)
-   @CollectionTable(name = "tablereport_rundata", joinColumns = @JoinColumn(name = "report_id"))
+   @CollectionTable(name = "tablereport_data", joinColumns = @JoinColumn(name = "report_id"))
    @Fetch(FetchMode.SELECT)
-   public Collection<RunData> runData;
+   public Collection<Data> data;
 
    @Embeddable
-   public static class RunData {
+   public static class Data {
       @NotNull
-      @Column(name = "runid")
+      @Column(name = "dataset_id")
+      public int datasetId;
+
+      @NotNull
       public int runId;
+
+      @NotNull
+      public int ordinal;
+
       @NotNull
       public String category;
       @NotNull
       public String series;
       @NotNull
-      public String label;
+      public String scale;
 
       @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
       @NotNull
@@ -69,11 +74,11 @@ public class TableReport extends PanacheEntityBase {
 
       @Override
       public String toString() {
-         return "RunData{" +
-               "runId=" + runId +
+         return "TableReport.Data{" +
+               "datasetId=" + datasetId +
                ", category='" + category + '\'' +
                ", series='" + series + '\'' +
-               ", label='" + label + '\'' +
+               ", label='" + scale + '\'' +
                ", values=" + values +
                '}';
       }

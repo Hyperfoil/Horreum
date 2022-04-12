@@ -10,7 +10,11 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
+import org.hibernate.annotations.Type;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 @Entity
 @Table(name = "reportcomponent")
@@ -32,7 +36,9 @@ public class ReportComponent {
    public int order;
 
    @NotNull
-   public String accessors;
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public ArrayNode labels;
+
    public String function;
 
    // displayed on Y axis

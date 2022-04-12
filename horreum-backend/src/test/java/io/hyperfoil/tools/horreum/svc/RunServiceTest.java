@@ -57,9 +57,6 @@ public class RunServiceTest extends BaseServiceTest {
    @Inject
    RunService runService;
 
-   @Inject
-   EventBus eventBus;
-
    @org.junit.jupiter.api.Test
    public void testDataSetCreated(TestInfo info) throws InterruptedException {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
@@ -83,16 +80,6 @@ public class RunServiceTest extends BaseServiceTest {
       runJson.put("$schema", schema.uri);
       runJson.put("value", value);
       return runJson;
-   }
-
-   private <E> BlockingQueue<E> eventConsumerQueue(Class<? extends E> eventClass, String eventType) {
-      BlockingQueue<E> queue = new LinkedBlockingDeque<>();
-      eventBus.consumer(eventType, msg -> {
-         if (eventClass.isInstance(msg.body())) {
-            queue.add(eventClass.cast(msg.body()));
-         }
-      });
-      return queue;
    }
 
    @org.junit.jupiter.api.Test

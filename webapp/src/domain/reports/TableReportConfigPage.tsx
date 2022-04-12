@@ -29,7 +29,7 @@ import * as api from "./api"
 import { TableReport, TableReportConfig, ReportComponent } from "./api"
 import TableReportView from "./TableReportView"
 
-import Accessors from "../../components/Accessors"
+import Labels from "../../components/Labels"
 import HelpButton from "../../components/HelpButton"
 import OptionalFunction from "../../components/OptionalFunction"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
@@ -66,11 +66,13 @@ function ReportConfigComponent(props: ReportConfigComponentProps) {
                         isReadOnly={props.readOnly}
                     />
                 </FormGroup>
-                <FormGroup label="Accessors" fieldId="accessors">
-                    <Accessors
+                <FormGroup label="Labels" fieldId="labels">
+                    <Labels
                         isReadOnly={props.readOnly}
-                        value={props.component.accessors ? props.component.accessors.split(";") : []}
-                        onChange={a => props.onChange({ ...props.component, accessors: a.join(";") })}
+                        labels={props.component.labels}
+                        onChange={labels => props.onChange({ ...props.component, labels })}
+                        defaultFiltering={false}
+                        defaultMetrics={true}
                     />
                 </FormGroup>
                 <FormGroup
@@ -128,12 +130,14 @@ export default function TableReportConfigPage() {
         test: {
             id: -1,
         },
-        categoryAccessors: "",
-        seriesAccessors: "",
-        labelAccessors: "",
+        filterLabels: [],
+        categoryLabels: [],
+        seriesLabels: [],
+        scaleLabels: [],
         components: [],
     })
-    const configValid = config.test?.id && config.test.id >= 0 && config.title && config.seriesAccessors
+    const configValid =
+        config.test?.id && config.test.id >= 0 && config.title && config.seriesLabels && config.seriesLabels.length > 0
     const [loading, setLoading] = useState(false)
     const [test, setTest] = useState<SelectedTest>()
     const [preview, setPreview] = useState<TableReport>()
@@ -172,7 +176,7 @@ export default function TableReportConfigPage() {
                     id: -1,
                     name: "",
                     order: config.components.length,
-                    accessors: "",
+                    labels: [],
                 },
             ],
         })
@@ -248,21 +252,22 @@ export default function TableReportConfigPage() {
                                 <>
                                     Filtering
                                     <Popover
-                                        headerContent="Filtering accessors and function"
+                                        headerContent="Filtering labels and function"
                                         bodyContent={
                                             <div>
-                                                Filtering lets you pre-select which runs are admitted to the report. It
-                                                is an optional feature: if you keep the list of accessors empty all runs
-                                                will be admitted.
+                                                Filtering lets you pre-select which datasets are admitted to the report.
+                                                It is an optional feature: if you keep the list of labels empty all
+                                                datasets will be admitted.
                                                 <List>
                                                     <ListItem>
-                                                        Accessors select data from the run based on its{" "}
-                                                        <NavLink to="/schema">schema</NavLink>.
+                                                        Labels select data from the dataset based on its{" "}
+                                                        <NavLink to="/schema">schema(s)</NavLink>.
                                                     </ListItem>
                                                     <ListItem>
-                                                        Filtering function takes the result of single accessor or object
-                                                        keyed by accessors (in case of multiple accessors) and returns{" "}
-                                                        <code>true</code> if the run should be admitted.
+                                                        Filtering function takes the label value (in case of single
+                                                        label) or object keyed by label names (in case of multiple
+                                                        labels) as its only parameter and returns <code>true</code> if
+                                                        the run should be admitted.
                                                     </ListItem>
                                                 </List>
                                             </div>
@@ -273,13 +278,13 @@ export default function TableReportConfigPage() {
                                 </>
                             }
                         >
-                            <FormGroup label="Accessors" fieldId="filterAcessors">
-                                <Accessors
-                                    value={config?.filterAccessors ? config.filterAccessors.split(";") : []}
-                                    onChange={accessors =>
-                                        setConfig({ ...config, filterAccessors: accessors.join(";") })
-                                    }
+                            <FormGroup label="Labels" fieldId="filterLabels">
+                                <Labels
+                                    labels={config.filterLabels || []}
+                                    onChange={labels => setConfig({ ...config, filterLabels: labels })}
                                     isReadOnly={!isTester}
+                                    defaultMetrics={false}
+                                    defaultFiltering={true}
                                 />
                             </FormGroup>
                             <FormGroup label="Function" fieldId="filterFunction">
@@ -298,7 +303,7 @@ export default function TableReportConfigPage() {
                                 <>
                                     Category
                                     <Popover
-                                        headerContent="Category accessors, function and formatter"
+                                        headerContent="Category labels, function and formatter"
                                         bodyContent={
                                             <div>
                                                 Categories split runs to several groups where side-by-side comparison
@@ -308,18 +313,19 @@ export default function TableReportConfigPage() {
                                                 category.
                                                 <List>
                                                     <ListItem>
-                                                        Accessors select data from the run based on its{" "}
-                                                        <NavLink to="/schema">schema</NavLink>.
+                                                        Labels select data from the dataset based on its{" "}
+                                                        <NavLink to="/schema">schema(s)</NavLink>.
                                                     </ListItem>
                                                     <ListItem>
-                                                        Category function takes the result of single accessor or object
-                                                        keyed by accessors (in case of multiple accessors) and produces
-                                                        a value that would be used for the distinction.
+                                                        Category function takes the label value (in case of single
+                                                        label) or object keyed by label name (in case of multiple
+                                                        labels) as its only parameter and produces a value that would be
+                                                        used for the distinction.
                                                     </ListItem>
                                                     <ListItem>
-                                                        Category formatter takes the result of category function (or the
-                                                        accessors if the function is not present) and formats it for
-                                                        presentation.
+                                                        Category formatter takes the result of category function (or
+                                                        what would be its input if the function is not present) and
+                                                        formats it for presentation.
                                                     </ListItem>
                                                 </List>
                                             </div>
@@ -330,13 +336,13 @@ export default function TableReportConfigPage() {
                                 </>
                             }
                         >
-                            <FormGroup label="Accessors" fieldId="categoryAcessors">
-                                <Accessors
-                                    value={config?.categoryAccessors ? config.categoryAccessors.split(";") : []}
-                                    onChange={accessors =>
-                                        setConfig({ ...config, categoryAccessors: accessors.join(";") })
-                                    }
+                            <FormGroup label="Labels" fieldId="categoryLabels">
+                                <Labels
+                                    labels={config.categoryLabels || []}
+                                    onChange={labels => setConfig({ ...config, categoryLabels: labels })}
                                     isReadOnly={!isTester}
+                                    defaultMetrics={false}
+                                    defaultFiltering={true}
                                 />
                             </FormGroup>
                             <FormGroup label="Function" fieldId="categoryFunction">
@@ -365,7 +371,7 @@ export default function TableReportConfigPage() {
                                 <>
                                     Series
                                     <Popover
-                                        headerContent="Series accessors, function and formatter"
+                                        headerContent="Series labels, function and formatter"
                                         bodyContent={
                                             <div>
                                                 Series are the products or configurations this report tries to compare,
@@ -373,18 +379,19 @@ export default function TableReportConfigPage() {
                                                 series is mandatory.
                                                 <List>
                                                     <ListItem>
-                                                        Accessors select data from the run based on its{" "}
-                                                        <NavLink to="/schema">schema</NavLink>.
+                                                        Labels select data from the dataset based on its{" "}
+                                                        <NavLink to="/schema">schema(s)</NavLink>.
                                                     </ListItem>
                                                     <ListItem>
-                                                        Series function takes the result of single accessor or object
-                                                        keyed by accessors (in case of multiple accessors) and produces
-                                                        a value that would be used to select the series.
+                                                        Series function takes the label value (in case of single label)
+                                                        or object keyed by label names (in case of multiple labels) as
+                                                        its only parameter and produces a value that would be used to
+                                                        select the series.
                                                     </ListItem>
                                                     <ListItem>
-                                                        Series formatter takes the result of series function (or the
-                                                        accessors if the function is not present) and formats it for
-                                                        presentation.
+                                                        Series formatter takes the result of series function (or what
+                                                        would be its input if the function is not present) and formats
+                                                        it for presentation.
                                                     </ListItem>
                                                 </List>
                                             </div>
@@ -395,14 +402,14 @@ export default function TableReportConfigPage() {
                                 </>
                             }
                         >
-                            <FormGroup label="Accessors" fieldId="seriesAcessors">
-                                <Accessors
-                                    value={config?.seriesAccessors ? config.seriesAccessors.split(";") : []}
-                                    onChange={accessors =>
-                                        setConfig({ ...config, seriesAccessors: accessors.join(";") })
-                                    }
-                                    error={config?.seriesAccessors ? undefined : "Selecting series is mandatory."}
+                            <FormGroup label="Labels" fieldId="seriesLabels">
+                                <Labels
+                                    labels={config.seriesLabels || []}
+                                    onChange={labels => setConfig({ ...config, seriesLabels: labels })}
+                                    error={config.seriesLabels ? undefined : "Selecting series is mandatory."}
                                     isReadOnly={!isTester}
+                                    defaultMetrics={false}
+                                    defaultFiltering={true}
                                 />
                             </FormGroup>
                             <FormGroup label="Function" fieldId="seriesFunction">
@@ -429,29 +436,30 @@ export default function TableReportConfigPage() {
                         <FormSection
                             title={
                                 <>
-                                    Labels
+                                    Scale
                                     <Popover
-                                        headerContent="Labels accessors, function and formatter"
+                                        headerContent="Scale labels, function and formatter"
                                         bodyContent={
                                             <div>
-                                                Labels represent gradation in configuration, e.g. as the cluster is
+                                                Scale represents gradation in configuration, e.g. as the cluster is
                                                 scaled, load is increased or other attributes are changing. Values with
                                                 different labels will be displayed in other rows in the table, and as
                                                 datapoints in series in the chart.
                                                 <List>
                                                     <ListItem>
-                                                        Accessors select data from the run based on its{" "}
-                                                        <NavLink to="/schema">schema</NavLink>.
+                                                        Labels select data from the dataset based on its{" "}
+                                                        <NavLink to="/schema">schema(s)</NavLink>.
                                                     </ListItem>
                                                     <ListItem>
-                                                        Label function takes the result of single accessor or object
-                                                        keyed by accessors (in case of multiple accessors) and produces
-                                                        a value that would be used for the label.
+                                                        Scale function takes the label value (in case of single label)
+                                                        or object keyed by accessors (in case of multiple accessors) as
+                                                        its only parameter and produces a value that would be used for
+                                                        the label.
                                                     </ListItem>
                                                     <ListItem>
-                                                        Label formatter takes the result of label function (or the
-                                                        accessors if the function is not present) and formats it for
-                                                        presentation.
+                                                        Scale formatter takes the result of scale function (or what
+                                                        would be its input if the function is not present) and formats
+                                                        it for presentation.
                                                     </ListItem>
                                                 </List>
                                             </div>
@@ -462,40 +470,40 @@ export default function TableReportConfigPage() {
                                 </>
                             }
                         >
-                            <FormGroup label="Accessors" fieldId="labelAccessors">
-                                <Accessors
-                                    value={config?.labelAccessors ? config.labelAccessors.split(";") : []}
-                                    onChange={accessors =>
-                                        setConfig({ ...config, labelAccessors: accessors.join(";") })
-                                    }
+                            <FormGroup label="Labels" fieldId="scaleLabels">
+                                <Labels
+                                    labels={config.scaleLabels || []}
+                                    onChange={labels => setConfig({ ...config, scaleLabels: labels })}
                                     isReadOnly={!isTester}
+                                    defaultMetrics={false}
+                                    defaultFiltering={true}
                                 />
                             </FormGroup>
-                            <FormGroup label="Function" fieldId="labelFunction">
+                            <FormGroup label="Function" fieldId="scaleFunction">
                                 <OptionalFunction
-                                    func={config?.labelFunction}
-                                    onChange={func => setConfig({ ...config, labelFunction: func })}
+                                    func={config?.scaleFunction}
+                                    onChange={func => setConfig({ ...config, scaleFunction: func })}
                                     readOnly={!isTester}
                                     undefinedText="Label function not defined."
                                     addText="Add label function..."
                                     defaultFunc="value => value"
                                 />
                             </FormGroup>
-                            <FormGroup label="Formatter" fieldId="labelFormatter">
+                            <FormGroup label="Formatter" fieldId="scaleFormatter">
                                 <OptionalFunction
-                                    func={config?.labelFormatter}
-                                    onChange={func => setConfig({ ...config, labelFormatter: func })}
+                                    func={config?.scaleFormatter}
+                                    onChange={func => setConfig({ ...config, scaleFormatter: func })}
                                     readOnly={!isTester}
                                     undefinedText="Label formatter function not defined."
                                     addText="Add label formatter function..."
                                     defaultFunc="label => label"
                                 />
                             </FormGroup>
-                            <FormGroup label="Description" fieldId="labelDescription">
+                            <FormGroup label="Description" fieldId="scaleDescription">
                                 <TextInput
                                     id="description"
-                                    value={config?.labelDescription}
-                                    onChange={labelDescription => setConfig({ ...config, labelDescription })}
+                                    value={config?.scaleDescription}
+                                    onChange={scaleDescription => setConfig({ ...config, scaleDescription })}
                                     placeholder="Name of the property that this report is scaling."
                                     readOnly={!isTester}
                                 />

@@ -614,9 +614,7 @@ public class SchemaServiceImpl implements SchemaService {
       RolesInterceptor.setCurrentIdentity(SYSTEM_IDENTITY);
       try {
          int deleted = em.createNativeQuery("DELETE FROM schemaextractor WHERE id IN (SELECT se.id FROM schemaextractor se FULL OUTER JOIN (" +
-                     "SELECT unnest(string_to_array(replace(tags, '[]', ''), ';')) FROM test UNION " +
-                     "SELECT unnest(string_to_array(replace(filteraccessors || ',' || categoryaccessors || ',' || seriesaccessors || ',' || labelaccessors, '[]', ''), ',')) FROM tablereportconfig UNION " +
-                     "SELECT unnest(string_to_array(replace(accessors, '[]', ''), ',')) FROM reportcomponent" +
+                     "SELECT unnest(string_to_array(replace(tags, '[]', ''), ';')) FROM test" +
                ") AS a ON se.accessor = a.unnest WHERE (se.deleted OR se.deprecatedby_id IS NOT NULL) AND a.unnest IS NULL);").executeUpdate();
          if (deleted > 0) {
             log.infof("Deleted %d unused extractors.");

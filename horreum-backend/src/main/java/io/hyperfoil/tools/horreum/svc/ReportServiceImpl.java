@@ -26,9 +26,14 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.hibernate.Hibernate;
+import org.hibernate.query.NativeQuery;
+import org.hibernate.type.IntegerType;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.ReportService;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -42,35 +47,13 @@ import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 
+
 @WithRoles
 public class ReportServiceImpl implements ReportService {
    private static final Logger log = Logger.getLogger(ReportServiceImpl.class);
 
    private static final Comparator<TableReportSummaryItem> REPORT_COMPARATOR = Comparator.<TableReportSummaryItem, Instant>comparing(item -> item.created).reversed();
 
-   //@formatter:off
-   private static final String SELECT_BY_ACCESSOR = "SELECT run.id, (" +
-            "CASE WHEN :accessors LIKE '%[]' THEN " +
-               "jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::::jsonpath) " +
-            "ELSE " +
-               "jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::::jsonpath) " +
-            "END" +
-         ")::::text AS result FROM schemaextractor se " +
-         "JOIN run_schemas rs ON se.schema_id = rs.schemaid " +
-         "JOIN run ON run.id = rs.runid " +
-         "WHERE NOT run.trashed AND (se.accessor = :accessors OR (se.accessor || '[]') = :accessors) AND ";
-   private static final String SELECT_BY_ACCESSORS = "SELECT run.id, jsonb_object_agg(se.accessor, (" +
-            "CASE WHEN ca LIKE '%[]' THEN " +
-               "jsonb_path_query_array(run.data, (rs.prefix || se.jsonpath)::::jsonpath) " +
-            "ELSE " +
-               "jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::::jsonpath) " +
-            "END)" +
-         ")::::text AS result FROM schemaextractor se " +
-         "JOIN run_schemas rs ON se.schema_id = rs.schemaid " +
-         "JOIN run ON run.id = rs.runid " +
-         "JOIN regexp_split_to_table(:accessors, ';') AS ca ON (se.accessor = ca OR (se.accessor || '[]') = ca) " +
-         "WHERE NOT run.trashed AND ";
-         // "WHERE xxx GROUP BY run.id " must be appended here
    //@formatter:on
 
    static {
@@ -200,25 +183,25 @@ public class ReportServiceImpl implements ReportService {
          throw ServiceException.badRequest("No config");
       }
       if (config.test == null || config.test.id == null) {
-         throw ServiceException.badRequest("No test");
+         throw ServiceException.badRequest("Table report configuration does not have a test with ID assigned.");
       }
-      if (!nullOrEmpty(config.filterFunction) && nullOrEmpty(config.filterAccessors)) {
+      if (!nullOrEmpty(config.filterFunction) && nullOrEmpty(config.filterLabels)) {
          throw ServiceException.badRequest("Filter function is defined but there are no accessors");
       }
-      if (nullOrEmpty(config.categoryAccessors)) {
+      if (nullOrEmpty(config.categoryLabels)) {
          if (!nullOrEmpty(config.categoryFunction)) {
             throw ServiceException.badRequest("Category function is defined but there are no accessors");
          } else if (!nullOrEmpty(config.categoryFormatter)) {
             throw ServiceException.badRequest("Category formatter is defined but there are not accessors");
          }
       }
-      if (nullOrEmpty(config.seriesAccessors)) {
+      if (nullOrEmpty(config.seriesLabels)) {
          throw ServiceException.badRequest("Service accessors must be defined");
       }
-      if (nullOrEmpty(config.labelAccessors)) {
-         if (!nullOrEmpty(config.labelFunction)) {
+      if (nullOrEmpty(config.scaleLabels)) {
+         if (!nullOrEmpty(config.scaleFunction)) {
             throw ServiceException.badRequest("Label function is defined but there are no accessors");
-         } else if (!nullOrEmpty(config.labelFormatter)) {
+         } else if (!nullOrEmpty(config.scaleFormatter)) {
             throw ServiceException.badRequest("Label formatter is defined but there are no accessors");
          }
       }
@@ -292,96 +275,97 @@ public class ReportServiceImpl implements ReportService {
          }
       }
       report.config = config;
-      List<Object[]> runCategories = Collections.emptyList(), series, labels = Collections.emptyList();
+      List<Object[]> categories = Collections.emptyList(), series, scales = Collections.emptyList();
       Query timestampQuery;
-      if (!nullOrEmpty(config.filterAccessors)) {
-         List<Integer> runIds = filterRunIds(config);
-         log.debugf("Table report %s(%d) includes runs %s", config.title, config.id, runIds);
-         series = selectByRuns(config.seriesAccessors, runIds);
-         log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
-         if (!nullOrEmpty(config.labelAccessors)) {
-            labels = selectByRuns(config.labelAccessors, runIds);
-            log.debugf("Labels: %s", labels.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
+      if (!nullOrEmpty(config.filterLabels)) {
+         List<Integer> datasetIds = filterDatasetIds(config);
+         log.debugf("Table report %s(%d) includes datasets %s", config.title, config.id, datasetIds);
+         series = selectByDatasets(config.seriesLabels, datasetIds);
+         log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
+         if (!nullOrEmpty(config.scaleLabels)) {
+            scales = selectByDatasets(config.scaleLabels, datasetIds);
+            log.debugf("Scales: %s", scales.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
          }
-         if (!nullOrEmpty(config.categoryAccessors)) {
-            runCategories = selectByRuns(config.categoryAccessors, runIds);
-            log.debugf("Categories: %s", runCategories.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
+         if (!nullOrEmpty(config.categoryLabels)) {
+            categories = selectByDatasets(config.categoryLabels, datasetIds);
+            log.debugf("Categories: %s", categories.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
          }
-         timestampQuery = em.createNativeQuery("SELECT id, start FROM run WHERE id IN :runs").setParameter("runs", runIds);
+         timestampQuery = em.createNativeQuery("SELECT id, start FROM dataset WHERE id IN :datasets").setParameter("datasets", datasetIds);
       } else {
-         log.debugf("Table report %s(%d) includes all runs for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
-         series = selectByTest(config.seriesAccessors, config.test.id);
-         log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
-         if (!nullOrEmpty(config.labelAccessors)) {
-            labels = selectByTest(config.labelAccessors, config.test.id);
-            log.debugf("Labels: %s", labels.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
+         log.debugf("Table report %s(%d) includes all datasets for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
+         series = selectByTest(config.test.id, config.seriesLabels);
+         log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
+         if (!nullOrEmpty(config.scaleLabels)) {
+            scales = selectByTest(config.test.id, config.scaleLabels);
+            log.debugf("Scales: %s", scales.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
          }
-         if (!nullOrEmpty(config.categoryAccessors)) {
-            runCategories = selectByTest(config.categoryAccessors, config.test.id);
-            log.debugf("Categories: %s", runCategories.stream().collect(Collectors.toMap(row -> row[0], row -> row[1])));
+         if (!nullOrEmpty(config.categoryLabels)) {
+            categories = selectByTest(config.test.id, config.categoryLabels);
+            log.debugf("Categories: %s", categories.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
          }
          timestampQuery = em.createNativeQuery("SELECT id, start FROM run WHERE testid = ?").setParameter(1, config.test.id);
       }
-      if (runCategories.isEmpty()) {
-         assert config.categoryAccessors == null;
+      if (categories.isEmpty() && !series.isEmpty()) {
+         assert config.categoryLabels == null;
          assert config.categoryFunction == null;
          assert config.categoryFormatter == null;
-         runCategories = series.stream().map(row -> new Object[]{ row[0], "" }).collect(Collectors.toList());
+         categories = series.stream().map(row -> new Object[]{ row[0], "" }).collect(Collectors.toList());
       }
-      if (labels.isEmpty()) {
-         assert config.labelAccessors == null;
-         assert config.labelFunction == null;
-         assert config.labelFormatter == null;
-         labels = series.stream().map(row -> new Object[] { row[0], "" }).collect(Collectors.toList());
+      if (scales.isEmpty() && !series.isEmpty()) {
+         assert config.scaleLabels == null;
+         assert config.scaleFunction == null;
+         assert config.scaleFormatter == null;
+         scales = series.stream().map(row -> new Object[] { row[0], "" }).collect(Collectors.toList());
       }
-      Map<Integer, TableReport.RunData> runData = getRunData(config, runCategories, series, labels);
-      log.debugf("Run data: %s", runData);
+      Map<Integer, TableReport.Data> datasetData = series.isEmpty() ? Collections.emptyMap() : getData(config, categories, series, scales);
+      log.debugf("Data per dataset: %s", datasetData);
 
       @SuppressWarnings("unchecked")
       Map<Integer, Timestamp> timestamps = ((Stream<Object[]>) timestampQuery.getResultStream())
             .collect(Collectors.toMap(row -> (Integer) row[0], row -> (Timestamp) row[1]));
       // TODO: customizable time range
-      List<Integer> runIds = getFinalRunIds(timestamps, runData);
+      List<Integer> datasetIds = getFinalDatasetIds(timestamps, datasetData);
       List<List<Object[]>> values = config.components.stream()
-            .map(component -> selectByRuns(component.accessors, runIds))
+            .map(component -> selectByDatasets(component.labels, datasetIds))
             .collect(Collectors.toList());
       executeInContext(config, context -> {
          for (int i = 0; i < values.size(); i++) {
             List<Object[]> valuesForComponent = values.get(i);
             ReportComponent component = config.components.get(i);
             for (Object[] row : valuesForComponent) {
-               Integer runId = (Integer) row[0];
-               TableReport.RunData data = runData.get(runId);
+               Integer datasetId = (Integer) row[0];
+               JsonNode value = (JsonNode) row[3];
+               TableReport.Data data = datasetData.get(datasetId);
                if (nullOrEmpty(component.function)) {
-                  if (row[1] == null) {
+                  if (value == null || value.isNull()) {
                      data.values.addNull();
                   } else {
-                     Double dValue = Util.toDoubleOrNull(row[1]);
+                     Double dValue = value.asDouble();
                      if (dValue != null) {
                         data.values.add(dValue);
                      } else {
-                        data.values.add(String.valueOf(row[1]));
+                        data.values.add(value);
                      }
                   }
                } else {
-                  String jsCode = buildCode(component.function, (String) row[1]);
+                  String jsCode = buildCode(component.function, String.valueOf(value));
                   try {
-                     Value value = context.eval("js", jsCode);
-                     Double maybeDouble = Util.toDoubleOrNull(value, err -> {}, info -> {});
+                     Value calculatedValue = context.eval("js", jsCode);
+                     Double maybeDouble = Util.toDoubleOrNull(calculatedValue, err -> {}, info -> {});
                      if (maybeDouble != null) {
                         data.values.add(maybeDouble);
                      } else {
-                        data.values.add(Util.convertToJson(value));
+                        data.values.add(Util.convertToJson(calculatedValue));
                      }
                   } catch (PolyglotException e) {
-                     log.errorf(e, "Failed to run report %s(%d) label function on run %d.", config.title, config.id, runId);
+                     log.errorf(e, "Failed to run report %s(%d) label function on run %d.", config.title, config.id, datasetId);
                      log.infof("Offending code: %s", jsCode);
                   }
                }
             }
          }
       });
-      report.runData = runIds.stream().map(runData::get).collect(Collectors.toList());
+      report.data = datasetIds.stream().map(datasetData::get).collect(Collectors.toList());
       return report;
    }
 
@@ -389,128 +373,164 @@ public class ReportServiceImpl implements ReportService {
       return str == null || str.trim().isEmpty();
    }
 
-   private Map<Integer, TableReport.RunData> getRunData(TableReportConfig config, List<Object[]> runCategories, List<Object[]> series, List<Object[]> labels) {
-      assert !runCategories.isEmpty();
-      assert !series.isEmpty();
-      assert !labels.isEmpty();
+   private boolean nullOrEmpty(JsonNode node) {
+      return node == null || node.isNull() || node.isEmpty();
+   }
 
-      Map<Integer, TableReport.RunData> runData = new HashMap<>();
+   private Map<Integer, TableReport.Data> getData(TableReportConfig config, List<Object[]> categories, List<Object[]> series, List<Object[]> scales) {
+      assert !categories.isEmpty();
+      assert !series.isEmpty();
+      assert !scales.isEmpty();
+
+      Map<Integer, TableReport.Data> datasetData = new HashMap<>();
       executeInContext(config, context -> {
-         for (Object[] row : runCategories) {
-            Integer runId = (Integer) row[0];
-            TableReport.RunData data = new TableReport.RunData();
-            data.runId = runId;
+         for (Object[] row : categories) {
+            Integer datasetId = (Integer) row[0];
+            int runId = (int) row[1];
+            int ordinal = (int) row[2];
+            JsonNode value = (JsonNode) row[3];
+            TableReport.Data data = new TableReport.Data();
+            data.datasetId = datasetId;
             data.values = JsonNodeFactory.instance.arrayNode(config.components.size());
             if (nullOrEmpty(config.categoryFunction)) {
-               data.category = Util.unwrapDoubleQuotes((String) row[1]);
+               data.category = toText(value);
             } else {
-               String jsCode = buildCode(config.categoryFunction, (String) row[1]);
+               String jsCode = buildCode(config.categoryFunction, String.valueOf(value));
                try {
                   data.category = Util.convert(context.eval("js", jsCode)).toString();
                } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to run report %s(%d) category function on run %d.", config.title, config.id, runId);
+                  log.errorf(e, "Failed to run report %s(%d) category function on dataset %d/%d (%d).", config.title, config.id, runId, ordinal + 1, datasetId);
                   log.infof("Offending code: %s", jsCode);
                   continue;
                }
             }
-            runData.put(runId, data);
+            datasetData.put(datasetId, data);
          }
          for (Object[] row: series) {
-            Integer runId = (Integer) row[0];
-            TableReport.RunData data = runData.get(runId);
+            Integer datasetId = (Integer) row[0];
+            int runId = (int) row[1];
+            int ordinal = (int) row[2];
+            JsonNode value = (JsonNode) row[3];
+            TableReport.Data data = datasetData.get(datasetId);
             if (nullOrEmpty(config.seriesFunction)) {
-               data.series = Util.unwrapDoubleQuotes((String) row[1]);
+               data.series = toText(value);
             } else {
-               String jsCode = buildCode(config.seriesFunction, (String) row[1]);
+               String jsCode = buildCode(config.seriesFunction, String.valueOf(value));
                try {
                   if (data != null) {
                      data.series = Util.convert(context.eval("js", jsCode)).toString();
                   }
                } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to run report %s(%d) series function on run %d.", config.title, config.id, runId);
+                  log.errorf(e, "Failed to run report %s(%d) series function on run %d/%d (%d).", config.title, config.id, runId, ordinal + 1, datasetId);
                   log.infof("Offending code: %s", jsCode);
                }
             }
          }
-         for (Object[] row: labels) {
-            Integer runId = (Integer) row[0];
-            TableReport.RunData data = runData.get(runId);
-            if (nullOrEmpty(config.labelFunction)) {
-               data.label = Util.unwrapDoubleQuotes((String) row[1]);
+         for (Object[] row: scales) {
+            Integer datasetId = (Integer) row[0];
+            int runId = (int) row[1];
+            int ordinal = (int) row[2];
+            JsonNode value = (JsonNode) row[3];
+            TableReport.Data data = datasetData.get(datasetId);
+            if (nullOrEmpty(config.scaleFunction)) {
+               data.scale = toText(value);
             } else {
-               String jsCode = buildCode(config.labelFunction, (String) row[1]);
+               String jsCode = buildCode(config.scaleFunction, String.valueOf(value));
                try {
                   if (data != null) {
-                     data.label = Util.convert(context.eval("js", jsCode)).toString();
+                     data.scale = Util.convert(context.eval("js", jsCode)).toString();
                   }
                } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to run report %s(%d) label function on run %d.", config.title, config.id, runId);
+                  log.errorf(e, "Failed to run report %s(%d) label function on dataset %d/%d (%d).", config.title, config.id, runId, ordinal + 1, datasetId);
                   log.infof("Offending code: %s", jsCode);
                }
             }
          }
       });
-      return runData;
+      return datasetData;
    }
 
-   private List<Integer> getFinalRunIds(Map<Integer, Timestamp> timestamps, Map<Integer, TableReport.RunData> runData) {
-      Map<Coords, TableReport.RunData> runsByCoords = new HashMap<>();
-      for (TableReport.RunData data : runData.values()) {
-         Timestamp dataTimestamp = timestamps.get(data.runId);
+   private String toText(JsonNode value) {
+      return value == null ? null : value.isTextual() ? value.asText() : value.toString();
+   }
+
+   private List<Integer> getFinalDatasetIds(Map<Integer, Timestamp> timestamps, Map<Integer, TableReport.Data> datasetData) {
+      Map<Coords, TableReport.Data> dataByCoords = new HashMap<>();
+      for (TableReport.Data data : datasetData.values()) {
+         Timestamp dataTimestamp = timestamps.get(data.datasetId);
          if (dataTimestamp == null) {
-            log.errorf("No timestamp for run %d", data.runId);
+            log.errorf("No timestamp for dataset %d", data.datasetId);
             continue;
          }
-         Coords coords = new Coords(data.category, data.series, data.label);
-         TableReport.RunData prev = runsByCoords.get(coords);
+         Coords coords = new Coords(data.category, data.series, data.scale);
+         TableReport.Data prev = dataByCoords.get(coords);
          if (prev == null) {
-            runsByCoords.put(coords, data);
+            dataByCoords.put(coords, data);
             continue;
          }
-         Timestamp prevTimestamp = timestamps.get(prev.runId);
+         Timestamp prevTimestamp = timestamps.get(prev.datasetId);
          if (prevTimestamp == null) {
-            log.errorf("No timestamp for prev run %d", prev.runId);
-            runsByCoords.put(coords, data);
+            log.errorf("No timestamp for prev dataset %d", prev.datasetId);
+            dataByCoords.put(coords, data);
          } else if (prevTimestamp.before(dataTimestamp)) {
-            runsByCoords.put(coords, data);
+            dataByCoords.put(coords, data);
          }
       }
-      return runsByCoords.values().stream().map(data -> data.runId).collect(Collectors.toList());
+      return dataByCoords.values().stream().map(data -> data.datasetId).collect(Collectors.toList());
    }
 
-   private List<Object[]> selectByTest(String accessors, int testId) {
-      List<Object[]> runCategories;
-      String query;
-      if (accessors.indexOf(';') >= 0) {
-         query = SELECT_BY_ACCESSORS + "run.testid = :testid GROUP BY run.id";
+   private List<Object[]> selectByTest(int testId, ArrayNode labels) {
+      // We need an expression that will return NULLs when the labels are not present
+      StringBuilder sql = new StringBuilder("WITH ");
+      sql.append("ds AS (SELECT id, runid, ordinal FROM dataset WHERE testid = :testid), ");
+      sql.append("values as (SELECT lv.dataset_id, label.name, lv.value FROM label_values lv ");
+      sql.append("JOIN label ON label.id = label_id WHERE dataset_id IN (SELECT id FROM ds) AND json_contains(:labels, label.name)) ");
+      sql.append("SELECT id, runid, ordinal, ");
+      if (labels.size() != 1) {
+         sql.append("jsonb_object_agg(values.name, values.value)");
       } else {
-         query = SELECT_BY_ACCESSOR + "run.testid = :testid";
+         sql.append("values.value");
       }
-      //noinspection unchecked
-      runCategories = em
-            .createNativeQuery(query)
-            .setParameter("accessors", accessors)
+      sql.append(" AS value FROM ds LEFT JOIN values ON ds.id = values.dataset_id");
+      if (labels.size() != 1) {
+         sql.append(" GROUP BY id, runid, ordinal");
+      }
+      Query query = em.createNativeQuery(sql.toString())
             .setParameter("testid", testId)
-            .getResultList();
-      return runCategories;
+            .unwrap(NativeQuery.class)
+            .setParameter("labels", labels, JsonNodeBinaryType.INSTANCE)
+            .addScalar("id", IntegerType.INSTANCE)
+            .addScalar("runid", IntegerType.INSTANCE)
+            .addScalar("ordinal", IntegerType.INSTANCE)
+            .addScalar("value", JsonNodeBinaryType.INSTANCE);
+      //noinspection unchecked
+      return query.getResultList();
    }
 
-   private List<Object[]> selectByRuns(String accessors, List<Integer> runIds) {
-      List<Object[]> runCategories;
-      String query;
-      if (accessors.indexOf(';') >= 0) {
-         query = SELECT_BY_ACCESSORS + "run.id IN :runs GROUP BY run.id";
+   private List<Object[]> selectByDatasets(ArrayNode labels, List<Integer> datasets) {
+      StringBuilder sql = new StringBuilder("SELECT dataset.id AS id, dataset.runid AS runid, dataset.ordinal AS ordinal, ");
+      if (labels.size() != 1) {
+         sql.append("jsonb_object_agg(label.name, lv.value)");
       } else {
-         query = SELECT_BY_ACCESSOR + "run.id IN :runs";
+         sql.append("lv.value");
       }
+      sql.append(" AS value FROM label ")
+         .append("JOIN label_values lv ON label.id = lv.label_id ")
+         .append("JOIN dataset ON dataset.id = lv.dataset_id ")
+         .append("WHERE dataset.id IN :datasets AND json_contains(:labels, label.name) ");
+      if (labels.size() != 1) {
+         sql.append("GROUP BY dataset.id, dataset.runid, dataset.ordinal");
+      }
+      Query query = em.createNativeQuery(sql.toString())
+            .setParameter("datasets", datasets)
+            .unwrap(NativeQuery.class)
+            .setParameter("labels", labels, JsonNodeBinaryType.INSTANCE)
+            .addScalar("id", IntegerType.INSTANCE)
+            .addScalar("runid", IntegerType.INSTANCE)
+            .addScalar("ordinal", IntegerType.INSTANCE)
+            .addScalar("value", JsonNodeBinaryType.INSTANCE);
       //noinspection unchecked
-      runCategories = em
-            .createNativeQuery(query)
-            .setParameter("accessors", accessors)
-            // this was hitting some bug (?) in Hibernate when using positional parameters
-            .setParameter("runs", runIds)
-            .getResultList();
-      return runCategories;
+      return (List<Object[]>) query.getResultList();
    }
 
    public static final class Coords {
@@ -538,41 +558,45 @@ public class ReportServiceImpl implements ReportService {
       }
    }
 
-   private List<Integer> filterRunIds(TableReportConfig config) {
-      List<Object[]> list = selectByTest(config.filterAccessors, config.test.id);
-      List<Integer> runIds = new ArrayList<>(list.size());
+   private List<Integer> filterDatasetIds(TableReportConfig config) {
+      List<Object[]> list = selectByTest(config.test.id, config.filterLabels);
+      // TODO: if list is empty log warning to persistent log
+      List<Integer> datasetIds = new ArrayList<>(list.size());
       if (nullOrEmpty(config.filterFunction)) {
          for (Object[] row : list) {
-            Integer runId = (Integer) row[0];
-            String result = (String) row[1];
-            if (result.equalsIgnoreCase("true")) {
-               runIds.add(runId);
+            Integer datasetId = (Integer) row[0];
+            if (((JsonNode) row[3]).asBoolean(false)) {
+               datasetIds.add(datasetId);
             }
          }
       } else {
          executeInContext(config, context -> {
             for (Object[] row : list) {
-               Integer runId = (Integer) row[0];
-               String jsCode = buildCode(config.filterFunction, (String) row[1]);
+               Integer datasetId = (Integer) row[0];
+               int runId = (int) row[1];
+               int ordinal = (int) row[2];
+               String jsCode = buildCode(config.filterFunction, String.valueOf(row[3]));
                try {
                   org.graalvm.polyglot.Value value = context.eval("js", jsCode);
                   // TODO debuggable
                   if (value.isBoolean()) {
                      if (value.asBoolean()) {
-                        runIds.add(runId);
+                        datasetIds.add(datasetId);
+                     } else if (log.isDebugEnabled()) {
+                        log.debugf("Dataset %d/%d (%d) filtered out, value: %s", runId, ordinal, datasetId, row[3]);
                      }
                   } else {
-                     log.errorf("Report %s(%d) filter result for run %d is not a boolean: %s", config.title, config.id, runId, value);
+                     log.errorf("Report %s(%d) filter result for dataset %d/%d (%d) is not a boolean: %s", config.title, config.id, runId, ordinal + 1, datasetId, value);
                      log.infof("Offending code: %s", jsCode);
                   }
                } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to run report %s(%d) filter function on run %d.", config.title, config.id, runId);
+                  log.errorf(e, "Failed to run report %s(%d) filter function on dataset %d/%d (%d).", config.title, config.id, runId, ordinal + 1, datasetId);
                   log.infof("Offending code: %s", jsCode);
                }
             }
          });
       }
-      return runIds;
+      return datasetIds;
    }
 
    private String buildCode(String function, String param) {

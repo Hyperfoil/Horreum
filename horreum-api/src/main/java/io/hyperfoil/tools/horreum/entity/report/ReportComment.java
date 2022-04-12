@@ -21,7 +21,7 @@ public class ReportComment extends PanacheEntityBase {
 
    @JsonIgnore
    @ManyToOne(fetch = FetchType.LAZY)
-   @JoinColumn(name = "report_id")
+   @JoinColumn(name = "report_id", nullable = false)
    public TableReport report;
 
    // 0 = root comment, 1 = on category, 2 = on component

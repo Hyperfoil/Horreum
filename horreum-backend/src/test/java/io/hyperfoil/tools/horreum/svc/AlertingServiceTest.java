@@ -100,16 +100,6 @@ public class AlertingServiceTest extends BaseServiceTest {
       return runJson;
    }
 
-   private <E> BlockingQueue<E> eventConsumerQueue(Class<? extends E> eventClass, String eventType) {
-      BlockingQueue<E> dpe = new LinkedBlockingDeque<>();
-      eventBus.consumer(eventType, msg -> {
-         if (eventClass.isInstance(msg.body())) {
-            dpe.add(eventClass.cast(msg.body()));
-         }
-      });
-      return dpe;
-   }
-
    @org.junit.jupiter.api.Test
    public void testLogging(TestInfo info) throws InterruptedException, ExecutionException, TimeoutException {
       Test test = createTest(createExampleTest(getTestName(info)));

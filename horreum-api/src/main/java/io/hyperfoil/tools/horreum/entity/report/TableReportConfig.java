@@ -14,6 +14,10 @@ import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
+import org.hibernate.annotations.Type;
+
+import com.fasterxml.jackson.databind.node.ArrayNode;
+
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -36,26 +40,28 @@ public class TableReportConfig extends PanacheEntityBase {
    @JoinColumn(name = "testid")
    public Test test;
 
-   // admittance filter
-   public String filterAccessors;
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public ArrayNode filterLabels;
    public String filterFunction;
 
-   public String categoryAccessors;
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public ArrayNode categoryLabels;
    public String categoryFunction;
    public String categoryFormatter;
 
    // this picks the column/series line
    @NotNull
-   public String seriesAccessors;
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public ArrayNode seriesLabels;
    public String seriesFunction;
    public String seriesFormatter;
 
    // this determines the row/x axis
-   @NotNull
-   public String labelAccessors;
-   public String labelFunction;
-   public String labelFormatter;
-   public String labelDescription;
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public ArrayNode scaleLabels;
+   public String scaleFunction;
+   public String scaleFormatter;
+   public String scaleDescription;
 
    @OneToMany(mappedBy = "report", orphanRemoval = true, cascade = CascadeType.ALL)
    @OrderBy("order ASC")

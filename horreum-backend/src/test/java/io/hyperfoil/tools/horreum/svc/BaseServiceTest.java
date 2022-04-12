@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -28,6 +30,7 @@ import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
+import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
@@ -37,6 +40,7 @@ import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import io.smallrye.jwt.build.Jwt;
+import io.vertx.core.eventbus.EventBus;
 
 public class BaseServiceTest {
    static final String[] TESTER_ROLES = { "foo-team", "foo-tester", "tester", "viewer" };
@@ -50,6 +54,8 @@ public class BaseServiceTest {
    TransactionManager tm;
    @Inject
    RoleManager roleManager;
+   @Inject
+   EventBus eventBus;
 
    @AfterEach
    public void afterMethod() {
@@ -66,8 +72,14 @@ public class BaseServiceTest {
             Test.deleteAll();
             Change.deleteAll();
             DataPoint.deleteAll();
+
             DataSet.deleteAll();
             Run.deleteAll();
+
+            SchemaExtractor.deleteAll();
+            em.createNativeQuery("DELETE FROM label_extractors").executeUpdate();
+            Label.deleteAll();
+            Schema.deleteAll();
          }
          return null;
       });
@@ -99,6 +111,10 @@ public class BaseServiceTest {
 
    protected int uploadRun(Object runJson, String test) {
       long timestamp = System.currentTimeMillis();
+      return uploadRun(timestamp, timestamp, runJson, test);
+   }
+
+   protected int uploadRun(long timestamp, Object runJson, String test) {
       return uploadRun(timestamp, timestamp, runJson, test);
    }
 
@@ -219,5 +235,15 @@ public class BaseServiceTest {
       }
       variables.add(variable);
       jsonRequest().body(variables.toString()).post("/api/alerting/variables?test=" + test.id).then().statusCode(204);
+   }
+
+   protected <E> BlockingQueue<E> eventConsumerQueue(Class<? extends E> eventClass, String eventType) {
+      BlockingQueue<E> queue = new LinkedBlockingDeque<>();
+      eventBus.consumer(eventType, msg -> {
+         if (eventClass.isInstance(msg.body())) {
+            queue.add(eventClass.cast(msg.body()));
+         }
+      });
+      return queue;
    }
 }
