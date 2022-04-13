@@ -281,27 +281,27 @@ public class ReportServiceImpl implements ReportService {
          List<Integer> datasetIds = filterDatasetIds(config);
          log.debugf("Table report %s(%d) includes datasets %s", config.title, config.id, datasetIds);
          series = selectByDatasets(config.seriesLabels, datasetIds);
-         log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
+         log.debugf("Series: %s", rowsToMap(series));
          if (!nullOrEmpty(config.scaleLabels)) {
             scales = selectByDatasets(config.scaleLabels, datasetIds);
-            log.debugf("Scales: %s", scales.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
+            log.debugf("Scales: %s", rowsToMap(scales));
          }
          if (!nullOrEmpty(config.categoryLabels)) {
             categories = selectByDatasets(config.categoryLabels, datasetIds);
-            log.debugf("Categories: %s", categories.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
+            log.debugf("Categories: %s", rowsToMap(categories));
          }
          timestampQuery = em.createNativeQuery("SELECT id, start FROM dataset WHERE id IN :datasets").setParameter("datasets", datasetIds);
       } else {
          log.debugf("Table report %s(%d) includes all datasets for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
          series = selectByTest(config.test.id, config.seriesLabels);
-         log.debugf("Series: %s", series.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
+         log.debugf("Series: %s", rowsToMap(series));
          if (!nullOrEmpty(config.scaleLabels)) {
             scales = selectByTest(config.test.id, config.scaleLabels);
-            log.debugf("Scales: %s", scales.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
+            log.debugf("Scales: %s", rowsToMap(scales));
          }
          if (!nullOrEmpty(config.categoryLabels)) {
             categories = selectByTest(config.test.id, config.categoryLabels);
-            log.debugf("Categories: %s", categories.stream().collect(Collectors.toMap(row -> row[0], row -> row[3])));
+            log.debugf("Categories: %s", rowsToMap(categories));
          }
          timestampQuery = em.createNativeQuery("SELECT id, start FROM run WHERE testid = ?").setParameter(1, config.test.id);
       }
@@ -367,6 +367,10 @@ public class ReportServiceImpl implements ReportService {
       });
       report.data = datasetIds.stream().map(datasetData::get).collect(Collectors.toList());
       return report;
+   }
+
+   private Map<Object, Object> rowsToMap(List<Object[]> series) {
+      return series.stream().collect(Collectors.toMap(row -> row[0] == null ? "<null>" : row[0], row -> row[3] == null ? "<null>" : row[3]));
    }
 
    private boolean nullOrEmpty(String str) {
@@ -451,7 +455,7 @@ public class ReportServiceImpl implements ReportService {
    }
 
    private String toText(JsonNode value) {
-      return value == null ? null : value.isTextual() ? value.asText() : value.toString();
+      return value == null ? "" : value.isTextual() ? value.asText() : value.toString();
    }
 
    private List<Integer> getFinalDatasetIds(Map<Integer, Timestamp> timestamps, Map<Integer, TableReport.Data> datasetData) {
@@ -487,11 +491,12 @@ public class ReportServiceImpl implements ReportService {
       sql.append("JOIN label ON label.id = label_id WHERE dataset_id IN (SELECT id FROM ds) AND json_contains(:labels, label.name)) ");
       sql.append("SELECT id, runid, ordinal, ");
       if (labels.size() != 1) {
-         sql.append("jsonb_object_agg(values.name, values.value)");
+         // jsonb_object_agg fails when values.name is null
+         sql.append("COALESCE(jsonb_object_agg(values.name, values.value) FILTER (WHERE values.name IS NOT NULL), '{}'::::jsonb)");
       } else {
          sql.append("values.value");
       }
-      sql.append(" AS value FROM ds LEFT JOIN values ON ds.id = values.dataset_id");
+      sql.append(" AS value FROM ds LEFT JOIN values ON ds.id = values.dataset_id ");
       if (labels.size() != 1) {
          sql.append(" GROUP BY id, runid, ordinal");
       }
@@ -510,16 +515,16 @@ public class ReportServiceImpl implements ReportService {
    private List<Object[]> selectByDatasets(ArrayNode labels, List<Integer> datasets) {
       StringBuilder sql = new StringBuilder("SELECT dataset.id AS id, dataset.runid AS runid, dataset.ordinal AS ordinal, ");
       if (labels.size() != 1) {
-         sql.append("jsonb_object_agg(label.name, lv.value)");
+         sql.append("COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb)");
       } else {
          sql.append("lv.value");
       }
-      sql.append(" AS value FROM label ")
-         .append("JOIN label_values lv ON label.id = lv.label_id ")
-         .append("JOIN dataset ON dataset.id = lv.dataset_id ")
-         .append("WHERE dataset.id IN :datasets AND json_contains(:labels, label.name) ");
+      sql.append(" AS value FROM dataset ")
+         .append("LEFT JOIN label_values lv ON dataset.id = lv.dataset_id ")
+         .append("LEFT JOIN label ON label.id = lv.label_id ")
+         .append("WHERE dataset.id IN :datasets AND (json_contains(:labels, label.name) OR label.name IS NULL)");
       if (labels.size() != 1) {
-         sql.append("GROUP BY dataset.id, dataset.runid, dataset.ordinal");
+         sql.append(" GROUP BY dataset.id, dataset.runid, dataset.ordinal");
       }
       Query query = em.createNativeQuery(sql.toString())
             .setParameter("datasets", datasets)

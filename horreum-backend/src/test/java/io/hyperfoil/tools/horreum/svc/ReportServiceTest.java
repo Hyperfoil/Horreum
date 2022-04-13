@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
@@ -205,4 +206,26 @@ public class ReportServiceTest extends BaseServiceTest {
       addLabel(schema, "throughput", null, new NamedJsonPath("throughput", "$.throughput", false));
    }
 
+   @org.junit.jupiter.api.Test
+   public void testMissingValues() throws InterruptedException {
+      Test test = createTest(createExampleTest("missing"));
+      createComparisonSchema();
+
+      BlockingQueue<DataSet.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+      int datasetId = uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
+      assertNotNull(queue.poll(10, TimeUnit.SECONDS));
+
+      TableReportConfig config = newExampleTableReportConfig(test);
+      TableReport report = jsonRequest().body(config).post("/api/report/table/config")
+            .then().statusCode(200).extract().body().as(TableReport.class);
+
+      assertEquals(1, report.data.size());
+      TableReport.Data data = report.data.iterator().next();
+      assertEquals(datasetId, data.datasetId);
+      assertEquals("", data.series);
+      assertEquals("", data.category);
+      assertEquals("", data.scale);
+      assertEquals(3, data.values.size());
+      data.values.forEach(value -> assertTrue(value.isNull()));
+   }
 }
