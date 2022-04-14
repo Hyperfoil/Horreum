@@ -408,8 +408,11 @@ public class AlertingServiceImpl implements AlertingService {
    @ConsumeEvent(value = Run.EVENT_TRASHED, blocking = true)
    public void onRunTrashed(Integer runId) {
       log.infof("Trashing datapoints for run %d", runId);
-      Change.delete("dataset.run.id", runId);
-      DataPoint.delete("dataset.run.id", runId);
+      // Hibernate would generate DELETE FROM change CROSS JOIN ... and that's not a valid PostgreSQL
+      em.createNativeQuery("DELETE FROM change USING dataset WHERE change.dataset_id = dataset.id AND dataset.runid = ?")
+            .setParameter(1, runId).executeUpdate();
+      em.createNativeQuery("DELETE FROM datapoint USING dataset WHERE datapoint.dataset_id = dataset.id AND dataset.runid = ?")
+            .setParameter(1, runId).executeUpdate();
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)

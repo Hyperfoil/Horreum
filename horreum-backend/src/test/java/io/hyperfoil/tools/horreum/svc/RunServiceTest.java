@@ -1,9 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -61,16 +58,38 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      uploadRun(runWithValue(schema, 42).toString(), test.name);
+      int runId = uploadRun(runWithValue(schema, 42).toString(), test.name);
 
-      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
-         DataSet event = dataSetQueue.poll(10, TimeUnit.SECONDS);
-         assertNotNull(event);
-         assertNotNull(event.id);
-         Integer id = event.id;
-         DataSet ds = DataSet.findById(id);
-         assertNotNull(ds);
-      }
+      assertNewDataset(dataSetQueue, runId);
+      em.clear();
+
+      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, Run.EVENT_TRASHED);
+      jsonRequest().post("/api/run/" + runId + "/trash").then().statusCode(204);
+      assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
+
+      Run run = Run.findById(runId);
+      assertNotNull(run);
+      assertTrue(run.trashed);
+      assertEquals(0, DataSet.count());
+
+      em.clear();
+
+      // reinstate the run
+      jsonRequest().post("/api/run/" + runId + "/trash?isTrashed=false").then().statusCode(204);
+      assertNull(trashedQueue.poll(50, TimeUnit.MILLISECONDS));
+      run = Run.findById(runId);
+      assertFalse(run.trashed);
+      assertNewDataset(dataSetQueue, runId);
+   }
+
+   private void assertNewDataset(BlockingQueue<DataSet> dataSetQueue, int runId) throws InterruptedException {
+      DataSet event = dataSetQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(event);
+      assertNotNull(event.id);
+      assertEquals(runId, event.run.id);
+      DataSet ds = DataSet.findById(event.id);
+      assertNotNull(ds);
+      assertEquals(runId, ds.run.id);
    }
 
    private ObjectNode runWithValue(Schema schema, double value) {

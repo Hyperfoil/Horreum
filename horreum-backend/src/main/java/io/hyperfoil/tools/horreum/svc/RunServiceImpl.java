@@ -875,8 +875,14 @@ public class RunServiceImpl implements RunService {
    @Transactional
    @Override
    public void trash(Integer id, Boolean isTrashed) {
-      updateRun(id, run -> run.trashed = isTrashed == null || isTrashed);
-      Util.publishLater(tm, eventBus, Run.EVENT_TRASHED, id);
+      boolean trashed = isTrashed == null || isTrashed;
+      updateRun(id, run -> run.trashed = trashed);
+      if (trashed) {
+         DataSet.delete("run.id", id);
+         Util.publishLater(tm, eventBus, Run.EVENT_TRASHED, id);
+      } else {
+         transform(id);
+      }
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -975,7 +981,8 @@ public class RunServiceImpl implements RunService {
          }
          dataSet.owner = run.owner;
          dataSet.access = run.access;
-         dataSet.persist();
+         dataSet.persistAndFlush();
+         log.infof("Created dataset %d/%d (%d)", dataSet.run.id, dataSet.ordinal + 1, dataSet.id);
          Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, dataSet);
       }
    }
