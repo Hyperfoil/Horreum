@@ -212,7 +212,7 @@ public class ReportServiceTest extends BaseServiceTest {
       createComparisonSchema();
 
       BlockingQueue<DataSet.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
-      int datasetId = uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
+      int runId = uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(queue.poll(10, TimeUnit.SECONDS));
 
       TableReportConfig config = newExampleTableReportConfig(test);
@@ -221,7 +221,7 @@ public class ReportServiceTest extends BaseServiceTest {
 
       assertEquals(1, report.data.size());
       TableReport.Data data = report.data.iterator().next();
-      assertEquals(datasetId, data.datasetId);
+      assertEquals(runId, data.runId);
       assertEquals("", data.series);
       assertEquals("", data.category);
       assertEquals("", data.scale);

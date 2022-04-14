@@ -389,12 +389,11 @@ public class ReportServiceImpl implements ReportService {
       Map<Integer, TableReport.Data> datasetData = new HashMap<>();
       executeInContext(config, context -> {
          for (Object[] row : categories) {
-            Integer datasetId = (Integer) row[0];
-            int runId = (int) row[1];
-            int ordinal = (int) row[2];
-            JsonNode value = (JsonNode) row[3];
             TableReport.Data data = new TableReport.Data();
-            data.datasetId = datasetId;
+            data.datasetId = (Integer) row[0];
+            data.runId = (int) row[1];
+            data.ordinal = (int) row[2];
+            JsonNode value = (JsonNode) row[3];
             data.values = JsonNodeFactory.instance.arrayNode(config.components.size());
             if (nullOrEmpty(config.categoryFunction)) {
                data.category = toText(value);
@@ -403,12 +402,13 @@ public class ReportServiceImpl implements ReportService {
                try {
                   data.category = Util.convert(context.eval("js", jsCode)).toString();
                } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to run report %s(%d) category function on dataset %d/%d (%d).", config.title, config.id, runId, ordinal + 1, datasetId);
+                  log.errorf(e, "Failed to run report %s(%d) category function on dataset %d/%d (%d).",
+                        config.title, config.id, data.runId, data.ordinal + 1, data.datasetId);
                   log.infof("Offending code: %s", jsCode);
                   continue;
                }
             }
-            datasetData.put(datasetId, data);
+            datasetData.put(data.datasetId, data);
          }
          for (Object[] row: series) {
             Integer datasetId = (Integer) row[0];
