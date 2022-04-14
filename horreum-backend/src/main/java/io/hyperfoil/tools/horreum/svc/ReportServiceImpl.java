@@ -303,7 +303,7 @@ public class ReportServiceImpl implements ReportService {
             categories = selectByTest(config.test.id, config.categoryLabels);
             log.debugf("Categories: %s", rowsToMap(categories));
          }
-         timestampQuery = em.createNativeQuery("SELECT id, start FROM run WHERE testid = ?").setParameter(1, config.test.id);
+         timestampQuery = em.createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?").setParameter(1, config.test.id);
       }
       if (categories.isEmpty() && !series.isEmpty()) {
          assert config.categoryLabels == null;
