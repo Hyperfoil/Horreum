@@ -13,7 +13,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -46,7 +45,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-import io.vertx.core.eventbus.EventBus;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -440,5 +438,38 @@ public class RunServiceTest extends BaseServiceTest {
       JsonNode datasets = Util.toJsonNode(jsonRequest().get("/api/run/dataset/list/" + testId).then().statusCode(200).extract().body().asString());
       assertNotNull(datasets);
       return datasets;
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testSchemaAfterData() throws InterruptedException {
+      Test test = createTest(createExampleTest("xxx"));
+      BlockingQueue<DataSet> dsQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.LabelsUpdatedEvent> labelQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+      JsonNode data = JsonNodeFactory.instance.arrayNode()
+            .add(JsonNodeFactory.instance.objectNode().put("$schema", "another"))
+            .add(JsonNodeFactory.instance.objectNode().put("$schema", "foobar").put("value", 42));
+      int runId = uploadRun(data, test.name);
+      DataSet eventDs = dsQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(eventDs);
+      assertEquals(runId, eventDs.run.id);
+      int datasetId = eventDs.id;
+      DataSet.LabelsUpdatedEvent eventLabels = labelQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(eventLabels);
+      assertEquals(datasetId, eventLabels.datasetId);
+
+      assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM dataset_schemas").getSingleResult()).intValue());
+      Schema schema = createSchema("Foobar", "foobar");
+      @SuppressWarnings("unchecked") List<Object[]> ds =
+            em.createNativeQuery("SELECT dataset_id, index FROM dataset_schemas").getResultList();
+      assertEquals(1, ds.size());
+      assertEquals(datasetId, ds.get(0)[0]);
+      assertEquals(1, ds.get(0)[1]);
+      assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM label_values").getSingleResult()).intValue());
+
+      addLabel(schema, "value", null, new NamedJsonPath("value", "$.value", false));
+      assertNotNull(labelQueue.poll(10, TimeUnit.SECONDS));
+      List<Label.Value> values = Label.Value.listAll();
+      assertEquals(1, values.size());
+      assertEquals(42, values.get(0).value.asInt());
    }
 }

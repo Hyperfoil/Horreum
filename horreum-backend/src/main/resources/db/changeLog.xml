@@ -3073,6 +3073,35 @@
         <addNotNullConstraint tableName="tablereport_data" columnName="ordinal"/>
         <addUniqueConstraint tableName="tablereport_data" columnNames="report_id,dataset_id,ordinal" />
     </changeSet>
+
+    <changeSet id="69" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION ds_after_schema_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH ds AS (
+                    SELECT id, jsonb_array_elements(data)->>'$schema' as uri FROM dataset
+                    WHERE jsonb_path_query_first(data, '$.type() == "array"')::boolean
+                ),  indexed AS (
+                    SELECT id, uri, row_number() over (PARTITION BY id) - 1 AS index FROM ds
+                ) INSERT INTO dataset_schemas(dataset_id, uri, index, schema_id)
+                    SELECT indexed.id, NEW.uri, indexed.index, NEW.id FROM indexed WHERE indexed.uri = NEW.uri;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION before_schema_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_schemas WHERE schemaid = OLD.id;
+                DELETE FROM dataset_schemas WHERE schema_id = OLD.id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE TRIGGER ds_after_schema_update AFTER INSERT OR UPDATE OF uri ON schema FOR EACH ROW EXECUTE FUNCTION ds_after_schema_update_func();
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
 
