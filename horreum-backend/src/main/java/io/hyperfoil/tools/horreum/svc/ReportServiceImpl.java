@@ -278,7 +278,7 @@ public class ReportServiceImpl implements ReportService {
       List<Object[]> categories = Collections.emptyList(), series, scales = Collections.emptyList();
       Query timestampQuery;
       if (!nullOrEmpty(config.filterLabels)) {
-         List<Integer> datasetIds = filterDatasetIds(config);
+         List<Integer> datasetIds = filterData(config);
          log.debugf("Table report %s(%d) includes datasets %s", config.title, config.id, datasetIds);
          series = selectByDatasets(config.seriesLabels, datasetIds);
          log.debugf("Series: %s", rowsToMap(series));
@@ -328,6 +328,10 @@ public class ReportServiceImpl implements ReportService {
       List<List<Object[]>> values = config.components.stream()
             .map(component -> selectByDatasets(component.labels, datasetIds))
             .collect(Collectors.toList());
+
+      List<Integer> baselines = filterValues(config,
+              selectByDatasets(config.baselineLabels, datasetIds), config.baselineFunction);
+
       executeInContext(config, context -> {
          for (int i = 0; i < values.size(); i++) {
             List<Object[]> valuesForComponent = values.get(i);
@@ -336,6 +340,9 @@ public class ReportServiceImpl implements ReportService {
                Integer datasetId = (Integer) row[0];
                JsonNode value = (JsonNode) row[3];
                TableReport.Data data = datasetData.get(datasetId);
+               if (baselines.contains(datasetId)) {
+                  data.baseline = true;
+               }
                if (nullOrEmpty(component.function)) {
                   if (value == null || value.isNull()) {
                      data.values.addNull();
@@ -563,11 +570,16 @@ public class ReportServiceImpl implements ReportService {
       }
    }
 
-   private List<Integer> filterDatasetIds(TableReportConfig config) {
+   private List<Integer> filterData(TableReportConfig config) {
       List<Object[]> list = selectByTest(config.test.id, config.filterLabels);
+      return filterValues(config, list, config.filterFunction);
+   }
+
+   private List<Integer> filterValues(TableReportConfig config, List<Object[]> list, String filterFunction) {
       // TODO: if list is empty log warning to persistent log
+
       List<Integer> datasetIds = new ArrayList<>(list.size());
-      if (nullOrEmpty(config.filterFunction)) {
+      if (nullOrEmpty(filterFunction)) {
          for (Object[] row : list) {
             Integer datasetId = (Integer) row[0];
             if (((JsonNode) row[3]).asBoolean(false)) {
@@ -580,9 +592,9 @@ public class ReportServiceImpl implements ReportService {
                Integer datasetId = (Integer) row[0];
                int runId = (int) row[1];
                int ordinal = (int) row[2];
-               String jsCode = buildCode(config.filterFunction, String.valueOf(row[3]));
+               String jsCode = buildCode(filterFunction, String.valueOf(row[3]));
                try {
-                  org.graalvm.polyglot.Value value = context.eval("js", jsCode);
+                  Value value = context.eval("js", jsCode);
                   // TODO debuggable
                   if (value.isBoolean()) {
                      if (value.asBoolean()) {

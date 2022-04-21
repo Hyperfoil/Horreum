@@ -130,6 +130,7 @@ export default function TableReportConfigPage() {
         test: {
             id: -1,
         },
+        baselineLabels: [],
         filterLabels: [],
         categoryLabels: [],
         seriesLabels: [],
@@ -298,6 +299,59 @@ export default function TableReportConfigPage() {
                                 />
                             </FormGroup>
                         </FormSection>
+
+                        <FormSection
+                            title={
+                                <>
+                                    Baseline
+                                    <Popover
+                                        headerContent="Baseline labels and function"
+                                        bodyContent={
+                                            <div>
+                                                Baseline lets you to get relative change in %. A difference between the
+                                                baseline and the new score is ((new/baseline)-1) * 100%
+                                                <List>
+                                                    <ListItem>
+                                                        Labels select data from the dataset based on its{" "}
+                                                        <NavLink to="/schema">schema(s)</NavLink>.
+                                                    </ListItem>
+                                                    <ListItem>
+                                                        Baseline function takes the label value (in case of single
+                                                        label) or object keyed by label names (in case of multiple
+                                                        labels) as its only parameter and returns <code>true</code> if
+                                                        the run should be considered as a refferenced baseline.
+                                                    </ListItem>
+                                                </List>
+                                            </div>
+                                        }
+                                    >
+                                        <HelpButton />
+                                    </Popover>
+                                </>
+                            }
+                        >
+
+                            <FormGroup label="Labels" fieldId="baselineLabels">
+                                <Labels
+                                    labels={config.baselineLabels || []}
+                                    onChange={labels => setConfig({ ...config, baselineLabels: labels })}
+                                    isReadOnly={!isTester}
+                                    defaultMetrics={false}
+                                    defaultFiltering={true}
+                                />
+                            </FormGroup>
+                            <FormGroup label="Function" fieldId="baselineFunction">
+                                <OptionalFunction
+                                    func={config?.baselineFunction}
+                                    onChange={func => setConfig({ ...config, baselineFunction: func })}
+                                    readOnly={!isTester}
+                                    undefinedText="Filtering baseline not defined."
+                                    addText="Add baseline function..."
+                                    defaultFunc="value => value"
+                                />
+                            </FormGroup>
+                        </FormSection>
+
                         <FormSection
                             title={
                                 <>

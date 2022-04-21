@@ -30,9 +30,35 @@ function formatter(func: string | undefined) {
 type DataViewProps = {
     config: TableReportConfig
     data?: TableReportData
+    baseline?: TableReportData
     unit?: string
     selector(d: TableReportData): number
     siblingSelector(d: TableReportData, index: number): number
+}
+
+function DataViewBaseline(props: DataViewProps) {
+
+    if (props.data === undefined) {
+        return <>(no data)</>
+    }
+
+    if (props.baseline === undefined) {
+        return <>(no data)</>
+    } 
+
+    const data = parseFloat(props.data.values[0])
+    const baseline = parseFloat(props.baseline.values[0])
+
+    if (isNaN(data) || isNaN(baseline)) {
+        return <>(data error)</>
+    } 
+
+    const change = (data/baseline -1) * 100
+    return (
+            <Button variant="link">
+                {change.toFixed(2)} %
+            </Button>
+    )
 }
 
 function DataView(props: DataViewProps) {
@@ -165,6 +191,23 @@ function ComponentTable(props: ComponentTableProps) {
                                         <DataView
                                             config={props.config}
                                             data={props.data.find(d => d.series === s && d.scale === sc)}
+                                            unit={props.unit}
+                                            selector={props.selector}
+                                            siblingSelector={props.siblingSelector}
+                                        />
+                                    </Td>
+                                ))}
+                            </Tr>
+                        ))}
+                        {scales.slice(1,scales.length).map((sc,i) => (
+                            <Tr key={sc}>
+                                <Th>{props.data.find(d => d.baseline === true)?.scale + "->" + scaleFormatter(sc)}</Th>
+                                {series.map(s => (
+                                    <Td key={s}>
+                                        <DataViewBaseline
+                                            config={props.config}
+                                            data={props.data.find(d => d.series === s && d.scale === sc)}
+                                            baseline={props.data.find(d => d.series === s && d.baseline === true)}
                                             unit={props.unit}
                                             selector={props.selector}
                                             siblingSelector={props.siblingSelector}

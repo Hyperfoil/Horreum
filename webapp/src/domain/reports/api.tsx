@@ -23,6 +23,9 @@ export type TableReportConfig = {
     scaleFormatter?: string
     scaleDescription?: string
 
+    baselineLabels: string[] | null
+    baselineFunction?: string
+
     components: ReportComponent[]
 }
 
@@ -58,6 +61,7 @@ export type TableReportData = {
     category: string
     series: string
     scale: string
+    baseline: boolean
     values: any[]
 }
 
