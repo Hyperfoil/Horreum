@@ -63,6 +63,11 @@ public class TableReportConfig extends PanacheEntityBase {
    public String scaleFormatter;
    public String scaleDescription;
 
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public ArrayNode baselineLabels;
+   public String baselineFunction;
+
+
    @OneToMany(mappedBy = "report", orphanRemoval = true, cascade = CascadeType.ALL)
    @OrderBy("order ASC")
    public List<ReportComponent> components;

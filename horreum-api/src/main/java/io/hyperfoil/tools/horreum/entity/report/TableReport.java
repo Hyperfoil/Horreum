@@ -72,6 +72,8 @@ public class TableReport extends PanacheEntityBase {
       @NotNull
       public ArrayNode values;
 
+      public boolean baseline;
+
       @Override
       public String toString() {
          return "TableReport.Data{" +
@@ -79,6 +81,7 @@ public class TableReport extends PanacheEntityBase {
                ", category='" + category + '\'' +
                ", series='" + series + '\'' +
                ", label='" + scale + '\'' +
+               ", label='" + baseline + '\'' +
                ", values=" + values +
                '}';
       }

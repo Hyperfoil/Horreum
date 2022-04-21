@@ -199,7 +199,7 @@ function ComponentTable(props: ComponentTableProps) {
                                 ))}
                             </Tr>
                         ))}
-                        {scales.slice(1,scales.length).map((sc,i) => (
+                        {scales.slice(1,scales.length).map((sc) => (
                             <Tr key={sc}>
                                 <Th>{props.data.find(d => d.baseline === true)?.scale + "->" + scaleFormatter(sc)}</Th>
                                 {series.map(s => (

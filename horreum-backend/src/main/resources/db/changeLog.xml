@@ -696,7 +696,7 @@
                 ));
         </sql>
     </changeSet>
-    
+
     <changeSet id="5" author="rvansa">
         <createTable tableName="userinfo">
             <column name="username" type="text">
@@ -1833,7 +1833,7 @@
                 USING (has_role2((SELECT test.owner FROM test JOIN tablereportconfig trc ON test.id = trc.testid JOIN tablereport tr ON tr.config_id = trc.id WHERE tr.id = report_id), 'tester'));
         </sql>
     </changeSet>
-    
+
     <changeSet id="34" author="rvansa">
         <createTable tableName="reportcomment">
             <column name="id" type="integer">
@@ -2437,7 +2437,7 @@
                 USING (exists(SELECT 1 FROM label WHERE label.id = label_id AND has_role2(label.owner, 'tester')));
         </sql>
     </changeSet>
-    
+
     <changeSet id="60" author="rvansa">
         <createTable tableName="label_values">
             <column name="dataset_id" type="integer">
@@ -3101,6 +3101,15 @@
         <sql>
             CREATE TRIGGER ds_after_schema_update AFTER INSERT OR UPDATE OF uri ON schema FOR EACH ROW EXECUTE FUNCTION ds_after_schema_update_func();
         </sql>
+    </changeSet>
+    <changeSet id="70" author="dupliaka">
+        <addColumn tableName="tablereport_data">
+            <column name="baseline" type="boolean"/>
+        </addColumn>
+        <addColumn tableName="tablereportconfig">
+            <column name="baselinefunction" type="text" />
+            <column name="baselinelabels" type="jsonb" />
+        </addColumn>
     </changeSet>
 </databaseChangeLog>
 
