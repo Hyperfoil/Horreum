@@ -63,9 +63,7 @@ public class RunServiceTest extends BaseServiceTest {
       assertNewDataset(dataSetQueue, runId);
       em.clear();
 
-      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, Run.EVENT_TRASHED);
-      jsonRequest().post("/api/run/" + runId + "/trash").then().statusCode(204);
-      assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
+      BlockingQueue<Integer> trashedQueue = trashRun(runId);
 
       Run run = Run.findById(runId);
       assertNotNull(run);
@@ -393,13 +391,13 @@ public class RunServiceTest extends BaseServiceTest {
             ViewComponent vc1 = new ViewComponent();
             vc1.view = view;
             vc1.headerName = "X";
-            vc1.labels = JsonNodeFactory.instance.arrayNode().add("a");
+            vc1.labels = jsonArray("a");
             view.components.add(vc1);
             ViewComponent vc2 = new ViewComponent();
             vc2.view = view;
             vc2.headerName = "Y";
             vc2.headerOrder = 1;
-            vc2.labels = JsonNodeFactory.instance.arrayNode().add("a").add("b");
+            vc2.labels = jsonArray("a", "b");
             view.components.add(vc2);
             view.persistAndFlush();
             em.createNativeQuery("UPDATE test SET defaultview_id = ?1 WHERE id = 0").setParameter(1, view.id).executeUpdate();

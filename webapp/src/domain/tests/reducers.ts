@@ -28,11 +28,6 @@ export interface View {
     components: ViewComponent[]
 }
 
-export interface StalenessSettings {
-    tags: any
-    maxStaleness?: number
-}
-
 export type CompareFunction = (runs: Run[]) => string
 
 export interface Test {
@@ -53,7 +48,6 @@ export interface Test {
     runs?: number // run count in AllTests
     watching?: string[]
     notificationsEnabled: boolean
-    stalenessSettings?: StalenessSettings[]
     transformers: Transformer[]
 }
 

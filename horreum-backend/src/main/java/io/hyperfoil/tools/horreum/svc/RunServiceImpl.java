@@ -20,6 +20,9 @@ import io.vertx.core.eventbus.EventBus;
 
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
+import org.hibernate.query.NativeQuery;
+import org.hibernate.type.IntegerType;
+import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
 import javax.annotation.PostConstruct;
@@ -62,6 +65,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.networknt.schema.ValidationMessage;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 @ApplicationScoped
 @Startup
@@ -108,7 +112,7 @@ public class RunServiceImpl implements RunService {
             "JOIN label_extractors le ON ul.label_id = le.label_id " +
             "WHERE dataset.id = ?1" +
          ") SELECT lvalues.label_id, ul.name, function, (CASE WHEN ul.multi THEN jsonb_object_agg(lvalues.name, lvalues.value) " +
-            "ELSE jsonb_agg(lvalues.value) -> 0 END)::::text AS value FROM label " +
+            "ELSE jsonb_agg(lvalues.value) -> 0 END) AS value FROM label " +
             "JOIN lvalues ON lvalues.label_id = label.id " +
             "JOIN used_labels ul ON label.id = ul.label_id " +
             "GROUP BY lvalues.label_id, ul.name, function, ul.multi";
@@ -251,46 +255,30 @@ public class RunServiceImpl implements RunService {
       // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
       // to the uploading user. However, the uploader should not have rights to fetch these anyway...
       @SuppressWarnings("unchecked") List<Object[]> extracted =
-            (List<Object[]>) em.createNativeQuery(LABEL_QUERY).setParameter(1, datasetId).setParameter(2, queryLabelId).getResultList();
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
-         context.enter();
-         try {
-            for (int i = 0; i < extracted.size(); i++) {
-               Object[] row = extracted.get(i);
-               int labelId = (Integer) row[0];
-               String name = (String) row[1];
-               String function = (String) row[2];
-               String obj = (String) row[3];
-               JsonNode result;
-               if (function != null && !function.isBlank()) {
-                  StringBuilder jsCode = new StringBuilder("const __obj").append(i).append(" = ").append(obj).append(";\n");
-                  jsCode.append("const __func").append(i).append(" = ").append(function).append(";\n");
-                  jsCode.append("__func").append(i).append("(__obj").append(i).append(")");
-                  try {
-                     Value value = context.eval("js", jsCode);
-                     result = Util.convertToJson(value);
-                  } catch (PolyglotException e) {
-                     logMessage(datasetId, DatasetLog.ERROR, "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
-                     continue;
-                  }
-               } else {
-                  result = Util.toJsonNode(obj);
-               }
-               Label.Value value = new Label.Value();
-               value.datasetId = datasetId;
-               value.labelId = labelId;
-               value.value = result;
-               value.persist();
-            }
-            Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId));
-         } finally {
-            if (out.size() > 0) {
-               logMessage(datasetId, DatasetLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out.toString());
-            }
-            context.leave();
-         }
-      }
+            (List<Object[]>) em.createNativeQuery(LABEL_QUERY)
+                  .setParameter(1, datasetId)
+                  .setParameter(2, queryLabelId)
+                  .unwrap(NativeQuery.class)
+                  .addScalar("label_id", IntegerType.INSTANCE)
+                  .addScalar("name", TextType.INSTANCE)
+                  .addScalar("function", TextType.INSTANCE)
+                  .addScalar("value", JsonNodeBinaryType.INSTANCE)
+                  .getResultList();
+      Util.evaluateMany(extracted, row -> (String) row[2], row -> (JsonNode) row[3],
+            (row, result) -> createLabel(datasetId, (int) row[0], Util.convertToJson(result)),
+            row -> createLabel(datasetId, (int) row[0], (JsonNode) row[3]),
+            (row, e, jsCode) -> logMessage(datasetId, DatasetLog.ERROR,
+                  "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
+            out -> logMessage(datasetId, DatasetLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
+      Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId));
+   }
+
+   private void createLabel(int datasetId, int labelId, JsonNode value) {
+      Label.Value labelValue = new Label.Value();
+      labelValue.datasetId = datasetId;
+      labelValue.labelId = labelId;
+      labelValue.value = value;
+      labelValue.persist();
    }
 
    private void logMessage(int datasetId, int level, String message, Object... params) {

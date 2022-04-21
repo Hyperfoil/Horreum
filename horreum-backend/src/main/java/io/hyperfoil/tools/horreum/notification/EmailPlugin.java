@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.notification;
 
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Date;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -26,8 +27,8 @@ public class EmailPlugin implements NotificationPlugin {
    @Location("change_notification_email")
    Template changeNotificationEmail;
 
-   @Location("missing_run_notification_email")
-   Template missingRunNotificationEmail;
+   @Location("missing_dataset_notification_email")
+   Template missingDatasetNotificationEmail;
 
    @Location("missing_values_notification_email")
    Template missingValuesNotificationEmail;
@@ -71,25 +72,23 @@ public class EmailPlugin implements NotificationPlugin {
       }
 
       @Override
-      public void notifyMissingRun(String testName, int testId, String tags,
-                                   long maxStaleness, int lastRunId, long lastRunTimestamp) {
-         String subject = subjectPrefix + " Missing expected run for " + testName + "/" + tags;
-         String content = missingRunNotificationEmail
+      public void notifyMissingDataset(String testName, int testId, String ruleName, long maxStaleness, Instant lastTimestamp) {
+         String subject = subjectPrefix + " Missing expected data for " + testName + "/" + ruleName;
+         String content = missingDatasetNotificationEmail
                .data("username", username)
                .data("testName", testName)
                .data("testId", String.valueOf(testId))
-               .data("tags", tags)
+               .data("ruleName", ruleName)
                .data("baseUrl", baseUrl)
                .data("maxStaleness", prettyPrintTime(maxStaleness))
-               .data("currentStaleness", prettyPrintTime(System.currentTimeMillis() - lastRunTimestamp))
-               .data("lastRunId", String.valueOf(lastRunId))
-               .data("lastRunTimestamp", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(lastRunTimestamp)))
+               .data("currentStaleness", lastTimestamp == null ? "yet" : "in " + prettyPrintTime(System.currentTimeMillis() - lastTimestamp.toEpochMilli()))
+               .data("lastTimestamp", lastTimestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date.from(lastTimestamp)))
                .render();
          mailer.send(Mail.withHtml(data, subject, content));
       }
 
       @Override
-      public void notifyMissingRunValues(String testName, String fingerprint, MissingValuesEvent event) {
+      public void notifyMissingValues(String testName, String fingerprint, MissingValuesEvent event) {
          String subject = subjectPrefix + " Missing change detection values for " + testName + "/" + fingerprint + ", run " + event.datasetId;
          String content = missingValuesNotificationEmail
                .data("username", username)

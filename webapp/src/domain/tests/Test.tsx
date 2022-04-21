@@ -21,6 +21,7 @@ import Hooks from "./Hooks"
 import Access from "./Access"
 import Subscriptions from "./Subscriptions"
 import Transformers from "./Transformers"
+import MissingDataNotifications from "./MissingDataNotifications"
 
 type Params = {
     testId: string
@@ -35,6 +36,7 @@ export default function Test() {
     const accessFuncsRef = useRef<TabFunctions>()
     const viewFuncsRef = useRef<TabFunctions>()
     const variablesFuncsRef = useRef<TabFunctions>()
+    const missingDataFuncsRef = useRef<TabFunctions>()
     const hooksFuncsRef = useRef<TabFunctions>()
     const subscriptionsFuncsRef = useRef<TabFunctions>()
     const transformersFuncsRef = useRef<TabFunctions>()
@@ -134,6 +136,20 @@ export default function Test() {
                                     test={test}
                                     onModified={setModified}
                                     funcsRef={variablesFuncsRef}
+                                />
+                            </SavedTab>
+                            <SavedTab
+                                title="Missing data notifications"
+                                fragment="missingdata"
+                                isHidden={testId <= 0}
+                                onSave={saveFunc(missingDataFuncsRef)}
+                                onReset={resetFunc(missingDataFuncsRef)}
+                                isModified={() => modified}
+                            >
+                                <MissingDataNotifications
+                                    test={test}
+                                    onModified={setModified}
+                                    funcsRef={missingDataFuncsRef}
                                 />
                             </SavedTab>
                             <SavedTab

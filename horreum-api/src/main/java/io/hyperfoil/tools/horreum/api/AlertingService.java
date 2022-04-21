@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
+import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 
@@ -51,12 +52,12 @@ public interface AlertingService {
 
    @POST
    @Path("recalculate")
-   void recalculate(@QueryParam("test") Integer testId, @QueryParam("notify") boolean notify,
-                    @QueryParam("debug") boolean debug, @QueryParam("from") Long from, @QueryParam("to") Long to);
+   void recalculateDatapoints(@QueryParam("test") Integer testId, @QueryParam("notify") boolean notify,
+                              @QueryParam("debug") boolean debug, @QueryParam("from") Long from, @QueryParam("to") Long to);
 
    @GET
    @Path("recalculate")
-   RecalculationStatus recalculateProgress(@QueryParam("test") Integer testId);
+   RecalculationStatus getRecalculationStatus(@QueryParam("test") Integer testId);
 
    @POST
    @Path("/datapoint/last")
@@ -82,6 +83,18 @@ public interface AlertingService {
    @GET
    @Path("/defaultChangeDetectionConfigs")
    List<ChangeDetection> defaultChangeDetectionConfigs();
+
+   @GET
+   @Path("/missingdatarule")
+   List<MissingDataRule> missingDataRules(@QueryParam("testId") int testId);
+
+   @POST
+   @Path("/missingdatarule")
+   int updateMissingDataRule(@QueryParam("testId") int testId, MissingDataRule rule);
+
+   @DELETE
+   @Path("/missingdatarule/{id}")
+   void deleteMissingDataRule(@PathParam("id") int id);
 
    class DashboardInfo {
       public int testId;

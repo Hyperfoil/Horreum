@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -69,7 +70,7 @@ public class NotificationServiceImpl implements NotificationService {
 
    @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
-   public void onMissingRunValues(Change.Event event) {
+   public void onMissingValues(Change.Event event) {
       if (!event.notify) {
          log.debug("Notification skipped");
          return;
@@ -101,7 +102,7 @@ public class NotificationServiceImpl implements NotificationService {
 
    @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
    @ConsumeEvent(value = DataSet.EVENT_MISSING_VALUES, blocking = true)
-   public void onMissingRunValues(MissingValuesEvent event) {
+   public void onMissingValues(MissingValuesEvent event) {
       if (!event.notify) {
          log.debugf("Skipping notification for missing run values on test %d, run %d", event.testId, event.datasetId);
          return;
@@ -112,7 +113,7 @@ public class NotificationServiceImpl implements NotificationService {
       log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.testId, testName, event.datasetId, event.variables);
 
       String fingerprint = getFingerprint(event.datasetId);
-      notifyAll(event.testId, n -> n.notifyMissingRunValues(testName, fingerprint, event));
+      notifyAll(event.testId, n -> n.notifyMissingValues(testName, fingerprint, event));
    }
 
    private void notifyAll(int testId, Consumer<Notification> consumer) {
@@ -186,12 +187,10 @@ public class NotificationServiceImpl implements NotificationService {
       }
    }
 
-   // must be called with sqlService.withRole
-   void notifyMissingRun(int testId, JsonNode tagsJson, long maxStaleness, int runId, long runTimestamp) {
-      String tags = fingerprintToString(tagsJson);
+   public void notifyMissingDataset(int testId, String ruleName, long maxStaleness, Instant lastTimestamp) {
       Test test = Test.findById(testId);
-      String name = test != null ? test.name : "<unknown test>";
-      notifyAll(testId, n -> n.notifyMissingRun(name, testId, tags, maxStaleness, runId, runTimestamp));
+      String testName = test != null ? test.name : "<unknown test>";
+      notifyAll(testId, n -> n.notifyMissingDataset(testName, testId, ruleName, maxStaleness, lastTimestamp));
    }
 
    public void notifyExpectedRun(int testId, JsonNode tagsJson, long expectedBefore, String expectedBy, String backlink) {

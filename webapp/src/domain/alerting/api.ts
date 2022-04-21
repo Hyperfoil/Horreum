@@ -1,6 +1,7 @@
 import { fetchApi } from "../../services/api"
 import { Change, Variable } from "./types"
 import { fingerprintToString } from "./grafanaapi"
+import { MissingDataRule } from "./types"
 
 const base = "/api/alerting"
 const endPoints = {
@@ -15,6 +16,8 @@ const endPoints = {
     lastDatapoints: () => `${base}/datapoint/last`,
     models: () => `${base}/models`,
     defaultChangeDetectionConfigs: () => `${base}/defaultChangeDetectionConfigs`,
+    missingDataRule: (testId: number, ruleId?: number) =>
+        `${base}/missingdatarule${ruleId !== undefined ? "/" + ruleId : ""}?testId=${testId}`,
 }
 
 export const fetchVariables = (testId: number) => {
@@ -63,4 +66,16 @@ export function models() {
 
 export function defaultChangeDetectionConfigs() {
     return fetchApi(endPoints.defaultChangeDetectionConfigs(), null, "get")
+}
+
+export function fetchMissingDataRules(testId: number): Promise<MissingDataRule[]> {
+    return fetchApi(endPoints.missingDataRule(testId), null, "get")
+}
+
+export function updateMissingDataRule(rule: MissingDataRule) {
+    return fetchApi(endPoints.missingDataRule(rule.testId), rule, "post")
+}
+
+export function deleteMissingDataRule(rule: MissingDataRule) {
+    return fetchApi(endPoints.missingDataRule(rule.testId, rule.id), null, "delete")
 }

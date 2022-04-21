@@ -107,8 +107,8 @@ export default function Labels(props: LabelsProps) {
         <SplitForm
             itemType="Label"
             addItemText="Add label..."
-            noItemTitle="No label selected"
-            noItemText="Please select one of the labels on the left side or create a new one."
+            noItemTitle="No labels"
+            noItemText="This schema does not have any labels defined."
             canAddItem={isTester}
             items={labels}
             onChange={setLabels}

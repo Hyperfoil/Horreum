@@ -5,20 +5,25 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.IntStream;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.TestInfo;
+import org.mockito.Mockito;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -30,6 +35,8 @@ import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
+import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
+import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRuleResult;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
@@ -40,6 +47,7 @@ import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
@@ -66,6 +74,9 @@ public class AlertingServiceTest extends BaseServiceTest {
 
    @Inject
    Vertx vertx;
+
+   @Inject
+   AlertingServiceImpl alertingService;
 
    @org.junit.jupiter.api.Test
    public void testNotifications(TestInfo info) throws InterruptedException {
@@ -195,7 +206,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testChangeDetectionWithFingerprint(TestInfo info) throws InterruptedException {
       Test test = createExampleTest(getTestName(info));
-      test.fingerprintLabels = JsonNodeFactory.instance.arrayNode().add("config");
+      test.fingerprintLabels = jsonArray("config");
       test = createTest(test);
       Schema schema = createExampleSchema(info);
       addLabel(schema, "config", null, new NamedJsonPath("config", "$.config", false));
@@ -244,7 +255,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testFingerprintLabelsChange(TestInfo info) throws Exception {
       Test test = createExampleTest(getTestName(info));
-      test.fingerprintLabels = JsonNodeFactory.instance.arrayNode().add("foo");
+      test.fingerprintLabels = jsonArray("foo");
       test = createTest(test);
       addChangeDetectionVariable(test);
       Schema schema = createExampleSchema(info);
@@ -277,7 +288,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testFingerprintFilter(TestInfo info) throws Exception {
       Test test = createExampleTest(getTestName(info));
-      test.fingerprintLabels = JsonNodeFactory.instance.arrayNode().add("foo");
+      test.fingerprintLabels = jsonArray("foo");
       test.fingerprintFilter = "value => value === 'aaa'";
       test = createTest(test);
       addChangeDetectionVariable(test);
@@ -330,5 +341,148 @@ public class AlertingServiceTest extends BaseServiceTest {
          }
          Thread.sleep(20);
       }
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testMissingRules(TestInfo info) throws InterruptedException {
+      NotificationServiceImpl notificationService = Mockito.mock(NotificationServiceImpl.class);
+      List<String> notifications = Collections.synchronizedList(new ArrayList<>());
+      Mockito.doAnswer(invocation -> {
+         notifications.add(invocation.getArgumentAt(1, String.class));
+         return null;
+      }).when(notificationService).notifyMissingDataset(Mockito.anyInt(), Mockito.anyString(), Mockito.anyLong(), Mockito.any(Instant.class));
+      QuarkusMock.installMockForType(notificationService, NotificationServiceImpl.class);
+
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+      int firstRuleId = addMissingDataRule(test, "my rule", jsonArray("value"), "value => value > 2", 10000);
+      assertTrue(firstRuleId > 0);
+
+      BlockingQueue<DataSet> newDatasetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      long now = System.currentTimeMillis();
+      uploadRun(now - 20000, runWithValue(schema, 3), test.name);
+      DataSet firstDataset = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(firstDataset);
+      uploadRun(now - 5000, runWithValue(schema, 1), test.name);
+      DataSet secondDataset = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(secondDataset);
+      // only the matching dataset will be present
+      pollMissingDataRuleResultsByRule(firstRuleId, firstDataset.id);
+
+      alertingService.checkMissingDataset();
+      assertEquals(1, notifications.size());
+      assertEquals("my rule", notifications.get(0));
+
+      // The notification should not fire again because the last notification is now
+      alertingService.checkMissingDataset();
+      assertEquals(1, notifications.size());
+
+      Util.withTx(tm, () -> {
+         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+            MissingDataRule currentRule = MissingDataRule.findById(firstRuleId);
+            assertNotNull(currentRule.lastNotification);
+            assertTrue(currentRule.lastNotification.isAfter(Instant.ofEpochMilli(now - 1)));
+            // remove the last notification
+            currentRule.lastNotification = null;
+            currentRule.persistAndFlush();
+            return null;
+         }
+      });
+      em.clear();
+
+      int thirdRunId = uploadRun(now - 5000, runWithValue(schema, 3), test.name);
+      DataSet thirdDataset = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(thirdDataset);
+      pollMissingDataRuleResultsByRule(firstRuleId, firstDataset.id, thirdDataset.id);
+      alertingService.checkMissingDataset();
+      assertEquals(1, notifications.size());
+
+      em.clear();
+
+      pollMissingDataRuleResultsByDataset(thirdDataset.id, 1);
+      trashRun(thirdRunId);
+      pollMissingDataRuleResultsByDataset(thirdDataset.id, 0);
+
+      alertingService.checkMissingDataset();
+      assertEquals(2, notifications.size());
+      assertEquals("my rule", notifications.get(1));
+
+      int otherRuleId = addMissingDataRule(test, null, null, null, 10000);
+      pollMissingDataRuleResultsByRule(otherRuleId, firstDataset.id, secondDataset.id);
+      alertingService.checkMissingDataset();
+      assertEquals(2, notifications.size());
+
+      Util.withTx(tm, () -> {
+         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+            MissingDataRule otherRule = MissingDataRule.findById(otherRuleId);
+            otherRule.maxStaleness = 1000;
+            otherRule.persistAndFlush();
+            return null;
+         }
+      });
+      alertingService.checkMissingDataset();
+      assertEquals(3, notifications.size());
+      assertTrue(notifications.get(2).startsWith("rule #"));
+      em.clear();
+
+      Util.withTx(tm, () -> {
+         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+            MissingDataRule otherRule = MissingDataRule.findById(otherRuleId);
+            assertNotNull(otherRule.lastNotification);
+            otherRule.lastNotification = Instant.ofEpochMilli(now - 2000);
+            otherRule.persistAndFlush();
+            return null;
+         }
+      });
+      alertingService.checkMissingDataset();
+      assertEquals(4, notifications.size());
+      assertTrue(notifications.get(3).startsWith("rule #"));
+
+      jsonRequest().delete("/api/alerting/missingdatarule/" + otherRuleId).then().statusCode(204);
+      em.clear();
+      assertEquals(0, MissingDataRuleResult.find("rule_id", otherRuleId).count());
+   }
+
+   private void pollMissingDataRuleResultsByRule(int ruleId, int... datasetIds) throws InterruptedException {
+      try (CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+         for (int i = 0; i < 1000; ++i) {
+            em.clear();
+            List<MissingDataRuleResult> results = MissingDataRuleResult.list("rule_id", ruleId);
+            if (results.size() == datasetIds.length && results.stream().mapToInt(MissingDataRuleResult::datasetId)
+                  .allMatch(res -> IntStream.of(datasetIds).anyMatch(id -> id == res))) {
+               return;
+            } else {
+               Thread.sleep(10);
+            }
+         }
+         fail();
+      }
+   }
+
+   private void pollMissingDataRuleResultsByDataset(int datasetId, long expectedResults) throws InterruptedException {
+      try (CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+         // there's no event when the results are updated, we need to poll
+         for (int i = 0; i < 1000; ++i) {
+            em.clear();
+            List<MissingDataRuleResult> results = MissingDataRuleResult.list("dataset_id", datasetId);
+            if (expectedResults == results.size()) {
+               return;
+            } else {
+               Thread.sleep(10);
+            }
+         }
+         fail();
+      }
+   }
+
+   private int addMissingDataRule(Test test, String ruleName, ArrayNode labels, String condition, int maxStaleness) {
+      MissingDataRule rule = new MissingDataRule();
+      rule.test = test;
+      rule.name = ruleName;
+      rule.condition = condition;
+      rule.labels = labels;
+      rule.maxStaleness = maxStaleness;
+      String ruleIdString = jsonRequest().body(rule).post("/api/alerting/missingdatarule?testId=" + test.id).then().statusCode(200).extract().body().asString();
+      return Integer.parseInt(ruleIdString);
    }
 }

@@ -2,13 +2,12 @@ package io.hyperfoil.tools.horreum.entity.json;
 
 import java.util.Collection;
 
+import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 import javax.persistence.CascadeType;
-import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -21,9 +20,10 @@ import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.validation.constraints.NotNull;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.Type;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity(name="test")
@@ -60,11 +60,6 @@ public class Test extends PanacheEntityBase {
    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
    public Collection<TestToken> tokens;
 
-   public String tags;
-
-   @JsonInclude(JsonInclude.Include.NON_NULL)
-   public String tagsCalculation;
-
    @Column(name = "fingerprint_labels")
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public JsonNode fingerprintLabels;
@@ -77,12 +72,9 @@ public class Test extends PanacheEntityBase {
 
    public String compareUrl;
 
-   @ElementCollection
-   @CollectionTable(name = "test_stalenesssettings")
-   public Collection<StalenessSettings> stalenessSettings;
-
    @OneToMany(fetch = FetchType.EAGER)
    @JoinTable(name = "test_transformers", joinColumns = @JoinColumn(name = "test_id"), inverseJoinColumns = @JoinColumn(name = "transformer_id"))
+   @Fetch(FetchMode.SELECT)
    public Collection<Transformer> transformers;
 
    @NotNull

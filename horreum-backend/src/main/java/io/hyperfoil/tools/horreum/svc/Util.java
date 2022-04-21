@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.io.ByteArrayOutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
@@ -7,9 +8,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import javax.transaction.HeuristicMixedException;
@@ -22,6 +27,8 @@ import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 
 import org.eclipse.microprofile.context.ThreadContext;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.jboss.logging.Logger;
 import org.postgresql.util.PSQLException;
@@ -464,5 +471,80 @@ public class Util {
          return null;
       }
       return toJsonNode(URLDecoder.decode(fpString.replace("+", "%2B"), StandardCharsets.UTF_8));
+   }
+
+   static <T> void evaluateMany(List<T> input,
+                                Function<T, String> function,
+                                Function<T, JsonNode> object,
+                                BiConsumer<T, Value> resultConsumer,
+                                Consumer<T> noExecConsumer,
+                                ExecutionExceptionConsumer<T> onException,
+                                Consumer<String> onOutput) {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
+         context.enter();
+         try {
+            for (int i = 0; i < input.size(); i++) {
+               T row = input.get(i);
+               String func = function.apply(row);
+               if (func != null && !func.isBlank()) {
+                  StringBuilder jsCode = new StringBuilder("const __obj").append(i).append(" = ").append(object.apply(row)).append(";\n");
+                  jsCode.append("const __func").append(i).append(" = ").append(func).append(";\n");
+                  jsCode.append("__func").append(i).append("(__obj").append(i).append(")");
+                  try {
+                     Value value = context.eval("js", jsCode);
+                     resultConsumer.accept(row, value);
+                  } catch (PolyglotException e) {
+                     onException.accept(row, e, jsCode.toString());
+                  }
+               } else {
+                  noExecConsumer.accept(row);
+               }
+            }
+         } finally {
+            if (out.size() > 0) {
+               onOutput.accept(out.toString(StandardCharsets.UTF_8));
+            }
+            context.leave();
+         }
+      }
+   }
+
+   static <T> T evaluateOnce(String function, JsonNode input, Function<Value, T> processResult, BiConsumer<String, Throwable> onException, Consumer<String> onOutput) {
+      StringBuilder jsCode = new StringBuilder("const __obj = ").append(input).append(";\n");
+      jsCode.append("const __func = ").append(function).append(";\n");
+      jsCode.append("__func(__obj)");
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      try (Context context = Context.newBuilder("js").out(out).err(out).build()) {
+         context.enter();
+         try {
+            Value value = context.eval("js", jsCode);
+            return processResult.apply(value);
+         } catch (PolyglotException e) {
+            onException.accept(jsCode.toString(), e);
+            return null;
+         } finally {
+            if (out.size() > 0) {
+               onOutput.accept(out.toString());
+            }
+            context.leave();
+         }
+      }
+   }
+
+   static boolean evaluateTest(String function, JsonNode input,
+                               Predicate<Value> onNotBoolean, BiConsumer<String, Throwable> onException, Consumer<String> onOutput) {
+      Boolean res = evaluateOnce("__x => (!!(" + function + ")(__x))", input, result -> {
+         if (result.isBoolean()) {
+            return result.asBoolean();
+         } else {
+            return onNotBoolean.test(result);
+         }
+      }, onException, onOutput);
+      return res != null && res;
+   }
+
+   interface ExecutionExceptionConsumer<T> {
+      void accept(T row, Throwable exception, String code);
    }
 }

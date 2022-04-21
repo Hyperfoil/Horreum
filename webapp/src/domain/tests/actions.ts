@@ -63,10 +63,6 @@ export function fetchTest(id: number) {
 
 export function sendTest(test: Test) {
     return (dispatch: Dispatch<LoadedTestAction | AddAlertAction>) => {
-        if (test.stalenessSettings && test.stalenessSettings.some(ss => !ss.maxStaleness || ss.maxStaleness <= 0)) {
-            dispatch(alertAction("UPDATE_TEST", "Test update failed", "Invalid max staleness."))
-            return Promise.reject()
-        }
         return api.send(test).then(
             response => {
                 dispatch({ type: actionTypes.LOADED_TEST, test })

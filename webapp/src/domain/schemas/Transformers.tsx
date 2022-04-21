@@ -131,8 +131,8 @@ export default function Transformers(props: TransformersProps) {
         <SplitForm
             itemType="Transformer"
             addItemText="Add transformer..."
-            noItemTitle="No transformer selected"
-            noItemText="Please select one of the transformers on the left side or create a new one."
+            noItemTitle="No transformers."
+            noItemText="This test does not have any transformers defined. By default each Run is trivially transformed into single Dataset."
             canAddItem={isTester}
             items={transformers}
             onChange={setTransformers}

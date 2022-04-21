@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -7,6 +9,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -64,7 +69,7 @@ public class BaseServiceTest {
 
    protected void dropAllViewsAndTests() {
       Util.withTx(tm, () -> {
-         try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+         try (CloseMe ignored = roleManager.withRoles(em, Stream.concat(Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM)).collect(Collectors.toList()))) {
             em.createNativeQuery("UPDATE test SET defaultview_id = NULL").executeUpdate();
             ViewComponent.deleteAll();
             View.deleteAll();
@@ -89,7 +94,6 @@ public class BaseServiceTest {
       Test test = new Test();
       test.name = testName;
       test.description = "Bar";
-      test.tags = "";
       test.owner = TESTER_ROLES[0];
       View defaultView = new View();
       defaultView.name = "Default";
@@ -245,5 +249,20 @@ public class BaseServiceTest {
          }
       });
       return queue;
+   }
+
+   protected ArrayNode jsonArray(String... items) {
+      ArrayNode array = JsonNodeFactory.instance.arrayNode(items.length);
+      for (String item : items) {
+         array.add(item);
+      }
+      return array;
+   }
+
+   protected BlockingQueue<Integer> trashRun(int runId) throws InterruptedException {
+      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, Run.EVENT_TRASHED);
+      jsonRequest().post("/api/run/" + runId + "/trash").then().statusCode(204);
+      assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
+      return trashedQueue;
    }
 }

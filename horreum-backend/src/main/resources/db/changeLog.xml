@@ -3102,6 +3102,94 @@
             CREATE TRIGGER ds_after_schema_update AFTER INSERT OR UPDATE OF uri ON schema FOR EACH ROW EXECUTE FUNCTION ds_after_schema_update_func();
         </sql>
     </changeSet>
+
+    <changeSet id="70" author="rvansa">
+        <!-- We'll keep the old timestamp around to resolve any mess that's created by this change -->
+        <renameColumn tableName="run" oldColumnName="start" newColumnName="old_start" />
+        <addColumn tableName="run">
+            <column name="start" type="timestamptz"/>
+        </addColumn>
+        <sql>
+            UPDATE run SET start = old_start;
+        </sql>
+        <addNotNullConstraint tableName="run" columnName="start"/>
+        <dropNotNullConstraint tableName="run" columnName="old_start"/>
+
+        <modifyDataType tableName="run" columnName="stop" newDataType="timestamptz"/>
+        <modifyDataType tableName="dataset" columnName="start" newDataType="timestamptz"/>
+        <modifyDataType tableName="dataset" columnName="stop" newDataType="timestamptz"/>
+        <modifyDataType tableName="datasetlog" columnName="timestamp" newDataType="timestamptz"/>
+    </changeSet>
+
+    <changeSet id="71" author="rvansa">
+        <dropTable tableName="lastmissingrunnotification"/>
+        <renameTable oldTableName="test_stalenesssettings" newTableName="missingdata_rule"/>
+        <addColumn tableName="missingdata_rule">
+            <column name="id" type="integer"/>
+            <column name="name" type="text"/>
+            <column name="condition" type="text" />
+            <column name="last_notification" type="timestamptz" />
+        </addColumn>
+        <renameColumn tableName="missingdata_rule" oldColumnName="tags" newColumnName="labels" />
+        <dropForeignKeyConstraint baseTableName="missingdata_rule" constraintName="fk_ss_test_id" />
+        <sql>
+            UPDATE missingdata_rule SET id = nextval('hibernate_sequence');
+        </sql>
+        <addPrimaryKey tableName="missingdata_rule" columnNames="id"/>
+        <addNotNullConstraint tableName="missingdata_rule" columnName="id" />
+
+        <createTable tableName="missingdata_ruleresult">
+            <column name="rule_id" type="integer">
+                <constraints nullable="false" referencedTableName="missingdata_rule" referencedColumnNames="id" foreignKeyName="rr_rule_id"/>
+            </column>
+            <column name="dataset_id" type="integer">
+                <!-- No constraint, we'll remove through triggers -->
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION mdr_on_test_delete() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM missingdata_rule WHERE test_id = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION mdr_on_rule_delete() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM missingdata_ruleresult WHERE rule_id = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION mdr_on_dataset_delete() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM missingdata_ruleresult WHERE dataset_id = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE POLICY ss_all ON missingdata_rule FOR ALL USING (has_role('horreum.system'));
+
+            GRANT select, insert, delete, update ON TABLE missingdata_ruleresult TO "${quarkus.datasource.username}";
+            ALTER TABLE missingdata_ruleresult ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY mdr_all ON missingdata_ruleresult FOR ALL USING (has_role('horreum.system'));
+            <!-- Let tester delete the result along with the dataset when trashing the run -->
+            CREATE POLICY mdr_select ON missingdata_ruleresult FOR SELECT USING (exists(SELECT 1 FROM dataset WHERE id = dataset_id AND can_view2(access, owner)));
+            CREATE POLICY mdr_delete ON missingdata_ruleresult FOR DELETE USING (has_role2((SELECT owner FROM dataset WHERE id = dataset_id), 'tester'));
+
+            CREATE TRIGGER mdr_before_delete BEFORE DELETE ON test FOR EACH ROW EXECUTE FUNCTION mdr_on_test_delete();
+            CREATE TRIGGER mdr_before_delete BEFORE DELETE ON missingdata_rule FOR EACH ROW EXECUTE FUNCTION mdr_on_rule_delete();
+            CREATE TRIGGER mdr_before_delete BEFORE DELETE ON dataset FOR EACH ROW EXECUTE FUNCTION mdr_on_dataset_delete();
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
 

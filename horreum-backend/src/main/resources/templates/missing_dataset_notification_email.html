@@ -1,0 +1,6 @@
+<p>Hello {username},</p>
+<p>the test <a href="{baseUrl}/test/{testId}">{testName}</a> should receive a new data matching rule "{ruleName}"
+    at least every {maxStaleness} but it didn't receive it {currentStaleness}.
+    {#if lastTimestamp != null}Data matching the rule was last received on {lastTimestamp}{/if}</p>
+<p>Please check your CI if the test is running correctly or reconfigure staleness settings.</p>
+Horreum Alerting

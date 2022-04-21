@@ -115,7 +115,9 @@ public class RoleManager {
 
    public String getDebugQuery(SecurityIdentity identity) {
       List<String> roles = new ArrayList<>(identity.getRoles());
-      roles.add(identity.getPrincipal().getName());
+      if (identity.getPrincipal() != null) {
+         roles.add(identity.getPrincipal().getName());
+      }
       try {
          return SET_ROLES.replace("?", '\'' + getSignedRoles(roles) + '\'');
       } catch (NoSuchAlgorithmException e) {

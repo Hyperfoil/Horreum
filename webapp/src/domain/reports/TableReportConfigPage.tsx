@@ -267,7 +267,7 @@ export default function TableReportConfigPage() {
                                                         Filtering function takes the label value (in case of single
                                                         label) or object keyed by label names (in case of multiple
                                                         labels) as its only parameter and returns <code>true</code> if
-                                                        the run should be admitted.
+                                                        the dataset should be admitted.
                                                     </ListItem>
                                                 </List>
                                             </div>

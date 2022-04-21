@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import java.io.ByteArrayOutputStream;
+import java.math.BigInteger;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,24 +43,27 @@ import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
+import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
+import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRuleResult;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
-import io.hyperfoil.tools.horreum.entity.alerting.LastMissingRunNotification;
 import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModel;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Value;
 import org.hibernate.jpa.TypedParameterValue;
+import org.hibernate.query.NativeQuery;
+import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.transform.Transformers;
+import org.hibernate.type.IntegerType;
+import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.vladmihalcea.hibernate.type.array.IntArrayType;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
@@ -84,27 +88,43 @@ public class AlertingServiceImpl implements AlertingService {
 
    //@formatter:off
    private static final String LOOKUP_VARIABLES =
-         "SELECT var.id, var.name, var.\"group\", var.calculation, jsonb_object_agg(label.name, lv.value)::::text " +
-         "FROM variable var LEFT JOIN label ON json_contains(var.labels, label.name) LEFT JOIN label_values lv ON label.id = lv.label_id " +
+         "SELECT var.id as variableId, var.name, var.\"group\", var.calculation, jsonb_array_length(var.labels) AS numLabels, (CASE " +
+            "WHEN jsonb_array_length(var.labels) = 1 THEN jsonb_agg(lv.value)->0 " +
+            "ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) " +
+         "END) AS value FROM variable var " +
+         "LEFT JOIN label ON json_contains(var.labels, label.name) LEFT JOIN label_values lv ON label.id = lv.label_id " +
          "WHERE var.testid = ?1 AND lv.dataset_id = ?2 " +
          "GROUP BY var.id, var.name, var.\"group\", var.calculation";
 
-   private static final String LOOKUP_STALE =
-         "WITH last_run AS (" +
-         "   SELECT DISTINCT ON (run.testid, run_tags.tags) run.id, run.testid, " +
-         "      EXTRACT(EPOCH FROM run.start) * 1000 AS timestamp, run_tags.tags FROM run " +
-         "   JOIN run_tags ON run_tags.runid = run.id " +
-         "   ORDER BY run.testid, run_tags.tags, run.start DESC " +
-         ") SELECT last_run.testid, last_run.tags::::text, last_run.id, last_run.timestamp, ts.maxStaleness FROM last_run " +
-         "JOIN test ON test.id = last_run.testid " +
-         "JOIN test_stalenesssettings ts ON last_run.testid = ts.test_id AND " +
-         "     (ts.tags IS NULL OR ts.tags @> last_run.tags AND last_run.tags @> ts.tags) " +
-         "LEFT JOIN lastmissingrunnotification lmrn ON last_run.testid = lmrn.testid " +
-         "   AND lmrn.tags @> last_run.tags AND last_run.tags @> lmrn.tags " +
-         "WHERE test.notificationsenabled = true " +
-         "   AND timestamp < EXTRACT(EPOCH FROM current_timestamp) * 1000 - ts.maxstaleness " +
-         "   AND (lmrn.lastnotification IS NULL OR " +
-         "       (EXTRACT(EPOCH FROM current_timestamp) - EXTRACT(EPOCH FROM lmrn.lastnotification))* 1000 > ts.maxstaleness)";
+   private static final String LOOKUP_RULE_LABEL_VALUES =
+         "SELECT mdr.id AS rule_id, mdr.condition, " +
+         "(CASE " +
+            "WHEN mdr.labels IS NULL OR jsonb_array_length(mdr.labels) = 0 THEN NULL " +
+            "WHEN jsonb_array_length(mdr.labels) = 1 THEN jsonb_agg(lv.value)->0 " +
+            "ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) " +
+         "END) as value FROM missingdata_rule mdr " +
+         "LEFT JOIN label ON json_contains(mdr.labels, label.name) " +
+         "LEFT JOIN label_values lv ON label.id = lv.label_id AND lv.dataset_id = ?1 " +
+         "WHERE mdr.test_id = ?2 " +
+         "GROUP BY rule_id, mdr.condition";
+
+   private static final String LOOKUP_LABEL_VALUE_FOR_RULE =
+         "SELECT (CASE " +
+            "WHEN mdr.labels IS NULL OR jsonb_array_length(mdr.labels) = 0 THEN NULL " +
+            "WHEN jsonb_array_length(mdr.labels) = 1 THEN jsonb_agg(lv.value)->0 " +
+            "ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) " +
+         "END) as value FROM missingdata_rule mdr " +
+         "LEFT JOIN label ON json_contains(mdr.labels, label.name) " +
+         "LEFT JOIN label_values lv ON label.id = lv.label_id AND lv.dataset_id = ?1 " +
+         "WHERE mdr.id = ?2 " +
+         "GROUP BY mdr.labels";
+
+   private static final String LOOKUP_RECENT =
+         "SELECT DISTINCT ON(mdr.id) mdr.id, mdr.test_id, mdr.name, mdr.maxstaleness, rr.timestamp " +
+         "FROM missingdata_rule mdr " +
+         "LEFT JOIN missingdata_ruleresult rr ON mdr.id = rr.rule_id " +
+         "WHERE last_notification IS NULL OR EXTRACT(EPOCH FROM last_notification) * 1000 < EXTRACT(EPOCH FROM current_timestamp) * 1000 - mdr.maxstaleness " +
+         "ORDER BY mdr.id, timestamp DESC";
 
    private static final String FIND_LAST_DATAPOINTS =
          "SELECT DISTINCT ON(variable_id) variable_id AS variable, EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp " +
@@ -177,7 +197,44 @@ public class AlertingServiceImpl implements AlertingService {
       } catch (NoResultException e) {
          sendNotifications = true;
       }
-      recalculateForDataset(dataset, sendNotifications, false, null);
+      recalculateDatapointsForDataset(dataset, sendNotifications, false, null);
+      recalculateMissingDataRules(dataset);
+   }
+
+   private void recalculateMissingDataRules(DataSet dataset) {
+      MissingDataRuleResult.deleteForDataset(dataset.id);
+      @SuppressWarnings("unchecked") List<Object[]> ruleValues = em.createNativeQuery(LOOKUP_RULE_LABEL_VALUES)
+            .setParameter(1, dataset.id).setParameter(2, dataset.testid)
+            .unwrap(NativeQuery.class)
+            .addScalar("rule_id", IntegerType.INSTANCE)
+            .addScalar("condition", TextType.INSTANCE)
+            .addScalar("value", JsonNodeBinaryType.INSTANCE)
+            .getResultList();
+      Util.evaluateMany(ruleValues, row -> (String) row[1], row -> (JsonNode) row[2],
+            (row, result) -> {
+               int ruleId = (int) row[0];
+               if (result.isBoolean()) {
+                  if (result.asBoolean()) {
+                     createMissingDataRuleResult(dataset, ruleId);
+                  }
+               } else {
+                  // TODO persistent log
+                  log.errorf("Result for missing data rule %d, dataset %d is not a boolean: %s", ruleId, dataset.id, result);
+               }
+            },
+            // Absence of condition means that this dataset is taken into account. This happens e.g. when value == NULL
+            row -> createMissingDataRuleResult(dataset, (int) row[0]),
+            (row, exception, code) -> {
+               // TODO persistent log
+               log.errorf(exception, "Exception evaluating missing data rule %d, dataset %d", row[0], dataset.id);
+            }, output -> {
+               // TODO persistent log
+               log.debugf("Output while evaluating missing data rules for dataset %d: %s", dataset.id, output);
+            });
+   }
+
+   private void createMissingDataRuleResult(DataSet dataset, int ruleId) {
+      new MissingDataRuleResult(ruleId, dataset.id, dataset.start).persist();
    }
 
    @PostConstruct
@@ -220,7 +277,7 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   private void recalculateForDataset(DataSet dataset, boolean notify, boolean debug, Recalculation recalculation) {
+   private void recalculateDatapointsForDataset(DataSet dataset, boolean notify, boolean debug, Recalculation recalculation) {
       log.infof("Analyzing dataset %d (%d/%d)", dataset.id, dataset.run.id, dataset.ordinal);
       try {
          Test test = Test.findById(dataset.testid);
@@ -254,153 +311,124 @@ public class AlertingServiceImpl implements AlertingService {
       } else {
          fingerprint = JsonNodeFactory.instance.nullNode();
       }
-      StringBuilder jsCode = new StringBuilder("const __obj = ").append(fingerprint).append(";\n");
-      jsCode.append("const __func = ").append(filter).append(";\n");
-      jsCode.append("!!__func(__obj)");
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      try (Context context = Context.newBuilder("js").out(out).err(out).build()) {
-         context.enter();
-         try {
-            Value value = context.eval("js", jsCode);
-            if (!value.isBoolean()) {
-               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.ERROR, "Evaluation of fingerprint failed: '%s' is not a boolean", value);
-            } else if (!value.asBoolean()) {
-               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.DEBUG, "Fingerprint %s was filtered out.", fingerprint);
+      boolean testResult = Util.evaluateTest(filter, fingerprint,
+            value -> {
+               logCalculationMessage(dataset, DatasetLog.ERROR, "Evaluation of fingerprint failed: '%s' is not a boolean", value);
                return false;
-            }
-            return true;
-         } catch (PolyglotException e) {
-            logCalculationMessage(dataset.testid, dataset.id, DatasetLog.ERROR, "Evaluation of fingerprint filter failed: '%s' Code:<pre>%s</pre>", e.getMessage(), jsCode);
-            return false;
-         } finally {
-            if (out.size() > 0) {
-               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.DEBUG, "Output while evaluating fingerprint filter: <pre>%s</pre>", out.toString());
-            }
-            context.leave();
-         }
+            },
+            (code, e) -> logCalculationMessage(dataset, DatasetLog.ERROR, "Evaluation of fingerprint filter failed: '%s' Code:<pre>%s</pre>", e.getMessage(), code),
+            output -> logCalculationMessage(dataset, DatasetLog.DEBUG, "Output while evaluating fingerprint filter: <pre>%s</pre>", output));
+      if (!testResult) {
+         logCalculationMessage(dataset, DatasetLog.DEBUG, "Fingerprint %s was filtered out.", fingerprint);
+      }
+      return testResult;
+   }
+
+   public static class VariableData {
+      public int variableId;
+      public String name;
+      public String group;
+      public String calculation;
+      public int numLabels;
+      public JsonNode value;
+
+      public String fullName() {
+         return (group == null || group.isEmpty()) ? name : group + "/" + name;
       }
    }
 
    private void emitDatapoints(DataSet dataset, boolean notify, boolean debug, Recalculation recalculation) {
       Set<String> missingValueVariables = new HashSet<>();
       @SuppressWarnings("unchecked")
-      List<Object[]> values = em.createNativeQuery(LOOKUP_VARIABLES)
-            .setParameter(1, dataset.testid).setParameter(2, dataset.id).getResultList();
-      for (Object[] row : values) {
-         int id = (Integer) row[0];
-         String name = (String) row[1];
-         String group = (String) row[2];
-         String calc = (String) row[3];
-         ObjectNode object = (ObjectNode) Util.toJsonNode((String) row[4]);
-
-         String fullName = (group == null || group.isEmpty()) ? name : group + "/" + name;
-
-         if (debug) {
-            logCalculationMessage(dataset.testid, dataset.id, DatasetLog.DEBUG, "Fetched value for variable %s: <pre>%s</pre>", fullName, object);
+      List<VariableData> values = em.createNativeQuery(LOOKUP_VARIABLES)
+            .setParameter(1, dataset.testid)
+            .setParameter(2, dataset.id)
+            .unwrap(NativeQuery.class)
+            .addScalar("variableId", IntegerType.INSTANCE)
+            .addScalar("name", TextType.INSTANCE)
+            .addScalar("group", TextType.INSTANCE)
+            .addScalar("calculation", TextType.INSTANCE)
+            .addScalar("numLabels", IntegerType.INSTANCE)
+            .addScalar("value", JsonNodeBinaryType.INSTANCE)
+            .setResultTransformer(new AliasToBeanResultTransformer(VariableData.class))
+            .getResultList();
+      if (debug) {
+         for (VariableData data : values) {
+            logCalculationMessage(dataset, DatasetLog.DEBUG, "Fetched value for variable %s: <pre>%s</pre>", data.fullName(), data.value);
          }
-
-         DataPoint dataPoint = new DataPoint();
-         dataPoint.variable = em.getReference(Variable.class, id);
-         dataPoint.dataset = dataset;
-         dataPoint.timestamp = dataset.start;
-
-         if (object == null || object.isEmpty()) {
-            logCalculationMessage(dataset.testid, dataset.id, DatasetLog.ERROR, "Variable %s does not have any label values!.", fullName);
-            missingValueVariables.add(fullName);
-            continue;
-         }
-         if (calc == null || calc.isEmpty()) {
-            if (object.size() > 1) {
-               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.WARN, "Variable %s has more than one label (%s) but no calculation function.", fullName, object.fieldNames());
-            }
-            JsonNode value = object.elements().next();
-            if (value == null || value.isNull()) {
-               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.INFO, "Null value for variable %s, label %s - datapoint is not created", fullName, object.fieldNames().next());
-               if (recalculation != null) {
-                  recalculation.datasetsWithoutValue.put(dataset.id, new DatasetInfo(dataset.id, dataset.run.id, dataset.ordinal));
-               }
-               missingValueVariables.add(fullName);
-               continue;
-            }
-
-            Double number = null;
-            if (value.isNumber()) {
-               number = value.asDouble();
-            } else if (value.isTextual()) {
-               try {
-                  number = Double.parseDouble(value.asText());
-               } catch (NumberFormatException e) {
-                  // ignore
-               }
-            }
-            if (number == null) {
-               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.ERROR, "Cannot turn %s into a floating-point value for variable %s", value, fullName);
-               if (recalculation != null) {
-                  recalculation.errors++;
-               }
-               missingValueVariables.add(fullName);
-               continue;
-            } else {
-               dataPoint.value = number;
-            }
-         } else {
-            StringBuilder code = new StringBuilder();
-            code.append("const __obj = ");
-            if (object.size() > 1) {
-               code.append(object);
-            } else {
-               code.append(object.elements().next());
-            }
-            code.append(";\n");
-            code.append("const __func = ").append(calc).append(";\n");
-            code.append("__func(__obj)");
-            if (debug) {
-               logCalculationMessage(dataset.testid, dataset.id, DatasetLog.DEBUG, "Variable %s, <pre>%s</pre>" , fullName, code.toString());
-            }
-            Double value = execute(dataset.testid, dataset.id, code.toString(), fullName);
-            if (value == null) {
-               if (recalculation != null) {
-                  recalculation.datasetsWithoutValue.put(dataset.id, new DatasetInfo(dataset.id, dataset.run.id, dataset.ordinal));
-               }
-               missingValueVariables.add(fullName);
-               continue;
-            }
-            dataPoint.value = value;
-         }
-         dataPoint.persist();
-         Util.publishLater(tm, eventBus, DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
       }
+      Util.evaluateMany(values, data -> data.calculation, data -> data.value,
+            (data, result) -> {
+               Double value = Util.toDoubleOrNull(result,
+                     error -> logCalculationMessage(dataset, DatasetLog.ERROR, "Evaluation of variable %s failed: %s", data.fullName(), error),
+                     info -> logCalculationMessage(dataset, DatasetLog.INFO, "Evaluation of variable %s: %s", data.fullName(), info));
+               if (value != null) {
+                  createDataPoint(dataset, data.variableId, value, notify);
+               } else {
+                  if (recalculation != null) {
+                     recalculation.datasetsWithoutValue.put(dataset.id, new DatasetInfo(dataset.id, dataset.run.id, dataset.ordinal));
+                  }
+                  missingValueVariables.add(data.fullName());
+               }
+            },
+            data -> {
+               if (data.numLabels > 1) {
+                  logCalculationMessage(dataset, DatasetLog.WARN, "Variable %s has more than one label (%s) but no calculation function.", data.fullName(), data.value.fieldNames());
+               }
+               if (data.value == null || data.value.isNull()) {
+                  logCalculationMessage(dataset, DatasetLog.INFO, "Null value for variable %s - datapoint is not created", data.fullName());
+                  if (recalculation != null) {
+                     recalculation.datasetsWithoutValue.put(dataset.id, new DatasetInfo(dataset.id, dataset.run.id, dataset.ordinal));
+                  }
+                  missingValueVariables.add(data.fullName());
+                  return;
+               }
+
+               Double value = null;
+               if (data.value.isNumber()) {
+                  value = data.value.asDouble();
+               } else if (data.value.isTextual()) {
+                  try {
+                     value = Double.parseDouble(data.value.asText());
+                  } catch (NumberFormatException e) {
+                     // ignore
+                  }
+               }
+               if (value == null) {
+                  logCalculationMessage(dataset, DatasetLog.ERROR, "Cannot turn %s into a floating-point value for variable %s", data.value, data.fullName());
+                  if (recalculation != null) {
+                     recalculation.errors++;
+                  }
+                  missingValueVariables.add(data.fullName());
+               } else {
+                  createDataPoint(dataset, data.variableId, value, notify);
+               }
+            },
+            (data, exception, code) -> logCalculationMessage(dataset, DatasetLog.ERROR, "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", data.fullName(), exception.getMessage(), code),
+            output -> logCalculationMessage(dataset, DatasetLog.DEBUG, "Output while calculating variable: <pre>%s</pre>", output)
+      );
       if (!missingValueVariables.isEmpty()) {
          Util.publishLater(tm, eventBus, DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.run.id, dataset.id, dataset.ordinal, dataset.testid, missingValueVariables, notify));
       }
    }
 
+   private void createDataPoint(DataSet dataset, int variableId, double value, boolean notify) {
+      DataPoint dataPoint = new DataPoint();
+      dataPoint.variable = em.getReference(Variable.class, variableId);
+      dataPoint.dataset = dataset;
+      dataPoint.timestamp = dataset.start;
+      dataPoint.value = value;
+      dataPoint.persist();
+      Util.publishLater(tm, eventBus, DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
+   }
+
+   private void logCalculationMessage(DataSet dataSet, int level, String format, Object... args) {
+      logCalculationMessage(dataSet.testid, dataSet.id, level, format, args);
+   }
+
    private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "variables", String.format(format, args)).persist();
-   }
-
-   private Double execute(int testId, int datasetId, String jsCode, String name) {
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      try (Context context = Context.newBuilder("js").out(out).err(out).build()) {
-         context.enter();
-         try {
-            Value value = context.eval("js", jsCode);
-            return Util.toDoubleOrNull(value, error -> {
-               logCalculationMessage(testId, datasetId, DatasetLog.ERROR, "Evaluation of variable %s failed: %s", name, error);
-            }, info -> {
-               logCalculationMessage(testId, datasetId, DatasetLog.INFO, "Evaluation of variable %s: %s", name, info);
-            });
-         } catch (PolyglotException e) {
-            logCalculationMessage(testId, datasetId, DatasetLog.ERROR, "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", name, e.getMessage(), jsCode);
-            return null;
-         } finally {
-            if (out.size() > 0) {
-               logCalculationMessage(testId, datasetId, DatasetLog.DEBUG, "Output while calculating variable %s: <pre>%s</pre>", name, out.toString());
-            }
-            context.leave();
-         }
-      }
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -714,8 +742,8 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Override
    @RolesAllowed(Roles.TESTER)
-   public void recalculate(Integer testId, boolean notify,
-                           boolean debug, Long from, Long to) {
+   public void recalculateDatapoints(Integer testId, boolean notify,
+                                     boolean debug, Long from, Long to) {
       if (testId == null) {
          throw ServiceException.badRequest("Missing param 'test'");
       }
@@ -766,7 +794,7 @@ public class AlertingServiceImpl implements AlertingService {
       DataPoint.delete("dataset_id in ?1", ids);
       Change.delete("dataset_id in ?1 AND confirmed = false", ids);
       if (ids.size() > 0) {
-         // Due to RLS policies we cannot add a record to a run we don't own
+         // Due to RLS policies we cannot add a record to a dataset we don't own
          logCalculationMessage(testId, ids.get(0), DatasetLog.INFO, "Starting recalculation of %d runs.", ids.size());
       }
       return ids;
@@ -776,12 +804,12 @@ public class AlertingServiceImpl implements AlertingService {
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    void recalulateForDataset(Integer datasetId, boolean notify, boolean debug, Recalculation recalculation) {
       DataSet dataset = DataSet.findById(datasetId);
-      recalculateForDataset(dataset, notify, debug, recalculation);
+      recalculateDatapointsForDataset(dataset, notify, debug, recalculation);
    }
 
    @Override
    @RolesAllowed(Roles.TESTER)
-   public RecalculationStatus recalculateProgress(Integer testId) {
+   public RecalculationStatus getRecalculationStatus(Integer testId) {
       if (testId == null) {
          throw ServiceException.badRequest("Missing param 'test'");
       }
@@ -797,27 +825,30 @@ public class AlertingServiceImpl implements AlertingService {
       return status;
    }
 
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   @Scheduled(every = "{horreum.alerting.missing.runs.check}")
-   public void checkMissingRuns() {
+   @Scheduled(every = "{horreum.alerting.missing.dataset.check}")
+   public void checkMissingDataset() {
       @SuppressWarnings("unchecked")
-      List<Object[]> results = em.createNativeQuery(LOOKUP_STALE).getResultList();
+      List<Object[]> results = em.createNativeQuery(LOOKUP_RECENT).getResultList();
       for (Object[] row : results) {
-         int testId = ((Number) row[0]).intValue();
-         JsonNode tags = Util.toJsonNode(String.valueOf(row[1]));
-         int runId = ((Number) row[2]).intValue();
-         long lastRunTimestamp = ((Number) row[3]).longValue();
-         long maxStaleness = ((Number) row[4]).longValue();
-         notificationService.notifyMissingRun(testId, tags, maxStaleness, runId, lastRunTimestamp);
-         LastMissingRunNotification last = LastMissingRunNotification.find("testid = ?1 AND tags = ?2", testId, tags).firstResult();
-         if (last == null) {
-            last = new LastMissingRunNotification();
-            last.testId = testId;
-            last.tags = tags;
+         int ruleId = (int) row[0];
+         int testId = (int) row[1];
+         String ruleName = (String) row[2];
+         long maxStaleness = ((BigInteger) row[3]).longValue();
+         Timestamp ts = (Timestamp) row[4];
+         Instant timestamp = ts == null ? null : ts.toInstant();
+         if (timestamp == null || timestamp.isBefore(Instant.now().minusMillis(maxStaleness))) {
+            if (ruleName == null) {
+               ruleName = "rule #" + ruleId;
+            }
+            notificationService.notifyMissingDataset(testId, ruleName, maxStaleness, timestamp);
+            int numUpdated = em.createNativeQuery("UPDATE missingdata_rule SET last_notification = ?1 WHERE id = ?2")
+                  .setParameter(1, Instant.now()).setParameter(2, ruleId).executeUpdate();
+            if (numUpdated != 1) {
+               log.errorf("Missing data rules update for rule %d (test %d) didn't work: updated: %d", ruleId, testId, numUpdated);
+            }
          }
-         last.lastNotification = Instant.now();
-         last.persist();
       }
    }
 
@@ -886,6 +917,89 @@ public class AlertingServiceImpl implements AlertingService {
       return Arrays.asList(lastDatapoint, floatingWindow);
    }
 
+   @WithRoles
+   @Override
+   public List<MissingDataRule> missingDataRules(int testId) {
+      if (testId <= 0) {
+         throw ServiceException.badRequest("Invalid test ID: " + testId);
+      }
+      return MissingDataRule.list("test.id", testId);
+   }
+
+   @WithRoles
+   @Transactional
+   @Override
+   public int updateMissingDataRule(int testId, MissingDataRule rule) {
+      if (testId <= 0) {
+         throw ServiceException.badRequest("Invalid test ID: " + testId);
+      }
+      if (rule.id != null && rule.id <= 0) {
+         rule.id = null;
+      }
+      // drop any info about last notification
+      rule.lastNotification = null;
+      if (rule.maxStaleness <= 0) {
+         throw ServiceException.badRequest("Invalid max staleness in rule " + rule.name + ": " + rule.maxStaleness);
+      }
+
+      if (rule.id == null) {
+         rule.test = em.getReference(Test.class, testId);
+         rule.persistAndFlush();
+      } else {
+         MissingDataRule existing = MissingDataRule.findById(rule.id);
+         if (existing == null) {
+            throw ServiceException.badRequest("Rule does not exist.");
+         } else if (existing.test.id != testId) {
+            throw ServiceException.badRequest("Rule belongs to a different test");
+         }
+         rule.test = existing.test;
+         em.merge(rule);
+         em.flush();
+      }
+      Util.executeBlocking(vertx, new CachedSecurityIdentity(identity), () -> {
+         @SuppressWarnings("unchecked") List<Object[]> idsAndTimestamps =
+               em.createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?1").setParameter(1, testId).getResultList();
+         for (Object[] row : idsAndTimestamps) {
+            recalculateMissingDataRule((int) row[0], ((Timestamp) row[1]).toInstant(), rule);
+         }
+      });
+      return rule.id;
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   void recalculateMissingDataRule(int datasetId, Instant timestamp, MissingDataRule rule) {
+      JsonNode value = (JsonNode) em.createNativeQuery(LOOKUP_LABEL_VALUE_FOR_RULE)
+            .setParameter(1, datasetId).setParameter(2, rule.id)
+            .unwrap(NativeQuery.class)
+            .addScalar("value", JsonNodeBinaryType.INSTANCE)
+            .getSingleResult();
+      boolean match = true;
+      if (rule.condition != null && !rule.condition.isBlank()) {
+         String ruleName = rule.name == null ? "#" + rule.id : rule.name;
+         match = Util.evaluateTest(rule.condition, value, notBoolean -> {
+            // TODO persistent log
+            log.errorf("Missing data rule %s result is not a boolean: %s", ruleName, notBoolean);
+            return true;
+         }, (code, exception) -> {
+            // TODO persistent log
+            log.errorf(exception, "Error evaluating missing data rule %s: %s", ruleName, code);
+         }, output -> {
+            log.debugf("Output while evaluating missing data rule %s: %s", ruleName, output);
+         });
+      }
+      if (match) {
+         new MissingDataRuleResult(rule.id, datasetId, timestamp).persist();
+      }
+   }
+
+   @WithRoles
+   @Transactional
+   @Override
+   public void deleteMissingDataRule(int id) {
+      MissingDataRule.deleteById(id);
+   }
+
    @ConsumeEvent(value = Run.EVENT_TAGS_CREATED, blocking = true)
    @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
@@ -901,7 +1015,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Transactional
    @WithRoles(extras = Roles.HORREUM_ALERTING)
-   @Scheduled(every = "{horreum.alerting.missing.runs.check}")
+   @Scheduled(every = "{horreum.alerting.expected.run.check}")
    public void checkExpectedRuns() {
       for (RunExpectation expectation : RunExpectation.<RunExpectation>find("expectedbefore < ?1", Instant.now()).list()) {
          boolean sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
@@ -923,22 +1037,5 @@ public class AlertingServiceImpl implements AlertingService {
       boolean done;
       public int errors;
       Map<Integer, DatasetInfo> datasetsWithoutValue = new HashMap<>();
-   }
-
-   public static class VarInfo {
-      public final int id;
-      public final String name;
-      public final String group;
-      public final String calculation;
-      public final Set<String> accessors = new HashSet<>();
-
-      public VarInfo(int id, String name, String group, String calculation) {
-         this.id = id;
-         this.name = name;
-         this.group = group;
-         this.calculation = calculation;
-      }
-
-
    }
 }

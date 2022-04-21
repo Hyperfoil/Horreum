@@ -72,3 +72,15 @@ export type LogSliderProperties = {
 export type EnumProperties = {
     options: Map<string, string>
 }
+
+export interface MissingDataRule {
+    id: number
+    name: string
+    labels: string[]
+    condition?: string
+    maxStaleness: number
+    testId: number
+    // temporary
+    maxStalenessStr?: string
+    modified?: boolean
+}
