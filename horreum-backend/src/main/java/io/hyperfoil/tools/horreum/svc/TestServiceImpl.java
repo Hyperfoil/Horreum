@@ -404,26 +404,6 @@ public class TestServiceImpl implements TestService {
       test.persist();
    }
 
-   @Override
-   @PermitAll
-   public List<JsonNode> tags(Integer testId, Boolean trashed) {
-      if (testId == null) {
-         throw ServiceException.badRequest("Missing param 'test'");
-      }
-      StringBuilder sql = new StringBuilder("SELECT tags::::text FROM run LEFT JOIN run_tags ON run_tags.runid = run.id WHERE run.testid = ?");
-      if (trashed == null || !trashed) {
-         sql.append(" AND NOT run.trashed");
-      }
-      sql.append(" GROUP BY tags");
-      Query tagComboQuery = em.createNativeQuery(sql.toString());
-      @SuppressWarnings("unchecked") List<String> tagList = tagComboQuery.setParameter(1, testId).getResultList();
-      ArrayList<JsonNode> result = new ArrayList<>(tagList.size());
-      for (String tags : tagList) {
-         result.add(tags == null ? Util.EMPTY_OBJECT : Util.toJsonNode(tags));
-      }
-      return result;
-   }
-
    @WithRoles
    @Override
    public List<JsonNode> listFingerprints(int testId) {

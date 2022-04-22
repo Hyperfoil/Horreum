@@ -389,33 +389,7 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @Override
    public List<AccessorLocation> findUsages(String accessor) {
-      accessor = accessor.trim();
-      List<AccessorLocation> result = new ArrayList<>();
-      for (Object row: em.createNativeQuery("SELECT id, name FROM test WHERE ? = ANY(string_to_array(replace(tags, '[]', ''), ';'));").setParameter(1, accessor).getResultList()) {
-         Object[] columns = (Object[]) row;
-         result.add(new AccessorInTags((int) columns[0], (String) columns[1]));
-      }
-      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, trc.id as configid, trc.title, " +
-            "filteraccessors, categoryaccessors, seriesaccessors, labelaccessors FROM tablereportconfig trc " +
-            "JOIN test ON test.id = trc.testid " +
-            "WHERE ?1 = ANY(string_to_array(replace(filteraccessors || ',' || categoryaccessors || ',' || seriesaccessors || ',' || labelaccessors, '[]', ''), ','));")
-            .setParameter(1, accessor).getResultList()) {
-         Object[] columns = (Object[]) row;
-         StringBuilder where = new StringBuilder();
-         addPart(where, (String) columns[4], accessor, "filter");
-         addPart(where, (String) columns[5], accessor, "series");
-         addPart(where, (String) columns[6], accessor, "category");
-         addPart(where, (String) columns[7], accessor, "label");
-         result.add(new AccessorInReport((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], where.toString(), null));
-      }
-      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, trc.id as configid, trc.title, rc.name FROM reportcomponent rc " +
-            "JOIN tablereportconfig trc ON rc.reportconfig_id = trc.id JOIN test ON test.id = trc.testid " +
-            "WHERE ? = ANY(string_to_array(replace(accessors, '[]', ''), ','));")
-            .setParameter(1, accessor).getResultList()) {
-         Object[] columns = (Object[]) row;
-         result.add(new AccessorInReport((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], "component", (String) columns[4]));
-      }
-      return result;
+      return Collections.emptyList();
    }
 
    @PermitAll
@@ -597,30 +571,5 @@ public class SchemaServiceImpl implements SchemaService {
          transformers.add(info);
       }
       return transformers;
-   }
-
-   private void addPart(StringBuilder where, String column, String accessor, String type) {
-      if (Arrays.asList(column.replaceAll("\\[]", "").split(",")).contains(accessor)) {
-         if (where.length() > 0) {
-            where.append(", ");
-         }
-         where.append(type);
-      }
-   }
-
-   @Scheduled(every = "{horreum.unused.executors.check}")
-   @Transactional
-   public void cleanUnusedExecutors() {
-      RolesInterceptor.setCurrentIdentity(SYSTEM_IDENTITY);
-      try {
-         int deleted = em.createNativeQuery("DELETE FROM schemaextractor WHERE id IN (SELECT se.id FROM schemaextractor se FULL OUTER JOIN (" +
-                     "SELECT unnest(string_to_array(replace(tags, '[]', ''), ';')) FROM test" +
-               ") AS a ON se.accessor = a.unnest WHERE (se.deleted OR se.deprecatedby_id IS NOT NULL) AND a.unnest IS NULL);").executeUpdate();
-         if (deleted > 0) {
-            log.infof("Deleted %d unused extractors.");
-         }
-      } finally {
-         RolesInterceptor.setCurrentIdentity(null);
-      }
    }
 }

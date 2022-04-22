@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Button, Chip, DropdownItem, Modal, Spinner, TextInput, Tooltip } from "@patternfly/react-core"
+import { Button, DropdownItem, Modal, Spinner, TextInput, Tooltip } from "@patternfly/react-core"
 import { WarningTriangleIcon } from "@patternfly/react-icons"
 import moment from "moment"
 import { useDispatch } from "react-redux"
@@ -226,19 +226,6 @@ export function UpdateDescriptionModal({ isOpen, onClose, run }: UpdateDescripti
             </Button>
         </Modal>
     )
-}
-
-export const RunTags = (tags: any) => {
-    if (!tags || tags === "") {
-        return null
-    }
-    return Object.entries(tags).map(([key, tag]: any[]) => (
-        <Tooltip key={tag} content={key}>
-            <Chip key={tag} isReadOnly>
-                {typeof tag === "object" ? JSON.stringify(tag) : tag}
-            </Chip>
-        </Tooltip>
-    ))
 }
 
 export function renderCell(

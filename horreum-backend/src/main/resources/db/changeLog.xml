@@ -3190,6 +3190,40 @@
             CREATE TRIGGER mdr_before_delete BEFORE DELETE ON dataset FOR EACH ROW EXECUTE FUNCTION mdr_on_dataset_delete();
         </sql>
     </changeSet>
+
+    <changeSet id="72" author="rvansa">
+        <dropColumn tableName="run_expectation" columnName="tags"/>
+        <dropTable tableName="run_tags"/>
+        <sql>
+            DROP TRIGGER rt_after_insert ON test;
+            DROP TRIGGER rt_before_update ON test;
+            DROP TRIGGER rt_before_delete ON test;
+
+            DROP TRIGGER rt_before_delete ON run;
+
+            DROP TRIGGER rt_after_insert ON run_schemas;
+            DROP TRIGGER rt_before_delete ON run_schemas;
+
+            DROP TRIGGER rt_before_insert ON schemaextractor;
+            DROP TRIGGER rt_before_update ON schemaextractor;
+            DROP TRIGGER rt_after_update ON schemaextractor;
+            DROP TRIGGER rt_before_delete ON schemaextractor;
+
+            DROP FUNCTION rt_after_insert_test_func;
+            DROP FUNCTION rt_before_update_test_func;
+            DROP FUNCTION rt_before_delete_test_func;
+
+            DROP FUNCTION rt_before_delete_run_func;
+
+            DROP FUNCTION rt_after_insert_run_schemas_func;
+            DROP FUNCTION rt_before_delete_run_schemas_func;
+
+            DROP FUNCTION rt_before_insert_extractor_func;
+            DROP FUNCTION rt_before_update_extractor_func;
+            DROP FUNCTION rt_after_update_extractor_func;
+            DROP FUNCTION rt_before_delete_extractor_func;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
 
 

@@ -17,7 +17,6 @@ export interface Run {
     start: number
     stop: number
     description: string
-    tags: string[]
     owner: string
     access: Access
     token: string | null

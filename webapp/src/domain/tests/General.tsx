@@ -8,7 +8,6 @@ import { sendTest } from "./actions"
 import FolderSelect from "../../components/FolderSelect"
 import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
-import DatasetLogModal from "./DatasetLogModal"
 
 import { Test, TestDispatch } from "./reducers"
 import { useTester, defaultTeamSelector } from "../../auth"
@@ -27,16 +26,11 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     const [description, setDescription] = useState("")
     const [compareUrl, setCompareUrl] = useState<string | undefined>(undefined)
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-    const [tags, setTags] = useState<string[]>([])
-    const [tagsCalculation, setTagsCalculation] = useState<string>()
-    const [isLogOpen, setLogOpen] = useState(false)
 
     const updateState = (test?: Test) => {
         setName(test?.name || "")
         setFolder(test?.folder || "")
         setDescription(test?.description || "")
-        setTags(test?.tags ? test.tags.split(";").filter(t => t !== "") : [])
-        setTagsCalculation(() => test?.tagsCalculation)
         setCompareUrl(test?.compareUrl?.toString() || undefined)
         setNotificationsEnabled(!test || test.notificationsEnabled)
     }
@@ -58,8 +52,6 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 description,
                 compareUrl: compareUrl || undefined, // when empty set to undefined
                 notificationsEnabled,
-                tags: tags.join(";"),
-                tagsCalculation: tagsCalculation || undefined,
                 fingerprintLabels: [],
                 fingerprintFilter: null,
                 owner: test?.owner || defaultRole || "__test_created_without_a_role__",
@@ -146,12 +138,6 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                     />
                 </FormGroup>
             </Form>
-            <DatasetLogModal
-                isOpen={isLogOpen}
-                onClose={() => setLogOpen(false)}
-                testId={test?.id || -1}
-                source="tags"
-            />
         </>
     )
 }

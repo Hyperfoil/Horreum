@@ -193,10 +193,9 @@ public class NotificationServiceImpl implements NotificationService {
       notifyAll(testId, n -> n.notifyMissingDataset(testName, testId, ruleName, maxStaleness, lastTimestamp));
    }
 
-   public void notifyExpectedRun(int testId, JsonNode tagsJson, long expectedBefore, String expectedBy, String backlink) {
-      String tags = fingerprintToString(tagsJson);
+   public void notifyExpectedRun(int testId, long expectedBefore, String expectedBy, String backlink) {
       Test test = Test.findById(testId);
       String name = test != null ? test.name : "<unknown test>";
-      notifyAll(testId, n -> n.notifyExpectedRun(name, testId, tags, expectedBefore, expectedBy, backlink));
+      notifyAll(testId, n -> n.notifyExpectedRun(name, testId, expectedBefore, expectedBy, backlink));
    }
 }

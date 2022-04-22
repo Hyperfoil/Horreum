@@ -97,10 +97,6 @@ public interface TestService {
    void updateHook(@PathParam("testId") Integer testId, Hook hook);
 
    @GET
-   @Path("{id}/tags")
-   List<JsonNode> tags(@PathParam("id") Integer testId, @QueryParam("trashed") Boolean trashed);
-
-   @GET
    @Path("{id}/fingerprint")
    List<JsonNode> listFingerprints(@PathParam("id") int testId);
 

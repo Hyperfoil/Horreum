@@ -36,8 +36,6 @@ export interface Test {
     folder?: string
     description: string
     compareUrl: string | CompareFunction | undefined
-    tags: string
-    tagsCalculation?: string
     fingerprintLabels: string[] | null
     fingerprintFilter: string | null
     owner: string

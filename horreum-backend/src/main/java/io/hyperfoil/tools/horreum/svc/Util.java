@@ -467,7 +467,7 @@ public class Util {
 
    public static JsonNode parseFingerprint(String fpString) {
       if (fpString == null || fpString.isEmpty()) {
-         // all tags
+         // any fingerprint
          return null;
       }
       return toJsonNode(URLDecoder.decode(fpString.replace("+", "%2B"), StandardCharsets.UTF_8));

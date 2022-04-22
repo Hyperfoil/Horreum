@@ -39,14 +39,6 @@ type FindUsagesModalProps = {
 
 function usageToCells(u: AccessorLocation) {
     switch (u.type) {
-        case "TAGS": {
-            return [
-                <DataListCell key={0}>Tags in test {u.testName}</DataListCell>,
-                <DataListCell key={1}>
-                    <ButtonLink to={`/test/${u.testId}#general`}>Go to</ButtonLink>
-                </DataListCell>,
-            ]
-        }
         case "VARIABLE": {
             const loc = u as AccessorInVariable
             return [

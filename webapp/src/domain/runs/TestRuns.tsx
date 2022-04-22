@@ -41,7 +41,7 @@ import {
     UseSortByColumnOptions,
 } from "react-table"
 import { Run, RunsDispatch } from "./reducers"
-import { Description, ExecutionTime, Menu, RunTags } from "./components"
+import { Description, ExecutionTime, Menu } from "./components"
 
 type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row: UseRowSelectRowProps<Run> }
 
@@ -120,12 +120,6 @@ const tableColumns: RunColumn[] = [
                 return "--"
             }
         },
-    },
-    {
-        Header: "Tags",
-        accessor: "tags",
-        disableSortBy: true,
-        Cell: (arg: C) => RunTags(arg.cell.value),
     },
     {
         Header: "Description",

@@ -10,6 +10,7 @@ public class HorreumTestProfile implements QuarkusTestProfile {
       return Map.of(
             "quarkus.oidc.auth-server-url", "${keycloak.url}/realms/quarkus/",
             "smallrye.jwt.sign.key.location", "/privateKey.jwk",
-            "horreum.url", "http://localhost:8081");
+            "horreum.url", "http://localhost:8081",
+            "horreum.test", "true");
    }
 }

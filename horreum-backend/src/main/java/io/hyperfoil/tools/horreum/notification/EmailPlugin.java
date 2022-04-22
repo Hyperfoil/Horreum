@@ -104,16 +104,12 @@ public class EmailPlugin implements NotificationPlugin {
       }
 
       @Override
-      public void notifyExpectedRun(String testName, int testId, String tags, long before, String expectedBy, String backlink) {
+      public void notifyExpectedRun(String testName, int testId, long before, String expectedBy, String backlink) {
          String subject = subjectPrefix + " Missing expected run for " + testName;
-         if (tags != null) {
-            subject += "/" + tags;
-         }
          String content = expectedRunNotificationEmail
                .data("username", username)
                .data("testName", testName)
                .data("testId", String.valueOf(testId))
-               .data("tags", tags)
                .data("baseUrl", baseUrl)
                .data("before", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(before)))
                .data("expectedBy", expectedBy)
@@ -122,7 +118,6 @@ public class EmailPlugin implements NotificationPlugin {
          mailer.send(Mail.withHtml(data, subject, content));
       }
    }
-
 
    private String prettyPrintTime(long duration) {
       StringBuilder sb = new StringBuilder();

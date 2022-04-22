@@ -17,5 +17,5 @@ public abstract class Notification {
    public abstract void notifyChange(String testName, String fingerprint, Change.Event change);
    public abstract void notifyMissingDataset(String testName, int testId, String ruleName, long maxStaleness, Instant lastTimestamp);
    public abstract void notifyMissingValues(String testName, String fingerprint, MissingValuesEvent missing);
-   public abstract void notifyExpectedRun(String testName, int testId, String tags, long before, String expectedBy, String backlink);
+   public abstract void notifyExpectedRun(String testName, int testId, long before, String expectedBy, String backlink);
 }

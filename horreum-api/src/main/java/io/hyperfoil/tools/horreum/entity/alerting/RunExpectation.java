@@ -23,11 +23,8 @@ public class RunExpectation extends PanacheEntityBase {
    @NotNull
    public int testId;
 
-   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
-   public JsonNode tags;
-
    @NotNull
-   @Column(columnDefinition = "timestamp")
+   @Column(columnDefinition = "timestamptz")
    public Instant expectedBefore;
 
    public String expectedBy;

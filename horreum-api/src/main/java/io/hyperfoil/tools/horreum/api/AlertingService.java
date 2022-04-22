@@ -67,7 +67,6 @@ public interface AlertingService {
    @Path("/expectRun")
    void expectRun(@QueryParam("test") String test,
                   @QueryParam("timeout") Long timeoutSeconds,
-                  @QueryParam("tags") String tags,
                   @QueryParam("expectedby") String expectedBy,
                   @QueryParam("backlink") String backlink);
 

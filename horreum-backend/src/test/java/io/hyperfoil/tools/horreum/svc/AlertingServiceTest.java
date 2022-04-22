@@ -6,7 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.when;
 
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.ParameterizedType;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +20,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
 import javax.inject.Inject;
@@ -23,6 +29,7 @@ import javax.persistence.EntityManager;
 
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.TestInfo;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -37,6 +44,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
 import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRuleResult;
+import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
@@ -46,6 +54,7 @@ import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
+import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -348,7 +357,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       NotificationServiceImpl notificationService = Mockito.mock(NotificationServiceImpl.class);
       List<String> notifications = Collections.synchronizedList(new ArrayList<>());
       Mockito.doAnswer(invocation -> {
-         notifications.add(invocation.getArgumentAt(1, String.class));
+         notifications.add(invocation.getArgument(1, String.class));
          return null;
       }).when(notificationService).notifyMissingDataset(Mockito.anyInt(), Mockito.anyString(), Mockito.anyLong(), Mockito.any(Instant.class));
       QuarkusMock.installMockForType(notificationService, NotificationServiceImpl.class);
@@ -484,5 +493,65 @@ public class AlertingServiceTest extends BaseServiceTest {
       rule.maxStaleness = maxStaleness;
       String ruleIdString = jsonRequest().body(rule).post("/api/alerting/missingdatarule?testId=" + test.id).then().statusCode(200).extract().body().asString();
       return Integer.parseInt(ruleIdString);
+   }
+
+   private MockedStatic<Clock> mockInstant(AtomicLong current) {
+      Clock spyClock = Mockito.spy(Clock.class);
+      MockedStatic<Clock> clockMock = Mockito.mockStatic(Clock.class);
+      clockMock.when(Clock::systemUTC).thenReturn(spyClock);
+      when(spyClock.instant()).thenAnswer(invocation -> Instant.ofEpochMilli(current.get()));
+      return clockMock;
+   }
+
+   private void withMockedRunExpectations(BiConsumer<AtomicLong, List<String>> consumer) {
+      NotificationServiceImpl notificationService = Mockito.mock(NotificationServiceImpl.class);
+      List<String> notifications = Collections.synchronizedList(new ArrayList<>());
+      Mockito.doAnswer(invocation -> {
+         notifications.add(invocation.getArgument(2, String.class));
+         return null;
+      }).when(notificationService).notifyExpectedRun(Mockito.anyInt(), Mockito.anyLong(), Mockito.anyString(), Mockito.anyString());
+      QuarkusMock.installMockForType(notificationService, NotificationServiceImpl.class);
+
+      AtomicLong current = new AtomicLong(System.currentTimeMillis());
+      try (var h = mockInstant(current)) {
+         consumer.accept(current, notifications);
+      }
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testExpectRunTimeout() {
+      Test test = createTest(createExampleTest("timeout"));
+      withMockedRunExpectations((current, notifications) -> {
+         jsonUploaderRequest().post("/api/alerting/expectRun?test=" + test.name + "&timeout=10&expectedby=foo&backlink=bar").then().statusCode(204);
+         List<RunExpectation> expectations = jsonRequest().get("/api/alerting/expectations")
+               .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectation.class));
+         assertEquals(1, expectations.size());
+         alertingService.checkExpectedRuns();
+         assertEquals(0, notifications.size());
+
+         current.addAndGet(20000);
+         alertingService.checkExpectedRuns();
+         assertEquals(1, notifications.size());
+         assertEquals("foo", notifications.get(0));
+      });
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testExpectRunUploaded() {
+      Test test = createTest(createExampleTest("uploaded"));
+      withMockedRunExpectations((current, notifications) -> {
+         jsonUploaderRequest().post("/api/alerting/expectRun?test=" + test.name + "&timeout=10").then().statusCode(204);
+         List<RunExpectation> expectations = jsonRequest().get("/api/alerting/expectations")
+               .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectation.class));
+         assertEquals(1, expectations.size());
+         alertingService.checkExpectedRuns();
+         assertEquals(0, notifications.size());
+
+         uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
+
+         current.addAndGet(20000);
+         alertingService.checkExpectedRuns();
+         assertEquals(0, notifications.size());
+      });
    }
 }

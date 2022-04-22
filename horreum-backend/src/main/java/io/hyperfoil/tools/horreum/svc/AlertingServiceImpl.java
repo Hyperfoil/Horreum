@@ -868,7 +868,7 @@ public class AlertingServiceImpl implements AlertingService {
    @RolesAllowed(Roles.UPLOADER)
    @WithRoles
    @Transactional
-   public void expectRun(String testNameOrId, Long timeoutSeconds, String tags, String expectedBy, String backlink) {
+   public void expectRun(String testNameOrId, Long timeoutSeconds, String expectedBy, String backlink) {
       if (timeoutSeconds == null) {
          throw ServiceException.badRequest("No timeout set.");
       } else if (timeoutSeconds <= 0) {
@@ -880,7 +880,6 @@ public class AlertingServiceImpl implements AlertingService {
       }
       RunExpectation runExpectation = new RunExpectation();
       runExpectation.testId = test.id;
-      runExpectation.tags = tags != null && !tags.isEmpty() ? Util.toJsonNode(tags) : null;
       runExpectation.expectedBefore = Instant.now().plusSeconds(timeoutSeconds);
       runExpectation.expectedBy = expectedBy != null ? expectedBy : identity.getPrincipal().getName();
       runExpectation.backlink = backlink;
@@ -1000,16 +999,16 @@ public class AlertingServiceImpl implements AlertingService {
       MissingDataRule.deleteById(id);
    }
 
-   @ConsumeEvent(value = Run.EVENT_TAGS_CREATED, blocking = true)
+   @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
-   public void removeExpected(Run.TagsEvent event) {
-      Query query = em.createNativeQuery("DELETE FROM run_expectation WHERE testid = (SELECT testid FROM run WHERE id = ?1) AND (tags IS NULL OR tags @> ?2 ::::jsonb AND ?2 ::::jsonb @> tags)");
-      query.setParameter(1, event.runId);
-      query.setParameter(2, event.tags != null ? event.tags : "{}");
+   public void removeExpected(Run run) {
+      // delete at most one expectation
+      Query query = em.createNativeQuery("DELETE FROM run_expectation WHERE id = (SELECT id FROM run_expectation WHERE testid = (SELECT testid FROM run WHERE id = ?1) LIMIT 1)");
+      query.setParameter(1, run.id);
       int updated = query.executeUpdate();
       if (updated > 0) {
-         log.infof("Removed %d run expectations as run %d with tags %s was added.", updated, event.runId, event.tags);
+         log.infof("Removed %d run expectations as run %d was added.", updated, run.id);
       }
    }
 
@@ -1021,7 +1020,7 @@ public class AlertingServiceImpl implements AlertingService {
          boolean sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
                .setParameter(1, expectation.testId).getSingleResult();
          if (sendNotifications) {
-            notificationService.notifyExpectedRun(expectation.testId, expectation.tags, expectation.expectedBefore.toEpochMilli(), expectation.expectedBy, expectation.backlink);
+            notificationService.notifyExpectedRun(expectation.testId, expectation.expectedBefore.toEpochMilli(), expectation.expectedBy, expectation.backlink);
          } else {
             log.debugf("Skipping expected run notification on test %d since it is disabled.", expectation.testId);
          }

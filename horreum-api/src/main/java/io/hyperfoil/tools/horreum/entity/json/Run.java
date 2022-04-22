@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class Run extends ProtectedBaseEntity {
    public static final String EVENT_NEW = "run/new";
    public static final String EVENT_TRASHED = "run/trashed";
-   public static final String EVENT_TAGS_CREATED = "run/tags_created";
 
    @Id
    @SequenceGenerator(
@@ -58,14 +57,4 @@ public class Run extends ProtectedBaseEntity {
 
    @OneToMany(mappedBy = "run", cascade = CascadeType.ALL, orphanRemoval = true)
    public Collection<DataSet> datasets;
-
-   public static class TagsEvent {
-      public final int runId;
-      public final String tags;
-
-      public TagsEvent(int runId, String tags) {
-         this.runId = runId;
-         this.tags = tags;
-      }
-   }
 }

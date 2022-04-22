@@ -18,8 +18,6 @@ import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.eventbus.EventBus;
 
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Value;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
@@ -45,7 +43,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 
-import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -80,21 +77,7 @@ public class RunServiceImpl implements RunService {
             "FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
-   // TODO: array queries!
-   private static final String GET_TAGS =
-         "WITH test_tags AS (" +
-            "SELECT id AS testid, unnest(string_to_array(tags, ';')) AS accessor, tagscalculation FROM test" +
-         "), tags AS (" +
-            "SELECT rs.runid, se.id as extractor_id, se.accessor, jsonb_path_query_first(run.data, (rs.prefix || se.jsonpath)::::jsonpath) AS value, test_tags.tagscalculation " +
-            "FROM schemaextractor se " +
-            "JOIN test_tags ON se.accessor = test_tags.accessor " +
-            "JOIN run_schemas rs ON rs.testid = test_tags.testid AND rs.schemaid = se.schema_id " +
-            "JOIN run ON run.id = rs.runid " +
-            "WHERE rs.runid = ?" +
-         ")" +
-         "SELECT tagscalculation, " +
-            "json_object_agg(tags.accessor, tags.value)::::text AS tags, " +
-            "json_agg(tags.extractor_id)::::text AS extractor_ids FROM tags GROUP BY runid, tagscalculation;";
+
    private static final String LABEL_QUERY =
          "WITH used_labels AS (" +
             "SELECT le.label_id, label.name, ds.schema_id, count(le) > 1 AS multi FROM dataset_schemas ds " +
@@ -162,79 +145,8 @@ public class RunServiceImpl implements RunService {
 
    @PostConstruct
    public void init() {
-      sqlService.registerListener("calculate_tags", this::onCalculateTags);
       sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
       sqlService.registerListener("calculate_labels", this::onLabelChanged);
-   }
-
-   private void onCalculateTags(String param) {
-      String[] parts = param.split(";", 3);
-      if (parts.length < 3) {
-         log.errorf("Received notification to recalculate tags %s but cannot extract run ID.", param);
-         return;
-      }
-      int runId;
-      try {
-         runId = Integer.parseInt(parts[0]);
-      } catch (NumberFormatException e) {
-         log.errorf("Received notification to recalculate tags for run %s but cannot parse as run ID.", parts[0]);
-         return;
-      }
-      try (@SuppressWarnings("unused") CloseMe h1 = roleManager.withRoles(em, parts[2]);
-           @SuppressWarnings("unused") CloseMe h2 = roleManager.withToken(em, parts[1])) {
-         log.debugf("Recalculating tags for run %s", runId);
-         Object[] result = (Object[]) em.createNativeQuery(GET_TAGS).setParameter(1, runId).getSingleResult();
-         String calculation = (String) result[0];
-         String tags = String.valueOf(result[1]);
-         String extractorIds = String.valueOf(result[2]);
-
-         if (calculation != null && !calculation.isEmpty()) {
-            StringBuilder jsCode = new StringBuilder();
-            jsCode.append("const __obj = ").append(tags).append(";\n");
-            jsCode.append("const __func = ").append(calculation).append(";\n");
-            jsCode.append("__func(__obj);");
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
-               context.enter();
-               try {
-                  Value value = context.eval("js", jsCode);
-                  // TODO debuggable
-                  if (value.isNull()) {
-                     tags = null;
-                  } else {
-                     tags = Util.convert(value).toString();
-                     if ("undefined".equals(tags)) {
-                        tags = null;
-                     }
-                  }
-               } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to evaluate tags function on run %d.", runId);
-                  log.infof("Offending code: %s", jsCode);
-                  wrappedLogCalculation(DatasetLog.ERROR, runId, "Failed to evaluate tags function with code: <pre>" + jsCode + "</pre>");
-                  return;
-               } finally {
-                  if (out.size() > 0) {
-                     log.infof("Output while calculating tags for run %d: <pre>%s</pre>", runId, out.toString());
-                  }
-                  context.leave();
-               }
-            }
-         }
-         Query insert = em.createNativeQuery("INSERT INTO run_tags (runid, tags, extractor_ids) VALUES (?, (?::::text)::::jsonb, ARRAY(SELECT jsonb_array_elements((?::::text)::::jsonb)::::int));");
-         insert.setParameter(1, runId).setParameter(2, tags).setParameter(3, extractorIds);
-         if (insert.executeUpdate() != 1) {
-            log.errorf("Failed to insert run tags for run %d (invalid update count - maybe missing privileges?)", runId);
-            wrappedLogCalculation(DatasetLog.ERROR, runId, "Failed to insert run tags (maybe missing privileges?)");
-         }
-         Util.publishLater(tm, eventBus, Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, tags));
-      } catch (NoResultException e) {
-         log.infof("Run %d does not create any tags.", runId);
-         wrappedLogCalculation(DatasetLog.INFO, runId, "Run does not create any tags");
-         Util.publishLater(tm, eventBus, Run.EVENT_TAGS_CREATED, new Run.TagsEvent(runId, null));
-      } catch (Throwable e) {
-         log.errorf(e, "Failed to calculate tags for run %d", runId);
-         wrappedLogCalculation(DatasetLog.ERROR, runId, "Failed to calculate tags: " + Util.explainCauses(e));
-      }
    }
 
    private void onLabelChanged(String param) {
@@ -662,9 +574,8 @@ public class RunServiceImpl implements RunService {
    public RunsSummary listAllRuns(String query, boolean matchAll, String roles, boolean trashed,
                                   Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
-         .append("run.owner, run.access, run.token, run.trashed, run.description, ")
-         .append("test.name AS testname, run_tags.tags::::text AS tags ")
-         .append("FROM run JOIN test ON test.id = run.testId LEFT JOIN run_tags ON run_tags.runid = run.id WHERE ");
+         .append("run.owner, run.access, run.token, run.trashed, run.description, test.name AS testname ")
+         .append("FROM run JOIN test ON test.id = run.testId WHERE ");
       String[] queryParts;
       boolean whereStarted = false;
       if (query == null || query.isEmpty()) {
@@ -720,8 +631,6 @@ public class RunServiceImpl implements RunService {
          summary.runs = runs.stream().map(row -> {
             RunSummary run = new RunSummary();
             initSummary(row, run);
-            String tags = (String) row[10];
-            run.tags = tags == null || tags.isEmpty() ? Util.EMPTY_ARRAY : Util.toJsonNode(tags);
             return run;
          }).collect(Collectors.toList());
          return summary;
@@ -783,9 +692,8 @@ public class RunServiceImpl implements RunService {
             .append("), dataset_agg AS (")
             .append("    SELECT runid, jsonb_agg(id ORDER BY id)::::text as datasets FROM dataset WHERE testid = ?1 GROUP BY runid")
             .append(") SELECT run.id, run.start, run.stop, run.access, run.owner, schema_agg.schemas::::text AS schemas, ")
-            .append("run.trashed, run.description, run_tags.tags::::text, COALESCE(dataset_agg.datasets, '[]') FROM run ")
+            .append("run.trashed, run.description, COALESCE(dataset_agg.datasets, '[]') FROM run ")
             .append("LEFT JOIN schema_agg ON schema_agg.runid = run.id ")
-            .append("LEFT JOIN run_tags ON run_tags.runid = run.id ")
             .append("LEFT JOIN dataset_agg ON dataset_agg.runid = run.id ")
             .append("WHERE run.testid = ?1 ");
       if (!trashed) {
@@ -813,8 +721,7 @@ public class RunServiceImpl implements RunService {
          run.schema = Util.toJsonNode((String) row[5]);
          run.trashed = (boolean) row[6];
          run.description = (String) row[7];
-         run.tags = Util.toJsonNode((String) row[8]);
-         run.datasets = (ArrayNode) Util.toJsonNode((String) row[9]);
+         run.datasets = (ArrayNode) Util.toJsonNode((String) row[8]);
          runs.add(run);
       }
       TestRunsSummary summary = new TestRunsSummary();

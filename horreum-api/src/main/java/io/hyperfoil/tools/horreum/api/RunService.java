@@ -173,7 +173,6 @@ public interface RunService {
       public String testname;
       public boolean trashed;
       public String description;
-      public JsonNode tags;
       public JsonNode schema; // id -> uri mapping
       public ArrayNode datasets;
    }

@@ -152,7 +152,7 @@ export interface LabelInfo {
 }
 
 export interface AccessorLocation {
-    type: "TAGS" | "VARIABLE" | "VIEW" | "REPORT"
+    type: "VARIABLE" | "VIEW" | "REPORT"
     testId: number
     testName: string
 }

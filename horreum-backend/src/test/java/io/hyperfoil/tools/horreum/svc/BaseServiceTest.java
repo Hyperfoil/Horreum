@@ -154,6 +154,11 @@ public class BaseServiceTest {
             .header(HttpHeaders.CONTENT_TYPE, "application/json");
    }
 
+   protected RequestSpecification jsonUploaderRequest() {
+      return RestAssured.given().auth().oauth2(UPLOADER_TOKEN)
+            .header(HttpHeaders.CONTENT_TYPE, "application/json");
+   }
+
    protected String getTestName(TestInfo info) {
       return info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
    }
