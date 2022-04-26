@@ -188,7 +188,13 @@ public class AlertingServiceImpl implements AlertingService {
       DataSet dataset = DataSet.findById(event.datasetId);
       if (dataset == null) {
          // The run is not committed yet?
-         vertx.setTimer(1000, timerId -> onLabelsUpdated(event));
+         vertx.setTimer(1000, timerId -> vertx.executeBlocking(promise -> {
+            try {
+               onLabelsUpdated(event);
+            } finally {
+               promise.complete();
+            }
+         }));
          return;
       }
       try {

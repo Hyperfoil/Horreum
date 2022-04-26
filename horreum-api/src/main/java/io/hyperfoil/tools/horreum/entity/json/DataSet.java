@@ -76,4 +76,18 @@ public class DataSet extends OwnedEntityBase {
          this.datasetId = datasetId;
       }
    }
+
+   public DataSet() {}
+
+   public DataSet(Instant st, Instant stp, String desc, Integer testId, JsonNode json, Run r, int ord, String ownr, Access acc) {
+      this.start = st;
+      stop = stp;
+      description = desc;
+      testid = testId;
+      data = json;
+      run = r;
+      ordinal = ord;
+      owner = ownr;
+      access = acc;
+   }
 }
