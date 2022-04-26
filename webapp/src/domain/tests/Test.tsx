@@ -132,11 +132,24 @@ export default function Test() {
                                 onReset={resetFunc(variablesFuncsRef)}
                                 isModified={() => modified}
                             >
-                                <ChangeDetectionForm
-                                    test={test}
-                                    onModified={setModified}
-                                    funcsRef={variablesFuncsRef}
-                                />
+                                {/*
+                                We have a problem with TestSelect used deeper down in this component:
+                                whenever the CopyVarsModal is opened the test fetches most recent list of tests,
+                                causing state change and reload here, too.
+                                The solution is to mount the component only after the test is loaded and not
+                                react to changes of the test object (only to the id).
+                                */}
+                                {test && test.id > 0 ? (
+                                    <ChangeDetectionForm
+                                        test={test}
+                                        onModified={setModified}
+                                        funcsRef={variablesFuncsRef}
+                                    />
+                                ) : (
+                                    <Bullseye>
+                                        <Spinner />
+                                    </Bullseye>
+                                )}
                             </SavedTab>
                             <SavedTab
                                 title="Missing data notifications"

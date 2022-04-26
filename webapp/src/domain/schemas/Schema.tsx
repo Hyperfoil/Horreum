@@ -22,7 +22,7 @@ import jsonpath from "jsonpath"
 import * as actions from "./actions"
 import * as selectors from "./selectors"
 import { defaultTeamSelector, teamsSelector, teamToName, useTester } from "../../auth"
-import { dispatchError, constraintValidationFormatter, dispatchInfo } from "../../alerts"
+import { dispatchInfo } from "../../alerts"
 import { noop } from "../../utils"
 
 import { toString } from "../../components/Editor"

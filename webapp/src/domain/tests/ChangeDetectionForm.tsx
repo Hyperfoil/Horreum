@@ -37,6 +37,9 @@ import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
 import RecalculateModal from "../alerting/RecalculateModal"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
+
+import { dispatchError } from "../../alerts"
+
 import DatasetLogModal from "./DatasetLogModal"
 import { subscriptions as subscriptionsSelector } from "./selectors"
 import { updateFingerprint } from "./actions"
@@ -63,15 +66,16 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm }: TestSelectModalProps) => 
         setGroup(undefined)
         onClose()
     }
+    const dispatch = useDispatch()
     return (
         <Modal
-            className="foobar"
             variant="small"
             title="Copy variables from..."
             isOpen={isOpen}
             onClose={reset}
             actions={[
                 <Button
+                    key="copy"
                     isDisabled={!test || working}
                     onClick={() => {
                         setWorking(true)
@@ -80,7 +84,7 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm }: TestSelectModalProps) => 
                 >
                     Copy
                 </Button>,
-                <Button isDisabled={working} variant="secondary" onClick={reset}>
+                <Button key="cancel" isDisabled={working} variant="secondary" onClick={reset}>
                     Cancel
                 </Button>,
             ]}
@@ -93,7 +97,10 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm }: TestSelectModalProps) => 
                         onSelect={t => {
                             setTest(t)
                             setGroups([])
-                            api.fetchVariables(t.id).then(response => setGroups(groupNames(response)))
+                            api.fetchVariables(t.id).then(
+                                response => setGroups(groupNames(response)),
+                                error => dispatchError(dispatch, error, "FETCH_VARIABLES", "Failed to fetch variables")
+                            )
                         }}
                         placeholderText="Select..."
                     />
@@ -182,7 +189,7 @@ const RenameGroupModal = (props: RenameGroupModalProps) => {
 }
 
 type ChangeDetectionFormProps = {
-    test: Test | undefined
+    test: Test
     funcsRef: TabFunctionsRef
     onModified(modified: boolean): void
 }
@@ -235,8 +242,8 @@ function groupNames(vars: Variable[]) {
 }
 
 export default function ChangeDetectionForm({ test, onModified, funcsRef }: ChangeDetectionFormProps) {
-    const [labels, setLabels] = useState<string[]>([])
-    const [filter, setFilter] = useState<string>()
+    const [labels, setLabels] = useState<string[]>(test.fingerprintLabels || [])
+    const [filter, setFilter] = useState(() => test.fingerprintFilter)
     const [variables, setVariables] = useState<Variable[]>([])
     const [groups, setGroups] = useState<string[]>([])
     const [selectedVariable, setSelectedVariable] = useState<Variable>()
@@ -248,11 +255,6 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
     // dummy variable to cause reloading of variables
     const [reload, setReload] = useState(0)
     useEffect(() => {
-        if (!test?.id) {
-            return
-        }
-        setLabels(test.fingerprintLabels || [])
-        setFilter(test.fingerprintFilter || undefined)
         api.fetchVariables(test.id).then(
             response => {
                 response.forEach((v: Variable) => {
@@ -267,7 +269,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
             },
             error => dispatch(alertAction("VARIABLE_FETCH", "Failed to fetch change detection variables", error))
         )
-    }, [test, reload, dispatch])
+    }, [test.id, reload, dispatch])
     useEffect(() => {
         api.models().then(setChangeDetectionModels, error =>
             dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
@@ -279,11 +281,20 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
     const isTester = useTester(test?.owner || "__no_owner__")
     funcsRef.current = {
         save: () => {
+            let error = undefined
             variables.forEach(v => {
+                v.name = v.name.trim()
                 if (v.calculation === "") {
                     v.calculation = null
                 }
+                if (variables.some(v2 => v2.name.trim() === v.name && v2.id != v.id)) {
+                    error = "There are two variables called " + v.name + ": please use unique names."
+                }
             })
+            if (error) {
+                dispatch(alertAction("VARIABLE_CHECK", error, undefined))
+                return Promise.reject(error)
+            }
             if (!test) {
                 return Promise.reject("No test!")
             }
@@ -291,10 +302,15 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 dispatch(updateFingerprint(test?.id || -1, labels, filter || null)),
                 api
                     .updateVariables(test.id, variables)
-                    .catch(error => {
-                        dispatch(alertAction("VARIABLE_UPDATE", "Failed to update change detection variables", error))
-                        return Promise.reject()
-                    })
+                    .catch(error =>
+                        dispatchError(
+                            dispatch,
+                            error,
+                            "VARIABLE_UPDATE",
+                            "Failed to update change detection variables",
+                            error
+                        )
+                    )
                     .then(_ => {
                         return new Promise(resolve => {
                             // we have to pass this using function, otherwise it would call the resolve function
@@ -360,7 +376,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
         return grouped
     }, [variables])
 
-    if (!variables || !test) {
+    if (!variables) {
         return (
             <Bullseye>
                 <Spinner />
@@ -515,10 +531,12 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                             const copied = group ? response.filter((v: Variable) => v.group === group) : response
                             setVariables([
                                 ...variables,
-                                ...copied.map((v: Variable) => ({
+                                ...copied.map((v: Variable, i: number) => ({
                                     ...v,
-                                    id: -1,
+                                    id: Math.min(...variables.map(v2 => v2.id), 0) - i - 1,
                                     testid: test.id,
+                                    group: v.group || undefined,
+                                    changeDetection: v.changeDetection.map(cd => ({ ...cd, id: undefined })),
                                 })),
                             ])
                         },

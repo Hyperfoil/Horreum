@@ -36,7 +36,6 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
     const footerRef = useRef<HTMLDivElement>()
     function ensureFooterInView() {
         setTimeout(() => {
-            console.log(footerRef)
             if (footerRef.current) {
                 const { bottom } = footerRef.current.getBoundingClientRect()
                 if (bottom > (window.innerHeight || document.documentElement.clientHeight)) {

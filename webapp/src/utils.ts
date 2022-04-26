@@ -127,3 +127,19 @@ export type PaginationInfo = {
 export function paginationParams(pagination: PaginationInfo) {
     return `page=${pagination.page}&limit=${pagination.perPage}&sort=${pagination.sort}&direction=${pagination.direction}`
 }
+
+export function deepEquals(x: any, y: any) {
+    if (x === y) {
+        return true
+    } else if (typeof x == "object" && x != null && typeof y == "object" && y != null) {
+        if (Object.keys(x).length != Object.keys(y).length) return false
+
+        for (const prop in x) {
+            if (Object.prototype.hasOwnProperty.call(y, prop)) {
+                if (!deepEquals(x[prop], y[prop])) return false
+            } else return false
+        }
+
+        return true
+    } else return false
+}

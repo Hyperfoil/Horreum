@@ -52,7 +52,6 @@ export default function FoldersTree(props: FoldersTreeProps) {
             }
         }
     }
-    console.log(activeItem)
     if (root.children?.length === 0) {
         return null
     }
