@@ -452,7 +452,7 @@ export default function TableReportConfigPage() {
                                                     </ListItem>
                                                     <ListItem>
                                                         Scale function takes the label value (in case of single label)
-                                                        or object keyed by accessors (in case of multiple accessors) as
+                                                        or object keyed by label names (in case of multiple labels) as
                                                         its only parameter and produces a value that would be used for
                                                         the label.
                                                     </ListItem>

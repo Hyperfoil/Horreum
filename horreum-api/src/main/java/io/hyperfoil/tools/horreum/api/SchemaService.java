@@ -20,7 +20,6 @@ import com.networknt.schema.ValidationMessage;
 
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
-import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.quarkus.panache.common.Sort;
 
@@ -69,20 +68,6 @@ public interface SchemaService {
    @Path("validate")
    @Consumes(MediaType.APPLICATION_JSON)
    Collection<ValidationMessage> validate(JsonNode data, @QueryParam("schema") String schemaUri);
-
-   @GET
-   @Path("extractor")
-   @Produces(MediaType.APPLICATION_JSON)
-   List<SchemaExtractor> listExtractors(@QueryParam("schemaId") Integer schema, @QueryParam("accessor") String accessor);
-
-   @POST
-   @Path("extractor")
-   @Consumes(MediaType.APPLICATION_JSON)
-   SchemaExtractor addOrUpdateExtractor(ExtractorUpdate update);
-
-   @GET
-   @Path("extractor/{id}/deprecated")
-   List<SchemaExtractor> findDeprecated(@PathParam("id") Integer extractorId);
 
    @DELETE
    @Path("{id}")

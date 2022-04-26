@@ -3224,6 +3224,8 @@
             DROP FUNCTION rt_before_delete_extractor_func;
         </sql>
     </changeSet>
+
+    <changeSet id="73" author="rvansa">
+        <dropTable tableName="schemaextractor"/>
+    </changeSet>
 </databaseChangeLog>
-
-

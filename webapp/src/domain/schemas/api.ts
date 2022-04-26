@@ -10,10 +10,6 @@ const endPoints = {
     dropToken: (id: number) => `${base}/${id}/dropToken`,
     updateAccess: (id: number, owner: string, access: Access) =>
         `${base}/${id}/updateAccess?owner=${owner}&access=${accessName(access)}`,
-    extractor: () => `${base}/extractor`,
-    extractorForSchema: (schemaId: number) => `${base}/extractor?schemaId=${schemaId}`,
-    extractorForAccessor: (accessor: string) => `${base}/extractor?accessor=${accessor}`,
-    deprecated: (id: number) => `${base}/extractor/${id}/deprecated`,
     findUsages: (label: string) => `${base}/findUsages?label=${encodeURIComponent(label)}`,
     testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${encodeURIComponent(jsonpath)}`,
     transformers: (schemaId: number, transformerId?: number) =>
@@ -48,28 +44,12 @@ export const updateAccess = (id: number, owner: string, access: Access) => {
     //                   'post', { 'content-type' : 'application/x-www-form-urlencoded'}, 'response')
 }
 
-export const listExtractors = (schemaId?: number, accessor?: string) => {
-    let path = endPoints.extractor()
-    if (schemaId !== undefined) {
-        path = endPoints.extractorForSchema(schemaId)
-    } else if (accessor !== undefined) {
-        path = endPoints.extractorForAccessor(accessor)
-    }
-    return fetchApi(path, null, "get")
-}
-
-export const addOrUpdateExtractor = (extractor: Extractor) => fetchApi(endPoints.extractor(), extractor, "post")
-
 export const deleteSchema = (id: number) => fetchApi(endPoints.crud(id), null, "delete")
 
 export const testJsonPath = (jsonpath: string) => fetchApi(endPoints.testJsonPath(jsonpath), null, "get")
 
 export function findUsages(label: string) {
     return fetchApi(endPoints.findUsages(label), null, "get")
-}
-
-export function findDeprecated(extractorId: number) {
-    return fetchApi(endPoints.deprecated(extractorId), null, "get")
 }
 
 export function listTransformers(schemaId: number) {
@@ -111,25 +91,10 @@ export type ValidationResult = {
     sqlState: string
 }
 
-export interface Extractor {
-    id: number
-    accessor: string
-    schema?: string
-    schemaId?: number
-    jsonpath?: string
-    // upload-only fields
-    deleted?: boolean
-    changed?: boolean
-    // temprary fields
-    oldName?: string
-    validationTimer?: any
-    validationResult?: ValidationResult
-}
-
 export interface Label {
     id: number
     name: string
-    extractors: NamedJsonPath[]
+    extractors: Extractor[]
     function?: string
     owner: string
     access: Access
@@ -184,7 +149,7 @@ export interface LabelInRule extends LabelLocation {
     ruleName: string
 }
 
-export type NamedJsonPath = {
+export type Extractor = {
     name: string
     jsonpath: string
     array: boolean
@@ -200,7 +165,7 @@ export type Transformer = {
     name: string
     description: string
     targetSchemaUri?: string
-    extractors: NamedJsonPath[]
+    extractors: Extractor[]
     function?: string
     owner: string
     access: Access

@@ -35,7 +35,6 @@ import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
-import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
@@ -81,7 +80,6 @@ public class BaseServiceTest {
             DataSet.deleteAll();
             Run.deleteAll();
 
-            SchemaExtractor.deleteAll();
             em.createNativeQuery("DELETE FROM label_extractors").executeUpdate();
             Label.deleteAll();
             Schema.deleteAll();
@@ -166,7 +164,6 @@ public class BaseServiceTest {
    protected Schema createExampleSchema(TestInfo info) {
       String name = info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
       Schema schema = createSchema(name, uriForTest(info, "1.0"));
-      addExtractor(schema, "value", ".value");
       addLabel(schema, "value", null, new NamedJsonPath("value", "$.value", false));
       return schema;
    }
@@ -188,15 +185,6 @@ public class BaseServiceTest {
 
    protected String uriForTest(TestInfo info, String suffix) {
       return "urn:" + info.getTestClass().map(Class::getName).orElse("<unknown>") + ":" + info.getDisplayName() + ":" + suffix;
-   }
-
-   protected void addExtractor(Schema schema, String accessor, String jsonpath) {
-      SchemaService.ExtractorUpdate extractor = new SchemaService.ExtractorUpdate();
-      extractor.id = -1;
-      extractor.accessor = accessor;
-      extractor.jsonpath = jsonpath;
-      extractor.schema = schema.uri;
-      jsonRequest().body(extractor).post("/api/schema/extractor").then().statusCode(200);
    }
 
    protected int addLabel(Schema schema, String name, String function, NamedJsonPath... extractors) {

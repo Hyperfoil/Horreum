@@ -41,7 +41,7 @@ function checkComponent(v: ViewComponent) {
     if (!v.labels || v.labels.length === 0) {
         return "View component requires at least one label"
     } else if (v.labels.length > 1 && !v.render) {
-        return "View component defines multiple accessors but does not define any function to combine these."
+        return "View component uses multiple labels but does not define any function to combine these."
     }
 }
 

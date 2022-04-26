@@ -21,7 +21,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * Variable emits a single value from the {@link io.hyperfoil.tools.horreum.entity.json.Run#data}
- * using the names of {@link io.hyperfoil.tools.horreum.entity.json.SchemaExtractor} for accessors and
+ * using {@link io.hyperfoil.tools.horreum.entity.json.Label labels} and
  * JavaScript code in {@link #calculation} (calculation is not necessary if there's a single accessor).
  *
  */

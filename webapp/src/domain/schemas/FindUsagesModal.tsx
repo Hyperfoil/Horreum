@@ -131,7 +131,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
     return (
         <Modal
             variant="medium"
-            title={`Usages of accessor ${label}`}
+            title={`Usages of label ${label}`}
             isOpen={!!label}
             onClose={() => {
                 setUsages(undefined)
@@ -179,7 +179,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                     usages.length > 0 ? (
                         <>
                             <Title headingLevel="h3">These are the places where {label} is used:</Title>
-                            <DataList aria-label="Accessor usages" isCompact>
+                            <DataList aria-label="Label usages" isCompact>
                                 {usages.map((u, i) => (
                                     <DataListItem key={i}>
                                         <DataListItemRow>

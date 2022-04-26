@@ -87,7 +87,7 @@ export function updateView(testId: number, view: View) {
                 dispatch(
                     alertAction(
                         "VIEW_UPDATE",
-                        "Column " + c.headerName + " is invalid; must set at least one accessor.",
+                        "Column " + c.headerName + " is invalid; must set at least one label.",
                         undefined
                     )
                 )

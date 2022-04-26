@@ -21,7 +21,6 @@ import jsonpath from "jsonpath"
 
 import * as actions from "./actions"
 import * as selectors from "./selectors"
-import * as api from "./api"
 import { defaultTeamSelector, teamsSelector, teamToName, useTester } from "../../auth"
 import { dispatchError, constraintValidationFormatter, dispatchInfo } from "../../alerts"
 import { noop } from "../../utils"
@@ -32,9 +31,7 @@ import AccessIcon from "../../components/AccessIcon"
 import AccessChoice from "../../components/AccessChoice"
 import SavedTabs, { SavedTab, TabFunctions, modifiedFunc, resetFunc, saveFunc } from "../../components/SavedTabs"
 import TeamSelect from "../../components/TeamSelect"
-import { Extractor } from "./api"
 import { Schema as SchemaDef, SchemaDispatch } from "./reducers"
-import Extractors from "./Extractors"
 import Transformers from "./Transformers"
 import Labels from "./Labels"
 
@@ -223,63 +220,21 @@ export default function Schema() {
 
     const isTester = useTester(schema?.owner)
 
-    const [extractors, setExtractors] = useState<Extractor[]>([])
-    const [originalExtractors, setOriginalExtractors] = useState<Extractor[]>([])
-    useEffect(() => {
-        if (schemaId >= 0) {
-            dispatch(actions.listExtractors(schemaId))
-                .then(result => {
-                    const exs = result.sort((a: Extractor, b: Extractor) => a.accessor.localeCompare(b.accessor))
-                    setExtractors(exs)
-                    setOriginalExtractors(JSON.parse(JSON.stringify(exs))) // deep copy
-                })
-                .catch(noop)
-        }
-    }, [schemaId, teams])
-    const uri = currentSchema?.uri
-    useEffect(() => {
-        if (uri) {
-            setExtractors(extractors.map(e => ({ ...e, schema: uri })))
-        }
-    }, [uri])
-
     const save = () => {
+        if (!modified) {
+            return Promise.resolve(schemaId)
+        }
         const newSchema = {
             id: schemaId,
             ...currentSchema,
             schema: editorSchema ? JSON.parse(editorSchema) : null,
             token: null,
         } as SchemaDef
-        // do not update the main schema when just changing extractors
-        return (modified ? dispatch(actions.add(newSchema)).catch(noop) : Promise.resolve(schemaId))
+        return dispatch(actions.add(newSchema))
             .then(id => {
                 setSchemaId(id)
             })
-            .then(() =>
-                Promise.all(
-                    extractors
-                        .filter(e => e.changed || (e.deleted && e.accessor !== ""))
-                        .map(e =>
-                            api.addOrUpdateExtractor(e).then(updated => {
-                                if (e.id < 0 || e.oldName) {
-                                    e.id = updated.id
-                                }
-                                e.oldName = undefined
-                                e.changed = false
-                            })
-                        )
-                )
-            )
-            .then(() => setOriginalExtractors(JSON.parse(JSON.stringify(extractors))))
-            .catch(e =>
-                dispatchError(
-                    dispatch,
-                    e,
-                    "SAVE_SCHEMA",
-                    "Failed to save the schema",
-                    constraintValidationFormatter("the saved schema")
-                )
-            )
+            .catch(noop)
     }
     const transformersFuncsRef = useRef<TabFunctions>()
     const labelsFuncsRef = useRef<TabFunctions>()
@@ -368,49 +323,6 @@ export default function Schema() {
                                         >
                                             Add validation schema
                                         </Button>
-                                    </>
-                                )}
-                            </SavedTab>
-                            <SavedTab
-                                title="Schema extractors"
-                                fragment="extractors"
-                                onSave={save}
-                                onReset={() => {
-                                    setCurrentSchema(schema)
-                                    setExtractors(originalExtractors)
-                                }}
-                                isModified={() => modified}
-                            >
-                                <Extractors
-                                    uri={currentSchema?.uri || ""}
-                                    extractors={extractors}
-                                    setExtractors={extractors => {
-                                        setExtractors(extractors)
-                                        setModified(true)
-                                    }}
-                                    isTester={isTester}
-                                />
-                                {isTester && (
-                                    <>
-                                        <Button
-                                            isDisabled={!currentSchema?.uri}
-                                            onClick={() => {
-                                                if (currentSchema?.uri) {
-                                                    setExtractors([
-                                                        ...extractors,
-                                                        { id: -1, accessor: "", schema: currentSchema?.uri },
-                                                    ])
-                                                }
-                                            }}
-                                        >
-                                            Add extractor
-                                        </Button>
-                                        {!currentSchema?.uri && (
-                                            <>
-                                                <br />
-                                                <span style={{ color: "red" }}>Please define an URI first.</span>
-                                            </>
-                                        )}
                                     </>
                                 )}
                             </SavedTab>

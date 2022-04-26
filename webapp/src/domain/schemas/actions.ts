@@ -29,7 +29,7 @@ export function add(payload: Schema) {
                 dispatch(loaded({ ...payload, id }))
                 return id
             },
-            error => dispatchError(dispatch, error, "ADD_SCHEMA", "Failed to add schema")
+            error => dispatchError(dispatch, error, "SAVE_SCHEMA", "Failed to save schema")
         )
 }
 
@@ -89,18 +89,4 @@ export function deleteSchema(id: number) {
             },
             error => dispatchError(dispatch, error, "SCHEMA_DELETE", "Failed to delete schema " + id)
         )
-}
-
-export function listExtractors(schemaId?: number, accessor?: string) {
-    return (dispatch: ThunkDispatch<any, unknown, DeleteAction>) =>
-        api
-            .listExtractors(schemaId, accessor)
-            .catch(error =>
-                dispatchError(
-                    dispatch,
-                    error,
-                    "LIST_EXTRACTORS",
-                    "Failed to list extractors" + (schemaId !== undefined ? "for schema " + schemaId : "")
-                )
-            )
 }

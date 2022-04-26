@@ -16,15 +16,99 @@ import {
 import { HelpIcon } from "@patternfly/react-icons"
 import { v4 as uuidv4 } from "uuid"
 
-import { checkAccessorName, INVALID_ACCESSOR_HELPER } from "../../components/Accessors"
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
-import { testJsonPath, NamedJsonPath } from "./api"
+import { testJsonPath, Extractor } from "./api"
 import TryJsonPathModal, { JsonPathTarget } from "./TryJsonPathModal"
+
+const RESERVED = [
+    "abstract",
+    "arguments",
+    "await",
+    "boolean",
+    "break",
+    "byte",
+    "case",
+    "catch",
+    "char",
+    "class",
+    "const",
+    "continue",
+    "debugger",
+    "default",
+    "delete",
+    "do",
+    "double",
+    "else",
+    "enum",
+    "eval",
+    "export",
+    "extends",
+    "false",
+    "final",
+    "finally",
+    "float",
+    "for",
+    "function",
+    "goto",
+    "if",
+    "implements",
+    "import",
+    "in",
+    "instanceof",
+    "int",
+    "interface",
+    "let",
+    "long",
+    "native",
+    "new",
+    "null",
+    "package",
+    "private",
+    "protected",
+    "public",
+    "return",
+    "short",
+    "static",
+    "super",
+    "switch",
+    "synchronized",
+    "this",
+    "throw",
+    "throws",
+    "transient",
+    "true",
+    "try",
+    "typeof",
+    "var",
+    "void",
+    "volatile",
+    "while",
+    "with",
+    "yield",
+]
+
+function checkName(name: string | undefined) {
+    if (!name) {
+        return true
+    } else if (!name.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
+        return false
+    } else if (RESERVED.includes(name)) {
+        return false
+    } else {
+        return true
+    }
+}
+
+const INVALID_NAME_HELPER = (
+    <span style={{ color: "var(--pf-global--warning-color--200)" }}>
+        Name should match <code>[a-zA-Z_][a-zA-Z_0-9]*</code>. It shouldn't be a Javascript-reserved word either.
+    </span>
+)
 
 type JsonExtractorProps = {
     schemaUri: string
     jsonpathTarget: JsonPathTarget
-    extractor: NamedJsonPath
+    extractor: Extractor
     readOnly: boolean
     onUpdate(): void
     onDelete(): void
@@ -33,7 +117,7 @@ type JsonExtractorProps = {
 export default function JsonExtractor(props: JsonExtractorProps) {
     const [modalOpen, setModalOpen] = useState(false)
     const extractor = props.extractor
-    const nameValid = checkAccessorName(extractor.name)
+    const nameValid = checkName(extractor.name)
     const variantName = useMemo(() => uuidv4(), [])
     return (
         <>
@@ -46,7 +130,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                         helperText={
                             nameValid
                                 ? "The name of the extractor will be used as a field in the object passed to the calculation function."
-                                : INVALID_ACCESSOR_HELPER
+                                : INVALID_NAME_HELPER
                         }
                     >
                         <TextInput
