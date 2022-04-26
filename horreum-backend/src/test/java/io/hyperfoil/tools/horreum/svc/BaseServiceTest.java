@@ -18,7 +18,9 @@ import javax.persistence.EntityManager;
 import javax.transaction.TransactionManager;
 import javax.ws.rs.core.HttpHeaders;
 
+import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -51,6 +53,8 @@ public class BaseServiceTest {
    static final String TESTER_TOKEN = BaseServiceTest.getAccessToken("alice", TESTER_ROLES);
    static final String UPLOADER_TOKEN = BaseServiceTest.getAccessToken("alice", UPLOADER_ROLES);
 
+   protected final Logger log = Logger.getLogger(getClass());
+
    @Inject
    EntityManager em;
    @Inject
@@ -60,9 +64,16 @@ public class BaseServiceTest {
    @Inject
    EventBus eventBus;
 
+   @BeforeEach
+   public void beforeMethod(TestInfo info) {
+      log.infof("Starting test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"), info.getDisplayName());
+   }
+
    @AfterEach
-   public void afterMethod() {
+   public void afterMethod(TestInfo info) {
+      log.infof("Completed test %s.%s", info.getTestClass().map(Class::getName).orElse("<unknown>"), info.getDisplayName());
       dropAllViewsAndTests();
+      log.infof("Finished cleanup of test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"), info.getDisplayName());
    }
 
    protected void dropAllViewsAndTests() {
