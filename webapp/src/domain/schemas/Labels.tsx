@@ -7,6 +7,7 @@ import { Access, defaultTeamSelector, useTester } from "../../auth"
 import { noop } from "../../utils"
 import { dispatchError } from "../../alerts"
 import { TabFunctionsRef } from "../../components/SavedTabs"
+import FindUsagesModal from "./FindUsagesModal"
 
 import OwnerAccess from "../../components/OwnerAccess"
 import FunctionFormItem from "../../components/FunctionFormItem"
@@ -39,6 +40,7 @@ export default function Labels(props: LabelsProps) {
     const [selected, setSelected] = useState<Label>()
     const [resetCounter, setResetCounter] = useState(0)
     const [deleted, setDeleted] = useState<Label[]>([])
+    const [findUsagesLabel, setFindUsagesLabel] = useState<string>()
     const isTester = useTester()
     const isTesterForLabel = useTester(selected?.owner || "__no_owner__")
     const defaultTeam = useSelector(defaultTeamSelector)
@@ -104,101 +106,110 @@ export default function Labels(props: LabelsProps) {
             .finally(() => setLoading(false))
     }, [props.schemaId, resetCounter])
     return (
-        <SplitForm
-            itemType="Label"
-            addItemText="Add label..."
-            noItemTitle="No labels"
-            noItemText="This schema does not have any labels defined."
-            canAddItem={isTester}
-            items={labels}
-            onChange={setLabels}
-            selected={selected}
-            onSelected={label => setSelected(label)}
-            newItem={id => ({
-                id,
-                name: "",
-                extractors: [],
-                owner: defaultTeam || "",
-                access: 0 as Access,
-                schemaId: props.schemaId,
-                modified: true,
-            })}
-            loading={loading}
-            canDelete={isTesterForLabel}
-            onDelete={label => {
-                if (label.id >= 0) {
-                    setDeleted([...deleted, label])
-                }
-            }}
-        >
-            {selected && (
-                <>
-                    <FormGroup label="Name" isRequired={true} fieldId="name" helperTextInvalid="Name must not be empty">
-                        <TextInput
-                            value={selected?.name}
-                            isRequired
-                            type="text"
-                            id="name"
-                            aria-describedby="name-helper"
-                            name="name"
-                            isReadOnly={!isTesterForLabel}
-                            validated={selected?.name.trim() ? "default" : "error"}
-                            onChange={name => update({ name })}
-                        />
-                    </FormGroup>
-                    <FormGroup label="Ownership&amp;Access" fieldId="owner">
-                        <OwnerAccess
-                            owner={selected.owner}
-                            access={selected.access}
-                            onUpdate={(owner, access) => update({ owner, access })}
+        <>
+            <FindUsagesModal label={findUsagesLabel} onClose={() => setFindUsagesLabel(undefined)} />
+            <SplitForm
+                itemType="Label"
+                addItemText="Add label..."
+                noItemTitle="No labels"
+                noItemText="This schema does not have any labels defined."
+                canAddItem={isTester}
+                items={labels}
+                onChange={setLabels}
+                selected={selected}
+                onSelected={label => setSelected(label)}
+                newItem={id => ({
+                    id,
+                    name: "",
+                    extractors: [],
+                    owner: defaultTeam || "",
+                    access: 0 as Access,
+                    schemaId: props.schemaId,
+                    modified: true,
+                })}
+                loading={loading}
+                canDelete={isTesterForLabel}
+                onDelete={label => {
+                    if (label.id >= 0) {
+                        setDeleted([...deleted, label])
+                    }
+                }}
+                actions={<Button onClick={() => setFindUsagesLabel(selected?.name)}>Find usages</Button>}
+            >
+                {selected && (
+                    <>
+                        <FormGroup
+                            label="Name"
+                            isRequired={true}
+                            fieldId="name"
+                            helperTextInvalid="Name must not be empty"
+                        >
+                            <TextInput
+                                value={selected?.name}
+                                isRequired
+                                type="text"
+                                id="name"
+                                aria-describedby="name-helper"
+                                name="name"
+                                isReadOnly={!isTesterForLabel}
+                                validated={selected?.name.trim() ? "default" : "error"}
+                                onChange={name => update({ name })}
+                            />
+                        </FormGroup>
+                        <FormGroup label="Ownership&amp;Access" fieldId="owner">
+                            <OwnerAccess
+                                owner={selected.owner}
+                                access={selected.access}
+                                onUpdate={(owner, access) => update({ owner, access })}
+                                readOnly={!isTesterForLabel}
+                            />
+                        </FormGroup>
+                        <FormSection title="Extractors">
+                            {selected.extractors.map((extractor, i) => {
+                                return (
+                                    <JsonExtractor
+                                        schemaUri={props.schemaUri}
+                                        key={i}
+                                        jsonpathTarget="dataset"
+                                        extractor={extractor}
+                                        readOnly={!isTesterForLabel}
+                                        onUpdate={() => update({ extractors: [...selected.extractors] })}
+                                        onDelete={() =>
+                                            update({
+                                                extractors: selected.extractors.filter(e => e !== extractor),
+                                            })
+                                        }
+                                    />
+                                )
+                            })}
+                            {isTesterForLabel && (
+                                <div>
+                                    <Button
+                                        variant="primary"
+                                        onClick={() => {
+                                            update({
+                                                extractors: [
+                                                    ...selected.extractors,
+                                                    { name: "", jsonpath: "", array: false },
+                                                ],
+                                            })
+                                        }}
+                                    >
+                                        Add extractor
+                                    </Button>
+                                </div>
+                            )}
+                        </FormSection>
+                        <FunctionFormItem
+                            label="Combination function"
+                            helpText={LABEL_FUNCTION_HELP}
+                            value={selected.function}
+                            onChange={value => update({ function: value })}
                             readOnly={!isTesterForLabel}
                         />
-                    </FormGroup>
-                    <FormSection title="Extractors">
-                        {selected.extractors.map((extractor, i) => {
-                            return (
-                                <JsonExtractor
-                                    schemaUri={props.schemaUri}
-                                    key={i}
-                                    jsonpathTarget="dataset"
-                                    extractor={extractor}
-                                    readOnly={!isTesterForLabel}
-                                    onUpdate={() => update({ extractors: [...selected.extractors] })}
-                                    onDelete={() =>
-                                        update({
-                                            extractors: selected.extractors.filter(e => e !== extractor),
-                                        })
-                                    }
-                                />
-                            )
-                        })}
-                        {isTesterForLabel && (
-                            <div>
-                                <Button
-                                    variant="primary"
-                                    onClick={() => {
-                                        update({
-                                            extractors: [
-                                                ...selected.extractors,
-                                                { name: "", jsonpath: "", array: false },
-                                            ],
-                                        })
-                                    }}
-                                >
-                                    Add extractor
-                                </Button>
-                            </div>
-                        )}
-                    </FormSection>
-                    <FunctionFormItem
-                        label="Combination function"
-                        helpText={LABEL_FUNCTION_HELP}
-                        value={selected.function}
-                        onChange={value => update({ function: value })}
-                        readOnly={!isTesterForLabel}
-                    />
-                </>
-            )}
-        </SplitForm>
+                    </>
+                )}
+            </SplitForm>
+        </>
     )
 }

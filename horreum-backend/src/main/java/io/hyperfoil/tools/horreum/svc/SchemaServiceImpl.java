@@ -7,12 +7,10 @@ import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.SchemaExtractor;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
-import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
-import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.identity.SecurityIdentity;
 
 import javax.annotation.security.PermitAll;
@@ -38,17 +36,23 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.hibernate.Hibernate;
+import org.hibernate.query.NativeQuery;
+import org.hibernate.type.IntegerType;
+import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.networknt.schema.JsonMetaSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.ValidationMessage;
 import com.networknt.schema.uri.URIFactory;
 import com.networknt.schema.uri.URIFetcher;
 import com.networknt.schema.uri.URLFactory;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 @WithRoles
 public class SchemaServiceImpl implements SchemaService {
@@ -388,8 +392,63 @@ public class SchemaServiceImpl implements SchemaService {
 
    @PermitAll
    @Override
-   public List<AccessorLocation> findUsages(String accessor) {
-      return Collections.emptyList();
+   public List<LabelLocation> findUsages(String label) {
+      if (label == null) {
+         throw ServiceException.badRequest("No label");
+      }
+      label = label.trim();
+      List<LabelLocation> result = new ArrayList<>();
+      for (Object row: em.createNativeQuery("SELECT id, name FROM test WHERE json_contains(fingerprint_labels, ?1)")
+            .setParameter(1, label).getResultList()) {
+         Object[] columns = (Object[]) row;
+         result.add(new LabelInFingerprint((int) columns[0], (String) columns[1]));
+      }
+      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, mdr.id, mdr.name FROM missingdata_rule mdr JOIN test ON mdr.test_id = test.id WHERE json_contains(mdr.labels, ?1)")
+            .setParameter(1, label).getResultList()) {
+         Object[] columns = (Object[]) row;
+         result.add(new LabelInRule((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3]));
+      }
+      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, v.id as varid, v.name as varname FROM variable v " +
+            "JOIN test ON test.id = v.testid WHERE json_contains(v.labels, ?1)")
+            .setParameter(1, label).getResultList()) {
+         Object[] columns = (Object[]) row;
+         result.add(new LabelInVariable((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3]));
+      }
+      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, view.id as viewid, view.name as viewname, vc.id as componentid, vc.headername FROM viewcomponent vc " +
+            "JOIN view ON vc.view_id = view.id JOIN test ON test.id = view.test_id WHERE json_contains(vc.labels, ?1)")
+            .setParameter(1, label).getResultList()) {
+         Object[] columns = (Object[]) row;
+         result.add(new LabelInView((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], (int) columns[4], (String) columns[5]));
+      }
+      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, trc.id as configid, trc.title, " +
+            "filterlabels, categorylabels, serieslabels, scalelabels FROM tablereportconfig trc JOIN test ON test.id = trc.testid " +
+            "WHERE json_contains(filterlabels, ?1) OR json_contains(categorylabels, ?1) OR json_contains(serieslabels, ?1) OR json_contains(scalelabels, ?1);")
+            .setParameter(1, label).unwrap(NativeQuery.class)
+            .addScalar("testid", IntegerType.INSTANCE)
+            .addScalar("testname", TextType.INSTANCE)
+            .addScalar("configid", IntegerType.INSTANCE)
+            .addScalar("title", TextType.INSTANCE)
+            .addScalar("filterlabels", JsonNodeBinaryType.INSTANCE)
+            .addScalar("categorylabels", JsonNodeBinaryType.INSTANCE)
+            .addScalar("serieslabels", JsonNodeBinaryType.INSTANCE)
+            .addScalar("scalelabels", JsonNodeBinaryType.INSTANCE)
+            .getResultList()) {
+         Object[] columns = (Object[]) row;
+         StringBuilder where = new StringBuilder();
+         addPart(where, (ArrayNode) columns[4], label, "filter");
+         addPart(where, (ArrayNode) columns[5], label, "series");
+         addPart(where, (ArrayNode) columns[6], label, "category");
+         addPart(where, (ArrayNode) columns[7], label, "label");
+         result.add(new LabelInReport((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], where.toString(), null));
+      }
+      for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, trc.id as configid, trc.title, rc.name FROM reportcomponent rc " +
+            "JOIN tablereportconfig trc ON rc.reportconfig_id = trc.id JOIN test ON test.id = trc.testid " +
+            "WHERE json_contains(rc.labels, ?1)")
+            .setParameter(1, label).getResultList()) {
+         Object[] columns = (Object[]) row;
+         result.add(new LabelInReport((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], "component", (String) columns[4]));
+      }
+      return result;
    }
 
    @PermitAll
@@ -537,9 +596,16 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @WithRoles
    @Override
-   public Collection<LabelInfo> allLabels() {
-      @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(
-            "SELECT label.name, label.metrics, label.filtering, schema_id, schema.name as schemaName, schema.uri FROM label JOIN schema ON schema.id = label.schema_id").getResultList();
+   public Collection<LabelInfo> allLabels(String filterName) {
+      String sqlQuery = "SELECT label.name, label.metrics, label.filtering, schema_id, schema.name as schemaName, schema.uri FROM label JOIN schema ON schema.id = label.schema_id";
+      if (filterName != null && !filterName.isBlank()) {
+         sqlQuery += " WHERE label.name = ?1";
+      }
+      Query query = em.createNativeQuery(sqlQuery);
+      if (filterName != null) {
+         query.setParameter(1, filterName.trim());
+      }
+      @SuppressWarnings("unchecked") List<Object[]> rows = query.getResultList();
       Map<String, LabelInfo> labels = new TreeMap<>();
       for (Object[] row : rows) {
          String name = (String) row[0];
@@ -571,5 +637,14 @@ public class SchemaServiceImpl implements SchemaService {
          transformers.add(info);
       }
       return transformers;
+   }
+
+   private void addPart(StringBuilder where, ArrayNode column, String label, String type) {
+      if (StreamSupport.stream(column.spliterator(), false).map(JsonNode::asText).anyMatch(label::equals)) {
+         if (where.length() > 0) {
+            where.append(", ");
+         }
+         where.append(type);
+      }
    }
 }

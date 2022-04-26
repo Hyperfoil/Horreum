@@ -6,7 +6,6 @@ import * as api from "./api"
 import { Extractor } from "./api"
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
 import { checkAccessorName, INVALID_ACCESSOR_HELPER } from "../../components/Accessors"
-import FindUsagesModal from "./FindUsagesModal"
 import TryJsonPathModal from "./TryJsonPathModal"
 
 type RenameModalProps = {
@@ -60,7 +59,6 @@ type ExtractorsProps = {
 
 export default function Extractors(props: ExtractorsProps) {
     const [testExtractor, setTestExtractor] = useState<Extractor>()
-    const [findUsages, setFindUsages] = useState<Extractor>()
     const [rename, setRename] = useState<Extractor>()
     return (
         <>
@@ -139,15 +137,6 @@ export default function Extractors(props: ExtractorsProps) {
                                         </Button>
                                     </FlexItem>
                                     <FlexItem>
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() => setFindUsages(e)}
-                                            isDisabled={e.id < 0}
-                                        >
-                                            Find usages
-                                        </Button>
-                                    </FlexItem>
-                                    <FlexItem>
                                         <Button variant="secondary" onClick={() => setRename(e)} isDisabled={e.id < 0}>
                                             Rename
                                         </Button>
@@ -184,11 +173,6 @@ export default function Extractors(props: ExtractorsProps) {
                     props.setExtractors([...props.extractors])
                 }}
                 onClose={() => setTestExtractor(undefined)}
-            />
-            <FindUsagesModal
-                extractorId={findUsages?.id || -1}
-                accessor={findUsages?.accessor}
-                onClose={() => setFindUsages(undefined)}
             />
             <RenameModal
                 extractor={rename}

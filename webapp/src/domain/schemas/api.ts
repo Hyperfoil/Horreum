@@ -14,14 +14,14 @@ const endPoints = {
     extractorForSchema: (schemaId: number) => `${base}/extractor?schemaId=${schemaId}`,
     extractorForAccessor: (accessor: string) => `${base}/extractor?accessor=${accessor}`,
     deprecated: (id: number) => `${base}/extractor/${id}/deprecated`,
-    findUsages: (accessor: string) => `${base}/findUsages?accessor=${encodeURIComponent(accessor)}`,
+    findUsages: (label: string) => `${base}/findUsages?label=${encodeURIComponent(label)}`,
     testJsonPath: (jsonpath: string) => `/api/sql/testjsonpath?query=${encodeURIComponent(jsonpath)}`,
     transformers: (schemaId: number, transformerId?: number) =>
         `${base}/${schemaId}/transformers${transformerId !== undefined ? "/" + transformerId : ""}`,
     allTransformers: () => `${base}/allTransformers`,
     labels: (schemaId: number, labelId?: number) =>
         `${base}/${schemaId}/labels${labelId !== undefined ? "/" + labelId : ""}`,
-    allLabels: () => `${base}/allLabels`,
+    allLabels: (name?: string) => `${base}/allLabels${name ? "?name=" + encodeURIComponent(name) : ""}`,
 }
 export const all = () => {
     return fetchApi(endPoints.base(), null, "get")
@@ -64,8 +64,8 @@ export const deleteSchema = (id: number) => fetchApi(endPoints.crud(id), null, "
 
 export const testJsonPath = (jsonpath: string) => fetchApi(endPoints.testJsonPath(jsonpath), null, "get")
 
-export function findUsages(accessor: string) {
-    return fetchApi(endPoints.findUsages(accessor), null, "get")
+export function findUsages(label: string) {
+    return fetchApi(endPoints.findUsages(label), null, "get")
 }
 
 export function findDeprecated(extractorId: number) {
@@ -100,8 +100,8 @@ export function deleteLabel(label: Label) {
     return fetchApi(endPoints.labels(label.schemaId, label.id), null, "delete")
 }
 
-export function listAllLabels(): Promise<LabelInfo[]> {
-    return fetchApi(endPoints.allLabels(), null, "get")
+export function listAllLabels(name?: string): Promise<LabelInfo[]> {
+    return fetchApi(endPoints.allLabels(name), null, "get")
 }
 
 export type ValidationResult = {
@@ -151,32 +151,37 @@ export interface LabelInfo {
     schemas: SchemaDescriptor[]
 }
 
-export interface AccessorLocation {
-    type: "VARIABLE" | "VIEW" | "REPORT"
+export interface LabelLocation {
+    type: "VARIABLE" | "VIEW" | "REPORT" | "FINGERPRINT" | "MISSINGDATA_RULE"
     testId: number
     testName: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface AccessorInTags extends AccessorLocation {}
-
-export interface AccessorInVariable extends AccessorLocation {
+export interface LabelInVariable extends LabelLocation {
     variableId: number
     variableName: string
 }
 
-export interface AccessorInView extends AccessorLocation {
+export interface LabelInView extends LabelLocation {
     viewId: number
     viewName: string
     componentId: number
     header: string
 }
 
-export interface AccessorInReport extends AccessorLocation {
+export interface LabelInReport extends LabelLocation {
     configId: number
     title: string
     where: "component" | "filter" | "category" | "series" | "label"
     name: string | null
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface LabelInFingerprint extends LabelLocation {}
+
+export interface LabelInRule extends LabelLocation {
+    ruleId: number
+    ruleName: string
 }
 
 export type NamedJsonPath = {

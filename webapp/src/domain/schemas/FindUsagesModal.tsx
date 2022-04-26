@@ -3,7 +3,6 @@ import { useDispatch } from "react-redux"
 
 import {
     Bullseye,
-    Button,
     DataList,
     DataListItem,
     DataListItemRow,
@@ -18,29 +17,24 @@ import {
 import { NavLink } from "react-router-dom"
 
 import {
-    AccessorLocation,
-    AccessorInVariable,
-    AccessorInView,
-    AccessorInReport,
-    Extractor,
-    findDeprecated,
     findUsages,
+    LabelLocation,
+    LabelInVariable,
+    LabelInView,
+    LabelInReport,
+    LabelInFingerprint,
+    LabelInRule,
+    listAllLabels,
+    SchemaDescriptor,
 } from "./api"
-import { listExtractors } from "./actions"
 import { SchemaDispatch } from "./reducers"
-import { alertAction } from "../../alerts"
+import { dispatchError } from "../../alerts"
 import ButtonLink from "../../components/ButtonLink"
 
-type FindUsagesModalProps = {
-    accessor: string | undefined
-    extractorId: number
-    onClose(): void
-}
-
-function usageToCells(u: AccessorLocation) {
+function usageToCells(u: LabelLocation) {
     switch (u.type) {
         case "VARIABLE": {
-            const loc = u as AccessorInVariable
+            const loc = u as LabelInVariable
             return [
                 <DataListCell key={0}>
                     Variable {loc.variableName} in test {loc.testName}
@@ -51,7 +45,7 @@ function usageToCells(u: AccessorLocation) {
             ]
         }
         case "VIEW": {
-            const loc = u as AccessorInView
+            const loc = u as LabelInView
             return [
                 <DataListCell key={0}>
                     Column <b>{loc.header}</b> in {loc.viewName === "default" ? "default view" : "view " + loc.viewName}{" "}
@@ -63,7 +57,7 @@ function usageToCells(u: AccessorLocation) {
             ]
         }
         case "REPORT": {
-            const loc = u as AccessorInReport
+            const loc = u as LabelInReport
             return [
                 <DataListCell key={0}>
                     Report config <b>{loc.title}</b> in {loc.where} {loc.name ? loc.name : ""}
@@ -73,81 +67,106 @@ function usageToCells(u: AccessorLocation) {
                 </DataListCell>,
             ]
         }
+        case "FINGERPRINT": {
+            const loc = u as LabelInFingerprint
+            return [
+                <DataListCell key={0}>Fingerprint for change detection in test {loc.testName}</DataListCell>,
+                <DataListCell key={1}>
+                    <ButtonLink to={`/test/${loc.testId}#vars`}>Go to</ButtonLink>
+                </DataListCell>,
+            ]
+        }
+        case "MISSINGDATA_RULE": {
+            const loc = u as LabelInRule
+            return [
+                <DataListCell key={0}>
+                    Missing data rule {loc.ruleName} in test {loc.testName}
+                </DataListCell>,
+                <DataListCell key={1}>
+                    <ButtonLink to={`/test/${loc.testId}#missingdata+${loc.ruleId}`}>Go to</ButtonLink>
+                </DataListCell>,
+            ]
+        }
         default:
             return [<DataListCell>Unknown location? {u}</DataListCell>]
     }
 }
 
+type FindUsagesModalProps = {
+    label: string | undefined
+    onClose(): void
+}
+
 export default function FindUsagesModal(props: FindUsagesModalProps) {
     const dispatch = useDispatch<SchemaDispatch>()
-    const [accessor, setAccessor] = useState(props.accessor)
-    useEffect(() => setAccessor(props.accessor), [props.accessor])
-    const [allExtractors, setAllExtractors] = useState<Extractor[]>()
-    const [usages, setUsages] = useState<AccessorLocation[]>()
-    const [deprecated, setDeprecated] = useState<Extractor[]>([])
+    const label = props.label
+    const [schemas, setSchemas] = useState<SchemaDescriptor[]>()
+    const [usages, setUsages] = useState<LabelLocation[]>()
     useEffect(() => {
-        if (accessor) {
-            findUsages(accessor)
+        if (label) {
+            findUsages(label)
                 .then(setUsages)
                 .catch(e => {
-                    dispatch(alertAction("FETCH USAGES", "Cannot retrieve accessor usages.", e))
+                    dispatchError(dispatch, e, "FETCH USAGES", "Cannot retrieve label usages.")
                     props.onClose()
                 })
         }
-    }, [accessor])
+    }, [label])
     useEffect(() => {
-        if (!accessor) {
+        if (!label) {
             return
         }
-        dispatch(listExtractors(undefined, accessor))
-            .then(setAllExtractors)
-            .catch(() => props.onClose())
-    }, [accessor])
-    useEffect(() => {
-        if (props.extractorId >= 0) {
-            findDeprecated(props.extractorId)
-                .then(setDeprecated)
-                .catch(e => {
-                    dispatch(alertAction("FETCH DEPRECATED", "Cannot retrieve deprecated accessors", e))
-                })
-        }
-    }, [props.extractorId, dispatch])
+        listAllLabels(label).then(
+            ls => {
+                if (ls.length > 0 && ls[0].name === label) {
+                    setSchemas(ls[0].schemas)
+                }
+            },
+            e => {
+                dispatchError(dispatch, e, "FETCH LABELS", "Cannot retrieve schemas for label " + label)
+                props.onClose()
+            }
+        )
+    }, [label])
     return (
         <Modal
             variant="medium"
-            title={`Usages of accessor ${accessor}`}
-            isOpen={!!accessor}
+            title={`Usages of accessor ${label}`}
+            isOpen={!!label}
             onClose={() => {
                 setUsages(undefined)
                 props.onClose()
             }}
         >
             <div style={{ minHeight: "60vh", maxHeight: "60vh", overflowY: "auto" }}>
-                <Title headingLevel="h3">Accessor is defined in these schemas:</Title>
-                {allExtractors ? (
-                    <List isPlain isBordered>
-                        {allExtractors
-                            .filter(ex => ex.accessor === accessor)
-                            .map((ex, i) => (
-                                <ListItem key={i}>
-                                    {ex.schemaId ? (
-                                        <NavLink to={`/schema/${ex.schemaId}`}>{ex.schema}</NavLink>
-                                    ) : (
-                                        ex.schema
-                                    )}
-                                    {"\u00A0\u279E\u00A0"}
-                                    <span
-                                        style={{
-                                            border: "1px solid #888",
-                                            borderRadius: "4px",
-                                            padding: "4px",
-                                            backgroundColor: "#f0f0f0",
-                                        }}
-                                    >
-                                        {ex.jsonpath}
-                                    </span>
-                                </ListItem>
-                            ))}
+                <Title headingLevel="h3">
+                    Label <code>{label}</code> is defined in these schemas:
+                </Title>
+                {schemas ? (
+                    <List>
+                        {schemas.map((s, i) => (
+                            <ListItem key={i}>
+                                {/* TODO: looks like this is not navigating anywhere but IDK why */}
+                                {s.id ? (
+                                    <NavLink to={`/schema/${s.id}#labels`} onClick={() => props.onClose()}>
+                                        {s.name}
+                                    </NavLink>
+                                ) : (
+                                    s.name
+                                )}
+                                {"\u00A0"}
+                                <span
+                                    style={{
+                                        border: "1px solid #888",
+                                        borderRadius: "4px",
+                                        padding: "4px",
+                                        backgroundColor: "#f0f0f0",
+                                    }}
+                                >
+                                    {s.uri}
+                                </span>
+                            </ListItem>
+                        ))}
                     </List>
                 ) : (
                     <Bullseye>
@@ -159,7 +178,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                 {usages ? (
                     usages.length > 0 ? (
                         <>
-                            <Title headingLevel="h3">These are the places where {accessor} is used:</Title>
+                            <Title headingLevel="h3">These are the places where {label} is used:</Title>
                             <DataList aria-label="Accessor usages" isCompact>
                                 {usages.map((u, i) => (
                                     <DataListItem key={i}>
@@ -171,39 +190,12 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                             </DataList>
                         </>
                     ) : (
-                        <Title headingLevel="h3">Accessor is not used anywhere.</Title>
+                        <Title headingLevel="h3">Label is not used anywhere.</Title>
                     )
                 ) : (
                     <Bullseye>
                         <Spinner size="xl" />
                     </Bullseye>
-                )}
-                {deprecated.length > 0 && (
-                    <>
-                        <br />
-                        <br />
-                        <Title headingLevel="h3">Deprecated accessors: </Title>
-                        {accessor !== props.accessor && (
-                            <>
-                                (deprecated by
-                                <Button variant="link" onClick={() => setAccessor(props.accessor)}>
-                                    {props.accessor}
-                                </Button>
-                                )
-                            </>
-                        )}
-                        <List isPlain isBordered>
-                            {deprecated
-                                .filter(d => d.accessor !== accessor)
-                                .map(d => (
-                                    <ListItem key={d.id}>
-                                        <Button variant="link" onClick={() => setAccessor(d.accessor)}>
-                                            {d.accessor}
-                                        </Button>
-                                    </ListItem>
-                                ))}
-                        </List>
-                    </>
                 )}
             </div>
         </Modal>

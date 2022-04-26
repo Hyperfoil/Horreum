@@ -91,7 +91,7 @@ public interface SchemaService {
    @GET
    @Path("findUsages")
    @Produces(MediaType.APPLICATION_JSON)
-   List<AccessorLocation> findUsages(@QueryParam("accessor") String accessor);
+   List<LabelLocation> findUsages(@QueryParam("label") String label);
 
    @GET
    @Path("{schemaId}/transformers")
@@ -124,7 +124,7 @@ public interface SchemaService {
    @GET
    @Path("allLabels")
    @Produces(MediaType.APPLICATION_JSON)
-   Collection<LabelInfo> allLabels();
+   Collection<LabelInfo> allLabels(@QueryParam("name") String name);
 
    @GET
    @Path("allTransformers")
@@ -139,42 +139,53 @@ public interface SchemaService {
       public boolean deleted;
    }
 
-   abstract class AccessorLocation {
+   abstract class LabelLocation {
       public final String type;
       public int testId;
       public String testName;
 
-      public AccessorLocation(String type, int testId, String testName) {
+      public LabelLocation(String type, int testId, String testName) {
          this.type = type;
          this.testId = testId;
          this.testName = testName;
       }
    }
 
-   class AccessorInTags extends AccessorLocation {
-      public AccessorInTags(int testId, String testName) {
-         super("TAGS", testId, testName);
+   class LabelInFingerprint extends LabelLocation {
+      public LabelInFingerprint(int testId, String testName) {
+         super("FINGERPRINT", testId, testName);
       }
    }
 
-   class AccessorInVariable extends AccessorLocation {
+   class LabelInRule extends LabelLocation {
+      public int ruleId;
+      public String ruleName;
+
+      public LabelInRule(int testId, String testName, int ruleId, String ruleName) {
+         super("MISSINGDATA_RULE", testId, testName);
+         this.ruleId = ruleId;
+         this.ruleName = ruleName;
+      }
+   }
+
+   class LabelInVariable extends LabelLocation {
       public int variableId;
       public String variableName;
 
-      public AccessorInVariable(int testId, String testName, int variableId, String variableName) {
+      public LabelInVariable(int testId, String testName, int variableId, String variableName) {
          super("VARIABLE", testId, testName);
          this.variableId = variableId;
          this.variableName = variableName;
       }
    }
 
-   class AccessorInView extends AccessorLocation {
+   class LabelInView extends LabelLocation {
       public int viewId;
       public String viewName;
       public int componentId;
       public String header;
 
-      public AccessorInView(int testId, String testName, int viewId, String viewName, int componentId, String header) {
+      public LabelInView(int testId, String testName, int viewId, String viewName, int componentId, String header) {
          super("VIEW", testId, testName);
          this.viewId = viewId;
          this.componentId = componentId;
@@ -183,13 +194,13 @@ public interface SchemaService {
       }
    }
 
-   class AccessorInReport extends AccessorLocation {
+   class LabelInReport extends LabelLocation {
       public int configId;
       public String title;
       public String where; // component, filter, category, series, label
       public String name; // only set for component
 
-      public AccessorInReport(int testId, String testName, int configId, String title, String where, String name) {
+      public LabelInReport(int testId, String testName, int configId, String title, String where, String name) {
          super("REPORT", testId, testName);
          this.configId = configId;
          this.title = title;

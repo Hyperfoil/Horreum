@@ -5,6 +5,8 @@ import {
     Button,
     EmptyState,
     EmptyStateBody,
+    Flex,
+    FlexItem,
     Form,
     SimpleList,
     SimpleListItem,
@@ -37,6 +39,7 @@ type SplitFormProps<I extends Item> = {
     selected?: I
     onSelected(item?: I): void
     loading: boolean
+    actions?: ReactNode[] | ReactNode
 }
 
 export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
@@ -65,6 +68,11 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
             </Bullseye>
         )
     }
+    const actions = !props.actions
+        ? []
+        : Array.isArray(props.actions)
+        ? (props.actions as ReactNode[])
+        : [props.actions as ReactNode]
     return (
         <Split hasGutter>
             <SplitItem style={{ minWidth: "20vw", maxWidth: "20vw", overflow: "clip" }}>
@@ -89,28 +97,33 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
                 )}
             </SplitItem>
             <SplitItem isFilled>
-                {props.canDelete && (
-                    <div style={{ textAlign: "right", marginBottom: "16px" }}>
-                        <Button variant="danger" onClick={() => setDeleteOpen(true)}>
-                            Delete
-                        </Button>
-                        <ConfirmDeleteModal
-                            isOpen={deleteOpen}
-                            onClose={() => setDeleteOpen(false)}
-                            onDelete={() => {
-                                const item = props.items.find(i => i.id === props.selected?.id)
-                                if (item !== undefined) {
-                                    const newItems = props.items.filter(t => t.id !== props.selected?.id)
-                                    props.onDelete(item)
-                                    props.onChange(newItems)
-                                    props.onSelected(newItems.length > 0 ? newItems[0] : undefined)
-                                }
-                                return Promise.resolve()
-                            }}
-                            description={`${props.itemType} ${(props.selected || props.items[0]).name}`}
-                        />
-                    </div>
-                )}
+                <Flex style={{ marginBottom: "16px" }} justifyContent={{ default: "justifyContentFlexEnd" }}>
+                    {actions.map((action, i) => (
+                        <FlexItem key={i}>{action}</FlexItem>
+                    ))}
+                    {props.canDelete && (
+                        <FlexItem>
+                            <Button variant="danger" onClick={() => setDeleteOpen(true)}>
+                                Delete
+                            </Button>
+                            <ConfirmDeleteModal
+                                isOpen={deleteOpen}
+                                onClose={() => setDeleteOpen(false)}
+                                onDelete={() => {
+                                    const item = props.items.find(i => i.id === props.selected?.id)
+                                    if (item !== undefined) {
+                                        const newItems = props.items.filter(t => t.id !== props.selected?.id)
+                                        props.onDelete(item)
+                                        props.onChange(newItems)
+                                        props.onSelected(newItems.length > 0 ? newItems[0] : undefined)
+                                    }
+                                    return Promise.resolve()
+                                }}
+                                description={`${props.itemType} ${(props.selected || props.items[0]).name}`}
+                            />
+                        </FlexItem>
+                    )}
+                </Flex>
                 <Form isHorizontal>{props.children}</Form>
             </SplitItem>
         </Split>

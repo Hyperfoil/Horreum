@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useDispatch } from "react-redux"
+import { useHistory } from "react-router"
 
 import { Bullseye, FormGroup, Popover, Spinner, TextInput } from "@patternfly/react-core"
 
@@ -39,6 +40,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
     const [resetCounter, setResetCounter] = useState(0)
 
     const dispatch = useDispatch()
+    const history = useHistory()
     useEffect(() => {
         if (!props.test) {
             return
@@ -48,7 +50,18 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                 if (rules) {
                     rules.forEach(r => (r.maxStalenessStr = millisToDuration(r.maxStaleness)))
                     setRules(rules.sort(compareRules))
-                    if (rules.length > 0) setSelectedRule(rules[0])
+                    if (rules.length > 0) {
+                        const fragmentParts = history.location.hash.split("+")
+                        let index = 0
+                        if (fragmentParts.length === 2 && fragmentParts[0] === "#missingdata") {
+                            const ruleId = parseInt(fragmentParts[1])
+                            index = Math.max(
+                                rules.findIndex(r => r.id === ruleId),
+                                0
+                            )
+                        }
+                        setSelectedRule(rules[index])
+                    }
                 } else {
                     dispatchError(dispatch, "", "FETCH_MISSING_DATA_RULES", "Unexpected value returned from server")
                 }
