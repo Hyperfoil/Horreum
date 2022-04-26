@@ -3228,4 +3228,39 @@
     <changeSet id="73" author="rvansa">
         <dropTable tableName="schemaextractor"/>
     </changeSet>
+
+    <changeSet id="74" author="jwhiting">
+        <createTable tableName="transformationlog">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="level" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="timestamp" type="timestamp without time zone">
+                <constraints nullable="false" />
+            </column>
+            <column name="testid" type="integer" />
+            <column name="runid" type="integer" />
+            <column name="message" type="text">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <sql>
+            GRANT select, insert, delete ON TABLE transformationlog TO "${quarkus.datasource.username}";
+            ALTER TABLE transformationlog ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY cl_all ON transformationlog FOR ALL
+                USING ((exists(
+                    SELECT 1 FROM test
+                    WHERE test.id = testid AND has_role(test.owner)
+                ) AND exists(
+                    SELECT 1 FROM run
+                    WHERE run.id = runid AND has_role(run.owner)
+                ))
+                OR has_role('horreum.system'));
+            DROP POLICY dataset_insert ON dataset;
+            CREATE POLICY dataset_insert ON dataset FOR INSERT
+                WITH CHECK (has_role2(owner, 'uploader') OR has_upload_token(testid) OR has_role('horreum.system'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>

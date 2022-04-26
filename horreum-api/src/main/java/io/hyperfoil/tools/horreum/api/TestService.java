@@ -101,6 +101,7 @@ public interface TestService {
    List<JsonNode> listFingerprints(@PathParam("id") int testId);
 
    @POST
+   @Consumes(MediaType.APPLICATION_JSON)
    @Path("{id}/transformers")
    void updateTransformers(@PathParam("id") Integer testId, List<Integer> transformerIds);
 

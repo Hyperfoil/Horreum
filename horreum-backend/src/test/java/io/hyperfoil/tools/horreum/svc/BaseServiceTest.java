@@ -1,6 +1,8 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +27,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
@@ -35,10 +38,12 @@ import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
@@ -72,6 +77,11 @@ public class BaseServiceTest {
             ViewComponent.deleteAll();
             View.deleteAll();
             em.flush();
+            PanacheQuery<Transformer> qTransformers = Transformer.findAll();
+            qTransformers.list().forEach(t -> { t.extractors.clear(); em.persist(t);});
+            PanacheQuery<Test> q = Test.findAll();
+            q.list().forEach(t -> {t.transformers.clear();em.persist(t);});
+            Transformer.deleteAll();
             Test.deleteAll();
             Change.deleteAll();
             DataPoint.deleteAll();
@@ -97,6 +107,7 @@ public class BaseServiceTest {
       defaultView.components = new ArrayList<>();
       defaultView.components.add(new ViewComponent("Some column", null, "foo"));
       test.defaultView = defaultView;
+      test.transformers = new ArrayList<>();
       return test;
    }
 
@@ -112,7 +123,9 @@ public class BaseServiceTest {
 
    protected int uploadRun(Object runJson, String test) {
       long timestamp = System.currentTimeMillis();
-      return uploadRun(timestamp, timestamp, runJson, test);
+      int runId = uploadRun(timestamp, timestamp, runJson, test);
+      assertNotEquals(-1, runId);
+      return runId;
    }
 
    protected int uploadRun(long timestamp, Object runJson, String test) {
@@ -166,6 +179,24 @@ public class BaseServiceTest {
       addLabel(schema, "value", null, new NamedJsonPath("value", "$.value", false));
       return schema;
    }
+
+   protected Schema createExampleSchema(String name, String className, String displayName, boolean label) {
+      Schema schema = new Schema();
+      schema.owner = TESTER_ROLES[0];
+      schema.access = Access.PUBLIC;
+      schema.name = name + "." + displayName;
+      schema.uri = "urn:" + className + ":" + displayName + ":1.0";
+      Integer id = jsonRequest().body(schema).post("/api/schema").then()
+         .statusCode(200).extract().as(Integer.class);
+      schema.id = id;
+
+      if (label) {
+         addLabel(schema, "value", null, new NamedJsonPath("value", "$.value", false));
+      }
+      assertNotNull(schema.id);
+      return schema;
+   }
+
 
    protected Schema createSchema(String name, String uri) {
       Schema schema = new Schema();

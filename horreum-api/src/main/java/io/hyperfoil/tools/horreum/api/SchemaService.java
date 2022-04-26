@@ -36,6 +36,7 @@ public interface SchemaService {
 
    @POST
    @Consumes(MediaType.APPLICATION_JSON)
+   @Produces(MediaType.APPLICATION_JSON)
    Integer add(Schema schema);
 
    @GET
@@ -86,6 +87,7 @@ public interface SchemaService {
    @POST
    @Path("{schemaId}/transformers")
    @Consumes(MediaType.APPLICATION_JSON)
+   @Produces(MediaType.APPLICATION_JSON)
    Integer addOrUpdateTransformer(@PathParam("schemaId") Integer schemaId, Transformer transformer);
 
    @DELETE

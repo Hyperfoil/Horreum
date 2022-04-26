@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
+import static java.lang.Integer.compare;
+
 import java.util.Collection;
 
 import javax.persistence.CollectionTable;
@@ -16,10 +18,8 @@ import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-
 @Entity
-public class Transformer extends OwnedEntityBase {
+public class Transformer extends OwnedEntityBase implements Comparable<Transformer> {
    @Id
    @GeneratedValue
    public Integer id;
@@ -56,5 +56,18 @@ public class Transformer extends OwnedEntityBase {
    @JsonProperty("schemaName")
    public String getSchemaName() {
       return schema.name;
+   }
+
+   @Override
+   public int compareTo(Transformer o) {
+      if (o != null) {
+         if (o == this) {
+            return 0;
+         } else {
+            return compare(this.id, o.id);
+         }
+      } else {
+         throw new IllegalArgumentException("cannot compare a null reference");
+      }
    }
 }
