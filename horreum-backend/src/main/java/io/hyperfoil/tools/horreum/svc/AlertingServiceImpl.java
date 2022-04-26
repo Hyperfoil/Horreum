@@ -1020,7 +1020,9 @@ public class AlertingServiceImpl implements AlertingService {
          boolean sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
                .setParameter(1, expectation.testId).getSingleResult();
          if (sendNotifications) {
-            notificationService.notifyExpectedRun(expectation.testId, expectation.expectedBefore.toEpochMilli(), expectation.expectedBy, expectation.backlink);
+            // We will perform this only if this transaction succeeds, to allow no-op retries
+            Util.doAfterCommit(tm, () -> notificationService.notifyExpectedRun(expectation.testId,
+                  expectation.expectedBefore.toEpochMilli(), expectation.expectedBy, expectation.backlink));
          } else {
             log.debugf("Skipping expected run notification on test %d since it is disabled.", expectation.testId);
          }

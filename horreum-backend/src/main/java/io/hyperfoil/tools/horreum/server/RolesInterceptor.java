@@ -58,10 +58,22 @@ public class RolesInterceptor {
          }
       }
       String previousRoles = roleManager.setRoles(em, roles);
+      Throwable t1 = null;
       try {
          return ctx.proceed();
+      } catch (Throwable t) {
+         t1 = t;
+         throw t;
       } finally {
-         roleManager.setRoles(em, previousRoles);
+         try {
+            roleManager.setRoles(em, previousRoles);
+         } catch (Throwable t2) {
+            if (t1 != null) {
+               t2.addSuppressed(t1);
+            }
+            //noinspection ThrowFromFinallyBlock
+            throw t2;
+         }
       }
    }
 }

@@ -17,6 +17,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import javax.persistence.OptimisticLockException;
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
 import javax.transaction.NotSupportedException;
@@ -164,19 +165,35 @@ public class Util {
       }
    }
 
+   private static void doAfterCommitThrowing(TransactionManager tm, Runnable runnable) throws SystemException, RollbackException {
+      tm.getTransaction().registerSynchronization(new Synchronization() {
+         @Override
+         public void beforeCompletion() {
+         }
+
+         @Override
+         public void afterCompletion(int status) {
+            if (status == Status.STATUS_COMMITTED || status == Status.STATUS_COMMITTING) {
+               runnable.run();
+            }
+         }
+      });
+   }
+
+   static void doAfterCommit(TransactionManager tm, Runnable runnable) {
+      try {
+         doAfterCommitThrowing(tm, runnable);
+      } catch (RollbackException e) {
+         log.debugf("Not performing %s as the transaction has been marked rollback-only", runnable);
+      } catch (SystemException e) {
+         log.errorf(e, "Failed to perform %s after transaction completion", runnable);
+      }
+   }
+
    static void publishLater(TransactionManager tm, final EventBus eventBus, String eventName, Object event) {
       try {
-         tm.getTransaction().registerSynchronization(new Synchronization() {
-            @Override
-            public void beforeCompletion() {
-            }
-
-            @Override
-            public void afterCompletion(int status) {
-               if (status == Status.STATUS_COMMITTED || status == Status.STATUS_COMMITTING) {
-                  eventBus.publish(eventName, event);
-               }
-            }
+         doAfterCommitThrowing(tm, () -> {
+            eventBus.publish(eventName, event);
          });
       } catch (RollbackException e) {
          log.debug("Not publishing the event as the transaction has been marked rollback-only");
@@ -406,7 +423,7 @@ public class Util {
 
    private static void yieldAndLog(int retry, Throwable t) {
       Thread.yield(); // give the other transaction a bit more chance to complete
-      log.infof("Retrying failed transaction, status attempt %d/%d", retry, Util.MAX_TRANSACTION_RETRIES);
+      log.infof("Retrying failed transaction, attempt %d/%d", retry, Util.MAX_TRANSACTION_RETRIES);
       log.trace("This is the exception that caused retry: ", t);
    }
 
@@ -454,6 +471,8 @@ public class Util {
             if (ex.getMessage().contains(RETRY_HINT)) {
                return true;
             }
+         } else if (ex instanceof OptimisticLockException) {
+            return true;
          }
          for (Throwable suppressed: ex.getSuppressed()) {
             if (lookupRetryHint(suppressed, causes)) {

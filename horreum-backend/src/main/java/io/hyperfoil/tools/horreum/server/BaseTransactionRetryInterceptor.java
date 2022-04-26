@@ -39,7 +39,7 @@ public class BaseTransactionRetryInterceptor {
                throw t;
             }
             Thread.yield(); // give the other transaction a bit more chance to complete
-            log.infof("Retrying failed transaction, status attempt %d/%d", i, Util.MAX_TRANSACTION_RETRIES);
+            log.infof("Retrying failed transaction, attempt %d/%d", i, Util.MAX_TRANSACTION_RETRIES);
             log.trace("This is the exception that caused retry: ", t);
          }
       }
