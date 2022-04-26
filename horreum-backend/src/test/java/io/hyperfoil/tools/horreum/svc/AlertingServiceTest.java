@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.ParameterizedType;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -61,7 +59,6 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.RestAssured;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
@@ -131,6 +128,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       runJson.put("$schema", schema.uri);
 
       BlockingQueue<MissingValuesEvent> missingQueue = eventConsumerQueue(MissingValuesEvent.class, DataSet.EVENT_MISSING_VALUES);
+      missingQueue.drainTo(new ArrayList<>());
       int runId = uploadRun(runJson, test.name);
 
       assertNotNull(missingQueue.poll(10, TimeUnit.SECONDS));
@@ -142,12 +140,11 @@ public class AlertingServiceTest extends BaseServiceTest {
 
          deleteTest(test);
 
-         // ordered execution should postpone us until all events are processed
-         vertx.executeBlocking(Promise::complete, true).toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS);
-
-         em.clear();
-         logs = DatasetLog.find("dataset.run.id", runId).list();
-         assertEquals(0, logs.size());
+         eventually(() -> {
+            em.clear();
+            List<DatasetLog> currentLogs = DatasetLog.find("dataset.run.id", runId).list();
+            assertEquals(0, currentLogs.size());
+         });
       }
    }
 

@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -267,5 +268,24 @@ public class BaseServiceTest {
       jsonRequest().post("/api/run/" + runId + "/trash").then().statusCode(204);
       assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
       return trashedQueue;
+   }
+
+   @SuppressWarnings("BusyWait")
+   protected void eventually(Runnable test) {
+      long now = System.currentTimeMillis();
+      do {
+         try {
+            test.run();
+            return;
+         } catch (AssertionError e) {
+            log.debug("Ignoring failed assertion", e);
+         }
+         try {
+            Thread.sleep(10);
+         } catch (InterruptedException e) {
+            fail("Interrupted while polling condition.");
+         }
+      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(10));
+      test.run();
    }
 }
