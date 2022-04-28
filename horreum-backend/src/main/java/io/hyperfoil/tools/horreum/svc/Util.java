@@ -5,6 +5,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -17,7 +18,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 import javax.persistence.OptimisticLockException;
+import javax.persistence.Query;
 import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
 import javax.transaction.NotSupportedException;
@@ -555,6 +559,22 @@ public class Util {
          }
       }, onException, onOutput);
       return res != null && res;
+   }
+
+   static Object runQuery(EntityManager em, String query, Object... params) {
+      Query q = em.createNativeQuery(query);
+      for (int i = 0; i < params.length; ++i) {
+         q.setParameter(i + 1, params[i]);
+      }
+      try {
+         return q.getSingleResult();
+      } catch (NoResultException e) {
+         log.errorf("No results in %s with params: %s", query, Arrays.asList(params));
+         throw ServiceException.notFound("No result");
+      } catch (Throwable t) {
+         log.errorf(t, "Query error in %s with params: %s", query, Arrays.asList(params));
+         throw t;
+      }
    }
 
    interface ExecutionExceptionConsumer<T> {

@@ -3,8 +3,10 @@ package io.hyperfoil.tools.horreum.svc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -13,11 +15,13 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.transaction.Status;
 import javax.transaction.TransactionManager;
 import javax.ws.rs.core.HttpHeaders;
 
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -67,6 +72,12 @@ public class BaseServiceTest {
    RoleManager roleManager;
    @Inject
    EventBus eventBus;
+
+   protected static void assertEmptyArray(JsonNode node) {
+      assertNotNull(node);
+      assertTrue(node.isArray());
+      assertTrue(node.isEmpty());
+   }
 
    @BeforeEach
    public void beforeMethod(TestInfo info) {
@@ -314,5 +325,53 @@ public class BaseServiceTest {
          }
       } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(10));
       test.run();
+   }
+
+   protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
+      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      try {
+         Run run = new Run();
+         tm.begin();
+         try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(UPLOADER_ROLES))) {
+            run.data = data;
+            run.testid = test.id;
+            run.start = run.stop = Instant.now();
+            run.owner = UPLOADER_ROLES[0];
+            run.persistAndFlush();
+         } finally {
+            if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
+               tm.commit();
+            } else {
+               tm.rollback();
+               fail();
+            }
+         }
+         DataSet ds = dataSetQueue.poll(10, TimeUnit.SECONDS);
+         assertNotNull(ds);
+         T value = testLogic.apply(ds);
+         tm.begin();
+         Throwable error = null;
+         try (CloseMe ignored = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+            DataSet oldDs = DataSet.findById(ds.id);
+            if (oldDs != null) {
+               oldDs.delete();
+            }
+            DataSet.delete("runid", run.id);
+            Run.findById(run.id).delete();
+         } catch (Throwable t) {
+            error = t;
+         } finally {
+            if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
+               tm.commit();
+            } else {
+               tm.rollback();
+               fail(error);
+            }
+         }
+         return value;
+      } catch (Exception e) {
+         fail(e);
+         return null;
+      }
    }
 }

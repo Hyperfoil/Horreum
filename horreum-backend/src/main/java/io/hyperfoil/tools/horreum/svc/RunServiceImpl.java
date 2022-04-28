@@ -5,13 +5,12 @@ import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_2ND_LEVEL_BY_R
 import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_TRANSFORMER_TARGETS;
 import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
 
+import io.hyperfoil.tools.horreum.api.QueryResult;
 import io.hyperfoil.tools.horreum.api.RunService;
 import io.hyperfoil.tools.horreum.api.SqlService;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLog;
-import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -21,7 +20,6 @@ import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
@@ -38,7 +36,6 @@ import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.persistence.TransactionRequiredException;
@@ -59,10 +56,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Map;
@@ -83,7 +78,6 @@ import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 @ApplicationScoped
 @Startup
-@WithRoles
 public class RunServiceImpl implements RunService {
    private static final Logger log = Logger.getLogger(RunServiceImpl.class);
 
@@ -94,38 +88,6 @@ public class RunServiceImpl implements RunService {
             "FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
-
-   private static final String LABEL_QUERY =
-         "WITH used_labels AS (" +
-            "SELECT le.label_id, label.name, ds.schema_id, count(le) > 1 AS multi FROM dataset_schemas ds " +
-            "JOIN label ON label.schema_id = ds.schema_id " +
-            "JOIN label_extractors le ON le.label_id = label.id " +
-            "WHERE ds.dataset_id = ?1 AND (?2 < 0 OR label.id = ?2) GROUP BY le.label_id, label.name, ds.schema_id" +
-         "), lvalues AS (" +
-            "SELECT le.label_id, le.name, (CASE WHEN le.isarray THEN " +
-                  "jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath::::jsonpath) " +
-               "ELSE " +
-                  "jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath::::jsonpath) " +
-               "END) AS value " +
-            "FROM dataset JOIN dataset_schemas ds ON dataset.id = ds.dataset_id " +
-            "JOIN used_labels ul ON ul.schema_id = ds.schema_id " +
-            "JOIN label_extractors le ON ul.label_id = le.label_id " +
-            "WHERE dataset.id = ?1" +
-         ") SELECT lvalues.label_id, ul.name, function, (CASE WHEN ul.multi THEN jsonb_object_agg(lvalues.name, lvalues.value) " +
-            "ELSE jsonb_agg(lvalues.value) -> 0 END) AS value FROM label " +
-            "JOIN lvalues ON lvalues.label_id = label.id " +
-            "JOIN used_labels ul ON label.id = ul.label_id " +
-            "GROUP BY lvalues.label_id, ul.name, function, ul.multi";
-   private static final String LIST_TEST_DATASETS =
-         "WITH schema_agg AS (" +
-            "SELECT dataset_id, jsonb_agg(uri) as schemas FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id " +
-            "WHERE testid = ?1 GROUP BY dataset_id" +
-         ") SELECT ds.id, ds.runid, ds.ordinal, ds.testid, test.name, ds.description, ds.start, ds.stop, ds.owner, ds.access, " +
-               "dv.value::::text as view, schema_agg.schemas::::text as schemas " +
-         "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
-         "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
-         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id " +
-         "WHERE testid = ?1";
    protected static final String FIND_RUNS_WITH_URI = "SELECT id FROM run WHERE data->>'$schema' = ?1 OR (" +
          "CASE WHEN jsonb_typeof(data) = 'object' THEN ?1 IN (SELECT values.value->>'$schema' FROM jsonb_each(data) as values) " +
          "WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema') ELSE false END)";
@@ -161,60 +123,17 @@ public class RunServiceImpl implements RunService {
    @Context HttpServletResponse response;
 
    @PostConstruct
-   public void init() {
+   void init() {
       sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
-      sqlService.registerListener("calculate_labels", this::onLabelChanged);
       sqlService.registerListener("new_or_updated_schema", this::onNewOrUpdatedSchema);
    }
 
-   private void onLabelChanged(String param) {
-      String[] parts = param.split(";");
-      if (parts.length != 2) {
-         log.errorf("Invalid parameter to onLabelChanged: %s", param);
-         return;
-      }
-      int datasetId = Integer.parseInt(parts[0]);
-      int labelId = Integer.parseInt(parts[1]);
-      calculateLabels(datasetId, labelId);
-   }
-
-   @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   @Transactional
-   void calculateLabels(int datasetId, int queryLabelId) {
-      log.infof("Calculating labels for dataset %d, label %d", datasetId, queryLabelId);
-      // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
-      // to the uploading user. However, the uploader should not have rights to fetch these anyway...
-      @SuppressWarnings("unchecked") List<Object[]> extracted =
-            (List<Object[]>) em.createNativeQuery(LABEL_QUERY)
-                  .setParameter(1, datasetId)
-                  .setParameter(2, queryLabelId)
-                  .unwrap(NativeQuery.class)
-                  .addScalar("label_id", IntegerType.INSTANCE)
-                  .addScalar("name", TextType.INSTANCE)
-                  .addScalar("function", TextType.INSTANCE)
-                  .addScalar("value", JsonNodeBinaryType.INSTANCE)
-                  .getResultList();
-      Util.evaluateMany(extracted, row -> (String) row[2], row -> (JsonNode) row[3],
-            (row, result) -> createLabel(datasetId, (int) row[0], Util.convertToJson(result)),
-            row -> createLabel(datasetId, (int) row[0], (JsonNode) row[3]),
-            (row, e, jsCode) -> logMessage(datasetId, DatasetLog.ERROR,
-                  "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
-            out -> logMessage(datasetId, DatasetLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
-      Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId));
-   }
-
-   private void createLabel(int datasetId, int labelId, JsonNode value) {
-      Label.Value labelValue = new Label.Value();
-      labelValue.datasetId = datasetId;
-      labelValue.labelId = labelId;
-      labelValue.value = value;
-      labelValue.persist();
-   }
 
    // We cannot run this without a transaction (to avoid timeout) because we have not request going on
    // and EM has to bind its lifecycle either to current request or transaction.
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    @TransactionConfiguration(timeout = 3600) // 1 hour, this may run a long time
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    void onNewOrUpdatedSchema(String schemaIdString) {
       int schemaId;
       try {
@@ -247,53 +166,19 @@ public class RunServiceImpl implements RunService {
       transform(runId);
    }
 
-   private void logMessage(int datasetId, int level, String message, Object... params) {
-      String msg = String.format(message, params);
-      if (level == DatasetLog.ERROR) {
-         log.errorf("Calculating labels for DS %d: %s", datasetId, msg);
-      }
-      // TODO log in DB
-   }
-
-   @Transactional(Transactional.TxType.REQUIRES_NEW)
-   @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   void logCalculation(int severity, int runId, String message) {
-      // TODO: split log for datasets and runs?
-//      Run run = Run.findById(runId);
-//      if (run == null) {
-//         log.errorf("Cannot find run %d! Cannot log message : %s", runId, message);
-//      } else {
-//         new CalculationLog(em.getReference(Test.class, run.testid), em.getReference(Run.class, run.id), severity, "tags", message).persistAndFlush();
-//      }
-   }
-
-   private Object runQuery(String query, Object... params) {
-      Query q = em.createNativeQuery(query);
-      for (int i = 0; i < params.length; ++i) {
-         q.setParameter(i + 1, params[i]);
-      }
-      try {
-         return q.getSingleResult();
-      } catch (NoResultException e) {
-         log.errorf("No results in %s with params: %s", query, Arrays.asList(params));
-         throw ServiceException.notFound("No result");
-      } catch (Throwable t) {
-         log.errorf(t, "Query error in %s with params: %s", query, Arrays.asList(params));
-         throw t;
-      }
-   }
-
    @PermitAll
+   @WithRoles
    @WithToken
    @Override
    public Object getRun(Integer id, String token) {
-      return runQuery("SELECT (to_jsonb(run) ||" +
+      return Util.runQuery(em, "SELECT (to_jsonb(run) ||" +
             "jsonb_set('{}', '{schema}', (SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = run.id)::::jsonb, true) || " +
             "jsonb_set('{}', '{testname}', to_jsonb((SELECT name FROM test WHERE test.id = run.testid)), true) || " +
             "jsonb_set('{}', '{datasets}', (SELECT jsonb_agg(id ORDER BY id) FROM dataset WHERE runid = run.id), true)" +
             ")::::text FROM run where id = ?", id);
    }
 
+   @WithRoles
    @Override
    public RunSummary getRunSummary(Integer id, String token) {
       // TODO: define the result set mapping properly without transforming jsonb and int[] to text
@@ -314,13 +199,15 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithRoles
    @WithToken
    @Override
    public Object getData(Integer id, String token) {
-      return runQuery("SELECT data#>>'{}' from run where id = ?", id);
+      return Util.runQuery(em, "SELECT data#>>'{}' from run where id = ?", id);
    }
 
    @PermitAll
+   @WithRoles
    @WithToken
    @Override
    public QueryResult queryData(Integer id, String jsonpath, String schemaUri, boolean array) {
@@ -334,10 +221,10 @@ public class RunServiceImpl implements RunService {
                jsonpath = jsonpath.substring(1);
             }
             String sqlQuery = "SELECT " + func + "(run.data, (rs.prefix || ?)::::jsonpath)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ? AND rs.uri = ?";
-            result.value = String.valueOf(runQuery(sqlQuery, jsonpath, id, schemaUri));
+            result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id, schemaUri));
          } else {
             String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM run WHERE id = ?";
-            result.value = String.valueOf(runQuery(sqlQuery, jsonpath, id));
+            result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id));
          }
          result.valid = true;
       } catch (PersistenceException pe) {
@@ -347,6 +234,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    public String resetToken(Integer id) {
@@ -354,6 +242,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    public String dropToken(Integer id) {
@@ -372,6 +261,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
@@ -386,11 +276,11 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll // all because of possible token-based upload
-   @Transactional
+   @WithRoles
    @WithToken
+   @Transactional
    @Override
-   public String add(String testNameOrId, String owner, Access access, String token,
-                     Run run) {
+   public String add(String testNameOrId, String owner, Access access, String token, Run run) {
       if (owner != null) {
          run.owner = owner;
       }
@@ -409,6 +299,7 @@ public class RunServiceImpl implements RunService {
 
    @PermitAll // all because of possible token-based upload
    @Transactional
+   @WithRoles
    @WithToken
    @Override
    public String addRunFromData(String start, String stop, String test,
@@ -552,6 +443,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithRoles
    @WithToken
    @Override
    public List<String> autocomplete(String query) {
@@ -614,6 +506,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithRoles
    @WithToken
    @Override
    public RunsSummary listAllRuns(String query, boolean matchAll, String roles, boolean trashed,
@@ -714,6 +607,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithRoles
    @WithToken
    @Override
    public RunCounts runCount(Integer testId) {
@@ -728,6 +622,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithRoles
    @WithToken
    @Override
    public TestRunsSummary listTestRuns(Integer testId, boolean trashed,
@@ -776,6 +671,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @PermitAll
+   @WithRoles
    @WithToken
    @Override
    public RunsSummary listBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
@@ -812,6 +708,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    public void trash(Integer id, Boolean isTrashed) {
@@ -826,6 +723,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    public void updateDescription(Integer id, String description) {
@@ -843,6 +741,7 @@ public class RunServiceImpl implements RunService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    public Object updateSchema(Integer id, String path, String schemaUri) {
@@ -899,102 +798,6 @@ public class RunServiceImpl implements RunService {
       transform(runId);
    }
 
-   @ConsumeEvent(value = DataSet.EVENT_NEW, blocking = true)
-   public void onNewDataset(DataSet dataSet) {
-      calculateLabels(dataSet.id, -1);
-   }
-
-   @PermitAll
-   @WithToken
-   @WithRoles
-   @Override
-   public DataSet getDataSet(Integer datasetId) {
-      return DataSet.findById(datasetId);
-   }
-
-   @PermitAll
-   @WithRoles
-   @Override
-   public DatasetList listTestDatasets(int testId, Integer limit, Integer page, String sort, String direction) {
-      StringBuilder sql = new StringBuilder(LIST_TEST_DATASETS);
-      // TODO: filtering by fingerprint
-      if (sort != null && sort.startsWith("view_data:")) {
-         String[] parts = sort.split(":", 3);
-         String vcid = parts[1];
-         String label = parts[2];
-         sql.append(" ORDER BY");
-         // TODO: use view ID in the sort format rather than wildcards below
-         // prefer numeric sort
-         sql.append(" to_double(dv.value->'").append(vcid).append("'->>'").append(label).append("')");
-         Util.addDirection(sql, direction);
-         sql.append(", dv.value->'").append(vcid).append("'->>'").append(label).append("'");
-         Util.addDirection(sql, direction);
-      } else {
-         Util.addOrderBy(sql, sort, direction);
-      }
-      Util.addLimitOffset(sql, limit, page);
-      @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(sql.toString())
-            .setParameter(1, testId).getResultList();
-      DatasetList list = new DatasetList();
-      for (Object[] row : rows) {
-         DatasetSummary summary = new DatasetSummary();
-         summary.id = (Integer) row[0];
-         summary.runId = (Integer) row[1];
-         summary.ordinal = (Integer) row[2];
-         summary.testId = (Integer) row[3];
-         summary.testname = (String) row[4];
-         summary.description = (String) row[5];
-         summary.start = ((Timestamp) row[6]).getTime();
-         summary.stop = ((Timestamp) row[7]).getTime();
-         summary.owner = (String) row[8];
-         summary.access = (Integer) row[9];
-         summary.view = (ObjectNode) Util.toJsonNode((String) row[10]);
-         summary.schemas = (ArrayNode) Util.toJsonNode((String) row[11]);
-         // TODO: all the 'views'
-         list.datasets.add(summary);
-      }
-
-      list.total = DataSet.count("testid = ?1", testId);
-      return list;
-   }
-
-   @Override
-   public QueryResult queryDataSet(Integer datasetId, String jsonpath, boolean array, String schemaUri) {
-      if (schemaUri != null && schemaUri.isBlank()) {
-         schemaUri = null;
-      }
-      QueryResult result = new QueryResult();
-      result.jsonpath = jsonpath;
-      try {
-         if (schemaUri == null) {
-            String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";
-            String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ?";
-            result.value = String.valueOf(runQuery(sqlQuery, jsonpath, datasetId));
-         } else {
-            // This schema-aware query already assumes that DataSet.data is an array of objects with defined schema
-            String schemaQuery = "jsonb_path_query(data, '$[*] ? (@.\"$schema\" == $schema)', ('{\"schema\":\"' || ? || '\"}')::::jsonb)";
-            String sqlQuery;
-            if (!array) {
-               sqlQuery = "SELECT jsonb_path_query_first(" + schemaQuery + ", ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ? LIMIT 1";
-            } else {
-               sqlQuery = "SELECT jsonb_agg(v)#>>'{}' FROM (SELECT jsonb_path_query(" + schemaQuery + ", ?::::jsonpath) AS v FROM dataset WHERE id = ?) AS values";
-            }
-            result.value = String.valueOf(runQuery(sqlQuery, schemaUri, jsonpath, datasetId));
-         }
-         result.valid = true;
-      } catch (PersistenceException pe) {
-         SqlServiceImpl.setFromException(pe, result);
-      }
-      return result;
-   }
-
-   @Override
-   public DatasetList listDatasetsBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
-      // TODO
-      DatasetList list = new DatasetList();
-      return list;
-   }
-
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void transform(int runId) {
@@ -1036,24 +839,24 @@ public class RunServiceImpl implements RunService {
             JsonNode root = JsonNodeFactory.instance.objectNode();
             JsonNode result;
             if (t.extractors != null && !t.extractors.isEmpty()) {
+               List<Object[]> extractedData;
                if (type == Schema.TYPE_1ST_LEVEL) {
-                  List<Object[]> extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
+                  extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
                         .setParameter(1, run.id).setParameter(2, transformerId)
                         .unwrap(NativeQuery.class)
                         .addScalar("name", TextType.INSTANCE)
                         .addScalar("value", JsonNodeBinaryType.INSTANCE)
                         .getResultList());
-                  addExtracted((ObjectNode) root, extractedData);
                } else {
-                  List<Object[]> extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
+                  extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
                         .setParameter(1, run.id).setParameter(2, transformerId)
                         .setParameter(3, type == Schema.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
                         .unwrap(NativeQuery.class)
                         .addScalar("name", TextType.INSTANCE)
                         .addScalar("value", JsonNodeBinaryType.INSTANCE)
                         .getResultList());
-                  addExtracted((ObjectNode) root, extractedData);
                }
+               addExtracted((ObjectNode) root, extractedData);
             }
             // In Horreum it's customary that when a single extractor is used we pass the result directly to the function
             // without wrapping it in an extra object.
@@ -1182,6 +985,7 @@ public class RunServiceImpl implements RunService {
       }
    }
 
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    protected void logTransformationMessage(Test test, Run run, int level, String format, Object... args) {
       new TransformationLog(test, run, level, "data", String.format(format, args)).persist();
@@ -1190,18 +994,6 @@ public class RunServiceImpl implements RunService {
    @SuppressWarnings("unchecked")
    private List<Object[]> unchecked(@SuppressWarnings("rawtypes") List list) {
       return (List<Object[]>)list;
-   }
-
-   private JsonNode findNestedMatch(JsonNode node, String uri) {
-      Iterator<Map.Entry<String, JsonNode>> children = node.fields();
-      while (children.hasNext()) {
-         Map.Entry<String, JsonNode> child = children.next();
-         if (child.getValue().isObject() && uri.equals(child.getValue().path("$schema").textValue())) {
-            return child.getValue();
-         }
-      }
-      log.errorf("Cannot find nested node with URI %s despite it should be present.", uri);
-      return null;
    }
 
    private void addExtracted(ObjectNode root, List<Object[]> resultSet) {
@@ -1217,5 +1009,4 @@ public class RunServiceImpl implements RunService {
          node.put("$schema", uri);
       }
    }
-
 }
