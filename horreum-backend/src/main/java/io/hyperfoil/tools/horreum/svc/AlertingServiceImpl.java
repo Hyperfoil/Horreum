@@ -24,6 +24,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
@@ -76,6 +77,7 @@ import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.hyperfoil.tools.horreum.grafana.Target;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import io.quarkus.runtime.Startup;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
@@ -83,6 +85,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
 @ApplicationScoped
+@Startup
 public class AlertingServiceImpl implements AlertingService {
    private static final Logger log = Logger.getLogger(AlertingServiceImpl.class);
 
@@ -173,6 +176,8 @@ public class AlertingServiceImpl implements AlertingService {
    @Inject
    NotificationServiceImpl notificationService;
 
+   long grafanaDatasourceTimerId;
+
    // entries can be removed from timer thread while normally this is updated from one of blocking threads
    private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
 
@@ -242,7 +247,16 @@ public class AlertingServiceImpl implements AlertingService {
    @PostConstruct
    void init() {
       if (grafanaBaseUrl.isPresent() && updateGrafanaDatasource.orElse(true)) {
-         vertx.setTimer(1, this::setupGrafanaDatasource);
+         setupGrafanaDatasource(0);
+      }
+   }
+
+   @PreDestroy
+   void destroy() {
+      synchronized (this) {
+         // The timer is not cancelled automatically during live reload:
+         // https://github.com/quarkusio/quarkus/issues/25254
+         vertx.cancelTimer(grafanaDatasourceTimerId);
       }
    }
 
@@ -268,14 +282,22 @@ public class AlertingServiceImpl implements AlertingService {
             }
          }
          if (create) {
+            log.info("Creating new Horreum datasource in Grafana");
             GrafanaClient.Datasource newDatasource = new GrafanaClient.Datasource();
             newDatasource.url = url;
             grafana.addDatasource(newDatasource);
          }
-         vertx.setTimer(60000, this::setupGrafanaDatasource);
+         scheduleNextSetup(10000);
       } catch (ProcessingException | WebApplicationException e) {
-         log.warn("Cannot set up datasource, retry in 5 seconds.", e);
-         vertx.setTimer(5000, this::setupGrafanaDatasource);
+         log.warn("Cannot set up Horreum datasource in Grafana , retrying in 5 seconds.", e);
+         scheduleNextSetup(5000);
+      }
+   }
+
+   private void scheduleNextSetup(int delay) {
+      synchronized (this) {
+         vertx.cancelTimer(grafanaDatasourceTimerId);
+         grafanaDatasourceTimerId = vertx.setTimer(delay, this::setupGrafanaDatasource);
       }
    }
 
