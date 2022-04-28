@@ -20,22 +20,28 @@ import com.fasterxml.jackson.databind.JsonNode;
 @NamedNativeQueries({
    @NamedNativeQuery(
       name = Schema.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID,
-      query = "SELECT te.name, (CASE WHEN te.isarray THEN jsonb_path_query_array(r.data, te.jsonpath::::jsonpath) ELSE jsonb_path_query_first(r.data,te.jsonpath::::jsonpath) END) AS value "
-         + " FROM run_schemas rs, transformer t, transformer_extractors te, run r "
-         + " WHERE (rs.schemaid = t.schema_id) AND (te.transformer_id = t.id) AND (rs.prefix = '$') "
-         + " AND (r.id = ?) AND (rs.schemaid = ?) AND (t.id = ?) "),
+      query = "SELECT te.name, (" +
+            "CASE WHEN te.isarray THEN jsonb_path_query_array(r.data, te.jsonpath::::jsonpath) " +
+            "ELSE jsonb_path_query_first(r.data,te.jsonpath::::jsonpath) END) AS value " +
+            "FROM run r, transformer t " +
+            "JOIN transformer_extractors te ON te.transformer_id = t.id " +
+            "WHERE r.id = ?1 AND t.id = ?2"
+   ),
    @NamedNativeQuery(
       name = Schema.QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID,
-      query = "WITH "
-         + " elements AS ( SELECT value FROM jsonb_each((SELECT r.data from run r WHERE r.id =?)) ) "
-         + " , prefixes AS ( SELECT value->>'$schema' AS schema_uri, value AS data FROM elements ) "
-         + " SELECT te.name, (CASE WHEN te.isarray THEN jsonb_path_query_array(r.data, te.jsonpath::::jsonpath) ELSE jsonb_path_query_first(r.data,te.jsonpath::::jsonpath) END) AS value "
-         + " FROM run_schemas rs, transformer t, transformer_extractors te, run r, prefixes p WHERE (p.schema_uri = rs.uri) "
-         + " AND (rs.schemaid = t.schema_id) AND (te.transformer_id = t.id) "
-         + " AND (r.id = ?) AND (rs.schemaid = ?) AND (t.id = ?) "),
+      query = "SELECT te.name, (" +
+            "CASE WHEN te.isarray THEN jsonb_path_query_array(r.data->?3, te.jsonpath::::jsonpath) " +
+            "ELSE jsonb_path_query_first(r.data->?3, te.jsonpath::::jsonpath) END) AS value " +
+            "FROM run r, transformer t " +
+            "JOIN transformer_extractors te ON te.transformer_id = t.id " +
+            "WHERE r.id = ?1 AND t.id = ?2"
+   ),
    @NamedNativeQuery(
-         name = Schema.QUERY_SCHEMA_BY_RUNID,
-         query = "SELECT rs.schemaid, t.id AS transformer_id, rs.prefix FROM run_schemas rs LEFT OUTER JOIN transformer t ON t.schema_id = rs.schemaid WHERE rs.runid = ?1 AND rs.testid = ?2 ORDER BY schemaid, transformer_id")
+         name = Schema.QUERY_TRANSFORMER_TARGETS,
+         query = "SELECT rs.type, rs.key, t.id as transformer_id FROM run_schemas rs " +
+               "LEFT JOIN transformer t ON t.schema_id = rs.schemaid AND t.id IN (SELECT transformer_id FROM test_transformers WHERE test_id = rs.testid) " +
+               "WHERE rs.runid = ?1 ORDER BY transformer_id NULLS LAST, type, key"
+         )
 })
 
 @Entity
@@ -48,7 +54,10 @@ public class Schema extends ProtectedBaseEntity {
 
    public static final String QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID = "Schema.getFirstLevelExtractorsByRunIDTransIDSchemaID";
    public static final String QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID = "Schema.getSecondLevelExtractorsByRunIDTransIDSchemaID";
-   public static final String QUERY_SCHEMA_BY_RUNID = "Schema.getSchemasForRun";
+   public static final String QUERY_TRANSFORMER_TARGETS = "Schema.queryTransformerTargets";
+   public static final int TYPE_1ST_LEVEL = 0;
+   public static final int TYPE_2ND_LEVEL = 1;
+   public static final int TYPE_ARRAY_ELEMENT = 2;
 
    @Id
    @SequenceGenerator(

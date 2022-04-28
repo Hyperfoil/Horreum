@@ -3263,4 +3263,67 @@
                 WITH CHECK (has_role2(owner, 'uploader') OR has_upload_token(testid) OR has_role('horreum.system'));
         </sql>
     </changeSet>
+
+    <changeSet id="75" author="rvansa">
+        <!-- This operation can take a long time - we don't want to execute in sync with schema update -->
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION after_schema_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                IF OLD.uri IS NULL OR OLD.uri != NEW.uri THEN
+                    PERFORM pg_notify('new_or_updated_schema', NEW.id::text);
+                END IF;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <renameColumn tableName="run_schemas" oldColumnName="prefix" newColumnName="key"/>
+        <addColumn tableName="run_schemas">
+            <column name="type" type="integer" />
+        </addColumn>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION after_run_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH rs AS (
+                    SELECT 0 AS type, NULL AS key, NEW.data->>'$schema' AS uri
+                    UNION SELECT 1 AS type, values.key, values.value->>'$schema' FROM jsonb_each(NEW.data) as values WHERE jsonb_typeof(NEW.data) = 'object'
+                    UNION SELECT 2 AS type, (row_number() OVER () - 1)::text AS key, value->>'$schema' as uri FROM jsonb_array_elements(NEW.data) WHERE jsonb_typeof(NEW.data) = 'array'
+                ) INSERT INTO run_schemas(runid, testid, type, key, uri, schemaid)
+                    SELECT NEW.id, NEW.testid, rs.type, rs.key, rs.uri, schema.id FROM rs
+                    JOIN schema ON schema.uri = rs.uri;
+                DELETE FROM dataset WHERE runid = OLD.id;
+                PERFORM pg_notify('calculate_datasets', NEW.id::text);
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE FUNCTION update_run_schemas(runid INTEGER) RETURNS void AS $$
+            BEGIN
+                WITH rs AS (
+                    SELECT id, testid, 0 AS type, NULL AS key, data->>'$schema' AS uri FROM run WHERE id = runid
+                    UNION SELECT id, testid, 1 AS type, values.key, values.value->>'$schema' FROM run, jsonb_each(run.data) as values WHERE id = runid AND jsonb_typeof(data) = 'object'
+                    UNION SELECT id, testid, 2 AS type, (row_number() OVER () - 1)::text AS key, value->>'$schema' as uri FROM run, jsonb_array_elements(data) WHERE id = runid AND jsonb_typeof(data) = 'array'
+                ) INSERT INTO run_schemas(runid, testid, type, key, uri, schemaid)
+                    SELECT rs.id, rs.testid, rs.type, rs.key, rs.uri, schema.id FROM rs
+                    JOIN schema ON schema.uri = rs.uri;
+                END;
+            $$ LANGUAGE plpgsql VOLATILE;
+        </createProcedure>
+        <sql>
+            DROP TRIGGER ds_after_schema_update ON schema;
+            DROP FUNCTION ds_after_schema_update_func;
+            CREATE POLICY schema_select_system ON schema FOR SELECT USING (has_role('horreum.system'));
+            CREATE POLICY rs_system ON run_schemas USING (has_role('horreum.system'));
+
+            <!-- We won't do a big update data = data to run the trigger because that would also
+                 delete the datasets; recalculation can't be triggered from migration (app not ready yet), though -->
+            DELETE FROM run_schemas;
+            SELECT update_run_schemas(id) FROM run;
+        </sql>
+        <addNotNullConstraint tableName="run_schemas" columnName="runid"/>
+        <addNotNullConstraint tableName="run_schemas" columnName="testid"/>
+        <addNotNullConstraint tableName="run_schemas" columnName="schemaid"/>
+        <addNotNullConstraint tableName="run_schemas" columnName="uri"/>
+        <addNotNullConstraint tableName="run_schemas" columnName="type"/>
+    </changeSet>
 </databaseChangeLog>

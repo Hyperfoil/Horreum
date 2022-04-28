@@ -110,8 +110,8 @@ public class SqlServiceImpl implements SqlService {
    @PostConstruct
    void init() {
       listenerConnection = (PgConnection) client.getConnectionAndAwait().getDelegate();
-      listenerConnection.notificationHandler(notification ->
-            vertx.executeBlocking(any -> handleNotification(notification.getChannel(), notification.getPayload())));
+      listenerConnection.notificationHandler(notification -> Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS,
+            () -> handleNotification(notification.getChannel(), notification.getPayload())));
    }
 
    public void registerListener(String channel, Consumer<String> consumer) {
@@ -133,10 +133,11 @@ public class SqlServiceImpl implements SqlService {
          List<Consumer<String>> consumers = listeners.get(channel);
          if (consumers != null) {
             for (Consumer<String> c : consumers) {
-               Util.withTx(tm, () -> {
+               try {
                   c.accept(payload);
-                  return null;
-               });
+               } catch (Exception e) {
+                  log.errorf(e, "Exception in listener for channel %s, payload %s", channel, payload);
+               }
             }
          }
       }

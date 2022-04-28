@@ -380,14 +380,6 @@ public class Util {
       }
    }
 
-   public static String unwrapDoubleQuotes(String str) {
-      if (str.startsWith("\"") && str.endsWith("\"")) {
-         return str.substring(1, str.length() - 1);
-      } else {
-         return str;
-      }
-   }
-
    static <T> T withTx(TransactionManager tm, Supplier<T> supplier) {
       for (int retry = 1;; ++retry) {
          try {
@@ -458,6 +450,8 @@ public class Util {
          RolesInterceptor.setCurrentIdentity(identity);
          try {
             wrapped.run();
+         } catch (Exception e) {
+            log.error("Failed to execute blocking task", e);
          } finally {
             RolesInterceptor.setCurrentIdentity(null);
             promise.complete();

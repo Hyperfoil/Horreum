@@ -30,7 +30,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
@@ -88,11 +87,9 @@ public class BaseServiceTest {
             em.createNativeQuery("UPDATE test SET defaultview_id = NULL").executeUpdate();
             ViewComponent.deleteAll();
             View.deleteAll();
-            em.flush();
-            PanacheQuery<Transformer> qTransformers = Transformer.findAll();
-            qTransformers.list().forEach(t -> { t.extractors.clear(); em.persist(t);});
-            PanacheQuery<Test> q = Test.findAll();
-            q.list().forEach(t -> {t.transformers.clear();em.persist(t);});
+
+            em.createNativeQuery("DELETE FROM test_transformers").executeUpdate();
+            em.createNativeQuery("DELETE FROM transformer_extractors").executeUpdate();
             Transformer.deleteAll();
             Test.deleteAll();
             Change.deleteAll();

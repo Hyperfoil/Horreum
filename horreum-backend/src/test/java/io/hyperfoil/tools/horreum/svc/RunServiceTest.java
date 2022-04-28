@@ -12,6 +12,7 @@ import java.util.Set;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
@@ -76,9 +77,7 @@ public class RunServiceTest extends BaseServiceTest {
 
       DataSet event = dataSetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
-      JsonNode node = event.data;
-      assertTrue(node.isArray());
-      assertTrue(node.isEmpty());
+      assertEmptyArray(event.data);
    }
 
    private NamedJsonPath createExampleNamedJsonPath(String name, String path) {
@@ -138,10 +137,7 @@ public class RunServiceTest extends BaseServiceTest {
 
       DataSet event = dataSetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
-      JsonNode node = event.data;
-      assertNotNull(node);
-      assertTrue(node.isArray());
-      assertTrue(node.isEmpty());
+      assertEmptyArray(event.data);
    }
 
    @org.junit.jupiter.api.Test
@@ -149,8 +145,7 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
       Schema schema = createExampleSchema(info);
 
-      NamedJsonPath path = null; // no extractors
-      Transformer transformer = createExampleTransformerWithJsonPath("acme", schema, "", path);
+      Transformer transformer = createExampleTransformerWithJsonPath("acme", schema, "");
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
       addTransformer(test, transformer);
@@ -160,7 +155,9 @@ public class RunServiceTest extends BaseServiceTest {
       assertNotNull(event);
       JsonNode node = event.data;
       assertTrue(node.isArray());
-      assertEquals(0, node.size());
+      assertEquals(1, node.size());
+      assertEquals(1, node.get(0).size());
+      assertTrue(node.get(0).hasNonNull("$schema"));
    }
 
    @org.junit.jupiter.api.Test
@@ -421,22 +418,15 @@ public class RunServiceTest extends BaseServiceTest {
       assertNotNull(dataset);
       assertTrue(dataset.data.isArray());
       assertEquals(3, dataset.data.size());
+      dataset.data.forEach(item -> {
+         assertTrue(item.path("foo").isNull());
+         assertEmptyArray(item.path("bar"));
+      });
 
-      JsonNode combined = StreamSupport.stream(dataset.data.spliterator(), false)
-            .filter(item -> item.get("value") != null).findFirst().orElseThrow(AssertionError::new);
+      JsonNode combined = dataset.data.get(2);
       assertEquals(42, combined.path("value").intValue());
       assertTrue(combined.path("values").isArray());
       assertEquals(3, combined.path("values").size());
-
-      JsonNode nodetransformerFunc = dataset.data.get(1);
-      JsonNode nodetransformerCombined = dataset.data.get(2);
-
-      assertTrue(nodetransformerFunc.path("foo").isNull());
-      assertTrue(nodetransformerFunc.path("bar").isArray());
-      assertTrue(nodetransformerFunc.path("bar").isEmpty());
-      assertEquals(3, nodetransformerCombined.size());
-      assertFalse(nodetransformerCombined.path("value").isMissingNode());
-      assertFalse(nodetransformerCombined.path("values").isMissingNode());
    }
 
    private void validate (String expected, JsonNode node) {
@@ -501,21 +491,23 @@ public class RunServiceTest extends BaseServiceTest {
    }
 
    private String testDataSetQuery(String jsonPath, boolean array, String schemaUri) {
-      return withExampleDataset(createABData(), ds -> {
+      AtomicReference<String> result = new AtomicReference<>();
+      withExampleSchemas(schemas -> result.set(withExampleDataset(createTest(createExampleTest("dummy")), createABData(), ds -> {
          RunService.QueryResult queryResult = runService.queryDataSet(ds.id, jsonPath, array, schemaUri);
          assertTrue(queryResult.valid);
          return queryResult.value;
-      });
+      })), "A", "B");
+      return result.get();
    }
 
-   private <T> T withExampleDataset(JsonNode data, Function<DataSet, T> testLogic) {
+   private <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
       try {
          Run run = new Run();
          tm.begin();
          try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(UPLOADER_ROLES))) {
             run.data = data;
-            run.testid = 0;
+            run.testid = test.id;
             run.start = run.stop = Instant.now();
             run.owner = UPLOADER_ROLES[0];
             run.persistAndFlush();
@@ -577,7 +569,6 @@ public class RunServiceTest extends BaseServiceTest {
          assertEquals(2, values.size());
          assertEquals(24, values.stream().filter(v -> v.labelId == labelA).map(v -> v.value.numberValue()).findFirst().orElse(null));
          assertEquals(43, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
-
       }, "A", "B");
    }
 
@@ -658,7 +649,7 @@ public class RunServiceTest extends BaseServiceTest {
          int labelB = addLabel(schemas[1], "B", "v => v + 1", new NamedJsonPath("value", "$.value", false));
          int labelC = addLabel(schemas[1], "C", null, new NamedJsonPath("value", "$.value", false));
          BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
-         withExampleDataset(createABData(), ds -> {
+         withExampleDataset(createTest(createExampleTest("dummy")), createABData(), ds -> {
             waitForUpdate(updateQueue, ds);
             List<Label.Value> values = Label.Value.<Label.Value>find("dataset_id", ds.id).list();
             assertEquals(3, values.size());
@@ -697,7 +688,7 @@ public class RunServiceTest extends BaseServiceTest {
 
    private List<Label.Value> withLabelValues(ArrayNode data) {
       BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
-      return withExampleDataset(data, ds -> {
+      return withExampleDataset(createTest(createExampleTest("dummy")), data, ds -> {
          waitForUpdate(updateQueue, ds);
          return Label.Value.<Label.Value>find("dataset_id", ds.id).list();
       });
@@ -714,7 +705,7 @@ public class RunServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testRecalculateDatasets() {
-      withExampleDataset(JsonNodeFactory.instance.objectNode(), ds -> {
+      withExampleDataset(createTest(createExampleTest("dummy")), JsonNodeFactory.instance.objectNode(), ds -> {
          Util.withTx(tm, () -> {
             try (CloseMe ignored = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
                DataSet dbDs = DataSet.findById(ds.id);
@@ -752,15 +743,11 @@ public class RunServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testDatasetView() {
+      Test test = createTest(createExampleTest("dummy"));
       Util.withTx(tm, () -> {
          try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
-            // we insert test directly to let it have ID=0, for simplicity
-            em.createNativeQuery("INSERT INTO test(id, name, owner, access) VALUES (0, 'foo', ?1, 0)")
-                  .setParameter(1, TESTER_ROLES[0]).executeUpdate();
-            View view = new View();
-            view.test = em.getReference(Test.class, 0);
-            view.name = "default";
-            view.components = new ArrayList<>();
+            View view = View.findById(test.defaultView.id);
+            view.components.clear();
             ViewComponent vc1 = new ViewComponent();
             vc1.view = view;
             vc1.headerName = "X";
@@ -773,8 +760,6 @@ public class RunServiceTest extends BaseServiceTest {
             vc2.labels = jsonArray("a", "b");
             view.components.add(vc2);
             view.persistAndFlush();
-            em.createNativeQuery("UPDATE test SET defaultview_id = ?1 WHERE id = 0").setParameter(1, view.id).executeUpdate();
-            em.flush();
          }
          return null;
       });
@@ -784,9 +769,9 @@ public class RunServiceTest extends BaseServiceTest {
          int labelB = addLabel(schemas[1], "b", null, valuePath);
          // view update should happen in the same transaction as labels update so we can use the event
          BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
-         withExampleDataset(createABData(), ds -> {
+         withExampleDataset(test, createABData(), ds -> {
             waitForUpdate(updateQueue, ds);
-            JsonNode datasets = fetchDatasetsByTest(0);
+            JsonNode datasets = fetchDatasetsByTest(test.id);
             assertEquals(1, datasets.get("total").asInt());
             assertEquals(1, datasets.get("datasets").size());
             JsonNode dsJson = datasets.get("datasets").get(0);
@@ -799,7 +784,8 @@ public class RunServiceTest extends BaseServiceTest {
             assertEquals(24, vc2.get("a").asInt());
             assertEquals(42, vc2.get("b").asInt());
 
-            String labelIds = (String) em.createNativeQuery("SELECT to_json(label_ids)::::text FROM dataset_view WHERE dataset_id = ?1").setParameter(1, ds.id).getSingleResult();
+            String labelIds = (String) em.createNativeQuery("SELECT to_json(label_ids)::::text FROM dataset_view WHERE dataset_id = ?1")
+                  .setParameter(1, ds.id).getSingleResult();
             Set<Integer> ids = new HashSet<>();
             StreamSupport.stream(Util.toJsonNode(labelIds).spliterator(), false).mapToInt(JsonNode::asInt).forEach(ids::add);
             assertEquals(2, ids.size());
@@ -814,7 +800,7 @@ public class RunServiceTest extends BaseServiceTest {
                return null;
             });
 
-            JsonNode updated = fetchDatasetsByTest(0);
+            JsonNode updated = fetchDatasetsByTest(test.id);
             JsonNode updatedView = updated.get("datasets").get(0).get("view");
             assertEquals(2, updatedView.size());
             assertTrue(StreamSupport.stream(updatedView.spliterator(), false).allMatch(vc -> vc.size() == 2), updated.toPrettyString());
@@ -839,28 +825,48 @@ public class RunServiceTest extends BaseServiceTest {
             .add(JsonNodeFactory.instance.objectNode().put("$schema", "another"))
             .add(JsonNodeFactory.instance.objectNode().put("$schema", "foobar").put("value", 42));
       int runId = uploadRun(data, test.name);
-      DataSet eventDs = dsQueue.poll(10, TimeUnit.SECONDS);
-      assertNotNull(eventDs);
-      assertEquals(runId, eventDs.run.id);
-      int datasetId = eventDs.id;
-      DataSet.LabelsUpdatedEvent eventLabels = labelQueue.poll(10, TimeUnit.SECONDS);
-      assertNotNull(eventLabels);
-      assertEquals(datasetId, eventLabels.datasetId);
+      DataSet firstDataset = dsQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(firstDataset);
+      assertEquals(runId, firstDataset.run.id);
+      assertEmptyArray(firstDataset.data);
+      // this update is for no label values - there's no schema
+      DataSet.LabelsUpdatedEvent firstUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(firstUpdate);
+      assertEquals(firstDataset.id, firstUpdate.datasetId);
 
       assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM dataset_schemas").getSingleResult()).intValue());
       Schema schema = createSchema("Foobar", "foobar");
+
+      DataSet secondDataset = dsQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(secondDataset);
+      assertEquals(runId, secondDataset.run.id);
+      // empty again - we have schema but no labels defined
+      DataSet.LabelsUpdatedEvent secondUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(secondUpdate);
+      assertEquals(secondDataset.id, secondUpdate.datasetId);
+
       @SuppressWarnings("unchecked") List<Object[]> ds =
             em.createNativeQuery("SELECT dataset_id, index FROM dataset_schemas").getResultList();
       assertEquals(1, ds.size());
-      assertEquals(datasetId, ds.get(0)[0]);
-      assertEquals(1, ds.get(0)[1]);
+      assertEquals(secondDataset.id, ds.get(0)[0]);
+      assertEquals(0, ds.get(0)[1]);
       assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM label_values").getSingleResult()).intValue());
 
       addLabel(schema, "value", null, new NamedJsonPath("value", "$.value", false));
-      assertNotNull(labelQueue.poll(10, TimeUnit.SECONDS));
+      // not empty anymore
+      DataSet.LabelsUpdatedEvent thirdUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(thirdUpdate);
+      assertEquals(secondDataset.id, thirdUpdate.datasetId);
+
       List<Label.Value> values = Label.Value.listAll();
       assertEquals(1, values.size());
       assertEquals(42, values.get(0).value.asInt());
+   }
+
+   private static void assertEmptyArray(JsonNode node) {
+      assertNotNull(node);
+      assertTrue(node.isArray());
+      assertTrue(node.isEmpty());
    }
 
    private Transformer createExampleTransformerWithJsonPath(String name, Schema schema, String function, NamedJsonPath... paths) {

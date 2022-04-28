@@ -2,7 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
 import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
-import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_SCHEMA_BY_RUNID;
+import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_TRANSFORMER_TARGETS;
 import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
 
 import io.hyperfoil.tools.horreum.api.RunService;
@@ -11,22 +11,22 @@ import io.hyperfoil.tools.horreum.entity.alerting.TransformationLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
-import io.hyperfoil.tools.horreum.server.CloseMe;
-import io.hyperfoil.tools.horreum.server.RoleManager;
-import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
+import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
+import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
+import org.hibernate.ScrollMode;
+import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
@@ -66,6 +66,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -125,6 +126,9 @@ public class RunServiceImpl implements RunService {
          "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
          "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id " +
          "WHERE testid = ?1";
+   protected static final String FIND_RUNS_WITH_URI = "SELECT id FROM run WHERE data->>'$schema' = ?1 OR (" +
+         "CASE WHEN jsonb_typeof(data) = 'object' THEN ?1 IN (SELECT values.value->>'$schema' FROM jsonb_each(data) as values) " +
+         "WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema') ELSE false END)";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -143,7 +147,7 @@ public class RunServiceImpl implements RunService {
    SqlServiceImpl sqlService;
 
    @Inject
-   RoleManager roleManager;
+   Vertx vertx;
 
    @Inject
    EventBus eventBus;
@@ -154,15 +158,13 @@ public class RunServiceImpl implements RunService {
    @Inject
    SchemaServiceImpl schemaService;
 
-   @Inject
-   RunServiceImpl self;
-
    @Context HttpServletResponse response;
 
    @PostConstruct
    public void init() {
       sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
       sqlService.registerListener("calculate_labels", this::onLabelChanged);
+      sqlService.registerListener("new_or_updated_schema", this::onNewOrUpdatedSchema);
    }
 
    private void onLabelChanged(String param) {
@@ -173,12 +175,12 @@ public class RunServiceImpl implements RunService {
       }
       int datasetId = Integer.parseInt(parts[0]);
       int labelId = Integer.parseInt(parts[1]);
-      try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
-         calculateLabels(datasetId, labelId);
-      }
+      calculateLabels(datasetId, labelId);
    }
 
-   private void calculateLabels(int datasetId, int queryLabelId) {
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void calculateLabels(int datasetId, int queryLabelId) {
       log.infof("Calculating labels for dataset %d, label %d", datasetId, queryLabelId);
       // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
       // to the uploading user. However, the uploader should not have rights to fetch these anyway...
@@ -209,21 +211,48 @@ public class RunServiceImpl implements RunService {
       labelValue.persist();
    }
 
+   // We cannot run this without a transaction (to avoid timeout) because we have not request going on
+   // and EM has to bind its lifecycle either to current request or transaction.
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   @TransactionConfiguration(timeout = 3600) // 1 hour, this may run a long time
+   void onNewOrUpdatedSchema(String schemaIdString) {
+      int schemaId;
+      try {
+         schemaId = Integer.parseInt(schemaIdString);
+      } catch (NumberFormatException e) {
+         log.errorf("Cannot process schema add/update: invalid id %s", schemaIdString);
+         return;
+      }
+      Schema schema = Schema.findById(schemaId);
+      if (schema == null) {
+         log.errorf("Cannot process schema add/update: cannot load schema %d", schemaId);
+         return;
+      }
+      // we don't have to care about races with new runs
+      ScrollableResults results = em.createNativeQuery(FIND_RUNS_WITH_URI)
+            .setParameter(1, schema.uri)
+            .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
+            .scroll(ScrollMode.FORWARD_ONLY);
+      while (results.next()) {
+         int runId = (int) results.get(0);
+         log.infof("Recalculate DataSets for run %d - schema %d (%s) changed", runId, schema.id, schema.uri);
+         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> onNewOrUpdatedSchemaForRun(runId));
+      }
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void onNewOrUpdatedSchemaForRun(int runId) {
+      em.createNativeQuery("SELECT update_run_schemas(?1)::::text").setParameter(1, runId).getSingleResult();
+      transform(runId);
+   }
+
    private void logMessage(int datasetId, int level, String message, Object... params) {
       String msg = String.format(message, params);
       if (level == DatasetLog.ERROR) {
          log.errorf("Calculating labels for DS %d: %s", datasetId, msg);
       }
       // TODO log in DB
-   }
-
-   private void wrappedLogCalculation(int severity, int runId, String message) {
-      RolesInterceptor.setCurrentIdentity(CachedSecurityIdentity.ANONYMOUS);
-      try {
-         self.logCalculation(severity, runId, message);
-      } finally {
-         RolesInterceptor.setCurrentIdentity(null);
-      }
    }
 
    @Transactional(Transactional.TxType.REQUIRES_NEW)
@@ -852,8 +881,6 @@ public class RunServiceImpl implements RunService {
    @Transactional
    @Override
    public List<Integer> recalculateDatasets(int runId) {
-      DataSet.delete("runid", runId);
-      //TODO: find the token to pass to the transform method
       transform(runId);
       //noinspection unchecked
       return em.createNativeQuery("SELECT id FROM dataset WHERE runid = ? ORDER BY ordinal")
@@ -869,13 +896,10 @@ public class RunServiceImpl implements RunService {
          log.errorf("Received notification to calculate dataset for run but cannot parse as run ID.", parts[0]);
          return;
       }
-
       transform(runId);
    }
 
    @ConsumeEvent(value = DataSet.EVENT_NEW, blocking = true)
-   @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   @Transactional
    public void onNewDataset(DataSet dataSet) {
       calculateLabels(dataSet.id, -1);
    }
@@ -971,163 +995,180 @@ public class RunServiceImpl implements RunService {
       return list;
    }
 
-   private void transform(int runId) {
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void transform(int runId) {
       if (runId < 1) {
          log.errorf("Transformation parameters error: run %s", runId);
       }
+      // We need to make sure all old datasets are gone before creating new; otherwise we could
+      // break the runid,ordinal uniqueness constraint
+      DataSet.delete("runid", runId);
 
-      Integer schemaid = null;
-      String transformer_id = null;
-      String prefix = null;
+      Run run = Run.findById(runId);
+      int ordinal = 0;
+      Map<Integer, JsonNode> transformerResults = new TreeMap<>();
+      // naked nodes (those produced by implicit identity transformers) are all added to each dataset
+      List<JsonNode> nakedNodes = new ArrayList<>();
 
-      try (@SuppressWarnings("unused") CloseMe h1 = roleManager.withRoles(em, Collections.singleton(Roles.HORREUM_SYSTEM)) ) {
+      List<Object[]> relevantSchemas = unchecked(em.createNamedQuery(QUERY_TRANSFORMER_TARGETS)
+            .setParameter(1, run.id)
+            .unwrap(NativeQuery.class)
+            .addScalar("type", IntegerType.INSTANCE)
+            .addScalar("key", TextType.INSTANCE)
+            .addScalar("transformer_id", IntegerType.INSTANCE)
+            .getResultList() );
 
-         Run run = Run.findById(runId);
-         Test test = Test.findById(run.testid);
-         int ordinal = 0;
-         Collection<DataSet> dataSets = new ArrayList<>();
-         JsonNode result = null;
-         List<JsonNode> allNodes = new ArrayList<>();
+      int schemasAndTransformers = relevantSchemas.size();
+      for (Object[] relevantSchema : relevantSchemas) {
+         int type = (int) relevantSchema[0];
+         String key = (String) relevantSchema[1];
+         Integer transformerId = (Integer) relevantSchema[2];
 
-         List<Object[]> relevantSchemas = unchecked(em.createNamedQuery(QUERY_SCHEMA_BY_RUNID)
-               .setParameter(1, run.id).setParameter(2, test.id)
-               .unwrap(NativeQuery.class)
-               .addScalar("schemaid", TextType.INSTANCE)
-               .addScalar("transformer_id", TextType.INSTANCE)
-               .addScalar("prefix", TextType.INSTANCE)
-               .getResultList() );
-
-         int queryCount = relevantSchemas.size();
-         for (int pos = 0; pos < queryCount ; pos += 1) {
-            Object[] relevantSchema =  relevantSchemas.get(pos);
-
-            schemaid = Integer.parseInt((String)relevantSchema[0]);
-            transformer_id = (String)relevantSchema[1];
-            prefix = (String)relevantSchema[2];
-            Schema s = Schema.findById(schemaid);
-
-            List<Object[]> labelValues = null;
-
-            ObjectNode root = JsonNodeFactory.instance.objectNode();
-            Transformer t = null;
-
-            if (transformer_id != null ) {
-               t = Transformer.findById(Integer.parseInt(transformer_id));
+         Transformer t = null;
+         if (transformerId != null) {
+            t = Transformer.findById(transformerId);
+            if (t == null) {
+               log.errorf("Missing transformer with ID %d", transformerId);
             }
-            if (isFunctionAvailable(t)) {
-               int transformerId = Integer.parseInt(transformer_id);
-               if (hasLabels(t.extractors)) {
-                  if ("$".equals(prefix)) {
-                     labelValues = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
-                        .setParameter(1, run.id).setParameter(2, schemaid).setParameter(3, transformerId)
+         }
+         if (t != null) {
+            ObjectNode root = JsonNodeFactory.instance.objectNode();
+            JsonNode result;
+            if (t.extractors != null && !t.extractors.isEmpty()) {
+               if (type == Schema.TYPE_1ST_LEVEL) {
+                  List<Object[]> extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
+                        .setParameter(1, run.id).setParameter(2, transformerId)
                         .unwrap(NativeQuery.class)
                         .addScalar("name", TextType.INSTANCE)
                         .addScalar("value", JsonNodeBinaryType.INSTANCE)
-                        .getResultList() );
-                     root = convert(root, labelValues);
-                  } else {
-                     labelValues = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
-                        .setParameter(1, run.id).setParameter(2, run.id).setParameter(3, schemaid).setParameter(4, transformerId)
+                        .getResultList());
+                  addExtracted(root, extractedData);
+               } else {
+                  List<Object[]> extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
+                        .setParameter(1, run.id).setParameter(2, transformerId)
+                        .setParameter(3, type == Schema.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
                         .unwrap(NativeQuery.class)
                         .addScalar("name", TextType.INSTANCE)
                         .addScalar("value", JsonNodeBinaryType.INSTANCE)
-                        .getResultList() );
-                     root = convert(root, labelValues);
-                  }
+                        .getResultList());
+                  addExtracted(root, extractedData);
                }
-               if (isFunctionExecutable(t)) {
-                  StringBuilder code = new StringBuilder();
-                  String obj = root.toString();
-                  code.append("const __obj = ").append(obj).append(" ;\n");
-                  code.append("const __func = ").append(t.function).append(";\n");
-                  code.append("__func(__obj);\n");
-                  ByteArrayOutputStream out = new ByteArrayOutputStream();
-                  try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
-                     context.enter();
-                     try {
-                        Value value = context.eval("js", code.toString());
-                        result = Util.convertToJson(value);
-                     } catch (PolyglotException e) {
-                        log.errorf("Failed to execute transformation for run %d and test %d and cause %s", run.id, test.id, e);
-                        if (result != null) {
-                           logTransformationMessage(test, run, TransformationLog.ERROR, "transformation "+t.name+" function", result);
-                           result = instance.objectNode();
-                        }
-                     } finally {
-                        context.leave();
-                        if (out.size() > 0) {
-                           logTransformationMessage(test, run, TransformationLog.INFO, "transformation "+t.name+" function", result);
-                        }
+            }
+            if (t.function != null && !t.function.isBlank()) {
+               StringBuilder code = new StringBuilder();
+               String obj = root.toString();
+               code.append("const __obj = ").append(obj).append(" ;\n");
+               code.append("const __func = ").append(t.function).append(";\n");
+               code.append("__func(__obj);\n");
+               ByteArrayOutputStream out = new ByteArrayOutputStream();
+               try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
+                  context.enter();
+                  try {
+                     Value value = context.eval("js", code.toString());
+                     result = Util.convertToJson(value);
+                  } catch (PolyglotException e) {
+                     log.errorf("Failed to execute transformation for run %d and test %d and cause %s", run.id, run.testid, e);
+                     logTransformationMessage(em.getReference(Test.class, run.testid), run, TransformationLog.ERROR, "transformation " + t.name + " function");
+                     continue;
+                  } finally {
+                     context.leave();
+                     if (out.size() > 0) {
+                        logTransformationMessage(em.getReference(Test.class, run.testid), run, TransformationLog.INFO, "transformation " + t.name + " function");
                      }
                   }
-               } else if (!root.isEmpty()){
-                  result = root;
-               }
-               if (t.targetSchemaUri != null && result != null) {
-                  if (result.isObject()) {
-                     putIfAbsent( t.targetSchemaUri, (ObjectNode)result);
-                  } else if (result.isArray()) {
-                     ArrayNode array = (ArrayNode)result;
-                     for ( JsonNode node : array ) {
-                        if (node.isObject()) {
-                           putIfAbsent(t.targetSchemaUri, (ObjectNode)node);
-                        }
-                     }
-                  }
-               }
-               if (result != null) {
-                  allNodes.add(result);
                }
             } else {
-               JsonNode node = null;
-               if ("$".equals(prefix)) { //1st level
-                  node = findMatch(run.data, s.uri);
-               }
-               if ("$.*".equals(prefix)){ // 2nd level
-                  node = findNestedMatch(run.data, s.uri);
-               }
-               allNodes.add(node); // a schema is just an ObjectNode
+               result = root;
             }
+            if (t.targetSchemaUri != null) {
+               if (result.isObject()) {
+                  putIfAbsent(t.targetSchemaUri, (ObjectNode) result);
+               } else if (result.isArray()) {
+                  ArrayNode array = (ArrayNode) result;
+                  for (JsonNode node : array) {
+                     if (node.isObject()) {
+                        putIfAbsent(t.targetSchemaUri, (ObjectNode) node);
+                     }
+                  }
+               } else {
+                  result = instance.objectNode()
+                        .put("$schema", t.targetSchemaUri).set("value", result);
+               }
+            }
+            JsonNode existing = transformerResults.get(transformerId);
+            if (existing == null) {
+               transformerResults.put(transformerId, result);
+            } else if (existing.isArray()) {
+               if (result.isArray()) {
+                  ((ArrayNode) existing).addAll((ArrayNode) result);
+               } else {
+                  ((ArrayNode) existing).add(result);
+               }
+            } else {
+               if (result.isArray()) {
+                  ((ArrayNode) result).insert(0, existing);
+                  transformerResults.put(transformerId, result);
+               } else {
+                  transformerResults.put(transformerId, instance.arrayNode().add(existing).add(result));
+               }
+            }
+         } else {
+            JsonNode node;
+            switch (type) {
+               case Schema.TYPE_1ST_LEVEL:
+                  node = run.data;
+                  break;
+               case Schema.TYPE_2ND_LEVEL:
+                  node = run.data.path(key);
+                  break;
+               case Schema.TYPE_ARRAY_ELEMENT:
+                  node = run.data.path(Integer.parseInt(key));
+                  break;
+               default:
+                  throw new IllegalStateException("Unknown type " + type);
+            }
+            nakedNodes.add(node);
          }
-         if (queryCount > 0) {
-            int max = allNodes.stream().filter(n -> n.isArray()).mapToInt(node -> node.size()).max().orElse(1);
+      }
+      if (schemasAndTransformers > 0) {
+         int max = transformerResults.values().stream().filter(JsonNode::isArray).mapToInt(JsonNode::size).max().orElse(1);
 
-            for (int position = 0; position < max; position += 1) {
-               ArrayNode all = instance.arrayNode(max);
-               for ( JsonNode node: allNodes) {
-                  int elementCountAtPosition = position + 1;
-                  if (node.size() == 1 || node.isTextual() || node.isObject()) {
-                     all.add(node);
-                  } else if (node.size() >= elementCountAtPosition) {
+         for (int position = 0; position < max; position += 1) {
+            ArrayNode all = instance.arrayNode(max + nakedNodes.size());
+            for (var entry: transformerResults.entrySet()) {
+               JsonNode node = entry.getValue();
+               if (node.isObject()) {
+                  all.add(node);
+               } else if (node.isArray()) {
+                  if (position < node.size()) {
                      all.add(node.get(position));
                   } else {
-                     log.warn("Transformation merge detected unaligned array sizes situation.");
+                     log.warnf("Transformer %d produced an array of %d elements but other transformer " +
+                           "produced %d elements; dataset %d/%d might be missing some data.",
+                           entry.getKey(), node.size(), max, run.id, ordinal);
                   }
+               } else {
+                  log.warnf("Unexpected result provided by one of the transformers: %s", node);
                }
-               dataSets.add(new DataSet(run.start, run.stop
-                     , "DataSet created from merged transformer functions and schema", test.id
-                     , all, run
-                     , ordinal++, run.owner, run.access));
             }
-         } else if (queryCount == 0) {
-            dataSets.add(new DataSet(run.start, run.stop
-                  , "DataSet created (empty) for run data that omitted a schema.", test.id
-                  , instance.arrayNode(), run
-                  , ordinal++, run.owner, run.access));
+            nakedNodes.forEach(all::add);
+            createDataset(new DataSet(run.start, run.stop, run.description,
+                  run.testid, all, run, ordinal++, run.owner, run.access));
          }
+      } else {
+         createDataset(new DataSet(run.start, run.stop,
+               "Empty DataSet for run data without any schema.",
+               run.testid, instance.arrayNode(), run, 0, run.owner, run.access));
+      }
+   }
 
-         dataSets.forEach(ds -> {
-            try {
-               ds.persistAndFlush();
-               Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, ds);
-            } catch (TransactionRequiredException tre) {
-               log.warn("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.");
-            }
-         });
-      } catch(Exception e) {
-         log.debugf("schema id %d transformer id %s prefix %s run id %s", schemaid, transformer_id, prefix, runId);
-         log.errorf("Exception with cause: %s", e);
-         throw e;
+   private void createDataset(DataSet ds) {
+      try {
+         ds.persist();
+         Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, ds);
+      } catch (TransactionRequiredException tre) {
+         log.error("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.", tre);
       }
    }
 
@@ -1141,45 +1182,24 @@ public class RunServiceImpl implements RunService {
       return (List<Object[]>)list;
    }
 
-   private boolean isFunctionAvailable(Transformer t) {
-      return t != null && t.function != null;
-   }
-
-   private JsonNode findMatch(JsonNode node, String uri) {
-      JsonNode search = node.path("$schema");
-      if (search.textValue().equals(uri)) {
-         return node;
-      }
-      return null;
-   }
-
    private JsonNode findNestedMatch(JsonNode node, String uri) {
       Iterator<Map.Entry<String, JsonNode>> children = node.fields();
       while (children.hasNext()) {
          Map.Entry<String, JsonNode> child = children.next();
-         if (child.getValue().isObject()) {
-            JsonNode found = findMatch(child.getValue(), uri);
-            if (found != null) {
-               return found;
-            }
+         if (child.getValue().isObject() && uri.equals(child.getValue().path("$schema").textValue())) {
+            return child.getValue();
          }
       }
+      log.errorf("Cannot find nested node with URI %s despite it should be present.", uri);
       return null;
    }
 
-   private ObjectNode convert(ObjectNode root, List<Object[]> resultSet) {
+   private void addExtracted(ObjectNode root, List<Object[]> resultSet) {
       for (Object[] labelValue : resultSet) {
          String name = (String)labelValue[0];
          JsonNode value = (JsonNode) labelValue[1];
-         if (value != null) {
-            root.set(name, value);
-         }
+         root.set(name, value);
       }
-      return root;
-   }
-
-   private boolean hasLabels(Collection<NamedJsonPath> labels) {
-      return labels != null && !labels.isEmpty() && !labels.stream().filter(e -> e != null).filter(e -> e.jsonpath != null && !e.jsonpath.isBlank()).collect(Collectors.toList()).isEmpty();
    }
 
    private void putIfAbsent(String uri, ObjectNode node) {
@@ -1188,7 +1208,4 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   private boolean isFunctionExecutable(Transformer t) {
-      return t != null && t.function != null && !t.function.isBlank();
-   }
 }
