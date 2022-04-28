@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.entity.converter;
+package io.hyperfoil.tools.horreum.converter;
 
 import org.hibernate.dialect.PostgreSQL95Dialect;
 

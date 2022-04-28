@@ -12,15 +12,14 @@ import javax.persistence.JoinColumn;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
-import io.hyperfoil.tools.horreum.server.UserTeamsFilter;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * This is an offline-cache of user-team mapping with the source-of-truth being held
  * in Keycloak. As the Keycloak API does not allow querying for users having effective
  * role (see https://issues.redhat.com/browse/KEYCLOAK-11494) we'll update these cached
- * roles as needed in {@link UserTeamsFilter}.
- * The table is actually read in {@link io.hyperfoil.tools.horreum.svc.NotificationServiceImpl}.GET_NOTIFICATIONS
+ * roles as needed in UserTeamsFilter.
+ * The table is actually read in {@link io.hyperfoil.tools.horreum.api.NotificationService}.
  */
 @Entity(name = "userinfo")
 public class UserInfo extends PanacheEntityBase {

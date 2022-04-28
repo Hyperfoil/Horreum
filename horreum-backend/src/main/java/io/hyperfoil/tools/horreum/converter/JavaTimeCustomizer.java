@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.entity.converter;
+package io.hyperfoil.tools.horreum.converter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
