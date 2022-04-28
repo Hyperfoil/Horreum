@@ -5,8 +5,7 @@ import javax.persistence.Converter;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-
-import io.hyperfoil.tools.horreum.svc.Util;
+import io.hyperfoil.tools.horreum.ApiUtil;
 
 @Converter
 public class JsonConverter implements AttributeConverter<JsonNode, String> {
@@ -18,7 +17,7 @@ public class JsonConverter implements AttributeConverter<JsonNode, String> {
    @Override
    public JsonNode convertToEntityAttribute(String s) {
       try {
-         return Util.OBJECT_MAPPER.readTree(s);
+         return ApiUtil.OBJECT_MAPPER.readTree(s);
       } catch (JsonProcessingException e) {
          throw new RuntimeException(e);
       }
