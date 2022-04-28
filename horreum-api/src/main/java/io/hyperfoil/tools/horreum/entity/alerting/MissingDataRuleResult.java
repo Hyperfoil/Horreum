@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.entity.alerting;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.Objects;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
@@ -28,6 +29,19 @@ public class MissingDataRuleResult extends PanacheEntityBase {
 
       @Column(name = "dataset_id", nullable = false, updatable = false)
       int datasetId;
+
+      @Override
+      public boolean equals(Object o) {
+         if (this == o) return true;
+         if (o == null || getClass() != o.getClass()) return false;
+         Pk pk = (Pk) o;
+         return ruleId == pk.ruleId && datasetId == pk.datasetId;
+      }
+
+      @Override
+      public int hashCode() {
+         return Objects.hash(ruleId, datasetId);
+      }
    }
 
    @EmbeddedId

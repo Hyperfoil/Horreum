@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.entity.json;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Objects;
 
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -78,5 +79,18 @@ public class Label extends OwnedEntityBase {
 
       @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
       public JsonNode value;
+
+      @Override
+      public boolean equals(Object o) {
+         if (this == o) return true;
+         if (o == null || getClass() != o.getClass()) return false;
+         Value value1 = (Value) o;
+         return datasetId == value1.datasetId && labelId == value1.labelId && Objects.equals(value, value1.value);
+      }
+
+      @Override
+      public int hashCode() {
+         return Objects.hash(datasetId, labelId, value);
+      }
    }
 }
