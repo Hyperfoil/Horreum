@@ -33,7 +33,7 @@ import io.hyperfoil.tools.horreum.api.RunService;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
-import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
+import io.hyperfoil.tools.horreum.entity.json.Extractor;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -47,7 +47,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-import io.vertx.core.eventbus.EventBus;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -63,7 +62,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testTransformationNoSchemaInData(TestInfo info) throws InterruptedException {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
-      NamedJsonPath path = new NamedJsonPath("foo", "$.value", false);
+      Extractor path = new Extractor("foo", "$.value", false);
       Schema schema = createExampleSchema(info);
 
       Transformer transformer = createTransformerWithJsonPaths("acme", schema, "", path);
@@ -155,7 +154,7 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
       Schema schema = createExampleSchema("AcneCorp", "AcneInc", "AcneRrUs", false);
 
-      NamedJsonPath path = new NamedJsonPath("foo", "$.value", false);
+      Extractor path = new Extractor("foo", "$.value", false);
       Transformer transformer = createTransformerWithJsonPaths("acme", schema, "", path); // blank function
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
@@ -176,9 +175,9 @@ public class RunServiceTest extends BaseServiceTest {
       Schema acmeSchema = createExampleSchema("AcmeCorp", "AcmeInc", "AcmeRrUs", false);
       Schema roadRunnerSchema = createExampleSchema("RoadRunnerCorp", "RoadRunnerInc", "RoadRunnerRrUs", false);
 
-      NamedJsonPath acmePath = new NamedJsonPath("foo", "$.value", false);
+      Extractor acmePath = new Extractor("foo", "$.value", false);
       Transformer acmeTransformer = createTransformerWithJsonPaths("acme", acmeSchema, "value => ({ acme: value })", acmePath);
-      NamedJsonPath roadRunnerPath = new NamedJsonPath("bah", "$.value", false);
+      Extractor roadRunnerPath = new Extractor("bah", "$.value", false);
       Transformer roadRunnerTransformer = createTransformerWithJsonPaths("roadrunner", roadRunnerSchema, "value => ({ outcome: value })", roadRunnerPath);
 
       Test exampleTest = createExampleTest(getTestName(info));
@@ -290,10 +289,10 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
 
       Schema schema = createExampleSchema("ArrayCorp", "ArrayInc", "ArrayRrUs", false);
-      NamedJsonPath arrayPath = new NamedJsonPath("mheep", "$.values", false);
+      Extractor arrayPath = new Extractor("mheep", "$.values", false);
       String arrayFunction = "mheep => { return mheep.map(x => ({ \"outcome\": x }))}";
 
-      NamedJsonPath scalarPath = new NamedJsonPath("sheep", "$.value", false);
+      Extractor scalarPath = new Extractor("sheep", "$.value", false);
       String scalarFunction = "sheep => { return ({  \"outcome\": { sheep } }) }";
 
       Transformer arrayTransformer = createTransformerWithJsonPaths("arrayT", schema, arrayFunction, arrayPath);
@@ -324,7 +323,7 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
 
       Schema schemaA = createExampleSchema("Aba", "Aba", "Aba", false);
-      NamedJsonPath path = new NamedJsonPath("value", "$.value", false);
+      Extractor path = new Extractor("value", "$.value", false);
       Transformer transformerA = createTransformerWithJsonPaths("A", schemaA, "value => ({\"by\": \"A\"})", path);
 
       Schema schemaB = createExampleSchema("Bcb", "Bcb", "Bcb", false);
@@ -360,7 +359,7 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
 
       Schema schema = createExampleSchema("DDDD", "DDDDInc", "DDDDRrUs", true);
-      NamedJsonPath scalarPath = new NamedJsonPath("sheep", "$.duff", false);
+      Extractor scalarPath = new Extractor("sheep", "$.duff", false);
       Transformer scalarTransformer = createTransformerWithJsonPaths("tranProcessNullExtractorValue", schema, "sheep => ({ outcome: { sheep }})", scalarPath);
 
       Test exampleTest = createExampleTest(getTestName(info));
@@ -382,11 +381,11 @@ public class RunServiceTest extends BaseServiceTest {
    private void testTransformationWithoutMatch(TestInfo info, Schema schema, ObjectNode data) throws InterruptedException {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
 
-      NamedJsonPath firstMatch = new NamedJsonPath("foo", "$.foo", false);
-      NamedJsonPath allMatches = new NamedJsonPath("bar", "$.bar[*].x", false);
+      Extractor firstMatch = new Extractor("foo", "$.foo", false);
+      Extractor allMatches = new Extractor("bar", "$.bar[*].x", false);
       allMatches.array = true;
-      NamedJsonPath value = new NamedJsonPath("value", "$.value", false);
-      NamedJsonPath values = new NamedJsonPath("values", "$.values[*]", false);
+      Extractor value = new Extractor("value", "$.value", false);
+      Extractor values = new Extractor("values", "$.values[*]", false);
       values.array = true;
 
       Transformer transformerNoFunc = createTransformerWithJsonPaths("noFunc", schema, null, firstMatch, allMatches);
@@ -546,8 +545,8 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testDatasetLabelsSingle() {
       withExampleSchemas((schemas) -> {
-         int labelA = addLabel(schemas[0], "value", null, new NamedJsonPath("value", "$.value", false));
-         int labelB = addLabel(schemas[1], "value", "v => v + 1", new NamedJsonPath("value", "$.value", false));
+         int labelA = addLabel(schemas[0], "value", null, new Extractor("value", "$.value", false));
+         int labelB = addLabel(schemas[1], "value", "v => v + 1", new Extractor("value", "$.value", false));
          List<Label.Value> values = withLabelValues(createABData());
          assertEquals(2, values.size());
          assertEquals(24, values.stream().filter(v -> v.labelId == labelA).map(v -> v.value.numberValue()).findFirst().orElse(null));
@@ -575,15 +574,15 @@ public class RunServiceTest extends BaseServiceTest {
    public void testDatasetLabelsMulti() {
       withExampleSchemas((schemas) -> {
          int labelSum = addLabel(schemas[0], "Sum", "({ a, b }) => a + b",
-               new NamedJsonPath("a", "$.a", false), new NamedJsonPath("b", "$.b", false));
+               new Extractor("a", "$.a", false), new Extractor("b", "$.b", false));
          int labelSingle = addLabel(schemas[0], "Single", null,
-               new NamedJsonPath("a", "$.a", false));
+               new Extractor("a", "$.a", false));
          int labelObject = addLabel(schemas[0], "Object", null,
-               new NamedJsonPath("x", "$.a", false), new NamedJsonPath("y", "$.b", false));
+               new Extractor("x", "$.a", false), new Extractor("y", "$.b", false));
          int labelArray = addLabel(schemas[1], "Array", null,
-               new NamedJsonPath("array", "$.array[*].y", true));
+               new Extractor("array", "$.array[*].y", true));
          int labelReduce = addLabel(schemas[1], "Reduce", "array => array.reduce((a, b) => a + b)",
-               new NamedJsonPath("array", "$.array[*].y", true));
+               new Extractor("array", "$.array[*].y", true));
 
          List<Label.Value> values = withLabelValues(createXYData());
          assertEquals(5, values.size());
@@ -600,17 +599,17 @@ public class RunServiceTest extends BaseServiceTest {
    public void testDatasetLabelsNotFound() {
       withExampleSchemas((schemas) -> {
          int labelSingle = addLabel(schemas[0], "Single", null,
-               new NamedJsonPath("value", "$.thisPathDoesNotExist", false));
+               new Extractor("value", "$.thisPathDoesNotExist", false));
          int labelSingleFunc = addLabel(schemas[0], "SingleFunc", "x => x === null",
-               new NamedJsonPath("value", "$.thisPathDoesNotExist", false));
+               new Extractor("value", "$.thisPathDoesNotExist", false));
          int labelSingleArray = addLabel(schemas[0], "SingleArray", "x => Array.isArray(x) && x.length === 0",
-               new NamedJsonPath("value", "$.thisPathDoesNotExist", true));
-         int labelMulti = addLabel(schemas[0], "Multi", null, new NamedJsonPath("a", "$.a", false),
-               new NamedJsonPath("value", "$.thisPathDoesNotExist", false));
+               new Extractor("value", "$.thisPathDoesNotExist", true));
+         int labelMulti = addLabel(schemas[0], "Multi", null, new Extractor("a", "$.a", false),
+               new Extractor("value", "$.thisPathDoesNotExist", false));
          int labelMultiFunc = addLabel(schemas[0], "MultiFunc", "({a, value}) => a === 1 && value === null",
-               new NamedJsonPath("a", "$.a", false), new NamedJsonPath("value", "$.thisPathDoesNotExist", false));
+               new Extractor("a", "$.a", false), new Extractor("value", "$.thisPathDoesNotExist", false));
          int labelMultiArray = addLabel(schemas[0], "MultiArray", "({a, value}) => a === 1 && Array.isArray(value) && value.length === 0",
-               new NamedJsonPath("a", "$.a", false), new NamedJsonPath("value", "$.thisPathDoesNotExist", true));
+               new Extractor("a", "$.a", false), new Extractor("value", "$.thisPathDoesNotExist", true));
 
          List<Label.Value> values = withLabelValues(createXYData());
          assertEquals(6, values.size());
@@ -628,9 +627,9 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testDatasetLabelChanged() {
       withExampleSchemas((schemas) -> {
-         int labelA = addLabel(schemas[0], "A", null, new NamedJsonPath("value", "$.value", false));
-         int labelB = addLabel(schemas[1], "B", "v => v + 1", new NamedJsonPath("value", "$.value", false));
-         int labelC = addLabel(schemas[1], "C", null, new NamedJsonPath("value", "$.value", false));
+         int labelA = addLabel(schemas[0], "A", null, new Extractor("value", "$.value", false));
+         int labelB = addLabel(schemas[1], "B", "v => v + 1", new Extractor("value", "$.value", false));
+         int labelC = addLabel(schemas[1], "C", null, new Extractor("value", "$.value", false));
          BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
          withExampleDataset(createTest(createExampleTest("dummy")), createABData(), ds -> {
             waitForUpdate(updateQueue, ds);
@@ -641,8 +640,8 @@ public class RunServiceTest extends BaseServiceTest {
             assertEquals(42, values.stream().filter(v -> v.labelId == labelC).map(v -> v.value.numberValue()).findFirst().orElse(null));
             em.clear();
 
-            updateLabel(schemas[0], labelA, "value", null, new NamedJsonPath("value", "$.value", true));
-            updateLabel(schemas[1], labelB, "value", "({ x, y }) => x + y", new NamedJsonPath("x", "$.value", false), new NamedJsonPath("y", "$.value", false));
+            updateLabel(schemas[0], labelA, "value", null, new Extractor("value", "$.value", true));
+            updateLabel(schemas[1], labelB, "value", "({ x, y }) => x + y", new Extractor("x", "$.value", false), new Extractor("y", "$.value", false));
             deleteLabel(schemas[1], labelC);
             waitForUpdate(updateQueue, ds);
             waitForUpdate(updateQueue, ds);
@@ -747,7 +746,7 @@ public class RunServiceTest extends BaseServiceTest {
          return null;
       });
       withExampleSchemas((schemas) -> {
-         NamedJsonPath valuePath = new NamedJsonPath("value", "$.value", false);
+         Extractor valuePath = new Extractor("value", "$.value", false);
          int labelA = addLabel(schemas[0], "a", null, valuePath);
          int labelB = addLabel(schemas[1], "b", null, valuePath);
          // view update should happen in the same transaction as labels update so we can use the event
@@ -835,7 +834,7 @@ public class RunServiceTest extends BaseServiceTest {
       assertEquals(0, ds.get(0)[1]);
       assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM label_values").getSingleResult()).intValue());
 
-      addLabel(schema, "value", null, new NamedJsonPath("value", "$.value", false));
+      addLabel(schema, "value", null, new Extractor("value", "$.value", false));
       // not empty anymore
       DataSet.LabelsUpdatedEvent thirdUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(thirdUpdate);
@@ -852,11 +851,11 @@ public class RunServiceTest extends BaseServiceTest {
       assertTrue(node.isEmpty());
    }
 
-   private Transformer createTransformerWithJsonPaths(String name, Schema schema, String function, NamedJsonPath... paths) {
+   private Transformer createTransformerWithJsonPaths(String name, Schema schema, String function, Extractor... paths) {
       Transformer transformer = new Transformer();
       transformer.name = name;
       transformer.extractors = new ArrayList<>();
-      for (NamedJsonPath path : paths) {
+      for (Extractor path : paths) {
          if (path != null) {
             transformer.extractors.add(path);
          }

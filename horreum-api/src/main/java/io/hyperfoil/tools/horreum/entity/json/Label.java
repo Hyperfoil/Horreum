@@ -48,7 +48,7 @@ public class Label extends OwnedEntityBase {
 
    @ElementCollection(fetch = FetchType.EAGER)
    @CollectionTable(name = "label_extractors")
-   public Collection<NamedJsonPath> extractors;
+   public Collection<Extractor> extractors;
 
    public String function;
 

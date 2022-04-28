@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
+import io.hyperfoil.tools.horreum.entity.json.Extractor;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.report.ReportComment;
@@ -197,13 +197,13 @@ public class ReportServiceTest extends BaseServiceTest {
 
    private void createComparisonSchema() {
       Schema schema = createSchema("comparison", SCHEMA);
-      addLabel(schema, "variant", null, new NamedJsonPath("variant", "$.variant", false));
-      addLabel(schema, "os", null, new NamedJsonPath("os", "$.os", false));
-      addLabel(schema, "category", null, new NamedJsonPath("category", "$.category", false));
-      addLabel(schema, "clusterSize", null, new NamedJsonPath("clusterSize", "$.clusterSize", false));
-      addLabel(schema, "cpuUsage", null, new NamedJsonPath("cpuUsage", "$.cpuUsage", false));
-      addLabel(schema, "memoryUsage", null, new NamedJsonPath("memoryUsage", "$.memoryUsage", false));
-      addLabel(schema, "throughput", null, new NamedJsonPath("throughput", "$.throughput", false));
+      addLabel(schema, "variant", null, new Extractor("variant", "$.variant", false));
+      addLabel(schema, "os", null, new Extractor("os", "$.os", false));
+      addLabel(schema, "category", null, new Extractor("category", "$.category", false));
+      addLabel(schema, "clusterSize", null, new Extractor("clusterSize", "$.clusterSize", false));
+      addLabel(schema, "cpuUsage", null, new Extractor("cpuUsage", "$.cpuUsage", false));
+      addLabel(schema, "memoryUsage", null, new Extractor("memoryUsage", "$.memoryUsage", false));
+      addLabel(schema, "throughput", null, new Extractor("throughput", "$.throughput", false));
    }
 
    @org.junit.jupiter.api.Test

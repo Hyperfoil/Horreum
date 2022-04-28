@@ -3,7 +3,7 @@ package io.hyperfoil.tools.horreum.svc;
 import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Label;
-import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
+import io.hyperfoil.tools.horreum.entity.json.Extractor;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -349,8 +349,8 @@ public class SchemaServiceImpl implements SchemaService {
       return transformer.id;
    }
 
-   private void validateExtractors(Collection<NamedJsonPath> extractors) {
-      for (NamedJsonPath extractor : extractors) {
+   private void validateExtractors(Collection<Extractor> extractors) {
+      for (Extractor extractor : extractors) {
          if (extractor.name == null || extractor.name.isBlank()) {
             throw ServiceException.badRequest("One of the extractors does not have a name!");
          } else if (extractor.jsonpath == null || extractor.jsonpath.isBlank()) {

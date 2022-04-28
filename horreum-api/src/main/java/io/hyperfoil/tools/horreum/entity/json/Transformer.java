@@ -39,7 +39,7 @@ public class Transformer extends OwnedEntityBase implements Comparable<Transform
 
    @ElementCollection(fetch = FetchType.EAGER)
    @CollectionTable(name = "transformer_extractors")
-   public Collection<NamedJsonPath> extractors;
+   public Collection<Extractor> extractors;
 
    public String function;
 

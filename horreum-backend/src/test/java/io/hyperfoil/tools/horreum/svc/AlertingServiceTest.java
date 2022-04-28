@@ -44,7 +44,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
 import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRuleResult;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
+import io.hyperfoil.tools.horreum.entity.json.Extractor;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
@@ -215,7 +215,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       test.fingerprintLabels = jsonArray("config");
       test = createTest(test);
       Schema schema = createExampleSchema(info);
-      addLabel(schema, "config", null, new NamedJsonPath("config", "$.config", false));
+      addLabel(schema, "config", null, new Extractor("config", "$.config", false));
 
       addChangeDetectionVariable(test);
 
@@ -265,8 +265,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       test = createTest(test);
       addChangeDetectionVariable(test);
       Schema schema = createExampleSchema(info);
-      addLabel(schema, "foo", null, new NamedJsonPath("foo", "$.foo", false));
-      addLabel(schema, "bar", null, new NamedJsonPath("bar", "$.bar", false));
+      addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
+      addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
       uploadRun(runWithValue(schema, 42).put("foo", "aaa").put("bar", "bbb"), test.name);
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
@@ -299,8 +299,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       test = createTest(test);
       addChangeDetectionVariable(test);
       Schema schema = createExampleSchema(info);
-      addLabel(schema, "foo", null, new NamedJsonPath("foo", "$.foo", false));
-      addLabel(schema, "bar", null, new NamedJsonPath("bar", "$.bar", false));
+      addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
+      addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
 

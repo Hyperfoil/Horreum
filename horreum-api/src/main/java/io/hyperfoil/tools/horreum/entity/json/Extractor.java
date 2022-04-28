@@ -5,7 +5,7 @@ import javax.persistence.Embeddable;
 import javax.validation.constraints.NotNull;
 
 @Embeddable
-public class NamedJsonPath {
+public class Extractor {
    @NotNull
    public String name;
 
@@ -16,10 +16,10 @@ public class NamedJsonPath {
    @Column(name = "isarray")
    public boolean array;
 
-   public NamedJsonPath() {
+   public Extractor() {
    }
 
-   public NamedJsonPath(String name, String jsonpath, boolean array) {
+   public Extractor(String name, String jsonpath, boolean array) {
       this.name = name;
       this.jsonpath = jsonpath;
       this.array = array;

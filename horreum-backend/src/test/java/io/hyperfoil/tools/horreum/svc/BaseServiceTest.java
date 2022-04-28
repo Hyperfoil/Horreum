@@ -36,7 +36,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
-import io.hyperfoil.tools.horreum.entity.json.NamedJsonPath;
+import io.hyperfoil.tools.horreum.entity.json.Extractor;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -45,7 +45,6 @@ import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
@@ -185,7 +184,7 @@ public class BaseServiceTest {
    protected Schema createExampleSchema(TestInfo info) {
       String name = info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
       Schema schema = createSchema(name, uriForTest(info, "1.0"));
-      addLabel(schema, "value", null, new NamedJsonPath("value", "$.value", false));
+      addLabel(schema, "value", null, new Extractor("value", "$.value", false));
       return schema;
    }
 
@@ -200,7 +199,7 @@ public class BaseServiceTest {
       schema.id = id;
 
       if (label) {
-         addLabel(schema, "value", null, new NamedJsonPath("value", "$.value", false));
+         addLabel(schema, "value", null, new Extractor("value", "$.value", false));
       }
       assertNotNull(schema.id);
       return schema;
@@ -226,17 +225,17 @@ public class BaseServiceTest {
       return "urn:" + info.getTestClass().map(Class::getName).orElse("<unknown>") + ":" + info.getDisplayName() + ":" + suffix;
    }
 
-   protected int addLabel(Schema schema, String name, String function, NamedJsonPath... extractors) {
+   protected int addLabel(Schema schema, String name, String function, Extractor... extractors) {
       return postLabel(schema, name, function, new Label(), extractors);
    }
 
-   protected int updateLabel(Schema schema, int labelId, String name, String function, NamedJsonPath... extractors) {
+   protected int updateLabel(Schema schema, int labelId, String name, String function, Extractor... extractors) {
       Label l = new Label();
       l.id = labelId;
       return postLabel(schema, name, function, l, extractors);
    }
 
-   private int postLabel(Schema schema, String name, String function, Label l, NamedJsonPath[] extractors) {
+   private int postLabel(Schema schema, String name, String function, Label l, Extractor[] extractors) {
       l.name = name;
       l.function = function;
       l.schema = schema;
