@@ -216,14 +216,12 @@ public class RunServiceImpl implements RunService {
       result.jsonpath = jsonpath;
       try {
          if (schemaUri != null && !schemaUri.isEmpty()) {
-            jsonpath = jsonpath.trim();
-            if (jsonpath.startsWith("$")) {
-               jsonpath = jsonpath.substring(1);
-            }
-            String sqlQuery = "SELECT " + func + "(run.data, (rs.prefix || ?)::::jsonpath)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ? AND rs.uri = ?";
+            String sqlQuery = "SELECT " + func + "((CASE " +
+                  "WHEN rs.type = 0 THEN run.data WHEN rs.type = 1 THEN run.data->rs.key ELSE run.data->(rs.key::::integer) END)" +
+                  ", (?1)::::jsonpath)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?2 AND rs.uri = ?3";
             result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id, schemaUri));
          } else {
-            String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM run WHERE id = ?";
+            String sqlQuery = "SELECT " + func + "(data, (?1)::::jsonpath)#>>'{}' FROM run WHERE id = ?2";
             result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id));
          }
          result.valid = true;
