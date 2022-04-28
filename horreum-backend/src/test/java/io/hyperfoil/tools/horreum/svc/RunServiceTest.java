@@ -58,18 +58,15 @@ public class RunServiceTest extends BaseServiceTest {
    @Inject
    RunService runService;
 
-   @Inject
-   EventBus eventBus;
-
    private static final int POLL_DURATION_SECONDS = /*11*/10;
 
    @org.junit.jupiter.api.Test
    public void testTransformationNoSchemaInData(TestInfo info) throws InterruptedException {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
-      NamedJsonPath path = createExampleNamedJsonPath("foo", "$.value");
+      NamedJsonPath path = new NamedJsonPath("foo", "$.value", false);
       Schema schema = createExampleSchema(info);
 
-      Transformer transformer = createExampleTransformerWithJsonPath("acme", schema, "", path);
+      Transformer transformer = createTransformerWithJsonPaths("acme", schema, "", path);
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
       addTransformer(test, transformer);
@@ -78,13 +75,6 @@ public class RunServiceTest extends BaseServiceTest {
       DataSet event = dataSetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
       assertEmptyArray(event.data);
-   }
-
-   private NamedJsonPath createExampleNamedJsonPath(String name, String path) {
-      NamedJsonPath jsonpath = new NamedJsonPath();
-      jsonpath.name = name;
-      jsonpath.jsonpath = path;
-      return jsonpath;
    }
 
    @org.junit.jupiter.api.Test
@@ -145,7 +135,7 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
       Schema schema = createExampleSchema(info);
 
-      Transformer transformer = createExampleTransformerWithJsonPath("acme", schema, "");
+      Transformer transformer = createTransformerWithJsonPaths("acme", schema, "");
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
       addTransformer(test, transformer);
@@ -165,8 +155,8 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
       Schema schema = createExampleSchema("AcneCorp", "AcneInc", "AcneRrUs", false);
 
-      NamedJsonPath path = createExampleNamedJsonPath("foo", "$.value");
-      Transformer transformer = createExampleTransformerWithJsonPath("acme", schema, "", path); // blank function
+      NamedJsonPath path = new NamedJsonPath("foo", "$.value", false);
+      Transformer transformer = createTransformerWithJsonPaths("acme", schema, "", path); // blank function
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
       addTransformer(test, transformer);
@@ -174,10 +164,10 @@ public class RunServiceTest extends BaseServiceTest {
 
       DataSet event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
       assertNotNull(event);
-      JsonNode node = event.data;
-      assertTrue(node.isArray());
-      assertEquals(1, node.size());
-      assertEquals(42, node.path(0).path("foo").intValue());
+      assertTrue(event.data.isArray());
+      assertEquals(1, event.data.size());
+      // the result of single extractor is 42, hence this needs to be wrapped into an object (using `value`) before adding schema
+      assertEquals(42, event.data.path(0).path("value").intValue());
    }
 
    @org.junit.jupiter.api.Test
@@ -186,12 +176,10 @@ public class RunServiceTest extends BaseServiceTest {
       Schema acmeSchema = createExampleSchema("AcmeCorp", "AcmeInc", "AcmeRrUs", false);
       Schema roadRunnerSchema = createExampleSchema("RoadRunnerCorp", "RoadRunnerInc", "RoadRunnerRrUs", false);
 
-      NamedJsonPath acmePath = createExampleNamedJsonPath("foo", "$.value");
-      String acmeFunction = createFunction("foo");
-      Transformer acmeTransformer = createExampleTransformerWithJsonPath("acme", acmeSchema, acmeFunction, acmePath);
-      NamedJsonPath roadRunnerPath = createExampleNamedJsonPath("bah", "$.value");
-      String bahFunction = createFunction("bah");
-      Transformer roadRunnerTransformer = createExampleTransformerWithJsonPath("roadrunner", roadRunnerSchema, bahFunction, roadRunnerPath);
+      NamedJsonPath acmePath = new NamedJsonPath("foo", "$.value", false);
+      Transformer acmeTransformer = createTransformerWithJsonPaths("acme", acmeSchema, "value => ({ acme: value })", acmePath);
+      NamedJsonPath roadRunnerPath = new NamedJsonPath("bah", "$.value", false);
+      Transformer roadRunnerTransformer = createTransformerWithJsonPaths("roadrunner", roadRunnerSchema, "value => ({ outcome: value })", roadRunnerPath);
 
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
@@ -206,14 +194,10 @@ public class RunServiceTest extends BaseServiceTest {
       JsonNode node = event.data;
       assertTrue(node.isArray());
       assertEquals(2 , node.size());
-      JsonNode acme = node.path(0).path("outcome").path("foo");
-      validate( "42", acme);
-      JsonNode runner = node.path(1).path("outcome").path("bah");
-      validate( "42", runner);
-      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES[2]))) {
-         Run run = Run.findById(runId);
-         assertEquals(1, run.datasets.size());
-      }
+      validate("42", node.path(0).path("acme"));
+      validate("42", node.path(1).path("outcome"));
+      Run run = Run.findById(runId);
+      assertEquals(1, run.datasets.size());
    }
 
    @org.junit.jupiter.api.Test
@@ -306,14 +290,14 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
 
       Schema schema = createExampleSchema("ArrayCorp", "ArrayInc", "ArrayRrUs", false);
-      NamedJsonPath arrayPath = createExampleNamedJsonPath("mheep", "$.values");
-      String arrayFunction = createArrayFunction("mheep");
+      NamedJsonPath arrayPath = new NamedJsonPath("mheep", "$.values", false);
+      String arrayFunction = "mheep => { return mheep.map(x => ({ \"outcome\": x }))}";
 
-      NamedJsonPath scalarPath = createExampleNamedJsonPath("sheep", "$.value");
-      String scalarFunction = createFunction("sheep");
+      NamedJsonPath scalarPath = new NamedJsonPath("sheep", "$.value", false);
+      String scalarFunction = "sheep => { return ({  \"outcome\": { sheep } }) }";
 
-      Transformer arrayTransformer = createExampleTransformerWithJsonPath("arrayT", schema, arrayFunction, arrayPath);
-      Transformer scalarTransformer = createExampleTransformerWithJsonPath("scalarT", schema, scalarFunction, scalarPath);
+      Transformer arrayTransformer = createTransformerWithJsonPaths("arrayT", schema, arrayFunction, arrayPath);
+      Transformer scalarTransformer = createTransformerWithJsonPaths("scalarT", schema, scalarFunction, scalarPath);
 
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
@@ -340,11 +324,11 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
 
       Schema schemaA = createExampleSchema("Aba", "Aba", "Aba", false);
-      NamedJsonPath path = createExampleNamedJsonPath("value", "$.value");
-      Transformer transformerA = createExampleTransformerWithJsonPath("A", schemaA, "value => ({\"by\": \"A\"})", path);
+      NamedJsonPath path = new NamedJsonPath("value", "$.value", false);
+      Transformer transformerA = createTransformerWithJsonPaths("A", schemaA, "value => ({\"by\": \"A\"})", path);
 
       Schema schemaB = createExampleSchema("Bcb", "Bcb", "Bcb", false);
-      Transformer transformerB = createExampleTransformerWithJsonPath("B", schemaB, "value => ({\"by\": \"B\"})");
+      Transformer transformerB = createTransformerWithJsonPaths("B", schemaB, "value => ({\"by\": \"B\"})");
 
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerA, transformerB);
@@ -376,9 +360,8 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
 
       Schema schema = createExampleSchema("DDDD", "DDDDInc", "DDDDRrUs", true);
-      NamedJsonPath scalarPath = createExampleNamedJsonPath("sheep", "$.duff");
-      String scalarFunction = createFunction("sheep");
-      Transformer scalarTransformer = createExampleTransformerWithJsonPath("tranProcessNullExtractorValue", schema, scalarFunction, scalarPath);
+      NamedJsonPath scalarPath = new NamedJsonPath("sheep", "$.duff", false);
+      Transformer scalarTransformer = createTransformerWithJsonPaths("tranProcessNullExtractorValue", schema, "sheep => ({ outcome: { sheep }})", scalarPath);
 
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
@@ -399,16 +382,16 @@ public class RunServiceTest extends BaseServiceTest {
    private void testTransformationWithoutMatch(TestInfo info, Schema schema, ObjectNode data) throws InterruptedException {
       BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
 
-      NamedJsonPath firstMatch = createExampleNamedJsonPath("foo", "$.foo");
-      NamedJsonPath allMatches = createExampleNamedJsonPath("bar", "$.bar[*].x");
+      NamedJsonPath firstMatch = new NamedJsonPath("foo", "$.foo", false);
+      NamedJsonPath allMatches = new NamedJsonPath("bar", "$.bar[*].x", false);
       allMatches.array = true;
-      NamedJsonPath value = createExampleNamedJsonPath("value", "$.value");
-      NamedJsonPath values = createExampleNamedJsonPath("values", "$.values[*]");
+      NamedJsonPath value = new NamedJsonPath("value", "$.value", false);
+      NamedJsonPath values = new NamedJsonPath("values", "$.values[*]", false);
       values.array = true;
 
-      Transformer transformerNoFunc = createExampleTransformerWithJsonPath("noFunc", schema, null, firstMatch, allMatches);
-      Transformer transformerFunc = createExampleTransformerWithJsonPath("func", schema, "({foo, bar}) => ({ foo, bar })", firstMatch, allMatches);
-      Transformer transformerCombined = createExampleTransformerWithJsonPath("combined", schema, null, firstMatch, allMatches, value, values);
+      Transformer transformerNoFunc = createTransformerWithJsonPaths("noFunc", schema, null, firstMatch, allMatches);
+      Transformer transformerFunc = createTransformerWithJsonPaths("func", schema, "({foo, bar}) => ({ foo, bar })", firstMatch, allMatches);
+      Transformer transformerCombined = createTransformerWithJsonPaths("combined", schema, null, firstMatch, allMatches, value, values);
 
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerNoFunc, transformerFunc, transformerCombined);
@@ -869,7 +852,7 @@ public class RunServiceTest extends BaseServiceTest {
       assertTrue(node.isEmpty());
    }
 
-   private Transformer createExampleTransformerWithJsonPath(String name, Schema schema, String function, NamedJsonPath... paths) {
+   private Transformer createTransformerWithJsonPaths(String name, Schema schema, String function, NamedJsonPath... paths) {
       Transformer transformer = new Transformer();
       transformer.name = name;
       transformer.extractors = new ArrayList<>();
@@ -895,16 +878,6 @@ public class RunServiceTest extends BaseServiceTest {
          ids.add(t.id);
       }
       jsonRequest().body(ids).post("/api/test/" + test.id + "/transformers").then().assertThat().statusCode(204);
-   }
-
-   private String createFunction(String name) {
-      return new StringBuilder().append("({ ").append(name)
-         .append(" }) => { return ({  \"outcome\": { ").append(name).append(" } }) }").toString();
-   }
-
-   private String createArrayFunction(String name) {
-      return new StringBuilder().append("({ ").append(name)
-         .append(" }) => { return ").append(name).append(".map(x => ({ \"outcome\": x }))}").toString();
    }
 
    private void validateScalarArray(DataSet ds, String expectedTarget) {

@@ -1033,7 +1033,7 @@ public class RunServiceImpl implements RunService {
             }
          }
          if (t != null) {
-            ObjectNode root = JsonNodeFactory.instance.objectNode();
+            JsonNode root = JsonNodeFactory.instance.objectNode();
             JsonNode result;
             if (t.extractors != null && !t.extractors.isEmpty()) {
                if (type == Schema.TYPE_1ST_LEVEL) {
@@ -1043,7 +1043,7 @@ public class RunServiceImpl implements RunService {
                         .addScalar("name", TextType.INSTANCE)
                         .addScalar("value", JsonNodeBinaryType.INSTANCE)
                         .getResultList());
-                  addExtracted(root, extractedData);
+                  addExtracted((ObjectNode) root, extractedData);
                } else {
                   List<Object[]> extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
                         .setParameter(1, run.id).setParameter(2, transformerId)
@@ -1052,7 +1052,17 @@ public class RunServiceImpl implements RunService {
                         .addScalar("name", TextType.INSTANCE)
                         .addScalar("value", JsonNodeBinaryType.INSTANCE)
                         .getResultList());
-                  addExtracted(root, extractedData);
+                  addExtracted((ObjectNode) root, extractedData);
+               }
+            }
+            // In Horreum it's customary that when a single extractor is used we pass the result directly to the function
+            // without wrapping it in an extra object.
+            if (t.extractors.size() == 1) {
+               if (root.size() != 1) {
+                  // missing results should be null nodes
+                  log.errorf("Unexpected result for single extractor: %s", root.toPrettyString());
+               } else {
+                  root = root.iterator().next();
                }
             }
             if (t.function != null && !t.function.isBlank()) {
