@@ -1,6 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.converter;
 
-import io.hyperfoil.tools.horreum.svc.Util;
+import io.hyperfoil.tools.horreum.ApiUtil;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -52,7 +52,7 @@ public class JsonUserType implements UserType {
          return null;
       }
       try {
-         return Util.OBJECT_MAPPER.readTree(content);
+         return ApiUtil.OBJECT_MAPPER.readTree(content);
       } catch (JsonProcessingException e) {
          throw new HibernateException(e);
       }
@@ -96,7 +96,7 @@ public class JsonUserType implements UserType {
    public Object assemble(Serializable cached, Object owner) throws HibernateException {
       if (cached instanceof String) {
          try {
-            return Util.OBJECT_MAPPER.readTree((String) cached);
+            return ApiUtil.OBJECT_MAPPER.readTree((String) cached);
          } catch (JsonProcessingException e) {
             throw new HibernateException(e);
          }
