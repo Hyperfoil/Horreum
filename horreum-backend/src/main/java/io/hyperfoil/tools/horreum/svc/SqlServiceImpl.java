@@ -3,7 +3,10 @@ package io.hyperfoil.tools.horreum.svc;
 import io.hyperfoil.tools.horreum.api.SqlService;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.mutiny.subscription.UniSubscriber;
+import io.smallrye.mutiny.subscription.UniSubscription;
 import io.vertx.core.Vertx;
+import io.vertx.mutiny.sqlclient.SqlConnection;
 import io.vertx.pgclient.PgConnection;
 
 import javax.annotation.PostConstruct;
@@ -109,22 +112,61 @@ public class SqlServiceImpl implements SqlService {
 
    @PostConstruct
    void init() {
-      listenerConnection = (PgConnection) client.getConnectionAndAwait().getDelegate();
-      listenerConnection.notificationHandler(notification -> Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS,
-            () -> handleNotification(notification.getChannel(), notification.getPayload())));
+      initListenerConnection();
+   }
+
+   private void initListenerConnection() {
+      client.getConnection().subscribe().withSubscriber(new UniSubscriber<SqlConnection>() {
+         @Override
+         public void onSubscribe(UniSubscription subscription) {
+         }
+
+         @Override
+         public void onItem(SqlConnection connection) {
+            synchronized (listeners) {
+               listenerConnection = (PgConnection) connection.getDelegate();
+               listenerConnection.notificationHandler(notification ->
+                     Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS,
+                           () -> handleNotification(notification.getChannel(), notification.getPayload())));
+               listenerConnection.exceptionHandler(t -> log.error("Listener connection experienced an exception!"));
+               for (String channel : listeners.keySet()) {
+                  listenOn(channel);
+               }
+               listenerConnection.closeHandler(nil -> {
+                  log.warn("Listener connection was closed, reconnecting");
+                  synchronized (listeners) {
+                     listenerConnection = null;
+                     initListenerConnection();
+                  }
+               });
+            }
+         }
+
+         @Override
+         public void onFailure(Throwable failure) {
+            log.error("Failed to allocate listener connection, will try again", failure);
+            initListenerConnection();
+         }
+      });
    }
 
    public void registerListener(String channel, Consumer<String> consumer) {
       synchronized (listeners) {
          List<Consumer<String>> consumers = listeners.get(channel);
          if (consumers == null) {
-            listenerConnection.query("LISTEN \"" + channel + "\"").execute()
-                  .onFailure(e -> log.errorf(e, "Failed to register PostgreSQL notification listener on channel %s", channel))
-                  .onSuccess(ignored -> log.infof("Listening for PostgreSQL notification on channel %s", channel));
+            listenOn(channel);
             consumers = new ArrayList<>();
             listeners.put(channel, consumers);
          }
          consumers.add(consumer);
+      }
+   }
+
+   private void listenOn(String channel) {
+      if (listenerConnection != null) {
+         listenerConnection.query("LISTEN \"" + channel + "\"").execute()
+               .onFailure(e -> log.errorf(e, "Failed to register PostgreSQL notification listener on channel %s", channel))
+               .onSuccess(ignored -> log.infof("Listening for PostgreSQL notification on channel %s", channel));
       }
    }
 
