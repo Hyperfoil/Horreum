@@ -1,17 +1,28 @@
 import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
 
-import { Bullseye, DualListSelector, DualListSelectorTreeItemData, Spinner } from "@patternfly/react-core"
+import {
+    Bullseye,
+    Button,
+    DualListSelector,
+    DualListSelectorTreeItemData,
+    Flex,
+    FlexItem,
+    Spinner,
+} from "@patternfly/react-core"
 
 import { dispatchError } from "../../alerts"
 import { noop } from "../../utils"
+import { useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { Transformer, TransformerInfo, allTransformers } from "../schemas/api"
 import { TestDispatch } from "./reducers"
 import { updateTransformers } from "./actions"
+import TransformationLogModal from "./TransformationLogModal"
 
 type TransformersProps = {
     testId: number
+    owner?: string
     originalTransformers: Transformer[]
     updateTransformers(newTransformers: Transformer[]): void
     funcsRef: TabFunctionsRef
@@ -98,6 +109,8 @@ export default function Transformers(props: TransformersProps) {
     const [originalOptions, setOriginalOptions] = useState<SchemaItem[]>([])
     const [options, setOptions] = useState<SchemaItem[]>([])
     const [chosen, setChosen] = useState<SchemaItem[]>([])
+    const [logModalOpen, setLogModalOpen] = useState(false)
+    const isTester = useTester(props.owner)
 
     useEffect(() => {
         setLoading(true)
@@ -162,11 +175,26 @@ export default function Transformers(props: TransformersProps) {
      */
     return (
         <>
+            <Flex justifyContent={{ default: "justifyContentFlexEnd" }}>
+                {isTester && (
+                    <FlexItem>
+                        <Button onClick={() => setLogModalOpen(true)}>Show transformation log</Button>
+                    </FlexItem>
+                )}
+            </Flex>
+            <TransformationLogModal
+                testId={props.testId}
+                title="Transformations"
+                emptyMessage="There are no logs from transformers"
+                isOpen={logModalOpen}
+                onClose={() => setLogModalOpen(false)}
+            />
             {[counter].map(c => (
                 <DualListSelector
                     key={c}
                     isSearchable
                     isTree
+                    isDisabled={!isTester}
                     availableOptions={options}
                     chosenOptions={chosen}
                     onListChange={(newAvailable, newChosen) => {

@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import javax.persistence.Column;
 import javax.persistence.ConstraintMode;
+import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.ForeignKey;
 import javax.persistence.GeneratedValue;
@@ -19,6 +20,7 @@ import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
+@Entity
 public class TransformationLog extends PanacheEntityBase {
    public static final int DEBUG = 0;
    public static final int INFO = 1;
@@ -47,20 +49,16 @@ public class TransformationLog extends PanacheEntityBase {
    public Instant timestamp;
 
    @NotNull
-   public String source;
-
-   @NotNull
    public String message;
 
    public TransformationLog() {
    }
 
-   public TransformationLog(Test test, Run run, int level, String source, String message) {
+   public TransformationLog(Test test, Run run, int level, String message) {
       this.test = test;
       this.run = run;
       this.level = level;
       this.timestamp = Instant.now();
-      this.source = source;
       this.message = message;
    }
 

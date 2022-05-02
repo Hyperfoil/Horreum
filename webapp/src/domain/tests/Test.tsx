@@ -205,6 +205,7 @@ export default function Test() {
                             >
                                 <Transformers
                                     testId={testId}
+                                    owner={test?.owner}
                                     originalTransformers={(test && test.transformers) || []}
                                     updateTransformers={ts => {
                                         if (test) test.transformers = ts

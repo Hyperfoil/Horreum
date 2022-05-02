@@ -225,18 +225,20 @@ public class AlertingServiceImpl implements AlertingService {
                      createMissingDataRuleResult(dataset, ruleId);
                   }
                } else {
-                  // TODO persistent log
                   log.errorf("Result for missing data rule %d, dataset %d is not a boolean: %s", ruleId, dataset.id, result);
+                  logMissingDataMessage(dataset, DatasetLog.ERROR,
+                        "Result for missing data rule %d, dataset %d is not a boolean: %s", ruleId, dataset.id, result);
                }
             },
             // Absence of condition means that this dataset is taken into account. This happens e.g. when value == NULL
             row -> createMissingDataRuleResult(dataset, (int) row[0]),
             (row, exception, code) -> {
-               // TODO persistent log
-               log.errorf(exception, "Exception evaluating missing data rule %d, dataset %d", row[0], dataset.id);
+               Integer ruleId = (Integer) row[0];
+               log.errorf(exception, "Exception evaluating missing data rule %d, dataset %d, code: %s", ruleId, dataset.id, code);
+               logMissingDataMessage(dataset, DatasetLog.ERROR, "Exception evaluating missing data rule %d, dataset %d: '%s' Code: <pre>%s</pre>", ruleId, dataset.id, exception.getMessage(), code);
             }, output -> {
-               // TODO persistent log
-               log.debugf("Output while evaluating missing data rules for dataset %d: %s", dataset.id, output);
+               log.debugf("Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output);
+               logMissingDataMessage(dataset, DatasetLog.DEBUG, "Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output);
             });
    }
 
@@ -453,6 +455,15 @@ public class AlertingServiceImpl implements AlertingService {
    private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "variables", String.format(format, args)).persist();
+   }
+
+   private void logMissingDataMessage(DataSet dataSet, int level, String format, Object... args) {
+      logMissingDataMessage(dataSet.testid, dataSet.id, level, format, args);
+   }
+
+   private void logMissingDataMessage(int testId, int datasetId, int level, String format, Object... args) {
+      new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
+            level, "missingdata", String.format(format, args)).persist();
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -1001,14 +1012,18 @@ public class AlertingServiceImpl implements AlertingService {
       if (rule.condition != null && !rule.condition.isBlank()) {
          String ruleName = rule.name == null ? "#" + rule.id : rule.name;
          match = Util.evaluateTest(rule.condition, value, notBoolean -> {
-            // TODO persistent log
             log.errorf("Missing data rule %s result is not a boolean: %s", ruleName, notBoolean);
+            logMissingDataMessage(rule.testId(), datasetId, DatasetLog.ERROR,
+                  "Missing data rule %s result is not a boolean: %s", ruleName, notBoolean);
             return true;
          }, (code, exception) -> {
-            // TODO persistent log
             log.errorf(exception, "Error evaluating missing data rule %s: %s", ruleName, code);
+            logMissingDataMessage(rule.testId(), datasetId, DatasetLog.ERROR,
+                  "Error evaluating missing data rule %s: '%s' Code:<pre>%s</pre>", ruleName, exception.getMessage(), code);
          }, output -> {
-            log.debugf("Output while evaluating missing data rule %s: %s", ruleName, output);
+            log.debugf("Output while evaluating missing data rule %s: '%s'", ruleName, output);
+            logMissingDataMessage(rule.testId(), datasetId, DatasetLog.DEBUG,
+                  "Output while evaluating missing data rule %s: '%s'", ruleName, output);
          });
       }
       if (match) {

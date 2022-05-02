@@ -15,6 +15,7 @@ import { NavLink } from "react-router-dom"
 import { Description } from "./components"
 import DatasetData from "./DatasetData"
 import RunData from "./RunData"
+import TransformationLogModal from "../tests/TransformationLogModal"
 
 export default function Run() {
     const { id: stringId } = useParams<any>()
@@ -24,6 +25,7 @@ export default function Run() {
     const run = useSelector(selectors.get(id))
     const [loading, setLoading] = useState(false)
     const [recalculating, setRecalculating] = useState(false)
+    const [transformationLogOpen, setTransformationLogOpen] = useState(false)
 
     const dispatch = useDispatch<RunsDispatch>()
     const teams = useSelector(teamsSelector)
@@ -70,17 +72,33 @@ export default function Run() {
                                         <Td>{Description(run.description)}</Td>
                                         <Td>
                                             {isTester && (
-                                                <Button
-                                                    isDisabled={recalculating}
-                                                    onClick={() => {
-                                                        setRecalculating(true)
-                                                        dispatch(actions.recalculateDatasets(run.id, run.testid))
-                                                            .catch(noop)
-                                                            .finally(() => setRecalculating(false))
-                                                    }}
-                                                >
-                                                    Recalculate datasets {recalculating && <Spinner size="md" />}
-                                                </Button>
+                                                <>
+                                                    <Button
+                                                        isDisabled={recalculating}
+                                                        onClick={() => {
+                                                            setRecalculating(true)
+                                                            dispatch(actions.recalculateDatasets(run.id, run.testid))
+                                                                .catch(noop)
+                                                                .finally(() => setRecalculating(false))
+                                                        }}
+                                                    >
+                                                        Recalculate datasets {recalculating && <Spinner size="md" />}
+                                                    </Button>
+                                                    <Button
+                                                        variant="secondary"
+                                                        onClick={() => setTransformationLogOpen(true)}
+                                                    >
+                                                        Transformation log
+                                                    </Button>
+                                                    <TransformationLogModal
+                                                        testId={run.testid}
+                                                        runId={run.id}
+                                                        title="Transformation log"
+                                                        emptyMessage="There are no messages"
+                                                        isOpen={transformationLogOpen}
+                                                        onClose={() => setTransformationLogOpen(false)}
+                                                    />
+                                                </>
                                             )}
                                         </Td>
                                     </Tr>

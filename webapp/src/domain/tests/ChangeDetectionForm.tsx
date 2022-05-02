@@ -545,7 +545,15 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                     )
                 }}
             />
-            <DatasetLogModal isOpen={isLogOpen} onClose={() => setLogOpen(false)} testId={test.id} source="variables" />
+            <DatasetLogModal
+                title="Change detection calculations"
+                emptyMessage="This test did not generate any logs. You can press 'Recalculate' to trigger recalculation of
+                        datapoints."
+                isOpen={isLogOpen}
+                onClose={() => setLogOpen(false)}
+                testId={test.id}
+                source="variables"
+            />
             <Split hasGutter>
                 <SplitItem style={{ minWidth: "20vw", maxWidth: "20vw", overflow: "clip" }}>
                     {groupedVariables && groupedVariables.length > 0 && (

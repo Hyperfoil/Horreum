@@ -3326,4 +3326,8 @@
         <addNotNullConstraint tableName="run_schemas" columnName="uri"/>
         <addNotNullConstraint tableName="run_schemas" columnName="type"/>
     </changeSet>
+
+    <changeSet id="76" author="rvansa">
+        <modifyDataType tableName="transformationlog" columnName="timestamp" newDataType="timestamptz"/>
+    </changeSet>
 </databaseChangeLog>

@@ -83,6 +83,7 @@ public class TestServiceImpl implements TestService {
       });
       test.delete();
       em.createNativeQuery(TRASH_RUNS).setParameter(1, test.id).executeUpdate();
+      em.createNativeQuery("DELETE FROM transformationlog WHERE testid = ?1").setParameter(1, test.id);
       Util.publishLater(tm, eventBus, Test.EVENT_DELETED, test);
    }
 

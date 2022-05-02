@@ -50,7 +50,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 
-import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -64,9 +63,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Value;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -127,7 +123,6 @@ public class RunServiceImpl implements RunService {
       sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
       sqlService.registerListener("new_or_updated_schema", this::onNewOrUpdatedSchema);
    }
-
 
    // We cannot run this without a transaction (to avoid timeout) because we have not request going on
    // and EM has to bind its lifecycle either to current request or transaction.
@@ -818,6 +813,7 @@ public class RunServiceImpl implements RunService {
             .addScalar("type", IntegerType.INSTANCE)
             .addScalar("key", TextType.INSTANCE)
             .addScalar("transformer_id", IntegerType.INSTANCE)
+            .addScalar("uri", TextType.INSTANCE)
             .getResultList() );
 
       int schemasAndTransformers = relevantSchemas.size();
@@ -825,13 +821,16 @@ public class RunServiceImpl implements RunService {
          int type = (int) relevantSchema[0];
          String key = (String) relevantSchema[1];
          Integer transformerId = (Integer) relevantSchema[2];
+         String uri = (String) relevantSchema[3];
 
-         Transformer t = null;
+         Transformer t;
          if (transformerId != null) {
             t = Transformer.findById(transformerId);
             if (t == null) {
                log.errorf("Missing transformer with ID %d", transformerId);
             }
+         } else {
+            t = null;
          }
          if (t != null) {
             JsonNode root = JsonNodeFactory.instance.objectNode();
@@ -866,29 +865,13 @@ public class RunServiceImpl implements RunService {
                   root = root.iterator().next();
                }
             }
+            logMessage(run, TransformationLog.DEBUG, "Run transformer %s/%s with input: <pre>%s</pre>, function: <pre>%s</pre>",
+                  uri, t.name, limitLength(root.toPrettyString()), t.function);
             if (t.function != null && !t.function.isBlank()) {
-               StringBuilder code = new StringBuilder();
-               String obj = root.toString();
-               code.append("const __obj = ").append(obj).append(" ;\n");
-               code.append("const __func = ").append(t.function).append(";\n");
-               code.append("__func(__obj);\n");
-               ByteArrayOutputStream out = new ByteArrayOutputStream();
-               try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
-                  context.enter();
-                  try {
-                     Value value = context.eval("js", code.toString());
-                     result = Util.convertToJson(value);
-                  } catch (PolyglotException e) {
-                     log.errorf("Failed to execute transformation for run %d and test %d and cause %s", run.id, run.testid, e);
-                     logTransformationMessage(em.getReference(Test.class, run.testid), run, TransformationLog.ERROR, "transformation " + t.name + " function");
-                     continue;
-                  } finally {
-                     context.leave();
-                     if (out.size() > 0) {
-                        logTransformationMessage(em.getReference(Test.class, run.testid), run, TransformationLog.INFO, "transformation " + t.name + " function");
-                     }
-                  }
-               }
+               result = Util.evaluateOnce(t.function, root, Util::convertToJson,
+                     (code, e) -> logMessage(run, TransformationLog.ERROR,
+                           "Evaluation of transformer %s/%s failed: '%s' Code: <pre>%s</pre>", uri, t.name, e.getMessage(), code),
+                     output -> logMessage(run, TransformationLog.DEBUG, "Output while running transformer %s/%s: <pre>%s</pre>", uri, t.name, output));
             } else {
                result = root;
             }
@@ -940,6 +923,7 @@ public class RunServiceImpl implements RunService {
                   throw new IllegalStateException("Unknown type " + type);
             }
             nakedNodes.add(node);
+            logMessage(run, TransformationLog.DEBUG, "No transformer for schema %s (key %s), passing as-is.", uri, key);
          }
       }
       if (schemasAndTransformers > 0) {
@@ -955,9 +939,11 @@ public class RunServiceImpl implements RunService {
                   if (position < node.size()) {
                      all.add(node.get(position));
                   } else {
-                     log.warnf("Transformer %d produced an array of %d elements but other transformer " +
-                           "produced %d elements; dataset %d/%d might be missing some data.",
+                     String message = String.format("Transformer %d produced an array of %d elements but other transformer " +
+                                 "produced %d elements; dataset %d/%d might be missing some data.",
                            entry.getKey(), node.size(), max, run.id, ordinal);
+                     logMessage(run, TransformationLog.WARN, "%s", message);
+                     log.warnf(message);
                   }
                } else {
                   log.warnf("Unexpected result provided by one of the transformers: %s", node);
@@ -968,10 +954,15 @@ public class RunServiceImpl implements RunService {
                   run.testid, all, run, ordinal++, run.owner, run.access));
          }
       } else {
+         logMessage(run, TransformationLog.INFO, "No applicable schema, dataset will be empty.");
          createDataset(new DataSet(run.start, run.stop,
                "Empty DataSet for run data without any schema.",
                run.testid, instance.arrayNode(), run, 0, run.owner, run.access));
       }
+   }
+
+   private String limitLength(String str) {
+      return str.length() > 1024 ? str.substring(0, 1024) + "...(truncated)" : str;
    }
 
    private void createDataset(DataSet ds) {
@@ -985,8 +976,8 @@ public class RunServiceImpl implements RunService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
-   protected void logTransformationMessage(Test test, Run run, int level, String format, Object... args) {
-      new TransformationLog(test, run, level, "data", String.format(format, args)).persist();
+   protected void logMessage(Run run, int level, String format, Object... args) {
+      new TransformationLog(em.getReference(Test.class, run.testid), run, level, String.format(format, args)).persist();
    }
 
    @SuppressWarnings("unchecked")

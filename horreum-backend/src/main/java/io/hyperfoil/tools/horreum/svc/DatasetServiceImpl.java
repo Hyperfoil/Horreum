@@ -27,6 +27,7 @@ import io.hyperfoil.tools.horreum.api.QueryResult;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
+import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.runtime.Startup;
@@ -100,7 +101,6 @@ public class DatasetServiceImpl implements DatasetService {
          String vcid = parts[1];
          String label = parts[2];
          sql.append(" ORDER BY");
-         // TODO: use view ID in the sort format rather than wildcards below
          // prefer numeric sort
          sql.append(" to_double(dv.value->'").append(vcid).append("'->>'").append(label).append("')");
          Util.addDirection(sql, direction);
@@ -235,18 +235,7 @@ public class DatasetServiceImpl implements DatasetService {
       if (level == DatasetLog.ERROR) {
          log.errorf("Calculating labels for DS %d: %s", datasetId, msg);
       }
-      // TODO log in DB
-   }
-
-   @Transactional(Transactional.TxType.REQUIRES_NEW)
-   @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   void logCalculation(int severity, int runId, String message) {
-      // TODO: split log for datasets and runs?
-//      Run run = Run.findById(runId);
-//      if (run == null) {
-//         log.errorf("Cannot find run %d! Cannot log message : %s", runId, message);
-//      } else {
-//         new CalculationLog(em.getReference(Test.class, run.testid), em.getReference(Run.class, run.id), severity, "tags", message).persistAndFlush();
-//      }
+      int testId = (int) em.createNativeQuery("SELECT testid FROM dataset WHERE id = ?1").setParameter(1, datasetId).getSingleResult();
+      new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId), level, "labels", msg).persist();
    }
 }

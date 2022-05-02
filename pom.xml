@@ -71,7 +71,7 @@
 
         <commons.math3.version>3.6.1</commons.math3.version>
         <compiler-plugin.version>3.8.1</compiler-plugin.version>
-        <graalvm.version>21.3.0</graalvm.version>
+        <graalvm.version>22.0.0.2</graalvm.version>
         <maven.compiler.parameters>true</maven.compiler.parameters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>

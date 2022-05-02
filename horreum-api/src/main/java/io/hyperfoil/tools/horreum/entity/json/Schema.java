@@ -38,7 +38,7 @@ import com.fasterxml.jackson.databind.JsonNode;
    ),
    @NamedNativeQuery(
          name = Schema.QUERY_TRANSFORMER_TARGETS,
-         query = "SELECT rs.type, rs.key, t.id as transformer_id FROM run_schemas rs " +
+         query = "SELECT rs.type, rs.key, t.id as transformer_id, rs.uri FROM run_schemas rs " +
                "LEFT JOIN transformer t ON t.schema_id = rs.schemaid AND t.id IN (SELECT transformer_id FROM test_transformers WHERE test_id = rs.testid) " +
                "WHERE rs.runid = ?1 ORDER BY transformer_id NULLS LAST, type, key"
          )
