@@ -10,6 +10,7 @@ import io.vertx.mutiny.sqlclient.SqlConnection;
 import io.vertx.pgclient.PgConnection;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -42,12 +43,11 @@ public class SqlServiceImpl implements SqlService {
 
    PgConnection listenerConnection;
    final Map<String, List<Consumer<String>>> listeners = new HashMap<>();
+   long listenerInitTimer;
+   boolean shuttingDown;
 
    @Inject
    Vertx vertx;
-
-   @Inject
-   TransactionManager tm;
 
    @Inject
    SecurityIdentity identity;
@@ -133,10 +133,14 @@ public class SqlServiceImpl implements SqlService {
                   listenOn(channel);
                }
                listenerConnection.closeHandler(nil -> {
-                  log.warn("Listener connection was closed, reconnecting");
                   synchronized (listeners) {
                      listenerConnection = null;
-                     initListenerConnection();
+                     if (shuttingDown) {
+                        log.info("Shutting down, listener connection won't be established.");
+                     } else {
+                        log.warn("Listener connection was closed, reconnecting in 10 ms");
+                        listenerInitTimer = vertx.setTimer(10, timerId -> initListenerConnection());
+                     }
                   }
                });
             }
@@ -144,8 +148,16 @@ public class SqlServiceImpl implements SqlService {
 
          @Override
          public void onFailure(Throwable failure) {
-            log.error("Failed to allocate listener connection, will try again", failure);
-            initListenerConnection();
+            synchronized (listeners) {
+               if (!shuttingDown) {
+                  log.error("Failed to allocate listener connection, will try again in 10 ms", failure);
+                  // We don't want to overflow the stack if the call fails immediately
+                  listenerInitTimer = vertx.setTimer(10, timerId -> initListenerConnection());
+               } else {
+                  log.info("Horreum is shutting down, listener connection error ignored");
+                  log.debug("Connection error (ignored)", failure);
+               }
+            }
          }
       });
    }
@@ -182,6 +194,14 @@ public class SqlServiceImpl implements SqlService {
                }
             }
          }
+      }
+   }
+
+   @PreDestroy
+   void stopListenerInitRetries() {
+      synchronized (listeners) {
+         vertx.cancelTimer(listenerInitTimer);
+         shuttingDown = true;
       }
    }
 
