@@ -977,7 +977,8 @@ public class RunServiceImpl implements RunService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    protected void logMessage(Run run, int level, String format, Object... args) {
-      new TransformationLog(em.getReference(Test.class, run.testid), run, level, String.format(format, args)).persist();
+      String msg = args.length > 0 ? String.format(format, args) : format;
+      new TransformationLog(em.getReference(Test.class, run.testid), run, level, msg).persist();
    }
 
    @SuppressWarnings("unchecked")

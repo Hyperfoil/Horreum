@@ -46,6 +46,11 @@ public class DataPoint extends PanacheEntityBase {
       return value;
    }
 
+   @Override
+   public String toString() {
+      return id + "|" + dataset.id + "@" + timestamp + ": " + value;
+   }
+
    @NotNull
    @ManyToOne(fetch = FetchType.LAZY)
    public Variable variable;
@@ -57,10 +62,12 @@ public class DataPoint extends PanacheEntityBase {
 
    public static class Event {
       public DataPoint dataPoint;
+      public int testId;
       public boolean notify;
 
-      public Event(DataPoint dataPoint, boolean notify) {
+      public Event(DataPoint dataPoint, int testId, boolean notify) {
          this.dataPoint = dataPoint;
+         this.testId = testId;
          this.notify = notify;
       }
 

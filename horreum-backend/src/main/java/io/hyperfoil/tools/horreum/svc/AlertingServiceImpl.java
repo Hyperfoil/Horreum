@@ -225,21 +225,14 @@ public class AlertingServiceImpl implements AlertingService {
                      createMissingDataRuleResult(dataset, ruleId);
                   }
                } else {
-                  log.errorf("Result for missing data rule %d, dataset %d is not a boolean: %s", ruleId, dataset.id, result);
                   logMissingDataMessage(dataset, DatasetLog.ERROR,
                         "Result for missing data rule %d, dataset %d is not a boolean: %s", ruleId, dataset.id, result);
                }
             },
             // Absence of condition means that this dataset is taken into account. This happens e.g. when value == NULL
             row -> createMissingDataRuleResult(dataset, (int) row[0]),
-            (row, exception, code) -> {
-               Integer ruleId = (Integer) row[0];
-               log.errorf(exception, "Exception evaluating missing data rule %d, dataset %d, code: %s", ruleId, dataset.id, code);
-               logMissingDataMessage(dataset, DatasetLog.ERROR, "Exception evaluating missing data rule %d, dataset %d: '%s' Code: <pre>%s</pre>", ruleId, dataset.id, exception.getMessage(), code);
-            }, output -> {
-               log.debugf("Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output);
-               logMissingDataMessage(dataset, DatasetLog.DEBUG, "Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output);
-            });
+            (row, exception, code) -> logMissingDataMessage(dataset, DatasetLog.ERROR, "Exception evaluating missing data rule %d, dataset %d: '%s' Code: <pre>%s</pre>", (Integer) row[0], dataset.id, exception.getMessage(), code),
+            output -> logMissingDataMessage(dataset, DatasetLog.DEBUG, "Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output));
    }
 
    private void createMissingDataRuleResult(DataSet dataset, int ruleId) {
@@ -445,7 +438,7 @@ public class AlertingServiceImpl implements AlertingService {
       dataPoint.timestamp = dataset.start;
       dataPoint.value = value;
       dataPoint.persist();
-      Util.publishLater(tm, eventBus, DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, notify));
+      Util.publishLater(tm, eventBus, DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, dataset.testid, notify));
    }
 
    private void logCalculationMessage(DataSet dataSet, int level, String format, Object... args) {
@@ -453,8 +446,9 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
+      String msg = formatAndLog(testId, datasetId, level, format, args);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
-            level, "variables", String.format(format, args)).persist();
+            level, "variables", msg).persist();
    }
 
    private void logMissingDataMessage(DataSet dataSet, int level, String format, Object... args) {
@@ -462,8 +456,21 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void logMissingDataMessage(int testId, int datasetId, int level, String format, Object... args) {
+      String msg = formatAndLog(testId, datasetId, level, format, args);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
-            level, "missingdata", String.format(format, args)).persist();
+            level, "missingdata", msg).persist();
+   }
+
+   private void logChangeDetectionMessage(int testId, int datasetId, int level, String format, Object... args) {
+      String msg = formatAndLog(testId, datasetId, level, format, args);
+      new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
+            level, "changes", msg).persist();
+   }
+
+   private String formatAndLog(int testId, int datasetId, int level, String format, Object[] args) {
+      String msg = args.length == 0 ? format : String.format(format, args);
+      log.log(DatasetLog.logLevel(level), "Test " + testId + ", dataset " + datasetId + ": " + msg);
+      return msg;
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -495,9 +502,10 @@ public class AlertingServiceImpl implements AlertingService {
       Instant changeTimestamp = LONG_TIME_AGO;
       if (lastChange != null) {
          if (lastChange.timestamp.compareTo(dataPoint.timestamp) > 0) {
-            // We won't revision changes until next variable recalculation
-            log.debugf("Ignoring datapoint %d from %s as there is a newer change %d from %s.",
+            logChangeDetectionMessage(event.testId, event.dataPoint.getDatasetId(), DatasetLog.DEBUG,
+                  "Ignoring datapoint %d from %s as there is a newer change %d from %s.",
                   dataPoint.id, dataPoint.timestamp, lastChange.id, lastChange.timestamp);
+            // We won't revision changes until next variable recalculation
             return;
          }
          log.debugf("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
@@ -516,18 +524,21 @@ public class AlertingServiceImpl implements AlertingService {
       }
       DataPoint lastDatapoint = dataPoints.get(0);
       if (!lastDatapoint.id.equals(dataPoint.id)) {
-         log.warnf("Ignoring datapoint %d from %s - it is not the last datapoint (%d from %s)",
-               dataPoint.id, dataPoint.timestamp, lastDatapoint.id, lastDatapoint.timestamp);
+         logChangeDetectionMessage(event.testId, dataPoint.getDatasetId(), DatasetLog.DEBUG,
+               "Ignoring datapoint %d from %s - it is not the last datapoint in %s",
+               dataPoint.id, dataPoint.timestamp, reversedAndLimited(dataPoints));
          return;
       }
 
       for (ChangeDetection detection : ChangeDetection.<ChangeDetection>find("variable", variable).list()) {
          ChangeDetectionModel model = MODELS.get(detection.model);
          if (model == null) {
-            log.errorf("Cannot find change detection model %s", detection.model);
+            logChangeDetectionMessage(event.testId, dataPoint.id, DatasetLog.ERROR, "Cannot find change detection model %s", detection.model);
             continue;
          }
          model.analyze(dataPoints, detection.config, change -> {
+            logChangeDetectionMessage(event.testId, dataPoint.id, DatasetLog.DEBUG,
+                  "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
             Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal FROM dataset WHERE id = ?1");
             SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DatasetInfo.class));
             DatasetInfo datasetInfo = (DatasetInfo) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
@@ -535,6 +546,19 @@ public class AlertingServiceImpl implements AlertingService {
             Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, datasetInfo, event.notify));
          });
       }
+   }
+
+   private String reversedAndLimited(List<DataPoint> list) {
+      int maxIndex = Math.min(list.size() - 1, 20);
+      StringBuilder sb = new StringBuilder("[");
+      if (maxIndex < list.size() - 1) {
+         sb.append("..., ");
+      }
+      for (int i = maxIndex; i >= 0; --i) {
+         sb.append(list.get(i));
+         if (i != 0) sb.append(", ");
+      }
+      return sb.append("]").toString();
    }
 
    @Override
@@ -1012,19 +1036,15 @@ public class AlertingServiceImpl implements AlertingService {
       if (rule.condition != null && !rule.condition.isBlank()) {
          String ruleName = rule.name == null ? "#" + rule.id : rule.name;
          match = Util.evaluateTest(rule.condition, value, notBoolean -> {
-            log.errorf("Missing data rule %s result is not a boolean: %s", ruleName, notBoolean);
             logMissingDataMessage(rule.testId(), datasetId, DatasetLog.ERROR,
                   "Missing data rule %s result is not a boolean: %s", ruleName, notBoolean);
             return true;
-         }, (code, exception) -> {
-            log.errorf(exception, "Error evaluating missing data rule %s: %s", ruleName, code);
-            logMissingDataMessage(rule.testId(), datasetId, DatasetLog.ERROR,
-                  "Error evaluating missing data rule %s: '%s' Code:<pre>%s</pre>", ruleName, exception.getMessage(), code);
-         }, output -> {
-            log.debugf("Output while evaluating missing data rule %s: '%s'", ruleName, output);
-            logMissingDataMessage(rule.testId(), datasetId, DatasetLog.DEBUG,
-                  "Output while evaluating missing data rule %s: '%s'", ruleName, output);
-         });
+         },
+            (code, exception) -> logMissingDataMessage(rule.testId(), datasetId, DatasetLog.ERROR,
+               "Error evaluating missing data rule %s: '%s' Code:<pre>%s</pre>", ruleName, exception.getMessage(), code),
+            output -> logMissingDataMessage(rule.testId(), datasetId, DatasetLog.DEBUG,
+                  "Output while evaluating missing data rule %s: '%s'", ruleName, output)
+         );
       }
       if (match) {
          new MissingDataRuleResult(rule.id, datasetId, timestamp).persist();

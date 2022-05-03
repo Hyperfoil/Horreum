@@ -13,6 +13,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -69,6 +71,20 @@ public class DatasetLog extends PanacheEntityBase {
       this.timestamp = Instant.now();
       this.source = source;
       this.message = message;
+   }
+
+   public static Logger.Level logLevel(int level) {
+      switch (level) {
+         case DEBUG:
+            return Logger.Level.DEBUG;
+         case INFO:
+            return Logger.Level.INFO;
+         case WARN:
+            return Logger.Level.WARN;
+         case ERROR:
+         default:
+            return Logger.Level.ERROR;
+      }
    }
 
    @JsonProperty("testId")
