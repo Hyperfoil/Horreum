@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
+import { useHistory } from "react-router-dom"
 
 import { Button, FormGroup, FormSection, TextInput } from "@patternfly/react-core"
 
@@ -85,12 +86,22 @@ export default function Labels(props: LabelsProps) {
         setLabels(labels.map(l => (l.id == label.id ? label : l)))
     }
 
+    const history = useHistory()
     useEffect(() => {
         setLoading(true)
         listLabels(props.schemaId)
             .then(
                 labels => {
                     setLabels(labels)
+                    const fragmentParts = history.location.hash.split("+")
+                    if (fragmentParts.length === 2 && fragmentParts[0] === "#labels") {
+                        const decoded = decodeURIComponent(fragmentParts[1])
+                        const label = labels.find(l => l.name === decoded)
+                        if (label) {
+                            setSelected(label)
+                        }
+                        return
+                    }
                     if (labels.length > 0) {
                         setSelected(labels[0])
                     }
@@ -105,6 +116,7 @@ export default function Labels(props: LabelsProps) {
             )
             .finally(() => setLoading(false))
     }, [props.schemaId, resetCounter])
+
     return (
         <>
             <FindUsagesModal label={findUsagesLabel} onClose={() => setFindUsagesLabel(undefined)} />

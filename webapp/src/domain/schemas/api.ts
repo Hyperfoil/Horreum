@@ -68,7 +68,7 @@ export function allTransformers(): Promise<TransformerInfo[]> {
     return fetchApi(endPoints.allTransformers(), null, "get")
 }
 
-export function listLabels(schemaId: number) {
+export function listLabels(schemaId: number): Promise<Label[]> {
     return fetchApi(endPoints.labels(schemaId), null, "get")
 }
 
