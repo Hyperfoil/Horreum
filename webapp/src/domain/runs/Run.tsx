@@ -11,6 +11,7 @@ import { teamsSelector, useTester } from "../../auth"
 import { Bullseye, Button, Card, CardHeader, CardBody, PageSection, Spinner } from "@patternfly/react-core"
 import { TableComposable, Thead, Tr, Th, Tbody, Td } from "@patternfly/react-table"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
+import OwnerAccess from "../../components/OwnerAccess"
 import { NavLink } from "react-router-dom"
 import { Description } from "./components"
 import DatasetData from "./DatasetData"
@@ -55,6 +56,7 @@ export default function Run() {
                                     <Tr>
                                         <Th>Id</Th>
                                         <Th>Test</Th>
+                                        <Th>Owner</Th>
                                         <Th>Start</Th>
                                         <Th>Stop</Th>
                                         <Th>Description</Th>
@@ -66,6 +68,16 @@ export default function Run() {
                                         <Td>{run.id}</Td>
                                         <Td>
                                             <NavLink to={`/test/${run.testid}`}>{run.testname || run.testid}</NavLink>
+                                        </Td>
+                                        <Td>
+                                            <OwnerAccess
+                                                owner={run.owner}
+                                                access={run.access}
+                                                readOnly={!isTester}
+                                                onUpdate={(owner, access) =>
+                                                    dispatch(actions.updateAccess(run.id, run.testid, owner, access))
+                                                }
+                                            />
                                         </Td>
                                         <Td>{formatDateTime(run.start)}</Td>
                                         <Td>{formatDateTime(run.stop)}</Td>
