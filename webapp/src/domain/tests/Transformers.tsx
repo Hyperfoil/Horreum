@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
+import { NavLink } from "react-router-dom"
 
 import {
     Bullseye,
@@ -8,7 +9,11 @@ import {
     DualListSelectorTreeItemData,
     Flex,
     FlexItem,
+    List,
+    ListItem,
     Spinner,
+    Title,
+    Tooltip,
 } from "@patternfly/react-core"
 
 import { dispatchError } from "../../alerts"
@@ -189,20 +194,45 @@ export default function Transformers(props: TransformersProps) {
                 isOpen={logModalOpen}
                 onClose={() => setLogModalOpen(false)}
             />
-            {[counter].map(c => (
-                <DualListSelector
-                    key={c}
-                    isSearchable
-                    isTree
-                    isDisabled={!isTester}
-                    availableOptions={options}
-                    chosenOptions={chosen}
-                    onListChange={(newAvailable, newChosen) => {
-                        setOptions(newAvailable as SchemaItem[])
-                        setChosen(newChosen as SchemaItem[])
-                    }}
-                />
-            ))}{" "}
+            <Flex>
+                <FlexItem>
+                    {[counter].map(c => (
+                        <DualListSelector
+                            key={c}
+                            isSearchable
+                            isTree
+                            isDisabled={!isTester}
+                            availableOptions={options}
+                            chosenOptions={chosen}
+                            onListChange={(newAvailable, newChosen) => {
+                                setOptions(newAvailable as SchemaItem[])
+                                setChosen(newChosen as SchemaItem[])
+                            }}
+                        />
+                    ))}
+                </FlexItem>
+                {chosen.length > 0 && (
+                    <FlexItem>
+                        <Title headingLevel="h4">Used transformers</Title>
+                        <List>
+                            {chosen
+                                .flatMap(s => s.children)
+                                .map(t => (
+                                    <ListItem>
+                                        {t.text} from{" "}
+                                        <Tooltip maxWidth="80vw" content={<code>{t.schemaUri}</code>}>
+                                            <NavLink
+                                                to={`/schema/${t.schemaId}#transformers+${encodeURIComponent(t.text)}`}
+                                            >
+                                                {t.schemaName}
+                                            </NavLink>
+                                        </Tooltip>
+                                    </ListItem>
+                                ))}
+                        </List>
+                    </FlexItem>
+                )}
+            </Flex>
         </>
     )
 }

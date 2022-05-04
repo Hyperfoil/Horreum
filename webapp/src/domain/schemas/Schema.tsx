@@ -218,7 +218,9 @@ export default function Schema() {
         return schemaUri || undefined
     }
 
-    const isTester = useTester(schema?.owner)
+    // any tester can save to add new labels/transformers
+    const isTester = useTester()
+    const isTesterForSchema = useTester(schema?.owner)
 
     const save = () => {
         if (!modified) {
@@ -296,7 +298,7 @@ export default function Schema() {
                                             }}
                                             options={{
                                                 mode: "application/ld+json",
-                                                readOnly: !isTester,
+                                                readOnly: !isTesterForSchema,
                                             }}
                                         />
                                     </div>
@@ -305,24 +307,26 @@ export default function Schema() {
                                     <>
                                         This schema does not have a validation JSON schema defined.
                                         <br />
-                                        <Button
-                                            onClick={() => {
-                                                setEditorSchema(
-                                                    JSON.stringify(
-                                                        {
-                                                            $id: currentSchema?.uri,
-                                                            $schema: "http://json-schema.org/draft-07/schema#",
-                                                            type: "object",
-                                                        },
-                                                        undefined,
-                                                        2
+                                        {isTesterForSchema && (
+                                            <Button
+                                                onClick={() => {
+                                                    setEditorSchema(
+                                                        JSON.stringify(
+                                                            {
+                                                                $id: currentSchema?.uri,
+                                                                $schema: "http://json-schema.org/draft-07/schema#",
+                                                                type: "object",
+                                                            },
+                                                            undefined,
+                                                            2
+                                                        )
                                                     )
-                                                )
-                                                setModified(true)
-                                            }}
-                                        >
-                                            Add validation schema
-                                        </Button>
+                                                    setModified(true)
+                                                }}
+                                            >
+                                                Add validation schema
+                                            </Button>
+                                        )}
                                     </>
                                 )}
                             </SavedTab>

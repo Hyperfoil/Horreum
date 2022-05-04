@@ -99,8 +99,8 @@ export default function Labels(props: LabelsProps) {
                         const label = labels.find(l => l.name === decoded)
                         if (label) {
                             setSelected(label)
+                            return
                         }
-                        return
                     }
                     if (labels.length > 0) {
                         setSelected(labels[0])

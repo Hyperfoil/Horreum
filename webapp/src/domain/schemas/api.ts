@@ -52,7 +52,7 @@ export function findUsages(label: string) {
     return fetchApi(endPoints.findUsages(label), null, "get")
 }
 
-export function listTransformers(schemaId: number) {
+export function listTransformers(schemaId: number): Promise<Transformer[]> {
     return fetchApi(endPoints.transformers(schemaId), null, "get")
 }
 

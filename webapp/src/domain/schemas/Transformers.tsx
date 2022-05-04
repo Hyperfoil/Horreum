@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
+import { useHistory } from "react-router-dom"
 
 import { Button, FormGroup, FormSection, Popover, TextArea, TextInput } from "@patternfly/react-core"
 import { HelpIcon } from "@patternfly/react-icons"
@@ -103,6 +104,7 @@ export default function Transformers(props: TransformersProps) {
         modified: () => transformers.some(t => t.modified) || deleted.length > 0,
     }
     const dispatch = useDispatch()
+    const history = useHistory()
     useEffect(() => {
         if (typeof props.schemaId !== "number") {
             return
@@ -113,6 +115,15 @@ export default function Transformers(props: TransformersProps) {
             .then(
                 ts => {
                     setTransformers(ts)
+                    const fragmentParts = history.location.hash.split("+")
+                    if (fragmentParts.length === 2 && fragmentParts[0] === "#transformers") {
+                        const decoded = decodeURIComponent(fragmentParts[1])
+                        const transformer = ts.find(t => t.name === decoded)
+                        if (transformer) {
+                            setSelected(transformer)
+                            return
+                        }
+                    }
                     if (ts.length > 0) {
                         setSelected(ts[0])
                     }
