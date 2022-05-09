@@ -17,7 +17,7 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
 
-        <resteasy-client.version>3.14.0.Final</resteasy-client.version>
+        <resteasy-client.version>4.7.5.Final</resteasy-client.version>
         <slf4j-simple.version>1.7.32</slf4j-simple.version>
     </properties>
 
@@ -49,23 +49,6 @@
         <dependency>
             <groupId>jakarta.persistence</groupId>
             <artifactId>jakarta.persistence-api</artifactId>
-        </dependency>
-
-        <!-- Keycloak client is not compatible  with resteasy client 4.x-->
-        <dependency>
-            <groupId>org.jboss.resteasy</groupId>
-            <artifactId>resteasy-client-microprofile</artifactId>
-            <version>${resteasy-client.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jboss.resteasy</groupId>
-                    <artifactId>resteasy-client</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.jboss.resteasy</groupId>
-                    <artifactId>resteasy-cdi</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>

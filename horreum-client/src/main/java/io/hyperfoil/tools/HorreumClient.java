@@ -1,20 +1,16 @@
 package io.hyperfoil.tools;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-
 import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
 import io.hyperfoil.tools.horreum.api.*;
-
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
-import org.jboss.resteasy.microprofile.client.impl.MpClientBuilderImpl;
+import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
 import org.jboss.resteasy.plugins.providers.DefaultTextPlain;
 import org.jboss.resteasy.plugins.providers.StringTextStar;
-import org.jboss.resteasy.plugins.providers.jackson.ResteasyJackson2Provider;
 
+import javax.net.ssl.SSLContext;
 import javax.ws.rs.core.UriBuilder;
+import java.security.NoSuchAlgorithmException;
 
 public class HorreumClient {
 
@@ -101,10 +97,15 @@ public class HorreumClient {
                     clientSecret);
 
 
-            MpClientBuilderImpl clientBuilder = new MpClientBuilderImpl();
+            ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
 
             //Override default ObjectMapper Provider
             clientBuilder.register(new CustomResteasyJackson2Provider(), 100);
+            try {
+                clientBuilder.sslContext(SSLContext.getDefault());
+            } catch (NoSuchAlgorithmException e) {
+                // Do nothing
+            }
 
             //Register Keycloak Request Filter
             clientBuilder.register(requestFilter);
