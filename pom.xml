@@ -81,7 +81,7 @@
         <quinoa.version>1.0.3</quinoa.version>
         <surefire-plugin.version>3.0.0-M6</surefire-plugin.version>
         <failsafe-plugin.version>3.0.0-M5</failsafe-plugin.version>
-        <keycloak-admin-client.version>14.0.0</keycloak-admin-client.version>
+        <keycloak-admin-client.version>18.0.0</keycloak-admin-client.version>
         <validator.version>1.0.29</validator.version>
         <jayway.jsonpath.version>2.6.0</jayway.jsonpath.version>
 
@@ -149,6 +149,28 @@
                 <groupId>org.keycloak</groupId>
                 <artifactId>keycloak-admin-client</artifactId>
                 <version>${keycloak-admin-client.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.jboss.resteasy</groupId>
+                        <artifactId>resteasy-client</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.jboss.resteasy</groupId>
+                        <artifactId>resteasy-multipart-provider</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.jboss.resteasy</groupId>
+                        <artifactId>resteasy-jackson2-provider</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.jboss.resteasy</groupId>
+                        <artifactId>resteasy-jaxb-provider</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>commons-logging</groupId>
+                        <artifactId>commons-logging</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.networknt</groupId>

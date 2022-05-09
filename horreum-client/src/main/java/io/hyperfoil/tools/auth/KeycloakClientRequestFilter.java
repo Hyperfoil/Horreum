@@ -1,19 +1,19 @@
 package io.hyperfoil.tools.auth;
 
+import io.hyperfoil.tools.CustomResteasyJackson2Provider;
 import org.apache.http.conn.HttpHostConnectException;
 import org.jboss.logging.Logger;
-import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
 import org.jboss.resteasy.plugins.providers.FormUrlEncodedProvider;
-import org.jboss.resteasy.plugins.providers.jackson.ResteasyJackson2Provider;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 
+import javax.net.ssl.SSLContext;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
-
-import io.hyperfoil.tools.CustomResteasyJackson2Provider;
+import java.security.NoSuchAlgorithmException;
 
 public class KeycloakClientRequestFilter implements ClientRequestFilter {
 
@@ -29,7 +29,14 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 			String clientId,
 			String clientSecret) {
 
-		ResteasyClientBuilder clientBuilder = new ResteasyClientBuilder().connectionPoolSize(20);
+		ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
+		clientBuilder.connectionPoolSize(20);
+		try {
+			clientBuilder.sslContext(SSLContext.getDefault());
+		} catch (NoSuchAlgorithmException e) {
+//			e.printStackTrace();
+		}
+
 		// We need to register the necessary providers manually in case this is used in Jenkins
 		// where the hierarchical classloader structure prevents provider lookup via ServiceLoader
 		clientBuilder.register(new FormUrlEncodedProvider());
