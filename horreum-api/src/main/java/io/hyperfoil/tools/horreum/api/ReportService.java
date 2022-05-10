@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api;
 import java.time.Instant;
 import java.util.List;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -19,6 +20,7 @@ import io.quarkus.panache.common.Sort;
 
 @Path("/api/report")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes({ MediaType.APPLICATION_JSON})
 public interface ReportService {
    @GET
    @Path("table")
