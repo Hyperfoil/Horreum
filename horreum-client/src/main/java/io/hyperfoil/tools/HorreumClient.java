@@ -19,9 +19,12 @@ import javax.ws.rs.core.UriBuilder;
 public class HorreumClient {
 
     public final AlertingService alertingService;
+    public final BannerService bannerService;
+    public final DatasetService datasetService;
     public final GrafanaService grafanaService;
     public final HookService hookService;
     public final NotificationService notificationService;
+    public final ReportService reportService;
     public final RunService runService;
     public final SchemaService schemaService;
     public final SqlService sqlService;
@@ -29,13 +32,16 @@ public class HorreumClient {
     public final TestService testService;
     public final UserService userService;
 
-    public HorreumClient(AlertingService alertingService, GrafanaService grafanaService, HookService hookService,
-                         NotificationService notificationService, RunService horreumRunService, SchemaService schemaService, SqlService sqlService,
+    public HorreumClient(AlertingService alertingService, BannerService bannerService,  DatasetService datasetService, GrafanaService grafanaService, HookService hookService,
+                         NotificationService notificationService, ReportService reportService, RunService horreumRunService, SchemaService schemaService, SqlService sqlService,
                          SubscriptionService subscriptionService, TestService horreumTestService, UserService userService) {
         this.alertingService = alertingService;
+        this.bannerService = bannerService;
+        this.datasetService = datasetService;
         this.grafanaService = grafanaService;
         this.hookService = hookService;
         this.notificationService = notificationService;
+        this.reportService = reportService;
         this.runService = horreumRunService;
         this.schemaService = schemaService;
         this.sqlService = sqlService;
@@ -117,9 +123,12 @@ public class HorreumClient {
 
             return new HorreumClient(
                     target.proxyBuilder(AlertingService.class).build(),
+                    target.proxyBuilder(BannerService.class).build(),
+                    target.proxyBuilder(DatasetService.class).build(),
                     target.proxyBuilder(GrafanaService.class).build(),
                     target.proxyBuilder(HookService.class).build(),
                     target.proxyBuilder(NotificationService.class).build(),
+                    target.proxyBuilder(ReportService.class).build(),
                     target.proxyBuilder(RunService.class).build(),
                     target.proxyBuilder(SchemaService.class).build(),
                     target.proxyBuilder(SqlService.class).build(),
