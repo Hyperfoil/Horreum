@@ -42,7 +42,7 @@ public class RunServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testTransformationNoSchemaInData(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       Extractor path = new Extractor("foo", "$.value", false);
       Schema schema = createExampleSchema(info);
 
@@ -52,19 +52,19 @@ public class RunServiceTest extends BaseServiceTest {
       addTransformer(test, transformer);
       uploadRun("{\"corporation\":\"acme\"}", test.name);
 
-      DataSet event = dataSetQueue.poll(10, TimeUnit.SECONDS);
+      DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
-      assertEmptyArray(event.data);
+      assertEmptyArray(event.dataset.data);
    }
 
    @org.junit.jupiter.api.Test
    public void testTransformationWithoutSchema(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       Test test = createTest(createExampleTest(getTestName(info)));
 
       Schema schema = createExampleSchema(info);
 
-      int runId = uploadRun(runWithValue(schema, 42).toString(), test.name);
+      int runId = uploadRun(runWithValue(42, schema).toString(), test.name);
 
       assertNewDataset(dataSetQueue, runId);
       em.clear();
@@ -86,44 +86,45 @@ public class RunServiceTest extends BaseServiceTest {
       assertNewDataset(dataSetQueue, runId);
    }
 
-   private void assertNewDataset(BlockingQueue<DataSet> dataSetQueue, int runId) throws InterruptedException {
-      DataSet event = dataSetQueue.poll(10, TimeUnit.SECONDS);
+   private void assertNewDataset(BlockingQueue<DataSet.EventNew> dataSetQueue, int runId) throws InterruptedException {
+      DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
-      assertNotNull(event.id);
-      assertEquals(runId, event.run.id);
-      DataSet ds = DataSet.findById(event.id);
+      assertNotNull(event.dataset);
+      assertNotNull(event.dataset.id);
+      assertEquals(runId, event.dataset.run.id);
+      DataSet ds = DataSet.findById(event.dataset.id);
       assertNotNull(ds);
       assertEquals(runId, ds.run.id);
    }
 
    @org.junit.jupiter.api.Test
    public void testTransformationWithoutSchemaInUpload(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       Test test = createTest(createExampleTest(getTestName(info)));
 
       setTestVariables(test, "Value", "value");
 
       uploadRun( "{ \"foo\":\"bar\"}", test.name);
 
-      DataSet event = dataSetQueue.poll(10, TimeUnit.SECONDS);
+      DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
-      assertEmptyArray(event.data);
+      assertEmptyArray(event.dataset.data);
    }
 
    @org.junit.jupiter.api.Test
    public void testTransformationWithoutExtractorsAndBlankFunction(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       Schema schema = createExampleSchema(info);
 
       Transformer transformer = createTransformerWithJsonPaths("acme", schema, "");
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
       addTransformer(test, transformer);
-      uploadRun(runWithValue(schema, 42.0d), test.name);
+      uploadRun(runWithValue(42.0d, schema), test.name);
 
-      DataSet event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
       assertNotNull(event);
-      JsonNode node = event.data;
+      JsonNode node = event.dataset.data;
       assertTrue(node.isArray());
       assertEquals(1, node.size());
       assertEquals(1, node.get(0).size());
@@ -132,7 +133,7 @@ public class RunServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testTransformationWithExtractorAndBlankFunction(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       Schema schema = createExampleSchema("AcneCorp", "AcneInc", "AcneRrUs", false);
 
       Extractor path = new Extractor("foo", "$.value", false);
@@ -140,19 +141,19 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
       addTransformer(test, transformer);
-      uploadRun(runWithValue(schema, 42.0d), test.name);
+      uploadRun(runWithValue(42.0d, schema), test.name);
 
-      DataSet event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
       assertNotNull(event);
-      assertTrue(event.data.isArray());
-      assertEquals(1, event.data.size());
+      assertTrue(event.dataset.data.isArray());
+      assertEquals(1, event.dataset.data.size());
       // the result of single extractor is 42, hence this needs to be wrapped into an object (using `value`) before adding schema
-      assertEquals(42, event.data.path(0).path("value").intValue());
+      assertEquals(42, event.dataset.data.path(0).path("value").intValue());
    }
 
    @org.junit.jupiter.api.Test
    public void testTransformationWithNestedSchema(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       Schema acmeSchema = createExampleSchema("AcmeCorp", "AcmeInc", "AcmeRrUs", false);
       Schema roadRunnerSchema = createExampleSchema("RoadRunnerCorp", "RoadRunnerInc", "RoadRunnerRrUs", false);
 
@@ -168,10 +169,10 @@ public class RunServiceTest extends BaseServiceTest {
       String data = runWithValue(42.0d, acmeSchema, roadRunnerSchema).toString();
       int runId = uploadRun(data, test.name);
 
-      DataSet event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
 
       assertNotNull(event);
-      JsonNode node = event.data;
+      JsonNode node = event.dataset.data;
       assertTrue(node.isArray());
       assertEquals(2 , node.size());
       validate("42", node.path(0).path("acme"));
@@ -182,7 +183,7 @@ public class RunServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testTransformationSingleSchemaTestWithoutTransformer(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       Schema acmeSchema = createExampleSchema("AceCorp", "AceInc", "AceRrUs", false);
 
       Test exampleTest = createExampleTest(getTestName(info));
@@ -190,10 +191,10 @@ public class RunServiceTest extends BaseServiceTest {
 
       uploadRun(runWithValue(42.0d, acmeSchema), test.name);
 
-      DataSet event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
 
       assertNotNull(event);
-      JsonNode node = event.data;
+      JsonNode node = event.dataset.data;
       assertTrue(node.isArray());
       ObjectNode object = (ObjectNode)node.path(0);
       JsonNode schema = object.path("$schema");
@@ -204,21 +205,22 @@ public class RunServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testTransformationNestedSchemasWithoutTransformers(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       Schema schemaA = createExampleSchema("Ada", "Ada", "Ada", false);
       Schema schemaB = createExampleSchema("Bdb", "Bdb", "Bdb", false);
       Schema schemaC = createExampleSchema("Cdc", "Cdc", "Cdc", false);
 
       Test test = createTest(createExampleTest(getTestName(info)));
 
-      ObjectNode data = runWithValue(schemaA, 1);
-      data.set("nestedB", runWithValue(schemaB, 2));
-      data.set("nestedC", runWithValue(schemaC, 3));
+      ObjectNode data = runWithValue(1, schemaA);
+      data.set("nestedB", runWithValue(2, schemaB));
+      data.set("nestedC", runWithValue(3, schemaC));
       uploadRun(data, test.name);
 
-      DataSet dataset = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
 
-      assertNotNull(dataset);
+      assertNotNull(event);
+      DataSet dataset = event.dataset;
       assertTrue(dataset.data.isArray());
       assertEquals(3, dataset.data.size());
       assertEquals(1, getBySchema(dataset, schemaA).path("value").intValue());
@@ -236,23 +238,23 @@ public class RunServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testTransformationUsingSameSchemaInBothLevelsTestWithoutTransformer(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
 
       Schema appleSchema = createExampleSchema("AppleCorp", "AppleInc", "AppleRrUs", false);
 
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      ObjectNode data = runWithValue(appleSchema, 42.0d);
-      ObjectNode nested = runWithValue(appleSchema, 52.0d);
+      ObjectNode data = runWithValue(42.0d, appleSchema);
+      ObjectNode nested = runWithValue(52.0d, appleSchema);
       data.set("field_" + appleSchema.name, nested);
 
       uploadRun(data, test.name);
 
-      DataSet event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
 
       assertNotNull(event);
-      JsonNode node = event.data;
+      JsonNode node = event.dataset.data;
       assertTrue(node.isArray());
       assertEquals(2 , node.size());
 
@@ -267,7 +269,7 @@ public class RunServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
     public void testTransformationUsingSingleSchemaTransformersProcessScalarPlusArray(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
 
       Schema schema = createExampleSchema("ArrayCorp", "ArrayInc", "ArrayRrUs", false);
       Extractor arrayPath = new Extractor("mheep", "$.values", false);
@@ -287,21 +289,23 @@ public class RunServiceTest extends BaseServiceTest {
 
       uploadRun(data,test.name);
 
-      DataSet first = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
-      DataSet second = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
-      DataSet third = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew first = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew second = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew third = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
 
       assertNotNull(first);
-      assertTrue(first.data.isArray());
+      assertNotNull(second);
+      assertNotNull(third);
+      assertTrue(first.dataset.data.isArray());
       String target = postFunctionSchemaUri(schema);
-      validateScalarArray(first, target);
-      validateScalarArray(second, target);
-      validateScalarArray(third, target);
+      validateScalarArray(first.dataset, target);
+      validateScalarArray(second.dataset, target);
+      validateScalarArray(third.dataset, target);
    }
 
    @org.junit.jupiter.api.Test
    public void testTransformationChoosingSchema(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
 
       Schema schemaA = createExampleSchema("Aba", "Aba", "Aba", false);
       Extractor path = new Extractor("value", "$.value", false);
@@ -313,9 +317,10 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerA, transformerB);
 
-      uploadRun(runWithValue(schemaB, 42), test.name);
-      DataSet dataset = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
-      assertNotNull(dataset);
+      uploadRun(runWithValue(42, schemaB), test.name);
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      assertNotNull(event);
+      DataSet dataset = event.dataset;
       assertTrue(dataset.data.isArray());
       assertEquals(1, dataset.data.size());
       assertEquals("B", dataset.data.get(0).path("by").asText());
@@ -326,18 +331,18 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testTransformationWithoutMatchFirstLevel(TestInfo info) throws InterruptedException {
       Schema schema = createExampleSchema("Aca", "Aca", "Aca", false);
-      testTransformationWithoutMatch(info, schema, runWithValue(schema, 42));
+      testTransformationWithoutMatch(info, schema, runWithValue(42, schema));
    }
 
    @org.junit.jupiter.api.Test
    public void testTransformationWithoutMatchSecondLevel(TestInfo info) throws InterruptedException {
       Schema schema = createExampleSchema("B", "B", "B", false);
-      testTransformationWithoutMatch(info, schema, JsonNodeFactory.instance.objectNode().set("nested", runWithValue(schema, 42)));
+      testTransformationWithoutMatch(info, schema, JsonNodeFactory.instance.objectNode().set("nested", runWithValue(42, schema)));
    }
 
    @org.junit.jupiter.api.Test
    public void testSchemaTransformerWithExtractorProducingNullValue(TestInfo info) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
 
       Schema schema = createExampleSchema("DDDD", "DDDDInc", "DDDDRrUs", true);
       Extractor scalarPath = new Extractor("sheep", "$.duff", false);
@@ -351,8 +356,9 @@ public class RunServiceTest extends BaseServiceTest {
 
       uploadRun(data,test.name);
 
-      DataSet dataSet = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
-      JsonNode eventData = dataSet.data;
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      assertNotNull(event);
+      JsonNode eventData = event.dataset.data;
       assertTrue(eventData.isArray());
       assertEquals(1, eventData.size());
       JsonNode sheep = eventData.path(0).path("outcome").path("sheep");
@@ -360,7 +366,7 @@ public class RunServiceTest extends BaseServiceTest {
    }
 
    private void testTransformationWithoutMatch(TestInfo info, Schema schema, ObjectNode data) throws InterruptedException {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
 
       Extractor firstMatch = new Extractor("foo", "$.foo", false);
       Extractor allMatches = new Extractor("bar", "$.bar[*].x", false);
@@ -376,9 +382,10 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerNoFunc, transformerFunc, transformerCombined);
       uploadRun(data, test.name);
-      DataSet dataset = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
 
-      assertNotNull(dataset);
+      assertNotNull(event);
+      DataSet dataset = event.dataset;
       assertTrue(dataset.data.isArray());
       assertEquals(3, dataset.data.size());
       dataset.data.forEach(item -> {
@@ -397,32 +404,6 @@ public class RunServiceTest extends BaseServiceTest {
       assertFalse(node.isMissingNode());
       assertEquals(expected, node.asText());
    }
-
-   private ObjectNode runWithValue(Schema schema, double value) {
-      ObjectNode runJson = JsonNodeFactory.instance.objectNode();
-      runJson.put("$schema", schema.uri);
-      runJson.put("value", value);
-      ArrayNode values = JsonNodeFactory.instance.arrayNode();
-      values.add(++value);
-      values.add(++value);
-      values.add(++value);
-      runJson.set("values", values);
-      return runJson;
-   }
-
-   private ObjectNode runWithValue( double value, Schema... schemas) {
-      ObjectNode root = null;
-      for ( Schema s : schemas) {
-         ObjectNode n = runWithValue (s, value);
-         if (root == null ) {
-            root = n;
-         } else {
-            root.set("field_"+s.name, n);
-         }
-      }
-      return root;
-   }
-
 
    @org.junit.jupiter.api.Test
    public void testRecalculateDatasets() {
@@ -508,7 +489,7 @@ public class RunServiceTest extends BaseServiceTest {
 
    @After
    public void drain() {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       dataSetQueue.drainTo(new ArrayList<>());
    }
 }

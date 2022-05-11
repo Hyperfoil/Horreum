@@ -8,6 +8,7 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
 import javax.annotation.security.PermitAll;
@@ -23,6 +24,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,10 +33,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.hibernate.Hibernate;
+import org.hibernate.ScrollMode;
+import org.hibernate.ScrollableResults;
+import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
 
@@ -62,8 +69,19 @@ public class TestServiceImpl implements TestService {
    @Inject
    SecurityIdentity identity;
 
+   @Inject
+   Vertx vertx;
+
+   @Inject
+   RunServiceImpl runService;
+
+   @Inject
+   DatasetServiceImpl datasetService;
+
    @Context
    HttpServletResponse response;
+
+   private final ConcurrentHashMap<Integer, RecalculationStatus> recalculations = new ConcurrentHashMap<>();
 
    @Override
    @RolesAllowed(Roles.TESTER)
@@ -438,6 +456,70 @@ public class TestServiceImpl implements TestService {
       test.fingerprintFilter = "";
       test.fingerprintFilter = update.filter;
       test.persistAndFlush();
+   }
+
+   @Override
+   @Transactional
+   public void recalculateDatasets(int testId) {
+      Test test = getTestForUpdate(testId);
+      RecalculationStatus status = new RecalculationStatus(Run.count("testid = ?1 AND trashed = false", testId));
+      // we don't have to care about races with new runs
+      RecalculationStatus prev = recalculations.putIfAbsent(testId, status);
+      while (prev != null) {
+         log.debugf("Recalculation for test %d (%s) already in progress", testId, test.name);
+         if (prev.timestamp < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(10)) {
+            log.warnf("Recalculation for test %d (%s) from %s timed out after 10 minutes with %d/%d runs",
+                  testId, test.name, Instant.ofEpochMilli(prev.timestamp), prev.finished, prev.totalRuns);
+            if (recalculations.replace(testId, prev, status)) {
+               log.debug("Continuing with recalculation.");
+               break;
+            } else {
+               prev = recalculations.get(testId);
+            }
+         } else {
+            return;
+         }
+      }
+      long deleted = em.createNativeQuery("DELETE FROM dataset USING run WHERE run.id = dataset.runid AND run.trashed AND dataset.testid = ?1")
+            .setParameter(1, testId).executeUpdate();
+      if (deleted > 0) {
+         log.infof("Deleted %d datasets for trashed runs in test %s (%d)", deleted, test.name, testId);
+      }
+
+      ScrollableResults results = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND NOT trashed ORDER BY start")
+            .setParameter(1, testId)
+            .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
+            .scroll(ScrollMode.FORWARD_ONLY);
+      while (results.next()) {
+         int runId = (int) results.get(0);
+         log.infof("Recalculate DataSets for run %d - forcing recalculation for test %d (%s)", runId, testId, test.name);
+         // transform will add proper roles anyway
+         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> datasetService.withRecalculationLock(() -> {
+            int newDatasets = 0;
+            try {
+               newDatasets = runService.transform(runId, true);
+            } finally {
+               synchronized (status) {
+                  status.finished++;
+                  status.datasets += newDatasets;
+                  if (status.finished == status.totalRuns) {
+                     recalculations.remove(testId, status);
+                  }
+               }
+            }
+         }));
+      }
+   }
+
+   @Override
+   public RecalculationStatus getRecalculationStatus(int testId) {
+      RecalculationStatus status = recalculations.get(testId);
+      if (status == null) {
+         status = new RecalculationStatus(Run.count("testid = ?1 AND trashed = false", testId));
+         status.finished = status.totalRuns;
+         status.datasets = DataSet.count("testid", testId);
+      }
+      return status;
    }
 
    private Test getTestForUpdate(int testId) {

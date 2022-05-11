@@ -26,7 +26,7 @@ function isEmpty(value: any) {
 }
 
 type RecalculationResult = {
-    totalRuns?: number
+    totalDatasets?: number
     errors?: number
     datasetsWithoutValue?: DatasetInfo[]
 }
@@ -186,7 +186,7 @@ export default function RecalculateModal(props: RecalculateModalProps) {
                         variant="compact"
                         cells={["Category", "Value"]}
                         rows={[
-                            ["Total number of runs", result.totalRuns],
+                            ["Total number of runs", result.totalDatasets],
                             ["Datasets without value", datasetsToLinks(result.datasetsWithoutValue)],
                             ["Value parsing errors", result.errors],
                         ]}

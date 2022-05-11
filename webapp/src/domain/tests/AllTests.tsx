@@ -36,6 +36,7 @@ import TeamSelect, { Team, ONLY_MY_OWN } from "../../components/TeamSelect"
 import FolderSelect from "../../components/FolderSelect"
 import FoldersTree from "./FoldersTree"
 import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
+import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
 
 import { Access, isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
 import { CellProps, Column, UseSortByColumnOptions } from "react-table"
@@ -120,6 +121,37 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
 
 type C = CellProps<Test>
 type Col = Column<Test> & UseSortByColumnOptions<Test>
+
+function useRecalculate(): MenuItem<undefined> {
+    const [modalOpen, setModalOpen] = useState(false)
+    return [
+        (props: ActionMenuProps, isOwner: boolean, close: () => void) => {
+            return {
+                item: (
+                    <DropdownItem
+                        key="recalculate"
+                        onClick={() => {
+                            close()
+                            setModalOpen(true)
+                        }}
+                        isDisabled={!isOwner}
+                    >
+                        Recalculate datasets
+                    </DropdownItem>
+                ),
+                modal: (
+                    <RecalculateDatasetsModal
+                        key="recalculate"
+                        isOpen={modalOpen}
+                        onClose={() => setModalOpen(false)}
+                        testId={props.id}
+                    />
+                ),
+            }
+        },
+        undefined,
+    ]
+}
 
 type DeleteConfig = {
     name: string
@@ -327,13 +359,14 @@ export default function AllTests() {
                     const del = useDelete({
                         name: arg.row.original.name,
                     })
+                    const recalc = useRecalculate()
                     return (
                         <ActionMenu
                             id={arg.cell.value}
                             access={arg.row.original.access}
                             owner={arg.row.original.owner}
                             description={"test " + arg.row.original.name}
-                            items={[changeAccess, move, del]}
+                            items={[changeAccess, move, del, recalc]}
                         />
                     )
                 },

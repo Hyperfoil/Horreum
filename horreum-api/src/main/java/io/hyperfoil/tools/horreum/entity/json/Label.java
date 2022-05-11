@@ -92,5 +92,14 @@ public class Label extends OwnedEntityBase {
       public int hashCode() {
          return Objects.hash(datasetId, labelId, value);
       }
+
+      @Override
+      public String toString() {
+         return "Value{" +
+               "datasetId=" + datasetId +
+               ", labelId=" + labelId +
+               ", value=" + value +
+               '}';
+      }
    }
 }

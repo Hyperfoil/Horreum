@@ -1,17 +1,26 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 
 import org.junit.jupiter.api.TestInfo;
 
+import io.hyperfoil.tools.horreum.api.TestService;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Run;
+import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
@@ -21,7 +30,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-import io.restassured.RestAssured;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -54,6 +62,45 @@ public class TestServiceTest extends BaseServiceTest {
          assertNotNull(run);
          assertTrue(run.trashed);
       }
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testRecalculate(TestInfo info) throws InterruptedException {
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
+      final int NUM_DATASETS = 5;
+      for (int i = 0; i < NUM_DATASETS; ++i) {
+         uploadRun(runWithValue(i, schema), test.name);
+         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         assertNotNull(event);
+         assertFalse(event.isRecalculation);
+      }
+      List<DataSet> datasets = DataSet.list("testid", test.id);
+      assertEquals(NUM_DATASETS, datasets.size());
+      int maxId = datasets.stream().mapToInt(ds -> ds.id).max().orElse(0);
+
+      jsonRequest().post("/api/test/" + test.id + "/recalculate").then().statusCode(204);
+      eventually(() -> {
+         TestService.RecalculationStatus status = jsonRequest().get("/api/test/" + test.id + "/recalculate")
+               .then().statusCode(200).extract().body().as(TestService.RecalculationStatus.class);
+         assertEquals(NUM_DATASETS, status.totalRuns);
+         return status.finished == status.totalRuns;
+      });
+      for (int i = 0; i < NUM_DATASETS; ++i) {
+         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         assertNotNull(event);
+         assertTrue(event.dataset.id > maxId);
+         assertTrue(event.isRecalculation);
+      }
+      datasets = DataSet.list("testid", test.id);
+      assertEquals(NUM_DATASETS, datasets.size());
+      datasets.forEach(ds -> {
+         assertTrue(ds.id > maxId);
+         assertEquals(0, ds.ordinal);
+      });
+      assertEquals(NUM_DATASETS, datasets.stream().map(ds -> ds.run.id).collect(Collectors.toSet()).size());
    }
 
 }

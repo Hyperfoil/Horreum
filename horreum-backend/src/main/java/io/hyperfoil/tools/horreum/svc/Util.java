@@ -196,9 +196,7 @@ public class Util {
 
    static void publishLater(TransactionManager tm, final EventBus eventBus, String eventName, Object event) {
       try {
-         doAfterCommitThrowing(tm, () -> {
-            eventBus.publish(eventName, event);
-         });
+         doAfterCommitThrowing(tm, () -> eventBus.publish(eventName, event));
       } catch (RollbackException e) {
          log.debug("Not publishing the event as the transaction has been marked rollback-only");
       } catch (SystemException e) {

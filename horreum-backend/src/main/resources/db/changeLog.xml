@@ -3330,4 +3330,51 @@
     <changeSet id="76" author="rvansa">
         <modifyDataType tableName="transformationlog" columnName="timestamp" newDataType="timestamptz"/>
     </changeSet>
+
+    <changeSet id="77" author="rvansa">
+        <!-- We have accidentally duplicated ViewComponent.render and Label.function - let's remove that from label
+             as in some instances we expect to get 3 parameters to the ViewComponent.render -->
+        <sql>
+            SELECT set_config('horreum.userroles', '', false);
+            UPDATE label SET function = NULL WHERE id IN (
+                SELECT label.id FROM viewcomponent
+                    JOIN label ON render = function and json_contains(viewcomponent.labels, label.name)
+            );
+            SELECT set_config('horreum.userroles', NULL, false);
+        </sql>
+        <!-- Let's split run_schemas update and notifications into independent functions for easier maintenance -->
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rs_after_run_update() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH rs AS (
+                    SELECT 0 AS type, NULL AS key, NEW.data->>'$schema' AS uri
+                    UNION SELECT 1 AS type, values.key, values.value->>'$schema' FROM jsonb_each(NEW.data) as values WHERE jsonb_typeof(NEW.data) = 'object'
+                    UNION SELECT 2 AS type, (row_number() OVER () - 1)::text AS key, value->>'$schema' as uri FROM jsonb_array_elements(NEW.data) WHERE jsonb_typeof(NEW.data) = 'array'
+                ) INSERT INTO run_schemas(runid, testid, type, key, uri, schemaid)
+                    SELECT NEW.id, NEW.testid, rs.type, rs.key, rs.uri, schema.id FROM rs
+                        JOIN schema ON schema.uri = rs.uri;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION after_run_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM dataset WHERE runid = OLD.id;
+                PERFORM pg_notify('calculate_datasets', NEW.id::text || ';' || (OLD.id IS NOT NULL)::text);
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE TRIGGER rs_after_run_update AFTER INSERT OR UPDATE OF data ON run FOR EACH ROW EXECUTE FUNCTION rs_after_run_update();
+        </sql>
+        <!-- These indexes prevent sequential scan on dataset_schemas which causes conflicts with many concurrent operations -->
+        <createIndex tableName="dataset_schemas" indexName="ds_datasets">
+            <column name="dataset_id" />
+        </createIndex>
+        <createIndex tableName="dataset_schemas" indexName="ds_schemas">
+            <column name="schema_id" />
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

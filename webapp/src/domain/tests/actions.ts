@@ -323,3 +323,7 @@ export function updateFingerprint(testId: number, labels: string[], filter: stri
         )
     }
 }
+
+export function updateRunsAndDatasetsAction(testId: number, runs: number, datasets: number) {
+    return { type: actionTypes.UPDATE_RUNS_AND_DATASETS, runs, datasets }
+}

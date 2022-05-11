@@ -158,7 +158,7 @@ public class RunServiceImpl implements RunService {
    @Transactional
    void onNewOrUpdatedSchemaForRun(int runId) {
       em.createNativeQuery("SELECT update_run_schemas(?1)::::text").setParameter(1, runId).getSingleResult();
-      transform(runId);
+      transform(runId, true);
    }
 
    @PermitAll
@@ -711,7 +711,7 @@ public class RunServiceImpl implements RunService {
          DataSet.delete("run.id", id);
          Util.publishLater(tm, eventBus, Run.EVENT_TRASHED, id);
       } else {
-         transform(id);
+         transform(id, true);
       }
    }
 
@@ -773,7 +773,7 @@ public class RunServiceImpl implements RunService {
    @Transactional
    @Override
    public List<Integer> recalculateDatasets(int runId) {
-      transform(runId);
+      transform(runId, true);
       //noinspection unchecked
       return em.createNativeQuery("SELECT id FROM dataset WHERE runid = ? ORDER BY ordinal")
             .setParameter(1, runId).getResultList();
@@ -788,15 +788,18 @@ public class RunServiceImpl implements RunService {
          log.errorf("Received notification to calculate dataset for run but cannot parse as run ID.", parts[0]);
          return;
       }
-      transform(runId);
+      boolean isRecalculation = parts.length > 1 && Boolean.parseBoolean(parts[1]);
+      transform(runId, isRecalculation);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void transform(int runId) {
+   int transform(int runId, boolean isRecalculation) {
       if (runId < 1) {
          log.errorf("Transformation parameters error: run %s", runId);
+         return 0;
       }
+      log.infof("Transforming run ID %d, recalculation? %s", runId, isRecalculation);
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
       DataSet.delete("runid", runId);
@@ -951,13 +954,15 @@ public class RunServiceImpl implements RunService {
             }
             nakedNodes.forEach(all::add);
             createDataset(new DataSet(run.start, run.stop, run.description,
-                  run.testid, all, run, ordinal++, run.owner, run.access));
+                  run.testid, all, run, ordinal++, run.owner, run.access), isRecalculation);
          }
+         return ordinal;
       } else {
          logMessage(run, TransformationLog.INFO, "No applicable schema, dataset will be empty.");
          createDataset(new DataSet(run.start, run.stop,
                "Empty DataSet for run data without any schema.",
-               run.testid, instance.arrayNode(), run, 0, run.owner, run.access));
+               run.testid, instance.arrayNode(), run, 0, run.owner, run.access), isRecalculation);
+         return 1;
       }
    }
 
@@ -965,10 +970,10 @@ public class RunServiceImpl implements RunService {
       return str.length() > 1024 ? str.substring(0, 1024) + "...(truncated)" : str;
    }
 
-   private void createDataset(DataSet ds) {
+   private void createDataset(DataSet ds, boolean isRecalculation) {
       try {
          ds.persist();
-         Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, ds);
+         Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, new DataSet.EventNew(ds, isRecalculation));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.", tre);
       }

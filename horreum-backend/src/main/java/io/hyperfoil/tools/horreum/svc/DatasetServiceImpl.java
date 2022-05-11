@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
@@ -84,6 +85,12 @@ public class DatasetServiceImpl implements DatasetService {
 
    @Inject
    EventBus eventBus;
+
+   // This is a nasty hack that will serialize all run -> dataset transformations and label calculations
+   // The problem is that PostgreSQL's SSI will for some (unknown) reason rollback some transactions,
+   // probably due to false sharing of locks. For some reason even using advisory locks in DB does not
+   // solve the issue so we have to serialize this even outside the problematic transactions.
+   private final ReentrantLock recalculationLock = new ReentrantLock();
 
    @PostConstruct
    void init() {
@@ -189,12 +196,14 @@ public class DatasetServiceImpl implements DatasetService {
       }
       int datasetId = Integer.parseInt(parts[0]);
       int labelId = Integer.parseInt(parts[1]);
-      calculateLabels(datasetId, labelId);
+      // This is invoked when the label is added/updated. We won't send notifications
+      // for that (user can check if there are any changes on his own).
+      calculateLabels(datasetId, labelId, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void calculateLabels(int datasetId, int queryLabelId) {
+   void calculateLabels(int datasetId, int queryLabelId, boolean isRecalculation) {
       log.infof("Calculating labels for dataset %d, label %d", datasetId, queryLabelId);
       // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
       // to the uploading user. However, the uploader should not have rights to fetch these anyway...
@@ -208,13 +217,14 @@ public class DatasetServiceImpl implements DatasetService {
                   .addScalar("function", TextType.INSTANCE)
                   .addScalar("value", JsonNodeBinaryType.INSTANCE)
                   .getResultList();
+
       Util.evaluateMany(extracted, row -> (String) row[2], row -> (JsonNode) row[3],
             (row, result) -> createLabel(datasetId, (int) row[0], Util.convertToJson(result)),
             row -> createLabel(datasetId, (int) row[0], (JsonNode) row[3]),
             (row, e, jsCode) -> logMessage(datasetId, DatasetLog.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
             out -> logMessage(datasetId, DatasetLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
-      Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId));
+      Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId, isRecalculation));
    }
 
    private void createLabel(int datasetId, int labelId, JsonNode value) {
@@ -225,9 +235,18 @@ public class DatasetServiceImpl implements DatasetService {
       labelValue.persist();
    }
 
+   void withRecalculationLock(Runnable runnable) {
+      recalculationLock.lock();
+      try {
+         runnable.run();
+      } finally {
+         recalculationLock.unlock();
+      }
+   }
+
    @ConsumeEvent(value = DataSet.EVENT_NEW, blocking = true)
-   public void onNewDataset(DataSet dataSet) {
-      calculateLabels(dataSet.id, -1);
+   public void onNewDataset(DataSet.EventNew event) {
+      withRecalculationLock(() -> calculateLabels(event.dataset.id, -1, event.isRecalculation));
    }
 
    private void logMessage(int datasetId, int level, String message, Object... params) {

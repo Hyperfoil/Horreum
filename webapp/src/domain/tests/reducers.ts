@@ -139,6 +139,13 @@ export interface UpdateFingerprintAction {
     filter: string | null
 }
 
+export interface UpdateRunsAndDatasetsAction {
+    type: typeof actionTypes.UPDATE_RUNS_AND_DATASETS
+    testId: number
+    runs: number
+    datasets: number
+}
+
 export type TestAction =
     | LoadingAction
     | LoadedSummaryAction
@@ -154,6 +161,7 @@ export type TestAction =
     | UpdateFolderAction
     | UpdateTransformersAction
     | UpdateFingerprintAction
+    | UpdateRunsAndDatasetsAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction | AddAlertAction>
 
@@ -254,6 +262,17 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
                     ...test,
                     fingerprintLabels: action.labels,
                     fingerprintFilter: action.filter,
+                })
+            }
+            break
+        }
+        case actionTypes.UPDATE_RUNS_AND_DATASETS: {
+            const test = state.byId?.get(action.testId)
+            if (test) {
+                state.byId = state.byId?.set(action.testId, {
+                    ...test,
+                    runs: action.runs,
+                    datasets: action.datasets,
                 })
             }
             break

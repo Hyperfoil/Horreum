@@ -216,36 +216,36 @@ public class DatasetServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testSchemaAfterData() throws InterruptedException {
       Test test = createTest(createExampleTest("xxx"));
-      BlockingQueue<DataSet> dsQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       BlockingQueue<DataSet.LabelsUpdatedEvent> labelQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
       JsonNode data = JsonNodeFactory.instance.arrayNode()
             .add(JsonNodeFactory.instance.objectNode().put("$schema", "another"))
             .add(JsonNodeFactory.instance.objectNode().put("$schema", "foobar").put("value", 42));
       int runId = uploadRun(data, test.name);
-      DataSet firstDataset = dsQueue.poll(10, TimeUnit.SECONDS);
-      assertNotNull(firstDataset);
-      assertEquals(runId, firstDataset.run.id);
-      assertEmptyArray(firstDataset.data);
+      DataSet.EventNew firstEvent = dsQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(firstEvent);
+      assertEquals(runId, firstEvent.dataset.run.id);
+      assertEmptyArray(firstEvent.dataset.data);
       // this update is for no label values - there's no schema
       DataSet.LabelsUpdatedEvent firstUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(firstUpdate);
-      assertEquals(firstDataset.id, firstUpdate.datasetId);
+      assertEquals(firstEvent.dataset.id, firstUpdate.datasetId);
 
       assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM dataset_schemas").getSingleResult()).intValue());
       Schema schema = createSchema("Foobar", "foobar");
 
-      DataSet secondDataset = dsQueue.poll(10, TimeUnit.SECONDS);
-      assertNotNull(secondDataset);
-      assertEquals(runId, secondDataset.run.id);
+      DataSet.EventNew secondEvent = dsQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(secondEvent);
+      assertEquals(runId, secondEvent.dataset.run.id);
       // empty again - we have schema but no labels defined
       DataSet.LabelsUpdatedEvent secondUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(secondUpdate);
-      assertEquals(secondDataset.id, secondUpdate.datasetId);
+      assertEquals(secondEvent.dataset.id, secondUpdate.datasetId);
 
       @SuppressWarnings("unchecked") List<Object[]> ds =
             em.createNativeQuery("SELECT dataset_id, index FROM dataset_schemas").getResultList();
       assertEquals(1, ds.size());
-      assertEquals(secondDataset.id, ds.get(0)[0]);
+      assertEquals(secondEvent.dataset.id, ds.get(0)[0]);
       assertEquals(0, ds.get(0)[1]);
       assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM label_values").getSingleResult()).intValue());
 
@@ -253,7 +253,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       // not empty anymore
       DataSet.LabelsUpdatedEvent thirdUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(thirdUpdate);
-      assertEquals(secondDataset.id, thirdUpdate.datasetId);
+      assertEquals(secondEvent.dataset.id, thirdUpdate.datasetId);
 
       List<Label.Value> values = Label.Value.listAll();
       assertEquals(1, values.size());

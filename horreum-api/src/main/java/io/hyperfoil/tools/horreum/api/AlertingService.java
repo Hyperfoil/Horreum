@@ -136,7 +136,7 @@ public interface AlertingService {
    class RecalculationStatus {
       public int percentage;
       public boolean done;
-      public Integer totalRuns;
+      public Integer totalDatasets;
       public Integer errors;
       public Collection<DatasetInfo> datasetsWithoutValue;
    }

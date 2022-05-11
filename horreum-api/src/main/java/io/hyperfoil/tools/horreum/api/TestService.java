@@ -20,7 +20,6 @@ import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.TestToken;
-import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.quarkus.panache.common.Sort;
 
@@ -109,6 +108,14 @@ public interface TestService {
    @Path("{id}/fingerprint")
    void updateFingerprint(@PathParam("id") int testId, FingerprintUpdate update);
 
+   @POST
+   @Path("{id}/recalculate")
+   void recalculateDatasets(@PathParam("id") int testId);
+
+   @GET
+   @Path("{id}/recalculate")
+   RecalculationStatus getRecalculationStatus(@PathParam("id") int testId);
+
    class TestListing {
       public List<TestSummary> tests;
    }
@@ -128,5 +135,20 @@ public interface TestService {
    class FingerprintUpdate {
       public List<String> labels;
       public String filter;
+   }
+
+   class RecalculationStatus {
+      public long timestamp;
+      public long totalRuns;
+      public long finished;
+      public long datasets;
+
+      public RecalculationStatus() {
+      }
+
+      public RecalculationStatus(long totalRuns) {
+         this.timestamp = System.currentTimeMillis();
+         this.totalRuns = totalRuns;
+      }
    }
 }

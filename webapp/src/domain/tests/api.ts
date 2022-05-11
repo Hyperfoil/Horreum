@@ -23,6 +23,7 @@ const endPoints = {
         `${base}/${id}/updateAccess?owner=${owner}&access=${access}`,
     transformers: (testId: number) => `${base}/${testId}/transformers`,
     fingerprint: (testId: number) => `${base}/${testId}/fingerprint`,
+    recalculate: (testId: number) => `${base}/${testId}/recalculate`,
 }
 
 export const updateView = (testId: number, view: View) => {
@@ -89,4 +90,19 @@ export function updateTransformers(testId: number, transformerIds: number[]) {
 
 export function updateFingerprint(testId: number, labels: string[], filter: string | null) {
     return fetchApi(endPoints.fingerprint(testId), { labels, filter }, "post")
+}
+
+export function recalculateDatasets(testId: number) {
+    return fetchApi(endPoints.recalculate(testId), null, "post")
+}
+
+export type RecalculationStatus = {
+    timestamp: number
+    totalRuns: number
+    finished: number
+    datasets: number
+}
+
+export function getRecalculationStatus(testId: number): Promise<RecalculationStatus> {
+    return fetchApi(endPoints.recalculate(testId), null, "get")
 }

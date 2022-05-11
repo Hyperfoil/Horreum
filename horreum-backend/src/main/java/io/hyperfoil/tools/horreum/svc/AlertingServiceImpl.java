@@ -198,11 +198,15 @@ public class AlertingServiceImpl implements AlertingService {
          ));
          return;
       }
-      try {
-         sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
-               .setParameter(1, dataset.testid).getSingleResult();
-      } catch (NoResultException e) {
-         sendNotifications = true;
+      if (event.isRecalculation) {
+         sendNotifications = false;
+      } else {
+         try {
+            sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
+                  .setParameter(1, dataset.testid).getSingleResult();
+         } catch (NoResultException e) {
+            sendNotifications = true;
+         }
       }
       recalculateDatapointsForDataset(dataset, sendNotifications, false, null);
       recalculateMissingDataRules(dataset);
@@ -877,7 +881,7 @@ public class AlertingServiceImpl implements AlertingService {
       status.percentage = recalculation == null ? 100 : recalculation.progress;
       status.done = recalculation == null || recalculation.done;
       if (recalculation != null) {
-         status.totalRuns = recalculation.datasets.size();
+         status.totalDatasets = recalculation.datasets.size();
          status.errors = recalculation.errors;
          status.datasetsWithoutValue = recalculation.datasetsWithoutValue.values();
       }

@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
 import java.time.Instant;
-import java.util.List;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
@@ -13,7 +12,6 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.NamedQuery;
 import javax.persistence.SequenceGenerator;
 
 import org.hibernate.annotations.Type;
@@ -69,11 +67,31 @@ public class DataSet extends OwnedEntityBase {
    @NotNull
    public int ordinal;
 
+   public static class EventNew {
+      public final DataSet dataset;
+      public final boolean isRecalculation;
+
+      public EventNew(DataSet dataset, boolean isRecalculation) {
+         this.dataset = dataset;
+         this.isRecalculation = isRecalculation;
+      }
+
+      @Override
+      public String toString() {
+         return "DataSet.EventNew{" +
+               "dataset=" + dataset.id + " (" + dataset.run.id + "/" + dataset.ordinal +
+               "), isRecalculation=" + isRecalculation +
+               '}';
+      }
+   }
+
    public static class LabelsUpdatedEvent {
       public final int datasetId;
+      public final boolean isRecalculation;
 
-      public LabelsUpdatedEvent(int datasetId) {
+      public LabelsUpdatedEvent(int datasetId, boolean isRecalculation) {
          this.datasetId = datasetId;
+         this.isRecalculation = isRecalculation;
       }
    }
 

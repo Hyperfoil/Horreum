@@ -202,6 +202,7 @@ public class UserServiceImpl implements UserService {
          if (userInfo == null) {
             userInfo = new UserInfo();
             userInfo.username = username;
+            userInfo.teams = teams;
          } else if (!teams.equals(userInfo.teams)) {
             userInfo.teams = teams;
          }

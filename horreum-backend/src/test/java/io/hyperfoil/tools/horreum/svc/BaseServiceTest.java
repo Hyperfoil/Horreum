@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -77,6 +78,31 @@ public class BaseServiceTest {
       assertNotNull(node);
       assertTrue(node.isArray());
       assertTrue(node.isEmpty());
+   }
+
+   protected static ObjectNode runWithValue(double value, Schema schema) {
+      ObjectNode runJson = JsonNodeFactory.instance.objectNode();
+      runJson.put("$schema", schema.uri);
+      runJson.put("value", value);
+      ArrayNode values = JsonNodeFactory.instance.arrayNode();
+      values.add(++value);
+      values.add(++value);
+      values.add(++value);
+      runJson.set("values", values);
+      return runJson;
+   }
+
+   protected static ObjectNode runWithValue(double value, Schema... schemas) {
+      ObjectNode root = null;
+      for (Schema s : schemas) {
+         ObjectNode n = runWithValue(value, s);
+         if (root == null ) {
+            root = n;
+         } else {
+            root.set("field_"+s.name, n);
+         }
+      }
+      return root;
    }
 
    @BeforeEach
@@ -327,8 +353,24 @@ public class BaseServiceTest {
       test.run();
    }
 
+   protected void eventually(BooleanSupplier test) {
+      long now = System.currentTimeMillis();
+      do {
+         if (test.getAsBoolean()) {
+            return;
+         }
+         try {
+            //noinspection BusyWait
+            Thread.sleep(10);
+         } catch (InterruptedException e) {
+            fail("Interrupted while polling condition.");
+         }
+      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(10));
+      fail("Failed waiting for test to become true");
+   }
+
    protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
-      BlockingQueue<DataSet> dataSetQueue = eventConsumerQueue(DataSet.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       try {
          Run run = new Run();
          tm.begin();
@@ -346,13 +388,14 @@ public class BaseServiceTest {
                fail();
             }
          }
-         DataSet ds = dataSetQueue.poll(10, TimeUnit.SECONDS);
-         assertNotNull(ds);
-         T value = testLogic.apply(ds);
+         DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
+         assertNotNull(event);
+         assertNotNull(event.dataset);
+         T value = testLogic.apply(event.dataset);
          tm.begin();
          Throwable error = null;
          try (CloseMe ignored = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
-            DataSet oldDs = DataSet.findById(ds.id);
+            DataSet oldDs = DataSet.findById(event.dataset.id);
             if (oldDs != null) {
                oldDs.delete();
             }
