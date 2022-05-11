@@ -1030,13 +1030,16 @@ public class AlertingServiceImpl implements AlertingService {
          em.merge(rule);
          em.flush();
       }
-      Util.executeBlocking(vertx, new CachedSecurityIdentity(identity), () -> {
-         @SuppressWarnings("unchecked") List<Object[]> idsAndTimestamps =
-               em.createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?1").setParameter(1, testId).getResultList();
+      // The recalculations are executed in independent transactions, therefore we need to make sure that
+      // this rule is committed in DB before starting to reevaluate it.
+      Util.doAfterCommit(tm, () -> Util.executeBlocking(vertx, new CachedSecurityIdentity(identity), () -> {
+         @SuppressWarnings("unchecked") List<Object[]> idsAndTimestamps = Util.withTx(tm,
+               () -> em.createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?1"
+               ).setParameter(1, testId).getResultList());
          for (Object[] row : idsAndTimestamps) {
             recalculateMissingDataRule((int) row[0], ((Timestamp) row[1]).toInstant(), rule);
          }
-      });
+      }));
       return rule.id;
    }
 
