@@ -26,7 +26,6 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -344,7 +343,6 @@ public class AlertingServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   @Disabled("Disabled until Transaction race condition fixed!")
    public void testMissingRules(TestInfo info) throws InterruptedException {
       NotificationServiceImpl notificationService = Mockito.mock(NotificationServiceImpl.class);
       List<String> notifications = Collections.synchronizedList(new ArrayList<>());
