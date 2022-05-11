@@ -49,7 +49,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
-@WithRoles
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
 
@@ -83,9 +82,10 @@ public class TestServiceImpl implements TestService {
 
    private final ConcurrentHashMap<Integer, RecalculationStatus> recalculations = new ConcurrentHashMap<>();
 
-   @Override
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
+   @Override
    public void delete(Integer id){
       Test test = Test.findById(id);
       if (test == null) {
@@ -107,6 +107,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @WithToken
+   @WithRoles
    @PermitAll
    public Test get(Integer id, String token){
       Test test = Test.find("id", id).firstResult();
@@ -134,6 +135,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    public Test add(Test test){
       if (!identity.hasRole(test.owner)) {
@@ -197,6 +199,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @PermitAll
+   @WithRoles
    public List<Test> list(String roles, Integer limit, Integer page, String sort, Sort.Direction direction){
       PanacheQuery<Test> query;
       Set<String> actualRoles = null;
@@ -224,6 +227,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @PermitAll
+   @WithRoles
    public TestListing summary(String roles, String folder) {
       folder = normalizeFolderName(folder);
       StringBuilder testSql = new StringBuilder();
@@ -271,6 +275,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @PermitAll
+   @WithRoles
    public List<String> folders(String roles) {
       StringBuilder sql = new StringBuilder("SELECT DISTINCT folder FROM test");
       Roles.addRolesSql(identity, "test", sql, roles, 1, " WHERE");
@@ -302,6 +307,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @WithRoles
    @Transactional
    public Integer addToken(Integer testId, TestToken token) {
       if (token.hasUpload() && !token.hasRead()) {
@@ -316,6 +322,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @WithRoles
    public Collection<TestToken> tokens(Integer testId) {
       Test t = Test.findById(testId);
       Hibernate.initialize(t.tokens);
@@ -324,6 +331,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @WithRoles
    @Transactional
    public void dropToken(Integer testId, Integer tokenId) {
       Test test = getTestForUpdate(testId);
@@ -333,6 +341,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @WithRoles
    @Transactional
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
    public void updateAccess(Integer id,
@@ -349,6 +358,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @WithRoles
    @Transactional
    public void updateView(Integer testId, View view) {
       if (testId == null || testId <= 0) {
@@ -376,6 +386,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @WithRoles
    @Transactional
    public void updateAccess(Integer id,
                             boolean enabled) {
@@ -402,6 +413,7 @@ public class TestServiceImpl implements TestService {
 
    @Override
    @RolesAllowed("tester")
+   @WithRoles
    @Transactional
    public void updateHook(Integer testId, Hook hook) {
       if (testId == null || testId <= 0) {
@@ -459,6 +471,7 @@ public class TestServiceImpl implements TestService {
    }
 
    @Override
+   @WithRoles
    @Transactional
    public void recalculateDatasets(int testId) {
       Test test = getTestForUpdate(testId);
@@ -512,6 +525,7 @@ public class TestServiceImpl implements TestService {
    }
 
    @Override
+   @WithRoles
    public RecalculationStatus getRecalculationStatus(int testId) {
       RecalculationStatus status = recalculations.get(testId);
       if (status == null) {

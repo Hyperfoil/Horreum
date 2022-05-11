@@ -51,7 +51,6 @@ import com.networknt.schema.uri.URIFetcher;
 import com.networknt.schema.uri.URLFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
-@WithRoles
 public class SchemaServiceImpl implements SchemaService {
    private static final Logger log = Logger.getLogger(SchemaServiceImpl.class);
 
@@ -96,6 +95,7 @@ public class SchemaServiceImpl implements SchemaService {
    SecurityIdentity identity;
 
    @WithToken
+   @WithRoles
    @PermitAll
    @Override
    public Schema getSchema(int id, String token){
@@ -116,6 +116,7 @@ public class SchemaServiceImpl implements SchemaService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    public Integer add(Schema schema){
@@ -135,6 +136,7 @@ public class SchemaServiceImpl implements SchemaService {
    }
 
    @PermitAll
+   @WithRoles
    @Override
    public List<Schema> list(Integer limit, Integer page, String sort, Sort.Direction direction) {
       if (sort == null || sort.isEmpty()) {
@@ -148,6 +150,7 @@ public class SchemaServiceImpl implements SchemaService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    public String resetToken(Integer id) {
@@ -155,6 +158,7 @@ public class SchemaServiceImpl implements SchemaService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    public String dropToken(Integer id) {
@@ -174,6 +178,7 @@ public class SchemaServiceImpl implements SchemaService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
@@ -193,6 +198,7 @@ public class SchemaServiceImpl implements SchemaService {
    }
 
    @PermitAll
+   @WithRoles
    @Override
    public Collection<ValidationMessage> validate(JsonNode data, String schemaUri) {
       if (schemaUri == null || schemaUri.isEmpty()) {
@@ -225,6 +231,7 @@ public class SchemaServiceImpl implements SchemaService {
    }
 
    @RolesAllowed("tester")
+   @WithRoles
    @Transactional
    @Override
    public void delete(Integer id){
@@ -241,6 +248,7 @@ public class SchemaServiceImpl implements SchemaService {
    }
 
    @PermitAll
+   @WithRoles
    @Override
    public List<LabelLocation> findUsages(String label) {
       if (label == null) {

@@ -20,11 +20,9 @@ import io.hyperfoil.tools.horreum.api.SubscriptionService;
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 
-@WithRoles
 @ApplicationScoped
 public class SubscriptionServiceImpl implements SubscriptionService {
    @Inject
@@ -42,6 +40,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    }
 
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
+   @WithRoles
    @Override
    public Map<Integer, Set<String>> all(String folder) {
       // TODO: do all of this in single obscure PSQL query
@@ -69,6 +68,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    }
 
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
+   @WithRoles
    @Override
    public Watch get(Integer testId) {
       Watch watch = Watch.find("test.id = ?1", testId).firstResult();
@@ -91,6 +91,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    }
 
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
+   @WithRoles
    @Transactional
    @Override
    public List<String> addUserOrTeam(Integer testId, String userOrTeam) {
@@ -140,6 +141,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    }
 
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
+   @WithRoles
    @Transactional
    @Override
    public List<String> removeUserOrTeam(Integer testId, String userOrTeam) {
@@ -183,6 +185,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    }
 
    @RolesAllowed({Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
+   @WithRoles
    @Transactional
    @Override
    public void update(Integer testId, Watch watch) {

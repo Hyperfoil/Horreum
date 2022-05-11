@@ -47,8 +47,6 @@ import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 
-
-@WithRoles
 public class ReportServiceImpl implements ReportService {
    private static final Logger log = Logger.getLogger(ReportServiceImpl.class);
 
@@ -67,6 +65,7 @@ public class ReportServiceImpl implements ReportService {
    EntityManager em;
 
    @PermitAll
+   @WithRoles
    @Override
    public AllTableReports getTableReports(Integer testId, String roles, Integer limit, Integer page, String sort, Sort.Direction direction) {
       StringBuilder queryBuilder = new StringBuilder();
@@ -135,12 +134,14 @@ public class ReportServiceImpl implements ReportService {
    }
 
    @PermitAll
+   @WithRoles
    @Override
    public TableReportConfig getTableReportConfig(Integer id) {
       return TableReportConfig.findById(id);
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Override
    @Transactional
    public TableReport updateTableReportConfig(TableReportConfig config, Integer reportId) {
@@ -208,6 +209,7 @@ public class ReportServiceImpl implements ReportService {
    }
 
    @PermitAll
+   @WithRoles
    @Override
    public TableReport getTableReport(Integer id) {
       TableReport report = TableReport.findById(id);
@@ -216,6 +218,7 @@ public class ReportServiceImpl implements ReportService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Transactional
    @Override
    public void deleteTableReport(Integer id) {
@@ -228,6 +231,7 @@ public class ReportServiceImpl implements ReportService {
    }
 
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    @Override
    @Transactional
    public ReportComment updateComment(Integer reportId, ReportComment comment) {
@@ -248,6 +252,7 @@ public class ReportServiceImpl implements ReportService {
    }
 
    @PermitAll
+   @WithRoles
    @Override
    public TableReport previewTableReport(TableReportConfig config, Integer reportId) {
       validateTableConfig(config);
