@@ -780,13 +780,21 @@ public class AlertingServiceImpl implements AlertingService {
    @Override
    @WithRoles
    @PermitAll
-   public List<Change> changes(Integer varId) {
+   public List<Change> changes(Integer varId, String fingerprint) {
       Variable v = Variable.findById(varId);
       if (v == null) {
          throw ServiceException.notFound("Variable " + varId + " not found");
       }
-      // TODO: Avoid sending variable in each datapoint
-      return Change.list("variable", v);
+      JsonNode fp = Util.parseFingerprint(fingerprint);
+      if (fp == null) {
+         return Change.list("variable", v);
+      }
+      //noinspection unchecked
+      return em.createNativeQuery("SELECT change.* FROM change JOIN fingerprint fp ON change.dataset_id = fp.dataset_id " +
+            "WHERE variable_id = ?1 AND json_equals(fp.fingerprint, ?2)", Change.class)
+            .setParameter(1, varId).unwrap(NativeQuery.class)
+            .setParameter(2, fp, JsonNodeBinaryType.INSTANCE)
+            .getResultList();
    }
 
    @Override

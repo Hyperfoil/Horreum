@@ -195,7 +195,7 @@ export default function Changes() {
         // We need to prevent fetching dashboard until we are sure if we need the fingerprint
         if (selectedTest && !loadingFingerprints) {
             setLoadingPanels(true)
-            fetchDashboard(selectedTest.id, selectedFingerprint ? JSON.stringify(selectedFingerprint) : undefined)
+            fetchDashboard(selectedTest.id, selectedFingerprint)
                 .then(
                     response => {
                         setDashboardUrl(response.url)
@@ -401,6 +401,7 @@ export default function Changes() {
                                                 <DataListCell key="changes">
                                                     <ChangesTabs
                                                         variables={p.variables}
+                                                        fingerprint={selectedFingerprint}
                                                         testOwner={selectedTest?.owner}
                                                         selectedChangeId={selectedChange}
                                                         selectedVariableId={selectedVariable}

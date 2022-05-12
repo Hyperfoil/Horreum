@@ -39,7 +39,7 @@ public interface AlertingService {
 
    @GET
    @Path("changes")
-   List<Change> changes(@QueryParam("var") Integer varId);
+   List<Change> changes(@QueryParam("var") Integer varId, @QueryParam("fingerprint") String fingerprint);
 
    @POST
    @Path("change/{id}")

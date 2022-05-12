@@ -7,9 +7,8 @@ const base = "/api/alerting"
 const endPoints = {
     base: () => `${base}`,
     variables: (testId: number) => `${base}/variables?test=${testId}`,
-    dashboard: (testId: number, fingerprint?: string) =>
-        `${base}/dashboard?test=${testId}&fingerprint=${fingerprint ? encodeURIComponent(fingerprint) : ""}`,
-    changes: (varId: number) => `${base}/changes?var=${varId}`,
+    dashboard: (testId: number, fingerprint: string) => `${base}/dashboard?test=${testId}&fingerprint=${fingerprint}`,
+    changes: (varId: number, fingerprint: string) => `${base}/changes?var=${varId}&fingerprint=${fingerprint}`,
     change: (changeId: number) => `${base}/change/${changeId}`,
     recalculate: (testId: number, debug: boolean, from?: number, to?: number) =>
         `${base}/recalculate?test=${testId}&debug=${debug}${from ? "&from=" + from : ""}${to ? "&to=" + to : ""}`,
@@ -28,12 +27,12 @@ export const updateVariables = (testId: number, variables: Variable[]) => {
     return fetchApi(endPoints.variables(testId), variables, "post", {}, "response")
 }
 
-export const fetchDashboard = (testId: number, fingerprint?: string) => {
-    return fetchApi(endPoints.dashboard(testId, fingerprint), null, "get")
+export const fetchDashboard = (testId: number, fingerprint: unknown) => {
+    return fetchApi(endPoints.dashboard(testId, fingerprintToString(fingerprint)), null, "get")
 }
 
-export const fetchChanges = (varId: number) => {
-    return fetchApi(endPoints.changes(varId), null, "get")
+export const fetchChanges = (varId: number, fingerprint: unknown) => {
+    return fetchApi(endPoints.changes(varId, fingerprintToString(fingerprint)), null, "get")
 }
 
 export const updateChange = (change: Change) => {

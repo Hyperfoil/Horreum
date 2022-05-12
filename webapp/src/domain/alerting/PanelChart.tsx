@@ -12,7 +12,7 @@ import {
     XAxis,
     YAxis,
 } from "recharts"
-import { Button, EmptyState, Spinner, Title } from "@patternfly/react-core"
+import { Bullseye, Button, EmptyState, Spinner, Title } from "@patternfly/react-core"
 import { DateTime } from "luxon"
 import { findLastDatapoints } from "./api"
 import { Annotation, fetchDatapoints, fetchAllAnnotations, TimeseriesTarget } from "./grafanaapi"
@@ -99,6 +99,7 @@ export default function PanelChart(props: PanelProps) {
     const [gettingLast, setGettingLast] = useState(false)
     const startTime = props.endTime - props.timespan * 1000
     useEffect(() => {
+        setDatapoints(undefined)
         fetchDatapoints(props.variables, props.fingerprint, startTime, props.endTime).then(response => {
             setLegend(
                 response.map((tt, i) => ({
@@ -129,7 +130,7 @@ export default function PanelChart(props: PanelProps) {
 
     const chartData = useMemo(() => {
         if (!datapoints) {
-            return []
+            return undefined
         }
         const series = new Map()
         datapoints.forEach(tt => {
@@ -191,7 +192,12 @@ export default function PanelChart(props: PanelProps) {
                     &#8810;
                 </Button>
                 <div style={{ width: "100%", height: 450 }}>
-                    {chartData.length === 0 && (
+                    {chartData === undefined && (
+                        <Bullseye>
+                            <Spinner size="xl" />
+                        </Bullseye>
+                    )}
+                    {chartData?.length === 0 && (
                         <EmptyState>
                             <Title headingLevel="h3">No datapoints in this range</Title>
                             <Button
@@ -233,7 +239,7 @@ export default function PanelChart(props: PanelProps) {
                             </Button>
                         </EmptyState>
                     )}
-                    {chartData.length > 0 && (
+                    {chartData && chartData.length > 0 && (
                         <ResponsiveContainer width="100%" height={450}>
                             <LineChart data={chartData} style={{ userSelect: "none" }}>
                                 <CartesianGrid strokeDasharray="3 3" />

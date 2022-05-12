@@ -143,15 +143,16 @@ const ChangeModal = ({ change, isOpen, onClose, onUpdate }: ChangeModalProps) =>
 
 type ChangesProps = {
     varId: number
+    fingerprint: unknown
     testOwner?: string
     selectedChangeId?: number
 }
 
-export const ChangeTable = ({ varId, testOwner, selectedChangeId }: ChangesProps) => {
+export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }: ChangesProps) => {
     const dispatch = useDispatch()
     const [changes, setChanges] = useState<Change[]>([])
     useEffect(() => {
-        api.fetchChanges(varId).then(
+        api.fetchChanges(varId, fingerprint).then(
             response => setChanges(response),
             error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
         )
@@ -166,7 +167,7 @@ export const ChangeTable = ({ varId, testOwner, selectedChangeId }: ChangesProps
         {
             Header: "Time",
             accessor: "timestamp",
-            Cell: (arg: any) => formatDateTime(arg.cell.value),
+            Cell: (arg: any) => formatDateTime(arg.cell.value * 1000),
         },
         {
             Header: "Dataset",
@@ -224,12 +225,19 @@ export const ChangeTable = ({ varId, testOwner, selectedChangeId }: ChangesProps
 
 type ChangesTabsProps = {
     variables: Variable[]
+    fingerprint: unknown
     testOwner?: string
     selectedChangeId?: number
     selectedVariableId?: number
 }
 
-export const ChangesTabs = ({ variables, testOwner, selectedChangeId, selectedVariableId }: ChangesTabsProps) => {
+export const ChangesTabs = ({
+    variables,
+    fingerprint,
+    testOwner,
+    selectedChangeId,
+    selectedVariableId,
+}: ChangesTabsProps) => {
     const [isExpanded, setExpanded] = useState(false)
     const [activeTab, setActiveTab] = useState<number | string>(0)
     useEffect(() => {
@@ -254,7 +262,12 @@ export const ChangesTabs = ({ variables, testOwner, selectedChangeId, selectedVa
             >
                 {variables.map((v, index) => (
                     <Tab key={v.name} eventKey={index} title={v.name}>
-                        <ChangeTable varId={v.id} testOwner={testOwner} selectedChangeId={selectedChangeId} />
+                        <ChangeTable
+                            varId={v.id}
+                            fingerprint={fingerprint}
+                            testOwner={testOwner}
+                            selectedChangeId={selectedChangeId}
+                        />
                     </Tab>
                 ))}
             </Tabs>
