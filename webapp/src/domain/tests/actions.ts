@@ -18,6 +18,7 @@ import {
     UpdateFoldersAction,
     UpdateFolderAction,
     UpdateTransformersAction,
+    UpdateRunsAndDatasetsAction,
 } from "./reducers"
 import { Dispatch } from "redux"
 import { Transformer } from "../schemas/api"
@@ -324,6 +325,10 @@ export function updateFingerprint(testId: number, labels: string[], filter: stri
     }
 }
 
-export function updateRunsAndDatasetsAction(testId: number, runs: number, datasets: number) {
-    return { type: actionTypes.UPDATE_RUNS_AND_DATASETS, runs, datasets }
+export function updateRunsAndDatasetsAction(
+    testId: number,
+    runs: number,
+    datasets: number
+): UpdateRunsAndDatasetsAction {
+    return { type: actionTypes.UPDATE_RUNS_AND_DATASETS, testId, runs, datasets }
 }

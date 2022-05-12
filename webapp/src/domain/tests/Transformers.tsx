@@ -24,6 +24,7 @@ import { Transformer, TransformerInfo, allTransformers } from "../schemas/api"
 import { TestDispatch } from "./reducers"
 import { updateTransformers } from "./actions"
 import TransformationLogModal from "./TransformationLogModal"
+import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
 
 type TransformersProps = {
     testId: number
@@ -115,6 +116,7 @@ export default function Transformers(props: TransformersProps) {
     const [options, setOptions] = useState<SchemaItem[]>([])
     const [chosen, setChosen] = useState<SchemaItem[]>([])
     const [logModalOpen, setLogModalOpen] = useState(false)
+    const [recalculateModalOpen, setRecalculateModalOpen] = useState(false)
     const isTester = useTester(props.owner)
 
     useEffect(() => {
@@ -181,19 +183,33 @@ export default function Transformers(props: TransformersProps) {
     return (
         <>
             <Flex justifyContent={{ default: "justifyContentFlexEnd" }}>
-                {isTester && (
-                    <FlexItem>
+                {isTester && [
+                    <FlexItem key="showLog">
                         <Button onClick={() => setLogModalOpen(true)}>Show transformation log</Button>
-                    </FlexItem>
-                )}
+                    </FlexItem>,
+                    <FlexItem key="recalculate">
+                        <Button variant="secondary" onClick={() => setRecalculateModalOpen(true)}>
+                            Recalculate datasets
+                        </Button>
+                    </FlexItem>,
+                ]}
             </Flex>
-            <TransformationLogModal
-                testId={props.testId}
-                title="Transformations"
-                emptyMessage="There are no logs from transformers"
-                isOpen={logModalOpen}
-                onClose={() => setLogModalOpen(false)}
-            />
+            {isTester && (
+                <>
+                    <TransformationLogModal
+                        testId={props.testId}
+                        title="Transformations"
+                        emptyMessage="There are no logs from transformers"
+                        isOpen={logModalOpen}
+                        onClose={() => setLogModalOpen(false)}
+                    />
+                    <RecalculateDatasetsModal
+                        testId={props.testId}
+                        isOpen={recalculateModalOpen}
+                        onClose={() => setRecalculateModalOpen(false)}
+                    />
+                </>
+            )}
             <Flex>
                 <FlexItem>
                     {[counter].map(c => (

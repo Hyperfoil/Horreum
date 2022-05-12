@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { getRecalculationStatus, recalculateDatasets, RecalculationStatus } from "./api"
 import { updateRunsAndDatasetsAction } from "./actions"
@@ -28,9 +28,13 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
         setStatus(undefined)
         props.onClose()
     }, [])
-    if (props.isOpen) {
-        console.log("Timer: " + timerId)
-    }
+    useEffect(() => {
+        if (test?.runs === undefined) {
+            getRecalculationStatus(props.testId).then(status => {
+                dispatch(updateRunsAndDatasetsAction(props.testId, status.totalRuns, status.datasets))
+            })
+        }
+    }, [test])
     return (
         <Modal
             title={`Recalculate datasets for test ${test?.name || "<unknown test>"}`}
@@ -101,7 +105,7 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
             )}
             {progress < 0 && (
                 <div style={{ marginBottom: "16px" }}>
-                    This test has {test?.runs || "<unknown number"} of runs; do you want to recalculate all datasets?
+                    This test has {test?.runs || "<unknown number>"} of runs; do you want to recalculate all datasets?
                 </div>
             )}
             {progress >= 0 && (
