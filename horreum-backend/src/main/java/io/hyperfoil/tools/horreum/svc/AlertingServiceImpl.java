@@ -42,6 +42,7 @@ import javax.ws.rs.core.Response;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
+import io.hyperfoil.tools.horreum.entity.Fingerprint;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
@@ -322,13 +323,15 @@ public class AlertingServiceImpl implements AlertingService {
       if (filter == null || filter.isBlank()) {
          return true;
       }
-      @SuppressWarnings("unchecked") Optional<String> result =
-            em.createNativeQuery("SELECT fp.fingerprint::::text FROM fingerprint fp WHERE dataset_id = ?1")
-                  .setParameter(1, dataset.id).getResultStream().findFirst();
+      @SuppressWarnings("unchecked") Optional<JsonNode> result =
+            em.createNativeQuery("SELECT fp.fingerprint FROM fingerprint fp WHERE dataset_id = ?1")
+                  .setParameter(1, dataset.id)
+                  .unwrap(NativeQuery.class).addScalar("fingerprint", JsonNodeBinaryType.INSTANCE)
+                  .getResultStream().findFirst();
       JsonNode fingerprint;
       if (result.isPresent()) {
-         fingerprint = Util.toJsonNode(result.get());
-         if (fingerprint != null && fingerprint.size() == 1) {
+         fingerprint = result.get();
+         if (fingerprint.isObject() && fingerprint.size() == 1) {
             fingerprint = fingerprint.elements().next();
          }
       } else {

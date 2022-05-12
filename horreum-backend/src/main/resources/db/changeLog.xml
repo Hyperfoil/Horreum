@@ -3377,4 +3377,25 @@
             <column name="schema_id" />
         </createIndex>
     </changeSet>
+
+    <changeSet id="78" author="rvansa">
+        <createProcedure>
+            <!-- This is invoked as deferred trigger and horreum.userroles is already unset
+                 - we can pass it to the trigger using a non-readable column -->
+            CREATE OR REPLACE FUNCTION recalc_fingerprint() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM set_config('horreum.userroles', NEW.roles, true);
+                WITH fps AS (
+                    SELECT jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL) AS fingerprint FROM test
+                    LEFT JOIN label ON test.fingerprint_labels ? label.name
+                    LEFT JOIN label_values lv ON label.id = lv.label_id
+                    WHERE test.id = (SELECT testid FROM dataset WHERE id = NEW.dataset_id) AND lv.dataset_id = NEW.dataset_id
+                ) INSERT INTO fingerprint(dataset_id, fingerprint)
+                    SELECT NEW.dataset_id, fingerprint FROM fps WHERE fingerprint IS NOT NULL;
+                DELETE FROM fingerprint_recalc_queue WHERE dataset_id = NEW.dataset_id;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+    </changeSet>
 </databaseChangeLog>

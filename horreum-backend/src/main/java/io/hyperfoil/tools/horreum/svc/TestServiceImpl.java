@@ -48,6 +48,7 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
@@ -436,13 +437,15 @@ public class TestServiceImpl implements TestService {
    }
 
    @WithRoles
+   @SuppressWarnings("unchecked")
    @Override
    public List<JsonNode> listFingerprints(int testId) {
-      @SuppressWarnings("unchecked") Stream<String> stream = em.createNativeQuery(
-            "SELECT DISTINCT fingerprint::::text FROM fingerprint fp " +
+      return em.createNativeQuery(
+            "SELECT DISTINCT fingerprint FROM fingerprint fp " +
             "JOIN dataset ON dataset.id = dataset_id WHERE dataset.testid = ?1")
-         .setParameter(1, testId).getResultStream();
-      return stream.map(Util::toJsonNode).collect(Collectors.toList());
+            .setParameter(1, testId)
+            .unwrap(NativeQuery.class).addScalar("fingerprint", JsonNodeBinaryType.INSTANCE)
+            .getResultList();
    }
 
    @WithRoles

@@ -15,9 +15,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
@@ -60,8 +58,6 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.RestAssured;
-import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -71,16 +67,10 @@ public class AlertingServiceTest extends BaseServiceTest {
    private static final Logger log = Logger.getLogger(AlertingServiceTest.class);
 
    @Inject
-   EventBus eventBus;
-
-   @Inject
    EntityManager em;
 
    @Inject
    RoleManager roleManager;
-
-   @Inject
-   Vertx vertx;
 
    @Inject
    AlertingServiceImpl alertingService;
@@ -112,7 +102,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testLogging(TestInfo info) throws InterruptedException, ExecutionException, TimeoutException {
+   public void testLogging(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
       setTestVariables(test, "Value", "value");
@@ -268,8 +258,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       List<Fingerprint> fingerprintsBefore = Fingerprint.listAll();
       assertEquals(1, fingerprintsBefore.size());
-      // When there's just a single label the fingerprint doesn't contain the label name
-      assertEquals(JsonNodeFactory.instance.textNode("aaa"), fingerprintsBefore.get(0).fingerprint);
+      assertEquals(JsonNodeFactory.instance.objectNode().put("foo", "aaa"), fingerprintsBefore.get(0).fingerprint);
 
       test.fingerprintLabels = ((ArrayNode) test.fingerprintLabels).add("bar");
       // We'll change the filter here but we do NOT expect to be applied to existing datapoints
