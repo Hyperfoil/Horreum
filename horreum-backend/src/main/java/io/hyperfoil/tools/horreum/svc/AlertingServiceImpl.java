@@ -22,6 +22,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -587,6 +588,14 @@ public class AlertingServiceImpl implements AlertingService {
       if (testId == null) {
          throw ServiceException.badRequest("Missing query param 'test'");
       }
+      for (Variable v : variables) {
+         if (v.name == null || v.name.isBlank()) {
+            throw ServiceException.badRequest("Variable name is mandatory!");
+         } else if (v.labels == null || !v.labels.isArray() ||
+               StreamSupport.stream(v.labels.spliterator(), false).anyMatch(l -> !l.isTextual())) {
+            throw ServiceException.badRequest("Variable labels must be an array of label names");
+         }
+      }
       try {
          List<Variable> currentVariables = Variable.list("testid", testId);
          updateCollection(currentVariables, variables, v -> v.id, item -> {
@@ -598,7 +607,7 @@ public class AlertingServiceImpl implements AlertingService {
                item.changeDetection.forEach(rd -> rd.variable = item);
             }
             item.testId = testId;
-            item.persist(); // insert
+                item.persist(); // insert
          }, (current, matching) -> {
             current.name = matching.name;
             current.group = matching.group;
