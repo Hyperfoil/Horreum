@@ -3398,4 +3398,16 @@
             $$ LANGUAGE plpgsql;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="79" author="rvansa">
+        <!-- Variable and label functions are duplicated -->
+        <sql>
+            UPDATE variable SET calculation = NULL WHERE id IN (
+                SELECT variable.id FROM variable JOIN label
+                    ON variable.name = label.name
+                    AND variable.calculation = label.function
+                    AND (SELECT value#>>'{}' FROM jsonb_array_elements(labels) LIMIT 1)::text = label.name
+            );
+        </sql>
+    </changeSet>
 </databaseChangeLog>
