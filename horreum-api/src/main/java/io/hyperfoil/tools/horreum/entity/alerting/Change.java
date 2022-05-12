@@ -14,7 +14,6 @@ import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -50,9 +49,13 @@ public class Change extends PanacheEntityBase {
 
    public String description;
 
-   @JsonProperty("runId")
-   public int getRunId() {
-      return dataset.id;
+   @JsonProperty("dataset")
+   public DataSet.Info getDatasetId() {
+      if (dataset != null) {
+         return new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal);
+      } else {
+         return null;
+      }
    }
 
    @Override
@@ -69,10 +72,10 @@ public class Change extends PanacheEntityBase {
 
    public static class Event {
       public Change change;
-      public AlertingService.DatasetInfo dataset;
+      public DataSet.Info dataset;
       public boolean notify;
 
-      public Event(Change change, AlertingService.DatasetInfo dataset, boolean notify) {
+      public Event(Change change, DataSet.Info dataset, boolean notify) {
          this.change = change;
          this.dataset = dataset;
          this.notify = notify;

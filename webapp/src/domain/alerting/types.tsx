@@ -37,12 +37,18 @@ export type DataPoint = {
     variable: Variable
 }
 
+export type DatasetInfo = {
+    id: number
+    runId: number
+    ordinal: number
+}
+
 export type Change = {
     id: number
     confirmed: boolean
     description: string
     variable?: Variable
-    runId: number
+    dataset: DatasetInfo
     timestamp: number
 }
 

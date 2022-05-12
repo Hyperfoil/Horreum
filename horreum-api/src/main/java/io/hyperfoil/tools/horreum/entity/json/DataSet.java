@@ -108,4 +108,28 @@ public class DataSet extends OwnedEntityBase {
       owner = ownr;
       access = acc;
    }
+
+   public static class Info {
+      public int id;
+      public int runId;
+      public int ordinal;
+
+      public Info() {
+      }
+
+      public Info(int id, int runId, int ordinal) {
+         this.id = id;
+         this.runId = runId;
+         this.ordinal = ordinal;
+      }
+
+      @Override
+      public String toString() {
+         return "DatasetInfo{" +
+               "id=" + id +
+               ", runId=" + runId +
+               ", ordinal=" + ordinal +
+               '}';
+      }
+   }
 }

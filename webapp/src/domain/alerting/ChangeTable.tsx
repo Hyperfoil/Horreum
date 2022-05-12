@@ -169,9 +169,17 @@ export const ChangeTable = ({ varId, testOwner, selectedChangeId }: ChangesProps
             Cell: (arg: any) => formatDateTime(arg.cell.value),
         },
         {
-            Header: "Run ID",
-            accessor: "runId",
-            Cell: (arg: any) => <NavLink to={"/run/" + arg.cell.value}>{arg.cell.value}</NavLink>,
+            Header: "Dataset",
+            accessor: "dataset",
+            Cell: (arg: any) => {
+                const dataset = arg.cell.value
+                if (!dataset) return "<unknown>"
+                return (
+                    <NavLink to={`/run/${dataset.runId}#dataset${dataset.ordinal}`}>
+                        {dataset.runId}/{dataset.ordinal + 1}
+                    </NavLink>
+                )
+            },
         },
         {
             Header: "Description",

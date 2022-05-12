@@ -19,6 +19,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 
 @Consumes({ MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
@@ -138,31 +139,7 @@ public interface AlertingService {
       public boolean done;
       public Integer totalDatasets;
       public Integer errors;
-      public Collection<DatasetInfo> datasetsWithoutValue;
-   }
-
-   class DatasetInfo {
-      public int id;
-      public int runId;
-      public int ordinal;
-
-      public DatasetInfo() {
-      }
-
-      public DatasetInfo(int id, int runId, int ordinal) {
-         this.id = id;
-         this.runId = runId;
-         this.ordinal = ordinal;
-      }
-
-      @Override
-      public String toString() {
-         return "DatasetInfo{" +
-               "id=" + id +
-               ", runId=" + runId +
-               ", ordinal=" + ordinal +
-               '}';
-      }
+      public Collection<DataSet.Info> datasetsWithoutValue;
    }
 
 

@@ -43,7 +43,6 @@ import javax.ws.rs.core.Response;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
-import io.hyperfoil.tools.horreum.entity.Fingerprint;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
@@ -393,7 +392,7 @@ public class AlertingServiceImpl implements AlertingService {
                   createDataPoint(dataset, data.variableId, value, notify);
                } else {
                   if (recalculation != null) {
-                     recalculation.datasetsWithoutValue.put(dataset.id, new DatasetInfo(dataset.id, dataset.run.id, dataset.ordinal));
+                     recalculation.datasetsWithoutValue.put(dataset.id, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal));
                   }
                   missingValueVariables.add(data.fullName());
                }
@@ -405,7 +404,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (data.value == null || data.value.isNull()) {
                   logCalculationMessage(dataset, DatasetLog.INFO, "Null value for variable %s - datapoint is not created", data.fullName());
                   if (recalculation != null) {
-                     recalculation.datasetsWithoutValue.put(dataset.id, new DatasetInfo(dataset.id, dataset.run.id, dataset.ordinal));
+                     recalculation.datasetsWithoutValue.put(dataset.id, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal));
                   }
                   missingValueVariables.add(data.fullName());
                   return;
@@ -548,10 +547,10 @@ public class AlertingServiceImpl implements AlertingService {
             logChangeDetectionMessage(event.testId, dataPoint.id, DatasetLog.DEBUG,
                   "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
             Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal FROM dataset WHERE id = ?1");
-            SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DatasetInfo.class));
-            DatasetInfo datasetInfo = (DatasetInfo) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
+            SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSet.Info.class));
+            DataSet.Info info = (DataSet.Info) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
             em.persist(change);
-            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, datasetInfo, event.notify));
+            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, info, event.notify));
          });
       }
    }
@@ -1115,6 +1114,6 @@ public class AlertingServiceImpl implements AlertingService {
       int progress;
       boolean done;
       public int errors;
-      Map<Integer, DatasetInfo> datasetsWithoutValue = new HashMap<>();
+      Map<Integer, DataSet.Info> datasetsWithoutValue = new HashMap<>();
    }
 }
