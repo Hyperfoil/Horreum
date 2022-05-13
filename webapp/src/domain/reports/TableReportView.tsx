@@ -173,23 +173,31 @@ function ComponentTable(props: ComponentTableProps) {
                                             unit={props.unit}
                                             selector={props.selector}
                                             siblingSelector={props.siblingSelector}
-                                            />
-                                            </Td>
-                                        ))}
-                                    </Tr>
+                                        />
+                                    </Td>
                                 ))}
-                        {scales.slice(1,scales.length).map((sc) => (
-                            <Tr key={sc} style={ props.baseline === "No Baseline"?{ display: 'none' }:{}}>
-                                <Th>{props.data.find(d => d.scale === props.baseline)?.scale + "->" + scaleFormatter(sc)}</Th>
+                            </Tr>
+                        ))}
+                        {
+                        props.baseline !== "No Baseline" && 
+                        scales.slice(1, scales.length).map(sc => (
+                            <Tr key={sc}>
+                                <Th>
+                                    {props.data.find(d => d.scale === props.baseline)?.scale +
+                                        "->" +
+                                        scaleFormatter(sc)}
+                                </Th>
                                 {series.map(s => (
-                                     <Td key={s}>
-                                         <DataViewBaseline
-                                                    config={props.config}
-                                                    data={props.data.find(d => d.series === s && d.scale === sc)}
-                                                    baseline={props.data.find(d => d.series === s && d.scale === props.baseline)}
-                                                    unit={props.unit}
-                                                    selector={props.selector}
-                                                    siblingSelector={props.siblingSelector}
+                                    <Td key={s}>
+                                        <DataViewBaseline
+                                            config={props.config}
+                                            data={props.data.find(d => d.series === s && d.scale === sc)}
+                                            baseline={props.data.find(
+                                                d => d.series === s && d.scale === props.baseline
+                                            )}
+                                            unit={props.unit}
+                                            selector={props.selector}
+                                            siblingSelector={props.siblingSelector}
                                         />
                                     </Td>
                                 ))}
@@ -253,21 +261,20 @@ function ComponentTable(props: ComponentTableProps) {
 }
 
 function DataViewBaseline(props: DataViewProps) {
-
     if (props.data === undefined) {
         return <>(no data)</>
     }
 
     if (props.baseline === undefined) {
         return <>(no data)</>
-    } 
+    }
 
     const data = parseFloat(props.data.values[0])
     const baseline = parseFloat(props.baseline.values[0])
 
     if (isNaN(data) || isNaN(baseline)) {
         return <>(data error)</>
-    } 
+    }
 
     const change = (data/baseline -1) * 100
     return (
@@ -435,32 +442,24 @@ export default function TableReportView(props: TableReportViewProps) {
                 editable={props.editable}
                 onUpdate={text => update(props.report, comment0, text, 0)}
             />
-
             <div>
-            <Title headingLevel="h2">Baseline scale</Title>
-            <Dropdown
-                isOpen={dropdownOpen}
-                onSelect={event => {
-                    if (event && event.currentTarget) {
-                        setBaseline(event.currentTarget.innerText)
-                    }
-                    setDropdownOpen(false)
-                }}
-                toggle={
-                    <DropdownToggle onToggle={setDropdownOpen}>
-                        {baseline}
-                    </DropdownToggle>
-                }
-                dropdownItems={
-                    scales.map((p, i) => (
-                    <DropdownItem key={i} value={scaleFormatter(p)} component="button">
-                        {scaleFormatter(p)}
-                    </DropdownItem>
-                ))}
-            >
-            </Dropdown>
+                <Title headingLevel="h2">Baseline scale</Title>
+                <Dropdown
+                    isOpen={dropdownOpen}
+                    onSelect={event => {
+                        if (event && event.currentTarget) {
+                            setBaseline(event.currentTarget.innerText)
+                        }
+                        setDropdownOpen(false)
+                    }}
+                    toggle={<DropdownToggle onToggle={setDropdownOpen}>{baseline}</DropdownToggle>}
+                    dropdownItems={scales.map((p, i) => (
+                        <DropdownItem key={i} value={scaleFormatter(p)} component="button">
+                            {scaleFormatter(p)}
+                        </DropdownItem>
+                    ))}
+                ></Dropdown>
             </div>
-
             {categories.map((cat, i1) => {
                 const comment1 = props.report.comments.find(c => c.level === 1 && c.category === cat)
                 return (
