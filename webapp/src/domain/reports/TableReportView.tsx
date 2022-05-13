@@ -178,30 +178,32 @@ function ComponentTable(props: ComponentTableProps) {
                                 ))}
                             </Tr>
                         ))}
-                        {props.baseline !== "No Baseline" &&
-                            scales.filter(s=>s!== props.baseline).map(sc => (
-                                <Tr key={sc}>
-                                    <Th>
-                                        {props.data.find(d => d.scale === props.baseline)?.scale +
-                                            "->" +
-                                            scaleFormatter(sc)}
-                                    </Th>
-                                    {series.map(s => (
-                                        <Td key={s}>
-                                            <DataViewBaseline
-                                                config={props.config}
-                                                data={props.data.find(d => d.series === s && d.scale === sc)}
-                                                baseline={props.data.find(
-                                                    d => d.series === s && d.scale === props.baseline
-                                                )}
-                                                unit={props.unit}
-                                                selector={props.selector}
-                                                siblingSelector={props.siblingSelector}
-                                            />
-                                        </Td>
-                                    ))}
-                                </Tr>
-                            ))}
+                        {props.baseline !== undefined &&
+                            scales
+                                .filter(s => s !== props.baseline)
+                                .map(sc => (
+                                    <Tr key={sc}>
+                                        <Th>
+                                            {props.data.find(d => d.scale === props.baseline)?.scale +
+                                                "->" +
+                                                scaleFormatter(sc)}
+                                        </Th>
+                                        {series.map(s => (
+                                            <Td key={s}>
+                                                <DataViewBaseline
+                                                    config={props.config}
+                                                    data={props.data.find(d => d.series === s && d.scale === sc)}
+                                                    baseline={props.data.find(
+                                                        d => d.series === s && d.scale === props.baseline
+                                                    )}
+                                                    unit={props.unit}
+                                                    selector={props.selector}
+                                                    siblingSelector={props.siblingSelector}
+                                                />
+                                            </Td>
+                                        ))}
+                                    </Tr>
+                                ))}
                     </Tbody>
                 </TableComposable>
             </LevelItem>
@@ -419,7 +421,7 @@ export default function TableReportView(props: TableReportViewProps) {
     const scaleFormatter = formatter(config.scaleFormatter)
 
     const [dropdownOpen, setDropdownOpen] = useState(false)
-    const [baseline, setBaseline] = useState("No Baseline")
+    const [baseline, setBaseline] = useState<string>()
 
     return (
         <div>
