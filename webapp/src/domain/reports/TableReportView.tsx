@@ -179,7 +179,7 @@ function ComponentTable(props: ComponentTableProps) {
                             </Tr>
                         ))}
                         {props.baseline !== "No Baseline" &&
-                            scales.slice(1, scales.length).map(sc => (
+                            scales.filter(s=>s!== props.baseline).map(sc => (
                                 <Tr key={sc}>
                                     <Th>
                                         {props.data.find(d => d.scale === props.baseline)?.scale +
