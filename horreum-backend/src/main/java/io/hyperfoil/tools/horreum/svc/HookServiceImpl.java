@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.HookService;
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.json.AllowedHookPrefix;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
@@ -197,11 +198,12 @@ public class HookServiceImpl implements HookService {
    @RolesAllowed(Roles.ADMIN)
    @WithRoles
    @Override
-   public List<Hook> list(Integer limit, Integer page, String sort, Sort.Direction direction){
+   public List<Hook> list(Integer limit, Integer page, String sort, SortDirection direction){
+      Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
       if (limit != null && page != null) {
-         return Hook.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
+         return Hook.findAll(Sort.by(sort).direction(sortDirection)).page(Page.of(page, limit)).list();
       } else {
-         return Hook.listAll(Sort.by(sort).direction(direction));
+         return Hook.listAll(Sort.by(sort).direction(sortDirection));
       }
    }
 

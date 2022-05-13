@@ -26,24 +26,6 @@
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
             <artifactId>horreum-api</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>io.quarkus</groupId>
-                    <artifactId>quarkus-hibernate-orm-panache-common</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.quarkus</groupId>
-                    <artifactId>quarkus-hibernate-orm</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.quarkus</groupId>
-                    <artifactId>quarkus-arc</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.quarkus</groupId>
-                    <artifactId>quarkus-core</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>

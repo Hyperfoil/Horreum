@@ -15,7 +15,6 @@ import javax.ws.rs.core.MediaType;
 
 import io.hyperfoil.tools.horreum.entity.json.AllowedHookPrefix;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
-import io.quarkus.panache.common.Sort;
 
 @Path("/api/hook")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -37,7 +36,7 @@ public interface HookService {
    List<Hook> list(@QueryParam("limit") Integer limit,
                    @QueryParam("page") Integer page,
                    @QueryParam("sort") @DefaultValue("url") String sort,
-                   @QueryParam("direction") @DefaultValue("Ascending") Sort.Direction direction);
+                   @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
 
    @GET
    @Path("test/{id}")

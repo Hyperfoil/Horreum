@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SchemaService;
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Extractor;
@@ -138,14 +139,15 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @WithRoles
    @Override
-   public List<Schema> list(Integer limit, Integer page, String sort, Sort.Direction direction) {
+   public List<Schema> list(Integer limit, Integer page, String sort, SortDirection direction) {
       if (sort == null || sort.isEmpty()) {
          sort = "name";
       }
+      Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
       if (limit != null && page != null) {
-         return Schema.findAll(Sort.by(sort).direction(direction)).page(Page.of(page, limit)).list();
+         return Schema.findAll(Sort.by(sort).direction(sortDirection)).page(Page.of(page, limit)).list();
       } else {
-         return Schema.listAll(Sort.by(sort).direction(direction));
+         return Schema.listAll(Sort.by(sort).direction(sortDirection));
       }
    }
 

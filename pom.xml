@@ -27,8 +27,10 @@
     <packaging>pom</packaging>
     <version>0.3-SNAPSHOT</version>
     <modules>
-        <module>horreum-api</module>
+        <module>horreum-model</module>
         <module>horreum-backend</module>
+        <module>horreum-api-generator</module>
+        <module>horreum-api</module>
         <module>horreum-client</module>
     </modules>
     <name>Horreum</name>
@@ -122,7 +124,17 @@
         <dependencies>
             <dependency>
                 <groupId>io.hyperfoil.tools</groupId>
+                <artifactId>horreum-model</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.hyperfoil.tools</groupId>
                 <artifactId>horreum-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.hyperfoil.tools</groupId>
+                <artifactId>horreum-api-generator</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

@@ -16,7 +16,6 @@ import javax.ws.rs.core.MediaType;
 import io.hyperfoil.tools.horreum.entity.report.ReportComment;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
 import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
-import io.quarkus.panache.common.Sort;
 
 @Path("/api/report")
 @Produces(MediaType.APPLICATION_JSON)
@@ -30,7 +29,7 @@ public interface ReportService {
          @QueryParam("limit") Integer limit,
          @QueryParam("page") Integer page,
          @QueryParam("sort") String sort,
-         @QueryParam("direction") Sort.Direction direction);
+         @QueryParam("direction") SortDirection direction);
 
    @GET
    @Path("table/config/{id}")

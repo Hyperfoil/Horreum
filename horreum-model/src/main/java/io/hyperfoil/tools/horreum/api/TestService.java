@@ -21,7 +21,6 @@ import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.TestToken;
 import io.hyperfoil.tools.horreum.entity.json.View;
-import io.quarkus.panache.common.Sort;
 
 @Path("/api/test")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -47,7 +46,7 @@ public interface TestService {
                    @QueryParam("limit") Integer limit,
                    @QueryParam("page") Integer page,
                    @QueryParam("sort") @DefaultValue("name") String sort,
-                   @QueryParam("direction") @DefaultValue("Ascending") Sort.Direction direction);
+                   @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
 
    @Path("summary")
    @GET

@@ -13,15 +13,6 @@
     <dependencies>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-hibernate-orm-panache</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-hibernate-validator</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-resteasy-jackson</artifactId>
             <optional>true</optional>
         </dependency>
@@ -31,16 +22,6 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>com.networknt</groupId>
-            <artifactId>json-schema-validator</artifactId>
-            <version>1.0.29</version>
-        </dependency>
-        <dependency>
-            <groupId>com.vladmihalcea</groupId>
-            <artifactId>hibernate-types-52</artifactId>
-            <version>2.12.1</version>
-        </dependency>
-        <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-smallrye-openapi</artifactId>
         </dependency>
@@ -48,6 +29,47 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.hyperfoil.tools</groupId>
+            <artifactId>horreum-model</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.hyperfoil.tools</groupId>
+            <artifactId>horreum-api-generator</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.hyperfoil.tools</groupId>
+                <artifactId>horreum-api-generator</artifactId>
+                <version>${project.version}</version>
+                <executions>
+                    <execution>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>apigen</goal>
+                        </goals>
+                        <configuration>
+                            <sources>${project.basedir}/../horreum-model/target/classes</sources>
+                            <transformedPackages>
+                                <package>io.hyperfoil.tools.horreum.api</package>
+                                <package>io.hyperfoil.tools.horreum.entity</package>
+                                <package>io.hyperfoil.tools.horreum.grafana</package>
+                            </transformedPackages>
+                            <erasedPackages>
+                                <package>javax.persistence</package>
+                                <package>org.hibernate.annotations</package>
+                                <package>io.quarkus.hibernate</package>
+                            </erasedPackages>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

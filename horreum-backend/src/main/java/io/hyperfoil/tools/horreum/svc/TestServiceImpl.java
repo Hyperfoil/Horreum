@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.entity.json.*;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -35,8 +36,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.hibernate.Hibernate;
 import org.hibernate.ScrollMode;
@@ -201,7 +200,7 @@ public class TestServiceImpl implements TestService {
    @Override
    @PermitAll
    @WithRoles
-   public List<Test> list(String roles, Integer limit, Integer page, String sort, Sort.Direction direction){
+   public List<Test> list(String roles, Integer limit, Integer page, String sort, SortDirection direction){
       PanacheQuery<Test> query;
       Set<String> actualRoles = null;
       if (Roles.hasRolesParam(roles)) {
@@ -214,7 +213,8 @@ public class TestServiceImpl implements TestService {
          }
       }
 
-      Sort sortOptions = Sort.by(sort).direction(direction);
+      Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
+      Sort sortOptions = Sort.by(sort).direction(sortDirection);
       if (actualRoles == null) {
          query = Test.findAll(sortOptions);
       } else {

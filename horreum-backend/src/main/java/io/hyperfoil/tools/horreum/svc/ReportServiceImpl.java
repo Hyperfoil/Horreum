@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.ReportService;
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.report.ReportComment;
 import io.hyperfoil.tools.horreum.entity.report.ReportComponent;
@@ -67,7 +68,7 @@ public class ReportServiceImpl implements ReportService {
    @PermitAll
    @WithRoles
    @Override
-   public AllTableReports getTableReports(Integer testId, String roles, Integer limit, Integer page, String sort, Sort.Direction direction) {
+   public AllTableReports getTableReports(Integer testId, String roles, Integer limit, Integer page, String sort, SortDirection direction) {
       StringBuilder queryBuilder = new StringBuilder();
       Map<String, Object> params = new HashMap<>();
       if (testId != null) {
@@ -126,7 +127,7 @@ public class ReportServiceImpl implements ReportService {
          case "report count":
             comparator = Comparator.comparing(s -> s.reports.size());
       }
-      if (direction == Sort.Direction.Descending) {
+      if (direction.name().equals(Sort.Direction.Descending.name())) {
          comparator = comparator.reversed();
       }
       result.reports.sort(comparator);

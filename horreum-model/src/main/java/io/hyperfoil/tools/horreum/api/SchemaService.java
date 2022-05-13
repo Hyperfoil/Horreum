@@ -21,7 +21,6 @@ import com.networknt.schema.ValidationMessage;
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
-import io.quarkus.panache.common.Sort;
 
 @Path("api/schema")
 public interface SchemaService {
@@ -43,7 +42,7 @@ public interface SchemaService {
    List<Schema> list(@QueryParam("limit") Integer limit,
                      @QueryParam("page") Integer page,
                      @QueryParam("sort") String sort,
-                     @QueryParam("direction") @DefaultValue("Ascending") Sort.Direction direction);
+                     @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
 
    @POST
    @Produces(MediaType.TEXT_PLAIN)
