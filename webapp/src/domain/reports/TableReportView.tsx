@@ -12,7 +12,7 @@ import {
     Tooltip,
     Dropdown,
     DropdownToggle,
-    DropdownItem
+    DropdownItem,
 } from "@patternfly/react-core"
 import { TableComposable, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table"
 import { EditIcon, HelpIcon } from "@patternfly/react-icons"
@@ -178,31 +178,30 @@ function ComponentTable(props: ComponentTableProps) {
                                 ))}
                             </Tr>
                         ))}
-                        {
-                        props.baseline !== "No Baseline" && 
-                        scales.slice(1, scales.length).map(sc => (
-                            <Tr key={sc}>
-                                <Th>
-                                    {props.data.find(d => d.scale === props.baseline)?.scale +
-                                        "->" +
-                                        scaleFormatter(sc)}
-                                </Th>
-                                {series.map(s => (
-                                    <Td key={s}>
-                                        <DataViewBaseline
-                                            config={props.config}
-                                            data={props.data.find(d => d.series === s && d.scale === sc)}
-                                            baseline={props.data.find(
-                                                d => d.series === s && d.scale === props.baseline
-                                            )}
-                                            unit={props.unit}
-                                            selector={props.selector}
-                                            siblingSelector={props.siblingSelector}
-                                        />
-                                    </Td>
-                                ))}
-                            </Tr>
-                        ))}
+                        {props.baseline !== "No Baseline" &&
+                            scales.slice(1, scales.length).map(sc => (
+                                <Tr key={sc}>
+                                    <Th>
+                                        {props.data.find(d => d.scale === props.baseline)?.scale +
+                                            "->" +
+                                            scaleFormatter(sc)}
+                                    </Th>
+                                    {series.map(s => (
+                                        <Td key={s}>
+                                            <DataViewBaseline
+                                                config={props.config}
+                                                data={props.data.find(d => d.series === s && d.scale === sc)}
+                                                baseline={props.data.find(
+                                                    d => d.series === s && d.scale === props.baseline
+                                                )}
+                                                unit={props.unit}
+                                                selector={props.selector}
+                                                siblingSelector={props.siblingSelector}
+                                            />
+                                        </Td>
+                                    ))}
+                                </Tr>
+                            ))}
                     </Tbody>
                 </TableComposable>
             </LevelItem>
@@ -276,12 +275,8 @@ function DataViewBaseline(props: DataViewProps) {
         return <>(data error)</>
     }
 
-    const change = (data/baseline -1) * 100
-    return (
-            <Button variant="link">
-                {change.toFixed(2)} %
-            </Button>
-    )
+    const change = (data / baseline - 1) * 100
+    return <Button variant="link">{change.toFixed(2)} %</Button>
 }
 
 function MarkdownCheatSheetLink() {
