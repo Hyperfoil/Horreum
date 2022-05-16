@@ -72,4 +72,63 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>release</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <!-- Source and JavaDoc artifacts are mandatory in Sonatype -->
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <configuration>
+                                    <target>
+                                        <copy file="${project.basedir}/../horreum-model/target/horreum-model-${project.version}-javadoc.jar"
+                                              tofile="${project.build.directory}/horreum-api-${project.version}-javadoc.jar" />
+                                        <copy file="${project.basedir}/../horreum-model/target/horreum-model-${project.version}-sources.jar"
+                                              tofile="${project.build.directory}/horreum-api-${project.version}-sources.jar" />
+                                    </target>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>attach-artifact</goal>
+                                </goals>
+                                <phase>package</phase>
+                                <configuration>
+                                    <artifacts>
+                                        <artifact>
+                                            <file>${project.build.directory}/horreum-api-${project.version}-javadoc.jar</file>
+                                            <classifier>javadoc</classifier>
+                                        </artifact>
+                                        <artifact>
+                                            <file>${project.build.directory}/horreum-api-${project.version}-sources.jar</file>
+                                            <classifier>sources</classifier>
+                                        </artifact>
+                                    </artifacts>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
