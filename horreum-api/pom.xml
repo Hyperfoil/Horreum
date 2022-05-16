@@ -3,7 +3,7 @@
     <parent>
         <artifactId>horreum</artifactId>
         <groupId>io.hyperfoil.tools</groupId>
-        <version>0.3-SNAPSHOT</version>
+        <version>0.3</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -89,10 +89,8 @@
                                 <phase>package</phase>
                                 <configuration>
                                     <target>
-                                        <copy file="${project.basedir}/../horreum-model/target/horreum-model-${project.version}-javadoc.jar"
-                                              tofile="${project.build.directory}/horreum-api-${project.version}-javadoc.jar" />
-                                        <copy file="${project.basedir}/../horreum-model/target/horreum-model-${project.version}-sources.jar"
-                                              tofile="${project.build.directory}/horreum-api-${project.version}-sources.jar" />
+                                        <copy file="${project.basedir}/../horreum-model/target/horreum-model-${project.version}-javadoc.jar" tofile="${project.build.directory}/horreum-api-${project.version}-javadoc.jar" />
+                                        <copy file="${project.basedir}/../horreum-model/target/horreum-model-${project.version}-sources.jar" tofile="${project.build.directory}/horreum-api-${project.version}-sources.jar" />
                                     </target>
                                 </configuration>
                                 <goals>
