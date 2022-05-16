@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react"
+import { useHistory } from "react-router-dom"
 
 import {
     ActionGroup,
     Button,
+    Checkbox,
     Level,
     LevelItem,
     Popover,
@@ -10,9 +12,6 @@ import {
     TextArea,
     Title,
     Tooltip,
-    Dropdown,
-    DropdownToggle,
-    DropdownItem,
 } from "@patternfly/react-core"
 import { TableComposable, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table"
 import { EditIcon, HelpIcon } from "@patternfly/react-icons"
@@ -44,6 +43,16 @@ function DataView(props: DataViewProps) {
         return <>(no data)</>
     }
     const data = props.data
+    const value = data && props.selector(data)
+
+    let change = undefined
+    if (props.baseline !== undefined && props.baseline !== data) {
+        const baseline = props.selector(props.baseline)
+        if (!isNaN(value) && !isNaN(baseline) && baseline !== 0) {
+            change = (value / baseline - 1) * 100
+        }
+    }
+
     return (
         <Popover
             headerContent={
@@ -68,8 +77,9 @@ function DataView(props: DataViewProps) {
             }
         >
             <Button variant="link">
-                {props.selector(data)}
+                {value}
                 {props.unit}
+                {change !== undefined && ` (${change > 0 ? "+" : ""}${change.toFixed(2)}%)`}
             </Button>
         </Popover>
     )
@@ -77,6 +87,7 @@ function DataView(props: DataViewProps) {
 
 type ComponentTableProps = {
     baseline?: string
+    onBaselineChange(scale: string | undefined): void
     config: TableReportConfig
     data: TableReportData[]
     unit?: string
@@ -155,6 +166,7 @@ function ComponentTable(props: ComponentTableProps) {
                 <TableComposable variant="compact">
                     <Thead>
                         <Tr>
+                            <Th></Th>
                             <Th>{props.config.scaleDescription}</Th>
                             {series.map(s => (
                                 <Th key={s}>{seriesFormatter(s)}</Th>
@@ -164,12 +176,24 @@ function ComponentTable(props: ComponentTableProps) {
                     <Tbody>
                         {scales.map(sc => (
                             <Tr key={sc}>
+                                <Td>
+                                    <Tooltip content="Set as baseline">
+                                        <Checkbox
+                                            id={sc}
+                                            isChecked={sc === props.baseline}
+                                            onChange={checked => props.onBaselineChange(checked ? sc : undefined)}
+                                        />
+                                    </Tooltip>
+                                </Td>
                                 <Th>{scaleFormatter(sc)}</Th>
                                 {series.map(s => (
                                     <Td key={s}>
                                         <DataView
                                             config={props.config}
                                             data={props.data.find(d => d.series === s && d.scale === sc)}
+                                            baseline={props.data.find(
+                                                d => d.series === s && d.scale === props.baseline
+                                            )}
                                             unit={props.unit}
                                             selector={props.selector}
                                             siblingSelector={props.siblingSelector}
@@ -178,32 +202,6 @@ function ComponentTable(props: ComponentTableProps) {
                                 ))}
                             </Tr>
                         ))}
-                        {props.baseline !== undefined &&
-                            scales
-                                .filter(s => s !== props.baseline)
-                                .map(sc => (
-                                    <Tr key={sc}>
-                                        <Th>
-                                            {props.data.find(d => d.scale === props.baseline)?.scale +
-                                                "->" +
-                                                scaleFormatter(sc)}
-                                        </Th>
-                                        {series.map(s => (
-                                            <Td key={s}>
-                                                <DataViewBaseline
-                                                    config={props.config}
-                                                    data={props.data.find(d => d.series === s && d.scale === sc)}
-                                                    baseline={props.data.find(
-                                                        d => d.series === s && d.scale === props.baseline
-                                                    )}
-                                                    unit={props.unit}
-                                                    selector={props.selector}
-                                                    siblingSelector={props.siblingSelector}
-                                                />
-                                            </Td>
-                                        ))}
-                                    </Tr>
-                                ))}
                     </Tbody>
                 </TableComposable>
             </LevelItem>
@@ -259,26 +257,6 @@ function ComponentTable(props: ComponentTableProps) {
             </LevelItem>
         </Level>
     )
-}
-
-function DataViewBaseline(props: DataViewProps) {
-    if (props.data === undefined) {
-        return <>(no data)</>
-    }
-
-    if (props.baseline === undefined) {
-        return <>(no data)</>
-    }
-
-    const data = parseFloat(props.data.values[0])
-    const baseline = parseFloat(props.baseline.values[0])
-
-    if (isNaN(data) || isNaN(baseline)) {
-        return <>(data error)</>
-    }
-
-    const change = (data / baseline - 1) * 100
-    return <Button variant="link">{change.toFixed(2)} %</Button>
 }
 
 function MarkdownCheatSheetLink() {
@@ -417,11 +395,13 @@ export default function TableReportView(props: TableReportViewProps) {
     const categoryFormatter = formatter(config.categoryFormatter)
     const comment0 = props.report.comments.find(c => c.level === 0)
 
-    const scales = [...new Set(props.report.data.map(d => d.scale))].sort(numericCompare)
-    const scaleFormatter = formatter(config.scaleFormatter)
-
-    const [dropdownOpen, setDropdownOpen] = useState(false)
-    const [baseline, setBaseline] = useState<string>()
+    const history = useHistory()
+    const queryParams = new URLSearchParams(history.location.search)
+    const [baseline, setBaseline] = useState<string | undefined>(queryParams.get("baseline") || undefined)
+    const onBaselineChange = (scale: string | undefined) => {
+        setBaseline(scale)
+        history.replace(history.location.pathname + (scale ? "?baseline=" + scale : ""))
+    }
 
     return (
         <div>
@@ -439,24 +419,6 @@ export default function TableReportView(props: TableReportViewProps) {
                 editable={props.editable}
                 onUpdate={text => update(props.report, comment0, text, 0)}
             />
-            <div>
-                <Title headingLevel="h2">Baseline scale</Title>
-                <Dropdown
-                    isOpen={dropdownOpen}
-                    onSelect={event => {
-                        if (event && event.currentTarget) {
-                            setBaseline(event.currentTarget.innerText)
-                        }
-                        setDropdownOpen(false)
-                    }}
-                    toggle={<DropdownToggle onToggle={setDropdownOpen}>{baseline}</DropdownToggle>}
-                    dropdownItems={scales.map((p, i) => (
-                        <DropdownItem key={i} value={scaleFormatter(p)} component="button">
-                            {scaleFormatter(p)}
-                        </DropdownItem>
-                    ))}
-                ></Dropdown>
-            </div>
             {categories.map((cat, i1) => {
                 const comment1 = props.report.comments.find(c => c.level === 1 && c.category === cat)
                 return (
@@ -495,6 +457,7 @@ export default function TableReportView(props: TableReportViewProps) {
                                         />
                                         <ComponentTable
                                             baseline={baseline}
+                                            onBaselineChange={onBaselineChange}
                                             config={config}
                                             data={categoryData}
                                             unit={comp.unit}
@@ -514,6 +477,7 @@ export default function TableReportView(props: TableReportViewProps) {
                                         />
                                         <ComponentTable
                                             baseline={baseline}
+                                            onBaselineChange={onBaselineChange}
                                             config={config}
                                             data={categoryData}
                                             unit={comp.unit}
