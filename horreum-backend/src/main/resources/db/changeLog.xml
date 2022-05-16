@@ -3410,4 +3410,12 @@
             );
         </sql>
     </changeSet>
+
+    <changeSet id="80" author="rvansa">
+        <sql>
+            CREATE POLICY test_select_system ON test FOR SELECT USING (has_role('horreum.system'));
+            CREATE POLICY test_token_select_system ON test_token FOR SELECT USING (has_role('horreum.system'));
+            CREATE POLICY view_select_system ON view FOR SELECT USING (has_role('horreum.system'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>

@@ -127,6 +127,7 @@ public class BaseServiceTest {
             em.createNativeQuery("DELETE FROM test_transformers").executeUpdate();
             em.createNativeQuery("DELETE FROM transformer_extractors").executeUpdate();
             Transformer.deleteAll();
+            em.createNativeQuery("DELETE FROM test_token").executeUpdate();
             Test.deleteAll();
             Change.deleteAll();
             DataPoint.deleteAll();
@@ -178,10 +179,14 @@ public class BaseServiceTest {
    }
 
    protected int uploadRun(long start, long stop, Object runJson, String test) {
+      return uploadRun(start, stop, runJson, test, UPLOADER_ROLES[0], Access.PUBLIC);
+   }
+
+   protected int uploadRun(long start, long stop, Object runJson, String test, String owner, Access access) {
       String runIdString = RestAssured.given().auth().oauth2(UPLOADER_TOKEN)
             .header(HttpHeaders.CONTENT_TYPE, "application/json")
             .body(runJson)
-            .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=foo-team&access=PUBLIC")
+            .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=" + owner + "&access=" + access)
             .then()
             .statusCode(200)
             .extract().asString();

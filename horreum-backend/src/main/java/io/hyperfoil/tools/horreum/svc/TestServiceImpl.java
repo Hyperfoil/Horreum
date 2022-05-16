@@ -133,6 +133,30 @@ public class TestServiceImpl implements TestService {
       return test;
    }
 
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   public Test ensureTestExists(String input, String token){
+      Test test;
+      if (input.matches("-?\\d+")) {
+         int id = Integer.parseInt(input);
+         test = Test.find("name = ?1 or id = ?2", input, id).firstResult();
+      } else {
+         test = Test.find("name", input).firstResult();
+      }
+      if (test != null) {// we won't return the whole entity with any data
+         Test detached = new Test();
+         detached.id = test.id;
+         detached.owner = test.owner;
+         detached.name = input;
+         if (identity.hasRole(test.owner.substring(0, test.owner.length() - 5) + "-uploader")) {
+            return detached;
+         } else if (token != null && test.tokens.stream().anyMatch(tt -> tt.valueEquals(token) && tt.hasUpload())) {
+            return detached;
+         }
+      }
+      // we need to be vague about the test existence
+      throw ServiceException.notFound("Cannot upload to test " + input);
+   }
+
    @Override
    @RolesAllowed(Roles.TESTER)
    @WithRoles

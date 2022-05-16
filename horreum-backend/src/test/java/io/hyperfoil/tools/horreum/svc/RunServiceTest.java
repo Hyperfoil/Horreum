@@ -10,6 +10,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
+import javax.ws.rs.core.HttpHeaders;
+
 import org.junit.After;
 import org.junit.jupiter.api.TestInfo;
 
@@ -24,6 +26,7 @@ import io.hyperfoil.tools.horreum.entity.json.Extractor;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.entity.json.TestToken;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
@@ -32,6 +35,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+import io.restassured.RestAssured;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -491,5 +495,41 @@ public class RunServiceTest extends BaseServiceTest {
    public void drain() {
       BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       dataSetQueue.drainTo(new ArrayList<>());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testUploadToPrivateTest() {
+      Test test = createExampleTest("supersecret");
+      test.access = Access.PRIVATE;
+      test = createTest(test);
+
+      long now = System.currentTimeMillis();
+      uploadRun(now, now, org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode(), test.name, test.owner, Access.PRIVATE);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testUploadToPrivateUsingToken() {
+      final String MY_SECRET_TOKEN = "mySecretToken";
+      Test test = createExampleTest("supersecret");
+      test.access = Access.PRIVATE;
+      test = createTest(test);
+
+      // TestToken.value is not readable, therefore we can't pass it in.
+      org.testcontainers.shaded.com.fasterxml.jackson.databind.node.ObjectNode token = org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+      token.put("value", MY_SECRET_TOKEN);
+      token.put("permissions", TestToken.READ + TestToken.UPLOAD);
+      token.put("description", "blablabla");
+      jsonRequest().header(HttpHeaders.CONTENT_TYPE, "application/json").body(token.toString())
+            .post("/api/test/" + test.id + "/addToken").then().statusCode(200);
+
+      long now = System.currentTimeMillis();
+      RestAssured.given()
+            .header(HttpHeaders.CONTENT_TYPE, "application/json")
+            .body(org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode())
+            .post("/api/run/data?start=" + now + "&stop=" + now + "&test=" + test.name + "&owner=" + UPLOADER_ROLES[0] +
+                  "&access=" + Access.PRIVATE + "&token=" + MY_SECRET_TOKEN)
+            .then()
+            .statusCode(200)
+            .extract().asString();
    }
 }

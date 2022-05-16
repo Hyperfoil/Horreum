@@ -65,4 +65,8 @@ public class TestToken {
    public boolean hasUpload() {
       return (permissions & UPLOAD) != 0;
    }
+
+   public boolean valueEquals(String value) {
+      return this.value.equals(value);
+   }
 }

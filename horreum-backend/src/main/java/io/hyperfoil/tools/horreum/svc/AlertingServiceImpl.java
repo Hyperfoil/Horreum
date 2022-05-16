@@ -956,10 +956,7 @@ public class AlertingServiceImpl implements AlertingService {
       } else if (timeoutSeconds <= 0) {
          throw ServiceException.badRequest("Timeout must be positive (unit: seconds)");
       }
-      Test test = testService.getByNameOrId(testNameOrId);
-      if (test == null) {
-         throw ServiceException.notFound("Test " + testNameOrId + " does not exist.");
-      }
+      Test test = testService.ensureTestExists(testNameOrId, null);
       RunExpectation runExpectation = new RunExpectation();
       runExpectation.testId = test.id;
       runExpectation.expectedBefore = Instant.now().plusSeconds(timeoutSeconds);

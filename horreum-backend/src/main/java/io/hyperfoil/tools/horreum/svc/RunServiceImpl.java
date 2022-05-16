@@ -280,10 +280,7 @@ public class RunServiceImpl implements RunService {
       if (access != null) {
          run.access = access;
       }
-      Test test = testService.getByNameOrId(testNameOrId);
-      if (test == null) {
-         throw ServiceException.serverError("Failed to find test " + testNameOrId);
-      }
+      Test test = testService.ensureTestExists(testNameOrId, token);
       run.testid = test.id;
       Integer runId = addAuthenticated(run, test);
       response.addHeader(HttpHeaders.LOCATION, "/run/" + runId);
@@ -333,11 +330,7 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.badRequest("Cannot parse stop time from " + foundStop + " (" + stop + ")");
       }
 
-      Test testEntity = testService.getByNameOrId(testNameOrId);
-      if (testEntity == null) {
-         log.debugf("Failed to upload for test %s with description %s as there is no such test.", test, description);
-         throw ServiceException.serverError("Failed to find test " + testNameOrId);
-      }
+      Test testEntity = testService.ensureTestExists(testNameOrId, token);
 
       Collection<ValidationMessage> validationErrors = schemaService.validate(data, schemaUri);
       if (validationErrors != null && !validationErrors.isEmpty()) {
