@@ -43,19 +43,19 @@ PGPASSWORD=secret psql -h localhost -U dbadmin horreum -f example-data.sql
 
 ```bash
 cd webapp && npm install && cd ..
-./mvnw compile quarkus:dev -Dui.dev
+./mvnw quarkus:dev
 ```
 
 `localhost:3000` to access the create-react-app live code server and `localhost:8080` to access the quarkus development server.
 
-Alternatively you can build Horreum image and run it (assuming that you've started the docker-compose/podman-compose infrastructure):
+Alternatively you can build Horreum image (with `dev` tag) and run it (assuming that you've started the docker-compose/podman-compose infrastructure):
 
 ```bash
 # The base image contains tools like curl and jq and horreum.sh script
 podman build -f src/main/docker/Dockerfile.jvm.base -t quay.io/hyperfoil/horreum-base:latest .
 podman push quay.io/hyperfoil/horreum-base:latest
-./mvnw package -Dui -Dquarkus.container-image.build=true
-podman run --rm --name horreum_app --env-file .env --network=host quay.io/hyperfoil/horreum
+./mvnw package
+podman run --rm --name horreum_app --env-file horreum-backend/.env --network=host quay.io/hyperfoil/horreum:dev
 ```
 
 > :warning: _If npm install fails_: please try clearing the node module cache `npm cache clean`
@@ -67,15 +67,6 @@ mvn -N io.takari:maven:wrapper
 ```
 
 This set's up your environment with the maven wrapper tool
-
-## Creating jar
-
-```bash
-./mvnw clean package -Dui
-```
-
-This builds the webapp and adds it to the `horreum-${version}-runner.jar`.
-Start the server with `java -jar horreum-${version}-runner.jar` after docker is already running
 
 ## Security
 
@@ -127,7 +118,7 @@ By default, the local setup uses plain HTTP. If you need to test HTTPS, run the 
 This script will amend `.env` file with few extra variables and configure Keycloak to redirect to secured ports. Then you can run
 
 ```bash
-HTTPS=true mvn compile quarkus:dev -Dui.dev
+HTTPS=true mvn quarkus:dev
 ```
 
 as usual - the `HTTPS=true` will use secured connections on the live-reload proxy on port 3000.
