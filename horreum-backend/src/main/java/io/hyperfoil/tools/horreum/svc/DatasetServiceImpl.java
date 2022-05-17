@@ -43,25 +43,28 @@ public class DatasetServiceImpl implements DatasetService {
    //@formatter:off
    private static final String LABEL_QUERY =
          "WITH used_labels AS (" +
-            "SELECT le.label_id, label.name, ds.schema_id, count(le) > 1 AS multi FROM dataset_schemas ds " +
+            "SELECT label.id AS label_id, label.name, ds.schema_id, count(le) AS count FROM dataset_schemas ds " +
             "JOIN label ON label.schema_id = ds.schema_id " +
-            "JOIN label_extractors le ON le.label_id = label.id " +
-            "WHERE ds.dataset_id = ?1 AND (?2 < 0 OR label.id = ?2) GROUP BY le.label_id, label.name, ds.schema_id" +
+            "LEFT JOIN label_extractors le ON le.label_id = label.id " +
+            "WHERE ds.dataset_id = ?1 AND (?2 < 0 OR label.id = ?2) GROUP BY label.id, label.name, ds.schema_id" +
          "), lvalues AS (" +
-            "SELECT le.label_id, le.name, (CASE WHEN le.isarray THEN " +
+            "SELECT ul.label_id, le.name, (CASE WHEN le.isarray THEN " +
                   "jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath::::jsonpath) " +
                "ELSE " +
                   "jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath::::jsonpath) " +
                "END) AS value " +
             "FROM dataset JOIN dataset_schemas ds ON dataset.id = ds.dataset_id " +
             "JOIN used_labels ul ON ul.schema_id = ds.schema_id " +
-            "JOIN label_extractors le ON ul.label_id = le.label_id " +
+            "LEFT JOIN label_extractors le ON ul.label_id = le.label_id " +
             "WHERE dataset.id = ?1" +
-         ") SELECT lvalues.label_id, ul.name, function, (CASE WHEN ul.multi THEN jsonb_object_agg(lvalues.name, lvalues.value) " +
-            "ELSE jsonb_agg(lvalues.value) -> 0 END) AS value FROM label " +
+         ") SELECT lvalues.label_id, ul.name, function, (CASE " +
+               "WHEN ul.count > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value) " +
+               "WHEN ul.count = 1 THEN jsonb_agg(lvalues.value) -> 0 " +
+               "ELSE '{}'::::jsonb END" +
+            ") AS value FROM label " +
             "JOIN lvalues ON lvalues.label_id = label.id " +
             "JOIN used_labels ul ON label.id = ul.label_id " +
-            "GROUP BY lvalues.label_id, ul.name, function, ul.multi";
+            "GROUP BY lvalues.label_id, ul.name, function, ul.count";
    private static final String LIST_TEST_DATASETS =
          "WITH schema_agg AS (" +
             "SELECT dataset_id, jsonb_agg(uri) as schemas FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id " +

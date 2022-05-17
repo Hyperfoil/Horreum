@@ -130,14 +130,16 @@ public class DatasetServiceTest extends BaseServiceTest {
                new Extractor("array", "$.array[*].y", true));
          int labelReduce = addLabel(schemas[1], "Reduce", "array => array.reduce((a, b) => a + b)",
                new Extractor("array", "$.array[*].y", true));
+         int labelNoExtractor = addLabel(schemas[0], "Nothing", "empty => 42");
 
          List<Label.Value> values = withLabelValues(createXYData());
-         assertEquals(5, values.size());
+         assertEquals(6, values.size());
          assertEquals(3, values.stream().filter(v -> v.labelId == labelSum).map(v -> v.value.numberValue()).findFirst().orElse(null));
          assertEquals(1, values.stream().filter(v -> v.labelId == labelSingle).map(v -> v.value.numberValue()).findFirst().orElse(null));
          assertEquals(JsonNodeFactory.instance.objectNode().put("x", 1).put("y", 2), values.stream().filter(v -> v.labelId == labelObject).map(v -> v.value).findFirst().orElse(null));
          assertEquals(JsonNodeFactory.instance.arrayNode().add(3).add(4), values.stream().filter(v -> v.labelId == labelArray).map(v -> v.value).findFirst().orElse(null));
          assertEquals(7, values.stream().filter(v -> v.labelId == labelReduce).map(v -> v.value.numberValue()).findFirst().orElse(null));
+         assertEquals(42, values.stream().filter(v -> v.labelId == labelNoExtractor).map(v -> v.value.numberValue()).findFirst().orElse(null));
 
       }, "X", "Y");
    }
