@@ -24,6 +24,7 @@ public interface ReportService {
    @GET
    @Path("table")
    AllTableReports getTableReports(
+         @QueryParam("folder") String folder,
          @QueryParam("test") Integer testId,
          @QueryParam("roles") String roles,
          @QueryParam("limit") Integer limit,

@@ -242,7 +242,7 @@ export default function TableReportConfigPage() {
                                 selection={test}
                                 onSelect={test => {
                                     setTest(test)
-                                    setConfig({ ...config, test: { id: test.id } })
+                                    setConfig({ ...config, test: { id: test?.id } })
                                 }}
                                 isDisabled={!isTester}
                             />

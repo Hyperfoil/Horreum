@@ -4,7 +4,7 @@ export const isLoading = (state: State) => state.tests.loading
 
 export function all(state: State) {
     if (!state.tests.byId) {
-        return false
+        return undefined
     }
     const list = [...state.tests.byId.values()]
     list.sort((a, b) => a.id - b.id)

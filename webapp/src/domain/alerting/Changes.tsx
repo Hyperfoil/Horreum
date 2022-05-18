@@ -215,8 +215,10 @@ export default function Changes() {
     const [selectedChange, setSelectedChange] = useState<number>()
     const [selectedVariable, setSelectedVariable] = useState<number>()
 
-    const onSelectTest = useCallback((selection, isInitial) => {
-        if (selectedTest !== selection) {
+    const onSelectTest = useCallback((selection, _, isInitial) => {
+        if (selection === undefined) {
+            setSelectedTest(undefined)
+        } else if (selectedTest !== selection) {
             setSelectedTest(selection as SelectedTest)
         }
         if (!isInitial) {
@@ -253,7 +255,6 @@ export default function Changes() {
                         <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
                             <div style={{ display: "flex" }}>
                                 <TestSelect
-                                    placeholderText="Choose test..."
                                     initialTestName={paramTest}
                                     onSelect={onSelectTest}
                                     selection={selectedTest}

@@ -97,12 +97,14 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm }: TestSelectModalProps) => 
                         onSelect={t => {
                             setTest(t)
                             setGroups([])
+                            if (!t) {
+                                return
+                            }
                             api.fetchVariables(t.id).then(
                                 response => setGroups(groupNames(response)),
                                 error => dispatchError(dispatch, error, "FETCH_VARIABLES", "Failed to fetch variables")
                             )
                         }}
-                        placeholderText="Select..."
                     />
                     {test && groups.length > 0 && (
                         <Select

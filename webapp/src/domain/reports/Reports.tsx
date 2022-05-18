@@ -46,6 +46,7 @@ export default function Reports() {
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
     const [roles, setRoles] = useState<Team>()
     const [test, setTest] = useState<SelectedTest>()
+    const [folder, setFolder] = useState<string>()
 
     const [tableReports, setTableReports] = useState<AllTableReports>()
     const [tableReportsReloadCounter, setTableReportsReloadCounter] = useState(0)
@@ -55,11 +56,11 @@ export default function Reports() {
 
     useEffect(() => {
         setLoading(true)
-        getTableReports(pagination, (test && test.id) || undefined, roles?.key)
+        getTableReports(pagination, (test && test.id) || undefined, roles?.key, folder)
             .then(setTableReports)
             .catch(error => dispatch(alertAction("FETCH_REPORTS", "Failed to fetch reports", error)))
             .finally(() => setLoading(false))
-    }, [pagination, roles, test, dispatch, tableReportsReloadCounter])
+    }, [pagination, roles, test, folder, dispatch, tableReportsReloadCounter])
 
     const columns: Column<TableReportSummary>[] = useMemo(
         () => [
@@ -163,7 +164,10 @@ export default function Reports() {
                         <FlexItem>
                             <TestSelect
                                 selection={test}
-                                onSelect={setTest}
+                                onSelect={(test, folder) => {
+                                    setTest(test)
+                                    setFolder(folder)
+                                }}
                                 extraOptions={[{ id: 0, toString: () => "All tests" }]}
                             />
                         </FlexItem>

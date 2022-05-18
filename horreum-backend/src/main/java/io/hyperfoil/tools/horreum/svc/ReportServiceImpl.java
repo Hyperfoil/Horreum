@@ -68,12 +68,19 @@ public class ReportServiceImpl implements ReportService {
    @PermitAll
    @WithRoles
    @Override
-   public AllTableReports getTableReports(Integer testId, String roles, Integer limit, Integer page, String sort, SortDirection direction) {
+   public AllTableReports getTableReports(String folder, Integer testId, String roles, Integer limit, Integer page, String sort, SortDirection direction) {
       StringBuilder queryBuilder = new StringBuilder();
       Map<String, Object> params = new HashMap<>();
       if (testId != null) {
          queryBuilder.append("config.test.id = :test");
          params.put("test", testId);
+      } else if (folder != null && !"*".equals(folder)) {
+         if (folder.isBlank()) {
+            queryBuilder.append("(config.test.folder = '' OR config.test.folder IS NULL)");
+         } else {
+            queryBuilder.append("config.test.folder = :folder");
+            params.put("folder", folder);
+         }
       }
       Set<String> rolesList = Roles.expandRoles(roles, identity);
       if (rolesList != null) {
@@ -89,7 +96,7 @@ public class ReportServiceImpl implements ReportService {
          pQuery.page(page - 1, limit);
       }
       AllTableReports result = new AllTableReports();
-      result.count = TableReportConfig.count(query, params);
+      result.count = TableReport.count(query, params);
       List<TableReport> reports = pQuery.list();
       Map<Map.Entry<Integer, String>, TableReportSummary> summaryLookup = new HashMap<>();
       for (TableReport report : reports) {

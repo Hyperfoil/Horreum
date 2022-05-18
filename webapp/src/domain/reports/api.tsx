@@ -75,10 +75,10 @@ export type TableReportSummary = {
 
 const base = "/api/report"
 const endPoints = {
-    tableReports: (pagination: PaginationInfo, testid?: number, roles?: string) =>
+    tableReports: (pagination: PaginationInfo, testid?: number, roles?: string, folder?: string) =>
         `${base}/table?${testid !== undefined ? `test=${testid}&` : ""}${
             roles ? `owner=${encodeURIComponent(roles)}&` : ""
-        }${paginationParams(pagination)}`,
+        }${paginationParams(pagination)}&folder=${folder === undefined ? "*" : folder}`,
     tableReportConfig: (configId?: number, reportId?: number) =>
         `${base}/table/config${configId ? "/" + configId : ""}${reportId ? "?edit=" + reportId : ""}`,
     tableReportPreview: (reportId?: number) => `${base}/table/preview${reportId ? "?edit=" + reportId : ""}`,
@@ -86,8 +86,8 @@ const endPoints = {
     comment: (reportId: number) => `${base}/comment/${reportId}`,
 }
 
-export function getTableReports(pagination: PaginationInfo, testid?: number, roles?: string) {
-    return fetchApi(endPoints.tableReports(pagination, testid, roles), null, "get")
+export function getTableReports(pagination: PaginationInfo, testid?: number, roles?: string, folder?: string) {
+    return fetchApi(endPoints.tableReports(pagination, testid, roles, folder), null, "get")
 }
 
 export function getTableConfig(configId: number) {
