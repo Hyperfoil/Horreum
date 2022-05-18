@@ -3418,4 +3418,12 @@
             CREATE POLICY view_select_system ON view FOR SELECT USING (has_role('horreum.system'));
         </sql>
     </changeSet>
+
+    <changeSet id="81" author="rvansa">
+        <sql>
+            SELECT setval('label_id_seq', (SELECT MAX(id) FROM label));
+        </sql>
+        <!-- Forgot to remove this earlier -->
+        <dropColumn tableName="test" columnName="tagscalculation" />
+    </changeSet>
 </databaseChangeLog>
