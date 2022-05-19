@@ -67,16 +67,17 @@ export default function Reports() {
             {
                 Header: "Title",
                 id: "title",
-                accessor: r => (r.reports && r.reports.length > 0 ? r.reports[0].configId : undefined),
+                accessor: r => r.title.toLowerCase(), // for case-insensitive sorting
                 Cell: (arg: C) => {
-                    const {
-                        cell: { value: configId },
-                    } = arg
+                    const title = arg.row.original.title
+                    const reports = arg.row.original.reports || []
+                    const configId = reports.length > 0 ? reports[0].configId : undefined
+
                     return configId === undefined ? (
-                        arg.row.original.title
+                        title
                     ) : (
                         <NavLink to={`/reports/table/config/${configId}`}>
-                            {arg.row.original.title} <EditIcon />
+                            {title} <EditIcon />
                         </NavLink>
                     )
                 },
@@ -84,13 +85,12 @@ export default function Reports() {
             {
                 Header: "Test",
                 id: "testname",
-                accessor: r => r.testId,
+                accessor: r => r.testName && r.testName.toLowerCase(), // for case-insensitive sorting
                 Cell: (arg: C) => {
-                    const {
-                        cell: { value: testId },
-                    } = arg
+                    const testName = arg.row.original.testName
+                    const testId = arg.row.original.testId
                     return testId !== undefined && testId >= 0 ? (
-                        <NavLink to={`/test/${testId}`}>{arg.row.original.testName}</NavLink>
+                        <NavLink to={`/test/${testId}`}>{testName}</NavLink>
                     ) : (
                         "<deleted test>"
                     )
@@ -98,7 +98,7 @@ export default function Reports() {
             },
             {
                 Header: "Last report",
-                id: "last report",
+                id: "created",
                 accessor: "reports",
                 disableSortBy: true, // TODO: fix client-side sorting
                 Cell: (arg: C) => {
@@ -119,7 +119,7 @@ export default function Reports() {
             },
             {
                 Header: "Total reports",
-                id: "report count",
+                id: "count",
                 accessor: "reports",
                 disableSortBy: true, // TODO: fix client-side sorting
                 Cell: (arg: C) => {

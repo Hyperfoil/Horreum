@@ -28,6 +28,7 @@ import org.graalvm.polyglot.Value;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.IntegerType;
+import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -53,8 +54,6 @@ public class ReportServiceImpl implements ReportService {
 
    private static final Comparator<TableReportSummaryItem> REPORT_COMPARATOR = Comparator.<TableReportSummaryItem, Instant>comparing(item -> item.created).reversed();
 
-   //@formatter:on
-
    static {
       System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
    }
@@ -69,75 +68,64 @@ public class ReportServiceImpl implements ReportService {
    @WithRoles
    @Override
    public AllTableReports getTableReports(String folder, Integer testId, String roles, Integer limit, Integer page, String sort, SortDirection direction) {
-      StringBuilder queryBuilder = new StringBuilder();
+      StringBuilder queryBuilder = new StringBuilder()
+            .append("WITH selected AS (")
+            .append("SELECT tr.id AS report_id, config_id, trc.title, test.name AS testname, test.id as testid, tr.created FROM tablereport tr ")
+            .append("JOIN tablereportconfig trc ON trc.id = tr.config_id ")
+            .append("LEFT JOIN test ON test.id = trc.testid WHERE 1 = 1 ");
       Map<String, Object> params = new HashMap<>();
       if (testId != null) {
-         queryBuilder.append("config.test.id = :test");
+         queryBuilder.append("AND testid = :test ");
          params.put("test", testId);
       } else if (folder != null && !"*".equals(folder)) {
-         if (folder.isBlank()) {
-            queryBuilder.append("(config.test.folder = '' OR config.test.folder IS NULL)");
-         } else {
-            queryBuilder.append("config.test.folder = :folder");
-            params.put("folder", folder);
-         }
+         queryBuilder.append("AND COALESCE(test.folder, '') = :folder ");
+         params.put("folder", folder);
       }
       Set<String> rolesList = Roles.expandRoles(roles, identity);
       if (rolesList != null) {
-         if (queryBuilder.length() > 0) {
-            queryBuilder.append(" AND ");
-         }
-         queryBuilder.append(" config.test.owner IN :roles");
+         queryBuilder.append("AND test.owner IN :roles ");
          params.put("roles", rolesList);
       }
-      String query = queryBuilder.toString();
-      PanacheQuery<TableReport> pQuery = TableReport.find(query, params);
-      if (page != null && limit != null) {
-         pQuery.page(page - 1, limit);
+      queryBuilder
+            .append("ORDER BY created DESC), grouped AS (")
+            .append("SELECT title, testname, testid, ")
+            .append("jsonb_agg(jsonb_build_object('report_id', report_id, 'config_id', config_id, 'created', EXTRACT (EPOCH FROM created))) AS reports ")
+            .append("FROM selected GROUP BY title, testname, testid")
+            .append(") SELECT title, testname, testid, reports, ")
+            .append("(SELECT COUNT(*) FROM grouped) AS total FROM grouped");
+      Util.addPaging(queryBuilder, limit, page, sort, direction.name());
+
+      Query query = em.createNativeQuery(queryBuilder.toString()).unwrap(NativeQuery.class)
+            .addScalar("title", TextType.INSTANCE)
+            .addScalar("testname", TextType.INSTANCE)
+            .addScalar("testid", IntegerType.INSTANCE)
+            .addScalar("reports", JsonNodeBinaryType.INSTANCE)
+            .addScalar("total", IntegerType.INSTANCE);
+      for (var entry : params.entrySet()) {
+         query.setParameter(entry.getKey(), entry.getValue());
       }
+      @SuppressWarnings("unchecked") List<Object[]> rows = query.getResultList();
+
       AllTableReports result = new AllTableReports();
-      result.count = TableReport.count(query, params);
-      List<TableReport> reports = pQuery.list();
-      Map<Map.Entry<Integer, String>, TableReportSummary> summaryLookup = new HashMap<>();
-      for (TableReport report : reports) {
-         int summaryTestId = report.config.test == null ? -1 : report.config.test.id;
-         TableReportSummaryItem item = new TableReportSummaryItem();
-         item.id = report.id;
-         item.configId = report.config.id;
-         item.created = report.created;
-         TableReportSummary summary = summaryLookup.computeIfAbsent(Map.entry(summaryTestId, report.config.title), k -> {
-            TableReportSummary newSummary = new TableReportSummary();
-            newSummary.testId = summaryTestId;
-            if (report.config.test != null) {
-               newSummary.testName = report.config.test.name;
-            }
-            newSummary.title = report.config.title;
-            newSummary.reports = new ArrayList<>();
-            return newSummary;
+      result.count = rows.size() > 0 ? (int) rows.get(0)[4] : 0;
+      result.reports = new ArrayList<>();
+
+      for (Object[] row : rows) {
+         TableReportSummary summary = new TableReportSummary();
+         summary.title = (String) row[0];
+         summary.testName = (String) row[1];
+         summary.testId = row[2] == null ? -1 : (int) row[2];
+         summary.reports = new ArrayList<>();
+         ArrayNode reports = (ArrayNode) row[3];
+         reports.forEach(report -> {
+            TableReportSummaryItem item = new TableReportSummaryItem();
+            item.id = report.get("report_id").asInt();
+            item.configId = report.get("config_id").asInt();
+            item.created = Instant.ofEpochSecond(report.get("created").asLong());
+            summary.reports.add(item);
          });
-         summary.reports.add(item);
+         result.reports.add(summary);
       }
-      result.reports = new ArrayList<>(summaryLookup.values());
-      result.reports.forEach(summary -> summary.reports.sort(REPORT_COMPARATOR));
-      Comparator<TableReportSummary> comparator;
-      switch (sort) {
-         case "title":
-         default:
-            comparator = Comparator.comparing(s -> s.title);
-            break;
-         case "testname":
-            comparator = Comparator.comparing(s -> s.testName != null ? s.testName : "");
-            break;
-         case "last report":
-            comparator = Comparator.comparing(s -> s.reports.get(0).created);
-            break;
-         case "report count":
-            comparator = Comparator.comparing(s -> s.reports.size());
-      }
-      if (direction.name().equals(Sort.Direction.Descending.name())) {
-         comparator = comparator.reversed();
-      }
-      result.reports.sort(comparator);
       return result;
    }
 
