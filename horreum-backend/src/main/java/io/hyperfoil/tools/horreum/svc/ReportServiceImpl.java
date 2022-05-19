@@ -5,7 +5,6 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,21 +37,19 @@ import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.ReportService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.report.ReportComment;
 import io.hyperfoil.tools.horreum.entity.report.ReportComponent;
+import io.hyperfoil.tools.horreum.entity.report.ReportLog;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
 import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
-import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 
 public class ReportServiceImpl implements ReportService {
    private static final Logger log = Logger.getLogger(ReportServiceImpl.class);
-
-   private static final Comparator<TableReportSummaryItem> REPORT_COMPARATOR = Comparator.<TableReportSummaryItem, Instant>comparing(item -> item.created).reversed();
 
    static {
       System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
@@ -274,12 +271,13 @@ public class ReportServiceImpl implements ReportService {
          if (report == null) {
             throw ServiceException.badRequest("Cannot find report ID " + reportId);
          }
+         report.logs.clear();
       }
       report.config = config;
       List<Object[]> categories = Collections.emptyList(), series, scales = Collections.emptyList();
       Query timestampQuery;
       if (!nullOrEmpty(config.filterLabels)) {
-         List<Integer> datasetIds = filterDatasetIds(config);
+         List<Integer> datasetIds = filterDatasetIds(config, report);
          log.debugf("Table report %s(%d) includes datasets %s", config.title, config.id, datasetIds);
          series = selectByDatasets(config.seriesLabels, datasetIds);
          log.debugf("Series: %s", rowsToMap(series));
@@ -293,7 +291,7 @@ public class ReportServiceImpl implements ReportService {
          }
          timestampQuery = em.createNativeQuery("SELECT id, start FROM dataset WHERE id IN :datasets").setParameter("datasets", datasetIds);
       } else {
-         log.debugf("Table report %s(%d) includes all datasets for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
+         log(report, PersistentLog.DEBUG, "Table report %s(%d) includes all datasets for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
          series = selectByTest(config.test.id, config.seriesLabels);
          log.debugf("Series: %s", rowsToMap(series));
          if (!nullOrEmpty(config.scaleLabels)) {
@@ -310,15 +308,16 @@ public class ReportServiceImpl implements ReportService {
          assert config.categoryLabels == null;
          assert config.categoryFunction == null;
          assert config.categoryFormatter == null;
-         categories = series.stream().map(row -> new Object[]{ row[0], "" }).collect(Collectors.toList());
+         categories = series.stream().map(row -> new Object[]{ row[0], row[1], row[2], JsonNodeFactory.instance.textNode("") }).collect(Collectors.toList());
       }
       if (scales.isEmpty() && !series.isEmpty()) {
          assert config.scaleLabels == null;
          assert config.scaleFunction == null;
          assert config.scaleFormatter == null;
-         scales = series.stream().map(row -> new Object[] { row[0], "" }).collect(Collectors.toList());
+         scales = series.stream().map(row -> new Object[] { row[0], row[1], row[2], JsonNodeFactory.instance.textNode("") }).collect(Collectors.toList());
       }
-      Map<Integer, TableReport.Data> datasetData = series.isEmpty() ? Collections.emptyMap() : getData(config, categories, series, scales);
+      Map<Integer, TableReport.Data> datasetData = series.isEmpty() ? Collections.emptyMap() :
+            getData(config, report, categories, series, scales);
       log.debugf("Data per dataset: %s", datasetData);
 
       @SuppressWarnings("unchecked")
@@ -352,15 +351,18 @@ public class ReportServiceImpl implements ReportService {
                   String jsCode = buildCode(component.function, String.valueOf(value));
                   try {
                      Value calculatedValue = context.eval("js", jsCode);
-                     Double maybeDouble = Util.toDoubleOrNull(calculatedValue, err -> {}, info -> {});
+                     Double maybeDouble = Util.toDoubleOrNull(calculatedValue,
+                           err -> log(report, PersistentLog.ERROR, err),
+                           info -> log(report, PersistentLog.INFO, info));
                      if (maybeDouble != null) {
                         data.values.add(maybeDouble);
                      } else {
                         data.values.add(Util.convertToJson(calculatedValue));
                      }
                   } catch (PolyglotException e) {
-                     log.errorf(e, "Failed to run report %s(%d) label function on run %d.", config.title, config.id, datasetId);
-                     log.infof("Offending code: %s", jsCode);
+                     log(report, PersistentLog.ERROR, "Failed to run report %s(%d) label function on run %d. Offending code: <br><pre>%s</pre>",
+                           config.title, config.id, datasetId, jsCode);
+                     log.debug("Caused by exception", e);
                   }
                }
             }
@@ -382,7 +384,8 @@ public class ReportServiceImpl implements ReportService {
       return node == null || node.isNull() || node.isEmpty();
    }
 
-   private Map<Integer, TableReport.Data> getData(TableReportConfig config, List<Object[]> categories, List<Object[]> series, List<Object[]> scales) {
+   private Map<Integer, TableReport.Data> getData(TableReportConfig config, TableReport report,
+                                                  List<Object[]> categories, List<Object[]> series, List<Object[]> scales) {
       assert !categories.isEmpty();
       assert !series.isEmpty();
       assert !scales.isEmpty();
@@ -403,9 +406,9 @@ public class ReportServiceImpl implements ReportService {
                try {
                   data.category = Util.convert(context.eval("js", jsCode)).toString();
                } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to run report %s(%d) category function on dataset %d/%d (%d).",
-                        config.title, config.id, data.runId, data.ordinal + 1, data.datasetId);
-                  log.infof("Offending code: %s", jsCode);
+                  log(report, PersistentLog.ERROR, "Failed to run report %s(%d) category function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
+                        config.title, config.id, data.runId, data.ordinal + 1, data.datasetId, jsCode);
+                  log.debug("Caused by exception", e);
                   continue;
                }
             }
@@ -417,17 +420,19 @@ public class ReportServiceImpl implements ReportService {
             int ordinal = (int) row[2];
             JsonNode value = (JsonNode) row[3];
             TableReport.Data data = datasetData.get(datasetId);
+            if (data == null) {
+               log(report, PersistentLog.ERROR, "Missing values for dataset %d!", datasetId);
+               continue;
+            }
             if (nullOrEmpty(config.seriesFunction)) {
                data.series = toText(value);
             } else {
                String jsCode = buildCode(config.seriesFunction, String.valueOf(value));
                try {
-                  if (data != null) {
-                     data.series = Util.convert(context.eval("js", jsCode)).toString();
-                  }
+                  data.series = Util.convert(context.eval("js", jsCode)).toString();
                } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to run report %s(%d) series function on run %d/%d (%d).", config.title, config.id, runId, ordinal + 1, datasetId);
-                  log.infof("Offending code: %s", jsCode);
+                  log(report, PersistentLog.ERROR, "Failed to run report %s(%d) series function on run %d/%d (%d). Offending code: <br><pre>%s</pre>", config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
+                  log.debug("Caused by exception", e);
                }
             }
          }
@@ -437,17 +442,20 @@ public class ReportServiceImpl implements ReportService {
             int ordinal = (int) row[2];
             JsonNode value = (JsonNode) row[3];
             TableReport.Data data = datasetData.get(datasetId);
+            if (data == null) {
+               log(report, PersistentLog.ERROR, "Missing values for dataset %d!", datasetId);
+               continue;
+            }
             if (nullOrEmpty(config.scaleFunction)) {
                data.scale = toText(value);
             } else {
                String jsCode = buildCode(config.scaleFunction, String.valueOf(value));
                try {
-                  if (data != null) {
-                     data.scale = Util.convert(context.eval("js", jsCode)).toString();
-                  }
+                  data.scale = Util.convert(context.eval("js", jsCode)).toString();
                } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to run report %s(%d) label function on dataset %d/%d (%d).", config.title, config.id, runId, ordinal + 1, datasetId);
-                  log.infof("Offending code: %s", jsCode);
+                  log(report, PersistentLog.ERROR, "Failed to run report %s(%d) label function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
+                        config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
+                  log.debug("Caused by exception", e);
                }
             }
          }
@@ -564,45 +572,74 @@ public class ReportServiceImpl implements ReportService {
       }
    }
 
-   private List<Integer> filterDatasetIds(TableReportConfig config) {
+   private List<Integer> filterDatasetIds(TableReportConfig config, TableReport report) {
       List<Object[]> list = selectByTest(config.test.id, config.filterLabels);
-      // TODO: if list is empty log warning to persistent log
+      if (list.isEmpty()) {
+         log(report, PersistentLog.WARN, "There are no matching datasets for test %s (%d)", config.test.name, config.test.id);
+      }
       List<Integer> datasetIds = new ArrayList<>(list.size());
       if (nullOrEmpty(config.filterFunction)) {
+         StringBuilder debugList = new StringBuilder();
          for (Object[] row : list) {
             Integer datasetId = (Integer) row[0];
+            int runId = (int) row[1];
+            int ordinal = (int) row[2];
+            if (debugList.length() != 0) {
+               debugList.append(", ");
+            }
+            debugList.append(runId).append('/').append(ordinal + 1);
             if (((JsonNode) row[3]).asBoolean(false)) {
                datasetIds.add(datasetId);
+            } else {
+               debugList.append("(filtered)");
             }
          }
+         log(report, PersistentLog.DEBUG, "Datasets considered for report: %s", debugList);
       } else {
          executeInContext(config, context -> {
+            StringBuilder debugList = new StringBuilder();
             for (Object[] row : list) {
                Integer datasetId = (Integer) row[0];
                int runId = (int) row[1];
                int ordinal = (int) row[2];
                String jsCode = buildCode(config.filterFunction, String.valueOf(row[3]));
+               if (debugList.length() != 0) {
+                  debugList.append(", ");
+               }
+               debugList.append(runId).append('/').append(ordinal + 1);
                try {
                   org.graalvm.polyglot.Value value = context.eval("js", jsCode);
-                  // TODO debuggable
                   if (value.isBoolean()) {
                      if (value.asBoolean()) {
                         datasetIds.add(datasetId);
-                     } else if (log.isDebugEnabled()) {
-                        log.debugf("Dataset %d/%d (%d) filtered out, value: %s", runId, ordinal, datasetId, row[3]);
+                     } else {
+                        debugList.append("(filtered)");
+                        if (log.isDebugEnabled()) {
+                           log.debugf("Dataset %d/%d (%d) filtered out, value: %s", runId, ordinal, datasetId, row[3]);
+                        }
                      }
                   } else {
-                     log.errorf("Report %s(%d) filter result for dataset %d/%d (%d) is not a boolean: %s", config.title, config.id, runId, ordinal + 1, datasetId, value);
-                     log.infof("Offending code: %s", jsCode);
+                     debugList.append("(filtered: not boolean)");
+                     log(report, PersistentLog.ERROR, "Report %s(%d) filter result for dataset %d/%d (%d) is not a boolean: %s. Offending code: <br><pre>%s</pre>",
+                           config.title, config.id, runId, ordinal + 1, datasetId, value, jsCode);
                   }
                } catch (PolyglotException e) {
-                  log.errorf(e, "Failed to run report %s(%d) filter function on dataset %d/%d (%d).", config.title, config.id, runId, ordinal + 1, datasetId);
-                  log.infof("Offending code: %s", jsCode);
+                  debugList.append("(filtered: JS error)");
+                  log(report, PersistentLog.ERROR, "Failed to run report %s(%d) filter function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
+                        config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
+                  log.debug("Caused by exception", e);
                }
             }
+            log(report, PersistentLog.DEBUG, "Datasets considered for report: %s", debugList);
          });
       }
       return datasetIds;
+   }
+
+   private void log(TableReport report, int level, String msg, Object... args) {
+      String message = args.length == 0 ? msg : String.format(msg, args);
+      report.logs.add(new ReportLog(report, level, message));
+      log.log(PersistentLog.logLevel(level), msg);
    }
 
    private String buildCode(String function, String param) {

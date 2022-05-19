@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.entity.report;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 
 import javax.persistence.CascadeType;
@@ -48,6 +49,10 @@ public class TableReport extends PanacheEntityBase {
    @CollectionTable(name = "tablereport_data", joinColumns = @JoinColumn(name = "report_id"))
    @Fetch(FetchMode.SELECT)
    public Collection<Data> data;
+
+   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, mappedBy = "report")
+   @Fetch(FetchMode.SELECT)
+   public Collection<ReportLog> logs = new ArrayList<>();
 
    @Embeddable
    public static class Data {

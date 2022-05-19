@@ -25,6 +25,7 @@ import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.DatasetService;
 import io.hyperfoil.tools.horreum.api.QueryResult;
+import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
@@ -224,9 +225,9 @@ public class DatasetServiceImpl implements DatasetService {
       Util.evaluateMany(extracted, row -> (String) row[2], row -> (JsonNode) row[3],
             (row, result) -> createLabel(datasetId, (int) row[0], Util.convertToJson(result)),
             row -> createLabel(datasetId, (int) row[0], (JsonNode) row[3]),
-            (row, e, jsCode) -> logMessage(datasetId, DatasetLog.ERROR,
+            (row, e, jsCode) -> logMessage(datasetId, PersistentLog.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
-            out -> logMessage(datasetId, DatasetLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
+            out -> logMessage(datasetId, PersistentLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
       Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId, isRecalculation));
    }
 
@@ -254,7 +255,7 @@ public class DatasetServiceImpl implements DatasetService {
 
    private void logMessage(int datasetId, int level, String message, Object... params) {
       String msg = String.format(message, params);
-      if (level == DatasetLog.ERROR) {
+      if (level == PersistentLog.ERROR) {
          log.errorf("Calculating labels for DS %d: %s", datasetId, msg);
       }
       int testId = (int) em.createNativeQuery("SELECT testid FROM dataset WHERE id = ?1").setParameter(1, datasetId).getSingleResult();

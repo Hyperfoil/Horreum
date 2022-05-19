@@ -22,12 +22,14 @@ import { useTester } from "../../auth"
 import { TableReport, getTableReport } from "./api"
 import TableReportView from "./TableReportView"
 import ButtonLink from "../../components/ButtonLink"
+import ReportLogModal from "./ReportLogModal"
 
 export default function TableReportPage() {
     const { id: stringId } = useParams<Record<string, string>>()
     const id = parseInt(stringId)
     const [report, setReport] = useState<TableReport>()
     const [loading, setLoading] = useState(false)
+    const [logOpen, setLogOpen] = useState(false)
     const dispatch = useDispatch()
     useEffect(() => {
         if (id) {
@@ -80,12 +82,26 @@ export default function TableReportPage() {
                             Export to PDF
                         </Button>
                         {isTester && (
-                            <ButtonLink
-                                variant="secondary"
-                                to={"/reports/table/config/" + report.config.id + "?edit=" + id}
-                            >
-                                Edit
-                            </ButtonLink>
+                            <>
+                                <ButtonLink
+                                    variant="secondary"
+                                    to={"/reports/table/config/" + report.config.id + "?edit=" + id}
+                                >
+                                    Edit
+                                </ButtonLink>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setLogOpen(true)}
+                                    disabled={!report.logs || report.logs.length === 0}
+                                >
+                                    Show log
+                                </Button>
+                                <ReportLogModal
+                                    logs={report.logs || []}
+                                    isOpen={logOpen}
+                                    onClose={() => setLogOpen(false)}
+                                />
+                            </>
                         )}
                     </ActionGroup>
                 </CardHeader>

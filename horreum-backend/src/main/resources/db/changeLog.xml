@@ -3426,4 +3426,42 @@
         <!-- Forgot to remove this earlier -->
         <dropColumn tableName="test" columnName="tagscalculation" />
     </changeSet>
+
+    <changeSet id="82" author="rvansa">
+        <createTable tableName="reportlog">
+            <column name="id" type="int8">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="report_id" type="integer">
+                <constraints nullable="false" foreignKeyName="tablereport_id" referencedTableName="tablereport" referencedColumnNames="id"/>
+            </column>
+            <column name="timestamp" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="level" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>
+            GRANT select, insert, delete, update ON TABLE reportlog TO "${quarkus.datasource.username}";
+            CREATE POLICY rl_select ON reportlog FOR SELECT
+                USING (exists(SELECT 1 FROM tablereport tr
+                    JOIN tablereportconfig trc ON tr.config_id = trc.id
+                    JOIN test ON test.id = trc.testid
+                    WHERE trc.id = report_id AND can_view2(test.access, test.owner)));
+            CREATE POLICY rl_insert ON reportlog FOR INSERT
+                WITH CHECK (has_role2((SELECT test.owner FROM tablereport tr
+                    JOIN tablereportconfig trc ON tr.config_id = trc.id
+                    JOIN test ON test.id = trc.testid
+                    WHERE trc.id = report_id), 'tester'));
+            CREATE POLICY rl_delete ON reportlog FOR DELETE
+                USING (has_role2((SELECT test.owner FROM tablereport tr
+                    JOIN tablereportconfig trc ON tr.config_id = trc.id
+                    JOIN test ON test.id = testid
+                    WHERE trc.id = report_id), 'tester'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>

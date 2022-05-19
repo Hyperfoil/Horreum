@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom"
 
 import { fetchApi } from "../../services/api/index"
 import { formatDateTime } from "../../utils"
-import LogModal, { CommonLogModalProps, LogLevelIcon } from "./LogModal"
+import LogModal, { CommonLogModalProps, LogLevelIcon } from "../../components/LogModal"
 
 type TransformationLog = {
     id: number

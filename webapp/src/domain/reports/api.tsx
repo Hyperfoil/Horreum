@@ -43,12 +43,21 @@ export type ReportComment = {
     comment: string
 }
 
+export type ReportLog = {
+    id: number
+    reportId: number
+    timestamp: number
+    level: number
+    message: string
+}
+
 export type TableReport = {
     id: number
     config: TableReportConfig
     created: number
     data: TableReportData[]
     comments: ReportComment[]
+    logs: ReportLog[]
 }
 
 export type TableReportData = {

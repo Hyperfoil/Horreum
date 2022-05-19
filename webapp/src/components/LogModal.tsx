@@ -20,9 +20,9 @@ import {
     InfoCircleIcon,
 } from "@patternfly/react-icons"
 
-import TimeRangeSelect, { TimeRange } from "../../components/TimeRangeSelect"
-import ConfirmDeleteModal from "../../components/ConfirmDeleteModal"
-import { alertAction } from "../../alerts"
+import TimeRangeSelect, { TimeRange } from "./TimeRangeSelect"
+import ConfirmDeleteModal from "./ConfirmDeleteModal"
+import { alertAction } from "../alerts"
 import "./LogModal.css"
 
 export type CommonLogModalProps = {
@@ -46,7 +46,7 @@ type LogModalProps = {
     columns: string[]
     fetchCount(): Promise<number>
     fetchLogs(page: number, limit: number): Promise<IRow[]>
-    deleteLogs(from?: number, to?: number): Promise<unknown>
+    deleteLogs?(from?: number, to?: number): Promise<unknown>
 } & CommonLogModalProps
 
 export default function LogModal(props: LogModalProps) {
@@ -105,18 +105,20 @@ export default function LogModal(props: LogModalProps) {
             )}
             {!loading && count > 0 && (
                 <>
-                    <Flex>
-                        <FlexItem>
-                            <Button onClick={() => setDeleteRequest(deleteRange)}>Delete logs older than...</Button>
-                        </FlexItem>
-                        <FlexItem>
-                            <TimeRangeSelect
-                                selection={deleteRange}
-                                onSelect={setDeleteRange}
-                                options={timeRangeOptions}
-                            />
-                        </FlexItem>
-                    </Flex>
+                    {props.deleteLogs && (
+                        <Flex>
+                            <FlexItem>
+                                <Button onClick={() => setDeleteRequest(deleteRange)}>Delete logs older than...</Button>
+                            </FlexItem>
+                            <FlexItem>
+                                <TimeRangeSelect
+                                    selection={deleteRange}
+                                    onSelect={setDeleteRange}
+                                    options={timeRangeOptions}
+                                />
+                            </FlexItem>
+                        </Flex>
+                    )}
                     <ConfirmDeleteModal
                         description={
                             deleteRequest && (deleteRequest.from || deleteRequest.to)
@@ -126,7 +128,7 @@ export default function LogModal(props: LogModalProps) {
                         isOpen={deleteRequest !== undefined}
                         onClose={() => setDeleteRequest(undefined)}
                         onDelete={() => {
-                            if (deleteRequest) {
+                            if (deleteRequest && props.deleteLogs) {
                                 return props.deleteLogs(deleteRequest.from, deleteRequest.to).then(
                                     () => setUpdateCounter(updateCounter + 1),
                                     error => {

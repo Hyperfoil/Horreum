@@ -22,12 +22,14 @@ import {
     Popover,
     Spinner,
     TextInput,
+    Title,
 } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
 
 import * as api from "./api"
 import { TableReport, TableReportConfig, ReportComponent } from "./api"
 import TableReportView from "./TableReportView"
+import ReportLogModal from "./ReportLogModal"
 
 import Labels from "../../components/Labels"
 import HelpButton from "../../components/HelpButton"
@@ -142,6 +144,7 @@ export default function TableReportConfigPage() {
     const [test, setTest] = useState<SelectedTest>()
     const [preview, setPreview] = useState<TableReport>()
     const [saving, setSaving] = useState(false)
+    const [previewLogOpen, setPreviewLogOpen] = useState(false)
 
     const dispatch = useDispatch()
     useEffect(() => {
@@ -571,7 +574,25 @@ export default function TableReportConfigPage() {
                         )}
                     </Form>
                     {preview && (
-                        <Modal title="Preview" isOpen={!!preview} onClose={() => setPreview(undefined)}>
+                        <Modal
+                            header={
+                                <Flex>
+                                    <FlexItem>
+                                        <Title headingLevel="h1">Preview</Title>
+                                    </FlexItem>
+                                    <FlexItem>
+                                        <Button onClick={() => setPreviewLogOpen(true)}>Show log</Button>
+                                    </FlexItem>
+                                </Flex>
+                            }
+                            isOpen={!!preview}
+                            onClose={() => setPreview(undefined)}
+                        >
+                            <ReportLogModal
+                                logs={preview.logs}
+                                isOpen={previewLogOpen}
+                                onClose={() => setPreviewLogOpen(false)}
+                            />
                             <div
                                 style={{
                                     overflowY: "auto",

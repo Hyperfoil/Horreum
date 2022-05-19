@@ -8,6 +8,7 @@ import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
 import io.hyperfoil.tools.horreum.api.QueryResult;
 import io.hyperfoil.tools.horreum.api.RunService;
 import io.hyperfoil.tools.horreum.api.SqlService;
+import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLog;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
@@ -861,13 +862,13 @@ public class RunServiceImpl implements RunService {
                   root = root.iterator().next();
                }
             }
-            logMessage(run, TransformationLog.DEBUG, "Run transformer %s/%s with input: <pre>%s</pre>, function: <pre>%s</pre>",
+            logMessage(run, PersistentLog.DEBUG, "Run transformer %s/%s with input: <pre>%s</pre>, function: <pre>%s</pre>",
                   uri, t.name, limitLength(root.toPrettyString()), t.function);
             if (t.function != null && !t.function.isBlank()) {
                result = Util.evaluateOnce(t.function, root, Util::convertToJson,
-                     (code, e) -> logMessage(run, TransformationLog.ERROR,
+                     (code, e) -> logMessage(run, PersistentLog.ERROR,
                            "Evaluation of transformer %s/%s failed: '%s' Code: <pre>%s</pre>", uri, t.name, e.getMessage(), code),
-                     output -> logMessage(run, TransformationLog.DEBUG, "Output while running transformer %s/%s: <pre>%s</pre>", uri, t.name, output));
+                     output -> logMessage(run, PersistentLog.DEBUG, "Output while running transformer %s/%s: <pre>%s</pre>", uri, t.name, output));
             } else {
                result = root;
             }
@@ -919,7 +920,7 @@ public class RunServiceImpl implements RunService {
                   throw new IllegalStateException("Unknown type " + type);
             }
             nakedNodes.add(node);
-            logMessage(run, TransformationLog.DEBUG, "No transformer for schema %s (key %s), passing as-is.", uri, key);
+            logMessage(run, PersistentLog.DEBUG, "No transformer for schema %s (key %s), passing as-is.", uri, key);
          }
       }
       if (schemasAndTransformers > 0) {
@@ -938,7 +939,7 @@ public class RunServiceImpl implements RunService {
                      String message = String.format("Transformer %d produced an array of %d elements but other transformer " +
                                  "produced %d elements; dataset %d/%d might be missing some data.",
                            entry.getKey(), node.size(), max, run.id, ordinal);
-                     logMessage(run, TransformationLog.WARN, "%s", message);
+                     logMessage(run, PersistentLog.WARN, "%s", message);
                      log.warnf(message);
                   }
                } else {
@@ -951,7 +952,7 @@ public class RunServiceImpl implements RunService {
          }
          return ordinal;
       } else {
-         logMessage(run, TransformationLog.INFO, "No applicable schema, dataset will be empty.");
+         logMessage(run, PersistentLog.INFO, "No applicable schema, dataset will be empty.");
          createDataset(new DataSet(run.start, run.stop,
                "Empty DataSet for run data without any schema.",
                run.testid, instance.arrayNode(), run, 0, run.owner, run.access), isRecalculation);
