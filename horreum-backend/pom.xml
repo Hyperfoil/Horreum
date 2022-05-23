@@ -114,7 +114,7 @@
         <dependency>
             <groupId>io.quarkiverse.quinoa</groupId>
             <artifactId>quarkus-quinoa</artifactId>
-            <version>1.0.1</version>
+            <version>${quinoa.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -246,7 +246,6 @@
             </plugin>
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>3.1.0</version>
                 <executions>
                     <execution>
                         <id>copy-webapp-build</id>

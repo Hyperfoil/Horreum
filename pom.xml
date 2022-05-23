@@ -77,7 +77,8 @@
         <maven.compiler.parameters>true</maven.compiler.parameters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>2.8.2.Final</quarkus.version>
+        <quarkus.version>2.9.1.Final</quarkus.version>
+        <quinoa.version>1.0.3</quinoa.version>
         <surefire-plugin.version>2.22.0</surefire-plugin.version>
         <failsafe-plugin.version>3.0.0-M5</failsafe-plugin.version>
         <keycloak-admin-client.version>14.0.0</keycloak-admin-client.version>
@@ -202,6 +203,11 @@
                         <releaseProfiles>ui,do-release</releaseProfiles>
                         <tagNameFormat>@{project.version}</tagNameFormat>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.2.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.eclipse.m2e</groupId>
