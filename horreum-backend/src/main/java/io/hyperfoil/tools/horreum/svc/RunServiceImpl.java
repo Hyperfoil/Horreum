@@ -947,15 +947,15 @@ public class RunServiceImpl implements RunService {
                }
             }
             nakedNodes.forEach(all::add);
-            createDataset(new DataSet(run.start, run.stop, run.description,
-                  run.testid, all, run, ordinal++, run.owner, run.access), isRecalculation);
+            createDataset(new DataSet(run, ordinal++, run.description,
+                  all), isRecalculation);
          }
          return ordinal;
       } else {
          logMessage(run, PersistentLog.INFO, "No applicable schema, dataset will be empty.");
-         createDataset(new DataSet(run.start, run.stop,
-               "Empty DataSet for run data without any schema.",
-               run.testid, instance.arrayNode(), run, 0, run.owner, run.access), isRecalculation);
+         createDataset(new DataSet(
+               run, 0, "Empty DataSet for run data without any schema.",
+               instance.arrayNode()), isRecalculation);
          return 1;
       }
    }

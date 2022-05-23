@@ -97,16 +97,17 @@ public class DataSet extends OwnedEntityBase {
 
    public DataSet() {}
 
-   public DataSet(Instant st, Instant stp, String desc, Integer testId, JsonNode json, Run r, int ord, String ownr, Access acc) {
-      this.start = st;
-      stop = stp;
-      description = desc;
-      testid = testId;
-      data = json;
-      run = r;
-      ordinal = ord;
-      owner = ownr;
-      access = acc;
+   public DataSet(Run run, int ordinal, String description, JsonNode data) {
+      this.run = run;
+      this.start = run.start;
+      this.stop = run.stop;
+      this.testid = run.testid;
+      this.owner = run.owner;
+      this.access = run.access;
+
+      this.ordinal = ordinal;
+      this.description = description;
+      this.data = data;
    }
 
    public static class Info {
