@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 /*
    Redirects unknown URLs to the default /index.html so that React can try and render them as part of browser Url History
  */
-@WebFilter(urlPatterns = "/*", asyncSupported = true)
+@WebFilter(filterName = "RouteFilter", asyncSupported = true)
 @ApplicationScoped
 public class RouteFilter extends HttpFilter {
    private static final String[] PATH_PREFIXES = { "/api/", "/connect", "/dev" };

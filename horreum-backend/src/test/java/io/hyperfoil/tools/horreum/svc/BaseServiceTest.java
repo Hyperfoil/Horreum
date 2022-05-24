@@ -422,4 +422,14 @@ public class BaseServiceTest {
          return null;
       }
    }
+
+   protected void addToken(Test test, int permissions, String value) {
+      ObjectNode token = JsonNodeFactory.instance.objectNode();
+      token.put("value", value);
+      token.put("permissions", permissions);
+      token.put("description", "blablabla");
+
+      jsonRequest().header(HttpHeaders.CONTENT_TYPE, "application/json").body(token.toString())
+            .post("/api/test/" + test.id + "/addToken").then().statusCode(200);
+   }
 }

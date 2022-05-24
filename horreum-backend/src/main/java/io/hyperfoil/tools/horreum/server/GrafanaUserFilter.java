@@ -28,7 +28,7 @@ import io.smallrye.jwt.auth.principal.JWTCallerPrincipal;
 /**
  * Make sure that matching Grafana user exists. We cache the fact in cookie to avoid querying Grafana all the time.
  */
-@WebFilter(value = "/*", asyncSupported = true)
+@WebFilter(filterName = "GrafanaUserFilter", asyncSupported = true)
 @ApplicationScoped
 public class GrafanaUserFilter extends HttpFilter {
    private static final Logger log = Logger.getLogger(GrafanaUserFilter.class);

@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
@@ -204,7 +205,7 @@ public class Util {
       }
    }
 
-   static JsonNode toJsonNode(String str) {
+   public static JsonNode toJsonNode(String str) {
       try {
          if (str == null) {
             return null;
@@ -213,6 +214,18 @@ public class Util {
       } catch (JsonProcessingException e) {
          log.errorf(e, "Failed to parse into JSON: %s", str);
          return null;
+      }
+   }
+
+   public static JsonNode toJsonNode(byte[] bytes) {
+      try {
+         if (bytes == null) {
+            return null;
+         }
+         return OBJECT_MAPPER.readTree(bytes);
+      } catch (IOException e) {
+         log.errorf(e, "Failed to parse into JSON: %s", new String(bytes, StandardCharsets.UTF_8));
+         throw new RuntimeException(e);
       }
    }
 

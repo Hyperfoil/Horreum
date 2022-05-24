@@ -13,14 +13,13 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.transaction.Transactional;
 
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.svc.UserServiceImpl;
 import io.quarkus.security.identity.SecurityIdentity;
 
-@WebFilter(value = "/*", asyncSupported = true)
+@WebFilter(filterName = "UserTeamsFilter", asyncSupported = true)
 @ApplicationScoped
 public class UserTeamsFilter extends HttpFilter {
    private static final Logger log = Logger.getLogger(GrafanaUserFilter.class);

@@ -515,12 +515,7 @@ public class RunServiceTest extends BaseServiceTest {
       test = createTest(test);
 
       // TestToken.value is not readable, therefore we can't pass it in.
-      org.testcontainers.shaded.com.fasterxml.jackson.databind.node.ObjectNode token = org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
-      token.put("value", MY_SECRET_TOKEN);
-      token.put("permissions", TestToken.READ + TestToken.UPLOAD);
-      token.put("description", "blablabla");
-      jsonRequest().header(HttpHeaders.CONTENT_TYPE, "application/json").body(token.toString())
-            .post("/api/test/" + test.id + "/addToken").then().statusCode(200);
+      addToken(test, TestToken.READ + TestToken.UPLOAD, MY_SECRET_TOKEN);
 
       long now = System.currentTimeMillis();
       RestAssured.given()
