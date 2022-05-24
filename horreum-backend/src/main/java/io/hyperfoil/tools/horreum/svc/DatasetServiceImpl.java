@@ -13,6 +13,7 @@ import javax.persistence.PersistenceException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
+import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
@@ -189,7 +190,9 @@ public class DatasetServiceImpl implements DatasetService {
    @WithRoles
    @Override
    public DataSet getDataSet(Integer datasetId) {
-      return DataSet.findById(datasetId);
+      DataSet dataset = DataSet.findById(datasetId);
+      Hibernate.initialize(dataset.data);
+      return dataset;
    }
 
    private void onLabelChanged(String param) {
