@@ -17,6 +17,7 @@ import { toString } from "../../components/Editor"
 import { NavLink } from "react-router-dom"
 import ChangeSchemaModal from "./ChangeSchemaModal"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
+import { NoSchemaInRun } from "./NoSchema"
 
 function findFirstValue(o: any) {
     if (!o || Object.keys(o).length !== 1) {
@@ -94,8 +95,7 @@ export default function RunData(props: RunDataProps) {
                                     </NavLink>
                                 )),
                                 i => <br key={2 * i + 1} />
-                            )) ||
-                            "(no schema)"}
+                            )) || <NoSchemaInRun />}
                         {isTester && (
                             <>
                                 <Button

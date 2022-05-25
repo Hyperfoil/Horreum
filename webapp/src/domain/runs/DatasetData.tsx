@@ -10,6 +10,7 @@ import SchemaLink from "../schemas/SchemaLink"
 
 import * as api from "./api"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
+import { NoSchemaInDataset } from "./NoSchema"
 
 type DatasetDataProps = {
     runId: number
@@ -61,8 +62,7 @@ export default function DatasetData(props: DatasetDataProps) {
                             interleave(
                                 schemas.map((uri, i) => <SchemaLink uri={uri} key={2 * i} />),
                                 i => <br key={2 * i + 1} />
-                            )) ||
-                            "(no schema)"}
+                            )) || <NoSchemaInDataset />}
                     </div>
                 </FormGroup>
             </Form>

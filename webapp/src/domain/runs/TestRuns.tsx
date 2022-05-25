@@ -41,6 +41,7 @@ import {
     UseSortByColumnOptions,
 } from "react-table"
 import { Run, RunsDispatch } from "./reducers"
+import { NoSchemaInRun } from "./NoSchema"
 import { Description, ExecutionTime, Menu } from "./components"
 
 type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row: UseRowSelectRowProps<Run> }
@@ -107,7 +108,9 @@ const tableColumns: RunColumn[] = [
                 cell: { value },
             } = arg
             // LEFT JOIN results in schema.id == 0
-            if (value) {
+            if (!value || Object.keys(value).length == 0) {
+                return <NoSchemaInRun />
+            } else {
                 return interleave(
                     Object.keys(value).map((key, i) => (
                         <NavLink key={2 * i} to={`/schema/${key}`}>
@@ -116,8 +119,6 @@ const tableColumns: RunColumn[] = [
                     )),
                     i => <br key={2 * i + 1} />
                 )
-            } else {
-                return "--"
             }
         },
     },

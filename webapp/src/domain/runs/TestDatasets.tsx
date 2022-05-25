@@ -40,6 +40,7 @@ import { listTestDatasets, Dataset, DatasetList } from "./api"
 import { Description, ExecutionTime, renderCell } from "./components"
 import { TestDispatch } from "../tests/reducers"
 import SchemaLink from "../schemas/SchemaLink"
+import { NoSchemaInDataset } from "./NoSchema"
 
 type C = CellProps<Dataset> &
     UseTableOptions<Dataset> &
@@ -105,14 +106,14 @@ const staticColumns: DatasetColumn[] = [
                 cell: { value },
             } = arg
             // LEFT JOIN results in schema.id == 0
-            if (value) {
+            if (!value || (value as string[]).length == 0) {
+                return <NoSchemaInDataset />
+            } else {
                 const schemas = value as string[]
                 return interleave(
                     schemas.map((uri, i) => <SchemaLink key={2 * i} uri={uri} />),
                     i => <br key={2 * i + 1} />
                 )
-            } else {
-                return "--"
             }
         },
     },
