@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.hibernate.query.NativeQuery;
+import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
@@ -86,8 +87,7 @@ public class SchemaServiceImpl implements SchemaService {
          URLFactory.SUPPORTED_SCHEMES.stream(), Stream.of("urn")
    ).toArray(String[]::new);
 
-   private static final CachedSecurityIdentity SYSTEM_IDENTITY = new CachedSecurityIdentity(
-         null, Collections.singleton(Roles.HORREUM_SYSTEM), Collections.emptySet(), Collections.emptyMap());
+   private static final AliasToBeanResultTransformer DESCRIPTOR_TRANSFORMER = new AliasToBeanResultTransformer(SchemaDescriptor.class);
 
    @Inject
    EntityManager em;
@@ -149,6 +149,14 @@ public class SchemaServiceImpl implements SchemaService {
       } else {
          return Schema.listAll(Sort.by(sort).direction(sortDirection));
       }
+   }
+
+   @WithRoles
+   @Override
+   public List<SchemaDescriptor> descriptors() {
+      //noinspection unchecked
+      return em.createNativeQuery("SELECT id, name, uri FROM schema").unwrap(org.hibernate.query.Query.class)
+            .setResultTransformer(DESCRIPTOR_TRANSFORMER).getResultList();
    }
 
    @RolesAllowed(Roles.TESTER)

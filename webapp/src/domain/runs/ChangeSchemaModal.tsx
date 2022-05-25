@@ -10,6 +10,7 @@ type InitialSchema = {
 }
 
 type PathSelectProps = {
+    hasRoot: boolean
     paths: string[]
     value?: string
     onChange(path: string | undefined): void
@@ -19,12 +20,21 @@ const ROOT_PATH = "__root_path__"
 
 function PathSelect(props: PathSelectProps) {
     const [isExpanded, setExpanded] = useState(false)
+    const options = []
+    if (props.hasRoot) {
+        options.push(
+            <SelectOption key={-1} value={ROOT_PATH}>
+                Root schema
+            </SelectOption>
+        )
+    }
+    props.paths.forEach((option, index) => options.push(<SelectOption key={index} value={option} />))
     return (
         <Select
             aria-label="Select path"
             isOpen={isExpanded}
             onToggle={setExpanded}
-            selections={props.value || ROOT_PATH}
+            selections={props.value ? props.value : props.hasRoot ? ROOT_PATH : undefined}
             onClear={() => {
                 setExpanded(false)
                 props.onChange(undefined)
@@ -37,13 +47,9 @@ function PathSelect(props: PathSelectProps) {
                     props.onChange(newValue as string)
                 }
             }}
+            placeholderText={props.hasRoot || props.paths.length > 0 ? "Select path..." : "No paths available"}
         >
-            {[
-                <SelectOption key={-1} value={ROOT_PATH}>
-                    Root schema
-                </SelectOption>,
-                ...props.paths.map((option, index) => <SelectOption key={index} value={option} />),
-            ]}
+            {options}
         </Select>
     )
 }
@@ -54,6 +60,7 @@ type ChangeSchemaModalProps = {
     update(path: string | undefined, schemaUri: string, schemaId: number): Promise<any>
     initialSchema?: InitialSchema
     paths: string[]
+    hasRoot: boolean
 }
 
 export default function ChangeSchemaModal(props: ChangeSchemaModalProps) {
@@ -95,7 +102,7 @@ export default function ChangeSchemaModal(props: ChangeSchemaModalProps) {
         >
             {!updating && (
                 <>
-                    <PathSelect paths={props.paths} value={path} onChange={setPath} />
+                    <PathSelect paths={props.paths} hasRoot={props.hasRoot} value={path} onChange={setPath} />
                     <SchemaSelect value={schema} onChange={setSchema} noSchemaOption={true} />
                 </>
             )}

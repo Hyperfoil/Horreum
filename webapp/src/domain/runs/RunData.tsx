@@ -31,7 +31,10 @@ function getPaths(data: any) {
     if (!data) {
         return []
     }
-    return Object.keys(data).filter(k => typeof data[k] === "object")
+    return Object.keys(data).filter(k => {
+        const value = data[k]
+        return typeof value === "object" && !Array.isArray(value) && value
+    })
 }
 
 type RunDataProps = {
@@ -110,6 +113,7 @@ export default function RunData(props: RunDataProps) {
                                     onClose={() => setChangeSchemaModalOpen(false)}
                                     initialSchema={findFirstValue(schemas)}
                                     paths={getPaths(data)}
+                                    hasRoot={typeof data === "object" && !Array.isArray(data) && data}
                                     update={(path, schema, schemaid) =>
                                         dispatch(
                                             actions.updateSchema(props.run.id, props.run.testid, path, schemaid, schema)

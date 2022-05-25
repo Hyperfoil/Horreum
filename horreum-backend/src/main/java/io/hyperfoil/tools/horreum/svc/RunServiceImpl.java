@@ -740,19 +740,25 @@ public class RunServiceImpl implements RunService {
       String uri = Util.destringify(schemaUri);
       // Triggering dirty property on Run
       JsonNode updated = run.data.deepCopy();
-      ObjectNode item;
+      JsonNode item;
       if (updated.isObject()) {
-         item = (ObjectNode) (path == null || path.isEmpty() ? updated : updated.get(path));
+         item = path == null ? updated : updated.path(path);
       } else if (updated.isArray()) {
-         int index = path == null || path.isEmpty() ? 0 : Integer.parseInt(path);
-         item = (ObjectNode) updated.get(index);
+         if (path == null) {
+            throw ServiceException.badRequest("Cannot update root schema in an array.");
+         }
+         item = updated.get(Integer.parseInt(path));
       } else {
          throw ServiceException.serverError("Cannot update run data with path " + path);
       }
-      if (uri != null && !uri.isEmpty()) {
-         item.set("$schema", new TextNode(uri));
+      if (item.isObject()) {
+         if (uri != null && !uri.isEmpty()) {
+            ((ObjectNode) item).set("$schema", new TextNode(uri));
+         } else {
+            ((ObjectNode) item).remove("$schema");
+         }
       } else {
-         item.remove("$schema");
+         throw ServiceException.badRequest("Cannot update schema at " + (path == null ? "<root>" : path) + " as the target is not an object");
       }
       run.data = updated;
       run.persist();

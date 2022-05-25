@@ -44,6 +44,12 @@ public interface SchemaService {
                      @QueryParam("sort") String sort,
                      @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
 
+
+   @GET
+   @Path("descriptors")
+   @Produces(MediaType.APPLICATION_JSON)
+   List<SchemaDescriptor> descriptors();
+
    @POST
    @Produces(MediaType.TEXT_PLAIN)
    @Path("{id}/resetToken")
@@ -207,6 +213,8 @@ public interface SchemaService {
       public int id;
       public String name;
       public String uri;
+
+      public SchemaDescriptor() {}
 
       public SchemaDescriptor(int id, String name, String uri) {
          this.id = id;

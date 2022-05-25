@@ -4,6 +4,7 @@ import { Access, accessName } from "../../auth"
 const base = "/api/schema"
 const endPoints = {
     base: () => `${base}`,
+    descriptors: () => `${base}/descriptors`,
     crud: (id: number) => `${base}/${id}/`,
     byUri: (uri: string) => `${base}/idByUri/${encodeURIComponent(uri)}`,
     resetToken: (id: number) => `${base}/${id}/resetToken`,
@@ -22,6 +23,10 @@ const endPoints = {
 export const all = () => {
     return fetchApi(endPoints.base(), null, "get")
 }
+export const descriptors = () => {
+    return fetchApi(endPoints.descriptors(), null, "get")
+}
+
 export const add = (payload: Schema) => {
     return fetchApi(endPoints.base(), payload, "post")
 }

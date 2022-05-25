@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react"
 
-import { all as allSchemas } from "../domain/schemas/api"
+import { descriptors } from "../domain/schemas/api"
 
 import { Select, SelectOption, SelectOptionObject } from "@patternfly/react-core"
 
@@ -24,13 +24,12 @@ export default function SchemaSelect(props: SchemaSelectProps) {
     const [options, setOptions] = useState<Schema[]>([])
     const noSchemaAllowed = props.noSchemaOption || false
     useEffect(() => {
-        if (props.value || options.length > 0) {
+        if (options.length > 0) {
             return
         }
-        // TODO: this is fetching all schemas including the schema JSONs
-        allSchemas().then((response: Schema[]) => {
+        descriptors().then((response: Schema[]) => {
             const schemas = response.map(s => {
-                return { name: s.name, id: s.id, uri: s.uri, toString: () => `${s.name} (${s.uri})` }
+                return { ...s, toString: () => `${s.name} (${s.uri})` }
             })
             setOptions(schemas)
             if (!noSchemaAllowed && !props.value && schemas.length > 0) {
@@ -45,9 +44,11 @@ export default function SchemaSelect(props: SchemaSelectProps) {
     return (
         <Select
             aria-label="Select schema"
+            menuAppendTo="parent"
+            maxHeight={300} // fixme: menu is clipped in modal
             isOpen={isExpanded}
             placeholderText="-- no schema --"
-            variant={props.isCreatable ? "typeahead" : "single"}
+            variant="typeahead"
             isCreatable={props.isCreatable}
             createText="Use new schema URI: "
             onToggle={setExpanded}
