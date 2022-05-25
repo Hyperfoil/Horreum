@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -7,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -18,16 +18,13 @@ import javax.persistence.EntityManager;
 import javax.ws.rs.core.HttpHeaders;
 
 import org.junit.jupiter.api.TestInfo;
-import org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import org.testcontainers.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.TestService;
-import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
+import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.entity.json.TestToken;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
@@ -36,7 +33,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-import io.restassured.RestAssured;
+import io.restassured.response.Response;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -108,5 +105,55 @@ public class TestServiceTest extends BaseServiceTest {
          assertEquals(0, ds.ordinal);
       });
       assertEquals(NUM_DATASETS, datasets.stream().map(ds -> ds.run.id).collect(Collectors.toSet()).size());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testAddTestHook(TestInfo info) {
+      Test test = createTest(createExampleTest(getTestName(info)));
+      addTestHook(test, Run.EVENT_NEW, "https://attacker.ru").then().statusCode(400);;
+
+      addAllowedPrefix("https://example.com");
+
+      Hook hook = addTestHook(test, Run.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Hook.class);
+      assertNotNull(hook.id);
+      assertTrue(hook.active);
+      hook.active = false;
+      jsonRequest().body(hook).post("/api/test/" + test.id + "/hook").then().statusCode(204);
+   }
+
+   private void addAllowedPrefix(String prefix) {
+      given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "text/plain")
+            .body(prefix).post("/api/hook/prefixes").then().statusCode(200);
+   }
+
+   private Response addTestHook(Test test, String type, String url) {
+      Hook hook = new Hook();
+      hook.type = type;
+      hook.active = true;
+      hook.url = url;
+      return jsonRequest().body(hook).post("/api/test/" + test.id + "/hook");
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testAddGlobalHook() {
+      String responseType = addGlobalHook(Test.EVENT_NEW, "https://attacker.ru")
+            .then().statusCode(400).extract().header(HttpHeaders.CONTENT_TYPE);
+      // constraint violations are mapped to 400 + JSON response, we want explicit error
+      assertTrue(responseType.startsWith("text/plain")); // text/plain;charset=UTF-8
+
+      addAllowedPrefix("https://example.com");
+
+      Hook hook = addGlobalHook(Test.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Hook.class);
+      assertNotNull(hook.id);
+      assertTrue(hook.active);
+      given().auth().oauth2(ADMIN_TOKEN).delete("/api/hook/" + hook.id);
+   }
+
+   private Response addGlobalHook(String type, String url) {
+      Hook hook = new Hook();
+      hook.type = type;
+      hook.active = true;
+      hook.url = url;
+      return  given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "application/json").body(hook).post("/api/hook");
    }
 }

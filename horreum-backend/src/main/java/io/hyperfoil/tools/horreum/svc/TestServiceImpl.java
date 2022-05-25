@@ -77,6 +77,9 @@ public class TestServiceImpl implements TestService {
    @Inject
    DatasetServiceImpl datasetService;
 
+   @Inject
+   HookServiceImpl hookService;
+
    @Context
    HttpServletResponse response;
 
@@ -440,24 +443,27 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @WithRoles
    @Transactional
-   public void updateHook(Integer testId, Hook hook) {
+   public Hook updateHook(Integer testId, Hook hook) {
       if (testId == null || testId <= 0) {
          throw ServiceException.badRequest("Missing test id");
       }
-      Test test = getTestForUpdate(testId);
+      // just ensure the test exists
+      getTestForUpdate(testId);
       hook.target = testId;
 
+      hookService.checkPrefix(hook);
       if (hook.id == null) {
-         em.persist(hook);
+         hook.persist();
       } else {
          if (!hook.active) {
-            Hook toDelete = em.find(Hook.class, hook.id);
-            em.remove(toDelete);
+            Hook.deleteById(hook.id);
+            return null;
          } else {
-            em.merge(hook);
+            hook = em.merge(hook);
          }
       }
-      test.persist();
+      em.flush();
+      return hook;
    }
 
    @WithRoles

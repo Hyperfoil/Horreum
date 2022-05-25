@@ -139,7 +139,14 @@ public class HookServiceImpl implements HookService {
       tellHooks(Change.EVENT_NEW, testId, changeEvent.change);
    }
 
-   @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
+   void checkPrefix(Hook hook) {
+      if (AllowedHookPrefix.find("?1 LIKE CONCAT(prefix, '%')", hook.url).count() == 0) {
+         throw ServiceException.badRequest("The requested URL is not on the list of allowed URL prefixes; " +
+               "visit /api/hook/prefixes to see this list. Only the administrator is allowed to add prefixes.");
+      }
+   }
+
+   @RolesAllowed(Roles.ADMIN)
    @WithRoles
    @Transactional
    @Override
@@ -147,24 +154,23 @@ public class HookServiceImpl implements HookService {
       if(hook == null){
          throw ServiceException.badRequest("Send hook as request body.");
       }
-      try {
-         if (hook.id != null && hook.id <= 0) {
-            hook.id = null;
-         }
-         if (hook.id == null) {
-            em.persist(hook);
-         } else {
-            em.merge(hook);
-         }
-         em.flush();
-         return hook;
-      } catch (PersistenceException e) {
-         log.error("Failed to persist hook", e);
-         throw ServiceException.serverError("Failed to persist hook");
+      if (hook.id != null && hook.id <= 0) {
+         hook.id = null;
       }
+      if (hook.target == null) {
+         hook.target = -1;
+      }
+      checkPrefix(hook);
+      if (hook.id == null) {
+         hook.persist();
+      } else {
+         em.merge(hook);
+      }
+      em.flush();
+      return hook;
    }
 
-   @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
+   @RolesAllowed(Roles.ADMIN)
    @WithRoles
    @Override
    public Hook get(Integer id){
@@ -173,11 +179,11 @@ public class HookServiceImpl implements HookService {
 
 
    @WithRoles
-   @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
+   @RolesAllowed(Roles.ADMIN)
    @Transactional
    @Override
    public void delete(Integer id){
-      Hook.find("id", id).firstResult().delete();
+      Hook.delete("id", id);
    }
 
    public List<Hook> getEventHooks(String type, int testId) {

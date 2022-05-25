@@ -40,7 +40,9 @@ import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.json.Access;
+import io.hyperfoil.tools.horreum.entity.json.AllowedHookPrefix;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
+import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Extractor;
 import io.hyperfoil.tools.horreum.entity.json.Run;
@@ -62,6 +64,7 @@ public class BaseServiceTest {
    static final String[] UPLOADER_ROLES = { "foo-team", "foo-uploader", "uploader" };
    static final String TESTER_TOKEN = BaseServiceTest.getAccessToken("alice", TESTER_ROLES);
    static final String UPLOADER_TOKEN = BaseServiceTest.getAccessToken("alice", UPLOADER_ROLES);
+   static final String ADMIN_TOKEN = BaseServiceTest.getAccessToken("admin", "admin");
 
    protected final Logger log = Logger.getLogger(getClass());
 
@@ -119,7 +122,8 @@ public class BaseServiceTest {
 
    protected void dropAllViewsAndTests() {
       Util.withTx(tm, () -> {
-         try (CloseMe ignored = roleManager.withRoles(em, Stream.concat(Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM)).collect(Collectors.toList()))) {
+         try (CloseMe ignored = roleManager.withRoles(em, Stream.concat(Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
+               .collect(Collectors.toList()))) {
             em.createNativeQuery("UPDATE test SET defaultview_id = NULL").executeUpdate();
             ViewComponent.deleteAll();
             View.deleteAll();
@@ -138,6 +142,9 @@ public class BaseServiceTest {
             em.createNativeQuery("DELETE FROM label_extractors").executeUpdate();
             Label.deleteAll();
             Schema.deleteAll();
+
+            Hook.deleteAll();
+            AllowedHookPrefix.deleteAll();
          }
          return null;
       });

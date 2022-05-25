@@ -92,7 +92,7 @@ public interface TestService {
 
    @POST
    @Path("{testId}/hook")
-   void updateHook(@PathParam("testId") Integer testId, Hook hook);
+   Hook updateHook(@PathParam("testId") Integer testId, Hook hook);
 
    @GET
    @Path("{id}/fingerprint")
