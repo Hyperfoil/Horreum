@@ -61,15 +61,15 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
             )
         }
     }, [props.uri, props.jsonpath, dispatch, props.onClose])
-    const executeQuery = () => {
+    const executeQuery = (id: number) => {
         if (!props.jsonpath) {
             return ""
         }
         let response: Promise<QueryResult>
         if (props.target === "run") {
-            response = query((target as Run).id, props.jsonpath, false, props.uri)
+            response = query(id, props.jsonpath, false, props.uri)
         } else {
-            response = queryDataset((target as Dataset).id, props.jsonpath, false, props.uri)
+            response = queryDataset(id, props.jsonpath, false, props.uri)
         }
         return response.then(
             result => {
@@ -94,7 +94,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
     return (
         <Modal
             variant="large"
-            title="Execute selected JsonPath on one of these runs"
+            title={`Execute selected JsonPath on one of these ${props.target}s`}
             isOpen={props.jsonpath !== undefined}
             onClose={() => {
                 setRuns(undefined)
@@ -156,7 +156,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                                                 <Button
                                                     onClick={() => {
                                                         setTarget(r)
-                                                        executeQuery()
+                                                        executeQuery(r.id)
                                                     }}
                                                 >
                                                     Execute
@@ -195,7 +195,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                                                 <Button
                                                     onClick={() => {
                                                         setTarget(d)
-                                                        executeQuery()
+                                                        executeQuery(d.id)
                                                     }}
                                                 >
                                                     Execute

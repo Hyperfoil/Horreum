@@ -10,13 +10,17 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
+import javax.persistence.Query;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.type.IntegerType;
+import org.hibernate.type.LongType;
 import org.hibernate.type.TextType;
+import org.hibernate.type.TimestampType;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -67,17 +71,26 @@ public class DatasetServiceImpl implements DatasetService {
             "JOIN lvalues ON lvalues.label_id = label.id " +
             "JOIN used_labels ul ON label.id = ul.label_id " +
             "GROUP BY lvalues.label_id, ul.name, function, ul.count";
+
+   private static final String SCHEMAS_SELECT = "SELECT dataset_id, jsonb_agg(uri) as schemas FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id";
+   private static final String DATASET_SUMMARY_SELECT = "SELECT ds.id, ds.runid AS runId, ds.ordinal, " +
+         "ds.testid AS testId, test.name AS testname, ds.description, " +
+         "EXTRACT(EPOCH FROM ds.start) * 1000 AS start, EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop, " +
+         "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas " +
+         "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
+         "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
+         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id";
    private static final String LIST_TEST_DATASETS =
-         "WITH schema_agg AS (" +
-            "SELECT dataset_id, jsonb_agg(uri) as schemas FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id " +
-            "WHERE testid = ?1 GROUP BY dataset_id" +
-         ") SELECT ds.id, ds.runid, ds.ordinal, ds.testid, test.name, ds.description, ds.start, ds.stop, ds.owner, ds.access, " +
-            "dv.value::::text as view, schema_agg.schemas::::text as schemas " +
-            "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
-            "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
-            "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id " +
-            "WHERE testid = ?1";
+         "WITH schema_agg AS (" + SCHEMAS_SELECT + " WHERE testid = ?1 GROUP BY dataset_id" +
+         ") " + DATASET_SUMMARY_SELECT + " WHERE testid = ?1";
+   private static final String LIST_SCHEMA_DATASETS =
+         "WITH ids AS (" +
+            "SELECT dataset_id AS id FROM dataset_schemas WHERE uri = ?1" +
+         "), schema_agg AS (" +
+            SCHEMAS_SELECT + " WHERE dataset_id IN (SELECT id FROM ids) GROUP BY dataset_id" +
+         ") " + DATASET_SUMMARY_SELECT + " WHERE ds.id IN (SELECT id FROM ids)";
    //@formatter:on
+   protected static final AliasToBeanResultTransformer DATASET_SUMMARY_TRANSFORMER = new AliasToBeanResultTransformer(DatasetSummary.class);
 
    @Inject
    EntityManager em;
@@ -108,6 +121,35 @@ public class DatasetServiceImpl implements DatasetService {
    public DatasetService.DatasetList listTestDatasets(int testId, Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder(LIST_TEST_DATASETS);
       // TODO: filtering by fingerprint
+      addOrderAndPaging(limit, page, sort, direction, sql);
+      Query query = em.createNativeQuery(sql.toString())
+            .setParameter(1, testId);
+      markAsSummaryList(query);
+      DatasetService.DatasetList list = new DatasetService.DatasetList();
+      //noinspection unchecked
+      list.datasets = query.getResultList();
+      list.total = DataSet.count("testid = ?1", testId);
+      return list;
+   }
+
+   private void markAsSummaryList(Query query) {
+      query.unwrap(NativeQuery.class)
+            .addScalar("id", IntegerType.INSTANCE)
+            .addScalar("runId", IntegerType.INSTANCE)
+            .addScalar("ordinal", IntegerType.INSTANCE)
+            .addScalar("testId", IntegerType.INSTANCE)
+            .addScalar("testname", TextType.INSTANCE)
+            .addScalar("description", TextType.INSTANCE)
+            .addScalar("start", LongType.INSTANCE)
+            .addScalar("stop", LongType.INSTANCE)
+            .addScalar("owner", TextType.INSTANCE)
+            .addScalar("access", IntegerType.INSTANCE)
+            .addScalar("view", JsonNodeBinaryType.INSTANCE)
+            .addScalar("schemas", JsonNodeBinaryType.INSTANCE)
+            .setResultTransformer(DATASET_SUMMARY_TRANSFORMER);
+   }
+
+   private void addOrderAndPaging(Integer limit, Integer page, String sort, String direction, StringBuilder sql) {
       if (sort != null && sort.startsWith("view_data:")) {
          String[] parts = sort.split(":", 3);
          String vcid = parts[1];
@@ -122,29 +164,6 @@ public class DatasetServiceImpl implements DatasetService {
          Util.addOrderBy(sql, sort, direction);
       }
       Util.addLimitOffset(sql, limit, page);
-      @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(sql.toString())
-            .setParameter(1, testId).getResultList();
-      DatasetService.DatasetList list = new DatasetService.DatasetList();
-      for (Object[] row : rows) {
-         DatasetService.DatasetSummary summary = new DatasetService.DatasetSummary();
-         summary.id = (Integer) row[0];
-         summary.runId = (Integer) row[1];
-         summary.ordinal = (Integer) row[2];
-         summary.testId = (Integer) row[3];
-         summary.testname = (String) row[4];
-         summary.description = (String) row[5];
-         summary.start = ((Timestamp) row[6]).getTime();
-         summary.stop = ((Timestamp) row[7]).getTime();
-         summary.owner = (String) row[8];
-         summary.access = (Integer) row[9];
-         summary.view = (ObjectNode) Util.toJsonNode((String) row[10]);
-         summary.schemas = (ArrayNode) Util.toJsonNode((String) row[11]);
-         // TODO: all the 'views'
-         list.datasets.add(summary);
-      }
-
-      list.total = DataSet.count("testid = ?1", testId);
-      return list;
    }
 
    @WithRoles
@@ -181,8 +200,16 @@ public class DatasetServiceImpl implements DatasetService {
    @WithRoles
    @Override
    public DatasetService.DatasetList listDatasetsBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
-      // TODO
+      StringBuilder sql = new StringBuilder(LIST_SCHEMA_DATASETS);
+      // TODO: filtering by fingerprint
+      addOrderAndPaging(limit, page, sort, direction, sql);
+      Query query = em.createNativeQuery(sql.toString()).setParameter(1, uri);
+      markAsSummaryList(query);
       DatasetService.DatasetList list = new DatasetService.DatasetList();
+      //noinspection unchecked
+      list.datasets = query.getResultList();
+      list.total = ((Number) em.createNativeQuery("SELECT COUNT(dataset_id) FROM dataset_schemas WHERE uri = ?1")
+            .setParameter(1, uri).getSingleResult()).longValue();
       return list;
    }
 

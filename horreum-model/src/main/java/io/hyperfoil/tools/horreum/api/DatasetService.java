@@ -44,8 +44,8 @@ public interface DatasetService {
    DatasetList listDatasetsBySchema(@QueryParam("uri") String uri,
                                     @QueryParam("limit") Integer limit,
                                     @QueryParam("page") Integer page,
-                                    @QueryParam("sort") String sort,
-                                    @QueryParam("direction") String direction);
+                                    @QueryParam("sort") @DefaultValue("start") String sort,
+                                    @QueryParam("direction") @DefaultValue("Descending") String direction);
 
    class DatasetSummary {
       public int id;
@@ -64,6 +64,6 @@ public interface DatasetService {
 
    class DatasetList {
       public long total;
-      public List<DatasetSummary> datasets = new ArrayList<>();
+      public List<DatasetSummary> datasets;
    }
 }
