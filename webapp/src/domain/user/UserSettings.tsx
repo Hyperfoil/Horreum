@@ -18,7 +18,6 @@ import Profile from "./Profile"
 import ManagedTeams from "./ManagedTeams"
 
 const base = "/api/notifications"
-const fetchMethods = () => fetchApi(`${base}/methods`, null, "get")
 const fetchSettings = (name: string, isTeam: boolean) =>
     fetchApi(`${base}/settings?name=${name}&team=${isTeam}`, null, "get")
 const updateSettings = (name: string, isTeam: boolean, settings: NotificationConfig[]) =>
@@ -52,14 +51,10 @@ export function UserSettings() {
     useEffect(() => {
         setDefaultTeam(createTeam(prevDefaultTeam))
     }, [prevDefaultTeam])
-    const [methods, setMethods] = useState<string[]>([])
     const [personal, setPersonal] = useState<NotificationConfig[]>()
     const [selectedTeam, setSelectedTeam] = useState<string>()
     const [team, setTeam] = useState<NotificationConfig[]>()
     const [modified, setModified] = useState(false)
-    useEffect(() => {
-        fetchMethods().then(response => setMethods(response))
-    }, [])
     const loadPersonal = () => {
         if (profile?.username) {
             fetchSettings(profile.username, false).then(
@@ -133,7 +128,6 @@ export function UserSettings() {
                         <NotificationSettingsList
                             title="Personal notifications"
                             data={personal}
-                            methods={methods}
                             onUpdate={list => {
                                 setPersonal(list)
                                 setModified(true)
@@ -180,7 +174,6 @@ export function UserSettings() {
                             <NotificationSettingsList
                                 title="Team notifications"
                                 data={team}
-                                methods={methods}
                                 onUpdate={list => {
                                     setTeam(list)
                                     setModified(true)

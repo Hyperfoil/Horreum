@@ -70,7 +70,7 @@ public class NotificationServiceImpl implements NotificationService {
 
    @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
-   public void onMissingValues(Change.Event event) {
+   public void onNewChange(Change.Event event) {
       if (!event.notify) {
          log.debug("Notification skipped");
          return;
@@ -184,6 +184,22 @@ public class NotificationServiceImpl implements NotificationService {
          s.name = name;
          s.isTeam = team;
          em.merge(s);
+      }
+   }
+
+   @RolesAllowed(Roles.ADMIN)
+   @Override
+   public void testNotifications(String method, String data) {
+      if (method == null) {
+         for (var plugin : plugins.values()) {
+            plugin.test(data);
+         }
+      } else {
+         var plugin = plugins.get(method);
+         if (plugin == null) {
+            throw ServiceException.badRequest("Method " + method + " is not available");
+         }
+         plugin.test(data);
       }
    }
 

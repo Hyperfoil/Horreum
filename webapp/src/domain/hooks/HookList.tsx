@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
-import { Button, Card, CardHeader, CardBody, Toolbar, ToolbarContent, ToolbarItem, Alert } from "@patternfly/react-core"
+import { Banner, Button, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 import { OutlinedTimesCircleIcon, PlusIcon } from "@patternfly/react-icons"
 
 import { allHooks, addHook, removeHook } from "./actions"
@@ -70,34 +70,28 @@ export default function HookList() {
     }, [dispatch, isAdmin])
     return (
         <>
-            <Alert
-                variant="info"
-                title="These Webhooks are global webhooks.  For individual test webhooks, please configure in the Test definition"
+            <Banner variant="info">
+                These Webhooks are global webhooks. For individual test webhooks, please configure in the Test
+                definition.
+            </Banner>
+            <Toolbar
+                className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
+                style={{ justifyContent: "space-between" }}
+            >
+                <ToolbarContent>
+                    <ToolbarItem aria-label="info">
+                        <Button variant="primary" onClick={() => setOpen(true)}>
+                            <PlusIcon /> Add Hook
+                        </Button>
+                    </ToolbarItem>
+                </ToolbarContent>
+            </Toolbar>
+            <AddHookModal
+                isOpen={isOpen}
+                onClose={() => setOpen(false)}
+                onSubmit={h => dispatch(addHook(h)).catch(noop)}
             />
-            <Card>
-                <CardHeader>
-                    <Toolbar
-                        className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
-                        style={{ justifyContent: "space-between" }}
-                    >
-                        <ToolbarContent>
-                            <ToolbarItem aria-label="info">
-                                <Button variant="primary" onClick={() => setOpen(true)}>
-                                    <PlusIcon /> Add Hook
-                                </Button>
-                            </ToolbarItem>
-                        </ToolbarContent>
-                    </Toolbar>
-                    <AddHookModal
-                        isOpen={isOpen}
-                        onClose={() => setOpen(false)}
-                        onSubmit={h => dispatch(addHook(h)).catch(noop)}
-                    />
-                </CardHeader>
-                <CardBody>
-                    <Table columns={columns} data={list || []} />
-                </CardBody>
-            </Card>
+            <Table columns={columns} data={list || []} />
         </>
     )
 }

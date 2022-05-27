@@ -22,13 +22,13 @@ import Test from "./domain/tests/Test"
 import AllSchema from "./domain/schemas/AllSchema"
 import Schema from "./domain/schemas/Schema"
 
-import AllHooks from "./domain/hooks/AllHooks"
+import Admin from "./domain/admin/Admin"
 import Alerts from "./alerts"
 
 import Changes from "./domain/alerting/Changes"
 
 import Reports from "./domain/reports/Reports"
-import Banner, { BannerConfig } from "./Banner"
+import Banner from "./Banner"
 import TableReportPage from "./domain/reports/TableReportPage"
 import TableReportConfigPage from "./domain/reports/TableReportConfigPage"
 
@@ -69,17 +69,7 @@ function Main() {
                                             Tests
                                         </NavLink>
                                     </NavItem>
-                                    {isAdmin && (
-                                        <NavItem itemId={2}>
-                                            <NavLink
-                                                to="/hook"
-                                                style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
-                                            >
-                                                Global WebHooks
-                                            </NavLink>
-                                        </NavItem>
-                                    )}
-                                    <NavItem itemId={3}>
+                                    <NavItem itemId={1}>
                                         <NavLink
                                             to="/schema"
                                             style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
@@ -87,7 +77,7 @@ function Main() {
                                             Schema
                                         </NavLink>
                                     </NavItem>
-                                    <NavItem itemId={4}>
+                                    <NavItem itemId={2}>
                                         <NavLink
                                             to="/changes"
                                             style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
@@ -95,7 +85,7 @@ function Main() {
                                             Changes
                                         </NavLink>
                                     </NavItem>
-                                    <NavItem itemId={5}>
+                                    <NavItem itemId={3}>
                                         <NavLink
                                             to="/reports"
                                             style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
@@ -104,12 +94,12 @@ function Main() {
                                         </NavLink>
                                     </NavItem>
                                     {isAdmin && (
-                                        <NavItem itemId={6}>
+                                        <NavItem itemId={4}>
                                             <NavLink
-                                                to="/banner"
+                                                to="/admin"
                                                 style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                             >
-                                                Banner
+                                                Administration
                                             </NavLink>
                                         </NavItem>
                                     )}
@@ -136,8 +126,6 @@ function Main() {
                     <Route exact path="/run/dataset/list/:testId" component={TestDatasets} />
                     <Route exact path="/run/:id" component={Run} />
 
-                    <Route exact path="/hook" component={AllHooks} />
-
                     <Route exact path="/schema" component={AllSchema} />
                     <Route path="/schema/:schemaId" component={Schema} />
 
@@ -147,7 +135,7 @@ function Main() {
                     <Route exact path="/reports/table/config/:configId" component={TableReportConfigPage} />
                     <Route exact path="/reports/table/:id" component={TableReportPage} />
 
-                    <Route exact path="/banner" component={BannerConfig} />
+                    <Route exact path="/admin" component={Admin} />
                     <Route exact path="/usersettings" component={UserSettings} />
                 </Switch>
             </Page>

@@ -2,17 +2,7 @@ import React, { useEffect, useState } from "react"
 
 import { useDispatch } from "react-redux"
 import { UseSortByColumnOptions } from "react-table"
-import {
-    Bullseye,
-    Button,
-    Card,
-    CardHeader,
-    CardBody,
-    Spinner,
-    Toolbar,
-    ToolbarContent,
-    ToolbarItem,
-} from "@patternfly/react-core"
+import { Bullseye, Button, Spinner, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 import { OutlinedTimesCircleIcon, PlusIcon } from "@patternfly/react-icons"
 
 import { fetchPrefixes, addPrefix, removePrefix } from "./api"
@@ -76,40 +66,36 @@ function PrefixList() {
     const [isOpen, setOpen] = useState(false)
 
     return (
-        <Card>
-            <CardHeader>
-                <AddPrefixModal
-                    isOpen={isOpen}
-                    onClose={() => setOpen(false)}
-                    onSubmit={prefix =>
-                        addPrefix(prefix).then(
-                            p => setPrefixes([...(prefixes || []), p]),
-                            e => dispatch(alertAction("ADD_HOOK_PREFIX", "Failed to add hook prefix.", e))
-                        )
-                    }
-                />
-                <Toolbar
-                    className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
-                    style={{ justifyContent: "space-between" }}
-                >
-                    <ToolbarContent>
-                        <ToolbarItem aria-label="info">
-                            <Button onClick={() => setOpen(true)}>
-                                <PlusIcon /> Add Prefix
-                            </Button>
-                        </ToolbarItem>
-                    </ToolbarContent>
-                </Toolbar>
-            </CardHeader>
-            <CardBody>
-                {!prefixes && (
-                    <Bullseye>
-                        <Spinner size="xl" />
-                    </Bullseye>
-                )}
-                {prefixes && <Table columns={columns} data={prefixes} />}
-            </CardBody>
-        </Card>
+        <>
+            <AddPrefixModal
+                isOpen={isOpen}
+                onClose={() => setOpen(false)}
+                onSubmit={prefix =>
+                    addPrefix(prefix).then(
+                        p => setPrefixes([...(prefixes || []), p]),
+                        e => dispatch(alertAction("ADD_HOOK_PREFIX", "Failed to add hook prefix.", e))
+                    )
+                }
+            />
+            <Toolbar
+                className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
+                style={{ justifyContent: "space-between" }}
+            >
+                <ToolbarContent>
+                    <ToolbarItem aria-label="info">
+                        <Button onClick={() => setOpen(true)}>
+                            <PlusIcon /> Add Prefix
+                        </Button>
+                    </ToolbarItem>
+                </ToolbarContent>
+            </Toolbar>
+            {!prefixes && (
+                <Bullseye>
+                    <Spinner size="xl" />
+                </Bullseye>
+            )}
+            {prefixes && <Table columns={columns} data={prefixes} />}
+        </>
     )
 }
 

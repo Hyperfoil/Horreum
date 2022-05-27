@@ -28,4 +28,8 @@ public interface NotificationService {
    @POST
    @Path("/settings")
    void updateSettings(@QueryParam("name") String name, @QueryParam("team") boolean team, NotificationSettings[] settings);
+
+   @POST
+   @Path("test")
+   void testNotifications(@QueryParam("method") String method, @QueryParam("data") String data);
 }

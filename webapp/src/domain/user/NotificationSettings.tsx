@@ -1,5 +1,3 @@
-import { useState } from "react"
-
 import {
     Bullseye,
     Button,
@@ -11,12 +9,11 @@ import {
     DataListAction,
     Form,
     FormGroup,
-    Select,
-    SelectOption,
     Spinner,
     TextInput,
     Title,
 } from "@patternfly/react-core"
+import NotificationMethodSelect from "../../components/NotificationMethodSelect"
 
 const EMPTY = { id: -1, method: "", data: "", disabled: false }
 
@@ -29,31 +26,21 @@ export type NotificationConfig = {
 
 type NotificationSettingsProps = {
     settings: NotificationConfig
-    methods: string[]
     onChange(): void
 }
 
-const NotificationSettings = ({ settings, methods, onChange }: NotificationSettingsProps) => {
-    const [methodOpen, setMethodOpen] = useState(false)
+const NotificationSettings = ({ settings, onChange }: NotificationSettingsProps) => {
     return (
         <Form isHorizontal={true} style={{ marginTop: "20px", width: "100%" }}>
             <FormGroup label="Method" fieldId="method">
-                <Select
+                <NotificationMethodSelect
                     isDisabled={settings.disabled}
-                    isOpen={methodOpen}
-                    onToggle={open => setMethodOpen(open)}
-                    selections={settings.method}
-                    onSelect={(event, selection) => {
-                        settings.method = selection.toString()
-                        setMethodOpen(false)
+                    method={settings.method}
+                    onChange={method => {
+                        settings.method = method
                         onChange()
                     }}
-                    placeholderText="Please select..."
-                >
-                    {methods.map((m, i) => (
-                        <SelectOption key={i} value={m} />
-                    ))}
-                </Select>
+                />
             </FormGroup>
             <FormGroup label="Data" fieldId="data" helperText="e.g. email address, IRC channel...">
                 <TextInput
@@ -76,11 +63,10 @@ const NotificationSettings = ({ settings, methods, onChange }: NotificationSetti
 type NotificationSettingsListProps = {
     title: string
     data?: NotificationConfig[]
-    methods: string[]
     onUpdate(data: NotificationConfig[]): void
 }
 
-export function NotificationSettingsList({ title, data, methods, onUpdate }: NotificationSettingsListProps) {
+export function NotificationSettingsList({ title, data, onUpdate }: NotificationSettingsListProps) {
     if (data) {
         return (
             <>
@@ -103,11 +89,7 @@ export function NotificationSettingsList({ title, data, methods, onUpdate }: Not
                                 <DataListItemCells
                                     dataListCells={[
                                         <DataListCell key="content">
-                                            <NotificationSettings
-                                                settings={s}
-                                                methods={methods}
-                                                onChange={() => onUpdate([...data])}
-                                            />
+                                            <NotificationSettings settings={s} onChange={() => onUpdate([...data])} />
                                         </DataListCell>,
                                     ]}
                                 />

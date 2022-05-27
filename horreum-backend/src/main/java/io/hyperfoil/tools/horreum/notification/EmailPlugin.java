@@ -11,6 +11,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.svc.MissingValuesEvent;
+import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 import io.quarkus.qute.Location;
@@ -47,6 +48,14 @@ public class EmailPlugin implements NotificationPlugin {
    @Override
    public Notification create(String username, String data) {
       return new EmailNotification(username, data);
+   }
+
+   @Override
+   public void test(String data) {
+      if (data == null || data.isBlank() || !data.contains("@")) {
+         throw ServiceException.badRequest("Mail notifications require an email as a data parameter: '" + data + "' is not a valid email.");
+      }
+      mailer.send(Mail.withText(data, "Test message", "This is a test message from Horreum. Please ignore."));
    }
 
    public class EmailNotification extends Notification {
