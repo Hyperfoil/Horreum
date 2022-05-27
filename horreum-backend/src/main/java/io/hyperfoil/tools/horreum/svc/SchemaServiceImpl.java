@@ -151,10 +151,10 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
+   @SuppressWarnings({ "deprecation", "unchecked" })
    @WithRoles
    @Override
    public List<SchemaDescriptor> descriptors() {
-      //noinspection unchecked
       return em.createNativeQuery("SELECT id, name, uri FROM schema").unwrap(org.hibernate.query.Query.class)
             .setResultTransformer(DESCRIPTOR_TRANSFORMER).getResultList();
    }
@@ -393,6 +393,17 @@ public class SchemaServiceImpl implements SchemaService {
       if (!identity.hasRole(testerRole)) {
          throw ServiceException.forbidden("You are not an owner of transfomer " + transformerId + "(" + t.owner + "); missing role " + testerRole + ", available roles: " + identity.getRoles());
       }
+      @SuppressWarnings("unchecked") List<Object[]> testsUsingTransformer =
+            em.createNativeQuery("SELECT test.id, test.name FROM test_transformers JOIN test ON test_id = test.id WHERE transformer_id = ?1")
+            .setParameter(1, transformerId).getResultList();
+      if (!testsUsingTransformer.isEmpty()) {
+         throw ServiceException.badRequest("This transformer is still referenced in some tests: " +
+         testsUsingTransformer.stream().map(row -> {
+            int id = (int) row[0];
+            String name = (String) row[1];
+            return "<a href=\"/test/" + id + "\">" + name + "</a>";
+         }).collect(Collectors.joining(", ")) + "; please remove them before deleting it.");
+      }
       t.delete();
    }
 
@@ -420,6 +431,7 @@ public class SchemaServiceImpl implements SchemaService {
       if (label.id == null || label.id < 0) {
          label.id = null;
          label.schema = em.getReference(Schema.class, schemaId);
+         checkSameName(label);
          label.persistAndFlush();
       } else {
          Label existing = Label.findById(label.id);
@@ -429,6 +441,9 @@ public class SchemaServiceImpl implements SchemaService {
          }
          if (!identity.hasRole(existing.owner)) {
             throw ServiceException.forbidden("Cannot transfer ownership: this user is not a member of team " + existing.owner);
+         }
+         if (!existing.name.equals(label.name)) {
+            checkSameName(label);
          }
          existing.name = label.name;
          existing.extractors.clear();
@@ -441,6 +456,13 @@ public class SchemaServiceImpl implements SchemaService {
          existing.persistAndFlush();
       }
       return label.id;
+   }
+
+   private void checkSameName(Label label) {
+      Label sameName = Label.find("schema = ?1 AND name = ?2", label.schema, label.name).firstResult();
+      if (sameName != null) {
+         throw ServiceException.badRequest("There is an existing label with the same name (" + label.name + ") in this schema; please choose different name.");
+      }
    }
 
    @WithRoles
