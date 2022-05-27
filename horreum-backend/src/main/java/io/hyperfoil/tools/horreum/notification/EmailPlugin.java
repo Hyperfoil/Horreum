@@ -76,6 +76,8 @@ public class EmailPlugin implements NotificationPlugin {
                .data("group", event.change.variable.group)
                .data("runId", event.dataset.runId)
                .data("datasetOrdinal", event.dataset.ordinal)
+               // arithmetic is not implemented in Qute: https://github.com/quarkusio/quarkus/issues/25824
+               .data("datasetOrdinalPlusOne", event.dataset.ordinal + 1)
                .render();
          mailer.send(Mail.withHtml(data, subject, content));
       }
