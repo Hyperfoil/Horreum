@@ -218,7 +218,9 @@ public class DatasetServiceImpl implements DatasetService {
    @Override
    public DataSet getDataSet(Integer datasetId) {
       DataSet dataset = DataSet.findById(datasetId);
-      Hibernate.initialize(dataset.data);
+      if (dataset != null) {
+         Hibernate.initialize(dataset.data);
+      }
       return dataset;
    }
 
