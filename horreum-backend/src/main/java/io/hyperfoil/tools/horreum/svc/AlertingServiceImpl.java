@@ -454,7 +454,7 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
-      String msg = formatAndLog(testId, datasetId, level, format, args);
+      String msg = args.length == 0 ? format : String.format(format, args);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "variables", msg).persist();
    }
@@ -464,21 +464,15 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void logMissingDataMessage(int testId, int datasetId, int level, String format, Object... args) {
-      String msg = formatAndLog(testId, datasetId, level, format, args);
+      String msg = args.length == 0 ? format : String.format(format, args);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "missingdata", msg).persist();
    }
 
    private void logChangeDetectionMessage(int testId, int datasetId, int level, String format, Object... args) {
-      String msg = formatAndLog(testId, datasetId, level, format, args);
+      String msg = args.length == 0 ? format : String.format(format, args);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "changes", msg).persist();
-   }
-
-   private String formatAndLog(int testId, int datasetId, int level, String format, Object[] args) {
-      String msg = args.length == 0 ? format : String.format(format, args);
-      log.log(PersistentLog.logLevel(level), "Test " + testId + ", dataset " + datasetId + ": " + msg);
-      return msg;
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)

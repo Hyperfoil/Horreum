@@ -639,7 +639,6 @@ public class ReportServiceImpl implements ReportService {
    private void log(TableReport report, int level, String msg, Object... args) {
       String message = args.length == 0 ? msg : String.format(msg, args);
       report.logs.add(new ReportLog(report, level, message));
-      log.log(PersistentLog.logLevel(level), msg);
    }
 
    private String buildCode(String function, String param) {

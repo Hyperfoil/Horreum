@@ -285,9 +285,6 @@ public class DatasetServiceImpl implements DatasetService {
 
    private void logMessage(int datasetId, int level, String message, Object... params) {
       String msg = String.format(message, params);
-      if (level == PersistentLog.ERROR) {
-         log.errorf("Calculating labels for DS %d: %s", datasetId, msg);
-      }
       int testId = (int) em.createNativeQuery("SELECT testid FROM dataset WHERE id = ?1").setParameter(1, datasetId).getSingleResult();
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId), level, "labels", msg).persist();
    }
