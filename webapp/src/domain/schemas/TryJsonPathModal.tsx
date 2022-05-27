@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useDispatch } from "react-redux"
 
-import { Bullseye, Button, Flex, FlexItem, Modal, Pagination, Spinner, TextInput } from "@patternfly/react-core"
+import { Bullseye, Button, Flex, FlexItem, Modal, Pagination, Radio, Spinner, TextInput } from "@patternfly/react-core"
 import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 import { NavLink } from "react-router-dom"
 
@@ -17,7 +17,8 @@ type TryJsonPathModalProps = {
     uri: string
     target: JsonPathTarget
     jsonpath?: string
-    onChange(jsonpath: string): void
+    array: boolean
+    onChange(jsonpath: string, array: boolean): void
     onClose(): void
 }
 
@@ -67,9 +68,9 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
         }
         let response: Promise<QueryResult>
         if (props.target === "run") {
-            response = query(id, props.jsonpath, false, props.uri)
+            response = query(id, props.jsonpath, props.array, props.uri)
         } else {
-            response = queryDataset(id, props.jsonpath, false, props.uri)
+            response = queryDataset(id, props.jsonpath, props.array, props.uri)
         }
         return response.then(
             result => {
@@ -91,6 +92,12 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
             }
         )
     }
+    const updateQuery = (jsonpath: string | undefined, array: boolean) => {
+        setValid(true)
+        setResult(undefined)
+        setTarget(undefined)
+        props.onChange(jsonpath || "", array)
+    }
     return (
         <Modal
             variant="large"
@@ -105,7 +112,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                 props.onClose()
             }}
         >
-            <Flex>
+            <Flex alignItems={{ default: "alignItemsCenter" }}>
                 <FlexItem>
                     <JsonPathDocsLink />
                 </FlexItem>
@@ -113,12 +120,24 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     <TextInput
                         id="jsonpath"
                         value={props.jsonpath || ""}
-                        onChange={value => {
-                            setValid(true)
-                            setResult(undefined)
-                            props.onChange(value)
-                        }}
+                        onChange={value => updateQuery(value, props.array)}
                         validated={valid ? "default" : "error"}
+                    />
+                </FlexItem>
+                <FlexItem>
+                    <Radio
+                        id="first"
+                        label="First match"
+                        name="variant"
+                        isChecked={!props.array}
+                        onChange={checked => updateQuery(props.jsonpath, !checked)}
+                    />
+                    <Radio
+                        id="all"
+                        label="All matches"
+                        name="variant"
+                        isChecked={props.array}
+                        onChange={checked => updateQuery(props.jsonpath, checked)}
                     />
                 </FlexItem>
             </Flex>

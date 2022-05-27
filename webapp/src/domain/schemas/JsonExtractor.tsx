@@ -245,8 +245,10 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                 uri={props.schemaUri}
                 target={props.jsonpathTarget}
                 jsonpath={modalOpen ? extractor.jsonpath : undefined}
-                onChange={jsonpath => {
+                array={extractor.array}
+                onChange={(jsonpath, array) => {
                     extractor.jsonpath = jsonpath
+                    extractor.array = array
                     props.onUpdate()
                 }}
                 onClose={() => setModalOpen(false)}
