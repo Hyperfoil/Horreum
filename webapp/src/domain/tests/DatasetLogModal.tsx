@@ -16,21 +16,31 @@ type DatasetLog = {
     message: string
 }
 
-function fetchLog(testId: number, source: string, page?: number, limit?: number) {
+function fetchLog(testId: number, datasetId: number | undefined, source: string, page?: number, limit?: number) {
     return fetchApi(
-        `/api/log/dataset/${source}/${testId}?page=${page ? page : 0}&limit=${limit ? limit : 25}`,
+        `/api/log/dataset/${source}/${testId}?page=${page ? page : 0}&limit=${limit ? limit : 25}${
+            datasetId !== undefined ? "&datasetId=" + datasetId : ""
+        }`,
         null,
         "get"
     )
 }
 
-function getLogCount(testId: number, source: string) {
-    return fetchApi(`/api/log/dataset/${source}/${testId}/count`, null, "get")
+function getLogCount(testId: number, datasetId: number | undefined, source: string) {
+    return fetchApi(
+        `/api/log/dataset/${source}/${testId}/count${datasetId !== undefined ? "?datasetId=" + datasetId : ""}`,
+        null,
+        "get"
+    )
 }
 
-function deleteLogs(testId: number, source: string, fromMs?: number, toMs?: number) {
+function deleteLogs(testId: number, datasetId: number | undefined, source: string, fromMs?: number, toMs?: number) {
     return fetchApi(
-        `/api/log/dataset/${source}/${testId}?${[fromMs ? "from=" + fromMs : undefined, toMs ? "to=" + toMs : undefined]
+        `/api/log/dataset/${source}/${testId}?${[
+            fromMs ? "from=" + fromMs : undefined,
+            toMs ? "to=" + toMs : undefined,
+            datasetId ? "datasetId=" + datasetId : undefined,
+        ]
             .filter(p => p !== undefined)
             .join("&")}`,
         null,
@@ -41,13 +51,17 @@ function deleteLogs(testId: number, source: string, fromMs?: number, toMs?: numb
 type DatasetLogModalProps = {
     testId: number
     source: string
+    datasetId?: number
 } & CommonLogModalProps
 
 export default function DatasetLogModal(props: DatasetLogModalProps) {
-    const fetchCount = useCallback(() => getLogCount(props.testId, props.source), [props.testId, props.source])
+    const fetchCount = useCallback(
+        () => getLogCount(props.testId, props.datasetId, props.source),
+        [props.testId, props.source]
+    )
     const fetchRows = useCallback(
         (page, limit) =>
-            fetchLog(props.testId, props.source, page, limit).then(response =>
+            fetchLog(props.testId, props.datasetId, props.source, page, limit).then(response =>
                 (response as DatasetLog[]).map(log => ({
                     cells: [
                         { title: <LogLevelIcon level={log.level} /> },
@@ -66,7 +80,7 @@ export default function DatasetLogModal(props: DatasetLogModalProps) {
         [props.testId, props.source]
     )
     const deleteFromTo = useCallback(
-        (from, to) => deleteLogs(props.testId, props.source, from, to),
+        (from, to) => deleteLogs(props.testId, props.datasetId, props.source, from, to),
         [props.testId, props.source]
     )
     return (

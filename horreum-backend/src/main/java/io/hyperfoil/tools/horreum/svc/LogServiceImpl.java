@@ -15,6 +15,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLog;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.scheduler.Scheduled;
@@ -33,29 +34,43 @@ public class LogServiceImpl implements LogService {
    @WithRoles
    @RolesAllowed(Roles.TESTER)
    @Override
-   public List<DatasetLog> getDatasetLog(String source, int testId, Integer page, Integer limit) {
+   public List<DatasetLog> getDatasetLog(String source, int testId, Integer datasetId, Integer page, Integer limit) {
       page = withDefault(page, 0);
       limit = withDefault(limit, 25);
-      return DatasetLog.find("testId = ?1 AND source = ?2", Sort.descending("timestamp"), testId, source)
-            .page(Page.of(page, limit)).list();
+      PanacheQuery<DatasetLog> query;
+      if (datasetId == null) {
+         query = DatasetLog.find("testId = ?1 AND source = ?2", Sort.descending("timestamp"), testId, source);
+      } else {
+         query = DatasetLog.find("dataset_id = ?1 AND source = ?2", Sort.descending("timestamp"), datasetId, source);
+      }
+      return query.page(Page.of(page, limit)).list();
    }
 
    @Override
    @WithRoles
    @RolesAllowed(Roles.TESTER)
-   public long getDatasetLogCount(String source, int testId) {
-      return DatasetLog.count("testId = ?1 AND source = ?2", testId, source);
+   public long getDatasetLogCount(String source, int testId, Integer datasetId) {
+      if (datasetId == null) {
+         return DatasetLog.count("testId = ?1 AND source = ?2", testId, source);
+      } else {
+         return DatasetLog.count("dataset_id = ?1 AND source = ?2", datasetId, source);
+      }
    }
 
    @Override
    @RolesAllowed(Roles.TESTER)
    @WithRoles
    @Transactional
-   public void deleteDatasetLogs(String source, int testId, Long from, Long to) {
+   public void deleteDatasetLogs(String source, int testId, Integer datasetId, Long from, Long to) {
       // Not using Instant.MIN/Instant.MAX as Hibernate converts to LocalDateTime internally
       Instant fromTs = from == null ? Instant.ofEpochMilli(0) : Instant.ofEpochMilli(from);
       Instant toTs = to == null ? Instant.ofEpochSecond(4 * (long) Integer.MAX_VALUE) : Instant.ofEpochMilli(to);
-      long deleted = DatasetLog.delete("testId = ?1 AND source = ?2 AND timestamp >= ?3 AND timestamp < ?4", testId, source, fromTs, toTs);
+      long deleted;
+      if (datasetId == null) {
+         deleted = DatasetLog.delete("testId = ?1 AND source = ?2 AND timestamp >= ?3 AND timestamp < ?4", testId, source, fromTs, toTs);
+      } else {
+         deleted = DatasetLog.delete("testId = ?1 AND source = ?2 AND timestamp >= ?3 AND timestamp < ?4 AND dataset_id = ?5", testId, source, fromTs, toTs, datasetId);
+      }
       log.debugf("Deleted %d logs for test %s", deleted, testId);
    }
 

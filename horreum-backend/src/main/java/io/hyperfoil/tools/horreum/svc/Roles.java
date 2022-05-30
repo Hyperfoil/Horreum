@@ -73,4 +73,8 @@ public final class Roles {
       }
       return null;
    }
+
+   static boolean hasRoleWithSuffix(SecurityIdentity identity, String owner, String suffix) {
+      return identity.hasRole(owner.substring(0, owner.length() - 5) + suffix);
+   }
 }

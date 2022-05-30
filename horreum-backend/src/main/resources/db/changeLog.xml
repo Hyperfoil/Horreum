@@ -3464,4 +3464,10 @@
                     WHERE trc.id = report_id), 'tester'));
         </sql>
     </changeSet>
+
+    <changeSet id="83" author="rvansa">
+        <sql>
+            CREATE TYPE extractor AS (name text, jsonpath jsonpath, isarray boolean);
+        </sql>
+    </changeSet>
 </databaseChangeLog>

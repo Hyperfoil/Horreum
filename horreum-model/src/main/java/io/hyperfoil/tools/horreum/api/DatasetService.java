@@ -6,16 +6,19 @@ import java.util.List;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
+import io.hyperfoil.tools.horreum.entity.json.Label;
 
 @Path("/api/dataset")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -47,6 +50,14 @@ public interface DatasetService {
                                     @QueryParam("sort") @DefaultValue("start") String sort,
                                     @QueryParam("direction") @DefaultValue("Descending") String direction);
 
+   @GET
+   @Path("{datasetId}/labelValues")
+   List<LabelValue> labelValues(@PathParam("datasetId") int datasetId);
+
+   @POST
+   @Path("{datasetId}/previewLabel")
+   LabelPreview previewLabel(@PathParam("datasetId") int datasetId, Label label);
+
    class DatasetSummary {
       public int id;
       public int runId;
@@ -65,5 +76,17 @@ public interface DatasetService {
    class DatasetList {
       public long total;
       public List<DatasetSummary> datasets;
+   }
+
+   class LabelValue {
+      public int id;
+      public String name;
+      public SchemaService.SchemaDescriptor schema;
+      public JsonNode value;
+   }
+
+   class LabelPreview {
+      public JsonNode value;
+      public String output;
    }
 }

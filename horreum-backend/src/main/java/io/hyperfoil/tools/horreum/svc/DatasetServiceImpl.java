@@ -1,8 +1,10 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import java.sql.Timestamp;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
@@ -20,16 +22,16 @@ import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.LongType;
 import org.hibernate.type.TextType;
-import org.hibernate.type.TimestampType;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.DatasetService;
 import io.hyperfoil.tools.horreum.api.QueryResult;
+import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
@@ -38,6 +40,7 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.runtime.Startup;
+import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.eventbus.EventBus;
 
@@ -71,6 +74,21 @@ public class DatasetServiceImpl implements DatasetService {
             "JOIN lvalues ON lvalues.label_id = label.id " +
             "JOIN used_labels ul ON label.id = ul.label_id " +
             "GROUP BY lvalues.label_id, ul.name, function, ul.count";
+   protected static final String LABEL_PREVIEW = "WITH le AS (" +
+            "SELECT * FROM jsonb_populate_recordset(NULL::::extractor, (?1)::::jsonb)" +
+         "), lvalues AS (" +
+            "SELECT le.name, (CASE WHEN le.isarray THEN " +
+               "jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath) " +
+            "ELSE " +
+               "jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath) " +
+            "END) AS value " +
+            "FROM le, dataset JOIN dataset_schemas ds ON dataset.id = ds.dataset_id " +
+            "WHERE dataset.id = ?2 AND ds.schema_id = ?3" +
+         ") SELECT (CASE " +
+            "WHEN jsonb_array_length((?1)::::jsonb) > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value) " +
+            "WHEN jsonb_array_length((?1)::::jsonb) = 1 THEN jsonb_agg(lvalues.value) -> 0 " +
+            "ELSE '{}'::::jsonb END" +
+         ") AS value FROM lvalues";
 
    private static final String SCHEMAS_SELECT = "SELECT dataset_id, jsonb_agg(uri) as schemas FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id";
    private static final String DATASET_SUMMARY_SELECT = "SELECT ds.id, ds.runid AS runId, ds.ordinal, " +
@@ -104,6 +122,9 @@ public class DatasetServiceImpl implements DatasetService {
    @Inject
    EventBus eventBus;
 
+   @Inject
+   SecurityIdentity identity;
+
    // This is a nasty hack that will serialize all run -> dataset transformations and label calculations
    // The problem is that PostgreSQL's SSI will for some (unknown) reason rollback some transactions,
    // probably due to false sharing of locks. For some reason even using advisory locks in DB does not
@@ -133,6 +154,7 @@ public class DatasetServiceImpl implements DatasetService {
    }
 
    private void markAsSummaryList(Query query) {
+      //noinspection deprecation
       query.unwrap(NativeQuery.class)
             .addScalar("id", IntegerType.INSTANCE)
             .addScalar("runId", IntegerType.INSTANCE)
@@ -211,6 +233,66 @@ public class DatasetServiceImpl implements DatasetService {
       list.total = ((Number) em.createNativeQuery("SELECT COUNT(dataset_id) FROM dataset_schemas WHERE uri = ?1")
             .setParameter(1, uri).getSingleResult()).longValue();
       return list;
+   }
+
+   @Override
+   public List<LabelValue> labelValues(int datasetId) {
+      //noinspection unchecked
+      Stream<Object[]> stream = em.createNativeQuery("SELECT label_id, label.name AS label_name, schema.id AS schema_id, schema.name AS schema_name, schema.uri, value FROM label_values " +
+            "JOIN label ON label.id = label_id JOIN schema ON label.schema_id = schema.id WHERE dataset_id = ?1")
+            .setParameter(1, datasetId).unwrap(NativeQuery.class)
+            .addScalar("label_id", IntegerType.INSTANCE)
+            .addScalar("label_name", TextType.INSTANCE)
+            .addScalar("schema_id", IntegerType.INSTANCE)
+            .addScalar("schema_name", TextType.INSTANCE)
+            .addScalar("uri", TextType.INSTANCE)
+            .addScalar("value", JsonNodeBinaryType.INSTANCE)
+            .getResultStream();
+      return stream.map(row -> {
+               LabelValue value = new LabelValue();
+               value.id = (int) row[0];
+               value.name = (String) row[1];
+               value.schema = new SchemaService.SchemaDescriptor((int) row[2], (String) row[3], (String) row[4]);
+               value.value = (JsonNode) row[5];
+               return value;
+            }).collect(Collectors.toList());
+   }
+
+   @Override
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   public LabelPreview previewLabel(int datasetId, Label label) {
+      // This is executed with elevated permissions, but with the same as a normal label calculation would use
+      // Therefore we need to explicitly check dataset ownership
+      DataSet dataset = DataSet.findById(datasetId);
+      if (dataset == null || !Roles.hasRoleWithSuffix(identity, dataset.owner, "-tester")) {
+         throw ServiceException.badRequest("Dataset not found or insufficient privileges.");
+      }
+
+      String extractors;
+      try {
+         extractors = Util.OBJECT_MAPPER.writeValueAsString(label.extractors);
+      } catch (JsonProcessingException e) {
+         log.error("Cannot serialize label extractors", e);
+         throw ServiceException.badRequest("Cannot serialize label extractors");
+      }
+      JsonNode extracted = (JsonNode) em.createNativeQuery(LABEL_PREVIEW).unwrap(NativeQuery.class)
+            .setParameter(1, extractors)
+            .setParameter(2, datasetId)
+            .setParameter(3, label.schema.id)
+            .addScalar("value", JsonNodeBinaryType.INSTANCE).getSingleResult();
+
+      LabelPreview preview = new LabelPreview();
+      if (label.function == null || label.function.isBlank()) {
+         preview.value = extracted;
+      } else {
+         AtomicReference<String> errorRef = new AtomicReference<>();
+         AtomicReference<String> outputRef = new AtomicReference<>();
+         JsonNode result = Util.evaluateOnce(label.function, extracted, Util::convertToJson,
+               (code, exception) -> errorRef.set("Execution failed: " + exception.getMessage() + ":\n" + code), outputRef::set);
+         preview.value = errorRef.get() == null ? result : JsonNodeFactory.instance.textNode(errorRef.get());
+         preview.output = outputRef.get();
+      }
+      return preview;
    }
 
    @WithToken

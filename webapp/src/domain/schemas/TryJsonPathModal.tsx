@@ -61,7 +61,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                 }
             )
         }
-    }, [props.uri, props.jsonpath, dispatch, props.onClose])
+    }, [props.uri, props.jsonpath, pagination, dispatch, props.onClose])
     const executeQuery = (id: number) => {
         if (!props.jsonpath) {
             return ""

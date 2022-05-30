@@ -64,6 +64,11 @@ public class Label extends OwnedEntityBase {
       return schema.id;
    }
 
+   @JsonProperty("schemaId")
+   public void setSchema(int schemaId) {
+      schema = Schema.getEntityManager().getReference(Schema.class, schemaId);
+   }
+
    @Entity
    @Table(name = "label_values")
    public static class Value extends PanacheEntityBase implements Serializable {

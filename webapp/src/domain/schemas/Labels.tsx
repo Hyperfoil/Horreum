@@ -14,6 +14,7 @@ import OwnerAccess from "../../components/OwnerAccess"
 import FunctionFormItem from "../../components/FunctionFormItem"
 import JsonExtractor from "./JsonExtractor"
 import SplitForm from "../../components/SplitForm"
+import TestLabelModal from "./TestLabelModal"
 
 import { Label, listLabels, addOrUpdateLabel, deleteLabel } from "./api"
 
@@ -42,6 +43,7 @@ export default function Labels(props: LabelsProps) {
     const [resetCounter, setResetCounter] = useState(0)
     const [deleted, setDeleted] = useState<Label[]>([])
     const [findUsagesLabel, setFindUsagesLabel] = useState<string>()
+    const [testLabelModalOpen, setTestLabelModalOpen] = useState(false)
     const isTester = useTester()
     const isTesterForLabel = useTester(selected?.owner || "__no_owner__")
     const defaultTeam = useSelector(defaultTeamSelector)
@@ -209,6 +211,15 @@ export default function Labels(props: LabelsProps) {
                                     >
                                         Add extractor
                                     </Button>
+                                    <Button variant="secondary" onClick={() => setTestLabelModalOpen(true)}>
+                                        Test label calculation
+                                    </Button>
+                                    <TestLabelModal
+                                        uri={props.schemaUri}
+                                        label={selected}
+                                        isOpen={testLabelModalOpen}
+                                        onClose={() => setTestLabelModalOpen(false)}
+                                    />
                                 </div>
                             )}
                         </FormSection>

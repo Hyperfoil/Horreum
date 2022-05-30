@@ -1,6 +1,7 @@
 import { fetchApi } from "../../services/api"
 import { Access, accessName } from "../../auth"
 import { PaginationInfo, paginationParams } from "../../utils"
+import { Label, SchemaDescriptor } from "../schemas/api"
 
 const runApi = {
     // getRun: (runId: number, token?: string) => `/api/run/${runId}${token ? "?token=" + token : ""}`,
@@ -41,6 +42,8 @@ const datasetApi = {
         `/api/dataset/list/${testId}?${paginationParams(pagination)}`,
     listBySchema: (uri: string, pagination: PaginationInfo) =>
         `/api/dataset/bySchema?uri=${encodeURIComponent(uri)}&${paginationParams(pagination)}`,
+    labelValues: (datasetId: number) => `/api/dataset/${datasetId}/labelValues`,
+    previewLabel: (datasetId: number) => `/api/dataset/${datasetId}/previewLabel`,
 }
 
 export const get = (id: number, token?: string) => {
@@ -145,4 +148,24 @@ export interface DatasetList {
 
 export function listTestDatasets(testId: number, pagination: PaginationInfo): Promise<DatasetList> {
     return fetchApi(datasetApi.listByTest(testId, pagination), null, "get")
+}
+
+export interface LabelValue {
+    id: number
+    name: string
+    schema: SchemaDescriptor
+    value: any
+}
+
+export function fetchLabelValues(datasetId: number): Promise<LabelValue[]> {
+    return fetchApi(datasetApi.labelValues(datasetId), null, "get")
+}
+
+type LabelPreview = {
+    value: any
+    output: string
+}
+
+export function previewLabel(datasetId: number, label: Label): Promise<LabelPreview> {
+    return fetchApi(datasetApi.previewLabel(datasetId), label, "post")
 }

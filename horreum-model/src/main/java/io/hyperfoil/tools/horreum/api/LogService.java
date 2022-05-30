@@ -20,17 +20,19 @@ public interface LogService {
    @Path("dataset/{source}/{testId}")
    List<DatasetLog> getDatasetLog(@PathParam("source") String source,
                                   @PathParam("testId") int testId,
+                                  @QueryParam("datasetId") Integer datasetId,
                                   @QueryParam("page") Integer page,
                                   @QueryParam("limit") Integer limit);
 
    @GET
    @Path("dataset/{source}/{testId}/count")
-   long getDatasetLogCount(@PathParam("source") String source, @PathParam("testId") int testId);
+   long getDatasetLogCount(@PathParam("source") String source, @PathParam("testId") int testId, @QueryParam("datasetId") Integer datasetId);
 
    @DELETE
    @Path("dataset/{source}/{testId}")
    void deleteDatasetLogs(@PathParam("source") String source,
                           @PathParam("testId") int testId,
+                          @QueryParam("datasetId") Integer datasetId,
                           @QueryParam("from") Long from,
                           @QueryParam("to") Long to);
 

@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useState } from "react"
 import { useDispatch } from "react-redux"
-import { Bullseye, Form, FormGroup, Spinner } from "@patternfly/react-core"
+import { Button, Bullseye, Flex, FlexItem, Form, FormGroup, Spinner } from "@patternfly/react-core"
 
 import { dispatchError } from "../../alerts"
 import { interleave, noop } from "../../utils"
 import { toString } from "../../components/Editor"
 import Editor from "../../components/Editor/monaco/Editor"
 import SchemaLink from "../schemas/SchemaLink"
+import DatasetLogModal from "../tests/DatasetLogModal"
 
 import * as api from "./api"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInDataset } from "./NoSchema"
+import LabelValuesModal from "./LabelValuesModal"
 
 type DatasetDataProps = {
+    testId: number
     runId: number
     datasetId: number
 }
@@ -22,6 +25,8 @@ export default function DatasetData(props: DatasetDataProps) {
     const [originalData, setOriginalData] = useState<any>()
     const [editorData, setEditorData] = useState<string>()
     const [loading, setLoading] = useState(false)
+    const [labelValuesOpen, setLabelValuesOpen] = useState(false)
+    const [labelsLogOpen, setLabelsLogOpen] = useState(false)
     useEffect(() => {
         setLoading(true)
         api.getDataset(props.datasetId)
@@ -66,11 +71,37 @@ export default function DatasetData(props: DatasetDataProps) {
                     </div>
                 </FormGroup>
             </Form>
-            <JsonPathSearchToolbar
-                originalData={originalData}
-                onRemoteQuery={(query, array) => api.queryDataset(props.datasetId, query, array)}
-                onDataUpdate={setEditorData}
-            />
+            <Flex alignItems={{ default: "alignItemsCenter" }}>
+                <FlexItem>
+                    <JsonPathSearchToolbar
+                        originalData={originalData}
+                        onRemoteQuery={(query, array) => api.queryDataset(props.datasetId, query, array)}
+                        onDataUpdate={setEditorData}
+                    />
+                </FlexItem>
+                <FlexItem>
+                    <Button variant="primary" onClick={() => setLabelValuesOpen(true)}>
+                        Show label values
+                    </Button>
+                    <LabelValuesModal
+                        datasetId={props.datasetId}
+                        isOpen={labelValuesOpen}
+                        onClose={() => setLabelValuesOpen(false)}
+                    />
+                    <Button variant="secondary" onClick={() => setLabelsLogOpen(true)}>
+                        Labels log
+                    </Button>
+                    <DatasetLogModal
+                        testId={props.testId}
+                        datasetId={props.datasetId}
+                        source="labels"
+                        title="Labels calculation log"
+                        emptyMessage="There are no logs."
+                        isOpen={labelsLogOpen}
+                        onClose={() => setLabelsLogOpen(false)}
+                    />
+                </FlexItem>
+            </Flex>
             {loading ? (
                 <Bullseye>
                     <Spinner />
