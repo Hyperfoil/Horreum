@@ -24,7 +24,7 @@ public enum Access {
    }
 
    @JsonCreator
-   public Access create(String str) {
+   public static Access fromString(String str) {
       try {
          return VALUES[Integer.parseInt(str)];
       } catch (NumberFormatException e) {
