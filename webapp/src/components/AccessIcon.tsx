@@ -1,26 +1,24 @@
 import { Tooltip } from "@patternfly/react-core"
 import { LockedIcon } from "@patternfly/react-icons"
+import { Access } from "../api"
 
-export default function AccessIcon({ access }: { access: number | string }) {
+export default function AccessIcon({ access }: { access: Access }) {
     let color
     let text
     let explanation
     switch (access) {
-        case "PUBLIC":
         case 0: {
             color = "--pf-global--success-color--200"
             text = "Public"
             explanation = "Anyone can view this."
             break
         }
-        case "PROTECTED":
         case 1: {
             color = "--pf-global--warning-color--100"
             text = "Protected"
             explanation = "Only authenticated (logged in) users can view this."
             break
         }
-        case "PRIVATE":
         case 2: {
             color = "--pf-global--danger-color--100"
             text = "Private"

@@ -3,7 +3,7 @@ import { Bullseye, Button, Modal, Spinner } from "@patternfly/react-core"
 import { QuestionCircleIcon } from "@patternfly/react-icons"
 import { Table, TableBody } from "@patternfly/react-table"
 
-import { fetchApi } from "./services/api/index"
+import Api from "./api"
 import { formatDateTime } from "./utils"
 
 type VersionInfo = {
@@ -25,7 +25,7 @@ export default function About() {
     const [versionInfo, setVersionInfo] = useState<VersionInfo>()
     useEffect(() => {
         if (isOpen) {
-            fetchApi("/api/config/version").then(
+            Api.configServiceVersion().then(
                 response => setVersionInfo(response),
                 _ => setVersionInfo(VERSION_ERROR)
             )

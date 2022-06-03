@@ -7,7 +7,7 @@ import { TableComposable, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-tab
 
 import { formatDateTime } from "../../utils"
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal"
-import { deleteTableReport, TableReportSummary } from "./api"
+import Api, { TableReportSummary } from "../../api"
 
 type ListReportsModalProps = {
     isOpen: boolean
@@ -70,7 +70,7 @@ export default function ListReportsModal(props: ListReportsModalProps) {
                     if (!deleteId) {
                         return Promise.resolve()
                     }
-                    return deleteTableReport(deleteId).then(() => props.onReload())
+                    return Api.reportServiceDeleteTableReport(deleteId).then(() => props.onReload())
                 }}
             />
         </Modal>

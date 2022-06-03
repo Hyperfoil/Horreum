@@ -30,6 +30,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 @Entity(name="label")
 @RegisterForReflection
 public class Label extends OwnedEntityBase {
+   @JsonProperty(required = true)
    @Id
    @SequenceGenerator(
          name="labelSequence",
@@ -47,6 +48,7 @@ public class Label extends OwnedEntityBase {
    @JsonIgnore
    public Schema schema;
 
+   @NotNull
    @ElementCollection(fetch = FetchType.EAGER)
    @CollectionTable(name = "label_extractors")
    public Collection<Extractor> extractors;
@@ -59,7 +61,7 @@ public class Label extends OwnedEntityBase {
    @NotNull
    public boolean metrics = true;
 
-   @JsonProperty("schemaId")
+   @JsonProperty(value = "schemaId", required = true)
    public int getSchemaId() {
       return schema.id;
    }

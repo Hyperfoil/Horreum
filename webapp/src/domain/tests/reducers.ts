@@ -1,56 +1,21 @@
 import * as actionTypes from "./actionTypes"
 import { Map } from "immutable"
-import { Access } from "../../auth"
 import { ThunkDispatch } from "redux-thunk"
-import { Hook } from "../hooks/reducers"
-import { Run } from "../runs/reducers"
-import { Transformer } from "../schemas/api"
 import { AddAlertAction } from "../../alerts"
-
-export interface Token {
-    id: number
-    description: string
-    permissions: number
-}
+import { Access, Hook, Run, Test, TestToken, Transformer, View } from "../../api"
 
 export type RenderFunction = (value: any, row: any, token: string | undefined) => any
 
-export interface ViewComponent {
-    id: number
-    headerName: string
-    labels: string[]
-    render: string | RenderFunction | undefined
-    headerOrder: number
-}
-
-export interface View {
-    name: string
-    components: ViewComponent[]
-}
-
 export type CompareFunction = (runs: Run[]) => string
 
-export interface Test {
-    id: number
-    name: string
-    folder?: string
-    description: string
-    compareUrl: string | CompareFunction | undefined
-    fingerprintLabels: string[] | null
-    fingerprintFilter: string | null
-    owner: string
-    access: Access
-    tokens: Token[]
-    defaultView?: View
+export interface TestStorage extends Test {
     datasets?: number // dataset count in AllTests
     runs?: number // run count in AllTests
     watching?: string[]
-    notificationsEnabled: boolean
-    transformers: Transformer[]
 }
 
 export class TestsState {
-    byId?: Map<number, Test> = undefined
+    byId?: Map<number, TestStorage> = undefined
     loading = false
     allFolders: string[] = []
     // we need to store watches independently as the information
@@ -105,7 +70,7 @@ export interface UpdateHookAction {
 export interface UpdateTokensAction {
     type: typeof actionTypes.UPDATE_TOKENS
     testId: number
-    tokens: Token[]
+    tokens: TestToken[]
 }
 
 export interface RevokeTokenAction {
@@ -136,7 +101,7 @@ export interface UpdateFingerprintAction {
     type: typeof actionTypes.UPDATE_FINGERPRINT
     testId: number
     labels: string[]
-    filter: string | null
+    filter?: string
 }
 
 export interface UpdateRunsAndDatasetsAction {
@@ -173,7 +138,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
         case actionTypes.LOADED_SUMMARY:
             {
                 state.loading = false
-                let byId = Map<number, Test>()
+                let byId = Map<number, TestStorage>()
                 action.tests.forEach(test => {
                     byId = byId.set(test.id, test)
                 })
@@ -183,7 +148,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
         case actionTypes.LOADED_TEST:
             state.loading = false
             if (!state.byId) {
-                state.byId = Map<number, Test>()
+                state.byId = Map<number, TestStorage>()
             }
             state.byId = (state.byId as Map<number, Test>).set(action.test.id, action.test)
             break
@@ -227,7 +192,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
                 if (test) {
                     state.byId = state.byId?.set(action.testId, {
                         ...test,
-                        tokens: test.tokens.filter(t => t.id !== action.tokenId),
+                        tokens: test.tokens?.filter(t => t.id !== action.tokenId),
                     })
                 }
             }

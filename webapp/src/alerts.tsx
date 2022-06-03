@@ -151,6 +151,7 @@ export function dispatchInfo(
 }
 
 export const defaultFormatError = (e: any) => {
+    console.log(e)
     if (!e) {
         return ""
     }

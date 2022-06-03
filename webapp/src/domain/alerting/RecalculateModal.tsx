@@ -6,7 +6,7 @@ import { Button, Checkbox, Form, FormGroup, Modal, Progress } from "@patternfly/
 import { Table, TableBody } from "@patternfly/react-table"
 import { NavLink } from "react-router-dom"
 
-import { recalculate, recalculateProgress } from "./api"
+import Api, { DatapointRecalculationStatus, DatasetInfo } from "../../api"
 import { alertAction } from "../../alerts"
 import TimeRangeSelect, { TimeRange } from "../../components/TimeRangeSelect"
 
@@ -23,18 +23,6 @@ type RecalculateModalProps = {
 
 function isEmpty(value: any) {
     return !Array.isArray(value) || value.length === 0
-}
-
-type RecalculationResult = {
-    totalDatasets?: number
-    errors?: number
-    datasetsWithoutValue?: DatasetInfo[]
-}
-
-type DatasetInfo = {
-    id: number
-    runId: number
-    ordinal: number
 }
 
 function datasetsToLinks(datasets: DatasetInfo[] | undefined | null) {
@@ -66,7 +54,7 @@ export default function RecalculateModal(props: RecalculateModalProps) {
     const [debug, setDebug] = useState(false)
     const [timeRange, setTimeRange] = useState<TimeRange>()
     const timer = useRef<number>()
-    const [result, setResult] = useState<RecalculationResult>()
+    const [result, setResult] = useState<DatapointRecalculationStatus>()
     const close = () => {
         setProgress(-1)
         if (timer.current) {
@@ -75,11 +63,11 @@ export default function RecalculateModal(props: RecalculateModalProps) {
         props.onClose()
     }
     const fetchProgress = () => {
-        recalculateProgress(props.testId).then(
+        Api.alertingServiceGetRecalculationStatus(props.testId).then(
             response => {
                 if (response.done) {
                     close()
-                    if (response.errors !== 0 || !isEmpty(response.runsWithoutValue)) {
+                    if (response.errors !== 0 || !isEmpty(response.datasetsWithoutValue)) {
                         setResult(response)
                     }
                 } else {
@@ -116,7 +104,13 @@ export default function RecalculateModal(props: RecalculateModalProps) {
                                   variant="primary"
                                   onClick={() => {
                                       setProgress(0)
-                                      recalculate(props.testId, debug, timeRange?.from, timeRange?.to).then(
+                                      Api.alertingServiceRecalculateDatapoints(
+                                          props.testId,
+                                          debug,
+                                          timeRange?.from,
+                                          false,
+                                          timeRange?.to
+                                      ).then(
                                           _ => {
                                               timer.current = window.setInterval(fetchProgress, 1000)
                                           },

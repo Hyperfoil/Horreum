@@ -13,7 +13,7 @@ import FunctionFormItem from "../../components/FunctionFormItem"
 import SchemaSelect from "../../components/SchemaSelect"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
-import { listTransformers, addOrUpdateTransformer, deleteTransformer, Transformer } from "./api"
+import Api, { Transformer } from "../../api"
 import JsonExtractor from "./JsonExtractor"
 
 const TARGET_SCHEMA_HELP = (
@@ -56,10 +56,14 @@ type TransformersProps = {
     funcsRef: TabFunctionsRef
 }
 
+type TransformerEx = {
+    modified?: boolean
+} & Transformer
+
 export default function Transformers(props: TransformersProps) {
     const [loading, setLoading] = useState(false)
-    const [transformers, setTransformers] = useState<Transformer[]>([])
-    const [selected, setSelected] = useState<Transformer>()
+    const [transformers, setTransformers] = useState<TransformerEx[]>([])
+    const [selected, setSelected] = useState<TransformerEx>()
     const [deleted, setDeleted] = useState<Transformer[]>([])
     const defaultTeam = useSelector(defaultTeamSelector)
     const isTester = useTester()
@@ -68,7 +72,7 @@ export default function Transformers(props: TransformersProps) {
         if (!selected) {
             return
         }
-        const transformer: Transformer = { ...selected, ...update, modified: true }
+        const transformer = { ...selected, ...update, modified: true }
         setSelected(transformer)
         setTransformers(transformers.map(t => (t.id == transformer.id ? transformer : t)))
     }
@@ -79,13 +83,13 @@ export default function Transformers(props: TransformersProps) {
                 ...transformers
                     .filter(t => t.modified)
                     .map(t =>
-                        addOrUpdateTransformer(t).then(id => {
+                        Api.schemaServiceAddOrUpdateTransformer(t.schemaId, t).then(id => {
                             t.id = id
                             t.modified = false
                         })
                     ),
                 ...deleted.map(t =>
-                    deleteTransformer(t).catch(e => {
+                    Api.schemaServiceDeleteTransformer(t.schemaId, t.id).catch(e => {
                         setTransformers([...transformers, t])
                         throw e
                     })
@@ -111,7 +115,7 @@ export default function Transformers(props: TransformersProps) {
         }
         setLoading(true)
         setTransformers([])
-        listTransformers(props.schemaId)
+        Api.schemaServiceListTransformers(props.schemaId)
             .then(
                 ts => {
                     setTransformers(ts)
@@ -222,7 +226,7 @@ export default function Transformers(props: TransformersProps) {
                     <FormGroup label="Ownership&amp;Access" fieldId="owner">
                         <OwnerAccess
                             owner={selected.owner}
-                            access={selected.access}
+                            access={selected.access as Access}
                             onUpdate={(owner, access) => update({ owner, access })}
                             readOnly={!isTesterForTransformer}
                         />
@@ -266,8 +270,8 @@ export default function Transformers(props: TransformersProps) {
                     <FunctionFormItem
                         label="Combination function"
                         helpText={TRANSFORMER_FUNCTION_HELP}
-                        value={selected.function}
-                        onChange={value => update({ function: value })}
+                        value={selected._function}
+                        onChange={value => update({ _function: value })}
                         readOnly={!isTesterForTransformer}
                     />
                 </>

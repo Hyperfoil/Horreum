@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react"
 
-import {
-    EnumProperties,
-    LogSliderProperties,
-    ChangeDetection,
-    ChangeDetectionModelConfig,
-    Variable,
-} from "../alerting/types"
+import { ChangeDetection, ChangeDetectionModelConfig, Variable } from "../../api"
 
 import {
     ActionList,
@@ -84,7 +78,7 @@ export default function VariableForm(props: VariableFormProps) {
     const [newModel, setNewModel] = useState<string>()
     useEffect(() => {
         if (!changeDetection && !adding) {
-            const rds = props.variable.changeDetection
+            const rds = [...props.variable.changeDetection]
             setChangeDetection(rds.length > 0 ? rds[0] : undefined)
         }
     }, [props.variable, props.variable.changeDetection, changeDetection])
@@ -243,25 +237,22 @@ export default function VariableForm(props: VariableFormProps) {
                         <FormGroup fieldId={comp.name} key={comp.name} label={comp.title} helperText={comp.description}>
                             {comp.type == "LOG_SLIDER" && (
                                 <LogSlider
-                                    value={
-                                        changeDetection.config[comp.name] *
-                                        ((comp.properties as LogSliderProperties).scale || 1)
-                                    }
+                                    value={changeDetection.config[comp.name] * ((comp.properties as any).scale || 1)}
                                     onChange={value => {
-                                        const scale = (comp.properties as LogSliderProperties).scale
+                                        const scale = (comp.properties as any).scale
                                         const copy = { ...changeDetection }
                                         copy.config[comp.name] = scale ? value / scale : value
                                         update(copy)
                                     }}
                                     isDisabled={!props.isTester}
-                                    min={(comp.properties as LogSliderProperties).min}
-                                    max={(comp.properties as LogSliderProperties).max}
-                                    unit={(comp.properties as LogSliderProperties).unit}
+                                    min={(comp.properties as any).min}
+                                    max={(comp.properties as any).max}
+                                    unit={(comp.properties as any).unit}
                                 />
                             )}
                             {comp.type == "ENUM" && (
                                 <EnumSelect
-                                    options={(comp.properties as EnumProperties).options}
+                                    options={(comp.properties as any).options}
                                     selected={changeDetection.config[comp.name]}
                                     onSelect={value => {
                                         const copy = { ...changeDetection }

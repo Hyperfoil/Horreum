@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react"
-
-import { descriptors } from "../domain/schemas/api"
+import { useState, useEffect } from "react"
 
 import { Select, SelectOption, SelectOptionObject } from "@patternfly/react-core"
+
+import Api from "../api"
 
 type SchemaSelectProps = {
     value?: string
@@ -27,7 +27,7 @@ export default function SchemaSelect(props: SchemaSelectProps) {
         if (options.length > 0) {
             return
         }
-        descriptors().then((response: Schema[]) => {
+        Api.schemaServiceDescriptors().then(response => {
             const schemas = response.map(s => {
                 return { ...s, toString: () => `${s.name} (${s.uri})` }
             })

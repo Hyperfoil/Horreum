@@ -1,4 +1,3 @@
-import React from "react"
 import { Component } from "react"
 import "@patternfly/patternfly/patternfly.css" //have to use this import to customize scss-variables.scss
 

@@ -31,9 +31,10 @@ import AccessIcon from "../../components/AccessIcon"
 import AccessChoice from "../../components/AccessChoice"
 import SavedTabs, { SavedTab, TabFunctions, modifiedFunc, resetFunc, saveFunc } from "../../components/SavedTabs"
 import TeamSelect from "../../components/TeamSelect"
-import { Schema as SchemaDef, SchemaDispatch } from "./reducers"
+import { SchemaDispatch } from "./reducers"
 import Transformers from "./Transformers"
 import Labels from "./Labels"
+import { Access, Schema as SchemaDef } from "../../api"
 
 type SchemaParams = {
     schemaId: string
@@ -58,7 +59,6 @@ function General(props: GeneralProps) {
         schema: {},
         owner: defaultTeam || "",
         access: 2,
-        token: null,
     }
     const onChange = (override: Partial<SchemaDef>) => {
         props.onChange({
@@ -165,13 +165,13 @@ function General(props: GeneralProps) {
             <FormGroup label="Access rights" fieldId="schemaAccess">
                 {isTester ? (
                     <AccessChoice
-                        checkedValue={schema.access}
+                        checkedValue={schema.access as Access}
                         onChange={access => {
                             onChange({ access })
                         }}
                     />
                 ) : (
-                    <AccessIcon access={schema.access} />
+                    <AccessIcon access={schema.access as Access} />
                 )}
             </FormGroup>
         </Form>
@@ -230,7 +230,6 @@ export default function Schema() {
             id: schemaId,
             ...currentSchema,
             schema: editorSchema ? JSON.parse(editorSchema) : null,
-            token: null,
         } as SchemaDef
         return dispatch(actions.add(newSchema))
             .then(id => {

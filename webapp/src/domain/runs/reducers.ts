@@ -5,31 +5,17 @@ import { Team } from "../../components/TeamSelect"
 import { Access } from "../../auth"
 import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction } from "../../alerts"
+import { RunExtended, RunSummary } from "../../api"
 
 export interface RunSchemas {
     // schemaid -> uri
     [key: string]: string
 }
 
-export interface Run {
-    id: number
-    testid: number
-    start: number
-    stop: number
-    description: string
-    owner: string
-    access: Access
-    token: string | null
-    testname?: string
-    schema?: RunSchemas
-    datasets?: number[]
-    trashed: boolean
-}
-
 export class RunsState {
     loading = false
-    byId?: Map<number, Run> = undefined
-    byTest?: Map<number, Map<number, Run>> = undefined
+    byId?: Map<number, RunExtended> = undefined
+    byTest?: Map<number, Map<number, RunExtended>> = undefined
     currentPage: number[] = []
     currentTotal = 0
     selectedRoles?: Team = undefined
@@ -43,14 +29,14 @@ export interface LoadingAction {
 
 export interface LoadedAction {
     type: typeof actionTypes.LOADED
-    runs: Run[]
+    run?: RunExtended
     total?: number
 }
 
 export interface TestIdAction {
     type: typeof actionTypes.TESTID
     id: number
-    runs: Run[]
+    runs: RunSummary[]
     total: number
 }
 
@@ -140,20 +126,15 @@ export const reducer = (state = new RunsState(), action: RunsAction) => {
         case actionTypes.LOADED: {
             state.loading = false
             if (!state.byId) {
-                state.byId = Map<number, Run>()
+                state.byId = Map<number, RunExtended>()
             }
-            if (!utils.isEmpty(action.runs)) {
-                action.runs.forEach(run => {
-                    if (run !== undefined) {
-                        const byId = state.byId as Map<number, Run>
-                        state.byId = byId.set(run.id, {
-                            ...(byId.get(run.id) || {}),
-                            ...run,
-                        })
-                    }
+            if (action.run !== undefined) {
+                const byId = state.byId as Map<number, RunExtended>
+                state.byId = byId.set(action.run.id, {
+                    ...(byId.get(action.run.id) || {}),
+                    ...action.run,
                 })
             }
-            state.currentPage = action.runs.map(run => run.id)
             if (action.total) {
                 state.currentTotal = action.total
             }
@@ -161,13 +142,15 @@ export const reducer = (state = new RunsState(), action: RunsAction) => {
         }
         case actionTypes.TESTID: {
             state.loading = false
-            const byTest = state.byTest || Map<number, Map<number, Run>>()
-            let testMap: Map<number, Run> = byTest.get(action.id, Map<number, Run>())
+            const byTest = state.byTest || Map<number, Map<number, RunExtended>>()
+            let testMap: Map<number, RunExtended> = byTest.get(action.id, Map<number, RunExtended>())
             if (!utils.isEmpty(action.runs)) {
                 action.runs.forEach(run => {
                     if (run !== undefined) {
                         testMap = testMap.set(run.id, {
                             ...testMap.get(run.id),
+                            data: undefined,
+                            schema: {},
                             ...run,
                         })
                     }
@@ -234,16 +217,16 @@ function updateRun(
     state: RunsState,
     id: number,
     testid: number,
-    patch: Record<string, unknown> | ((current: Run) => Run)
+    patch: Record<string, unknown> | ((current: RunExtended) => RunExtended)
 ) {
     const run = state.byId?.get(id)
     if (run) {
         const updated = typeof patch === "function" ? patch(run) : { ...run, ...patch }
-        state.byId = (state.byId || Map<number, Run>()).set(run.id, updated)
+        state.byId = (state.byId || Map<number, RunExtended>()).set(run.id, updated)
     }
-    let testMap: Map<number, Run> | undefined = state.byTest?.get(testid)
+    let testMap: Map<number, RunExtended> | undefined = state.byTest?.get(testid)
     if (testMap) {
-        const current: Run | undefined = testMap.get(id)
+        const current = testMap.get(id)
         if (current) {
             const updated = typeof patch === "function" ? patch(current) : { ...current, ...patch }
             testMap = testMap.set(id, updated)

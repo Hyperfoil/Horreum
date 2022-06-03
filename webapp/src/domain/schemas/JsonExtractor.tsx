@@ -17,8 +17,9 @@ import { HelpIcon } from "@patternfly/react-icons"
 import { v4 as uuidv4 } from "uuid"
 
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
-import { testJsonPath, Extractor } from "./api"
+import Api, { Extractor } from "../../api"
 import TryJsonPathModal, { JsonPathTarget } from "./TryJsonPathModal"
+import { JsonpathValidation } from "../../generated"
 
 const RESERVED = [
     "abstract",
@@ -104,11 +105,15 @@ const INVALID_NAME_HELPER = (
         Name should match <code>[a-zA-Z_][a-zA-Z_0-9]*</code>. It shouldn't be a Javascript-reserved word either.
     </span>
 )
+type ExtractorEx = {
+    validationTimer?: any
+    validationResult?: JsonpathValidation
+} & Extractor
 
 type JsonExtractorProps = {
     schemaUri: string
     jsonpathTarget: JsonPathTarget
-    extractor: Extractor
+    extractor: ExtractorEx
     readOnly: boolean
     onUpdate(): void
     onDelete(): void
@@ -162,7 +167,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                                 }
                                 extractor.validationTimer = window.setTimeout(() => {
                                     if (extractor.jsonpath) {
-                                        testJsonPath(extractor.jsonpath).then(result => {
+                                        Api.sqlServiceTestJsonPath(extractor.jsonpath).then(result => {
                                             extractor.validationResult = result
                                             props.onUpdate()
                                         })

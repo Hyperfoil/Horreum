@@ -36,17 +36,17 @@ import {
     Column,
     UseSortByColumnOptions,
 } from "react-table"
-import { listTestDatasets, Dataset, DatasetList } from "./api"
+import Api, { DatasetSummary, DatasetList } from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
 import { TestDispatch } from "../tests/reducers"
 import SchemaLink from "../schemas/SchemaLink"
 import { NoSchemaInDataset } from "./NoSchema"
 
-type C = CellProps<Dataset> &
-    UseTableOptions<Dataset> &
-    UseRowSelectInstanceProps<Dataset> & { row: UseRowSelectRowProps<Dataset> }
+type C = CellProps<DatasetSummary> &
+    UseTableOptions<DatasetSummary> &
+    UseRowSelectInstanceProps<DatasetSummary> & { row: UseRowSelectRowProps<DatasetSummary> }
 
-type DatasetColumn = Column<Dataset> & UseSortByColumnOptions<Dataset>
+type DatasetColumn = Column<DatasetSummary> & UseSortByColumnOptions<DatasetSummary>
 
 const staticColumns: DatasetColumn[] = [
     {
@@ -94,7 +94,7 @@ const staticColumns: DatasetColumn[] = [
     {
         Header: "Duration",
         id: "(stop - start)",
-        accessor: (dataset: Dataset) =>
+        accessor: dataset =>
             Duration.fromMillis(toEpochMillis(dataset.stop) - toEpochMillis(dataset.start)).toFormat("hh:mm:ss.SSS"),
     },
     {
@@ -146,7 +146,7 @@ export default function TestDatasets() {
     }, [dispatch, testId, teams, token])
     useEffect(() => {
         setLoading(true)
-        listTestDatasets(testId, pagination)
+        Api.datasetServiceListByTest(testId, pagination.direction, pagination.perPage, pagination.page, pagination.sort)
             .then(setDatasets, error =>
                 dispatchError(dispatch, error, "FETCH_DATASETS", "Failed to fetch datasets in test " + testId).catch(
                     noop
@@ -163,7 +163,7 @@ export default function TestDatasets() {
         components.forEach(vc => {
             allColumns.push({
                 Header: vc.headerName,
-                accessor: (dataset: Dataset) => dataset.view && dataset.view[vc.id],
+                accessor: dataset => dataset.view && dataset.view[vc.headerOrder],
                 // In general case we would have to calculate the final sortable cell value
                 // in database, or fetch all runs and sort in server doing the rendering
                 disableSortBy: (!!vc.render && vc.render !== "") || vc.labels.length > 1,

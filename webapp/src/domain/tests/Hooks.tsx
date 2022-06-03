@@ -21,10 +21,9 @@ import { useTester } from "../../auth"
 import { alertAction } from "../../alerts"
 import { noop } from "../../utils"
 import { TestDispatch } from "./reducers"
-import { Hook } from "../hooks/reducers"
+import Api, { Hook } from "../../api"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { updateHooks } from "./actions"
-import * as api from "../hooks/api"
 import { testHookEventTypes } from "../hooks/reducers"
 import HookUrlSelector from "../../components/HookUrlSelector"
 
@@ -87,7 +86,7 @@ export default function Hooks({ testId, testOwner, funcsRef, onModified }: Hooks
         if (!testId || !isTester) {
             return
         }
-        api.fetchHooks(testId).then(
+        Api.hookServiceTestHooks(testId).then(
             response => {
                 setTestWebHooks(
                     response.map((h: Hook) => {

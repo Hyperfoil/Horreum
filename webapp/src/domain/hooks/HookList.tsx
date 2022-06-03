@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
+import { useDispatch, useSelector } from "react-redux"
 
-import { useSelector } from "react-redux"
-import { useDispatch } from "react-redux"
 import { Banner, Button, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 import { OutlinedTimesCircleIcon, PlusIcon } from "@patternfly/react-icons"
 
@@ -15,7 +14,8 @@ import { fetchSummary } from "../tests/actions"
 import Table from "../../components/Table"
 import AddHookModal from "./AddHookModal"
 import { Column } from "react-table"
-import { Hook, HooksDispatch } from "./reducers"
+import { HooksDispatch } from "./reducers"
+import { Hook } from "../../api"
 
 export default function HookList() {
     const dispatch = useDispatch<HooksDispatch>()

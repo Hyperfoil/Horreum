@@ -47,22 +47,22 @@ public class DatasetLog extends PersistentLog {
       this.source = source;
    }
 
-   @JsonProperty("testId")
+   @JsonProperty(value = "testId", required = true)
    private int getTestId() {
       return test.id;
    }
 
-   @JsonProperty("runId")
+   @JsonProperty(value = "runId", required = true)
    private int getRunId() {
       return dataset.run.id;
    }
 
-   @JsonProperty("datasetId")
+   @JsonProperty(value = "datasetId", required = true)
    private int getDatasetId() {
       return dataset.id;
    }
 
-   @JsonProperty("datasetOrdinal")
+   @JsonProperty(value = "datasetOrdinal", required = true)
    private int getDatasetOrdinal() {
       return dataset.ordinal;
    }

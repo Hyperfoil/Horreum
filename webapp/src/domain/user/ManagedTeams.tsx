@@ -19,7 +19,7 @@ import TeamSelect, { createTeam, Team } from "../../components/TeamSelect"
 import { defaultTeamSelector, managedTeamsSelector, teamToName } from "../../auth"
 import { alertAction, dispatchError, dispatchInfo } from "../../alerts"
 import UserSearch from "../../components/UserSearch"
-import { User, teamMembers, info, createUser, updateTeamMembers } from "./api"
+import Api, { UserData } from "../../api"
 import { noop } from "../../utils"
 
 type ManagedTeamsProps = {
@@ -27,7 +27,7 @@ type ManagedTeamsProps = {
     onModified(modified: boolean): void
 }
 
-function userName(user: User) {
+function userName(user: UserData) {
     let str = ""
     if (user.firstName) {
         str += user.firstName + " "
@@ -43,7 +43,7 @@ function userName(user: User) {
 }
 
 type UserPermissionsProps = {
-    user: User
+    user: UserData
     roles: string[]
     onRolesUpdate(roles: string[]): void
 }
@@ -102,7 +102,7 @@ function UserPermissions({ user, roles, onRolesUpdate }: UserPermissionsProps) {
     )
 }
 
-function member(user: User, memberRoles: Map<string, string[]>, setModified: (_: boolean) => void) {
+function member(user: UserData, memberRoles: Map<string, string[]>, setModified: (_: boolean) => void) {
     return (
         <UserPermissions
             key={user.username}
@@ -138,16 +138,16 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
     }
 
     useEffect(() => {
-        teamMembers(team.key).then(
+        Api.userServiceTeamMembers(team.key).then(
             userRolesMap => {
                 memberRoles.current = new Map(Object.entries(userRolesMap))
-                info(Object.keys(userRolesMap)).then(
-                    (users: User[]) => {
+                Api.userServiceInfo(Object.keys(userRolesMap)).then(
+                    users => {
                         const userMap = new Map()
                         users.forEach(u => userMap.set(u.username, u))
                         setMembers(
                             Object.keys(userRolesMap).map(username => {
-                                let user: User = userMap.get(username)
+                                let user = userMap.get(username)
                                 if (!user) {
                                     user = {
                                         id: "",
@@ -166,7 +166,9 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
     }, [team, resetCounter])
     props.funcs.current = {
         save: () => {
-            return updateTeamMembers(team.key, memberRoles.current).then(() => setModified(false))
+            return Api.userServiceUpdateTeamMembers(team.key, Object.fromEntries(memberRoles.current)).then(() =>
+                setModified(false)
+            )
         },
         reset: () => {
             setAvailableUsers([])
@@ -276,7 +278,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
                 isOpen={createNewUser}
                 onClose={() => setCreateNewUser(false)}
                 onCreate={(user, password, roles) => {
-                    return createUser(user, password, team.key, roles).then(
+                    return Api.userServiceCreateUser({ user, password, team: team.key, roles }).then(
                         () => {
                             memberRoles.current.set(user.username, roles)
                             setMembers([...members, member(user, memberRoles.current, onModify)])
@@ -299,7 +301,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
 type NewUserModalProps = {
     isOpen: boolean
     onClose(): void
-    onCreate(user: User, password: string, roles: string[]): Promise<unknown>
+    onCreate(user: UserData, password: string, roles: string[]): Promise<unknown>
 }
 
 function NewUserModal(props: NewUserModalProps) {

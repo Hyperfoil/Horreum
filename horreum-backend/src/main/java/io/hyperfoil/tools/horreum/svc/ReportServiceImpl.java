@@ -129,7 +129,7 @@ public class ReportServiceImpl implements ReportService {
    @PermitAll
    @WithRoles
    @Override
-   public TableReportConfig getTableReportConfig(Integer id) {
+   public TableReportConfig getTableReportConfig(int id) {
       return TableReportConfig.findById(id);
    }
 
@@ -204,7 +204,7 @@ public class ReportServiceImpl implements ReportService {
    @PermitAll
    @WithRoles
    @Override
-   public TableReport getTableReport(Integer id) {
+   public TableReport getTableReport(int id) {
       TableReport report = TableReport.findById(id);
       Hibernate.initialize(report.config);
       return report;
@@ -214,7 +214,7 @@ public class ReportServiceImpl implements ReportService {
    @WithRoles
    @Transactional
    @Override
-   public void deleteTableReport(Integer id) {
+   public void deleteTableReport(int id) {
       TableReport report = TableReport.findById(id);
       if (report == null) {
          throw ServiceException.notFound("Report " + id + " does not exist.");
@@ -227,7 +227,7 @@ public class ReportServiceImpl implements ReportService {
    @WithRoles
    @Override
    @Transactional
-   public ReportComment updateComment(Integer reportId, ReportComment comment) {
+   public ReportComment updateComment(int reportId, ReportComment comment) {
       if (comment.id == null || comment.id < 0) {
          comment.id = null;
          comment.report = TableReport.findById(reportId);

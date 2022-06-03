@@ -237,7 +237,7 @@ public class AlertingServiceImpl implements AlertingService {
             },
             // Absence of condition means that this dataset is taken into account. This happens e.g. when value == NULL
             row -> createMissingDataRuleResult(dataset, (int) row[0]),
-            (row, exception, code) -> logMissingDataMessage(dataset, PersistentLog.ERROR, "Exception evaluating missing data rule %d, dataset %d: '%s' Code: <pre>%s</pre>", (Integer) row[0], dataset.id, exception.getMessage(), code),
+            (row, exception, code) -> logMissingDataMessage(dataset, PersistentLog.ERROR, "Exception evaluating missing data rule %d, dataset %d: '%s' Code: <pre>%s</pre>", row[0], dataset.id, exception.getMessage(), code),
             output -> logMissingDataMessage(dataset, PersistentLog.DEBUG, "Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output));
    }
 
@@ -578,10 +578,7 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles
    @RolesAllowed("tester")
    @Transactional
-   public void variables(Integer testId, List<Variable> variables) {
-      if (testId == null) {
-         throw ServiceException.badRequest("Missing query param 'test'");
-      }
+   public void updateVariables(int testId, List<Variable> variables) {
       for (Variable v : variables) {
          if (v.name == null || v.name.isBlank()) {
             throw ServiceException.badRequest("Variable name is mandatory!");
@@ -745,10 +742,7 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles
    @PermitAll
    @Transactional
-   public DashboardInfo dashboard(Integer testId, String fingerprint) {
-      if (testId == null) {
-         throw ServiceException.badRequest("Missing param 'test'");
-      }
+   public DashboardInfo dashboard(int testId, String fingerprint) {
       if (fingerprint == null) {
          fingerprint = "";
       }
@@ -775,7 +769,7 @@ public class AlertingServiceImpl implements AlertingService {
    @Override
    @WithRoles
    @PermitAll
-   public List<Change> changes(Integer varId, String fingerprint) {
+   public List<Change> changes(int varId, String fingerprint) {
       Variable v = Variable.findById(varId);
       if (v == null) {
          throw ServiceException.notFound("Variable " + varId + " not found");
@@ -796,7 +790,7 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles
    @RolesAllowed(Roles.TESTER)
    @Transactional
-   public void updateChange(Integer id, Change change) {
+   public void updateChange(int id, Change change) {
       try {
          if (id != change.id) {
             throw ServiceException.badRequest("Path ID and entity don't match");
@@ -811,7 +805,7 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles
    @RolesAllowed(Roles.TESTER)
    @Transactional
-   public void deleteChange(Integer id) {
+   public void deleteChange(int id) {
       if (!Change.deleteById(id)) {
          throw ServiceException.notFound("Change not found");
       }
@@ -819,12 +813,8 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Override
    @RolesAllowed(Roles.TESTER)
-   public void recalculateDatapoints(Integer testId, boolean notify,
+   public void recalculateDatapoints(int testId, boolean notify,
                                      boolean debug, Long from, Long to) {
-      if (testId == null) {
-         throw ServiceException.badRequest("Missing param 'test'");
-      }
-
       // We cannot use resteasy propagation because when the request completes the request data
       // are terminated anyway (it's not reference counter) - therefore we need to manually copy the identity
       // to the new context in a different thread.
@@ -886,12 +876,9 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Override
    @RolesAllowed(Roles.TESTER)
-   public RecalculationStatus getRecalculationStatus(Integer testId) {
-      if (testId == null) {
-         throw ServiceException.badRequest("Missing param 'test'");
-      }
+   public DatapointRecalculationStatus getRecalculationStatus(int testId) {
       Recalculation recalculation = recalcProgress.get(testId);
-      RecalculationStatus status = new RecalculationStatus();
+      DatapointRecalculationStatus status = new DatapointRecalculationStatus();
       status.percentage = recalculation == null ? 100 : recalculation.progress;
       status.done = recalculation == null || recalculation.done;
       if (recalculation != null) {

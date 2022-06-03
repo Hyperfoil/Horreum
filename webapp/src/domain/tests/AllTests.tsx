@@ -40,7 +40,7 @@ import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
 
 import { Access, isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
 import { CellProps, Column, UseSortByColumnOptions } from "react-table"
-import { Test, TestDispatch } from "./reducers"
+import { TestStorage, TestDispatch } from "./reducers"
 import { noop } from "../../utils"
 
 type WatchDropdownProps = {
@@ -119,8 +119,8 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
     )
 }
 
-type C = CellProps<Test>
-type Col = Column<Test> & UseSortByColumnOptions<Test>
+type C = CellProps<TestStorage>
+type Col = Column<TestStorage> & UseSortByColumnOptions<TestStorage>
 
 function useRecalculate(): MenuItem<undefined> {
     const [modalOpen, setModalOpen] = useState(false)
@@ -363,7 +363,7 @@ export default function AllTests() {
                     return (
                         <ActionMenu
                             id={arg.cell.value}
-                            access={arg.row.original.access}
+                            access={arg.row.original.access as Access}
                             owner={arg.row.original.owner}
                             description={"test " + arg.row.original.name}
                             items={[changeAccess, move, del, recalc]}

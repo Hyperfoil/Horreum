@@ -2,6 +2,8 @@ package io.hyperfoil.tools.horreum.entity.json;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
 
@@ -17,6 +19,8 @@ import javax.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.Collection;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity(name = "run")
@@ -26,6 +30,7 @@ public class Run extends ProtectedBaseEntity {
    public static final String EVENT_NEW = "run/new";
    public static final String EVENT_TRASHED = "run/trashed";
 
+   @JsonProperty(required = true)
    @Id
    @SequenceGenerator(
       name = "runSequence",
@@ -34,10 +39,12 @@ public class Run extends ProtectedBaseEntity {
    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "runSequence")
    public Integer id;
 
+   @Schema(type = SchemaType.NUMBER)
    @NotNull
    @Column(name="start", columnDefinition = "timestamp")
    public Instant start;
 
+   @Schema(type = SchemaType.NUMBER)
    @NotNull
    @Column(name="stop", columnDefinition = "timestamp")
    public Instant stop;
@@ -56,5 +63,6 @@ public class Run extends ProtectedBaseEntity {
    public boolean trashed;
 
    @OneToMany(mappedBy = "run", cascade = CascadeType.ALL, orphanRemoval = true)
+   @JsonIgnore
    public Collection<DataSet> datasets;
 }

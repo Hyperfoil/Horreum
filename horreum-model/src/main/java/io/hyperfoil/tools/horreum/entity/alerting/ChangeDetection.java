@@ -12,12 +12,14 @@ import javax.validation.constraints.NotNull;
 import org.hibernate.annotations.Type;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity
 public class ChangeDetection extends PanacheEntityBase {
+   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Integer id;

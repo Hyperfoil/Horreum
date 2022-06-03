@@ -70,7 +70,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @WithRoles
    @Override
-   public Watch get(Integer testId) {
+   public Watch get(int testId) {
       Watch watch = Watch.find("test.id = ?1", testId).firstResult();
       if (watch == null) {
          watch = new Watch();
@@ -94,10 +94,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @WithRoles
    @Transactional
    @Override
-   public List<String> addUserOrTeam(Integer testId, String userOrTeam) {
-      if (testId == null) {
-         throw ServiceException.badRequest("Missing test id");
-      } else if (userOrTeam == null) {
+   public List<String> addUserOrTeam(int testId, String userOrTeam) {
+      if (userOrTeam == null) {
          throw ServiceException.badRequest("Missing user/team");
       } else if (userOrTeam.startsWith("\"") && userOrTeam.endsWith("\"") && userOrTeam.length() > 2) {
          userOrTeam = userOrTeam.substring(1, userOrTeam.length() - 1);
@@ -144,10 +142,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @WithRoles
    @Transactional
    @Override
-   public List<String> removeUserOrTeam(Integer testId, String userOrTeam) {
-      if (testId == null) {
-         throw ServiceException.badRequest("Missing test id");
-      } else if (userOrTeam == null) {
+   public List<String> removeUserOrTeam(int testId, String userOrTeam) {
+      if (userOrTeam == null) {
          throw ServiceException.badRequest("Missing user/team");
       } else if (userOrTeam.startsWith("\"") && userOrTeam.endsWith("\"") && userOrTeam.length() > 2) {
          userOrTeam = userOrTeam.substring(1, userOrTeam.length() - 1);
@@ -188,7 +184,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @WithRoles
    @Transactional
    @Override
-   public void update(Integer testId, Watch watch) {
+   public void update(int testId, Watch watch) {
       Watch existing = Watch.find("testid", testId).firstResult();
       if (existing == null) {
          watch.id = null;

@@ -14,14 +14,17 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.hibernate.annotations.Type;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.smallrye.common.constraint.NotNull;
 
+@Schema(name = "Dataset")
 @Entity(name="dataset")
 @RegisterForReflection
 /**
@@ -110,9 +113,13 @@ public class DataSet extends OwnedEntityBase {
       this.data = data;
    }
 
+   @Schema(name = "DatasetInfo")
    public static class Info {
+      @JsonProperty(required = true)
       public int id;
+      @JsonProperty(required = true)
       public int runId;
+      @JsonProperty(required = true)
       public int ordinal;
 
       public Info() {

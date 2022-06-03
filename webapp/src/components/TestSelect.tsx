@@ -4,7 +4,8 @@ import { Select, SelectGroup, SelectOption, SelectOptionObject, Split, SplitItem
 
 import { useDispatch, useSelector, shallowEqual } from "react-redux"
 
-import { Test, TestDispatch } from "../domain/tests/reducers"
+import { TestDispatch } from "../domain/tests/reducers"
+import { Test } from "../api"
 import { all } from "../domain/tests/selectors"
 import { fetchSummary } from "../domain/tests/actions"
 import { teamsSelector } from "../auth"

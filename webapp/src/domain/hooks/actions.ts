@@ -1,6 +1,6 @@
-import * as api from "./api"
+import Api, { Hook } from "../../api"
 import * as actionTypes from "./actionTypes"
-import { Hook, LoadedAction, DeleteAction } from "./reducers"
+import { LoadedAction, DeleteAction } from "./reducers"
 import { Dispatch } from "redux"
 import { AddAlertAction, dispatchError } from "../../alerts"
 
@@ -17,7 +17,7 @@ const removed = (id: number): DeleteAction => ({
 
 export function getHook(id: number) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        api.getHook(id).then(
+        Api.hookServiceGet(id).then(
             response => dispatch(loaded(response)),
             error => {
                 dispatch(loaded([]))
@@ -26,9 +26,9 @@ export function getHook(id: number) {
         )
 }
 
-export function addHook(payload: Hook) {
+export function addHook(hook: Hook) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        api.addHook(payload).then(
+        Api.hookServiceAdd(hook).then(
             response => dispatch(loaded(response)),
             error => dispatchError(dispatch, error, "ADD_HOOK", "Failed to add hook")
         )
@@ -36,7 +36,7 @@ export function addHook(payload: Hook) {
 
 export function allHooks() {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        api.allHooks().then(
+        Api.hookServiceList().then(
             response => dispatch(loaded(response)),
             error => dispatchError(dispatch, error, "GET_HOOKS", "Failed to get hooks")
         )
@@ -44,7 +44,7 @@ export function allHooks() {
 
 export function removeHook(id: number) {
     return (dispatch: Dispatch<DeleteAction | AddAlertAction>) =>
-        api.removeHook(id).then(
+        Api.hookServiceDelete(id).then(
             _ => dispatch(removed(id)),
             error => dispatchError(dispatch, error, "REMOVE_HOOK", "Failed to remove hook")
         )

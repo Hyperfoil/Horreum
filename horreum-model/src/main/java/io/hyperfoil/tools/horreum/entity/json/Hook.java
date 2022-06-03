@@ -6,6 +6,8 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 @Entity
 @RegisterForReflection
 @Table(
@@ -17,7 +19,7 @@ import javax.validation.constraints.NotNull;
    }
 )
 public class Hook extends PanacheEntityBase {
-
+   @JsonProperty(required = true)
    @Id
    @SequenceGenerator(
       name = "hookSequence",

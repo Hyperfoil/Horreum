@@ -1,10 +1,10 @@
-import * as api from "./api"
 import * as actionTypes from "./actionTypes"
 import { Access } from "../../auth"
-import { Schema, DeleteAction, LoadedAction, UpdateTokenAction, UpdateAccessAction } from "./reducers"
+import { DeleteAction, LoadedAction, UpdateTokenAction, UpdateAccessAction } from "./reducers"
 import { Dispatch } from "redux"
 import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction, dispatchError } from "../../alerts"
+import Api, { Schema } from "../../api"
 
 const loaded = (schema: Schema | Schema[]): LoadedAction => ({
     type: actionTypes.LOADED,
@@ -13,7 +13,7 @@ const loaded = (schema: Schema | Schema[]): LoadedAction => ({
 
 export function getById(id: number) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        api.getById(id).then(
+        Api.schemaServiceGetSchema(id).then(
             response => dispatch(loaded(response)),
             error => {
                 dispatch(loaded([]))
@@ -24,18 +24,18 @@ export function getById(id: number) {
 
 export function add(payload: Schema) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        api.add(payload).then(
+        Api.schemaServiceAdd(payload).then(
             id => {
                 dispatch(loaded({ ...payload, id }))
                 return id
             },
             error => dispatchError(dispatch, error, "SAVE_SCHEMA", "Failed to save schema")
-        )
+        ) as Promise<number>
 }
 
 export function all() {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        api.all().then(
+        Api.schemaServiceList().then(
             response => dispatch(loaded(response)),
             error => {
                 dispatch(loaded([]))
@@ -46,7 +46,7 @@ export function all() {
 
 export function resetToken(id: number) {
     return (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) =>
-        api.resetToken(id).then(
+        Api.schemaServiceResetToken(id).then(
             token =>
                 dispatch({
                     type: actionTypes.UPDATE_TOKEN,
@@ -59,12 +59,12 @@ export function resetToken(id: number) {
 
 export function dropToken(id: number) {
     return (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) =>
-        api.dropToken(id).then(
+        Api.schemaServiceDropToken(id).then(
             () =>
                 dispatch({
                     type: actionTypes.UPDATE_TOKEN,
                     id: id,
-                    token: null,
+                    token: undefined,
                 }),
             error => dispatchError(dispatch, error, "DROP_SCHEMA_TOKEN", "Failed to drop schema token")
         )
@@ -72,7 +72,7 @@ export function dropToken(id: number) {
 
 export function updateAccess(id: number, owner: string, access: Access) {
     return (dispatch: Dispatch<UpdateAccessAction | AddAlertAction>) =>
-        api.updateAccess(id, owner, access).then(
+        Api.schemaServiceUpdateAccess(id, access, owner).then(
             () => dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access }),
             error => dispatchError(dispatch, error, "SCHEMA_UPDATE", "Failed to update schema access.")
         )
@@ -80,7 +80,7 @@ export function updateAccess(id: number, owner: string, access: Access) {
 
 export function deleteSchema(id: number) {
     return (dispatch: ThunkDispatch<any, unknown, DeleteAction>) =>
-        api.deleteSchema(id).then(
+        Api.schemaServiceDelete(id).then(
             () => {
                 dispatch({
                     type: actionTypes.DELETE,

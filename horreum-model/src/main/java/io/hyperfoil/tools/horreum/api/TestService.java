@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api;
 import java.util.Collection;
 import java.util.List;
 
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -14,6 +15,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.json.Access;
@@ -28,18 +34,18 @@ import io.hyperfoil.tools.horreum.entity.json.View;
 public interface TestService {
    @DELETE
    @Path("{id}")
-   void delete(@PathParam("id") Integer id);
+   void delete(@PathParam("id") int id);
 
    @GET
    @Path("{id}")
-   Test get(@PathParam("id") Integer id, @QueryParam("token") String token);
+   Test get(@PathParam("id") int id, @QueryParam("token") String token);
 
    @GET
    @Path("byName/{name}")
    Test getByNameOrId(@PathParam("name") String input);
 
    @POST
-   Test add(Test test);
+   Test add(@RequestBody(required = true) Test test);
 
    @GET
    List<Test> list(@QueryParam("roles") String roles,
@@ -59,40 +65,39 @@ public interface TestService {
    @POST
    @Path("{id}/addToken")
    @Produces(MediaType.TEXT_PLAIN)
-   Integer addToken(@PathParam("id") Integer testId, TestToken token);
+   int addToken(@PathParam("id") int testId, TestToken token);
 
    @GET
    @Path("{id}/tokens")
-   Collection<TestToken> tokens(@PathParam("id") Integer testId);
+   Collection<TestToken> tokens(@PathParam("id") int testId);
 
    @POST
    @Path("{id}/revokeToken/{tokenId}")
-   void dropToken(@PathParam("id") Integer testId, @PathParam("tokenId") Integer tokenId);
+   void dropToken(@PathParam("id") int testId, @PathParam("tokenId") int tokenId);
 
    @POST
    @Path("{id}/updateAccess")
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-   void updateAccess(@PathParam("id") Integer id,
-                     @QueryParam("owner") String owner,
-                     @QueryParam("access") Access access);
+   void updateAccess(@PathParam("id") int id,
+                     @Parameter(required = true) @QueryParam("owner") String owner,
+                     @Parameter(required = true) @QueryParam("access") Access access);
 
    @POST
    @Path("{testId}/view")
-   void updateView(@PathParam("testId") Integer testId, View view);
+   void updateView(@PathParam("testId") int testId, @RequestBody(required = true) View view);
 
    @POST
    @Consumes // any
    @Path("{id}/notifications")
-   void updateAccess(@PathParam("id") Integer id,
-                     @QueryParam("enabled") boolean enabled);
+   void updateNotifications(@PathParam("id") int id, @Parameter(required = true) @QueryParam("enabled") boolean enabled);
 
    @POST
    @Path("{id}/move")
-   void updateFolder(@PathParam("id") Integer id, @QueryParam("folder") String folder);
+   void updateFolder(@PathParam("id") int id, @QueryParam("folder") String folder);
 
    @POST
    @Path("{testId}/hook")
-   Hook updateHook(@PathParam("testId") Integer testId, Hook hook);
+   Hook updateHook(@PathParam("testId") int testId, @RequestBody(required = true) Hook hook);
 
    @GET
    @Path("{id}/fingerprint")
@@ -101,11 +106,11 @@ public interface TestService {
    @POST
    @Consumes(MediaType.APPLICATION_JSON)
    @Path("{id}/transformers")
-   void updateTransformers(@PathParam("id") Integer testId, List<Integer> transformerIds);
+   void updateTransformers(@PathParam("id") int testId, @RequestBody(required = true) List<Integer> transformerIds);
 
    @POST
    @Path("{id}/fingerprint")
-   void updateFingerprint(@PathParam("id") int testId, FingerprintUpdate update);
+   void updateFingerprint(@PathParam("id") int testId, @RequestBody(required = true) FingerprintUpdate update);
 
    @POST
    @Path("{id}/recalculate")
@@ -120,14 +125,18 @@ public interface TestService {
    }
 
    class TestSummary {
+      @JsonProperty(required = true)
       public int id;
+      @NotNull
       public String name;
       public String folder;
       public String description;
       // SQL count(*) returns BigInteger
       public Number datasets;
       public Number runs;
+      @NotNull
       public String owner;
+      @Schema(implementation = Access.class, required = true)
       public int access;
    }
 
@@ -137,9 +146,13 @@ public interface TestService {
    }
 
    class RecalculationStatus {
+      @JsonProperty(required = true)
       public long timestamp;
+      @JsonProperty(required = true)
       public long totalRuns;
+      @JsonProperty(required = true)
       public long finished;
+      @JsonProperty(required = true)
       public long datasets;
 
       public RecalculationStatus() {

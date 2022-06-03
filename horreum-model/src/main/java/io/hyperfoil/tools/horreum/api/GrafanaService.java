@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.OPTIONS;
@@ -12,6 +13,11 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.hyperfoil.tools.horreum.grafana.Target;
 
@@ -28,12 +34,13 @@ public interface GrafanaService {
 
    @POST
    @Path("/search")
-   Object[] search(Target query);
+   String[] search(@RequestBody(required = true) Target query);
 
    @POST
    @Path("/query")
-   List<TimeseriesTarget> query(Query query);
+   List<TimeseriesTarget> query(@RequestBody(required = true) Query query);
 
+   @Operation(hidden = true)
    @OPTIONS
    @Path("/annotations")
    default Response annotations() {
@@ -46,22 +53,29 @@ public interface GrafanaService {
 
    @POST
    @Path("/annotations")
-   List<AnnotationDefinition> annotations(AnnotationsQuery query);
+   List<AnnotationDefinition> annotations(@RequestBody(required = true) AnnotationsQuery query);
 
    class Query {
+      @NotNull
       public Range range;
+      @NotNull
       public List<Target> targets;
    }
 
    class Range {
+      @NotNull
       public Instant from;
+      @NotNull
       public Instant to;
    }
 
    class TimeseriesTarget {
+      @NotNull
       public String target;
+      @NotNull
       public List<Number[]> datapoints = new ArrayList<>();
       // custom fields Grafana does not understand
+      @JsonProperty(required = true)
       public int variableId;
    }
 

@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useSelector, useDispatch } from "react-redux"
 
 import * as actions from "./actions"
-import * as api from "./api"
-import { Run, RunsDispatch } from "./reducers"
+import { RunsDispatch } from "./reducers"
 import { noop } from "../../utils"
 import { useTester, teamsSelector } from "../../auth"
 import { interleave } from "../../utils"
@@ -18,6 +17,7 @@ import { NavLink } from "react-router-dom"
 import ChangeSchemaModal from "./ChangeSchemaModal"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInRun } from "./NoSchema"
+import Api, { RunExtended } from "../../api"
 
 function findFirstValue(o: any) {
     if (!o || Object.keys(o).length !== 1) {
@@ -38,7 +38,7 @@ function getPaths(data: any) {
 }
 
 type RunDataProps = {
-    run: Run
+    run: RunExtended
 }
 
 export default function RunData(props: RunDataProps) {
@@ -53,10 +53,10 @@ export default function RunData(props: RunDataProps) {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get("token")
         setLoading(true)
-        api.getData(props.run.id, token || undefined)
+        Api.runServiceGetData(props.run.id, token || undefined)
             .then(
                 data => {
-                    setData(data)
+                    setData(data as any)
                     setEditorData(toString(data))
                 },
                 error => dispatchError(dispatch, error, "FETCH_RUN_DATA", "Failed to fetch run data").catch(noop)
@@ -114,9 +114,9 @@ export default function RunData(props: RunDataProps) {
                                     initialSchema={findFirstValue(schemas)}
                                     paths={getPaths(data)}
                                     hasRoot={typeof data === "object" && !Array.isArray(data) && data}
-                                    update={(path, schema, schemaid) =>
+                                    update={(path, schemaUri, _) =>
                                         dispatch(
-                                            actions.updateSchema(props.run.id, props.run.testid, path, schemaid, schema)
+                                            actions.updateSchema(props.run.id, props.run.testid, path, schemaUri)
                                         ).catch(noop)
                                     }
                                 />
@@ -127,7 +127,7 @@ export default function RunData(props: RunDataProps) {
             </Form>
             <JsonPathSearchToolbar
                 originalData={data}
-                onRemoteQuery={(query, array) => api.query(props.run.id, query, array)}
+                onRemoteQuery={(query, array) => Api.runServiceQueryData(props.run.id, query, array)}
                 onDataUpdate={setEditorData}
             />
             {loading ? (

@@ -35,8 +35,8 @@ public class GrafanaServiceImpl implements GrafanaService {
 
    @WithRoles
    @Override
-   public Object[] search(Target query) {
-      return Variable.<Variable>listAll().stream().map(v -> String.valueOf(v.id)).toArray();
+   public String[] search(Target query) {
+      return Variable.<Variable>listAll().stream().map(v -> String.valueOf(v.id)).toArray(String[]::new);
    }
 
    @WithRoles

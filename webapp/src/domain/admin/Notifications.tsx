@@ -3,16 +3,8 @@ import { useDispatch } from "react-redux"
 
 import { ActionGroup, Button, Form, FormGroup, TextInput } from "@patternfly/react-core"
 import NotificationMethodSelect from "../../components/NotificationMethodSelect"
-import { fetchApi } from "../../services/api/index"
+import Api from "../../api"
 import { dispatchInfo, dispatchError } from "../../alerts"
-
-const base = "/api/notifications"
-const fetchMethods = (method: string | undefined, data: string) =>
-    fetchApi(
-        `${base}/test?method=${method ? encodeURIComponent(method) : ""}&data=${encodeURIComponent(data)}`,
-        null,
-        "post"
-    )
 
 export default function Notifications() {
     const [method, setMethod] = useState<string>()
@@ -29,7 +21,7 @@ export default function Notifications() {
             <ActionGroup>
                 <Button
                     onClick={() =>
-                        fetchMethods(method, data).then(
+                        Api.notificationServiceTestNotifications(data, method).then(
                             () =>
                                 dispatchInfo(
                                     dispatch,

@@ -22,7 +22,7 @@ import TestSelect, { SelectedTest } from "../../components/TestSelect"
 import { alertAction } from "../../alerts"
 import { formatDateTime } from "../../utils"
 
-import { AllTableReports, TableReportSummary, getTableReports } from "./api"
+import Api, { AllTableReports, SortDirection, TableReportSummary } from "../../api"
 import ButtonLink from "../../components/ButtonLink"
 import { useTester } from "../../auth"
 
@@ -42,7 +42,7 @@ export default function Reports() {
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [sort, setSort] = useState("title")
-    const [direction, setDirection] = useState("Descending")
+    const [direction, setDirection] = useState<SortDirection>("Descending")
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
     const [roles, setRoles] = useState<Team>()
     const [test, setTest] = useState<SelectedTest>()
@@ -56,7 +56,15 @@ export default function Reports() {
 
     useEffect(() => {
         setLoading(true)
-        getTableReports(pagination, (test && test.id) || undefined, roles?.key, folder)
+        Api.reportServiceGetTableReports(
+            pagination.direction,
+            folder,
+            pagination.perPage,
+            pagination.page,
+            roles?.key,
+            pagination.sort,
+            (test && test.id) || undefined
+        )
             .then(setTableReports)
             .catch(error => dispatch(alertAction("FETCH_REPORTS", "Failed to fetch reports", error)))
             .finally(() => setLoading(false))

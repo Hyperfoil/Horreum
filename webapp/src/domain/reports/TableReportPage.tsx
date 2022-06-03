@@ -19,7 +19,7 @@ import { useReactToPrint } from "react-to-print"
 import { alertAction } from "../../alerts"
 import { useTester } from "../../auth"
 
-import { TableReport, getTableReport } from "./api"
+import Api, { TableReport } from "../../api"
 import TableReportView from "./TableReportView"
 import ButtonLink from "../../components/ButtonLink"
 import ReportLogModal from "./ReportLogModal"
@@ -35,7 +35,7 @@ export default function TableReportPage() {
         if (id) {
             setLoading(true)
             document.title = "Loading report... | Horreum"
-            getTableReport(id)
+            Api.reportServiceGetTableReport(id)
                 .then(
                     report => {
                         document.title = report.config.title + " | Horreum"

@@ -12,7 +12,8 @@ import Table from "../../components/Table"
 import AccessIcon from "../../components/AccessIcon"
 import ActionMenu, { useShareLink, useChangeAccess, useDelete } from "../../components/ActionMenu"
 import { CellProps, Column } from "react-table"
-import { Schema, SchemaDispatch } from "./reducers"
+import { SchemaDispatch } from "./reducers"
+import { Access, Schema } from "../../api"
 
 type C = CellProps<Schema>
 
@@ -68,7 +69,7 @@ export default function AllSchema() {
                         <ActionMenu
                             id={arg.cell.value}
                             owner={arg.row.original.owner}
-                            access={arg.row.original.access}
+                            access={arg.row.original.access as Access}
                             description={"schema " + arg.row.original.name + " (" + arg.row.original.uri + ")"}
                             items={[shareLink, changeAccess, del]}
                         />

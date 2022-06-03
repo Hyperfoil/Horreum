@@ -82,7 +82,7 @@ public class DatasetServiceTest extends BaseServiceTest {
    private String testDataSetQuery(String jsonPath, boolean array, String schemaUri) {
       AtomicReference<String> result = new AtomicReference<>();
       withExampleSchemas(schemas -> result.set(withExampleDataset(createTest(createExampleTest("dummy")), createABData(), ds -> {
-         QueryResult queryResult = datasetService.queryDataSet(ds.id, jsonPath, array, schemaUri);
+         QueryResult queryResult = datasetService.queryData(ds.id, jsonPath, array, schemaUri);
          assertTrue(queryResult.valid);
          return queryResult.value;
       })), "A", "B");

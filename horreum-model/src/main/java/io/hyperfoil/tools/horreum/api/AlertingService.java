@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -13,6 +14,11 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
@@ -31,41 +37,47 @@ public interface AlertingService {
 
    @POST
    @Path("variables")
-   void variables(@QueryParam("test") Integer testId, List<Variable> variables);
+   void updateVariables(@Parameter(required = true) @QueryParam("test") int testId,
+                        @RequestBody(required = true) List<Variable> variables);
 
    @GET
    @Path("dashboard")
-   DashboardInfo dashboard(@QueryParam("test") Integer testId, @QueryParam("fingerprint") String fingerprint);
+   DashboardInfo dashboard(@Parameter(required = true) @QueryParam("test") int testId,
+                           @QueryParam("fingerprint") String fingerprint);
 
    @GET
    @Path("changes")
-   List<Change> changes(@QueryParam("var") Integer varId, @QueryParam("fingerprint") String fingerprint);
+   List<Change> changes(@Parameter(required = true) @QueryParam("var") int varId,
+                        @QueryParam("fingerprint") String fingerprint);
 
    @POST
    @Path("change/{id}")
-   void updateChange(@PathParam("id") Integer id, Change change);
+   void updateChange(@Parameter(required = true) @PathParam("id") int id,
+                     @RequestBody(required = true) Change change);
 
    @DELETE
    @Path("change/{id}")
-   void deleteChange(@PathParam("id") Integer id);
+   void deleteChange(@PathParam("id") int id);
 
    @POST
    @Path("recalculate")
-   void recalculateDatapoints(@QueryParam("test") Integer testId, @QueryParam("notify") boolean notify,
-                              @QueryParam("debug") boolean debug, @QueryParam("from") Long from, @QueryParam("to") Long to);
+   void recalculateDatapoints(@Parameter(required = true) @QueryParam("test") int testId,
+                              @QueryParam("notify") boolean notify,
+                              @QueryParam("debug") boolean debug,
+                              @QueryParam("from") Long from, @QueryParam("to") Long to);
 
    @GET
    @Path("recalculate")
-   RecalculationStatus getRecalculationStatus(@QueryParam("test") Integer testId);
+   DatapointRecalculationStatus getRecalculationStatus(@Parameter(required = true) @QueryParam("test") int testId);
 
    @POST
    @Path("/datapoint/last")
-   List<DatapointLastTimestamp> findLastDatapoints(LastDatapointsParams params);
+   List<DatapointLastTimestamp> findLastDatapoints(@RequestBody(required = true) LastDatapointsParams params);
 
    @POST
    @Path("/expectRun")
-   void expectRun(@QueryParam("test") String test,
-                  @QueryParam("timeout") Long timeoutSeconds,
+   void expectRun(@Parameter(required = true) @QueryParam("test") String test,
+                  @Parameter(required = true) @QueryParam("timeout") Long timeoutSeconds,
                   @QueryParam("expectedby") String expectedBy,
                   @QueryParam("backlink") String backlink);
 
@@ -84,25 +96,33 @@ public interface AlertingService {
 
    @GET
    @Path("/missingdatarule")
-   List<MissingDataRule> missingDataRules(@QueryParam("testId") int testId);
+   List<MissingDataRule> missingDataRules(@Parameter(required = true) @QueryParam("testId") int testId);
 
    @POST
    @Path("/missingdatarule")
-   int updateMissingDataRule(@QueryParam("testId") int testId, MissingDataRule rule);
+   int updateMissingDataRule(
+         @Parameter(required = true) @QueryParam("testId") int testId,
+         @RequestBody(required = true) MissingDataRule rule);
 
    @DELETE
    @Path("/missingdatarule/{id}")
    void deleteMissingDataRule(@PathParam("id") int id);
 
    class DashboardInfo {
+      @JsonProperty(required = true)
       public int testId;
+      @NotNull
       public String uid;
+      @NotNull
       public String url;
+      @NotNull
       public List<PanelInfo> panels = new ArrayList<>();
    }
 
    class PanelInfo {
+      @NotNull
       public String name;
+      @NotNull
       public List<Variable> variables;
 
       public PanelInfo(String name, List<Variable> variables) {
@@ -134,22 +154,29 @@ public interface AlertingService {
       }
    }
 
-   class RecalculationStatus {
+   class DatapointRecalculationStatus {
+      @JsonProperty(required = true)
       public int percentage;
+      @JsonProperty(required = true)
       public boolean done;
       public Integer totalDatasets;
       public Integer errors;
+      @NotNull
       public Collection<DataSet.Info> datasetsWithoutValue;
    }
 
 
    class DatapointLastTimestamp {
+      @JsonProperty(required = true)
       public int variable;
+      @NotNull
       public Number timestamp;
    }
 
    class LastDatapointsParams {
+      @NotNull
       public int[] variables;
+      @NotNull
       public String fingerprint;
    }
 }

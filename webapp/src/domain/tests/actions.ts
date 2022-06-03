@@ -1,9 +1,5 @@
-import * as api from "./api"
 import * as actionTypes from "./actionTypes"
-import { accessName, Access } from "../../auth"
 import {
-    Test,
-    View,
     LoadingAction,
     LoadedSummaryAction,
     LoadedTestAction,
@@ -20,12 +16,10 @@ import {
     UpdateTransformersAction,
     UpdateRunsAndDatasetsAction,
 } from "./reducers"
+import Api, { Access, Hook, Test, Transformer, View, Watch } from "../../api"
 import { Dispatch } from "redux"
-import { Transformer } from "../schemas/api"
-import * as subscriptions from "./subscriptions-api"
 import { Map } from "immutable"
 import { alertAction, AddAlertAction, constraintValidationFormatter, dispatchError } from "../../alerts"
-import { Hook } from "../hooks/reducers"
 
 function loading(isLoading: boolean): LoadingAction {
     return { type: actionTypes.LOADING, isLoading }
@@ -34,8 +28,8 @@ function loading(isLoading: boolean): LoadingAction {
 export function fetchSummary(roles?: string, folder?: string) {
     return (dispatch: Dispatch<LoadingAction | LoadedSummaryAction | AddAlertAction>) => {
         dispatch(loading(true))
-        return api.summary(roles, folder).then(
-            listing => dispatch({ type: actionTypes.LOADED_SUMMARY, tests: listing.tests }),
+        return Api.testServiceSummary(folder, roles).then(
+            listing => dispatch({ type: actionTypes.LOADED_SUMMARY, tests: listing.tests?.map(t => t as Test) || [] }),
             error => {
                 dispatch(loading(false))
                 return dispatchError(dispatch, error, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
@@ -47,7 +41,7 @@ export function fetchSummary(roles?: string, folder?: string) {
 export function fetchTest(id: number) {
     return (dispatch: Dispatch<LoadingAction | LoadedTestAction | AddAlertAction>) => {
         dispatch(loading(true))
-        return api.get(id).then(
+        return Api.testServiceGet(id).then(
             test => dispatch({ type: actionTypes.LOADED_TEST, test }),
             error => {
                 dispatch(loading(false))
@@ -64,7 +58,7 @@ export function fetchTest(id: number) {
 
 export function sendTest(test: Test) {
     return (dispatch: Dispatch<LoadedTestAction | AddAlertAction>) => {
-        return api.send(test).then(
+        return Api.testServiceAdd(test).then(
             response => {
                 dispatch({ type: actionTypes.LOADED_TEST, test })
                 return response
@@ -95,7 +89,7 @@ export function updateView(testId: number, view: View) {
                 return Promise.reject()
             }
         }
-        return api.updateView(testId, view).then(
+        return Api.testServiceUpdateView(testId, view).then(
             response => {
                 dispatch({
                     type: actionTypes.UPDATE_VIEW,
@@ -117,7 +111,7 @@ export function updateView(testId: number, view: View) {
 
 export function updateFolder(testId: number, prevFolder: string, newFolder: string) {
     return (dispatch: Dispatch<UpdateFolderAction | AddAlertAction>) =>
-        api.updateFolder(testId, newFolder).then(
+        Api.testServiceUpdateFolder(testId, newFolder).then(
             _ =>
                 dispatch({
                     type: actionTypes.UPDATE_FOLDER,
@@ -134,7 +128,7 @@ export function updateHooks(testId: number, testWebHooks: Hook[]) {
         const promises: any[] = []
         testWebHooks.forEach(hook => {
             promises.push(
-                api.updateHook(testId, hook).then(
+                Api.testServiceUpdateHook(testId, hook).then(
                     response => {
                         dispatch({
                             type: actionTypes.UPDATE_HOOK,
@@ -154,9 +148,9 @@ export function updateHooks(testId: number, testWebHooks: Hook[]) {
 
 export function addToken(testId: number, value: string, description: string, permissions: number) {
     return (dispatch: Dispatch<UpdateTokensAction | AddAlertAction>) =>
-        api.addToken(testId, value, description, permissions).then(
+        Api.testServiceAddToken(testId, { id: -1, value, description, permissions }).then(
             () =>
-                api.tokens(testId).then(
+                Api.testServiceTokens(testId).then(
                     tokens =>
                         dispatch({
                             type: actionTypes.UPDATE_TOKENS,
@@ -172,7 +166,7 @@ export function addToken(testId: number, value: string, description: string, per
 
 export function revokeToken(testId: number, tokenId: number) {
     return (dispatch: Dispatch<RevokeTokenAction | AddAlertAction>) =>
-        api.revokeToken(testId, tokenId).then(
+        Api.testServiceDropToken(testId, tokenId).then(
             () =>
                 dispatch({
                     type: actionTypes.REVOKE_TOKEN,
@@ -185,7 +179,7 @@ export function revokeToken(testId: number, tokenId: number) {
 
 export function updateAccess(id: number, owner: string, access: Access) {
     return (dispatch: Dispatch<UpdateAccessAction | AddAlertAction>) =>
-        api.updateAccess(id, owner, accessName(access)).then(
+        Api.testServiceUpdateAccess(id, access, owner).then(
             () => dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access }),
             error =>
                 dispatchError(
@@ -200,7 +194,7 @@ export function updateAccess(id: number, owner: string, access: Access) {
 
 export function deleteTest(id: number) {
     return (dispatch: Dispatch<DeleteAction | AddAlertAction>) =>
-        api.deleteTest(id).then(
+        Api.testServiceDelete(id).then(
             () => dispatch({ type: actionTypes.DELETE, id }),
             error => dispatchError(dispatch, error, "DELETE_TEST", "Failed to delete test " + id)
         )
@@ -208,23 +202,23 @@ export function deleteTest(id: number) {
 
 export function allSubscriptions(folder?: string) {
     return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
-        subscriptions.all(folder).then(
+        Api.subscriptionServiceAll(folder).then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
-                    byId: Map(Object.entries(response).map(([key, value]) => [parseInt(key), value as string[]])),
+                    byId: Map(Object.entries(response).map(([key, value]) => [parseInt(key), [...value]])),
                 }),
             error => dispatchError(dispatch, error, "GET_ALL_SUBSCRIPTIONS", "Failed to fetch test subscriptions")
         )
 }
 
-function watchToList(watch: subscriptions.Watch) {
+function watchToList(watch: Watch) {
     return [...watch.users, ...watch.teams, ...watch.optout.map((u: string) => `!${u}`)]
 }
 
 export function getSubscription(testId: number) {
     return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
-        subscriptions.getSubscription(testId).then(
+        Api.subscriptionServiceGet(testId).then(
             watch => {
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -233,12 +227,12 @@ export function getSubscription(testId: number) {
                 return watch
             },
             error => dispatchError(dispatch, error, "SUBSCRIPTION_LOOKUP", "Subscription lookup failed")
-        )
+        ) as Promise<Watch>
 }
 
-export function updateSubscription(watch: subscriptions.Watch) {
+export function updateSubscription(watch: Watch) {
     return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
-        subscriptions.updateSubscription(watch).then(
+        Api.subscriptionServiceUpdate(watch.testId, watch).then(
             () =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -254,7 +248,7 @@ export function addUserOrTeam(id: number, userOrTeam: string) {
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map([[id, undefined]]),
         })
-        return subscriptions.addUserOrTeam(id, userOrTeam).then(
+        return Api.subscriptionServiceAddUserOrTeam(id, userOrTeam).then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -271,7 +265,7 @@ export function removeUserOrTeam(id: number, userOrTeam: string) {
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map([[id, undefined]]),
         })
-        return subscriptions.removeUserOrTeam(id, userOrTeam).then(
+        return Api.subscriptionServiceRemoveUserOrTeam(id, userOrTeam).then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -284,7 +278,7 @@ export function removeUserOrTeam(id: number, userOrTeam: string) {
 
 export function fetchFolders() {
     return (dispatch: Dispatch<UpdateFoldersAction | AddAlertAction>) => {
-        return api.folders().then(
+        return Api.testServiceFolders().then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_FOLDERS,
@@ -297,27 +291,25 @@ export function fetchFolders() {
 
 export function updateTransformers(testId: number, transformers: Transformer[]) {
     return (dispatch: Dispatch<UpdateTransformersAction | AddAlertAction>) => {
-        return api
-            .updateTransformers(
-                testId,
-                transformers.map(t => t.id)
-            )
-            .then(
-                () => dispatch({ type: actionTypes.UPDATE_TRANSFORMERS, testId, transformers }),
-                error =>
-                    dispatchError(
-                        dispatch,
-                        error,
-                        "UPDATE_TRANSFORMERS",
-                        "Failed to update transformers for test " + testId
-                    )
-            )
+        return Api.testServiceUpdateTransformers(
+            testId,
+            transformers.map(t => t.id)
+        ).then(
+            () => dispatch({ type: actionTypes.UPDATE_TRANSFORMERS, testId, transformers }),
+            error =>
+                dispatchError(
+                    dispatch,
+                    error,
+                    "UPDATE_TRANSFORMERS",
+                    "Failed to update transformers for test " + testId
+                )
+        )
     }
 }
 
-export function updateFingerprint(testId: number, labels: string[], filter: string | null) {
+export function updateFingerprint(testId: number, labels: string[], filter?: string) {
     return (dispatch: Dispatch<UpdateFingerprintAction | AddAlertAction>) => {
-        return api.updateFingerprint(testId, labels, filter).then(
+        return Api.testServiceUpdateFingerprint(testId, { labels, filter }).then(
             () => dispatch({ type: actionTypes.UPDATE_FINGERPRINT, testId, labels, filter }),
             error =>
                 dispatchError(dispatch, error, "UPDATE_FINGERPRINT", "Failed to update fingerprint for test " + testId)

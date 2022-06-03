@@ -26,7 +26,8 @@ import { TabFunctionsRef } from "../../components/SavedTabs"
 import { useTester, teamToName, Access as authAccess, defaultTeamSelector } from "../../auth"
 import { noop } from "../../utils"
 import { addToken, revokeToken, updateAccess } from "./actions"
-import { Test, TestDispatch } from "./reducers"
+import { TestDispatch } from "./reducers"
+import { Test } from "../../api"
 
 type AddTokenModalProps = {
     testId: number

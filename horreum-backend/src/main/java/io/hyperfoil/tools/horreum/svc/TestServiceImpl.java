@@ -89,7 +89,7 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @Transactional
    @Override
-   public void delete(Integer id){
+   public void delete(int id){
       Test test = Test.findById(id);
       if (test == null) {
          throw ServiceException.notFound("No test with id " + id);
@@ -112,7 +112,7 @@ public class TestServiceImpl implements TestService {
    @WithToken
    @WithRoles
    @PermitAll
-   public Test get(Integer id, String token){
+   public Test get(int id, String token){
       Test test = Test.find("id", id).firstResult();
       if (test == null) {
          throw ServiceException.notFound("No test with id " + id);
@@ -337,7 +337,7 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @WithRoles
    @Transactional
-   public Integer addToken(Integer testId, TestToken token) {
+   public int addToken(int testId, TestToken token) {
       if (token.hasUpload() && !token.hasRead()) {
          throw ServiceException.badRequest("Upload permission requires read permission as well.");
       }
@@ -351,7 +351,7 @@ public class TestServiceImpl implements TestService {
    @Override
    @RolesAllowed("tester")
    @WithRoles
-   public Collection<TestToken> tokens(Integer testId) {
+   public Collection<TestToken> tokens(int testId) {
       Test t = Test.findById(testId);
       Hibernate.initialize(t.tokens);
       return t.tokens;
@@ -361,7 +361,7 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @WithRoles
    @Transactional
-   public void dropToken(Integer testId, Integer tokenId) {
+   public void dropToken(int testId, int tokenId) {
       Test test = getTestForUpdate(testId);
       test.tokens.removeIf(t -> Objects.equals(t.id, tokenId));
       test.persist();
@@ -372,7 +372,7 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @Transactional
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-   public void updateAccess(Integer id,
+   public void updateAccess(int id,
                             String owner,
                             Access access) {
       Query query = em.createNativeQuery(CHANGE_ACCESS);
@@ -388,8 +388,8 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @WithRoles
    @Transactional
-   public void updateView(Integer testId, View view) {
-      if (testId == null || testId <= 0) {
+   public void updateView(int testId, View view) {
+      if (testId <= 0) {
          throw ServiceException.badRequest("Missing test id");
       }
       try {
@@ -416,8 +416,8 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @WithRoles
    @Transactional
-   public void updateAccess(Integer id,
-                            boolean enabled) {
+   public void updateNotifications(int id,
+                                   boolean enabled) {
       Query query = em.createNativeQuery(UPDATE_NOTIFICATIONS)
             .setParameter(1, enabled)
             .setParameter(2, id);
@@ -430,7 +430,7 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @Transactional
    @Override
-   public void updateFolder(Integer id, String folder) {
+   public void updateFolder(int id, String folder) {
       if ("*".equals(folder)) {
          throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
       }
@@ -443,8 +443,8 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @WithRoles
    @Transactional
-   public Hook updateHook(Integer testId, Hook hook) {
-      if (testId == null || testId <= 0) {
+   public Hook updateHook(int testId, Hook hook) {
+      if (testId <= 0) {
          throw ServiceException.badRequest("Missing test id");
       }
       // just ensure the test exists
@@ -481,7 +481,7 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @Transactional
    @Override
-   public void updateTransformers(Integer testId, List<Integer> transformerIds) {
+   public void updateTransformers(int testId, List<Integer> transformerIds) {
       if (transformerIds == null) {
          throw ServiceException.badRequest("Null transformer IDs");
       }

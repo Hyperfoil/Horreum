@@ -10,6 +10,11 @@
     <artifactId>horreum-backend</artifactId>
     <name>Horreum Backend</name>
 
+    <properties>
+        <!-- empty value breaks quarkus:generate-code -->
+        <buildNumber>dummy-value</buildNumber>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>

@@ -40,13 +40,16 @@ import {
     Column,
     UseSortByColumnOptions,
 } from "react-table"
-import { Run, RunsDispatch } from "./reducers"
+import { RunsDispatch } from "./reducers"
+import { RunSummary } from "../../api"
 import { NoSchemaInRun } from "./NoSchema"
 import { Description, ExecutionTime, Menu } from "./components"
 
-type C = CellProps<Run> & UseTableOptions<Run> & UseRowSelectInstanceProps<Run> & { row: UseRowSelectRowProps<Run> }
+type C = CellProps<RunSummary> &
+    UseTableOptions<RunSummary> &
+    UseRowSelectInstanceProps<RunSummary> & { row: UseRowSelectRowProps<RunSummary> }
 
-type RunColumn = Column<Run> & UseSortByColumnOptions<Run>
+type RunColumn = Column<RunSummary> & UseSortByColumnOptions<RunSummary>
 
 const tableColumns: RunColumn[] = [
     {
@@ -96,7 +99,7 @@ const tableColumns: RunColumn[] = [
     {
         Header: "Duration",
         id: "(stop - start)",
-        accessor: (run: Run) =>
+        accessor: (run: RunSummary) =>
             Duration.fromMillis(toEpochMillis(run.stop) - toEpochMillis(run.start)).toFormat("hh:mm:ss.SSS"),
     },
     {
@@ -137,7 +140,7 @@ const tableColumns: RunColumn[] = [
         id: "actions",
         accessor: "id",
         disableSortBy: true,
-        Cell: (arg: CellProps<Run, number>) => Menu(arg.row.original),
+        Cell: (arg: CellProps<RunSummary, number>) => Menu(arg.row.original),
     },
 ]
 
@@ -169,7 +172,7 @@ export default function TestRuns() {
     }, [test])
     const isLoading = useSelector(selectors.isLoading)
 
-    const compareUrl = test?.compareUrl
+    const compareUrl = test && new Function("return " + test.compareUrl)()
     const [actualCompareUrl, compareError] = useMemo(() => {
         if (compareUrl && typeof compareUrl === "function") {
             try {

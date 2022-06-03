@@ -1,16 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import { fetchDashboard } from "./api"
-import { Panel } from "./types"
 import { ChangesTabs } from "./ChangeTable"
 import { alertAction } from "../../alerts"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
 import LabelsSelect, { convertLabels, SelectedLabels } from "../../components/LabelsSelect"
 import PanelChart from "./PanelChart"
-import { formatDate } from "../../utils"
+import { fingerprintToString, formatDate } from "../../utils"
 import { DateTime } from "luxon"
 import { teamsSelector } from "../../auth"
-import { listFingerprints } from "../../domain/tests/api"
+import Api, { PanelInfo } from "../../api"
 
 import {
     Button,
@@ -154,7 +152,7 @@ export default function Changes() {
         return { ...fingerprint, toString: () => str }
     })
     const [dashboardUrl, setDashboardUrl] = useState("")
-    const [panels, setPanels] = useState<Panel[]>([])
+    const [panels, setPanels] = useState<PanelInfo[]>([])
     const [loadingPanels, setLoadingPanels] = useState(false)
     const [loadingFingerprints, setLoadingFingerprints] = useState(false)
     const [requiresFingerprint, setRequiresFingerprint] = useState(false)
@@ -195,7 +193,7 @@ export default function Changes() {
         // We need to prevent fetching dashboard until we are sure if we need the fingerprint
         if (selectedTest && !loadingFingerprints) {
             setLoadingPanels(true)
-            fetchDashboard(selectedTest.id, selectedFingerprint)
+            Api.alertingServiceDashboard(selectedTest.id, fingerprintToString(selectedFingerprint))
                 .then(
                     response => {
                         setDashboardUrl(response.url)
@@ -232,9 +230,9 @@ export default function Changes() {
             return Promise.resolve([])
         }
         setLoadingFingerprints(true)
-        return listFingerprints(selectedTest?.id)
+        return Api.testServiceListFingerprints(selectedTest?.id)
             .then(
-                (response: any[]) => {
+                response => {
                     setRequiresFingerprint(!!response && response.length > 1)
                     return response
                 },

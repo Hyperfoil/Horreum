@@ -29,6 +29,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity
 @Table(name = "missingdata_rule")
 public class MissingDataRule extends PanacheEntityBase {
+   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Integer id;
@@ -40,6 +41,7 @@ public class MissingDataRule extends PanacheEntityBase {
    @JsonIgnore
    public Test test;
 
+   @NotNull
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public ArrayNode labels;
 

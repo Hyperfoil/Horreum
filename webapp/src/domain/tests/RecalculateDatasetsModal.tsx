@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState, useRef } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import { getRecalculationStatus, recalculateDatasets, RecalculationStatus } from "./api"
 import { updateRunsAndDatasetsAction } from "./actions"
 import { get } from "./selectors"
 import { dispatchError } from "../../alerts"
 import { Bullseye, Button, Modal, Progress, Spinner } from "@patternfly/react-core"
+import Api, { RecalculationStatus } from "../../api"
 
 type RecalculateDatasetsModalProps = {
     testId: number
@@ -30,7 +30,7 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
     }, [])
     useEffect(() => {
         if (test?.runs === undefined) {
-            getRecalculationStatus(props.testId).then(status => {
+            Api.testServiceGetRecalculationStatus(props.testId).then(status => {
                 dispatch(updateRunsAndDatasetsAction(props.testId, status.totalRuns, status.datasets))
             })
         }
@@ -49,10 +49,10 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
                               key="recalculate"
                               onClick={() => {
                                   setProgress(0)
-                                  recalculateDatasets(props.testId)
+                                  Api.testServiceRecalculateDatasets(props.testId)
                                       .then(() => {
                                           timerId.current = window.setInterval(() => {
-                                              getRecalculationStatus(props.testId)
+                                              Api.testServiceGetRecalculationStatus(props.testId)
                                                   .then(status => {
                                                       setStatus(status)
                                                       setProgress(status.finished)

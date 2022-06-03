@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Button, ButtonVariant, Form, FormGroup, FormSelectOption, FormSelect, Modal } from "@patternfly/react-core"
-import { Hook } from "./reducers"
+import { Hook } from "../../api"
 import HookUrlSelector from "../../components/HookUrlSelector"
 import { globalEventTypes } from "./reducers"
 

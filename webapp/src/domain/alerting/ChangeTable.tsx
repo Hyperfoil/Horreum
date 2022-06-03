@@ -17,10 +17,9 @@ import {
 } from "@patternfly/react-core"
 import { CheckIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
-import * as api from "./api"
-import { Change, Variable } from "./types"
+import Api, { Change, Variable } from "../../api"
 import { alertAction } from "../../alerts"
-import { formatDateTime } from "../../utils"
+import { fingerprintToString, formatDateTime } from "../../utils"
 import { Column, UseSortByColumnOptions } from "react-table"
 import Table from "../../components/Table"
 import { useTester } from "../../auth"
@@ -152,7 +151,7 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
     const dispatch = useDispatch()
     const [changes, setChanges] = useState<Change[]>([])
     useEffect(() => {
-        api.fetchChanges(varId, fingerprint).then(
+        Api.alertingServiceChanges(varId, fingerprintToString(fingerprint)).then(
             response => setChanges(response),
             error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
         )
@@ -198,14 +197,14 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
                     <ChangeMenu
                         change={arg.row.original}
                         onDelete={changeId =>
-                            api.deleteChange(changeId).then(
+                            Api.alertingServiceDeleteChange(changeId).then(
                                 _ => setChanges(changes.filter(c => c.id !== changeId)),
                                 error =>
                                     dispatch(alertAction("CHANGE_DELETE", "Failed to delete change " + changeId, error))
                             )
                         }
                         onUpdate={change =>
-                            api.updateChange(change).then(
+                            Api.alertingServiceUpdateChange(change.id, change).then(
                                 _ => setChanges(changes.map(c => (c.id === change.id ? change : c))),
                                 error =>
                                     dispatch(

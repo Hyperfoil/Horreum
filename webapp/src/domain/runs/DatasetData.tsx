@@ -9,7 +9,7 @@ import Editor from "../../components/Editor/monaco/Editor"
 import SchemaLink from "../schemas/SchemaLink"
 import DatasetLogModal from "../tests/DatasetLogModal"
 
-import * as api from "./api"
+import Api from "../../api"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInDataset } from "./NoSchema"
 import LabelValuesModal from "./LabelValuesModal"
@@ -29,7 +29,7 @@ export default function DatasetData(props: DatasetDataProps) {
     const [labelsLogOpen, setLabelsLogOpen] = useState(false)
     useEffect(() => {
         setLoading(true)
-        api.getDataset(props.datasetId)
+        Api.datasetServiceGetDataSet(props.datasetId)
             .then(
                 dataset => {
                     setOriginalData(dataset.data)
@@ -75,7 +75,7 @@ export default function DatasetData(props: DatasetDataProps) {
                 <FlexItem>
                     <JsonPathSearchToolbar
                         originalData={originalData}
-                        onRemoteQuery={(query, array) => api.queryDataset(props.datasetId, query, array)}
+                        onRemoteQuery={(query, array) => Api.datasetServiceQueryData(props.datasetId, query, array)}
                         onDataUpdate={setEditorData}
                     />
                 </FlexItem>

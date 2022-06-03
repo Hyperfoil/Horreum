@@ -50,6 +50,9 @@ release.properties
 # production
 /webapp/build
 
+# generated API
+/webapp/src/generated
+
 # misc
 .env.local
 .env.development.local

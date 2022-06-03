@@ -43,8 +43,11 @@ PGPASSWORD=secret psql -h localhost -U dbadmin horreum -f example-data.sql
 
 ```bash
 cd webapp && npm install && cd ..
+./mvnw package
 ./mvnw quarkus:dev
 ```
+
+The `package` phase needs to run first in order to build OpenAPI and generate API client for the frontend.
 
 `localhost:3000` to access the create-react-app live code server and `localhost:8080` to access the quarkus development server.
 

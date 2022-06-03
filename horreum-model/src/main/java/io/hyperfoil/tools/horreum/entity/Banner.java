@@ -7,12 +7,16 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.validation.constraints.NotNull;
 
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 @Entity
 public class Banner {
    @Id
    @GeneratedValue
    public Integer id;
 
+   @Schema(type = SchemaType.NUMBER)
    @NotNull
    public Instant created;
 

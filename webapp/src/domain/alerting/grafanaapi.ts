@@ -1,31 +1,12 @@
-import { fetchApi } from "../../services/api"
 import { DateTime } from "luxon"
-
-const base = "/api/grafana"
-const endPoints = {
-    query: () => `${base}/query`,
-    annotations: () => `${base}/annotations`,
-}
-
-export type TimeseriesTarget = {
-    target: string
-    datapoints: number[][] // array of [value, timestamp]
-    // extra (not used by Grafana)
-    variableId?: number
-}
+import Api, { AnnotationDefinition, TimeseriesTarget } from "../../api"
+import { fingerprintToString } from "../../utils"
 
 function range(from: number, to: number) {
     return {
-        from: DateTime.fromMillis(from).setZone("utc").toISO(),
-        to: DateTime.fromMillis(to).setZone("utc").toISO(),
+        from: new Date(DateTime.fromMillis(from).setZone("utc").toISO()),
+        to: new Date(DateTime.fromMillis(to).setZone("utc").toISO()),
     }
-}
-
-export function fingerprintToString(fingerprint: unknown) {
-    if (!fingerprint) {
-        return ""
-    }
-    return encodeURIComponent(JSON.stringify(fingerprint))
 }
 
 export const fetchDatapoints = (
@@ -42,20 +23,7 @@ export const fetchDatapoints = (
             refId: "ignored",
         })),
     }
-    return fetchApi(endPoints.query(), query, "post")
-}
-
-export type Annotation = {
-    title: string
-    text: string
-    isRegion: boolean
-    time: number
-    timeEnd: number
-    tags: string[]
-    // extra (not used by Grafana)
-    changeId?: number
-    variableId?: number
-    runId?: number
+    return Api.grafanaServiceQuery(query)
 }
 
 export const fetchAnnotations = (
@@ -63,14 +31,14 @@ export const fetchAnnotations = (
     fingerprint: unknown,
     from: number,
     to: number
-): Promise<Annotation[]> => {
+): Promise<AnnotationDefinition[]> => {
     const query = {
         range: range(from, to),
         annotation: {
             query: variableId + ";" + fingerprintToString(fingerprint),
         },
     }
-    return fetchApi(endPoints.annotations(), query, "post")
+    return Api.grafanaServiceAnnotations(query)
 }
 
 export const fetchAllAnnotations = (
@@ -78,7 +46,7 @@ export const fetchAllAnnotations = (
     fingerprint: unknown,
     from: number,
     to: number
-): Promise<Annotation[]> => {
+): Promise<AnnotationDefinition[]> => {
     // TODO: let's create a bulk operation for these
     return Promise.all(variableIds.map(id => fetchAnnotations(id, fingerprint, from, to))).then(results =>
         results.flat()

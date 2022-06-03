@@ -16,6 +16,7 @@ import javax.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Type;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -28,6 +29,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity
 @Table(name = "tablereportconfig")
 public class TableReportConfig extends PanacheEntityBase {
+   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Integer id;
@@ -63,6 +65,7 @@ public class TableReportConfig extends PanacheEntityBase {
    public String scaleFormatter;
    public String scaleDescription;
 
+   @NotNull
    @OneToMany(mappedBy = "report", orphanRemoval = true, cascade = CascadeType.ALL)
    @OrderBy("order ASC")
    public List<ReportComponent> components;

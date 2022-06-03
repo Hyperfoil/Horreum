@@ -26,8 +26,7 @@ import {
 } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
 
-import * as api from "./api"
-import { TableReport, TableReportConfig, ReportComponent } from "./api"
+import Api, { TableReport, TableReportConfig, ReportComponent } from "../../api"
 import TableReportView from "./TableReportView"
 import ReportLogModal from "./ReportLogModal"
 
@@ -98,8 +97,8 @@ function ReportConfigComponent(props: ReportConfigComponentProps) {
                     fieldId="function"
                 >
                     <OptionalFunction
-                        func={props.component.function}
-                        onChange={f => props.onChange({ ...props.component, function: f })}
+                        func={props.component._function}
+                        onChange={f => props.onChange({ ...props.component, _function: f })}
                         readOnly={props.readOnly}
                         undefinedText="No function defined."
                         addText="Add component function..."
@@ -129,9 +128,6 @@ export default function TableReportConfigPage() {
     const [config, setConfig] = useState<TableReportConfig>({
         id: -1,
         title: "",
-        test: {
-            id: -1,
-        },
         filterLabels: [],
         categoryLabels: [],
         seriesLabels: [],
@@ -154,7 +150,7 @@ export default function TableReportConfigPage() {
         }
         setLoading(true)
         document.title = "Loading report config ... | Horreum"
-        api.getTableConfig(id)
+        Api.reportServiceGetTableReportConfig(id)
             .then((config: TableReportConfig) => {
                 setConfig(config)
                 setTest({
@@ -194,7 +190,7 @@ export default function TableReportConfigPage() {
                 onClick={() => {
                     // TODO save locally for faster reload...
                     setSaving(true)
-                    api.updateTableConfig(config, reportId)
+                    Api.reportServiceUpdateTableReportConfig(reportId, config)
                         .then(
                             report => history.push("/reports/table/" + report.id),
                             error => dispatch(alertAction("SAVE_CONFIG", "Failed to save report configuration.", error))
@@ -245,7 +241,16 @@ export default function TableReportConfigPage() {
                                 selection={test}
                                 onSelect={test => {
                                     setTest(test)
-                                    setConfig({ ...config, test: { id: test?.id } })
+                                    setConfig({
+                                        ...config,
+                                        test: {
+                                            id: test?.id || -1,
+                                            name: "",
+                                            owner: "",
+                                            access: 0,
+                                            notificationsEnabled: false,
+                                        },
+                                    })
                                 }}
                                 isDisabled={!isTester}
                             />
@@ -552,7 +557,7 @@ export default function TableReportConfigPage() {
                                     isDisabled={!configValid || saving}
                                     onClick={() => {
                                         setSaving(true)
-                                        api.previewTableReport(config, reportId)
+                                        Api.reportServicePreviewTableReport(reportId, config)
                                             .then(
                                                 report => setPreview(report),
                                                 error =>

@@ -5,11 +5,10 @@ import { Bullseye, Button, Flex, FlexItem, Modal, Pagination, Radio, Spinner, Te
 import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 import { NavLink } from "react-router-dom"
 
-import { Dataset, listBySchema, datasetsBySchema, query, queryDataset, QueryResult } from "../runs/api"
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
 import Editor from "../../components/Editor/monaco/Editor"
-import { Run } from "../runs/reducers"
 import { alertAction } from "../../alerts"
+import Api, { DatasetSummary, QueryResult, RunSummary } from "../../api"
 
 export type JsonPathTarget = "run" | "dataset"
 
@@ -23,14 +22,14 @@ type TryJsonPathModalProps = {
 }
 
 export default function TryJsonPathModal(props: TryJsonPathModalProps) {
-    const [runs, setRuns] = useState<Run[]>()
-    const [datasets, setDatasets] = useState<Dataset[]>()
+    const [runs, setRuns] = useState<RunSummary[]>()
+    const [datasets, setDatasets] = useState<DatasetSummary[]>()
     const [count, setCount] = useState(0) // total runs/datasets, not runs.length
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [valid, setValid] = useState(true)
     const [result, setResult] = useState<string>()
-    const [target, setTarget] = useState<Run | Dataset>()
+    const [target, setTarget] = useState<RunSummary | DatasetSummary>()
     const pagination = useMemo(() => ({ page, perPage, sort: "start", direction: "Descending" }), [page, perPage])
     const dispatch = useDispatch()
     useEffect(() => {
@@ -38,10 +37,16 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
             return
         }
         if (props.target === "run") {
-            listBySchema(props.uri, pagination).then(
-                response => {
-                    setRuns(response.runs)
-                    setCount(response.total)
+            Api.runServiceListBySchema(
+                props.uri,
+                pagination.direction,
+                pagination.perPage,
+                pagination.page,
+                pagination.sort
+            ).then(
+                summary => {
+                    setRuns(summary.runs)
+                    setCount(summary.total)
                 },
                 error => {
                     dispatch(alertAction("FETCH_RUNS_BY_URI", "Failed to fetch runs by Schema URI.", error))
@@ -50,7 +55,13 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
             )
         } else {
             // target === dataset
-            datasetsBySchema(props.uri, pagination).then(
+            Api.datasetServiceListBySchema(
+                props.uri,
+                pagination.direction,
+                pagination.perPage,
+                pagination.page,
+                pagination.sort
+            ).then(
                 response => {
                     setDatasets(response.datasets)
                     setCount(response.total)
@@ -68,16 +79,16 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
         }
         let response: Promise<QueryResult>
         if (props.target === "run") {
-            response = query(id, props.jsonpath, props.array, props.uri)
+            response = Api.runServiceQueryData(id, props.jsonpath, props.array, props.uri)
         } else {
-            response = queryDataset(id, props.jsonpath, props.array, props.uri)
+            response = Api.datasetServiceQueryData(id, props.jsonpath, props.array, props.uri)
         }
         return response.then(
             result => {
                 setValid(result.valid)
                 if (result.valid) {
                     try {
-                        result.value = JSON.parse(result.value)
+                        result.value = result.value ? JSON.parse(result.value) : undefined
                     } catch (e) {
                         // ignored
                     }
@@ -265,11 +276,11 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     {props.target === "run" && (
                         <NavLink
                             className="pf-c-button pf-m-secondary"
-                            to={`/run/${(target as Dataset).runId}?query=${encodeURIComponent(
+                            to={`/run/${(target as DatasetSummary).runId}?query=${encodeURIComponent(
                                 props.jsonpath || ""
-                            )}#dataset${(target as Dataset).ordinal}`}
+                            )}#dataset${(target as DatasetSummary).ordinal}`}
                         >
-                            Go to dataset {(target as Dataset).runId} #{(target as Dataset).ordinal + 1}
+                            Go to dataset {(target as DatasetSummary).runId} #{(target as DatasetSummary).ordinal + 1}
                         </NavLink>
                     )}
                 </div>

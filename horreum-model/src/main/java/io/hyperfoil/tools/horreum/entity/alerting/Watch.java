@@ -13,6 +13,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
+import javax.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
@@ -41,19 +42,22 @@ public class Watch extends PanacheEntityBase {
    @JsonIgnore
    public Test test;
 
+   @NotNull
    @ElementCollection(fetch = FetchType.EAGER)
    @Fetch(FetchMode.SELECT)
    public List<String> users;
 
+   @NotNull
    @ElementCollection(fetch = FetchType.EAGER)
    @Fetch(FetchMode.SELECT)
    public List<String> optout;
 
+   @NotNull
    @ElementCollection(fetch = FetchType.EAGER)
    @Fetch(FetchMode.SELECT)
    public List<String> teams;
 
-   @JsonProperty("testId")
+   @JsonProperty(value = "testId", required = true)
    private Integer getTestId() {
       return test.id;
    }

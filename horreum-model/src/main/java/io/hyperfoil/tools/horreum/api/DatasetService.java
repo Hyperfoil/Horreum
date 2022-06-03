@@ -1,8 +1,8 @@
 package io.hyperfoil.tools.horreum.api;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -13,10 +13,16 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
 
@@ -26,29 +32,30 @@ import io.hyperfoil.tools.horreum.entity.json.Label;
 public interface DatasetService {
    @Path("{id}")
    @GET
-   DataSet getDataSet(@PathParam("id") Integer datasetId);
+   DataSet getDataSet(@PathParam("id") int datasetId);
 
    @Path("list/{testId}")
    @GET
-   DatasetList listTestDatasets(@PathParam("testId") int testId,
-                                @QueryParam("limit") Integer limit,
-                                @QueryParam("page") Integer page,
-                                @QueryParam("sort") String sort,
-                                @QueryParam("direction") String direction);
+   DatasetList listByTest(@PathParam("testId") int testId,
+                          @QueryParam("limit") Integer limit,
+                          @QueryParam("page") Integer page,
+                          @QueryParam("sort") String sort,
+                          @QueryParam("direction") String direction);
 
    @Path("{id}/query")
    @GET
-   QueryResult queryDataSet(@PathParam("id") Integer datasetId,
-                            @QueryParam("query") String jsonpath,
-                            @QueryParam("array") @DefaultValue("false") boolean array, @QueryParam("schemaUri") String schemaUri);
+   QueryResult queryData(@PathParam("id") int datasetId,
+                         @Parameter(required = true) @QueryParam("query") String jsonpath,
+                         @QueryParam("array") @DefaultValue("false") boolean array,
+                         @QueryParam("schemaUri") String schemaUri);
 
    @GET
    @Path("bySchema")
-   DatasetList listDatasetsBySchema(@QueryParam("uri") String uri,
-                                    @QueryParam("limit") Integer limit,
-                                    @QueryParam("page") Integer page,
-                                    @QueryParam("sort") @DefaultValue("start") String sort,
-                                    @QueryParam("direction") @DefaultValue("Descending") String direction);
+   DatasetList listBySchema(@Parameter(required = true) @QueryParam("uri") String uri,
+                            @QueryParam("limit") Integer limit,
+                            @QueryParam("page") Integer page,
+                            @QueryParam("sort") @DefaultValue("start") String sort,
+                            @QueryParam("direction") @DefaultValue("Descending") String direction);
 
    @GET
    @Path("{datasetId}/labelValues")
@@ -56,31 +63,46 @@ public interface DatasetService {
 
    @POST
    @Path("{datasetId}/previewLabel")
-   LabelPreview previewLabel(@PathParam("datasetId") int datasetId, Label label);
+   LabelPreview previewLabel(@PathParam("datasetId") int datasetId, @RequestBody(required = true) Label label);
 
    class DatasetSummary {
+      @JsonProperty(required = true)
       public int id;
+      @JsonProperty(required = true)
       public int runId;
+      @JsonProperty(required = true)
       public int ordinal;
+      @JsonProperty(required = true)
       public int testId;
+      @NotNull
       public String testname;
       public String description;
+      @JsonProperty(required = true)
       public long start;
+      @JsonProperty(required = true)
       public long stop;
+      @NotNull
       public String owner;
+      @Schema(required = true, implementation = Access.class)
       public int access;
       public ObjectNode view;
+      @Schema(required = true, implementation = String[].class)
       public ArrayNode schemas; // list of URIs
    }
 
    class DatasetList {
+      @JsonProperty(required = true)
       public long total;
+      @NotNull
       public List<DatasetSummary> datasets;
    }
 
    class LabelValue {
+      @JsonProperty(required = true)
       public int id;
+      @NotNull
       public String name;
+      @NotNull
       public SchemaService.SchemaDescriptor schema;
       public JsonNode value;
    }

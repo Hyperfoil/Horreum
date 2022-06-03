@@ -14,15 +14,9 @@ import {
     Title,
 } from "@patternfly/react-core"
 import NotificationMethodSelect from "../../components/NotificationMethodSelect"
+import { NotificationSettings as NotificationConfig } from "../../api"
 
-const EMPTY = { id: -1, method: "", data: "", disabled: false }
-
-export type NotificationConfig = {
-    id: number
-    method: string
-    data: string
-    disabled: boolean
-}
+const EMPTY = { id: -1, name: "", isTeam: false, method: "", data: "", disabled: false }
 
 type NotificationSettingsProps = {
     settings: NotificationConfig

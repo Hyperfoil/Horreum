@@ -20,7 +20,7 @@ import {
 import { HelpIcon } from "@patternfly/react-icons"
 import { toString } from "../../components/Editor"
 import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams } from "react-autosuggest"
-import { QueryResult } from "./api"
+import { QueryResult } from "../../api"
 
 type ToolbarProps = {
     originalData: any
@@ -193,14 +193,14 @@ function execQuery(
     return remote(query, array).then(result => {
         if (result.valid) {
             try {
-                result.value = JSON.parse(result.value)
+                result.value = result.value ? JSON.parse(result.value) : undefined
             } catch (e) {
                 // ignored
             }
             result.value = JSON.stringify(result.value, null, 2)
-            return [result.value, true]
+            return [result.value || "", true]
         } else {
-            return [result.reason, false]
+            return [result.reason || "", false]
         }
     })
 }

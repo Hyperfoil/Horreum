@@ -6,7 +6,7 @@ import { useDispatch } from "react-redux"
 
 import { RenderFunction } from "../tests/reducers"
 
-import { Run, RunsDispatch } from "./reducers"
+import { RunsDispatch } from "./reducers"
 import { resetToken, dropToken, updateAccess, trash, updateDescription, recalculateDatasets } from "./actions"
 import ActionMenu, {
     ActionMenuProps,
@@ -17,6 +17,7 @@ import ActionMenu, {
 } from "../../components/ActionMenu"
 import { formatDateTime, toEpochMillis, noop } from "../../utils"
 import { useTester } from "../../auth"
+import { Access, RunSummary } from "../../api"
 
 export function Description(description: string) {
     return (
@@ -63,10 +64,10 @@ export const ExecutionTime = (timestamps: StartStop) => (
     </Tooltip>
 )
 
-function useRestore(run: Run): MenuItem<Run> {
+function useRestore(run: RunSummary): MenuItem<RunSummary> {
     const dispatch = useDispatch<RunsDispatch>()
     return [
-        (props: ActionMenuProps, isOwner: boolean, close: () => void, run: Run) => {
+        (props: ActionMenuProps, isOwner: boolean, close: () => void, run: RunSummary) => {
             return {
                 item: (
                     <DropdownItem
@@ -86,7 +87,7 @@ function useRestore(run: Run): MenuItem<Run> {
     ]
 }
 
-function useRecalculateDatasets(run: Run): MenuItem<Run> {
+function useRecalculateDatasets(run: RunSummary): MenuItem<RunSummary> {
     const dispatch = useDispatch<RunsDispatch>()
     const [recalculating, setRecalculating] = useState(false)
     return [
@@ -116,10 +117,10 @@ function useRecalculateDatasets(run: Run): MenuItem<Run> {
     ]
 }
 
-function useUpdateDescription(run: Run): MenuItem<Run> {
+function useUpdateDescription(run: RunSummary): MenuItem<RunSummary> {
     const [updateDescriptionOpen, setUpdateDescriptionOpen] = useState(false)
     return [
-        (props: ActionMenuProps, isOwner: boolean, close: () => void, run: Run) => {
+        (props: ActionMenuProps, isOwner: boolean, close: () => void, run: RunSummary) => {
             return {
                 item: (
                     <DropdownItem
@@ -146,7 +147,7 @@ function useUpdateDescription(run: Run): MenuItem<Run> {
     ]
 }
 
-export function Menu(run: Run) {
+export function Menu(run: RunSummary) {
     const dispatch = useDispatch<RunsDispatch>()
 
     const shareLink = useShareLink({
@@ -173,14 +174,20 @@ export function Menu(run: Run) {
     }
 
     return (
-        <ActionMenu id={run.id} description={"run " + run.id} owner={run.owner} access={run.access} items={menuItems} />
+        <ActionMenu
+            id={run.id}
+            description={"run " + run.id}
+            owner={run.owner}
+            access={run.access as Access}
+            items={menuItems}
+        />
     )
 }
 
 type UpdateDescriptionModalProps = {
     isOpen: boolean
     onClose(): void
-    run: Run
+    run: RunSummary
 }
 
 export function UpdateDescriptionModal({ isOpen, onClose, run }: UpdateDescriptionModalProps) {
@@ -202,7 +209,7 @@ export function UpdateDescriptionModal({ isOpen, onClose, run }: UpdateDescripti
                 variant="primary"
                 onClick={() => {
                     setUpdating(true)
-                    dispatch(updateDescription(run.id, run.testid, value))
+                    dispatch(updateDescription(run.id, run.testid, value || ""))
                         .catch(_ => {
                             setValue(run.description)
                         })

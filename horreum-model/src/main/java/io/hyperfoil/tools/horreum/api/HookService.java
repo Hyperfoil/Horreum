@@ -13,6 +13,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
 import io.hyperfoil.tools.horreum.entity.json.AllowedHookPrefix;
 import io.hyperfoil.tools.horreum.entity.json.Hook;
 
@@ -25,11 +27,11 @@ public interface HookService {
 
    @GET
    @Path("{id}")
-   Hook get(@PathParam("id") Integer id);
+   Hook get(@PathParam("id") int id);
 
    @DELETE
    @Path("{id}")
-   void delete(@PathParam("id") Integer id);
+   void delete(@PathParam("id") int id);
 
    @GET
    @Path("list")
@@ -40,7 +42,7 @@ public interface HookService {
 
    @GET
    @Path("test/{id}")
-   List<Hook> hooks(@PathParam("id") Integer testId);
+   List<Hook> testHooks(@PathParam("id") int testId);
 
    @GET
    @Path("prefixes")
@@ -49,9 +51,9 @@ public interface HookService {
    @Consumes("text/plain")
    @POST
    @Path("prefixes")
-   AllowedHookPrefix addPrefix(String prefix);
+   AllowedHookPrefix addPrefix(@RequestBody(required = true) String prefix);
 
    @DELETE
    @Path("prefixes/{id}")
-   void deletePrefix(@PathParam("id") Long id);
+   void deletePrefix(@PathParam("id") long id);
 }

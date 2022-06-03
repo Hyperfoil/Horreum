@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -13,21 +14,24 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
 @Path("api/user")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public interface UserService {
    @GET
    @Path("search")
-   List<UserData> searchUsers(@QueryParam("query") String query);
+   List<UserData> searchUsers(@Parameter(required = true) @QueryParam("query") String query);
 
    @POST
    @Path("info")
-   CompletionStage<List<UserData>> info(List<String> usernames);
+   CompletionStage<List<UserData>> info(@Parameter(required = true) List<String> usernames);
 
    @POST
    @Path("createUser")
-   void createUser(NewUser user);
+   void createUser(@RequestBody(required = true) NewUser user);
 
    @GET
    @Path("teams")
@@ -41,7 +45,7 @@ public interface UserService {
    @POST
    @Path("defaultTeam")
    @Consumes("text/plain")
-   void setDefaultTeam(String team);
+   void setDefaultTeam(@RequestBody(required = true) String team);
 
    @GET
    @Path("team/{team}/members")
@@ -49,11 +53,14 @@ public interface UserService {
 
    @POST
    @Path("team/{team}/members")
-   CompletionStage<Void> updateTeamMembers(@PathParam("team") String team, Map<String, List<String>> roles);
+   CompletionStage<Void> updateTeamMembers(@PathParam("team") String team,
+                                           @RequestBody(required = true) Map<String, List<String>> roles);
 
    // this is a simplified copy of org.keycloak.representations.idm.UserRepresentation
    class UserData {
+      @NotNull
       public String id;
+      @NotNull
       public String username;
       public String firstName;
       public String lastName;

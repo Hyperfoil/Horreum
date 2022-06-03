@@ -3,25 +3,19 @@ import { useDispatch, useSelector } from "react-redux"
 import { NavLink } from "react-router-dom"
 
 import { defaultTeamSelector, teamToName, useManagedTeams, userProfileSelector } from "../../auth"
-import { fetchApi } from "../../services/api"
 import { alertAction, dispatchInfo } from "../../alerts"
 import SavedTabs, { SavedTab, TabFunctions } from "../../components/SavedTabs"
-import { updateDefaultRole, TryLoginAgain } from "../../auth"
+import { updateDefaultTeam, TryLoginAgain } from "../../auth"
+import Api, { NotificationSettings } from "../../api"
 
 import { Alert, Bullseye, Card, CardBody, EmptyState, Form, FormGroup, Spinner, Title } from "@patternfly/react-core"
 
 import { UserIcon } from "@patternfly/react-icons"
 
 import TeamSelect, { createTeam, Team } from "../../components/TeamSelect"
-import { NotificationSettingsList, NotificationConfig } from "./NotificationSettings"
+import { NotificationSettingsList } from "./NotificationSettings"
 import Profile from "./Profile"
 import ManagedTeams from "./ManagedTeams"
-
-const base = "/api/notifications"
-const fetchSettings = (name: string, isTeam: boolean) =>
-    fetchApi(`${base}/settings?name=${name}&team=${isTeam}`, null, "get")
-const updateSettings = (name: string, isTeam: boolean, settings: NotificationConfig[]) =>
-    fetchApi(`${base}/settings?name=${name}&team=${isTeam}`, settings, "post", {}, "response")
 
 export const UserProfileLink = () => {
     const profile = useSelector(userProfileSelector)
@@ -51,14 +45,14 @@ export function UserSettings() {
     useEffect(() => {
         setDefaultTeam(createTeam(prevDefaultTeam))
     }, [prevDefaultTeam])
-    const [personal, setPersonal] = useState<NotificationConfig[]>()
+    const [personal, setPersonal] = useState<NotificationSettings[]>()
     const [selectedTeam, setSelectedTeam] = useState<string>()
-    const [team, setTeam] = useState<NotificationConfig[]>()
+    const [team, setTeam] = useState<NotificationSettings[]>()
     const [modified, setModified] = useState(false)
     const loadPersonal = () => {
         if (profile?.username) {
-            fetchSettings(profile.username, false).then(
-                response => setPersonal(response || []),
+            Api.notificationServiceSettings(profile.username, false).then(
+                response => setPersonal(response),
                 error => dispatch(alertAction("LOAD_SETTINGS", "Failed to load notification settings", error))
             )
         }
@@ -97,7 +91,7 @@ export function UserSettings() {
                     <SavedTab
                         title="My profile"
                         fragment="profile"
-                        onSave={() => updateDefaultRole(defaultTeam.key).catch(reportError)}
+                        onSave={() => updateDefaultTeam(defaultTeam.key).catch(reportError)}
                         onReset={() => {
                             setDefaultTeam(createTeam(prevDefaultTeam))
                             setModified(false)
@@ -117,7 +111,9 @@ export function UserSettings() {
                         fragment="personal-notifications"
                         onSave={() => {
                             const username = profile?.username || "user-should-be-set"
-                            return updateSettings(username, false, personal || []).catch(reportError)
+                            return Api.notificationServiceUpdateSettings(username, false, personal || []).catch(
+                                reportError
+                            )
                         }}
                         onReset={() => {
                             setPersonal(undefined)
@@ -139,7 +135,7 @@ export function UserSettings() {
                         fragment="team-notifications"
                         onSave={() => {
                             const teamname = selectedTeam || "team-should-be-set"
-                            return updateSettings(teamname, true, team || []).catch(reportError)
+                            return Api.notificationServiceUpdateSettings(teamname, true, team || []).catch(reportError)
                         }}
                         onReset={() => {
                             setTeam(undefined)
@@ -155,7 +151,7 @@ export function UserSettings() {
                                     onSelect={role => {
                                         setTeam(undefined)
                                         setSelectedTeam(role.key)
-                                        fetchSettings(role.key, true).then(
+                                        Api.notificationServiceSettings(role.key, true).then(
                                             response => setTeam(response || []),
                                             error =>
                                                 dispatch(

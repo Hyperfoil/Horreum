@@ -1,6 +1,6 @@
 import { Radio } from "@patternfly/react-core"
 import AccessIcon from "./AccessIcon"
-import { Access } from "../auth"
+import { Access } from "../api"
 
 type AccessChoiceProps = {
     checkedValue: Access
@@ -15,21 +15,21 @@ export default function AccessChoice({ checkedValue, onChange }: AccessChoicePro
                 name="PUBLIC"
                 isChecked={checkedValue === 0}
                 onChange={() => onChange(0)}
-                label={<AccessIcon access="PUBLIC" />}
+                label={<AccessIcon access={0} />}
             />
             <Radio
                 id="access-1"
                 name="PROTECTED"
                 isChecked={checkedValue === 1}
                 onChange={() => onChange(1)}
-                label={<AccessIcon access="PROTECTED" />}
+                label={<AccessIcon access={1} />}
             />
             <Radio
                 id="access-2"
                 name="PRIVATE"
                 isChecked={checkedValue === 2}
                 onChange={() => onChange(2)}
-                label={<AccessIcon access="PRIVATE" />}
+                label={<AccessIcon access={2} />}
             />
         </>
     )

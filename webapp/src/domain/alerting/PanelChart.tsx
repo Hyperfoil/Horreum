@@ -14,14 +14,10 @@ import {
 } from "recharts"
 import { Bullseye, Button, EmptyState, Spinner, Title } from "@patternfly/react-core"
 import { DateTime } from "luxon"
-import { findLastDatapoints } from "./api"
-import { Annotation, fetchDatapoints, fetchAllAnnotations, TimeseriesTarget } from "./grafanaapi"
+import Api, { AnnotationDefinition, TimeseriesTarget } from "../../api"
+import { fingerprintToString } from "../../utils"
+import { fetchDatapoints, fetchAllAnnotations } from "./grafanaapi"
 import { alertAction, dispatchInfo } from "../../alerts"
-
-type LastDatapoint = {
-    variable: number
-    timestamp: number
-}
 
 function tsToDate(timestamp: number) {
     return DateTime.fromMillis(timestamp).toFormat("yyyy-LL-dd")
@@ -95,7 +91,7 @@ export default function PanelChart(props: PanelProps) {
     const [legend, setLegend] = useState<any[]>() // Payload is not exported
     const [lines, setLines] = useState<any[]>()
     const [datapoints, setDatapoints] = useState<TimeseriesTarget[]>()
-    const [annotations, setAnnotations] = useState<Annotation[]>()
+    const [annotations, setAnnotations] = useState<AnnotationDefinition[]>()
     const [gettingLast, setGettingLast] = useState(false)
     const startTime = props.endTime - props.timespan * 1000
     useEffect(() => {
@@ -204,14 +200,15 @@ export default function PanelChart(props: PanelProps) {
                                 isDisabled={gettingLast}
                                 onClick={() => {
                                     setGettingLast(true)
-                                    findLastDatapoints(props.variables, props.fingerprint)
+                                    Api.alertingServiceFindLastDatapoints({
+                                        variables: props.variables,
+                                        fingerprint: fingerprintToString(props.fingerprint),
+                                    })
                                         .then(
                                             response => {
                                                 if (Array.isArray(response) && response.length > 0) {
                                                     props.setEndTime(
-                                                        Math.max(
-                                                            ...response.map(({ timestamp }: LastDatapoint) => timestamp)
-                                                        ) + 1
+                                                        Math.max(...response.map(({ timestamp }) => timestamp)) + 1
                                                     )
                                                 } else {
                                                     dispatchInfo(
@@ -319,7 +316,7 @@ export default function PanelChart(props: PanelProps) {
                                                                 <strong>{a.title}</strong>
                                                                 <div
                                                                     style={{ fontSize: 12 }}
-                                                                    dangerouslySetInnerHTML={{ __html: a.text }}
+                                                                    dangerouslySetInnerHTML={{ __html: a.text || "" }}
                                                                 />
                                                             </React.Fragment>
                                                         ))}

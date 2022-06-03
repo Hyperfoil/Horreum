@@ -20,10 +20,12 @@ import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.validation.constraints.NotNull;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.Type;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity(name="test")
@@ -32,6 +34,7 @@ public class Test extends PanacheEntityBase {
    public static final String EVENT_NEW = "test/new";
    public static final String EVENT_DELETED = "test/deleted";
 
+   @JsonProperty(required = true)
    @Id
    @SequenceGenerator(
       name = "testSequence",
@@ -60,6 +63,7 @@ public class Test extends PanacheEntityBase {
    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
    public Collection<TestToken> tokens;
 
+   @Schema(implementation = String[].class)
    @Column(name = "fingerprint_labels")
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public JsonNode fingerprintLabels;

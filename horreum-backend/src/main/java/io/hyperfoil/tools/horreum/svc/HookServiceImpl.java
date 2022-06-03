@@ -28,7 +28,6 @@ import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import javax.persistence.PersistenceException;
 import javax.transaction.Transactional;
 
 import java.net.URL;
@@ -173,7 +172,7 @@ public class HookServiceImpl implements HookService {
    @RolesAllowed(Roles.ADMIN)
    @WithRoles
    @Override
-   public Hook get(Integer id){
+   public Hook get(int id){
       return Hook.find("id", id).firstResult();
    }
 
@@ -182,7 +181,7 @@ public class HookServiceImpl implements HookService {
    @RolesAllowed(Roles.ADMIN)
    @Transactional
    @Override
-   public void delete(Integer id){
+   public void delete(int id){
       Hook.delete("id", id);
    }
 
@@ -217,12 +216,8 @@ public class HookServiceImpl implements HookService {
    @RolesAllowed({ Roles.ADMIN, Roles.TESTER})
    @WithRoles
    @Override
-   public List<Hook> hooks(Integer testId) {
-      if (testId != null) {
-         return Hook.list("target", testId);
-      } else {
-         throw ServiceException.badRequest("No test ID set.");
-      }
+   public List<Hook> testHooks(int testId) {
+      return Hook.list("target", testId);
    }
 
    @PermitAll
@@ -247,7 +242,7 @@ public class HookServiceImpl implements HookService {
    @WithRoles
    @Transactional
    @Override
-   public void deletePrefix(Long id) {
+   public void deletePrefix(long id) {
       AllowedHookPrefix.delete("id", id);
    }
 }

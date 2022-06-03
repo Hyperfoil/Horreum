@@ -4,22 +4,10 @@ import * as actionTypes from "./actionTypes"
 import { Map } from "immutable"
 import * as utils from "../../utils"
 import { AddAlertAction } from "../../alerts"
+import { Hook } from "../../api"
 
 export const globalEventTypes = ["test/new", "run/new", "change/new"]
 export const testHookEventTypes = ["run/new", "change/new"]
-
-export interface Hook {
-    id: number
-    url: string
-    type: string
-    target: number
-    active: boolean
-}
-
-export interface AllowedHookPrefix {
-    id: number
-    prefix: string
-}
 
 export class HooksState {
     byId?: Map<string, Hook> = undefined

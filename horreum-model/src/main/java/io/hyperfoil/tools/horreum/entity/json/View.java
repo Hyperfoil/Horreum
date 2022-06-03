@@ -37,6 +37,7 @@ public class View extends PanacheEntityBase {
    @JsonIgnore
    public Test test;
 
+   @NotNull
    @OneToMany(mappedBy = "view", orphanRemoval = true, cascade = CascadeType.ALL)
    @OrderBy("headerorder ASC")
    public List<ViewComponent> components;

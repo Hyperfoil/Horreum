@@ -1,21 +1,10 @@
 import * as actionTypes from "./actionTypes"
 import { Map } from "immutable"
 import * as utils from "../../utils"
-import { Access } from "../../auth"
 import { Action } from "redux"
 import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction } from "../../alerts"
-
-export interface Schema {
-    id: number
-    name: string
-    description: string
-    uri: string
-    schema: unknown
-    owner: string
-    access: Access
-    token: string | null
-}
+import { Access, Schema } from "../../api"
 
 export class SchemasState {
     byId?: Map<string, Schema> = undefined
@@ -34,7 +23,7 @@ export interface DeleteAction extends Action {
 export interface UpdateTokenAction extends Action {
     type: typeof actionTypes.UPDATE_TOKEN
     id: number
-    token: string | null
+    token: string | undefined
 }
 
 export interface UpdateAccessAction extends Action {

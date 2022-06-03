@@ -2,10 +2,10 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 
 import javax.annotation.PostConstruct;
@@ -155,7 +155,7 @@ public class NotificationServiceImpl implements NotificationService {
 
    @PermitAll
    @Override
-   public Set<String> methods() {
+   public Collection<String> methods() {
       return plugins.keySet();
    }
 

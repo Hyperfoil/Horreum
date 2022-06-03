@@ -72,6 +72,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.networknt.schema.ValidationMessage;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
+import com.vladmihalcea.hibernate.type.util.MapResultTransformer;
 
 @ApplicationScoped
 @Startup
@@ -166,7 +167,7 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public Object getRun(Integer id, String token) {
+   public Object getRun(int id, String token) {
       return Util.runQuery(em, "SELECT (to_jsonb(run) ||" +
             "jsonb_set('{}', '{schema}', (SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = run.id)::::jsonb, true) || " +
             "jsonb_set('{}', '{testname}', to_jsonb((SELECT name FROM test WHERE test.id = run.testid)), true) || " +
@@ -176,7 +177,7 @@ public class RunServiceImpl implements RunService {
 
    @WithRoles
    @Override
-   public RunSummary getRunSummary(Integer id, String token) {
+   public RunSummary getRunSummary(int id, String token) {
       // TODO: define the result set mapping properly without transforming jsonb and int[] to text
       Query query = em.createNativeQuery("SELECT run.id, run.start, run.stop, run.testid, " +
             "run.owner, run.access, run.token, run.trashed, run.description, " +
@@ -198,7 +199,7 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public Object getData(Integer id, String token) {
+   public Object getData(int id, String token) {
       return Util.runQuery(em, "SELECT data#>>'{}' from run where id = ?", id);
    }
 
@@ -206,7 +207,7 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public QueryResult queryData(Integer id, String jsonpath, String schemaUri, boolean array) {
+   public QueryResult queryData(int id, String jsonpath, String schemaUri, boolean array) {
       String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";
       QueryResult result = new QueryResult();
       result.jsonpath = jsonpath;
@@ -231,7 +232,7 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @Transactional
    @Override
-   public String resetToken(Integer id) {
+   public String resetToken(int id) {
       return updateToken(id, Tokens.generateToken());
    }
 
@@ -239,11 +240,11 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @Transactional
    @Override
-   public String dropToken(Integer id) {
+   public String dropToken(int id) {
       return updateToken(id, null);
    }
 
-   private String updateToken(Integer id, String token) {
+   private String updateToken(int id, String token) {
       Query query = em.createNativeQuery(UPDATE_TOKEN);
       query.setParameter(1, token);
       query.setParameter(2, id);
@@ -259,7 +260,7 @@ public class RunServiceImpl implements RunService {
    @Transactional
    @Override
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-   public void updateAccess(Integer id, String owner, Access access) {
+   public void updateAccess(int id, String owner, Access access) {
       Query query = em.createNativeQuery(CHANGE_ACCESS);
       query.setParameter(1, owner);
       query.setParameter(2, access.ordinal());
@@ -333,7 +334,7 @@ public class RunServiceImpl implements RunService {
 
       Test testEntity = testService.ensureTestExists(testNameOrId, token);
 
-      Collection<ValidationMessage> validationErrors = schemaService.validate(data, schemaUri);
+      Collection<ValidationMessage> validationErrors = schemaService.validate(schemaUri, data);
       if (validationErrors != null && !validationErrors.isEmpty()) {
          log.debugf("Failed to upload for test %s with description %s because of validation errors.", test, description);
          throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST).entity(validationErrors).build());
@@ -597,11 +598,8 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public RunCounts runCount(Integer testId) {
-      if (testId == null) {
-         throw ServiceException.badRequest("Missing testId query param.");
-      }
-      RunCounts counts = new RunCounts();
+   public RunCount runCount(int testId) {
+      RunCount counts = new RunCount();
       counts.total = Run.count("testid = ?1", testId);
       counts.active = Run.count("testid = ?1 AND trashed = false", testId);
       counts.trashed = counts.total - counts.active;
@@ -612,8 +610,8 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public TestRunsSummary listTestRuns(Integer testId, boolean trashed,
-                                       Integer limit, Integer page, String sort, String direction) {
+   public RunsSummary listTestRuns(int testId, boolean trashed,
+                                   Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
             .append("    SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') AS schemas, rs.runid FROM run_schemas rs GROUP BY rs.runid")
             .append("), dataset_agg AS (")
@@ -636,9 +634,9 @@ public class RunServiceImpl implements RunService {
       query.setParameter(1, testId);
       @SuppressWarnings("unchecked")
       List<Object[]> resultList = query.getResultList();
-      List<TestRunSummary> runs = new ArrayList<>();
+      List<RunSummary> runs = new ArrayList<>();
       for (Object[] row : resultList) {
-         TestRunSummary run = new TestRunSummary();
+         RunSummary run = new RunSummary();
          run.id = (int) row[0];
          run.start = ((Timestamp) row[1]).getTime();
          run.stop = ((Timestamp) row[2]).getTime();
@@ -651,7 +649,7 @@ public class RunServiceImpl implements RunService {
          run.datasets = (ArrayNode) Util.toJsonNode((String) row[8]);
          runs.add(run);
       }
-      TestRunsSummary summary = new TestRunsSummary();
+      RunsSummary summary = new RunsSummary();
       summary.total = trashed ? Run.count("testid = ?1", testId) : Run.count("testid = ?1 AND trashed = false", testId);
       summary.runs = runs;
       return summary;
@@ -698,7 +696,7 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @Transactional
    @Override
-   public void trash(Integer id, Boolean isTrashed) {
+   public void trash(int id, Boolean isTrashed) {
       boolean trashed = isTrashed == null || isTrashed;
       updateRun(id, run -> run.trashed = trashed);
       if (trashed) {
@@ -713,12 +711,12 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @Transactional
    @Override
-   public void updateDescription(Integer id, String description) {
+   public void updateDescription(int id, String description) {
       // FIXME: fetchival stringifies the body into JSON string :-/
       updateRun(id, run -> run.description = Util.destringify(description));
    }
 
-   public void updateRun(Integer id, Consumer<Run> consumer) {
+   public void updateRun(int id, Consumer<Run> consumer) {
       Run run = Run.findById(id);
       if (run == null) {
          throw ServiceException.notFound("Run not found");
@@ -731,7 +729,7 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @Transactional
    @Override
-   public Object updateSchema(Integer id, String path, String schemaUri) {
+   public Map<Integer, String> updateSchema(int id, String path, String schemaUri) {
       // FIXME: fetchival stringifies the body into JSON string :-/
       Run run = Run.findById(id);
       if (run == null) {
@@ -762,9 +760,10 @@ public class RunServiceImpl implements RunService {
       }
       run.data = updated;
       run.persist();
-      Query query = em.createNativeQuery("SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}')::::text FROM run_schemas WHERE runid = ?");
+      Query query = em.createNativeQuery("SELECT schemaid AS key, uri AS value FROM run_schemas WHERE runid = ?");
       query.setParameter(1, run.id);
-      Object schemas = query.getSingleResult();
+      query.unwrap(NativeQuery.class).setResultTransformer(new MapResultTransformer<Integer, String>());
+      @SuppressWarnings("unchecked") Map<Integer, String> schemas = (Map<Integer, String>) query.getSingleResult();
       em.flush();
       return schemas;
    }

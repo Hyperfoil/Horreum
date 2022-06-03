@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 
 import { formatDateTime } from "../../utils"
-import { ReportLog } from "./api"
+import { ReportLog } from "../../api"
 import LogModal, { CommonLogModalProps, LogLevelIcon } from "../../components/LogModal"
 
 type ReportLogModalProps = {

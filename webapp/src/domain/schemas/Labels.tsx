@@ -16,7 +16,7 @@ import JsonExtractor from "./JsonExtractor"
 import SplitForm from "../../components/SplitForm"
 import TestLabelModal from "./TestLabelModal"
 
-import { Label, listLabels, addOrUpdateLabel, deleteLabel } from "./api"
+import Api, { Label } from "../../api"
 
 const LABEL_FUNCTION_HELP = (
     <>
@@ -30,6 +30,10 @@ const LABEL_FUNCTION_HELP = (
     </>
 )
 
+type LabelEx = {
+    modified?: boolean
+} & Label
+
 type LabelsProps = {
     schemaId: number
     schemaUri: string
@@ -38,8 +42,8 @@ type LabelsProps = {
 
 export default function Labels(props: LabelsProps) {
     const [loading, setLoading] = useState(false)
-    const [labels, setLabels] = useState<Label[]>([])
-    const [selected, setSelected] = useState<Label>()
+    const [labels, setLabels] = useState<LabelEx[]>([])
+    const [selected, setSelected] = useState<LabelEx>()
     const [resetCounter, setResetCounter] = useState(0)
     const [deleted, setDeleted] = useState<Label[]>([])
     const [findUsagesLabel, setFindUsagesLabel] = useState<string>()
@@ -54,13 +58,13 @@ export default function Labels(props: LabelsProps) {
                 ...labels
                     .filter(l => l.modified)
                     .map(l =>
-                        addOrUpdateLabel(l).then(id => {
+                        Api.schemaServiceAddOrUpdateLabel(l.schemaId, l).then(id => {
                             l.id = id
                             l.modified = false
                         })
                     ),
                 ...deleted.map(l =>
-                    deleteLabel(l).catch(e => {
+                    Api.schemaServiceDeleteLabel(l.id, l.schemaId).catch(e => {
                         setLabels([...labels, l])
                         throw e
                     })
@@ -83,7 +87,7 @@ export default function Labels(props: LabelsProps) {
         if (!selected) {
             return
         }
-        const label: Label = { ...selected, ...update, modified: true }
+        const label = { ...selected, ...update, modified: true }
         setSelected(label)
         setLabels(labels.map(l => (l.id == label.id ? label : l)))
     }
@@ -91,7 +95,7 @@ export default function Labels(props: LabelsProps) {
     const history = useHistory()
     useEffect(() => {
         setLoading(true)
-        listLabels(props.schemaId)
+        Api.schemaServiceLabels(props.schemaId)
             .then(
                 labels => {
                     setLabels(labels)
@@ -139,6 +143,8 @@ export default function Labels(props: LabelsProps) {
                     owner: defaultTeam || "",
                     access: 0 as Access,
                     schemaId: props.schemaId,
+                    filtering: true,
+                    metrics: true,
                     modified: true,
                 })}
                 loading={loading}
@@ -173,7 +179,7 @@ export default function Labels(props: LabelsProps) {
                         <FormGroup label="Ownership&amp;Access" fieldId="owner">
                             <OwnerAccess
                                 owner={selected.owner}
-                                access={selected.access}
+                                access={selected.access as Access}
                                 onUpdate={(owner, access) => update({ owner, access })}
                                 readOnly={!isTesterForLabel}
                             />
@@ -226,8 +232,8 @@ export default function Labels(props: LabelsProps) {
                         <FunctionFormItem
                             label="Combination function"
                             helpText={LABEL_FUNCTION_HELP}
-                            value={selected.function}
-                            onChange={value => update({ function: value })}
+                            value={selected._function}
+                            onChange={value => update({ _function: value })}
                             readOnly={!isTesterForLabel}
                         />
                     </>

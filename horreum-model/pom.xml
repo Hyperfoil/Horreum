@@ -50,4 +50,58 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>smallrye-open-api-maven-plugin</artifactId>
+                <groupId>io.smallrye</groupId>
+                <version>2.1.22</version>
+                <executions>
+                    <execution>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>generate-schema</goal>
+                        </goals>
+                        <configuration>
+                            <scanPackages>
+                                io.hyperfoil.tools.horreum.api,
+                                io.hyperfoil.tools.horreum.entity,
+                                io.hyperfoil.tools.horreum.entity.json,
+                                io.hyperfoil.tools.horreum.entity.report,
+                                io.hyperfoil.tools.horreum.grafana
+                            </scanPackages>
+                            <scanClasses>.*</scanClasses>
+                            <operationIdStrategy>CLASS_METHOD</operationIdStrategy>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>6.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
+                            <output>${project.basedir}/../webapp/src/generated</output>
+                            <generatorName>typescript-fetch</generatorName>
+                            <skipValidateSpec>true</skipValidateSpec>
+                            <typeMappings>Array=any</typeMappings>
+                            <configOptions>
+                                <supportsES6>true</supportsES6>
+                                <useSingleRequestParameter>false</useSingleRequestParameter>
+                                <typescriptThreePlus>true</typescriptThreePlus>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

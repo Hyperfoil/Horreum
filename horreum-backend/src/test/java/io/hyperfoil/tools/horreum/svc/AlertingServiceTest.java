@@ -322,8 +322,8 @@ public class AlertingServiceTest extends BaseServiceTest {
             .post("/api/alerting/recalculate")
             .then().statusCode(204);
       for (int i = 0; i < 200; ++i) {
-         AlertingService.RecalculationStatus status = jsonRequest().queryParam("test", testId).get("/api/alerting/recalculate")
-               .then().statusCode(200).extract().body().as(AlertingService.RecalculationStatus.class);
+         AlertingService.DatapointRecalculationStatus status = jsonRequest().queryParam("test", testId).get("/api/alerting/recalculate")
+               .then().statusCode(200).extract().body().as(AlertingService.DatapointRecalculationStatus.class);
          if (status.done) {
             break;
          }

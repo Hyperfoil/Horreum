@@ -12,11 +12,15 @@ import OptionalFunction from "../../components/OptionalFunction"
 import SplitForm from "../../components/SplitForm"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
-import { Test } from "./reducers"
+import Api, { MissingDataRule, Test } from "../../api"
 import { useTester } from "../../auth"
 import { dispatchError } from "../../alerts"
-import { MissingDataRule } from "../alerting/types"
-import * as api from "../alerting/api"
+
+type MissingDataRuleExtended = MissingDataRule & {
+    // temporary
+    maxStalenessStr?: string
+    modified?: boolean
+}
 
 type MissingDataNotificationsProps = {
     test?: Test
@@ -34,9 +38,9 @@ function asWarning(text: string) {
 }
 
 export default function MissingDataNotifications(props: MissingDataNotificationsProps) {
-    const [rules, setRules] = useState<MissingDataRule[]>()
-    const [deleted, setDeleted] = useState<MissingDataRule[]>([])
-    const [selectedRule, setSelectedRule] = useState<MissingDataRule>()
+    const [rules, setRules] = useState<MissingDataRuleExtended[]>()
+    const [deleted, setDeleted] = useState<MissingDataRuleExtended[]>([])
+    const [selectedRule, setSelectedRule] = useState<MissingDataRuleExtended>()
     const [resetCounter, setResetCounter] = useState(0)
 
     const dispatch = useDispatch()
@@ -45,10 +49,10 @@ export default function MissingDataNotifications(props: MissingDataNotifications
         if (!props.test) {
             return
         }
-        api.fetchMissingDataRules(props.test.id).then(
+        Api.alertingServiceMissingDataRules(props.test.id).then(
             rules => {
                 if (rules) {
-                    rules.forEach(r => (r.maxStalenessStr = millisToDuration(r.maxStaleness)))
+                    rules = rules.map(r => ({ ...r, maxStalenessStr: millisToDuration(r.maxStaleness) }))
                     setRules(rules.sort(compareRules))
                     if (rules.length > 0) {
                         const fragmentParts = history.location.hash.split("+")
@@ -78,7 +82,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
             </Bullseye>
         )
     }
-    const update = (patch: Partial<MissingDataRule>) => {
+    const update = (patch: Partial<MissingDataRuleExtended>) => {
         if (selectedRule) {
             const updatedRule = { ...selectedRule, ...patch, modified: true }
             setSelectedRule(updatedRule)
@@ -92,7 +96,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
         save: () =>
             Promise.all([
                 ...deleted.map(rule =>
-                    api.deleteMissingDataRule(rule).catch(e => {
+                    Api.alertingServiceDeleteMissingDataRule(rule.id).catch(e => {
                         dispatchError(
                             dispatch,
                             e,
@@ -105,7 +109,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                 ...rules
                     .filter(rule => rule.modified)
                     .map(rule =>
-                        api.updateMissingDataRule(rule).then(
+                        Api.alertingServiceUpdateMissingDataRule(rule.id, rule).then(
                             () => {
                                 rule.modified = false
                             },

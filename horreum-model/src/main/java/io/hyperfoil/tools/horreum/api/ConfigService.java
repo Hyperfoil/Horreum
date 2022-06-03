@@ -1,12 +1,15 @@
 package io.hyperfoil.tools.horreum.api;
 
 import javax.annotation.security.PermitAll;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import org.eclipse.microprofile.config.ConfigProvider;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.quarkus.runtime.Startup;
 
@@ -41,9 +44,13 @@ public class ConfigService {
    }
 
    public static class VersionInfo {
+      @NotNull
       public String version;
+      @NotNull
       public String commit;
+      @JsonProperty(required = true)
       public long buildTimestamp;
+      @JsonProperty(required = true)
       public long startTimestamp;
    }
 

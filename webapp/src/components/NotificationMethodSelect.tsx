@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { Select, SelectOption } from "@patternfly/react-core"
-import { fetchApi } from "../services/api"
-
-const base = "/api/notifications"
-const fetchMethods = () => fetchApi(`${base}/methods`, null, "get")
+import Api from "../api"
 
 type NotificationMethodSelectProps = {
     isDisabled: boolean
@@ -16,7 +13,7 @@ export default function NotificationMethodSelect(props: NotificationMethodSelect
     const [methodOpen, setMethodOpen] = useState(false)
     const [methods, setMethods] = useState<string[]>([])
     useEffect(() => {
-        fetchMethods().then(response => setMethods(response))
+        Api.notificationServiceMethods().then(response => setMethods(response))
     }, [])
     return (
         <Select

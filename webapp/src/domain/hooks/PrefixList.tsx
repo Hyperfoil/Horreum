@@ -1,18 +1,17 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { useDispatch } from "react-redux"
 import { UseSortByColumnOptions } from "react-table"
 import { Bullseye, Button, Spinner, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 import { OutlinedTimesCircleIcon, PlusIcon } from "@patternfly/react-icons"
 
-import { fetchPrefixes, addPrefix, removePrefix } from "./api"
+import Api, { AllowedHookPrefix } from "../../api"
 
 import { alertAction } from "../../alerts"
 
 import Table from "../../components/Table"
 import AddPrefixModal from "./AddPrefixModal"
 import { Column } from "react-table"
-import { AllowedHookPrefix } from "./reducers"
 
 type C = Column<AllowedHookPrefix> & UseSortByColumnOptions<AllowedHookPrefix>
 
@@ -21,7 +20,7 @@ function PrefixList() {
     const [prefixes, setPrefixes] = useState<AllowedHookPrefix[]>()
     useEffect(() => {
         setPrefixes(undefined)
-        fetchPrefixes().then(setPrefixes, e =>
+        Api.hookServiceAllowedPrefixes().then(setPrefixes, e =>
             dispatch(alertAction("FETCH_HOOK_PREFIXES", "Failed to fetch allowed hook prefixes", e))
         )
     }, [dispatch])
@@ -52,7 +51,7 @@ function PrefixList() {
                             if (prefixes) {
                                 setPrefixes(prefixes.filter(p => p.id !== value))
                             }
-                            removePrefix(value).catch(e =>
+                            Api.hookServiceDeletePrefix(value).catch(e =>
                                 dispatch(alertAction("REMOVE_HOOK_PREFIX", "Failed to remove hook prefix.", e))
                             )
                         }}
@@ -71,7 +70,7 @@ function PrefixList() {
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
                 onSubmit={prefix =>
-                    addPrefix(prefix).then(
+                    Api.hookServiceAddPrefix(prefix).then(
                         p => setPrefixes([...(prefixes || []), p]),
                         e => dispatch(alertAction("ADD_HOOK_PREFIX", "Failed to add hook prefix.", e))
                     )

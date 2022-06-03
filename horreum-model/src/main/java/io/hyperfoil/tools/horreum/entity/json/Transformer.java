@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 public class Transformer extends OwnedEntityBase implements Comparable<Transformer> {
+   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Integer id;
@@ -37,23 +38,24 @@ public class Transformer extends OwnedEntityBase implements Comparable<Transform
    @JoinColumn(name = "schema_id")
    public Schema schema;
 
+   @NotNull
    @ElementCollection(fetch = FetchType.EAGER)
    @CollectionTable(name = "transformer_extractors")
    public Collection<Extractor> extractors;
 
    public String function;
 
-   @JsonProperty("schemaId")
+   @JsonProperty(value = "schemaId", required = true)
    public int getSchemaId() {
       return schema.id;
    }
 
-   @JsonProperty("schemaUri")
+   @JsonProperty(value = "schemaUri", required = true)
    public String getSchemaUri() {
       return schema.uri;
    }
 
-   @JsonProperty("schemaName")
+   @JsonProperty(value = "schemaName", required = true)
    public String getSchemaName() {
       return schema.name;
    }

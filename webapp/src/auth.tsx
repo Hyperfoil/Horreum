@@ -2,10 +2,11 @@ import { useDispatch, useSelector } from "react-redux"
 
 import { Button } from "@patternfly/react-core"
 
-import Keycloak from "keycloak-js"
+import Keycloak, { KeycloakConfig } from "keycloak-js"
+import fetchival from "fetchival"
 
 import store, { State } from "./store"
-import { fetchApi } from "./services/api"
+import Api from "./api"
 import { alertAction, CLEAR_ALERT } from "./alerts"
 import { noop } from "./utils"
 
@@ -152,12 +153,14 @@ export const initKeycloak = (state: State) => {
     const keycloak = keycloakSelector(state)
     let keycloakPromise
     if (!keycloak) {
-        keycloakPromise = fetchApi("/api/config/keycloak").then(response => Keycloak(response))
+        keycloakPromise = fetchival("/api/config/keycloak", { responseAs: "json" })
+            .get()
+            .then((response: any) => Keycloak(response as KeycloakConfig))
     } else {
         keycloakPromise = Promise.resolve(keycloak)
     }
     keycloakPromise
-        .then(keycloak => {
+        .then((keycloak: Keycloak.KeycloakInstance) => {
             let initPromise: Promise<boolean> | undefined = undefined
             if (!keycloak.authenticated) {
                 // Typecast required due to https://github.com/keycloak/keycloak/pull/5858
@@ -182,7 +185,7 @@ export const initKeycloak = (state: State) => {
                                     alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error)
                                 )
                             )
-                        fetchApi("/api/user/defaultTeam", null, "GET", { accept: "text/plain" }, "text").then(
+                        Api.userServiceDefaultTeam().then(
                             response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
                             error =>
                                 store.dispatch(
@@ -201,10 +204,8 @@ export const initKeycloak = (state: State) => {
         .catch(noop)
 }
 
-export function updateDefaultRole(team: string) {
-    return fetchApi("/api/user/defaultTeam", team, "POST", { "content-type": "text/plain" }).then(_ =>
-        store.dispatch({ type: UPDATE_DEFAULT_TEAM, team })
-    )
+export function updateDefaultTeam(team: string) {
+    return Api.userServiceSetDefaultTeam(team).then(_ => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team }))
 }
 
 export const TryLoginAgain = () => {

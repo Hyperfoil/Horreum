@@ -3,8 +3,7 @@ import { useDispatch } from "react-redux"
 
 import { Dropdown, DropdownItem, DropdownToggle, FormGroup, InputGroup, TextInput } from "@patternfly/react-core"
 
-import { AllowedHookPrefix } from "../domain/hooks/reducers"
-import { fetchPrefixes } from "../domain/hooks/api"
+import Api, { AllowedHookPrefix } from "../api"
 
 import { alertAction } from "../alerts"
 
@@ -32,7 +31,7 @@ export default function HookUrlSelector(props: HookUrlSelectorProps) {
     const [prefixes, setPrefixes] = useState<AllowedHookPrefix[]>([{ id: -1, prefix: "" }])
     useEffect(() => {
         if (props.active) {
-            fetchPrefixes().then(setPrefixes, e =>
+            Api.hookServiceAllowedPrefixes().then(setPrefixes, e =>
                 dispatch(alertAction("FETCH_HOOK_PREFIXES", "Failed to fetch allowed hook prefixes", e))
             )
         }

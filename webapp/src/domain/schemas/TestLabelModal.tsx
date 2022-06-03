@@ -2,13 +2,12 @@ import { useEffect, useMemo, useState } from "react"
 import { useDispatch } from "react-redux"
 import { NavLink } from "react-router-dom"
 
-import Editor from "../../components/Editor/monaco/Editor"
-import { toString } from "../../components/Editor"
 import { Bullseye, Button, Modal, Pagination, Spinner, Title } from "@patternfly/react-core"
 import { Table, TableBody, TableHeader } from "@patternfly/react-table"
-import { Dataset, datasetsBySchema, previewLabel } from "../runs/api"
-import { Label } from "./api"
 
+import Editor from "../../components/Editor/monaco/Editor"
+import { toString } from "../../components/Editor"
+import Api, { DatasetSummary, Label } from "../../api"
 import { alertAction } from "../../alerts"
 
 type TestLabelModalProps = {
@@ -19,7 +18,7 @@ type TestLabelModalProps = {
 }
 
 export default function TestLabelModal(props: TestLabelModalProps) {
-    const [datasets, setDatasets] = useState<Dataset[]>()
+    const [datasets, setDatasets] = useState<DatasetSummary[]>()
     const [count, setCount] = useState(0)
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
@@ -33,11 +32,17 @@ export default function TestLabelModal(props: TestLabelModalProps) {
             return
         }
         setLoading(true)
-        datasetsBySchema(props.uri, pagination)
+        Api.datasetServiceListBySchema(
+            props.uri,
+            pagination.direction,
+            pagination.perPage,
+            pagination.page,
+            pagination.sort
+        )
             .then(
-                response => {
-                    setDatasets(response.datasets)
-                    setCount(response.total)
+                summary => {
+                    setDatasets(summary.datasets)
+                    setCount(summary.total)
                 },
                 error => {
                     dispatch(alertAction("FETCH_DATASETS_BY_URI", "Failed to fetch datasets by Schema URI.", error))
@@ -88,7 +93,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
                                         <Button
                                             onClick={() => {
                                                 setLoading(true)
-                                                previewLabel(d.id, props.label)
+                                                Api.datasetServicePreviewLabel(d.id, props.label)
                                                     .then(
                                                         preview => {
                                                             setResult(preview.value)

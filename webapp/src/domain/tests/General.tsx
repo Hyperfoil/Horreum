@@ -9,7 +9,8 @@ import FolderSelect from "../../components/FolderSelect"
 import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
-import { Test, TestDispatch } from "./reducers"
+import { TestDispatch } from "./reducers"
+import { Test } from "../../api"
 import { useTester, defaultTeamSelector } from "../../auth"
 
 type GeneralProps = {
@@ -53,13 +54,13 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 compareUrl: compareUrl || undefined, // when empty set to undefined
                 notificationsEnabled,
                 fingerprintLabels: [],
-                fingerprintFilter: null,
+                fingerprintFilter: undefined,
                 owner: test?.owner || defaultRole || "__test_created_without_a_role__",
                 access: test ? test.access : 2, // || notation does not work well with 0
                 tokens: [],
                 transformers: [],
             }
-            return dispatch(sendTest(newTest)).then(response => onTestIdChange(response.id))
+            return dispatch(sendTest(newTest)).then(response => onTestIdChange((response as Test).id))
         },
         reset: () => updateState(test),
     }

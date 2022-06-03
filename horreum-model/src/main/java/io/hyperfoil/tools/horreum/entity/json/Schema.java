@@ -15,6 +15,7 @@ import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @NamedNativeQueries({
@@ -59,6 +60,7 @@ public class Schema extends ProtectedBaseEntity {
    public static final int TYPE_2ND_LEVEL = 1;
    public static final int TYPE_ARRAY_ELEMENT = 2;
 
+   @JsonProperty(required = true)
    @Id
    @SequenceGenerator(
       name = "schemaSequence",

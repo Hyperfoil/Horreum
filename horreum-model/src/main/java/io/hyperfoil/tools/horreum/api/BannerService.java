@@ -7,6 +7,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
 import io.hyperfoil.tools.horreum.entity.Banner;
 
 @Path("/api/banner")
@@ -14,7 +16,7 @@ import io.hyperfoil.tools.horreum.entity.Banner;
 @Produces(MediaType.APPLICATION_JSON)
 public interface BannerService {
    @POST
-   void set(Banner banner);
+   void set(@RequestBody(required = true) Banner banner);
 
    @GET
    Banner get();

@@ -25,7 +25,7 @@ public class ReportLog extends PersistentLog {
       this.report = report;
    }
 
-   @JsonProperty("reportId")
+   @JsonProperty(required = true, value = "reportId")
    public int getReportId() {
       return report.id;
    }

@@ -13,6 +13,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 
 @Consumes(MediaType.APPLICATION_JSON)
@@ -25,19 +27,21 @@ public interface SubscriptionService {
 
    @GET
    @Path("/{testId}")
-   Watch get(@PathParam("testId") Integer testId);
+   Watch get(@PathParam("testId") int testId);
 
    @POST
    @Path("/{testid}")
-   void update(@PathParam("testid") Integer testId, Watch watch);
+   void update(@PathParam("testid") int testId, @RequestBody(required = true) Watch watch);
 
    @POST
    @Path("/{testid}/add")
    @Consumes({ MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN })
-   List<String> addUserOrTeam(@PathParam("testid") Integer testId, String userOrTeam);
+   List<String> addUserOrTeam(@PathParam("testid") int testId,
+                              @RequestBody(required = true) String userOrTeam);
 
    @POST
    @Path("/{testid}/remove")
    @Consumes({ MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN })
-   List<String> removeUserOrTeam(@PathParam("testid") Integer testId, String userOrTeam);
+   List<String> removeUserOrTeam(@PathParam("testid") int testId,
+                                 @RequestBody(required = true) String userOrTeam);
 }

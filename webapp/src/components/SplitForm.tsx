@@ -21,7 +21,7 @@ import ConfirmDeleteModal from "./ConfirmDeleteModal"
 
 interface Item {
     id: number
-    name: string
+    name?: string
 }
 
 type SplitFormProps<I extends Item> = {

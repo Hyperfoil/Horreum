@@ -27,6 +27,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 public class Change extends PanacheEntityBase {
    public static final String EVENT_NEW = "change/new";
 
+   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public int id;

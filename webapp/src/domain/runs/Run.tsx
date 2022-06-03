@@ -17,6 +17,7 @@ import { Description } from "./components"
 import DatasetData from "./DatasetData"
 import RunData from "./RunData"
 import TransformationLogModal from "../tests/TransformationLogModal"
+import { Access } from "../../api"
 
 export default function Run() {
     const { id: stringId } = useParams<any>()
@@ -72,7 +73,7 @@ export default function Run() {
                                         <Td>
                                             <OwnerAccess
                                                 owner={run.owner}
-                                                access={run.access}
+                                                access={run.access as Access}
                                                 readOnly={!isTester}
                                                 onUpdate={(owner, access) =>
                                                     dispatch(actions.updateAccess(run.id, run.testid, owner, access))
@@ -81,7 +82,7 @@ export default function Run() {
                                         </Td>
                                         <Td>{formatDateTime(run.start)}</Td>
                                         <Td>{formatDateTime(run.stop)}</Td>
-                                        <Td>{Description(run.description)}</Td>
+                                        <Td>{Description(run.description || "")}</Td>
                                         <Td>
                                             {isTester && (
                                                 <>

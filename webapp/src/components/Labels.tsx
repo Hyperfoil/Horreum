@@ -2,7 +2,7 @@ import React, { RefObject, useRef, useState, useEffect } from "react"
 import { useDispatch } from "react-redux"
 
 import { NavLink } from "react-router-dom"
-import { listAllLabels, LabelInfo } from "../domain/schemas/api"
+import Api, { LabelInfo } from "../api"
 
 import { dispatchError } from "../alerts"
 
@@ -24,7 +24,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
     const [filtering, setFiltering] = useState(defaultFiltering === undefined || defaultFiltering)
     const dispatch = useDispatch()
     useEffect(() => {
-        listAllLabels().then(setOptions, error =>
+        Api.schemaServiceAllLabels().then(setOptions, error =>
             dispatchError(dispatch, error, "LIST_ALL_LABELS", "Failed to list available labels.")
         )
     }, [])

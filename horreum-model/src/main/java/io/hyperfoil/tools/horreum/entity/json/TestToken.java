@@ -33,7 +33,6 @@ public class TestToken {
 
    @SuppressWarnings({ "unused", "FieldCanBeLocal" })
    @NotNull
-   @JsonIgnore
    @Column()
    private String value;
 

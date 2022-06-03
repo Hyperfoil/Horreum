@@ -1,5 +1,8 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -8,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  *
  * Do not change unless changing constants in SQL policies.
  */
+@Schema(type = SchemaType.INTEGER, required = true)
 public enum Access {
    /** Anyone can see */
    PUBLIC,

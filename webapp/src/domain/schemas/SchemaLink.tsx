@@ -1,6 +1,6 @@
 import { useDispatch } from "react-redux"
 
-import { getIdByUri } from "./api"
+import Api from "../../api"
 import { dispatchError } from "../../alerts"
 import IndirectLink from "../../components/IndirectLink"
 
@@ -14,7 +14,7 @@ export default function SchemaLink({ uri }: SchemaLinkProps) {
         <IndirectLink
             style={{ padding: 0, fontWeight: "var(--pf-global--link--FontWeight)" }}
             onNavigate={() =>
-                getIdByUri(uri).then(
+                Api.schemaServiceIdByUri(uri).then(
                     id => `/schema/${id}`,
                     error =>
                         dispatchError(dispatch, error, "FIND_SCHEMA", "Cannot find schema with URI " + uri).then(

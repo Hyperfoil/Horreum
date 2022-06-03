@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.api;
 
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -11,6 +11,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
 
 @Consumes(MediaType.APPLICATION_JSON)
@@ -19,17 +22,21 @@ import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
 public interface NotificationService {
    @GET
    @Path("/methods")
-   Set<String> methods();
+   Collection<String> methods();
 
    @GET
    @Path("/settings")
-   List<NotificationSettings> settings(@QueryParam("name") String name, @QueryParam("team") boolean team);
+   List<NotificationSettings> settings(@Parameter(required = true) @QueryParam("name") String name,
+                                       @Parameter(required = true) @QueryParam("team") boolean team);
 
    @POST
    @Path("/settings")
-   void updateSettings(@QueryParam("name") String name, @QueryParam("team") boolean team, NotificationSettings[] settings);
+   void updateSettings(@Parameter(required = true) @QueryParam("name") String name,
+                       @Parameter(required = true) @QueryParam("team") boolean team,
+                       @RequestBody(required = true) NotificationSettings[] settings);
 
    @POST
    @Path("test")
-   void testNotifications(@QueryParam("method") String method, @QueryParam("data") String data);
+   void testNotifications(@QueryParam("method") String method,
+                          @Parameter(required = true) @QueryParam("data") String data);
 }

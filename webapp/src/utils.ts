@@ -143,3 +143,10 @@ export function deepEquals(x: any, y: any) {
         return true
     } else return false
 }
+
+export function fingerprintToString(fingerprint: unknown) {
+    if (!fingerprint) {
+        return ""
+    }
+    return JSON.stringify(fingerprint)
+}

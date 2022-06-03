@@ -4,7 +4,7 @@ import { getSubscription, updateSubscription } from "./actions"
 import { TestDispatch } from "./reducers"
 import { noop } from "../../utils"
 import { Divider, DualListSelector } from "@patternfly/react-core"
-import { info, teams, User } from "../user/api"
+import Api, { UserData } from "../../api"
 import { alertAction } from "../../alerts"
 import { teamToName, useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -17,7 +17,7 @@ type SubscriptionsProps = {
     funcsRef: TabFunctionsRef
 }
 
-function userElement(user: User): ReactElement {
+function userElement(user: UserData): ReactElement {
     let str = ""
     if (user.firstName) {
         str += user.firstName + " "
@@ -47,7 +47,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
     const [watchingTeams, setWatchingTeams] = useState<ReactElement[]>([])
 
     const [reloadCounter, setReloadCounter] = useState(0)
-    const updateUsers = (users: User[]) =>
+    const updateUsers = (users: UserData[]) =>
         setAvailableUsers(users.filter(u => !watchingUsers.some(w => w && w.key === u.username)).map(userElement))
     useEffect(() => {
         if (!isTester) {
@@ -55,7 +55,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
         }
         dispatch(getSubscription(props.testId)).then(watch => {
             if (watch.users.length > 0) {
-                info(watch.users).then(
+                Api.userServiceInfo(watch.users).then(
                     users => setWatchingUsers(users.map(userElement)),
                     error => dispatch(alertAction("USER_INFO", "User info lookup failed, error", error))
                 )
@@ -63,7 +63,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 setWatchingUsers([])
             }
             if (watch.optout.length > 0) {
-                info(watch.optout).then(
+                Api.userServiceInfo(watch.optout).then(
                     users => setOptoutUsers(users.map(userElement)),
                     error => dispatch(alertAction("USER_INFO", "User info lookup failed, error", error))
                 )
@@ -72,7 +72,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
             }
             setWatchingTeams(watch.teams.map(teamElement))
         }, noop)
-        teams().then(
+        Api.userServiceGetTeams().then(
             // We will filter in the component to not recompute this on watchingTeams change
             teamRoles => setAvailableTeams(teamRoles.map(teamElement)),
             error => dispatch(alertAction("TEAM_LOOKUP", "Team lookup failed", error))

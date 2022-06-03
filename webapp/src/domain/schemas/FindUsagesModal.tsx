@@ -16,17 +16,15 @@ import {
 } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
 
-import {
-    findUsages,
+import Api, {
     LabelLocation,
+    LabelInFingerprint,
+    LabelInReport,
+    LabelInRule,
     LabelInVariable,
     LabelInView,
-    LabelInReport,
-    LabelInFingerprint,
-    LabelInRule,
-    listAllLabels,
     SchemaDescriptor,
-} from "./api"
+} from "../../api"
 import { SchemaDispatch } from "./reducers"
 import { dispatchError } from "../../alerts"
 import ButtonLink from "../../components/ButtonLink"
@@ -104,7 +102,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
     const [usages, setUsages] = useState<LabelLocation[]>()
     useEffect(() => {
         if (label) {
-            findUsages(label)
+            Api.schemaServiceFindUsages(label)
                 .then(setUsages)
                 .catch(e => {
                     dispatchError(dispatch, e, "FETCH USAGES", "Cannot retrieve label usages.")
@@ -116,7 +114,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
         if (!label) {
             return
         }
-        listAllLabels(label).then(
+        Api.schemaServiceAllLabels(label).then(
             ls => {
                 if (ls.length > 0 && ls[0].name === label) {
                     setSchemas(ls[0].schemas)

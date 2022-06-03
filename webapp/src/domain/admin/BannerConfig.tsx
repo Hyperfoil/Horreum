@@ -15,14 +15,10 @@ import {
 import Editor from "../../components/Editor/monaco/Editor"
 import { alertAction, dispatchInfo } from "../../alerts"
 import { isAdminSelector } from "../../auth"
-import { fetchApi } from "../../services/api/index"
+import Api from "../../api"
 
 function setBanner(severity: string, title: string, message: string) {
-    return fetchApi("/api/banner", { severity, title, message }, "post")
-}
-
-function fetchBanner() {
-    return fetchApi("/api/banner", null, "get")
+    return Api.bannerServiceSet({ severity, title, message, active: true, created: -1 })
 }
 
 export default function BannerConfig() {
@@ -33,12 +29,12 @@ export default function BannerConfig() {
     const isAdmin = useSelector(isAdminSelector)
     const dispatch = useDispatch()
     useEffect(() => {
-        fetchBanner().then(
+        Api.bannerServiceGet().then(
             banner => {
                 if (banner) {
                     setSeverity(banner.severity)
                     setTitle(banner.title)
-                    setMessage(banner.message)
+                    setMessage(banner.message || "")
                 }
             },
             e => dispatch(alertAction("FETCH BANNER", "Failed to fetch current banner", e))

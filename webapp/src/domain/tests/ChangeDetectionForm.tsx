@@ -4,9 +4,8 @@ import { useHistory } from "react-router"
 
 import { useTester } from "../../auth"
 import { alertAction } from "../../alerts"
-import * as api from "../alerting/api"
+import Api, { ChangeDetection, ChangeDetectionModelConfig, Variable } from "../../api"
 import { NavLink } from "react-router-dom"
-import { ChangeDetection, ChangeDetectionModelConfig, Variable } from "../alerting/types"
 
 import {
     Alert,
@@ -44,7 +43,7 @@ import DatasetLogModal from "./DatasetLogModal"
 import { subscriptions as subscriptionsSelector } from "./selectors"
 import { updateFingerprint } from "./actions"
 import { TabFunctionsRef } from "../../components/SavedTabs"
-import { Test } from "./reducers"
+import { Test } from "../../api"
 import VariableForm from "./VariableForm"
 
 type TestSelectModalProps = {
@@ -100,7 +99,7 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm }: TestSelectModalProps) => 
                             if (!t) {
                                 return
                             }
-                            api.fetchVariables(t.id).then(
+                            Api.alertingServiceVariables(t.id).then(
                                 response => setGroups(groupNames(response)),
                                 error => dispatchError(dispatch, error, "FETCH_VARIABLES", "Failed to fetch variables")
                             )
@@ -257,7 +256,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
     // dummy variable to cause reloading of variables
     const [reload, setReload] = useState(0)
     useEffect(() => {
-        api.fetchVariables(test.id).then(
+        Api.alertingServiceVariables(test.id).then(
             response => {
                 response.forEach((v: Variable) => {
                     // convert nulls to undefined
@@ -273,10 +272,10 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
         )
     }, [test.id, reload, dispatch])
     useEffect(() => {
-        api.models().then(setChangeDetectionModels, error =>
+        Api.alertingServiceModels().then(setChangeDetectionModels, error =>
             dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
         )
-        api.defaultChangeDetectionConfigs().then(setDefaultChangeDetectionConfigs, error =>
+        Api.alertingServiceDefaultChangeDetectionConfigs().then(setDefaultChangeDetectionConfigs, error =>
             dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
         )
     }, [])
@@ -287,7 +286,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
             variables.forEach(v => {
                 v.name = v.name.trim()
                 if (v.calculation === "") {
-                    v.calculation = null
+                    v.calculation = undefined
                 }
                 if (variables.some(v2 => v2.name.trim() === v.name && v2.id != v.id)) {
                     error = "There are two variables called " + v.name + ": please use unique names."
@@ -301,9 +300,8 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 return Promise.reject("No test!")
             }
             return Promise.all([
-                dispatch(updateFingerprint(test?.id || -1, labels, filter || null)),
-                api
-                    .updateVariables(test.id, variables)
+                dispatch(updateFingerprint(test?.id || -1, labels, filter)),
+                Api.alertingServiceUpdateVariables(test.id, variables)
                     .catch(error =>
                         dispatchError(
                             dispatch,
@@ -335,11 +333,10 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
     const addVariable = () => {
         const newVar = {
             id: Math.min(-1, ...variables.map(v => v.id - 1)),
-            testid: test?.id || -1,
+            testId: test?.id || -1,
             name: "",
             order: variables.length,
             labels: [],
-            calculation: null,
             changeDetection: JSON.parse(JSON.stringify(defaultChangeDetectionConfigs)) as ChangeDetection[],
         }
         setVariables([...variables, newVar])
@@ -528,7 +525,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 isOpen={copyOpen}
                 onClose={() => setCopyOpen(false)}
                 onConfirm={(otherTestId, group) => {
-                    return api.fetchVariables(otherTestId).then(
+                    return Api.alertingServiceVariables(otherTestId).then(
                         response => {
                             const copied = group ? response.filter((v: Variable) => v.group === group) : response
                             setVariables([
@@ -538,7 +535,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                                     id: Math.min(...variables.map(v2 => v2.id), 0) - i - 1,
                                     testid: test.id,
                                     group: v.group || undefined,
-                                    changeDetection: v.changeDetection.map(cd => ({ ...cd, id: undefined })),
+                                    changeDetection: v.changeDetection.map(cd => ({ ...cd, id: -1 })),
                                 })),
                             ])
                         },

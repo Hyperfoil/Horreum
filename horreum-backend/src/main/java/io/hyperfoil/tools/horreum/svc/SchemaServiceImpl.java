@@ -163,7 +163,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Transactional
    @Override
-   public String resetToken(Integer id) {
+   public String resetToken(int id) {
       return updateToken(id, Tokens.generateToken());
    }
 
@@ -171,12 +171,11 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Transactional
    @Override
-   public String dropToken(Integer id) {
+   public String dropToken(int id) {
       return updateToken(id, null);
    }
 
-   @Override
-   public String updateToken(Integer id, String token) {
+   public String updateToken(int id, String token) {
       Query query = em.createNativeQuery(UPDATE_TOKEN);
       query.setParameter(1, token);
       query.setParameter(2, id);
@@ -192,7 +191,7 @@ public class SchemaServiceImpl implements SchemaService {
    @Transactional
    @Override
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-   public void updateAccess(Integer id,
+   public void updateAccess(int id,
                             String owner,
                             int access) {
       if (access < Access.PUBLIC.ordinal() || access > Access.PRIVATE.ordinal()) {
@@ -210,7 +209,7 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @WithRoles
    @Override
-   public Collection<ValidationMessage> validate(JsonNode data, String schemaUri) {
+   public Collection<ValidationMessage> validate(String schemaUri, JsonNode data) {
       if (schemaUri == null || schemaUri.isEmpty()) {
          return null;
       }
@@ -244,7 +243,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Transactional
    @Override
-   public void delete(Integer id){
+   public void delete(int id){
       Schema schema = Schema.find("id", id).firstResult();
       if (schema == null) {
          throw ServiceException.notFound("Schema not found");
@@ -322,7 +321,7 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @WithRoles
    @Override
-   public List<Transformer> listTransformers(Integer schemaId) {
+   public List<Transformer> listTransformers(int schemaId) {
       return Transformer.find("schema_id", Sort.by("name"), schemaId).list();
    }
 
@@ -330,7 +329,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Transactional
    @Override
-   public Integer addOrUpdateTransformer(Integer schemaId, Transformer transformer) {
+   public int addOrUpdateTransformer(int schemaId, Transformer transformer) {
       if (!identity.hasRole(transformer.owner)) {
          throw ServiceException.forbidden("This user is not a member of team " + transformer.owner);
       }

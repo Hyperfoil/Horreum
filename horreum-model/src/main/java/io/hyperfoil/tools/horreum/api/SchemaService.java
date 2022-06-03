@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -15,6 +16,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.ValidationMessage;
 
@@ -53,47 +58,47 @@ public interface SchemaService {
    @POST
    @Produces(MediaType.TEXT_PLAIN)
    @Path("{id}/resetToken")
-   String resetToken(@PathParam("id") Integer id);
+   String resetToken(@PathParam("id") int id);
 
    @POST
    @Produces(MediaType.TEXT_PLAIN)
    @Path("{id}/dropToken")
-   String dropToken(@PathParam("id") Integer id);
-
-   String updateToken(Integer id, String token);
+   String dropToken(@PathParam("id") int id);
 
    @POST
    @Path("{id}/updateAccess")
    @Consumes(MediaType.TEXT_PLAIN) //is POST the correct verb for this method as we are not uploading a new artefact?
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-   void updateAccess(@PathParam("id") Integer id,
-                     @QueryParam("owner") String owner,
-                     @QueryParam("access") int access);
+   void updateAccess(@PathParam("id") int id,
+                     @Parameter(required = true) @QueryParam("owner") String owner,
+                     @Parameter(required = true) @QueryParam("access") int access);
 
    @POST
    @Path("validate")
    @Consumes(MediaType.APPLICATION_JSON)
-   Collection<ValidationMessage> validate(JsonNode data, @QueryParam("schema") String schemaUri);
+   Collection<ValidationMessage> validate(@QueryParam("schema") String schemaUri,
+                                          @RequestBody(required = true) JsonNode data);
 
    @DELETE
    @Path("{id}")
-   void delete(@PathParam("id") Integer id);
+   void delete(@PathParam("id") int id);
 
    @GET
    @Path("findUsages")
    @Produces(MediaType.APPLICATION_JSON)
-   List<LabelLocation> findUsages(@QueryParam("label") String label);
+   List<LabelLocation> findUsages(@Parameter(required = true) @QueryParam("label") String label);
 
    @GET
    @Path("{schemaId}/transformers")
    @Produces(MediaType.APPLICATION_JSON)
-   List<Transformer> listTransformers(@PathParam("schemaId") Integer schemaId);
+   List<Transformer> listTransformers(@PathParam("schemaId") int schemaId);
 
    @POST
    @Path("{schemaId}/transformers")
    @Consumes(MediaType.APPLICATION_JSON)
    @Produces(MediaType.APPLICATION_JSON)
-   Integer addOrUpdateTransformer(@PathParam("schemaId") Integer schemaId, Transformer transformer);
+   int addOrUpdateTransformer(@PathParam("schemaId") int schemaId,
+                              @RequestBody(required = true) Transformer transformer);
 
    @DELETE
    @Path("{schemaId}/transformers/{transformerId}")
@@ -107,7 +112,7 @@ public interface SchemaService {
    @POST
    @Path("{schemaId}/labels")
    @Consumes(MediaType.APPLICATION_JSON)
-   Integer addOrUpdateLabel(@PathParam("schemaId") int schemaId, Label label);
+   Integer addOrUpdateLabel(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Label label);
 
    @DELETE
    @Path("{schemaId}/labels/{labelId}")
@@ -123,14 +128,9 @@ public interface SchemaService {
    @Produces(MediaType.APPLICATION_JSON)
    List<TransformerInfo> allTransformers();
 
-   class ExtractorUpdate {
-      public int id;
-      public String accessor;
-      public String schema;
-      public String jsonpath;
-      public boolean deleted;
-   }
-
+   @org.eclipse.microprofile.openapi.annotations.media.Schema(anyOf = {
+         LabelInFingerprint.class, LabelInRule.class, LabelInReport.class, LabelInVariable.class, LabelInView.class
+   })
    abstract class LabelLocation {
       public final String type;
       public int testId;
@@ -202,16 +202,24 @@ public interface SchemaService {
    }
 
    class TransformerInfo {
+      @JsonProperty(required = true)
       public int schemaId;
+      @NotNull
       public String schemaUri;
+      @NotNull
       public String schemaName;
+      @JsonProperty(required = true)
       public int transformerId;
+      @NotNull
       public String transformerName;
    }
 
    class SchemaDescriptor {
+      @JsonProperty(required = true)
       public int id;
+      @NotNull
       public String name;
+      @NotNull
       public String uri;
 
       public SchemaDescriptor() {}
@@ -224,9 +232,13 @@ public interface SchemaService {
    }
 
    class LabelInfo {
+      @NotNull
       public String name;
+      @JsonProperty(required = true)
       public boolean metrics;
+      @JsonProperty(required = true)
       public boolean filtering;
+      @NotNull
       public List<SchemaDescriptor> schemas = new ArrayList<>();
 
       public LabelInfo(String name) {

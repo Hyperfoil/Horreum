@@ -20,7 +20,7 @@ import { dispatchError } from "../../alerts"
 import { noop } from "../../utils"
 import { useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
-import { Transformer, TransformerInfo, allTransformers } from "../schemas/api"
+import Api, { Transformer, TransformerInfo } from "../../api"
 import { TestDispatch } from "./reducers"
 import { updateTransformers } from "./actions"
 import TransformationLogModal from "./TransformationLogModal"
@@ -87,7 +87,7 @@ function compareTransformers(ts1: number[], ts2: number[]) {
     return true
 }
 
-function toInfo(t: Transformer) {
+function toInfo(t: Transformer): TransformerInfo {
     return {
         ...t,
         transformerId: t.id,
@@ -121,7 +121,7 @@ export default function Transformers(props: TransformersProps) {
 
     useEffect(() => {
         setLoading(true)
-        allTransformers()
+        Api.schemaServiceAllTransformers()
             .then(
                 ts => {
                     const items = transformersToTree(ts)

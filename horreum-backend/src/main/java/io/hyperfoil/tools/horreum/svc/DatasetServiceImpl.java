@@ -139,7 +139,7 @@ public class DatasetServiceImpl implements DatasetService {
    @PermitAll
    @WithRoles
    @Override
-   public DatasetService.DatasetList listTestDatasets(int testId, Integer limit, Integer page, String sort, String direction) {
+   public DatasetService.DatasetList listByTest(int testId, Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder(LIST_TEST_DATASETS);
       // TODO: filtering by fingerprint
       addOrderAndPaging(limit, page, sort, direction, sql);
@@ -190,7 +190,7 @@ public class DatasetServiceImpl implements DatasetService {
 
    @WithRoles
    @Override
-   public QueryResult queryDataSet(Integer datasetId, String jsonpath, boolean array, String schemaUri) {
+   public QueryResult queryData(int datasetId, String jsonpath, boolean array, String schemaUri) {
       if (schemaUri != null && schemaUri.isBlank()) {
          schemaUri = null;
       }
@@ -221,7 +221,7 @@ public class DatasetServiceImpl implements DatasetService {
 
    @WithRoles
    @Override
-   public DatasetService.DatasetList listDatasetsBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
+   public DatasetService.DatasetList listBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder(LIST_SCHEMA_DATASETS);
       // TODO: filtering by fingerprint
       addOrderAndPaging(limit, page, sort, direction, sql);
@@ -298,7 +298,7 @@ public class DatasetServiceImpl implements DatasetService {
    @WithToken
    @WithRoles
    @Override
-   public DataSet getDataSet(Integer datasetId) {
+   public DataSet getDataSet(int datasetId) {
       DataSet dataset = DataSet.findById(datasetId);
       if (dataset != null) {
          Hibernate.initialize(dataset.data);

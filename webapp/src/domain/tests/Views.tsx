@@ -21,7 +21,8 @@ import { useTester } from "../../auth"
 
 import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
-import { View, ViewComponent, TestDispatch } from "./reducers"
+import { TestDispatch } from "./reducers"
+import { View, ViewComponent } from "../../api"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { updateView } from "./actions"
 

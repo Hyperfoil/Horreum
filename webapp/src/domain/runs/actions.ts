@@ -5,7 +5,6 @@ import {
     LoadedAction,
     LoadingAction,
     LoadSuggestionsAction,
-    Run,
     SelectRolesAction,
     SuggestAction,
     TestIdAction,
@@ -17,19 +16,19 @@ import {
     UpdateDatasetsAction,
 } from "../runs/reducers"
 import * as actionTypes from "./actionTypes"
-import * as api from "./api"
+import Api, { RunExtended, RunSummary } from "../../api"
 import { isFetchingSuggestions, suggestQuery } from "./selectors"
 import store from "../../store"
 import { PaginationInfo } from "../../utils"
 import { AddAlertAction, alertAction, dispatchError } from "../../alerts"
 
-const loaded = (run: Run | Run[], total?: number): LoadedAction => ({
+const loaded = (run: RunExtended | undefined, total?: number): LoadedAction => ({
     type: actionTypes.LOADED,
-    runs: Array.isArray(run) ? run : [run],
+    run,
     total,
 })
 
-const testId = (id: number, runs: Run[], total: number): TestIdAction => ({
+const testId = (id: number, runs: RunSummary[], total: number): TestIdAction => ({
     type: actionTypes.TESTID,
     id,
     runs,
@@ -38,11 +37,11 @@ const testId = (id: number, runs: Run[], total: number): TestIdAction => ({
 
 export function get(id: number, token?: string) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        api.get(id, token).then(
+        Api.runServiceGetRun(id, token).then(
             response => dispatch(loaded(response)),
             error => {
                 dispatch(alertAction("FETCH_RUN", "Failed to fetch data for run " + id, error))
-                dispatch(loaded([], 0))
+                dispatch(loaded(undefined, 0))
                 return Promise.reject(error)
             }
         )
@@ -51,24 +50,20 @@ export function get(id: number, token?: string) {
 export function byTest(id: number, pagination: PaginationInfo, trashed: boolean) {
     return (dispatch: Dispatch<LoadingAction | TestIdAction | AddAlertAction>) => {
         dispatch({ type: actionTypes.LOADING })
-        return api.byTest(id, pagination, trashed).then(
+        return Api.runServiceListTestRuns(
+            id,
+            pagination.direction,
+            pagination.perPage,
+            pagination.page,
+            pagination.sort,
+            trashed
+        ).then(
             response => dispatch(testId(id, response.runs, response.total)),
             error => {
                 dispatch(alertAction("FETCH_RUNS", "Failed to fetch runs for test " + id, error))
                 dispatch(testId(id, [], 0))
                 return Promise.reject(error)
             }
-        )
-    }
-}
-
-export function list(query: string, matchAll: boolean, roles: string, pagination: PaginationInfo, trashed: boolean) {
-    return (dispatch: Dispatch<LoadedAction | AddAlertAction>) => {
-        return api.list(query, matchAll, roles, pagination, trashed).then(
-            response => {
-                dispatch(loaded(response.runs, response.total))
-            },
-            error => dispatchError(dispatch, error, "FETCH_RUNS", "Failed to fetch runs using query " + query)
         )
     }
 }
@@ -99,7 +94,7 @@ function fetchSuggestions(
     roles: string,
     dispatch: Dispatch<SuggestAction | LoadSuggestionsAction | AddAlertAction>
 ) {
-    api.suggest(query, roles)
+    Api.runServiceAutocomplete(query)
         .then(
             response => {
                 dispatch({
@@ -134,7 +129,7 @@ export const selectRoles = (selection: Team): SelectRolesAction => {
 
 export function resetToken(id: number, testid: number) {
     return (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) => {
-        return api.resetToken(id).then(
+        return Api.runServiceResetToken(id).then(
             token => {
                 dispatch({
                     type: actionTypes.UPDATE_TOKEN,
@@ -149,7 +144,7 @@ export function resetToken(id: number, testid: number) {
 }
 
 export const dropToken = (id: number, testid: number) => (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) => {
-    return api.dropToken(id).then(
+    return Api.runServiceDropToken(id).then(
         _ => {
             dispatch({
                 type: actionTypes.UPDATE_TOKEN,
@@ -164,7 +159,7 @@ export const dropToken = (id: number, testid: number) => (dispatch: Dispatch<Upd
 
 export function updateAccess(id: number, testid: number, owner: string, access: Access) {
     return (dispatch: Dispatch<UpdateAccessAction | AddAlertAction>) => {
-        return api.updateAccess(id, owner, access).then(
+        return Api.runServiceUpdateAccess(id, access, owner).then(
             _ => {
                 dispatch({
                     type: actionTypes.UPDATE_ACCESS,
@@ -181,7 +176,7 @@ export function updateAccess(id: number, testid: number, owner: string, access: 
 
 export function trash(id: number, testid: number, isTrashed = true) {
     return (dispatch: Dispatch<TrashAction | AddAlertAction>) =>
-        api.trash(id, isTrashed).then(
+        Api.runServiceTrash(id, isTrashed).then(
             _ => {
                 dispatch({
                     type: actionTypes.TRASH,
@@ -196,7 +191,7 @@ export function trash(id: number, testid: number, isTrashed = true) {
 
 export function updateDescription(id: number, testid: number, description: string) {
     return (dispatch: Dispatch<UpdateDescriptionAction | AddAlertAction>) =>
-        api.updateDescription(id, description).then(
+        Api.runServiceUpdateDescription(id, description).then(
             _ => {
                 dispatch({
                     type: actionTypes.UPDATE_DESCRIPTION,
@@ -209,16 +204,16 @@ export function updateDescription(id: number, testid: number, description: strin
         )
 }
 
-export function updateSchema(id: number, testid: number, path: string | undefined, schemaid: number, schema: string) {
+export function updateSchema(id: number, testid: number, path: string | undefined, schemaUri: string) {
     return (dispatch: Dispatch<UpdateSchemaAction | AddAlertAction>) =>
-        api.updateSchema(id, path, schema).then(
+        Api.runServiceUpdateSchema(id, schemaUri, path).then(
             schemas =>
                 dispatch({
                     type: actionTypes.UPDATE_SCHEMA,
                     id,
                     testid,
                     path,
-                    schema,
+                    schema: schemaUri,
                     schemas,
                 }),
             error => dispatchError(dispatch, error, "SCHEME_UPDATE_FAILED", "Failed to update run schema")
@@ -227,7 +222,7 @@ export function updateSchema(id: number, testid: number, path: string | undefine
 
 export function recalculateDatasets(id: number, testid: number) {
     return (dispatch: Dispatch<UpdateDatasetsAction | AddAlertAction>) =>
-        api.recalculateDatasets(id).then(
+        Api.runServiceRecalculateDatasets(id).then(
             datasets =>
                 dispatch({
                     type: actionTypes.UPDATE_DATASETS,

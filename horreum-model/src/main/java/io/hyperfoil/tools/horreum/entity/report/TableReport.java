@@ -19,10 +19,13 @@ import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.Type;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -30,30 +33,37 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity
 @Table(name = "tablereport")
 public class TableReport extends PanacheEntityBase {
+   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Integer id;
 
+   @JsonProperty(required = true)
    @OneToOne(fetch = FetchType.EAGER)
    @JoinColumn(name = "config_id")
    public TableReportConfig config;
 
+   @Schema(required = true, type = SchemaType.NUMBER)
    @NotNull
    public Instant created;
 
+   @NotNull
    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, mappedBy = "report")
    @Fetch(FetchMode.SELECT)
    public Collection<ReportComment> comments;
 
+   @NotNull
    @ElementCollection(fetch = FetchType.EAGER)
    @CollectionTable(name = "tablereport_data", joinColumns = @JoinColumn(name = "report_id"))
    @Fetch(FetchMode.SELECT)
    public Collection<Data> data;
 
+   @NotNull
    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, mappedBy = "report")
    @Fetch(FetchMode.SELECT)
    public Collection<ReportLog> logs = new ArrayList<>();
 
+   @Schema(name = "TableReportData")
    @Embeddable
    public static class Data {
       @NotNull

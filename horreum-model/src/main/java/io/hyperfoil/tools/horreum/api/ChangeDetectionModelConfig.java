@@ -5,12 +5,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.validation.constraints.NotNull;
+
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 public class ChangeDetectionModelConfig {
+   @NotNull
    public String name;
+   @NotNull
    public String title;
+   @NotNull
    public String description;
+   @NotNull
    public List<Component> ui = new ArrayList<>();
    public Map<String, JsonNode> defaults = new HashMap<>();
 
@@ -27,11 +35,17 @@ public class ChangeDetectionModelConfig {
       return component;
    }
 
+   @Schema(name = "ChangeDetectionComponent")
    public class Component {
+      @NotNull
       public String name;
+      @NotNull
       public String title;
+      @NotNull
       public String description;
+      @NotNull
       public ComponentType type;
+      @NotNull
       public Map<String, Object> properties = new HashMap<>();
 
       private Component(String name, String title, String description, ComponentType type) {
