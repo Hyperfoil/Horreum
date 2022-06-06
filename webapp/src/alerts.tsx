@@ -150,7 +150,7 @@ export function dispatchInfo(
     window.setTimeout(() => dispatch(info.clear), timeout)
 }
 
-export const defaultFormatError = (e: any) => {
+function defaultFormatError(e: any) {
     console.log(e)
     if (!e) {
         return ""

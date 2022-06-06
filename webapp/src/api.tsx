@@ -56,7 +56,8 @@ const authMiddleware: Middleware = {
                 return ctx.response.text().then((text: any) => Promise.reject(text))
             }
         } else {
-            return Promise.reject(ctx.response)
+            // We won't reject it because that would skip other middleware
+            return Promise.resolve(ctx.response)
         }
     },
 }
@@ -86,10 +87,29 @@ const serializationMiddleware: Middleware = {
     // we won't deserialize functions eagerly
 }
 
+const noResponseMiddleware: Middleware = {
+    post: ctx => {
+        if (ctx.response.status === 204) {
+            const rsp = ctx.response.clone()
+            rsp.json = () => Promise.resolve(undefined)
+            return Promise.resolve(rsp)
+        } else if (ctx.response.status >= 400) {
+            return ctx.response.text().then(err => {
+                if (err) {
+                    return Promise.reject(err)
+                } else {
+                    return Promise.reject(ctx.response.status + " " + ctx.response.statusText)
+                }
+            })
+        }
+        return Promise.resolve(ctx.response)
+    },
+}
+
 const Api = new DefaultApi(
     new Configuration({
         basePath: window.location.origin,
-        middleware: [authMiddleware, serializationMiddleware],
+        middleware: [authMiddleware, serializationMiddleware, noResponseMiddleware],
     })
 )
 
