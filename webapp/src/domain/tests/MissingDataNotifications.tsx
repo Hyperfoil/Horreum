@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
 import { useHistory } from "react-router"
 
 import { Bullseye, FormGroup, Popover, Spinner, TextInput } from "@patternfly/react-core"
 
-import { durationToMillis, millisToDuration } from "../../utils"
+import { durationToMillis, millisToDuration, noop } from "../../utils"
 
 import HelpButton from "../../components/HelpButton"
 import Labels from "../../components/Labels"
@@ -70,7 +70,10 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                     dispatchError(dispatch, "", "FETCH_MISSING_DATA_RULES", "Unexpected value returned from server")
                 }
             },
-            error => dispatchError(dispatch, error, "FETCH_MISSING_DATA_RULES", "Failed to fetch missing data rules.")
+            error =>
+                dispatchError(dispatch, error, "FETCH_MISSING_DATA_RULES", "Failed to fetch missing data rules.").catch(
+                    noop
+                )
         )
     }, [props.test, resetCounter])
 
@@ -109,7 +112,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                 ...rules
                     .filter(rule => rule.modified)
                     .map(rule =>
-                        Api.alertingServiceUpdateMissingDataRule(rule.id, rule).then(
+                        Api.alertingServiceUpdateMissingDataRule(rule.testId, rule).then(
                             () => {
                                 rule.modified = false
                             },
@@ -133,6 +136,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
             setResetCounter(resetCounter + 1)
         },
     }
+    const hasLabels = selectedRule?.labels && selectedRule.labels.length > 0
     return (
         <SplitForm
             itemType="Rule"
@@ -168,6 +172,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                 <>
                     <FormGroup label="Name" fieldId="name">
                         <TextInput
+                            id="name"
                             isReadOnly={!isTester}
                             value={selectedRule.name || ""}
                             onChange={name => update({ name })}
@@ -177,23 +182,23 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                         label="Labels"
                         fieldId="labels"
                         validated={
-                            selectedRule.labels.length > 0 && !selectedRule.condition
+                            hasLabels && !selectedRule.condition
                                 ? "warning"
-                                : selectedRule.labels.length == 0 && selectedRule.condition
+                                : !hasLabels && selectedRule.condition
                                 ? "warning"
                                 : "default"
                         }
                         helperText={
-                            selectedRule.labels.length > 0 && !selectedRule.condition
+                            hasLabels
                                 ? asWarning("Labels are defined but there is no condition evaulating these.")
-                                : selectedRule.labels.length == 0 && selectedRule.condition
+                                : !hasLabels && selectedRule.condition
                                 ? asWarning("Condition is used but the labels are not defined.")
                                 : undefined
                         }
                     >
                         <Labels
                             isReadOnly={!isTester}
-                            labels={selectedRule.labels}
+                            labels={selectedRule.labels || []}
                             onChange={labels => update({ labels })}
                             defaultMetrics={false}
                             defaultFiltering={true}

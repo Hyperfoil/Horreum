@@ -41,7 +41,6 @@ public class MissingDataRule extends PanacheEntityBase {
    @JsonIgnore
    public Test test;
 
-   @NotNull
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public ArrayNode labels;
 
@@ -58,12 +57,17 @@ public class MissingDataRule extends PanacheEntityBase {
       return test.id;
    }
 
+   @JsonProperty(value = "testId", required = true)
+   public void setTestId(int testId) {
+      this.test = Test.getEntityManager().getReference(Test.class, testId);
+   }
+
    @Override
    public boolean equals(Object o) {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
       MissingDataRule that = (MissingDataRule) o;
-      return maxStaleness == that.maxStaleness && labels.equals(that.labels) && Objects.equals(condition, that.condition);
+      return maxStaleness == that.maxStaleness && Objects.equals(labels, that.labels) && Objects.equals(condition, that.condition);
    }
 
    @Override
