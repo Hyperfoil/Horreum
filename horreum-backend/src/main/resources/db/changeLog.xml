@@ -3470,4 +3470,39 @@
             CREATE TYPE extractor AS (name text, jsonpath jsonpath, isarray boolean);
         </sql>
     </changeSet>
+
+    <changeSet id="84" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION recalc_dataset_view() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM set_config('horreum.userroles', NEW.roles, true);
+                <!-- Make sure we won't conflict with existing view -->
+                DELETE FROM dataset_view WHERE dataset_id = NEW.dataset_id AND (NEW.view_id IS NULL OR NEW.view_id = view_id);
+                WITH view_agg AS (
+                    SELECT vc.view_id, vc.id as vcid, array_agg(DISTINCT label.id) as label_ids, jsonb_object_agg(label.name, lv.value) as value FROM dataset_schemas ds
+                    JOIN label ON label.schema_id = ds.schema_id
+                    JOIN viewcomponent vc ON vc.labels ? label.name
+                    JOIN label_values lv ON lv.label_id = label.id
+                    WHERE ds.dataset_id = NEW.dataset_id
+                        AND (NEW.view_id IS NULL OR NEW.view_id = vc.view_id)
+                        AND vc.view_id IN (SELECT view.id FROM view JOIN dataset ON view.test_id = dataset.testid WHERE dataset.id = NEW.dataset_id)
+                    GROUP BY vc.view_id, vcid
+                ) INSERT INTO dataset_view (dataset_id, view_id, label_ids, value)
+                    SELECT NEW.dataset_id, view_id, array_agg(DISTINCT label_id), jsonb_object_agg(vcid, value) FROM view_agg, unnest(label_ids) as label_id
+                    GROUP BY view_id;
+                DELETE FROM view_recalc_queue WHERE dataset_id = NEW.dataset_id AND (view_id IS NULL OR view_id = NEW.view_id);
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <!-- Delete those values for non-existent view/dataset combinations -->
+        <sql>
+            DELETE FROM dataset_view USING (
+                SELECT dv.dataset_id, dv.view_id FROM dataset_view dv
+                JOIN view ON dv.view_id = view.id
+                JOIN dataset ON dataset.id = dv.dataset_id
+                WHERE dataset.testid != view.test_id
+            ) AS extra WHERE dataset_view.dataset_id = extra.dataset_id AND dataset_view.view_id = extra.view_id;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
