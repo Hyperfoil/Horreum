@@ -1,8 +1,6 @@
 #!/bin/sh
 
-if [ -z "$JAVA_OPTIONS" ]; then
-  JAVA_OPTIONS="-Djava.util.logging.manager=org.jboss.logmanager.LogManager $JAVA_OPTIONS"
-fi
+JAVA_OPTIONS="-Djava.util.logging.manager=org.jboss.logmanager.LogManager $JAVA_OPTIONS"
 if [ -n "$QUARKUS_DATASOURCE_USERNAME" ]; then
   # When the property is set using environment variables it is not correctly propagated
   # to Liquibase changeLog.xml
