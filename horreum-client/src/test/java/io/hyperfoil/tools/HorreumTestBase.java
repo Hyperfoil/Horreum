@@ -80,6 +80,14 @@ public class HorreumTestBase {
         try {
             if (propertyStream != null) {
                 configProperties.load(propertyStream);
+                try (InputStream horreumPropertyStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("application.properties")) {
+                    if (horreumPropertyStream != null) {
+                        Properties horreumProps = new Properties();
+                        horreumProps.load(horreumPropertyStream);
+                        configProperties.put("quarkus.datasource.password", horreumProps.getProperty("quarkus.datasource.password"));
+                        configProperties.put("horreum.grafana.admin.password", horreumProps.getProperty("horreum.grafana.admin.password"));
+                    }
+                }
 
                 HORREUM_TEST_PORT_OFFSET = Integer.parseInt(getProperty("test.port.offset"));
                 CONTAINER_HOST_IP=getProperty("container.host.ip");
@@ -130,6 +138,9 @@ public class HorreumTestBase {
             String KEYCLOAK_OFFSET_PORT = getOffsetPort(KEYCLOAK_PORT);
             String KEYCLOAK_URL_ROOT = "http://172.17.0.1:" + KEYCLOAK_OFFSET_PORT;
 
+            String QUARKUS_DATASOURCE_PASSWORD = getProperty("quarkus.datasource.password");
+            String HORREUM_GRAFANA_ADMIN_PASSWORD = getProperty("horreum.grafana.admin.password");
+
             String horreumCommitId = System.getProperty("horreum.commit.id");
             if (horreumCommitId == null) {
                 InputStream stream = HorreumTestBase.class.getClassLoader().getResourceAsStream("horreum.commit.id.txt");
@@ -142,6 +153,7 @@ public class HorreumTestBase {
             envVariables.put("CONTAINER_HOST_IP", CONTAINER_HOST_IP);
             envVariables.put("PORT_OFFSET", PORT_OFFSET);
             envVariables.put("RESOURCES_PATH", ".");
+            envVariables.put("QUARKUS_DATASOURCE_PASSWORD", QUARKUS_DATASOURCE_PASSWORD);
             envVariables.put("HORREUM_HTTPS_PORT", getOffsetPort(HORREUM_HTTPS_PORT));
             envVariables.put("HORREUM_HTTP_PORT", getOffsetPort(HORREUM_HTTP_PORT ));
             envVariables.put("GRAFANA_HTTP_PORT", getOffsetPort(GRAFANA_HTTP_PORT ));
@@ -155,6 +167,7 @@ public class HorreumTestBase {
             envVariables.put("CONTAINER_JAVA_OPTIONS", CONTAINER_JAVA_OPTIONS);
 
             envVariables.put("GRAFANA_GF_SERVER_ROOT_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(GRAFANA_HTTP_PORT ) + "/");
+            envVariables.put("HORREUM_GRAFANA_ADMIN_PASSWORD", HORREUM_GRAFANA_ADMIN_PASSWORD);
 
             String GF_AUTH_URL_ROOT = KEYCLOAK_URL_ROOT + "/realms/horreum/protocol/openid-connect";
             envVariables.put("GF_AUTH_GENERIC_OAUTH_AUTH_URL", GF_AUTH_URL_ROOT + "/auth");
