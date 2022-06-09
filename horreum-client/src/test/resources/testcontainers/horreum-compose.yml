@@ -18,6 +18,7 @@ services:
       - "HORREUM_GRAFANA_MP_REST_URL=${GRAFANA_GF_SERVER_ROOT_URL}"
       - "HORREUM_GRAFANA_URL=${GRAFANA_GF_SERVER_ROOT_URL}"
       - HORREUM_TEST=true
+      - "JAVA_OPTIONS=${CONTAINER_JAVA_OPTIONS}"
     env_file: horreum-backend/.env
 
     ports:

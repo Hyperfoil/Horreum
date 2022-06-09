@@ -53,6 +53,7 @@ public class HorreumTestBase {
     private static final Integer HORREUM_TEST_PORT_OFFSET;
 
     private static final String CONTAINER_HOST_IP;
+    private static final String CONTAINER_JAVA_OPTIONS;
 
     private static final Integer HORREUM_HTTP_PORT = 8080;
     private static final Integer HORREUM_HTTPS_PORT = 8443;
@@ -88,6 +89,8 @@ public class HorreumTestBase {
 
                 HORREUM_USERNAME = getProperty("horreum.username");
                 HORREUM_PASSWORD = getProperty("horreum.password");
+
+                CONTAINER_JAVA_OPTIONS = getProperty("container.java.options");
 
                 START_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.start-infra"));
                 STOP_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.stop-infra"));
@@ -149,6 +152,7 @@ public class HorreumTestBase {
             envVariables.put("HORREUM_HORREUM_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(HORREUM_HTTP_PORT));
             envVariables.put("HORREUM_QUARKUS_OIDC_AUTH_SERVER_URL", KEYCLOAK_URL_ROOT + "/realms/horreum");
             envVariables.put("HORREUM_QUARKUS_DATASOURCE_JDBC_URL", "jdbc:postgresql://" + CONTAINER_HOST_IP + ":" + getOffsetPort(POSTGRES_PORT) + "/horreum");
+            envVariables.put("CONTAINER_JAVA_OPTIONS", CONTAINER_JAVA_OPTIONS);
 
             envVariables.put("GRAFANA_GF_SERVER_ROOT_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(GRAFANA_HTTP_PORT ) + "/");
 
