@@ -2,7 +2,7 @@
 
 ROOT=$(dirname $0)/..
 
-echo QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_FILE=/home/rvansa/workspace/horreum/src/test/resources/keystore.jks >> $ROOT/horreum-backend/.env
+echo QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_FILE=$ROOT/src/test/resources/keystore.jks >> $ROOT/horreum-backend/.env
 echo QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_PASSWORD=secret >> $ROOT/horreum-backend/.env
 echo QUARKUS_HTTP_INSECURE_REQUESTS=disabled >> $ROOT/horreum-backend/.env
 echo HORREUM_URL=https://localhost:8443 >> $ROOT/horreum-backend/.env

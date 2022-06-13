@@ -78,7 +78,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.version>2.9.2.Final</quarkus.version>
-        <quinoa.version>1.0.3</quinoa.version>
+        <quinoa.version>1.0.5</quinoa.version>
         <surefire-plugin.version>3.0.0-M6</surefire-plugin.version>
         <failsafe-plugin.version>3.0.0-M5</failsafe-plugin.version>
         <keycloak-admin-client.version>18.0.0</keycloak-admin-client.version>

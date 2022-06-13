@@ -112,6 +112,8 @@ Similar to that testers should get a `engineers-tester` role which is a composit
 
 ## Running in dev mode over HTTPS
 
+> TODO: Dev mode currently does not work over HTTPS (this is Quinoa issue)
+
 By default, the local setup uses plain HTTP. If you need to test HTTPS, run the docker-compose/podman-compose as usual (in this setup the other containers won't be secured) and then run:
 
 ```bash
