@@ -43,13 +43,7 @@ public interface GrafanaService {
    @Operation(hidden = true)
    @OPTIONS
    @Path("/annotations")
-   default Response annotations() {
-      return Response.ok()
-            .header("Access-Control-Allow-Headers", "accept, content-type")
-            .header("Access-Control-Allow-Methods", "POST")
-            .header("Access-Control-Allow-Origin", "*")
-            .build();
-   }
+   Response annotations();
 
    @POST
    @Path("/annotations")

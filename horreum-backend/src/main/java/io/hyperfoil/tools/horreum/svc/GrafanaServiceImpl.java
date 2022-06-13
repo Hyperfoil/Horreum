@@ -2,13 +2,20 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
+
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -32,6 +39,27 @@ public class GrafanaServiceImpl implements GrafanaService {
 
    @Context
    HttpServletRequest request;
+
+   private final List<String> allowedOrigins = new ArrayList<>();
+
+   @PostConstruct
+   void init() {
+      Config config = ConfigProvider.getConfig();
+      String baseUrl = config.getValue("horreum.url", String.class);
+      allowedOrigins.add(getOrigin(baseUrl));
+      if (baseUrl.contains("//localhost")) {
+         // allow live-coding port
+         int colonIndex = baseUrl.indexOf(':', 8);
+         allowedOrigins.add(baseUrl.substring(0, colonIndex < 0 ? baseUrl.length() : colonIndex) + ":" + config.getValue("quarkus.quinoa.dev-server-port", int.class));
+      }
+      config.getOptionalValue("horreum.internal.url", String.class).ifPresent(url -> allowedOrigins.add(getOrigin(url)));
+      config.getOptionalValue("horreum.grafana.url", String.class).ifPresent(url -> allowedOrigins.add(getOrigin(url)));
+   }
+
+   private String getOrigin(String baseUrl) {
+      int slashIndex = baseUrl.indexOf('/', 8); // skip http(s)://
+      return baseUrl.substring(0, slashIndex < 0 ? baseUrl.length() : slashIndex);
+   }
 
    @WithRoles
    @Override
@@ -107,6 +135,21 @@ public class GrafanaServiceImpl implements GrafanaService {
          variableId = -1;
       }
       return variableId;
+   }
+
+   @Override
+   public Response annotations() {
+      Response.ResponseBuilder response = Response.ok()
+            .header("Access-Control-Allow-Headers", "accept, content-type")
+            .header("Access-Control-Allow-Methods", "POST")
+            .header("Vary", "Origin");
+      String origin = request.getHeader("Origin");
+      for (String allowed : allowedOrigins) {
+         if (allowed.equals(origin)) {
+            return response.header("Access-Control-Allow-Origin", allowed).build();
+         }
+      }
+      return response.header("Access-Control-Allow-Origin", allowedOrigins.get(0)).build();
    }
 
    @Override
