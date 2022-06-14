@@ -3,7 +3,7 @@ package io.hyperfoil.tools.auth;
 import io.hyperfoil.tools.CustomResteasyJackson2Provider;
 import org.apache.http.conn.HttpHostConnectException;
 import org.jboss.logging.Logger;
-import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jboss.resteasy.plugins.providers.FormUrlEncodedProvider;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
@@ -27,9 +27,9 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 			String username,
 			String password,
 			String clientId,
-			String clientSecret) {
+			String clientSecret,
+			ResteasyClientBuilder clientBuilder) {
 
-		ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
 		clientBuilder.connectionPoolSize(20);
 		try {
 			clientBuilder.sslContext(SSLContext.getDefault());

@@ -32,6 +32,7 @@
         <module>horreum-api-generator</module>
         <module>horreum-api</module>
         <module>horreum-client</module>
+        <module>horreum-integration</module>
     </modules>
     <name>Horreum</name>
     <description>Performance results repository</description>
@@ -137,6 +138,21 @@
             <dependency>
                 <groupId>io.hyperfoil.tools</groupId>
                 <artifactId>horreum-api-generator</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.hyperfoil.tools</groupId>
+                <artifactId>horreum-backend</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.hyperfoil.tools</groupId>
+                <artifactId>horreum-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.hyperfoil.tools</groupId>
+                <artifactId>horreum-integration</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

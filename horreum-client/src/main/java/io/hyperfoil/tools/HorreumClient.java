@@ -3,6 +3,7 @@ package io.hyperfoil.tools;
 import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
 import io.hyperfoil.tools.horreum.api.*;
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
 import org.jboss.resteasy.plugins.providers.DefaultTextPlain;
@@ -55,6 +56,8 @@ public class HorreumClient {
         private String clientId = "horreum-ui";
         private String clientSecret;
 
+        private ResteasyClientBuilder clientBuilder;
+
         public Builder() {
         }
 
@@ -93,6 +96,11 @@ public class HorreumClient {
             return this;
         }
 
+        public Builder resteasyClientBuilder(ResteasyClientBuilder clientBuilder) {
+            this.clientBuilder = clientBuilder;
+            return this;
+        }
+
         public HorreumClient build() throws IllegalStateException {
 
             KeycloakClientRequestFilter requestFilter = new KeycloakClientRequestFilter(keycloakUrl,
@@ -100,13 +108,20 @@ public class HorreumClient {
                     horreumUser,
                     horreumPassword,
                     clientId,
-                    clientSecret);
+                    clientSecret,
+                    clientBuilder);
 
 
             ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
 
             //Override default ObjectMapper Provider
             clientBuilder.register(new CustomResteasyJackson2Provider(), 100);
+            try {
+                clientBuilder.sslContext(SSLContext.getDefault());
+            } catch (NoSuchAlgorithmException e) {
+                // Do nothing
+            }
+
             try {
                 clientBuilder.sslContext(SSLContext.getDefault());
             } catch (NoSuchAlgorithmException e) {

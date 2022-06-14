@@ -12,6 +12,7 @@ jobs:
   build:
     env:
       QUAY_BOT_LOGIN: ${{secrets.QUAY_BOT_LOGIN}}
+      ENVIRONMENT: CI
     runs-on: ubuntu-latest
 
     steps:
@@ -29,7 +30,9 @@ jobs:
     - name: Maven Version
       run: mvn --version
     - name: Build with Maven
-      run: mvn clean -B package --file pom.xml
+      run: mvn clean package -B --file pom.xml -Dnpm.skip -DskipTests
+    - name: Test with Maven
+      run: mvn -B test --file pom.xml -Dnpm.skip
     - name: Upload artifact for failed workflow
       if: failure()
       uses: actions/upload-artifact@v2

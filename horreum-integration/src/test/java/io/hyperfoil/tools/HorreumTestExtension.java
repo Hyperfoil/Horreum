@@ -1,11 +1,13 @@
 package io.hyperfoil.tools;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.ContainerState;
 import org.testcontainers.containers.DockerComposeContainer;
@@ -40,9 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import io.hyperfoil.tools.horreum.entity.json.Test;
-
-public class HorreumTestBase {
+public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback, ExtensionContext.Store.CloseableResource  {
 
     public static Properties configProperties;
     public static final String HORREUM_KEYCLOAK_BASE_URL;
@@ -69,10 +69,9 @@ public class HorreumTestBase {
     private static final TimeUnit ContainerStartTimeoutUnit = TimeUnit.SECONDS;
     private static final Integer ContainerStartRetries = 1;
 
-    protected static HorreumClient horreumClient;
-    protected static Test dummyTest;
+    private static final Logger log = Logger.getLogger(HorreumTestExtension.class);
 
-    private static Logger log = Logger.getLogger(HorreumTestBase.class);
+    protected static final ResteasyClientBuilder clientBuilder;
 
     static {
         configProperties = new Properties();
@@ -103,6 +102,9 @@ public class HorreumTestBase {
                 START_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.start-infra"));
                 STOP_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.stop-infra"));
                 HORREUM_DUMP_LOGS = Boolean.parseBoolean(getProperty("horreum.dump-logs"));
+
+                clientBuilder = new ResteasyClientBuilderImpl().connectionPoolSize(20);
+
             } else {
                 throw new RuntimeException("Could not load test configuration");
             }
@@ -110,6 +112,8 @@ public class HorreumTestBase {
             throw new RuntimeException("Failed to load configuration properties");
         }
     }
+
+    private static boolean started = false;
 
     public static TestContainer infrastructureContainer = null;
     public static TestContainer horreumContainer = null;
@@ -125,7 +129,6 @@ public class HorreumTestBase {
         return configProperties.getProperty(propertyName).trim();
     }
 
-    @BeforeAll
     public static void startContainers() throws URISyntaxException, IOException {
         log.info("Starting Infra: " + START_HORREUM_INFRA);
         if (START_HORREUM_INFRA) {
@@ -143,11 +146,12 @@ public class HorreumTestBase {
 
             String horreumCommitId = System.getProperty("horreum.commit.id");
             if (horreumCommitId == null) {
-                InputStream stream = HorreumTestBase.class.getClassLoader().getResourceAsStream("horreum.commit.id.txt");
-                if (stream == null) {
-                    throw new IllegalStateException("Cannot determine Horreum commit ID this test should run against.");
+                try (InputStream stream = HorreumTestExtension.class.getClassLoader().getResourceAsStream("horreum.commit.id.txt")) {
+                    if (stream == null) {
+                        throw new IllegalStateException("Cannot determine Horreum commit ID this test should run against.");
+                    }
+                    horreumCommitId = new String(stream.readAllBytes(), StandardCharsets.UTF_8).trim();
                 }
-                horreumCommitId = new String(stream.readAllBytes(), StandardCharsets.UTF_8).trim();
             }
             envVariables.put("HORREUM_COMMIT_ID", horreumCommitId);
             envVariables.put("CONTAINER_HOST_IP", CONTAINER_HOST_IP);
@@ -191,11 +195,33 @@ public class HorreumTestBase {
         }
     }
 
+    @Override
+    public void beforeAll(ExtensionContext context) throws Exception{
+        if (!started){
+            started = true;
+            startContainers();
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            stopContainers();
+        } catch (Exception e) {
+            log.error( "Error when stopping containers", e);
+        }
+    }
+
+    @Override
+    public void afterAll(ExtensionContext context) {
+        close();
+    }
+
     private static void prepareDockerCompose() throws URISyntaxException, IOException {
         // this is where .env will be written
         Path.of("target/docker-compose/horreum-backend").toFile().mkdirs();
         Path.of("target/docker-compose/infra").toFile().mkdirs();
-        URI root = HorreumTestBase.class.getClassLoader().getResource("docker-compose").toURI();
+        URI root = HorreumTestExtension.class.getClassLoader().getResource("docker-compose").toURI();
         Path source;
         FileSystem fileSystem = null;
         try {
@@ -218,7 +244,7 @@ public class HorreumTestBase {
                 }
             });
             //noinspection ConstantConditions
-            Files.copy(HorreumTestBase.class.getClassLoader().getResourceAsStream("testcontainers/horreum-compose.yml"),
+            Files.copy(HorreumTestExtension.class.getClassLoader().getResourceAsStream("testcontainers/horreum-compose.yml"),
                   Path.of("target/docker-compose/horreum-compose.yml"), StandardCopyOption.REPLACE_EXISTING);
         } finally {
             if (fileSystem != null) {
@@ -253,7 +279,6 @@ public class HorreumTestBase {
         return Integer.toString(originalPortNumber + HORREUM_TEST_PORT_OFFSET);
     }
 
-    @AfterAll
     public static void stopContainers() throws Exception {
         if (START_HORREUM_INFRA && HORREUM_DUMP_LOGS) {
             Optional<ContainerState> containerState = horreumContainer.getContainerByServiceName("horreum_1"); //TODO: dynamic resolve
@@ -286,33 +311,6 @@ public class HorreumTestBase {
         if (composeContainer != null) {
             composeContainer.stop();
         }
-    }
-
-    @BeforeAll
-    private static void initialiseRestClients() {
-       horreumClient = new HorreumClient.Builder()
-             .horreumUrl(HORREUM_BASE_URL + "/")
-             .keycloakUrl(HORREUM_KEYCLOAK_BASE_URL)
-             .horreumUser(HORREUM_USERNAME)
-             .horreumPassword(HORREUM_PASSWORD)
-             .build();
-
-       assertNotNull(horreumClient);
-    }
-
-    protected static void createOrLookupTest() {
-       boolean createTest = Boolean.parseBoolean(getProperty("horreum.create-test"));
-       if (createTest) {
-          Test test = new Test();
-          test.name = "Dummy5";
-          test.owner = "dev-team";
-          test.description = "This is a dummy test";
-          dummyTest = horreumClient.testService.add(test);
-       } else {
-          // TODO: id from configuration?
-          dummyTest = horreumClient.testService.get(10, null);
-       }
-       assertNotNull(dummyTest);
     }
 
     protected static String resourceToString(String resourcePath) {

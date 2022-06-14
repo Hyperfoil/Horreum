@@ -14,11 +14,6 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-
-        <resteasy-client.version>4.7.5.Final</resteasy-client.version>
-        <slf4j-simple.version>1.7.32</slf4j-simple.version>
     </properties>
 
     <dependencies>
@@ -37,19 +32,16 @@
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-client</artifactId>
-            <version>${resteasy-client.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-cdi</artifactId>
-            <version>${resteasy-client.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-jackson2-provider</artifactId>
-            <version>${resteasy-client.version}</version>
         </dependency>
 
         <dependency>
@@ -57,37 +49,9 @@
             <artifactId>keycloak-admin-client</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>${slf4j-simple.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <scope>test</scope>
-        </dependency>
-
     </dependencies>
 
     <build>
-    <pluginManagement>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>3.2.0</version>
-            </plugin>
-        </plugins>
-    </pluginManagement>
     <plugins>
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
@@ -115,39 +79,5 @@
         </plugin>
     </plugins>
 
-    <testResources>
-        <testResource>
-            <directory>src/test/resources</directory>
-            <filtering>true</filtering>
-            <includes>
-                <include>**/*</include>
-            </includes>
-            <excludes>
-                <exclude>*/horreum-compose.yaml</exclude>
-            </excludes>
-        </testResource>
-        <testResource>
-            <directory>../infra</directory>
-            <targetPath>docker-compose</targetPath>
-            <includes>
-                <include>*.env</include>
-                <include>*.sh</include>
-                <include>*.yml</include>
-            </includes>
-        </testResource>
-        <testResource>
-            <directory>../horreum-backend/src/main/resources</directory>
-            <targetPath>docker-compose</targetPath>
-            <includes>
-                <include>keycloak-horreum.json</include>
-            </includes>
-        </testResource>
-       <testResource>
-            <directory>../horreum-backend/src/main/resources</directory>
-            <includes>
-                <include>application.properties</include>
-            </includes>
-        </testResource>
-    </testResources>
 </build>
 </project>
