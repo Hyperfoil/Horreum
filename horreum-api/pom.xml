@@ -34,16 +34,31 @@
             <groupId>io.hyperfoil.tools</groupId>
             <artifactId>horreum-model</artifactId>
             <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
             <artifactId>horreum-api-generator</artifactId>
             <optional>true</optional>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <skipMain>true</skipMain>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>io.hyperfoil.tools</groupId>
                 <artifactId>horreum-api-generator</artifactId>
