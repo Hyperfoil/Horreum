@@ -82,8 +82,8 @@
         <surefire-plugin.version>3.0.0-M6</surefire-plugin.version>
         <failsafe-plugin.version>3.0.0-M5</failsafe-plugin.version>
         <keycloak-admin-client.version>18.0.0</keycloak-admin-client.version>
-        <validator.version>1.0.29</validator.version>
-        <jayway.jsonpath.version>2.6.0</jayway.jsonpath.version>
+        <validator.version>1.0.69</validator.version>
+        <jayway.jsonpath.version>2.7.0</jayway.jsonpath.version>
         <netty.version>4.1.77.Final</netty.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
@@ -186,8 +186,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
                 <artifactId>jackson-datatype-jsr310</artifactId>
-                <!-- This should be synced with quarkus-bom -->
-                <version>2.12.5</version>
+                <version>2.13.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
