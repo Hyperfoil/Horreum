@@ -1,6 +1,9 @@
 package io.hyperfoil.tools;
 
 import static org.junit.jupiter.api.Assertions.fail;
+import static io.hyperfoil.tools.HorreumTestExtension.resourceToString;
+import static io.hyperfoil.tools.HorreumTestClientExtension.dummyTest;
+import static io.hyperfoil.tools.HorreumTestClientExtension.horreumClient;
 
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import org.junit.jupiter.api.MethodOrderer;
@@ -13,14 +16,14 @@ import javax.ws.rs.BadRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith({HorreumTestClientExtension.class})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class HorreumClientTest extends HorreumTestBase {
+public class HorreumClientTest {
     @Test
     @Order(1)
     public void ConfigQuickstartTest() throws JsonProcessingException {
-        createOrLookupTest();
-
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
 
         try {

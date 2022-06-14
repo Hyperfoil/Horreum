@@ -60,20 +60,20 @@ import io.smallrye.jwt.build.Jwt;
 import io.vertx.core.eventbus.EventBus;
 
 public class BaseServiceTest {
-   static final String[] TESTER_ROLES = { "foo-team", "foo-tester", "tester", "viewer" };
    static final String[] UPLOADER_ROLES = { "foo-team", "foo-uploader", "uploader" };
-   static final String TESTER_TOKEN = BaseServiceTest.getAccessToken("alice", TESTER_ROLES);
+   public static final String[] TESTER_ROLES = { "foo-team", "foo-tester", "tester", "viewer" };
    static final String UPLOADER_TOKEN = BaseServiceTest.getAccessToken("alice", UPLOADER_ROLES);
+   static final String TESTER_TOKEN = BaseServiceTest.getAccessToken("alice", TESTER_ROLES);
    static final String ADMIN_TOKEN = BaseServiceTest.getAccessToken("admin", "admin");
 
    protected final Logger log = Logger.getLogger(getClass());
 
    @Inject
-   EntityManager em;
+   protected EntityManager em;
    @Inject
    TransactionManager tm;
    @Inject
-   RoleManager roleManager;
+   protected RoleManager roleManager;
    @Inject
    EventBus eventBus;
 
@@ -439,4 +439,9 @@ public class BaseServiceTest {
       jsonRequest().header(HttpHeaders.CONTENT_TYPE, "application/json").body(token.toString())
             .post("/api/test/" + test.id + "/addToken").then().statusCode(200);
    }
+
+   protected RequestSpecification bareRequest() {
+      return RestAssured.given().auth().oauth2(TESTER_TOKEN);
+   }
+
 }
