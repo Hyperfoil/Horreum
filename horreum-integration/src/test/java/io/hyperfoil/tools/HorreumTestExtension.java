@@ -75,39 +75,41 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
 
     static {
         configProperties = new Properties();
-        InputStream propertyStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("env.properties"); //TODO: make configurable
-        try {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+
+        try (InputStream propertyStream = classLoader.getResourceAsStream("env.properties");
+             InputStream applicationStream = classLoader.getResourceAsStream("application.properties")
+        ) {
             if (propertyStream != null) {
                 configProperties.load(propertyStream);
-                try (InputStream horreumPropertyStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("application.properties")) {
-                    if (horreumPropertyStream != null) {
-                        Properties horreumProps = new Properties();
-                        horreumProps.load(horreumPropertyStream);
-                        configProperties.put("quarkus.datasource.password", horreumProps.getProperty("quarkus.datasource.password"));
-                        configProperties.put("horreum.grafana.admin.password", horreumProps.getProperty("horreum.grafana.admin.password"));
-                    }
-                }
-
-                HORREUM_TEST_PORT_OFFSET = Integer.parseInt(getProperty("test.port.offset"));
-                CONTAINER_HOST_IP=getProperty("container.host.ip");
-
-                HORREUM_KEYCLOAK_BASE_URL = "http://" + CONTAINER_HOST_IP + ":" + getOffsetPort(KEYCLOAK_PORT);
-                HORREUM_BASE_URL = "http://127.0.0.1:" + getOffsetPort(HORREUM_HTTP_PORT);
-
-                HORREUM_USERNAME = getProperty("horreum.username");
-                HORREUM_PASSWORD = getProperty("horreum.password");
-
-                CONTAINER_JAVA_OPTIONS = getProperty("container.java.options");
-
-                START_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.start-infra"));
-                STOP_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.stop-infra"));
-                HORREUM_DUMP_LOGS = Boolean.parseBoolean(getProperty("horreum.dump-logs"));
-
-                clientBuilder = new ResteasyClientBuilderImpl().connectionPoolSize(20);
-
             } else {
                 throw new RuntimeException("Could not load test configuration");
             }
+            if (applicationStream != null) {
+                Properties horreumProps = new Properties();
+                horreumProps.load(applicationStream);
+                configProperties.put("quarkus.datasource.password", horreumProps.getProperty("quarkus.datasource.password"));
+                configProperties.put("horreum.grafana.admin.password", horreumProps.getProperty("horreum.grafana.admin.password"));
+            } else {
+                throw new RuntimeException("Could not load application properties");
+            }
+
+            HORREUM_TEST_PORT_OFFSET = Integer.parseInt(getProperty("test.port.offset"));
+            CONTAINER_HOST_IP = getProperty("container.host.ip");
+
+            HORREUM_KEYCLOAK_BASE_URL = "http://" + CONTAINER_HOST_IP + ":" + getOffsetPort(KEYCLOAK_PORT);
+            HORREUM_BASE_URL = "http://127.0.0.1:" + getOffsetPort(HORREUM_HTTP_PORT);
+
+            HORREUM_USERNAME = getProperty("horreum.username");
+            HORREUM_PASSWORD = getProperty("horreum.password");
+
+            CONTAINER_JAVA_OPTIONS = getProperty("container.java.options");
+
+            START_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.start-infra"));
+            STOP_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.stop-infra"));
+            HORREUM_DUMP_LOGS = Boolean.parseBoolean(getProperty("horreum.dump-logs"));
+
+            clientBuilder = new ResteasyClientBuilderImpl().connectionPoolSize(20);
         } catch (IOException ioException) {
             throw new RuntimeException("Failed to load configuration properties");
         }
@@ -126,7 +128,11 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
                 return override;
             }
         }
-        return configProperties.getProperty(propertyName).trim();
+        String value = configProperties.getProperty(propertyName);
+        if (value == null) {
+            throw new IllegalStateException("Missing property value for " + propertyName);
+        }
+        return value.trim();
     }
 
     public static void startContainers() throws URISyntaxException, IOException {
@@ -146,11 +152,13 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
 
             String horreumCommitId = System.getProperty("horreum.commit.id");
             if (horreumCommitId == null) {
-                try (InputStream stream = HorreumTestExtension.class.getClassLoader().getResourceAsStream("horreum.commit.id.txt")) {
+                try (InputStream stream = HorreumTestExtension.class.getClassLoader().getResourceAsStream("buildinfo.properties")) {
                     if (stream == null) {
                         throw new IllegalStateException("Cannot determine Horreum commit ID this test should run against.");
                     }
-                    horreumCommitId = new String(stream.readAllBytes(), StandardCharsets.UTF_8).trim();
+                    Properties buildInfo = new Properties();
+                    buildInfo.load(stream);
+                    horreumCommitId = buildInfo.getProperty("horreum.build.commit");
                 }
             }
             envVariables.put("HORREUM_COMMIT_ID", horreumCommitId);

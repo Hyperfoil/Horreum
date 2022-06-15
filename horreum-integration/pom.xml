@@ -51,10 +51,6 @@
         </dependency>
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
-            <artifactId>horreum-backend</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.hyperfoil.tools</groupId>
             <artifactId>horreum-client</artifactId>
         </dependency>
         <dependency>
@@ -125,6 +121,19 @@
                         </target>
                     </configuration>
                 </execution>
+                <execution>
+                    <id>copy-application-properties</id>
+                    <phase>generate-test-resources</phase>
+                    <goals>
+                        <goal>run</goal>
+                    </goals>
+                    <configuration>
+                        <target>
+                            <copy file="${project.basedir}/../horreum-backend/src/main/resources/application.properties"
+                                  todir="${project.build.testOutputDirectory}"/>
+                        </target>
+                    </configuration>
+                </execution>
             </executions>
         </plugin>
     </plugins>
@@ -136,9 +145,6 @@
             <includes>
                 <include>**/*</include>
             </includes>
-            <excludes>
-                <exclude>*/*-horreum.yaml</exclude>
-            </excludes>
         </testResource>
         <testResource>
             <directory>../infra</directory>
@@ -149,12 +155,6 @@
                 <include>*.sh</include>
                 <include>*.yml</include>
                 <include>Dockerfile.*</include>
-            </includes>
-        </testResource>
-        <testResource>
-            <directory>../horreum-backend/src/main/resources</directory>
-            <includes>
-                <include>application.properties</include>
             </includes>
         </testResource>
     </testResources>
