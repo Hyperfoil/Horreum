@@ -25,17 +25,16 @@ services:
     - /cwd/infra/create-db.sh
     network_mode: host
   keycloak:
+    build:
+      context: .
+      dockerfile: Dockerfile.keycloak
     depends_on:
     - postgres
-    image: quay.io/keycloak/keycloak:17.0.0
-    entrypoint: /cwd/infra/keycloak.sh
-    env_file: keycloak.env
     environment:
     - KC_HTTP_HOST=127.0.0.1
     - DB_ADDR=127.0.0.1
     network_mode: host
     volumes:
-    - ../horreum-backend/src/main/resources:/etc/keycloak/imports:ro,z
     - ../:/cwd:rw,z
   app-init:
     depends_on:

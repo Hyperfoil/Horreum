@@ -21,10 +21,10 @@ services:
       - HORREUM_TEST=true
       - "JAVA_OPTIONS=${CONTAINER_JAVA_OPTIONS}"
     env_file: horreum-backend/.env
-
     ports:
       - "${HORREUM_HTTPS_PORT}:8443"
       - "${HORREUM_HTTP_PORT}:8080"
+    stop_signal: SIGKILL
     volumes:
       - ./:/etc/horreum/certs:ro,z
       - ./:/cwd:rw,z

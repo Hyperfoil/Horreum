@@ -145,15 +145,10 @@
             <targetPath>docker-compose</targetPath>
             <includes>
                 <include>*.env</include>
+                <include>*.json</include>
                 <include>*.sh</include>
                 <include>*.yml</include>
-            </includes>
-        </testResource>
-        <testResource>
-            <directory>../horreum-backend/src/main/resources</directory>
-            <targetPath>docker-compose</targetPath>
-            <includes>
-                <include>keycloak-horreum.json</include>
+                <include>Dockerfile.*</include>
             </includes>
         </testResource>
         <testResource>

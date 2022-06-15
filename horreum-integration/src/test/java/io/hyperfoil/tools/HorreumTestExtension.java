@@ -156,7 +156,6 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
             envVariables.put("HORREUM_COMMIT_ID", horreumCommitId);
             envVariables.put("CONTAINER_HOST_IP", CONTAINER_HOST_IP);
             envVariables.put("PORT_OFFSET", PORT_OFFSET);
-            envVariables.put("RESOURCES_PATH", ".");
             envVariables.put("QUARKUS_DATASOURCE_PASSWORD", QUARKUS_DATASOURCE_PASSWORD);
             envVariables.put("HORREUM_HTTPS_PORT", getOffsetPort(HORREUM_HTTPS_PORT));
             envVariables.put("HORREUM_HTTP_PORT", getOffsetPort(HORREUM_HTTP_PORT ));
@@ -177,10 +176,12 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
             envVariables.put("GF_AUTH_GENERIC_OAUTH_AUTH_URL", GF_AUTH_URL_ROOT + "/auth");
             envVariables.put("GF_AUTH_GENERIC_OAUTH_TOKEN_URL", GF_AUTH_URL_ROOT + "/token");
             envVariables.put("GF_AUTH_GENERIC_OAUTH_API_URL", GF_AUTH_URL_ROOT + "/userinfo");
+            envVariables.put("STOP_SIGNAL", "SIGKILL");
 
             prepareDockerCompose();
 
-            infrastructureContainer = new TestContainer("target/docker-compose/infra/docker-compose.yml", envVariables);
+            infrastructureContainer = new TestContainer("target/docker-compose/infra/docker-compose.yml", envVariables)
+                  .withRemoveImages(DockerComposeContainer.RemoveImages.LOCAL);
             horreumContainer = new TestContainer("target/docker-compose/horreum-compose.yml", envVariables);
 
             log.info("Waiting for Horreum infrastructure to start");
@@ -238,7 +239,9 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
                     Files.copy(file, destPath,
                           StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
                     if (file.toString().endsWith(".sh")) {
-                        destPath.toFile().setExecutable(true);
+                        if (!destPath.toFile().setExecutable(true, false)) {
+                            log.errorf("Could not set executable permissions on %s", destPath);
+                        }
                     }
                     return FileVisitResult.CONTINUE;
                 }

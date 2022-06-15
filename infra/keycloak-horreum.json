@@ -859,31 +859,6 @@
             ]
           }
         ],
-        "policies": [
-          {
-            "id": "567cdbc6-375b-430c-919d-4ba61e9714db",
-            "name": "Default Policy",
-            "description": "A policy that grants access only for users within this realm",
-            "type": "js",
-            "logic": "POSITIVE",
-            "decisionStrategy": "AFFIRMATIVE",
-            "config": {
-              "code": "// by default, grants any permission associated with this policy\n$evaluation.grant();\n"
-            }
-          },
-          {
-            "id": "3955d930-8116-4351-be54-5bfbb5770928",
-            "name": "Default Permission",
-            "description": "A permission that applies to the default resource type",
-            "type": "resource",
-            "logic": "POSITIVE",
-            "decisionStrategy": "UNANIMOUS",
-            "config": {
-              "defaultResourceType": "urn:horreum:resources:default",
-              "applyPolicies": "[\"Default Policy\"]"
-            }
-          }
-        ],
         "scopes": [],
         "decisionStrategy": "UNANIMOUS"
       }

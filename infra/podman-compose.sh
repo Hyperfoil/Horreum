@@ -12,7 +12,15 @@ fi
 # Delete leftovers from Docker runs: files owned by root
 rm horreum-backend/.env .grafana
 
+# Force rebuild but keeping the cache
+podman untag horreum_keycloak:latest
+
+ORIGINAL_DIR=$(pwd)
+cd $(dirname $0)
 # Get the definition and filter out "--net horreum_default"
-podman-compose -p horreum -f $(dirname $0)/podman-compose.yml --dry-run up -d | \
-    grep -e '^podman' | sed 's/--net horreum_default//' | \
+podman-compose -p horreum -f podman-compose.yml --dry-run up -d | \
+    grep -e '^podman' | \
+    sed 's/--net horreum_default//' | \
+    sed 's/--network-alias [a-zA-Z0-9_-]*//' | \
     sed "s/\(\[\|]\|\"\)/'\1'/g" | bash
+cd $ORIGINAL_DIR

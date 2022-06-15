@@ -11,8 +11,6 @@ echo "#####################"
 echo "# STARTING KEYCLOAK #"
 echo "#####################"
 export KC_DB_URL=jdbc:postgresql://$DB_ADDR:$DB_PORT/$DB_DATABASE
-BUILD_OPTS="--features=upload-scripts"
-/opt/keycloak/bin/kc.sh build $BUILD_OPTS || exit 1
-/opt/keycloak/bin/kc.sh import --file=/etc/keycloak/imports/keycloak-horreum.json --override=false -Dquarkus.log.level=DEBUG || exit 1
-/opt/keycloak/bin/kc.sh start-dev $BUILD_OPTS $EXTRA_OPTIONS
+# Automatically imports contents of /opt/keycloak/data/import/
+/opt/keycloak/bin/kc.sh start-dev --import-realm $EXTRA_OPTIONS
 
