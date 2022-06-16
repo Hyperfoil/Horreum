@@ -342,6 +342,7 @@ public class TestServiceImpl implements TestService {
          throw ServiceException.badRequest("Upload permission requires read permission as well.");
       }
       Test test = getTestForUpdate(testId);
+      token.id = null; // this is always a new token, ignore -1 in the request
       token.test = test;
       test.tokens.add(token);
       test.persistAndFlush();
