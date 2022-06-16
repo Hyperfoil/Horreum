@@ -1,50 +1,57 @@
 package io.hyperfoil.tools;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.hyperfoil.tools.horreum.entity.json.Test;
-import org.junit.jupiter.api.BeforeAll;
+
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-public class HorreumTestClientExtension extends HorreumTestExtension {
+public class HorreumTestClientExtension extends HorreumTestExtension implements BeforeEachCallback, AfterEachCallback {
 
-   static HorreumClient horreumClient;
+   public static HorreumClient horreumClient;
 
-   static Test dummyTest;
+   public static Test dummyTest;
 
-   @BeforeAll
    protected void initialiseRestClients() {
       horreumClient = new HorreumClient.Builder()
             .horreumUrl(HORREUM_BASE_URL + "/")
             .keycloakUrl(HORREUM_KEYCLOAK_BASE_URL)
             .horreumUser(HORREUM_USERNAME)
             .horreumPassword(HORREUM_PASSWORD)
-            .resteasyClientBuilder(clientBuilder)
             .build();
 
       assertNotNull(horreumClient);
    }
 
-   public void createOrLookupTest() {
+   @Override
+   protected void beforeSuite(ExtensionContext context) throws Exception {
+      super.beforeSuite(context);
+      initialiseRestClients();
+   }
 
-      boolean createTest = Boolean.parseBoolean(getProperty("horreum.create-test"));
-      if (createTest) {
-         Test test = new Test();
-         test.name = "Dummy5";
-         test.owner = "dev-team";
-         test.description = "This is a dummy test";
-         dummyTest = horreumClient.testService.add(test);
-      } else {
-         // TODO: id from configuration?
-         dummyTest = horreumClient.testService.get(10, null);
-      }
+   @Override
+   public void close() {
+      horreumClient.close();
+      super.close();
+   }
+
+   @Override
+   public void beforeEach(ExtensionContext context) throws Exception {
+      assertNull(dummyTest);
+      Test test = new Test();
+      test.name = context.getUniqueId();
+      test.owner = "dev-team";
+      test.description = "This is a dummy test";
+      dummyTest = horreumClient.testService.add(test);
       assertNotNull(dummyTest);
    }
 
    @Override
-   public void beforeAll(ExtensionContext context) throws Exception {
-      super.beforeAll(context);
-      initialiseRestClients();
-      createOrLookupTest();
+   public void afterEach(ExtensionContext context) throws Exception {
+      horreumClient.testService.delete(dummyTest.id);
+      dummyTest = null;
    }
 }

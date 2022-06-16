@@ -3,7 +3,6 @@ package io.hyperfoil.tools;
 import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
 import io.hyperfoil.tools.horreum.api.*;
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
-import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
 import org.jboss.resteasy.plugins.providers.DefaultTextPlain;
@@ -11,10 +10,12 @@ import org.jboss.resteasy.plugins.providers.StringTextStar;
 
 import javax.net.ssl.SSLContext;
 import javax.ws.rs.core.UriBuilder;
+
+import java.io.Closeable;
 import java.security.NoSuchAlgorithmException;
 
-public class HorreumClient {
-
+public class HorreumClient implements Closeable {
+    private final ResteasyClient client;
     public final AlertingService alertingService;
     public final BannerService bannerService;
     public final DatasetService datasetService;
@@ -29,9 +30,11 @@ public class HorreumClient {
     public final TestService testService;
     public final UserService userService;
 
-    public HorreumClient(AlertingService alertingService, BannerService bannerService,  DatasetService datasetService, GrafanaService grafanaService, HookService hookService,
+    public HorreumClient(ResteasyClient client,
+                         AlertingService alertingService, BannerService bannerService, DatasetService datasetService, GrafanaService grafanaService, HookService hookService,
                          NotificationService notificationService, ReportService reportService, RunService horreumRunService, SchemaService schemaService, SqlService sqlService,
                          SubscriptionService subscriptionService, TestService horreumTestService, UserService userService) {
+        this.client = client;
         this.alertingService = alertingService;
         this.bannerService = bannerService;
         this.datasetService = datasetService;
@@ -47,6 +50,11 @@ public class HorreumClient {
         this.userService = userService;
     }
 
+    @Override
+    public void close() {
+        client.close();
+    }
+
     public static class Builder {
         private String horreumUrl;
         private String keycloakUrl;
@@ -55,8 +63,6 @@ public class HorreumClient {
         private String horreumPassword;
         private String clientId = "horreum-ui";
         private String clientSecret;
-
-        private ResteasyClientBuilder clientBuilder;
 
         public Builder() {
         }
@@ -96,11 +102,6 @@ public class HorreumClient {
             return this;
         }
 
-        public Builder resteasyClientBuilder(ResteasyClientBuilder clientBuilder) {
-            this.clientBuilder = clientBuilder;
-            return this;
-        }
-
         public HorreumClient build() throws IllegalStateException {
 
             KeycloakClientRequestFilter requestFilter = new KeycloakClientRequestFilter(keycloakUrl,
@@ -108,20 +109,12 @@ public class HorreumClient {
                     horreumUser,
                     horreumPassword,
                     clientId,
-                    clientSecret,
-                    clientBuilder);
-
+                    clientSecret);
 
             ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
 
             //Override default ObjectMapper Provider
             clientBuilder.register(new CustomResteasyJackson2Provider(), 100);
-            try {
-                clientBuilder.sslContext(SSLContext.getDefault());
-            } catch (NoSuchAlgorithmException e) {
-                // Do nothing
-            }
-
             try {
                 clientBuilder.sslContext(SSLContext.getDefault());
             } catch (NoSuchAlgorithmException e) {
@@ -137,7 +130,7 @@ public class HorreumClient {
             ResteasyClient client = clientBuilder.build();
             ResteasyWebTarget target = client.target(UriBuilder.fromPath(this.horreumUrl));
 
-            return new HorreumClient(
+            return new HorreumClient(client,
                     target.proxyBuilder(AlertingService.class).build(),
                     target.proxyBuilder(BannerService.class).build(),
                     target.proxyBuilder(DatasetService.class).build(),

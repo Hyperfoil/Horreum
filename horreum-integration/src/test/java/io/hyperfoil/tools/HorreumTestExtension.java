@@ -3,9 +3,6 @@ package io.hyperfoil.tools;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.jboss.logging.Logger;
-import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
-import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
-import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.testcontainers.DockerClientFactory;
@@ -24,7 +21,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -42,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback, ExtensionContext.Store.CloseableResource  {
+public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext.Store.CloseableResource  {
 
     public static Properties configProperties;
     public static final String HORREUM_KEYCLOAK_BASE_URL;
@@ -70,8 +66,6 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
     private static final Integer ContainerStartRetries = 1;
 
     private static final Logger log = Logger.getLogger(HorreumTestExtension.class);
-
-    protected static final ResteasyClientBuilder clientBuilder;
 
     static {
         configProperties = new Properties();
@@ -108,8 +102,6 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
             START_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.start-infra"));
             STOP_HORREUM_INFRA = Boolean.parseBoolean(getProperty("horreum.stop-infra"));
             HORREUM_DUMP_LOGS = Boolean.parseBoolean(getProperty("horreum.dump-logs"));
-
-            clientBuilder = new ResteasyClientBuilderImpl().connectionPoolSize(20);
         } catch (IOException ioException) {
             throw new RuntimeException("Failed to load configuration properties");
         }
@@ -135,7 +127,7 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
         return value.trim();
     }
 
-    public static void startContainers() throws URISyntaxException, IOException {
+    public static void startContainers() throws Exception {
         log.info("Starting Infra: " + START_HORREUM_INFRA);
         if (START_HORREUM_INFRA) {
 
@@ -205,25 +197,29 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
     }
 
     @Override
-    public void beforeAll(ExtensionContext context) throws Exception{
-        if (!started){
-            started = true;
-            startContainers();
+    public void beforeAll(ExtensionContext context) throws Exception {
+        synchronized (HorreumTestExtension.class) {
+            if (!started) {
+                started = true;
+                beforeSuite(context);
+            }
         }
+    }
+
+    protected void beforeSuite(ExtensionContext context) throws Exception {
+        startContainers();
     }
 
     @Override
     public void close() {
-        try {
-            stopContainers();
-        } catch (Exception e) {
-            log.error( "Error when stopping containers", e);
+        synchronized (HorreumTestExtension.class) {
+            try {
+                stopContainers();
+                started = false;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
-    }
-
-    @Override
-    public void afterAll(ExtensionContext context) {
-        close();
     }
 
     private static void prepareDockerCompose() throws URISyntaxException, IOException {
@@ -325,7 +321,7 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
     }
 
     protected static String resourceToString(String resourcePath) {
-        try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath);) {
+        try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
             return new BufferedReader(new InputStreamReader(inputStream))
                     .lines().collect(Collectors.joining(" "));
         } catch (IOException e) {
