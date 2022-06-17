@@ -6,6 +6,7 @@ import io.restassured.specification.RequestSpecification;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
+import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.keycloak.admin.client.Keycloak;
@@ -45,7 +46,7 @@ import java.util.stream.Collectors;
 
 import io.restassured.RestAssured;
 
-public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext.Store.CloseableResource  {
+public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback, ExtensionContext.Store.CloseableResource  {
 
     public static Properties configProperties;
     public static final String HORREUM_KEYCLOAK_BASE_URL;
@@ -237,6 +238,11 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
 
     protected void beforeSuite(ExtensionContext context) throws Exception {
         startContainers();
+    }
+
+    @Override
+    public void afterAll(ExtensionContext context) throws Exception {
+        close();
     }
 
     @Override
