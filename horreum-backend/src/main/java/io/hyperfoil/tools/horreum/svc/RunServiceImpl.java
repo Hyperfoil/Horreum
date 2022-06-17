@@ -801,7 +801,10 @@ public class RunServiceImpl implements RunService {
       log.infof("Transforming run ID %d, recalculation? %s", runId, isRecalculation);
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
-      DataSet.delete("runid", runId);
+      for (DataSet old : DataSet.<DataSet>list("runid", runId)) {
+         Util.publishLater(tm, eventBus, DataSet.EVENT_DELETED, new DataSet.Info(old.id, old.run.id, old.ordinal, old.testid));
+         old.delete();
+      }
 
       Run run = Run.findById(runId);
       int ordinal = 0;

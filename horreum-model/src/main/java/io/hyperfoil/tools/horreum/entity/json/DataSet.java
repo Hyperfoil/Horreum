@@ -34,6 +34,7 @@ public class DataSet extends OwnedEntityBase {
    public static final String EVENT_NEW = "dataset/new";
    public static final String EVENT_LABELS_UPDATED = "dataset/updatedlabels";
    public static final String EVENT_MISSING_VALUES = "dataset/missing_values";
+   public static final String EVENT_DELETED = "dataset/deleted";
 
    @Id
    @SequenceGenerator(
@@ -121,14 +122,17 @@ public class DataSet extends OwnedEntityBase {
       public int runId;
       @JsonProperty(required = true)
       public int ordinal;
+      @JsonProperty(required = true)
+      public int testId;
 
       public Info() {
       }
 
-      public Info(int id, int runId, int ordinal) {
+      public Info(int id, int runId, int ordinal, int testId) {
          this.id = id;
          this.runId = runId;
          this.ordinal = ordinal;
+         this.testId = testId;
       }
 
       @Override
@@ -137,6 +141,7 @@ public class DataSet extends OwnedEntityBase {
                "id=" + id +
                ", runId=" + runId +
                ", ordinal=" + ordinal +
+               ", testId=" + testId +
                '}';
       }
    }

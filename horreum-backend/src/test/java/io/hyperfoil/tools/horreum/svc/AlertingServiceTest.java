@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,6 +34,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
+import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.entity.Fingerprint;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
@@ -159,7 +161,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent1);
       // The change is detected already at run 4 because it's > than the previous mean
-      assertEquals(run4, changeEvent1.change.dataset.id);
+      assertEquals(run4, changeEvent1.change.dataset.run.id);
 
       ((ObjectNode) cd.config).put("filter", "min");
       setTestVariables(test, "Value", "value", cd);
@@ -175,7 +177,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       // now we'll find a change already at run3
       Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent2);
-      assertEquals(run3, changeEvent2.change.dataset.id);
+      assertEquals(run3, changeEvent2.change.dataset.run.id);
 
       int run6 = uploadRun(ts + 5, ts + 5, runWithValue(1.5, schema), test.name);
       assertValue(datapointQueue, 1.5);
@@ -189,7 +191,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       // mean of previous is 2, the last value doesn't matter (1.5 is lower than 2 - 10%)
       Change.Event changeEvent3 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent3);
-      assertEquals(run6, changeEvent3.change.dataset.id);
+      assertEquals(run6, changeEvent3.change.dataset.run.id);
    }
 
    @org.junit.jupiter.api.Test
@@ -235,10 +237,11 @@ public class AlertingServiceTest extends BaseServiceTest {
       return rd;
    }
 
-   private void assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
+   private DataPoint assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
       DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(dpe);
       assertEquals(value, dpe.dataPoint.value);
+      return dpe.dataPoint;
    }
 
    @org.junit.jupiter.api.Test
@@ -307,7 +310,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(4, DataSet.count());
       assertEquals(2, DataPoint.count());
 
-      recalculate(test.id);
+      recalculateDatapoints(test.id);
 
       List<DataPoint> datapoints = DataPoint.listAll();
       assertEquals(3, datapoints.size());
@@ -316,7 +319,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertTrue(datapoints.stream().anyMatch(dp -> dp.value == 4));
    }
 
-   private void recalculate(int testId) throws InterruptedException {
+   private void recalculateDatapoints(int testId) throws InterruptedException {
       jsonRequest()
             .queryParam("test", testId).queryParam("notify", true).queryParam("debug", true)
             .post("/api/alerting/recalculate")
@@ -366,7 +369,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(1, notifications.size());
 
       Util.withTx(tm, () -> {
-         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
             MissingDataRule currentRule = MissingDataRule.findById(firstRuleId);
             assertNotNull(currentRule.lastNotification);
             assertTrue(currentRule.lastNotification.isAfter(Instant.ofEpochMilli(now - 1)));
@@ -401,7 +404,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(2, notifications.size());
 
       Util.withTx(tm, () -> {
-         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
             MissingDataRule otherRule = MissingDataRule.findById(otherRuleId);
             otherRule.maxStaleness = 1000;
             otherRule.persistAndFlush();
@@ -414,7 +417,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       em.clear();
 
       Util.withTx(tm, () -> {
-         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
             MissingDataRule otherRule = MissingDataRule.findById(otherRuleId);
             assertNotNull(otherRule.lastNotification);
             otherRule.lastNotification = Instant.ofEpochMilli(now - 2000);
@@ -432,7 +435,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    }
 
    private void pollMissingDataRuleResultsByRule(int ruleId, int... datasetIds) throws InterruptedException {
-      try (CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+      try (CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
          for (int i = 0; i < 1000; ++i) {
             em.clear();
             List<MissingDataRuleResult> results = MissingDataRuleResult.list("rule_id", ruleId);
@@ -448,7 +451,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    }
 
    private void pollMissingDataRuleResultsByDataset(int datasetId, long expectedResults) throws InterruptedException {
-      try (CloseMe h = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+      try (CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
          // there's no event when the results are updated, we need to poll
          for (int i = 0; i < 1000; ++i) {
             em.clear();
@@ -532,5 +535,59 @@ public class AlertingServiceTest extends BaseServiceTest {
          alertingService.checkExpectedRuns();
          assertEquals(0, notifications.size());
       });
+   }
+
+   // This tests recalculation of run -> dataset, not dataset -> datapoint
+   @org.junit.jupiter.api.Test
+   public void testRecalculateDatasets(TestInfo info) throws InterruptedException {
+      assertEquals(0, DataPoint.count());
+
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+      addChangeDetectionVariable(test);
+
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> datapointDeletedQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_DELETED);
+
+      uploadRun(runWithValue(42, schema), test.name);
+      DataPoint first = assertValue(datapointQueue, 42);
+
+      assertNotNull(DataPoint.findById(first.id));
+      assertEquals(1, DataPoint.count());
+
+      recalculateDatasets(test.id, false);
+      DataPoint second = assertValue(datapointQueue, 42);
+      assertNotEquals(first.id, second.id);
+
+      // Prevent flakiness if the new datapoint is created before the old one is deleted
+      // Ideally we would add a delay into AlertingServiceImpl.onDatasetDeleted() to test this synchronization
+      // but we cannot mock the service - Quarkus mocking disables interceptors for the whole class.
+      DataPoint.Event deleted = datapointDeletedQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(deleted.dataPoint.id, first.id);
+
+      em.clear();
+      // We need to use system role in the test because as the policy fetches ownership from dataset
+      // and this is missing we wouldn't find the old datapoint anyway
+      try (CloseMe ignored = roleManager.withRoles(em, SYSTEM_ROLES)) {
+         assertNotNull(DataPoint.findById(second.id));
+         assertNull(DataPoint.findById(first.id));
+         assertEquals(1, DataPoint.count());
+      }
+   }
+
+   private void recalculateDatasets(int testId, boolean waitForComplete) throws InterruptedException {
+      jsonRequest()
+            .post("/api/test/" + testId + "/recalculate")
+            .then().statusCode(204);
+      if (waitForComplete) {
+         for (int i = 0; i < 200; ++i) {
+            TestService.RecalculationStatus status = jsonRequest().get("/api/test/" + testId + "/recalculate")
+                  .then().statusCode(200).extract().body().as(TestService.RecalculationStatus.class);
+            if (status.finished == status.totalRuns) {
+               break;
+            }
+            Thread.sleep(20);
+         }
+      }
    }
 }

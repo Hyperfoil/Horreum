@@ -370,6 +370,7 @@ public class DatasetServiceImpl implements DatasetService {
    private void logMessage(int datasetId, int level, String message, Object... params) {
       String msg = String.format(message, params);
       int testId = (int) em.createNativeQuery("SELECT testid FROM dataset WHERE id = ?1").setParameter(1, datasetId).getSingleResult();
+      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId), level, "labels", msg).persist();
    }
 }

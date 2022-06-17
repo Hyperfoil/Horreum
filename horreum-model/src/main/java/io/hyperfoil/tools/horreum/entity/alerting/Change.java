@@ -53,7 +53,7 @@ public class Change extends PanacheEntityBase {
    @JsonProperty("dataset")
    public DataSet.Info getDatasetId() {
       if (dataset != null) {
-         return new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal);
+         return new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal, dataset.testid);
       } else {
          return null;
       }

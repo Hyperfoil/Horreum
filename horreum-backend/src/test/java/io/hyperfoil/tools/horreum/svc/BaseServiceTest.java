@@ -62,6 +62,7 @@ import io.vertx.core.eventbus.EventBus;
 public class BaseServiceTest {
    static final String[] UPLOADER_ROLES = { "foo-team", "foo-uploader", "uploader" };
    public static final String[] TESTER_ROLES = { "foo-team", "foo-tester", "tester", "viewer" };
+   static final List<String> SYSTEM_ROLES = Collections.singletonList(Roles.HORREUM_SYSTEM);
    static final String UPLOADER_TOKEN = BaseServiceTest.getAccessToken("alice", UPLOADER_ROLES);
    static final String TESTER_TOKEN = BaseServiceTest.getAccessToken("alice", TESTER_ROLES);
    static final String ADMIN_TOKEN = BaseServiceTest.getAccessToken("admin", "admin");
@@ -406,7 +407,7 @@ public class BaseServiceTest {
          T value = testLogic.apply(event.dataset);
          tm.begin();
          Throwable error = null;
-         try (CloseMe ignored = roleManager.withRoles(em, Collections.singletonList(Roles.HORREUM_SYSTEM))) {
+         try (CloseMe ignored = roleManager.withRoles(em, SYSTEM_ROLES)) {
             DataSet oldDs = DataSet.findById(event.dataset.id);
             if (oldDs != null) {
                oldDs.delete();

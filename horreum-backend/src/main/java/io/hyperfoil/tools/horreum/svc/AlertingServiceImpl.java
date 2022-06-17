@@ -393,7 +393,7 @@ public class AlertingServiceImpl implements AlertingService {
                   createDataPoint(dataset, data.variableId, value, notify);
                } else {
                   if (recalculation != null) {
-                     recalculation.datasetsWithoutValue.put(dataset.id, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal));
+                     recalculation.datasetsWithoutValue.put(dataset.id, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal, dataset.testid));
                   }
                   missingValueVariables.add(data.fullName());
                }
@@ -405,7 +405,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (data.value == null || data.value.isNull()) {
                   logCalculationMessage(dataset, PersistentLog.INFO, "Null value for variable %s - datapoint is not created", data.fullName());
                   if (recalculation != null) {
-                     recalculation.datasetsWithoutValue.put(dataset.id, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal));
+                     recalculation.datasetsWithoutValue.put(dataset.id, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal, dataset.testid));
                   }
                   missingValueVariables.add(data.fullName());
                   return;
@@ -455,6 +455,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
+      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "variables", msg).persist();
    }
@@ -465,12 +466,14 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void logMissingDataMessage(int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
+      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "missingdata", msg).persist();
    }
 
    private void logChangeDetectionMessage(int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
+      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "changes", msg).persist();
    }
@@ -496,26 +499,24 @@ public class AlertingServiceImpl implements AlertingService {
       Variable variable = Variable.findById(dataPoint.variable.id);
       log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.dataset.id,
             dataPoint.variable.id, variable != null ? variable.name : "<unknown>", dataPoint.value);
+      // We'll simply ignore newer changes as this recalculation might be a result of re-transformation of runs.
+      // The changes that are about to come are going to be removed soon.
       Change lastChange = em.createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
-            "WHERE c.variable = ?1 AND TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?2)) " +
+            "WHERE c.variable = ?1 AND c.timestamp < ?2 AND " +
+            "TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?3)) " +
             "ORDER by c.timestamp DESC", Change.class)
-            .setParameter(1, variable).setParameter(2, event.dataPoint.dataset.id).setMaxResults(1)
+            .setParameter(1, variable).setParameter(2, event.dataPoint.timestamp)
+            .setParameter(3, event.dataPoint.dataset.id).setMaxResults(1)
             .getResultStream().findFirst().orElse(null);
       Instant changeTimestamp = LONG_TIME_AGO;
       if (lastChange != null) {
-         if (lastChange.timestamp.compareTo(dataPoint.timestamp) > 0) {
-            logChangeDetectionMessage(event.testId, event.dataPoint.getDatasetId(), PersistentLog.DEBUG,
-                  "Ignoring datapoint %d from %s as there is a newer change %d from %s.",
-                  dataPoint.id, dataPoint.timestamp, lastChange.id, lastChange.timestamp);
-            // We won't revision changes until next variable recalculation
-            return;
-         }
          log.debugf("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
          changeTimestamp = lastChange.timestamp;
       }
       List<DataPoint> dataPoints = em.createQuery("SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
-            "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 AND " +
-            "TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?4)) " +
+            "JOIN dp.dataset " + // ignore datapoints (that were not deleted yet) from deleted datasets
+            "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 " +
+            "AND TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?4)) " +
             "ORDER BY dp.timestamp DESC", DataPoint.class)
             .setParameter(1, variable).setParameter(2, changeTimestamp)
             .setParameter(3, dataPoint.timestamp).setParameter(4, dataPoint.dataset.id).getResultList();
@@ -1073,6 +1074,19 @@ public class AlertingServiceImpl implements AlertingService {
       int updated = query.executeUpdate();
       if (updated > 0) {
          log.infof("Removed %d run expectations as run %d was added.", updated, run.id);
+      }
+   }
+
+   @ConsumeEvent(value = DataSet.EVENT_DELETED, blocking = true)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   public void onDatasetDeleted(DataSet.Info info) {
+      for (DataPoint dp : DataPoint.<DataPoint>list("dataset_id", info.id)) {
+         Util.publishLater(tm, eventBus, DataPoint.EVENT_DELETED, new DataPoint.Event(dp, info.testId, false));
+         dp.delete();
+      }
+      for (Change c: Change.<Change>list("dataset_id = ?1 AND confirmed = false", info.id)) {
+         c.delete();
       }
    }
 
