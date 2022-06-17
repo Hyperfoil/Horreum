@@ -104,14 +104,15 @@ public class HorreumClient implements Closeable {
 
         public HorreumClient build() throws IllegalStateException {
 
+            ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
+
             KeycloakClientRequestFilter requestFilter = new KeycloakClientRequestFilter(keycloakUrl,
                     keycloakRealm,
                     horreumUser,
                     horreumPassword,
                     clientId,
-                    clientSecret);
-
-            ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
+                    clientSecret,
+                    clientBuilder);
 
             //Override default ObjectMapper Provider
             clientBuilder.register(new CustomResteasyJackson2Provider(), 100);

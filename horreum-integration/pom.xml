@@ -145,6 +145,12 @@
                 <include>Dockerfile.*</include>
             </includes>
         </testResource>
+        <testResource>
+            <directory>../horreum-backend/src/main/resources</directory>
+            <includes>
+                <include>application.properties</include>
+            </includes>
+        </testResource>
     </testResources>
     </build>
 </project>

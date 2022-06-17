@@ -23,6 +23,7 @@ services:
     ports:
       - "${HORREUM_HTTPS_PORT}:8443"
       - "${HORREUM_HTTP_PORT}:8080"
+      - "5006:5006"
     stop_signal: SIGKILL
     volumes:
       - ./:/etc/horreum/certs:ro,z
