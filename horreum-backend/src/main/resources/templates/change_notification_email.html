@@ -1,4 +1,5 @@
 <p>Hello {username},</p>
 <p>there has been a recent change in results for test <a href="{baseUrl}/test/{testId}">{testName}</a>, change detection variable {#if group != null}{group}/{/if}{variable}, introduced with dataset <a href="{baseUrl}/run/{runId}#dataset{datasetOrdinal}">{runId}/{datasetOrdinalPlusOne}</a>.</p>
-<p>Please <a href="{baseUrl}/series?test={testId}&fingerprint={fingerprint}">check it out</a> and provide an explanatory description</p>
+<p>This is the current explanation for the change: {description}.</p>
+<p>Please <a href="{baseUrl}/series?test={testId}&fingerprint={fingerprint}">check it out</a> and provide an explanatory description.</p>
 Horreum Alerting
