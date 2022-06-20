@@ -1,8 +1,5 @@
 package io.hyperfoil.tools.horreum.changedetection;
 
-import static io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig.ComponentType.ENUM;
-import static io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig.ComponentType.LOG_SLIDER;
-
 import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
@@ -11,11 +8,9 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.jboss.logging.Logger;
 
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionModel {
 
@@ -31,18 +26,19 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
                   "if the relative difference is greater than the threshold the change is emitted.\n" +
                   "In case that window is set to 1 this becomes a simple comparison of the most recent datapoint " +
                   "against the previous average value.")
-              .addComponent("threshold", JsonNodeFactory.instance.numberNode(0.2), LOG_SLIDER, "Threshold for relative difference",
-                    "Maximum difference between the aggregated value of last <window> datapoints and the mean of preceding values.")
-                .addProperty("scale", 100).addProperty("min", 1).addProperty("max", 1000).addProperty("unit", "%").end()
-              .addComponent("window", JsonNodeFactory.instance.numberNode(1), LOG_SLIDER, "Minimum window",
+              .addComponent("threshold", new ChangeDetectionModelConfig.LogSliderComponent(100, 1, 1000, 0.2, "%"),
+                    "Threshold for relative difference",
+                    "Maximum difference between the aggregated value of last <window> datapoints and the mean of preceding values."
+              )
+              .addComponent("window", new ChangeDetectionModelConfig.LogSliderComponent(1, 1, 1000, 1, " "),
+                    "Minimum window",
                     "Number of most recent datapoints used for aggregating the value for comparison.")
-                .addProperty("min", 1).addProperty("max", 1000).addProperty("unit", " ").end()
-              .addComponent("minPrevious", JsonNodeFactory.instance.numberNode(5), LOG_SLIDER, "Minimal number of preceding datapoints",
+              .addComponent("minPrevious", new ChangeDetectionModelConfig.LogSliderComponent(1, 1, 1000, 5, " "),
+                    "Minimal number of preceding datapoints",
                     "Number of datapoints preceding the aggregation window.")
-                .addProperty("min", 1).addProperty("max", 1000).addProperty("unit", " ").end()
-              .addComponent("filter", JsonNodeFactory.instance.textNode("mean"), ENUM, "Aggregation function for the floating window",
-                    "Function used to aggregate datapoints from the floating window.")
-                .addProperty("options", Map.of("mean", "Mean value", "min", "Minimum value", "max", "Maximum value")).end();
+              .addComponent("filter", new ChangeDetectionModelConfig.EnumComponent("mean").add("mean", "Mean value").add("min", "Minimum value").add("max", "Maximum value"),
+                    "Aggregation function for the floating window",
+                    "Function used to aggregate datapoints from the floating window.");
     }
 
     @Override
@@ -97,13 +93,10 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
                 }
             }
             assert dp != null;
-            Change change = new Change();
-            change.variable = dp.variable;
-            change.timestamp = dp.timestamp;
-            change.dataset = dp.dataset;
+            Change change = Change.fromDatapoint(dp);
             DataPoint prevDataPoint = dataPoints.get(window - 1);
             DataPoint lastDataPoint = dataPoints.get(0);
-            change.description = String.format("Change detected, datasets %d/%d (%s) - %d/%d (%s): %s %f, previous mean %f (stddev %f), relative change %.2f%%",
+            change.description = String.format("Datasets %d/%d (%s) - %d/%d (%s): %s %f, previous mean %f (stddev %f), relative change %.2f%%",
                     prevDataPoint.dataset.run.id, prevDataPoint.dataset.ordinal, prevDataPoint.timestamp,
                     lastDataPoint.dataset.run.id, lastDataPoint.dataset.ordinal, lastDataPoint.timestamp,
                     filter, filteredValue, previousStats.getMean(), previousStats.getStandardDeviation(), 100 * (ratio - 1));

@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.TestService;
+import io.hyperfoil.tools.horreum.changedetection.FixedThresholdModel;
 import io.hyperfoil.tools.horreum.entity.Fingerprint;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
@@ -116,7 +117,9 @@ public class AlertingServiceTest extends BaseServiceTest {
       missingQueue.drainTo(new ArrayList<>());
       int runId = uploadRun(runJson, test.name);
 
-      assertNotNull(missingQueue.poll(10, TimeUnit.SECONDS));
+      MissingValuesEvent event = missingQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(event);
+      assertEquals(runId, event.runId);
 
       try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
          List<DatasetLog> logs = DatasetLog.find("dataset.run.id", runId).list();
@@ -589,5 +592,41 @@ public class AlertingServiceTest extends BaseServiceTest {
             Thread.sleep(20);
          }
       }
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testFixedThresholds(TestInfo info) throws InterruptedException {
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+      ChangeDetection rd = new ChangeDetection();
+      rd.model = FixedThresholdModel.NAME;
+      ObjectNode config = JsonNodeFactory.instance.objectNode();
+      config.putObject("min").put("value", 3).put("enabled", true).put("inclusive", true);
+      config.putObject("max").put("value", 6).put("enabled", true).put("inclusive", false);
+      rd.config = config;
+      setTestVariables(test, "Value", "value", rd);
+
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
+
+      long ts = System.currentTimeMillis();
+      uploadRun(ts, ts, runWithValue(4, schema), test.name);
+      assertValue(datapointQueue, 4);
+      uploadRun(ts + 1, ts + 1, runWithValue(3, schema), test.name);
+      assertValue(datapointQueue, 3);
+      // lower bound is inclusive, no change
+      assertNull(changeQueue.poll(50, TimeUnit.MILLISECONDS));
+
+      int run3 = uploadRun(ts + 2, ts + 2, runWithValue(2, schema), test.name);
+      assertValue(datapointQueue, 2);
+      Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(changeEvent1);
+      assertEquals(run3, changeEvent1.change.dataset.run.id);
+
+      int run4 = uploadRun(ts + 3, ts + 3, runWithValue(6, schema), test.name);
+      assertValue(datapointQueue, 6);
+      Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(changeEvent2);
+      assertEquals(run4, changeEvent2.change.dataset.run.id);
    }
 }

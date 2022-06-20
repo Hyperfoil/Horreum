@@ -24,6 +24,7 @@ import { AddCircleOIcon } from "@patternfly/react-icons"
 
 import Labels from "../../components/Labels"
 import LogSlider from "../../components/LogSlider"
+import NumberBound from "../../components/NumberBound"
 import OptionalFunction from "../../components/OptionalFunction"
 
 type EnumSelectProps = {
@@ -235,10 +236,11 @@ export default function VariableForm(props: VariableFormProps) {
                     )}
                     {usedModel.ui.map(comp => (
                         <FormGroup fieldId={comp.name} key={comp.name} label={comp.title} helperText={comp.description}>
-                            {comp.type == "LOG_SLIDER" && (
+                            {comp.type === "LOG_SLIDER" && (
                                 <LogSlider
                                     value={changeDetection.config[comp.name] * ((comp.properties as any).scale || 1)}
                                     onChange={value => {
+                                        console.log(comp.name)
                                         const scale = (comp.properties as any).scale
                                         const copy = { ...changeDetection }
                                         copy.config[comp.name] = scale ? value / scale : value
@@ -250,13 +252,23 @@ export default function VariableForm(props: VariableFormProps) {
                                     unit={(comp.properties as any).unit}
                                 />
                             )}
-                            {comp.type == "ENUM" && (
+                            {comp.type === "ENUM" && (
                                 <EnumSelect
                                     options={(comp.properties as any).options}
                                     selected={changeDetection.config[comp.name]}
                                     onSelect={value => {
                                         const copy = { ...changeDetection }
                                         copy.config[comp.name] = value
+                                        update(copy)
+                                    }}
+                                />
+                            )}
+                            {comp.type === "NUMBER_BOUND" && (
+                                <NumberBound
+                                    {...changeDetection.config[comp.name]}
+                                    onChange={(enabled: boolean, inclusive: boolean, value: number) => {
+                                        const copy = { ...changeDetection }
+                                        copy.config[comp.name] = { enabled, inclusive, value }
                                         update(copy)
                                     }}
                                 />

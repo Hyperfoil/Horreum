@@ -71,6 +71,14 @@ public class Change extends PanacheEntityBase {
             '}';
    }
 
+   public static Change fromDatapoint(DataPoint dp) {
+      Change change = new Change();
+      change.variable = dp.variable;
+      change.timestamp = dp.timestamp;
+      change.dataset = dp.dataset;
+      return change;
+   }
+
    public static class Event {
       public Change change;
       public DataSet.Info dataset;

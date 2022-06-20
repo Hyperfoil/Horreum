@@ -10,6 +10,7 @@ import javax.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 public class ChangeDetectionModelConfig {
    @NotNull
@@ -33,6 +34,12 @@ public class ChangeDetectionModelConfig {
       Component component = new Component(name, title, description, type);
       ui.add(component);
       return component;
+   }
+
+   public ChangeDetectionModelConfig addComponent(String name, ComponentTemplate template, String title, String description) {
+      Component component = addComponent(name, template.getDefault(), template.getType(), title, description);
+      template.addProperties(component);
+      return this;
    }
 
    @Schema(name = "ChangeDetectionComponent")
@@ -70,5 +77,90 @@ public class ChangeDetectionModelConfig {
    public enum ComponentType {
       LOG_SLIDER,
       ENUM,
+      NUMBER_BOUND,
+   }
+
+   public interface ComponentTemplate {
+      ComponentType getType();
+
+      JsonNode getDefault();
+
+      void addProperties(Component component);
+   }
+
+   public static class LogSliderComponent implements ComponentTemplate{
+      private final double scale;
+      private final double min;
+      private final double max;
+      private final double defaultValue;
+      private final String unit;
+
+      public LogSliderComponent(double scale, double min, double max, double defaultValue, String unit) {
+         this.scale = scale;
+         this.min = min;
+         this.max = max;
+         this.defaultValue = defaultValue;
+         this.unit = unit;
+      }
+
+      @Override
+      public ComponentType getType() {
+         return ComponentType.LOG_SLIDER;
+      }
+
+      @Override
+      public JsonNode getDefault() {
+         return JsonNodeFactory.instance.numberNode(defaultValue);
+      }
+
+      @Override
+      public void addProperties(Component component) {
+         component.addProperty("scale", scale).addProperty("min", min).addProperty("max", max).addProperty("unit", unit);
+      }
+   }
+
+   public static class EnumComponent implements ComponentTemplate {
+      private final Map<String, String> options = new HashMap<>();
+      private final String defaultValue;
+
+      public EnumComponent(String defaultValue) {
+         this.defaultValue = defaultValue;
+      }
+
+      public EnumComponent add(String name, String title) {
+         options.put(name, title);
+         return this;
+      }
+
+      @Override
+      public ComponentType getType() {
+         return ComponentType.ENUM;
+      }
+
+      @Override
+      public JsonNode getDefault() {
+         return JsonNodeFactory.instance.textNode(defaultValue);
+      }
+
+      @Override
+      public void addProperties(Component component) {
+         component.addProperty("options", options);
+      }
+   }
+
+   public static class NumberBound implements ComponentTemplate {
+      @Override
+      public ComponentType getType() {
+         return ComponentType.NUMBER_BOUND;
+      }
+
+      @Override
+      public JsonNode getDefault() {
+         return JsonNodeFactory.instance.objectNode().put("value", 0).put("inclusive", true).put("enabled", false);
+      }
+
+      @Override
+      public void addProperties(Component component) {
+      }
    }
 }

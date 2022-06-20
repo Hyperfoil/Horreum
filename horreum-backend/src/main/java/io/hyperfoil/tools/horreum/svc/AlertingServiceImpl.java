@@ -43,6 +43,7 @@ import javax.ws.rs.core.Response;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
+import io.hyperfoil.tools.horreum.changedetection.FixedThresholdModel;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
@@ -54,6 +55,7 @@ import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetect
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.hibernate.Hibernate;
 import org.hibernate.jpa.TypedParameterValue;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
@@ -139,8 +141,9 @@ public class AlertingServiceImpl implements AlertingService {
    //@formatter:on
    private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
 
-   private static final Map<String, ChangeDetectionModel> MODELS =
-         Map.of(RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel());
+   private static final Map<String, ChangeDetectionModel> MODELS = Map.of(
+         RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel(),
+         FixedThresholdModel.NAME, new FixedThresholdModel());
 
    @Inject
    TestServiceImpl testService;
@@ -546,6 +549,7 @@ public class AlertingServiceImpl implements AlertingService {
             SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSet.Info.class));
             DataSet.Info info = (DataSet.Info) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
             em.persist(change);
+            Hibernate.initialize(change.dataset.run.id);
             Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, info, event.notify));
          });
       }
