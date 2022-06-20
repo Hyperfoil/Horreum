@@ -282,6 +282,7 @@ public class RunServiceImpl implements RunService {
       if (access != null) {
          run.access = access;
       }
+      log.debugf("About to add new run to test %s using owner", testNameOrId, owner);
       Test test = testService.ensureTestExists(testNameOrId, token);
       run.testid = test.id;
       Integer runId = addAuthenticated(run, test);

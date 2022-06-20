@@ -155,6 +155,10 @@ public class TestServiceImpl implements TestService {
          } else if (token != null && test.tokens.stream().anyMatch(tt -> tt.valueEquals(token) && tt.hasUpload())) {
             return detached;
          }
+         log.debugf("Failed to retrieve test %s as this user (%s = %s) is not uploader for %s and token %s does not match",
+               input, identity.getPrincipal().getName(), identity.getRoles(), test.owner, token);
+      } else {
+         log.debugf("Failed to retrieve test %s - could not find it in the database", input);
       }
       // we need to be vague about the test existence
       throw ServiceException.notFound("Cannot upload to test " + input);
