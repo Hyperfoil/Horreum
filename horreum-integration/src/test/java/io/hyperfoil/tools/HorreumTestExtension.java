@@ -143,7 +143,7 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
             String HORREUM_GRAFANA_ADMIN_PASSWORD = getProperty("horreum.grafana.admin.password");
 
             String horreumCommitId = System.getProperty("horreum.commit.id");
-            if (horreumCommitId == null) {
+            if (horreumCommitId == null || horreumCommitId.isBlank()) {
                 try (InputStream stream = HorreumTestExtension.class.getClassLoader().getResourceAsStream("buildinfo.properties")) {
                     if (stream == null) {
                         throw new IllegalStateException("Cannot determine Horreum commit ID this test should run against.");
