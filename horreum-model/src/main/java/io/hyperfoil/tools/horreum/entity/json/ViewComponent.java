@@ -16,6 +16,7 @@ import org.hibernate.annotations.Type;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -29,6 +30,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "viewcomponent")
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = { "view_id", "headerName"}))
 public class ViewComponent extends PanacheEntityBase {
+   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Integer id;

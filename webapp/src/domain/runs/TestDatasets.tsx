@@ -163,7 +163,7 @@ export default function TestDatasets() {
         components.forEach(vc => {
             allColumns.push({
                 Header: vc.headerName,
-                accessor: dataset => dataset.view && dataset.view[vc.headerOrder],
+                accessor: dataset => dataset.view && dataset.view[vc.id],
                 // In general case we would have to calculate the final sortable cell value
                 // in database, or fetch all runs and sort in server doing the rendering
                 disableSortBy: (!!vc.render && vc.render !== "") || vc.labels.length > 1,

@@ -15,6 +15,7 @@ import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -24,6 +25,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "view")
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = { "id", "name" }))
 public class View extends PanacheEntityBase {
+   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Integer id;

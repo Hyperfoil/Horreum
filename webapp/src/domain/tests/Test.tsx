@@ -117,7 +117,11 @@ export default function Test() {
                                 <Views
                                     testId={testId}
                                     testView={
-                                        (test ? test.defaultView : undefined) || { name: "default", components: [] }
+                                        (test ? test.defaultView : undefined) || {
+                                            id: -1,
+                                            name: "default",
+                                            components: [],
+                                        }
                                     }
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
