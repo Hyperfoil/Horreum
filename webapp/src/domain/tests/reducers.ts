@@ -4,8 +4,6 @@ import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction } from "../../alerts"
 import { Access, Hook, Run, Test, TestToken, Transformer, View } from "../../api"
 
-export type RenderFunction = (value: any, row: any, token: string | undefined) => any
-
 export type CompareFunction = (runs: Run[]) => string
 
 export interface TestStorage extends Test {
