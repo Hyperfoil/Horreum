@@ -1068,6 +1068,16 @@ public class AlertingServiceImpl implements AlertingService {
       MissingDataRule.deleteById(id);
    }
 
+   @Override
+   public String grafanaStatus() {
+      try {
+         grafana.listDatasources();
+         return "OK";
+      } catch (WebApplicationException e) {
+         return "KO";
+      }
+   }
+
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional

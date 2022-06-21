@@ -2,6 +2,7 @@ package io.hyperfoil.tools;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import io.hyperfoil.tools.horreum.entity.json.Test;
 
@@ -30,6 +31,10 @@ public class HorreumTestClientExtension extends HorreumTestExtension implements 
    protected void beforeSuite(ExtensionContext context) throws Exception {
       super.beforeSuite(context);
       initialiseRestClients();
+
+      if (!"OK".equals(horreumClient.alertingService.grafanaStatus())) {
+         fail("Grafana is not healthy");
+      }
    }
 
    @Override
