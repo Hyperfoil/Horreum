@@ -261,7 +261,6 @@ export default function Changes() {
                                     <LabelsSelect
                                         selection={selectedFingerprint}
                                         onSelect={setSelectedFingerprint}
-                                        showIfNoLabels={false}
                                         source={fingerprintSource}
                                     />
                                 )}

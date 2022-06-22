@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useHistory } from "react-router-dom"
 
-import { Button, FormGroup, FormSection, TextInput } from "@patternfly/react-core"
+import { Button, Checkbox, Flex, FlexItem, FormGroup, FormSection, TextInput } from "@patternfly/react-core"
 
 import { Access, defaultTeamSelector, useTester } from "../../auth"
 import { noop } from "../../utils"
@@ -10,6 +10,7 @@ import { dispatchError } from "../../alerts"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import FindUsagesModal from "./FindUsagesModal"
 
+import HelpPopover from "../../components/HelpPopover"
 import OwnerAccess from "../../components/OwnerAccess"
 import FunctionFormItem from "../../components/FunctionFormItem"
 import JsonExtractor from "./JsonExtractor"
@@ -183,6 +184,34 @@ export default function Labels(props: LabelsProps) {
                                 onUpdate={(owner, access) => update({ owner, access })}
                                 readOnly={!isTesterForLabel}
                             />
+                        </FormGroup>
+                        <FormGroup label="Usage" fieldId="usage">
+                            <Flex alignItems={{ default: "alignItemsCenter" }}>
+                                <FlexItem>
+                                    <HelpPopover text="This label will be suggested on places for selecting or filtering datasets, e.g. by test configuration." />
+                                </FlexItem>
+                                <FlexItem>
+                                    <Checkbox
+                                        id="filtering"
+                                        label="Filtering"
+                                        isChecked={selected.filtering}
+                                        onChange={checked => update({ filtering: checked })}
+                                    />
+                                </FlexItem>
+                            </Flex>
+                            <Flex alignItems={{ default: "alignItemsCenter" }}>
+                                <FlexItem>
+                                    <HelpPopover text="This label will be suggested on places where test results are displayed." />
+                                </FlexItem>
+                                <FlexItem>
+                                    <Checkbox
+                                        id="metrics"
+                                        label="Metrics"
+                                        isChecked={selected.metrics}
+                                        onChange={checked => update({ metrics: checked })}
+                                    />
+                                </FlexItem>
+                            </Flex>
                         </FormGroup>
                         <FormSection title="Extractors">
                             {selected.extractors.map((extractor, i) => {

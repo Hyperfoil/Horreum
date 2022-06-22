@@ -103,6 +103,12 @@ public interface TestService {
    @Path("{id}/fingerprint")
    List<JsonNode> listFingerprints(@PathParam("id") int testId);
 
+   @GET
+   @Path("{id}/labelValues")
+   List<JsonNode> listLabelValues(@PathParam("id") int testId,
+                                  @QueryParam("filtering") @DefaultValue("true") boolean filtering,
+                                  @QueryParam("metrics") @DefaultValue("true") boolean metrics);
+
    @POST
    @Consumes(MediaType.APPLICATION_JSON)
    @Path("{id}/transformers")

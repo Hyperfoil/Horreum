@@ -98,18 +98,19 @@ public class DatasetServiceImpl implements DatasetService {
          "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
          "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
          "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id";
-   private static final String LIST_TEST_DATASETS =
-         "WITH schema_agg AS (" + SCHEMAS_SELECT + " WHERE testid = ?1 GROUP BY dataset_id" +
-         ") " + DATASET_SUMMARY_SELECT + " WHERE testid = ?1";
    private static final String LIST_SCHEMA_DATASETS =
          "WITH ids AS (" +
             "SELECT dataset_id AS id FROM dataset_schemas WHERE uri = ?1" +
          "), schema_agg AS (" +
             SCHEMAS_SELECT + " WHERE dataset_id IN (SELECT id FROM ids) GROUP BY dataset_id" +
          ") " + DATASET_SUMMARY_SELECT + " WHERE ds.id IN (SELECT id FROM ids)";
+   private static final String ALL_LABELS_SELECT = "SELECT dataset_id, " +
+         "COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values FROM dataset " +
+         "LEFT JOIN label_values lv ON dataset.id = lv.dataset_id " +
+         "LEFT JOIN label ON label.id = label_id ";
+
    //@formatter:on
    protected static final AliasToBeanResultTransformer DATASET_SUMMARY_TRANSFORMER = new AliasToBeanResultTransformer(DatasetSummary.class);
-
    @Inject
    EntityManager em;
 
@@ -139,12 +140,25 @@ public class DatasetServiceImpl implements DatasetService {
    @PermitAll
    @WithRoles
    @Override
-   public DatasetService.DatasetList listByTest(int testId, Integer limit, Integer page, String sort, String direction) {
-      StringBuilder sql = new StringBuilder(LIST_TEST_DATASETS);
-      // TODO: filtering by fingerprint
+   public DatasetService.DatasetList listByTest(int testId, String filter, Integer limit, Integer page, String sort, String direction) {
+      StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
+            .append(SCHEMAS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id")
+            .append(") ");
+      JsonNode jsonFilter = null;
+      if (filter != null && !filter.isBlank()) {
+         sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id) ");
+         sql.append(DATASET_SUMMARY_SELECT);
+         sql.append(" JOIN all_labels ON all_labels.dataset_id = ds.id WHERE testid = ?1 AND all_labels.values @> ?2");
+         jsonFilter = Util.parseFingerprint(filter);
+      } else {
+         sql.append(DATASET_SUMMARY_SELECT).append(" WHERE testid = ?1");
+      }
       addOrderAndPaging(limit, page, sort, direction, sql);
       Query query = em.createNativeQuery(sql.toString())
             .setParameter(1, testId);
+      if (jsonFilter != null) {
+         query.unwrap(NativeQuery.class).setParameter(2, jsonFilter, JsonNodeBinaryType.INSTANCE);
+      }
       markAsSummaryList(query);
       DatasetService.DatasetList list = new DatasetService.DatasetList();
       //noinspection unchecked

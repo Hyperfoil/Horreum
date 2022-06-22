@@ -37,6 +37,7 @@ public interface DatasetService {
    @Path("list/{testId}")
    @GET
    DatasetList listByTest(@PathParam("testId") int testId,
+                          @QueryParam("filter") String filter,
                           @QueryParam("limit") Integer limit,
                           @QueryParam("page") Integer page,
                           @QueryParam("sort") String sort,

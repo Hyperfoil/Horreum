@@ -55,6 +55,14 @@ public class TestServiceImpl implements TestService {
    private static final String UPDATE_NOTIFICATIONS = "UPDATE test SET notificationsenabled = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
    private static final String TRASH_RUNS = "UPDATE run SET trashed = true WHERE testid = ?";
+   //@formatter:off
+   protected static final String LABEL_VALUES_QUERY =
+         "SELECT DISTINCT jsonb_object_agg(label.name, lv.value) AS values FROM label_values lv " +
+         "JOIN dataset ON dataset.id = lv.dataset_id " +
+         "JOIN label ON label.id = lv.label_id " +
+         "WHERE dataset.testid = ?1 AND ((?2 AND label.filtering) OR (?3 AND label.metrics))" +
+         "GROUP BY dataset_id";
+   //@formatter:on
 
    @Inject
    EntityManager em;
@@ -480,6 +488,17 @@ public class TestServiceImpl implements TestService {
             "JOIN dataset ON dataset.id = dataset_id WHERE dataset.testid = ?1")
             .setParameter(1, testId)
             .unwrap(NativeQuery.class).addScalar("fingerprint", JsonNodeBinaryType.INSTANCE)
+            .getResultList();
+   }
+
+   @WithRoles
+   @Override
+   public List<JsonNode> listLabelValues(int testId, boolean filtering, boolean metrics) {
+      //noinspection unchecked
+      return em.createNativeQuery(LABEL_VALUES_QUERY)
+            .setParameter(1, testId).setParameter(2, filtering).setParameter(3, metrics)
+            .unwrap(NativeQuery.class)
+            .addScalar("values", JsonNodeBinaryType.INSTANCE)
             .getResultList();
    }
 

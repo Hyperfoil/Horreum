@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
@@ -7,6 +7,8 @@ import {
     CardHeader,
     CardBody,
     CardFooter,
+    ExpandableSection,
+    ExpandableSectionToggle,
     PageSection,
     Pagination,
     Title,
@@ -18,7 +20,7 @@ import { ArrowRightIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
-import { toEpochMillis, interleave, noop } from "../../utils"
+import { toEpochMillis, interleave, noop, fingerprintToString } from "../../utils"
 
 import { dispatchError } from "../../alerts"
 import { teamsSelector, teamToName, tokenSelector } from "../../auth"
@@ -41,6 +43,7 @@ import { Description, ExecutionTime, renderCell } from "./components"
 import { TestDispatch } from "../tests/reducers"
 import SchemaLink from "../schemas/SchemaLink"
 import { NoSchemaInDataset } from "./NoSchema"
+import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
 
 type C = CellProps<DatasetSummary> &
     UseTableOptions<DatasetSummary> &
@@ -130,6 +133,8 @@ export default function TestDatasets() {
 
     const test = useSelector(get(testId))
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
+    const [filter, setFilter] = useState<SelectedLabels>()
+    const [filterExpanded, setFilterExpanded] = useState(false)
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [sort, setSort] = useState("start")
@@ -146,17 +151,27 @@ export default function TestDatasets() {
     }, [dispatch, testId, teams, token])
     useEffect(() => {
         setLoading(true)
-        Api.datasetServiceListByTest(testId, pagination.direction, pagination.perPage, pagination.page, pagination.sort)
+        Api.datasetServiceListByTest(
+            testId,
+            pagination.direction,
+            fingerprintToString(filter),
+            pagination.perPage,
+            pagination.page,
+            pagination.sort
+        )
             .then(setDatasets, error =>
                 dispatchError(dispatch, error, "FETCH_DATASETS", "Failed to fetch datasets in test " + testId).catch(
                     noop
                 )
             )
             .finally(() => setLoading(false))
-    }, [dispatch, testId, pagination, teams])
+    }, [dispatch, testId, filter, pagination, teams])
     useEffect(() => {
         document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
+    useEffect(() => {
+        console.log(filter)
+    }, [filter])
     const columns = useMemo(() => {
         const allColumns = [...staticColumns]
         const components = test?.defaultView?.components || []
@@ -173,6 +188,7 @@ export default function TestDatasets() {
         })
         return allColumns
     }, [test, token])
+    const labelsSource = useCallback(() => Api.testServiceListLabelValues(testId, true, false), [testId, teams, token])
     return (
         <PageSection>
             <Card>
@@ -193,6 +209,15 @@ export default function TestDatasets() {
                                     View runs
                                 </NavLink>
                             </ToolbarItem>
+                            <ToolbarItem>
+                                <ExpandableSectionToggle
+                                    isExpanded={filterExpanded}
+                                    contentId="filter"
+                                    onToggle={setFilterExpanded}
+                                >
+                                    {filterExpanded ? "Hide filters" : "Show filters"}
+                                </ExpandableSectionToggle>
+                            </ToolbarItem>
                         </ToolbarGroup>
                     </Toolbar>
                     <Pagination
@@ -202,6 +227,19 @@ export default function TestDatasets() {
                         onSetPage={(e, p) => setPage(p)}
                         onPerPageSelect={(e, pp) => setPerPage(pp)}
                     />
+                </CardHeader>
+                <CardHeader>
+                    <ExpandableSection isDetached isExpanded={filterExpanded} contentId="filter">
+                        <LabelsSelect
+                            forceSplit={true}
+                            fireOnPartial={true}
+                            showKeyHelper={true}
+                            selection={filter}
+                            onSelect={setFilter}
+                            source={labelsSource}
+                            emptyPlaceholder={<span>No filters available</span>}
+                        />
+                    </ExpandableSection>
                 </CardHeader>
                 <CardBody style={{ overflowX: "auto" }}>
                     <Table
