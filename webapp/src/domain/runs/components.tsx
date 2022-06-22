@@ -18,19 +18,29 @@ import { useTester } from "../../auth"
 import { Access, RunSummary } from "../../api"
 
 export function Description(description: string) {
+    const truncated = (
+        <span
+            style={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: "300px",
+                display: "inline-block",
+            }}
+        >
+            {description}
+        </span>
+    )
     return (
         <Tooltip content={description}>
-            <span
-                style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    maxWidth: "300px",
-                    display: "inline-block",
-                }}
-            >
-                {description}
-            </span>
+            {typeof description === "string" &&
+            (description.startsWith("http://") || description.startsWith("https://")) ? (
+                <a href={description} target="_blank">
+                    {truncated}
+                </a>
+            ) : (
+                truncated
+            )}
         </Tooltip>
     )
 }
