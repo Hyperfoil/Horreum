@@ -2,6 +2,8 @@ package io.hyperfoil.tools.horreum.api;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
+import java.lang.annotation.Annotation;
+
 import org.junit.jupiter.api.Test;
 
 import io.hyperfoil.tools.horreum.entity.json.Run;
@@ -16,7 +18,7 @@ public class TestNoJpa {
     */
    @Test
    public void testNoJpa() {
-      for (var annotation: Run.class.getDeclaredAnnotations()) {
+      for (Annotation annotation: Run.class.getDeclaredAnnotations()) {
          assertNotEquals("javax.persistence", annotation.annotationType().getPackageName());
          assertNotEquals("org.hibernate.annotations", annotation.annotationType().getPackageName());
       }
