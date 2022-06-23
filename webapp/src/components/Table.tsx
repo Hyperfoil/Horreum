@@ -29,6 +29,7 @@ type TableProps<D extends object> = {
     selected: Record<string, boolean>
     onSelected(ids: Record<string, boolean>): void
     onSortBy?(order: SortingRule<D>[]): void
+    showNumberOfRows?: boolean
 }
 
 // FIXME: Default values in parameters doesn't work: https://github.com/microsoft/TypeScript/issues/31247
@@ -40,7 +41,16 @@ const defaultProps = {
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-function Table<D extends object>({ columns, data, sortBy, isLoading, selected, onSelected, onSortBy }: TableProps<D>) {
+function Table<D extends object>({
+    columns,
+    data,
+    sortBy,
+    isLoading,
+    selected,
+    onSelected,
+    onSortBy,
+    ...props
+}: TableProps<D>) {
     const [currentSortBy, setCurrentSortBy] = useState(sortBy)
     useEffect(() => {
         setCurrentSortBy(sortBy)
@@ -170,7 +180,7 @@ function Table<D extends object>({ columns, data, sortBy, isLoading, selected, o
                 </tbody>
             </table>
             <br />
-            <div>Showing {rows.length} rows</div>
+            {(props.showNumberOfRows === undefined || props.showNumberOfRows) && <div>Showing {rows.length} rows</div>}
         </>
     )
 }

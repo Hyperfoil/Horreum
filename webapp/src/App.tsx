@@ -17,6 +17,7 @@ import TestDatasets from "./domain/runs/TestDatasets"
 import Run from "./domain/runs/Run"
 import AllTests from "./domain/tests/AllTests"
 import Test from "./domain/tests/Test"
+import DatasetComparison from "./domain/runs/DatasetComparison"
 
 import AllSchema from "./domain/schemas/AllSchema"
 import Schema from "./domain/schemas/Schema"
@@ -124,6 +125,7 @@ function Main() {
                     <Route exact path="/run/list/:testId" component={TestRuns} />
                     <Route exact path="/run/dataset/list/:testId" component={TestDatasets} />
                     <Route exact path="/run/:id" component={Run} />
+                    <Route exact path="/dataset/comparison" component={DatasetComparison} />
 
                     <Route exact path="/schema" component={AllSchema} />
                     <Route path="/schema/:schemaId" component={Schema} />

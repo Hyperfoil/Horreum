@@ -14,14 +14,13 @@ import {
     PageSection,
 } from "@patternfly/react-core"
 
-import { useReactToPrint } from "react-to-print"
-
 import { alertAction } from "../../alerts"
 import { useTester } from "../../auth"
 
 import Api, { TableReport } from "../../api"
 import TableReportView from "./TableReportView"
 import ButtonLink from "../../components/ButtonLink"
+import PrintButton from "../../components/PrintButton"
 import ReportLogModal from "./ReportLogModal"
 
 export default function TableReportPage() {
@@ -50,10 +49,6 @@ export default function TableReportPage() {
         }
     }, [id, dispatch])
     const componentRef = useRef<HTMLDivElement>(null)
-    const printHandle = useReactToPrint({
-        content: () => componentRef.current,
-        pageStyle: "@page { margin: 1cm; }",
-    })
     const isTester = useTester(report?.config?.test?.owner)
     if (loading) {
         return (
@@ -74,13 +69,7 @@ export default function TableReportPage() {
             <Card>
                 <CardHeader>
                     <ActionGroup>
-                        <Button
-                            onClick={() => {
-                                if (printHandle) printHandle()
-                            }}
-                        >
-                            Export to PDF
-                        </Button>
+                        <PrintButton printRef={componentRef} />
                         {isTester && (
                             <>
                                 <ButtonLink

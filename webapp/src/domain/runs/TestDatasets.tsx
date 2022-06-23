@@ -3,6 +3,7 @@ import { useParams } from "react-router"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
 import {
+    Button,
     Card,
     CardHeader,
     CardBody,
@@ -43,6 +44,7 @@ import { Description, ExecutionTime, renderCell } from "./components"
 import { TestDispatch } from "../tests/reducers"
 import SchemaLink from "../schemas/SchemaLink"
 import { NoSchemaInDataset } from "./NoSchema"
+import ButtonLink from "../../components/ButtonLink"
 import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
 
 type C = CellProps<DatasetSummary> &
@@ -52,16 +54,6 @@ type C = CellProps<DatasetSummary> &
 type DatasetColumn = Column<DatasetSummary> & UseSortByColumnOptions<DatasetSummary>
 
 const staticColumns: DatasetColumn[] = [
-    {
-        Header: "",
-        id: "selection",
-        disableSortBy: true,
-        Cell: ({ row }: C) => {
-            const props = row.getToggleRowSelectedProps()
-            delete props.indeterminate
-            return <input type="checkbox" {...props} />
-        },
-    },
     {
         Header: "Run",
         accessor: "runId",
@@ -132,7 +124,6 @@ export default function TestDatasets() {
     const testId = parseInt(stringTestId)
 
     const test = useSelector(get(testId))
-    const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
     const [filter, setFilter] = useState<SelectedLabels>()
     const [filterExpanded, setFilterExpanded] = useState(false)
     const [page, setPage] = useState(1)
@@ -144,6 +135,7 @@ export default function TestDatasets() {
     const dispatch = useDispatch<TestDispatch>()
     const [loading, setLoading] = useState(false)
     const [datasets, setDatasets] = useState<DatasetList>()
+    const [comparedDatasets, setComparedDatasets] = useState<DatasetSummary[]>()
     const teams = useSelector(teamsSelector)
     const token = useSelector(tokenSelector)
     useEffect(() => {
@@ -174,6 +166,33 @@ export default function TestDatasets() {
     }, [filter])
     const columns = useMemo(() => {
         const allColumns = [...staticColumns]
+        if (comparedDatasets) {
+            allColumns.unshift({
+                Header: "",
+                accessor: "id",
+                disableSortBy: true,
+                Cell: (arg: C) => {
+                    if (comparedDatasets.some(ds => ds.id === arg.cell.value)) {
+                        return (
+                            <Button
+                                variant="secondary"
+                                onClick={() =>
+                                    setComparedDatasets(comparedDatasets.filter(ds => ds.id !== arg.cell.value))
+                                }
+                            >
+                                Remove
+                            </Button>
+                        )
+                    } else {
+                        return (
+                            <Button onClick={() => setComparedDatasets([...comparedDatasets, arg.row.original])}>
+                                Add to comparison
+                            </Button>
+                        )
+                    }
+                },
+            })
+        }
         const components = test?.defaultView?.components || []
         components.forEach(vc => {
             allColumns.push({
@@ -187,7 +206,7 @@ export default function TestDatasets() {
             })
         })
         return allColumns
-    }, [test, token])
+    }, [test, token, comparedDatasets])
     const labelsSource = useCallback(() => Api.testServiceListLabelValues(testId, true, false), [testId, teams, token])
     return (
         <PageSection>
@@ -208,6 +227,19 @@ export default function TestDatasets() {
                                 <NavLink className="pf-c-button pf-m-secondary" to={`/run/list/${testId}`}>
                                     View runs
                                 </NavLink>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => {
+                                        if (comparedDatasets) {
+                                            setComparedDatasets(undefined)
+                                        } else {
+                                            setComparedDatasets([])
+                                            setFilterExpanded(true)
+                                        }
+                                    }}
+                                >
+                                    {comparedDatasets ? "Cancel comparison" : "Select for comparison"}
+                                </Button>
                             </ToolbarItem>
                             <ToolbarItem>
                                 <ExpandableSectionToggle
@@ -229,11 +261,17 @@ export default function TestDatasets() {
                     />
                 </CardHeader>
                 <CardHeader>
-                    <ExpandableSection isDetached isExpanded={filterExpanded} contentId="filter">
+                    <ExpandableSection
+                        isDetached
+                        isExpanded={filterExpanded}
+                        contentId="filter"
+                        style={{ display: "flex" }}
+                    >
                         <LabelsSelect
                             forceSplit={true}
                             fireOnPartial={true}
                             showKeyHelper={true}
+                            addResetButton={true}
                             selection={filter}
                             onSelect={setFilter}
                             source={labelsSource}
@@ -241,10 +279,28 @@ export default function TestDatasets() {
                         />
                     </ExpandableSection>
                 </CardHeader>
+                {comparedDatasets && (
+                    <CardBody style={{ overflowX: "auto" }}>
+                        <Title headingLevel="h3">Datasets for comparison</Title>
+                        <Table columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
+                        <ButtonLink
+                            to={
+                                "/dataset/comparison?" +
+                                comparedDatasets.map(ds => `ds=${ds.id}_${ds.runId}_${ds.ordinal}`).join("&") +
+                                "#labels"
+                            }
+                            isDisabled={comparedDatasets.length === 0}
+                        >
+                            Compare labels
+                        </ButtonLink>
+                    </CardBody>
+                )}
                 <CardBody style={{ overflowX: "auto" }}>
                     <Table
                         columns={columns}
-                        data={datasets?.datasets || []}
+                        data={
+                            datasets?.datasets?.filter(ds => !comparedDatasets || !comparedDatasets.includes(ds)) || []
+                        }
                         sortBy={[{ id: sort, desc: direction === "Descending" }]}
                         onSortBy={order => {
                             if (order.length > 0 && order[0]) {
@@ -253,8 +309,6 @@ export default function TestDatasets() {
                             }
                         }}
                         isLoading={loading}
-                        selected={selectedRows}
-                        onSelected={setSelectedRows}
                     />
                 </CardBody>
                 <CardFooter style={{ textAlign: "right" }}>

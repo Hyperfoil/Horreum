@@ -56,10 +56,13 @@ const tableColumns: RunColumn[] = [
         Header: "",
         id: "selection",
         disableSortBy: true,
-        Cell: ({ row, selectedFlatRows }: C) => {
+        Cell: ({ row }: C) => {
             const props = row.getToggleRowSelectedProps()
             delete props.indeterminate
-            return <input type="checkbox" {...props} disabled={!row.isSelected && selectedFlatRows.length >= 2} />
+            // Note: to limit selection to 2 entries use
+            //   disabled={!row.isSelected && selectedFlatRows.length >= 2}
+            // with { row, selectedFlatRows }: C as this function's argument
+            return <input type="checkbox" {...props} />
         },
     },
     {

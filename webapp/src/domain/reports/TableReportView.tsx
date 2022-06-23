@@ -21,6 +21,7 @@ import ReactMarkdown from "react-markdown"
 
 import Api, { TableReportData, TableReport, TableReportConfig, ReportComment } from "../../api"
 import { formatDateTime } from "../../utils"
+import { colors } from "../../charts"
 import "./TableReportView.css"
 import "github-markdown-css"
 
@@ -94,8 +95,6 @@ type ComponentTableProps = {
     selector(d: TableReportData): number
     siblingSelector(d: TableReportData, index: number): number
 }
-
-const colors = ["#4caf50", "#FF0000", "#CC0066", "#0066FF", "#42a5f5", "#f1c40f"]
 
 function tryConvertToNumber(value: any) {
     const num = parseInt(value)

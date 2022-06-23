@@ -2,7 +2,7 @@ import { ReactElement, useEffect, useMemo, useState } from "react"
 import { useSelector } from "react-redux"
 import { teamsSelector } from "../auth"
 
-import { HelperText, Select, SelectOption, SelectOptionObject, Split, SplitItem } from "@patternfly/react-core"
+import { Button, HelperText, Select, SelectOption, SelectOptionObject, Split, SplitItem } from "@patternfly/react-core"
 
 import { useDispatch } from "react-redux"
 import { deepEquals, noop } from "../utils"
@@ -53,6 +53,7 @@ type LabelsSelectProps = {
     forceSplit?: boolean
     fireOnPartial?: boolean
     showKeyHelper?: boolean
+    addResetButton?: boolean
 }
 
 export default function LabelsSelect(props: LabelsSelectProps) {
@@ -126,66 +127,71 @@ export default function LabelsSelect(props: LabelsSelectProps) {
             />
         )
     } else {
-        return (
-            <Split>
-                {[...new Set(availableLabels.flatMap(ls => Object.keys(ls)))].map(key => {
-                    const values = filteredOptions.map(fo => fo[key])
-                    // javascript Set cannot use deep equality comparison
-                    console.log(key)
-                    const opts = values
-                        .filter((value, index) => {
-                            for (let i = index + 1; i < values.length; ++i) {
-                                // console.log("compare " + index + " and " + i)
-                                // console.log(Object.keys(value))
-                                // console.log(Object.keys(values[i]))
-                                if (deepEquals(value, values[i])) {
-                                    return false
+        const items = [...new Set(availableLabels.flatMap(ls => Object.keys(ls)))].map(key => {
+            const values = filteredOptions.map(fo => fo[key])
+            // javascript Set cannot use deep equality comparison
+            const opts = values
+                .filter((value, index) => {
+                    for (let i = index + 1; i < values.length; ++i) {
+                        if (deepEquals(value, values[i])) {
+                            return false
+                        }
+                    }
+                    return true
+                })
+                .map(value => convertPartial(value))
+                .sort()
+            return (
+                <SplitItem key={key}>
+                    {props.showKeyHelper && <HelperText>{key}:</HelperText>}
+                    <InnerSelect
+                        disabled={!!props.disabled}
+                        isTypeahead
+                        hasOnlyOneOption={opts.length === 1 && partialSelect[key] === undefined}
+                        selection={opts.length === 1 ? opts[0] : partialSelect[key]}
+                        options={opts}
+                        onSelect={value => {
+                            const partial = { ...partialSelect }
+                            if (value !== undefined) {
+                                partial[key] = value
+                            } else {
+                                delete partial[key]
+                            }
+                            setPartialSelect(partial)
+                            if (props.fireOnPartial) {
+                                const fo = getFilteredOptions(partial)
+                                if (fo.length === 1) {
+                                    props.onSelect(fo[0])
+                                } else {
+                                    props.onSelect(partial)
                                 }
                             }
-                            return true
-                        })
-                        .map(value => convertPartial(value))
-                        .sort()
-                    console.log(opts)
-                    console.log(opts.map(o => o.toString))
-                    return (
-                        <SplitItem key={key}>
-                            {props.showKeyHelper && <HelperText>{key}:</HelperText>}
-                            <InnerSelect
-                                disabled={!!props.disabled}
-                                isTypeahead
-                                hasOnlyOneOption={opts.length === 1 && partialSelect[key] === undefined}
-                                selection={opts.length === 1 ? opts[0] : partialSelect[key]}
-                                options={opts}
-                                onSelect={value => {
-                                    const partial = { ...partialSelect }
-                                    if (value !== undefined) {
-                                        partial[key] = value
-                                    } else {
-                                        delete partial[key]
-                                    }
-                                    setPartialSelect(partial)
-                                    if (props.fireOnPartial) {
-                                        const fo = getFilteredOptions(partial)
-                                        if (fo.length === 1) {
-                                            props.onSelect(fo[0])
-                                        } else {
-                                            props.onSelect(partial)
-                                        }
-                                    }
-                                }}
-                                onOpen={() => {
-                                    const partial = { ...partialSelect }
-                                    delete partial[key]
-                                    setPartialSelect(partial)
-                                }}
-                                placeholderText={`Choose ${key}...`}
-                            />
-                        </SplitItem>
-                    )
-                })}
-            </Split>
-        )
+                        }}
+                        onOpen={() => {
+                            const partial = { ...partialSelect }
+                            delete partial[key]
+                            setPartialSelect(partial)
+                        }}
+                        placeholderText={`Choose ${key}...`}
+                    />
+                </SplitItem>
+            )
+        })
+        if (props.addResetButton) {
+            items.push(
+                <SplitItem style={{ alignSelf: "end" }}>
+                    <Button
+                        onClick={() => {
+                            setPartialSelect({})
+                            props.onSelect({})
+                        }}
+                    >
+                        Reset
+                    </Button>
+                </SplitItem>
+            )
+        }
+        return <Split>{items}</Split>
     }
 }
 
