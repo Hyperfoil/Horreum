@@ -66,6 +66,10 @@ public interface DatasetService {
    @Path("{datasetId}/previewLabel")
    LabelPreview previewLabel(@PathParam("datasetId") int datasetId, @RequestBody(required = true) Label label);
 
+   @GET
+   @Path("{datasetId}/summary")
+   DatasetSummary getSummary(@PathParam("datasetId") int datasetId, @QueryParam("viewId") int viewId);
+
    class DatasetSummary {
       @JsonProperty(required = true)
       public int id;

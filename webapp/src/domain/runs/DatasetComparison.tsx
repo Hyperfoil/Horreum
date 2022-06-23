@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react"
-import { useDispatch } from "react-redux"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useDispatch, useSelector } from "react-redux"
 import {
     ActionGroup,
     Bullseye,
     Card,
     CardBody,
-    CardHeader,
     EmptyState,
     EmptyStateBody,
     PageSection,
@@ -15,39 +14,108 @@ import { expandable, ICell, IRow, Table, TableHeader, TableBody } from "@pattern
 import { useHistory, NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 
-import Api from "../../api"
+import Api, { Test, View } from "../../api"
 import { dispatchError } from "../../alerts"
+import { tokenSelector } from "../../auth"
 import { colors } from "../../charts"
 
 import PrintButton from "../../components/PrintButton"
+import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
+
+import { renderValue } from "./components"
+
+type Ds = {
+    id: number
+    runId: number
+    ordinal: number
+}
 
 export default function DatasetComparison() {
+    window.document.title = "Dataset comparison: Horreum"
     const history = useHistory()
     const params = new URLSearchParams(history.location.search)
-    const [loading, setLoading] = useState(false)
-    const [headers, setHeaders] = useState<ICell[]>([])
-    const [rows, setRows] = useState<IRow[]>([])
+    const testId = parseInt(params.get("testId") || "-1")
+    const dispatch = useDispatch()
+    const [test, setTest] = useState<Test>()
+    useEffect(() => {
+        Api.testServiceGet(testId).then(setTest, e =>
+            dispatchError(dispatch, e, "FETCH_TEST", "Failed to fetch test " + testId)
+        )
+    }, [testId])
+    const datasets = useMemo(
+        () =>
+            params
+                .getAll("ds")
+                .map(ds => {
+                    const parts = ds.split("_")
+                    return {
+                        id: parseInt(parts[0]),
+                        runId: parseInt(parts[1]),
+                        ordinal: parseInt(parts[2]),
+                    }
+                })
+                .sort((a, b) => (a.runId - b.runId) * 1000 + (a.ordinal - b.ordinal)),
+        []
+    )
+    const headers = useMemo(
+        () => [
+            { title: "Name", cellFormatters: [expandable] },
+            ...datasets.map(item => ({
+                title: (
+                    <NavLink to={`/run/${item.runId}#dataset${item.ordinal}`}>
+                        {item.runId}/{item.ordinal + 1}
+                    </NavLink>
+                ),
+            })),
+        ],
+        [datasets]
+    )
 
-    window.document.title = "Dataset comparison: Horreum"
+    return (
+        <PageSection>
+            <Card>
+                <CardBody>
+                    {headers.length <= 1 ? (
+                        <EmptyState>
+                            <EmptyStateBody>No datasets have been loaded</EmptyStateBody>
+                        </EmptyState>
+                    ) : (
+                        <FragmentTabs>
+                            <FragmentTab title="Labels" fragment="labels">
+                                <LabelsComparison headers={headers} datasets={datasets} />
+                            </FragmentTab>
+                            <FragmentTab title="Default view" fragment="view_default" isHidden={!test}>
+                                {test?.defaultView ? (
+                                    <ViewComparison headers={headers} view={test?.defaultView} datasets={datasets} />
+                                ) : (
+                                    <Bullseye>
+                                        <Spinner size="xl" />
+                                    </Bullseye>
+                                )}
+                            </FragmentTab>
+                        </FragmentTabs>
+                    )}
+                </CardBody>
+            </Card>
+        </PageSection>
+    )
+}
+
+type LabelsComparisonProps = {
+    headers: ICell[]
+    datasets: Ds[]
+}
+
+function LabelsComparison(props: LabelsComparisonProps) {
+    const [loading, setLoading] = useState(false)
+    const [rows, setRows] = useState<IRow[]>([])
 
     const dispatch = useDispatch()
     useEffect(() => {
         setLoading(true)
-        Promise.all(
-            params.getAll("ds").map(ds => {
-                const parts = ds.split("_")
-                const id = parseInt(parts[0])
-                return Api.datasetServiceLabelValues(id).then(values => ({
-                    id,
-                    runId: parseInt(parts[1]),
-                    ordinal: parseInt(parts[2]),
-                    values,
-                }))
-            })
-        )
+        Promise.all(props.datasets.map(ds => Api.datasetServiceLabelValues(ds.id).then(values => ({ ...ds, values }))))
             .then(
                 labels => {
-                    labels.sort((a, b) => (b.runId - a.runId) * 1000 + (b.ordinal - a.ordinal))
                     const rows: any[][] = []
                     labels.forEach((item, index) => {
                         item.values.forEach(label => {
@@ -60,16 +128,6 @@ export default function DatasetComparison() {
                             }
                         })
                     })
-                    setHeaders([
-                        { title: "Label name", cellFormatters: [expandable] },
-                        ...labels.map(item => ({
-                            title: (
-                                <NavLink to={`/run/${item.runId}#dataset${item.ordinal}`}>
-                                    {item.runId}/{item.ordinal + 1}
-                                </NavLink>
-                            ),
-                        })),
-                    ])
                     rows.sort((r1, r2) => r1[0].localeCompare(r2[0]))
                     const renderRows: IRow[] = []
                     rows.forEach(row => {
@@ -105,49 +163,96 @@ export default function DatasetComparison() {
                 e => dispatchError(dispatch, e, "LOAD_LABELS", "Failed to load labels for one of the datasets.")
             )
             .finally(() => setLoading(false))
-    }, [])
+    }, [props.datasets])
     const componentRef = useRef<HTMLDivElement>(null)
-    const empty = headers.length <= 1
+    if (loading) {
+        return (
+            <Bullseye>
+                <Spinner size="xl" />
+            </Bullseye>
+        )
+    }
     return (
-        <PageSection>
-            <Card>
-                <CardHeader>
-                    <ActionGroup>
-                        <PrintButton printRef={componentRef} />
-                    </ActionGroup>
-                </CardHeader>
-                <CardBody>
-                    {loading && (
-                        <Bullseye>
-                            <Spinner size="xl" />
-                        </Bullseye>
-                    )}
-                    {!loading && empty && (
-                        <EmptyState>
-                            <EmptyStateBody>No datasets have been loaded</EmptyStateBody>
-                        </EmptyState>
-                    )}
-                    {!loading && !empty && (
-                        <div ref={componentRef}>
-                            <Table
-                                aria-label="Label comparison"
-                                variant="compact"
-                                cells={headers}
-                                rows={rows}
-                                isExpandable={true}
-                                onCollapse={(_, rowIndex, isOpen) => {
-                                    rows[rowIndex].isOpen = isOpen
-                                    setRows([...rows])
-                                }}
-                            >
-                                <TableHeader />
-                                <TableBody />
-                            </Table>
-                        </div>
-                    )}
-                </CardBody>
-            </Card>
-        </PageSection>
+        <>
+            <ActionGroup>
+                <PrintButton printRef={componentRef} />
+            </ActionGroup>
+            <div ref={componentRef}>
+                <Table
+                    aria-label="Label comparison"
+                    variant="compact"
+                    cells={props.headers}
+                    rows={rows}
+                    isExpandable={true}
+                    onCollapse={(_, rowIndex, isOpen) => {
+                        rows[rowIndex].isOpen = isOpen
+                        setRows([...rows])
+                    }}
+                >
+                    <TableHeader />
+                    <TableBody />
+                </Table>
+            </div>
+        </>
+    )
+}
+
+type ViewComparisonProps = {
+    headers: ICell[]
+    view: View
+    datasets: Ds[]
+}
+
+function ViewComparison(props: ViewComparisonProps) {
+    const dispatch = useDispatch()
+    const [loading, setLoading] = useState(false)
+    const [rows, setRows] = useState<IRow[]>()
+    const token = useSelector(tokenSelector)
+    useEffect(() => {
+        setLoading(true)
+        Promise.all(props.datasets.map(ds => Api.datasetServiceGetSummary(ds.id, props.view.id)))
+            .then(
+                summaries => {
+                    setRows(
+                        props.view.components.map(vc => ({
+                            cells: [
+                                vc.headerName,
+                                ...summaries.map(summary => {
+                                    const render = renderValue(
+                                        vc.render,
+                                        vc.labels.length == 1 ? vc.labels[0] : undefined,
+                                        token
+                                    )
+                                    return render(summary.view[vc.id], summary)
+                                }),
+                            ],
+                        }))
+                    )
+                },
+                e => dispatchError(dispatch, e, "FETCH_VIEW", "Failed to fetch view for one of datasets.")
+            )
+            .finally(() => setLoading(false))
+    }, [props.datasets, props.view])
+    const componentRef = useRef<HTMLDivElement>(null)
+    if (loading) {
+        return (
+            <Bullseye>
+                <Spinner size="xl" />
+            </Bullseye>
+        )
+    }
+    return (
+        <>
+            <ActionGroup>
+                <PrintButton printRef={componentRef} />
+            </ActionGroup>
+            <div ref={componentRef}>
+                <Table aria-label="View comparison" variant="compact" cells={props.headers} rows={rows}>
+                    <TableHeader />
+                    <TableBody />
+                </Table>
+            </div>
+        </>
     )
 }
 

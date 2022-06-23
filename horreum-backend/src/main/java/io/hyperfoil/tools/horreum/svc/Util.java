@@ -66,8 +66,8 @@ public class Util {
    private static final Configuration JSONPATH_CONFIG = Configuration.builder()
          .jsonProvider(new JacksonJsonNodeJsonProvider())
          .options(Option.SUPPRESS_EXCEPTIONS,Option.DEFAULT_PATH_LEAF_TO_NULL).build();
-   static final JsonNode EMPTY_ARRAY = JsonNodeFactory.instance.arrayNode();
-   static final JsonNode EMPTY_OBJECT = JsonNodeFactory.instance.objectNode();
+   static final ArrayNode EMPTY_ARRAY = JsonNodeFactory.instance.arrayNode();
+   static final ObjectNode EMPTY_OBJECT = JsonNodeFactory.instance.objectNode();
 
    public static final int MAX_TRANSACTION_RETRIES = 10;
    private static final String RETRY_HINT = "The transaction might succeed if retried";

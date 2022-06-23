@@ -11,6 +11,7 @@ import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.transaction.TransactionManager;
@@ -27,6 +28,7 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.DatasetService;
@@ -97,13 +99,13 @@ public class DatasetServiceImpl implements DatasetService {
          "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas " +
          "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
          "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
-         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id";
+         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id";
    private static final String LIST_SCHEMA_DATASETS =
          "WITH ids AS (" +
             "SELECT dataset_id AS id FROM dataset_schemas WHERE uri = ?1" +
          "), schema_agg AS (" +
             SCHEMAS_SELECT + " WHERE dataset_id IN (SELECT id FROM ids) GROUP BY dataset_id" +
-         ") " + DATASET_SUMMARY_SELECT + " WHERE ds.id IN (SELECT id FROM ids)";
+         ") " + DATASET_SUMMARY_SELECT + " AND dv.view_id = defaultview_id WHERE ds.id IN (SELECT id FROM ids)";
    private static final String ALL_LABELS_SELECT = "SELECT dataset_id, " +
          "COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values FROM dataset " +
          "LEFT JOIN label_values lv ON dataset.id = lv.dataset_id " +
@@ -147,11 +149,11 @@ public class DatasetServiceImpl implements DatasetService {
       JsonNode jsonFilter = null;
       if (filter != null && !filter.isBlank()) {
          sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id) ");
-         sql.append(DATASET_SUMMARY_SELECT);
+         sql.append(DATASET_SUMMARY_SELECT).append(" AND dv.view_id = defaultview_id");
          sql.append(" JOIN all_labels ON all_labels.dataset_id = ds.id WHERE testid = ?1 AND all_labels.values @> ?2");
          jsonFilter = Util.parseFingerprint(filter);
       } else {
-         sql.append(DATASET_SUMMARY_SELECT).append(" WHERE testid = ?1");
+         sql.append(DATASET_SUMMARY_SELECT).append(" AND dv.view_id = defaultview_id").append(" WHERE testid = ?1");
       }
       addOrderAndPaging(limit, page, sort, direction, sql);
       Query query = em.createNativeQuery(sql.toString())
@@ -307,6 +309,20 @@ public class DatasetServiceImpl implements DatasetService {
          preview.output = outputRef.get();
       }
       return preview;
+   }
+
+   @WithRoles
+   @Override
+   public DatasetSummary getSummary(int datasetId, int viewId) {
+      try {
+         Query query = em.createNativeQuery("WITH schema_agg AS (" + SCHEMAS_SELECT + " WHERE ds.dataset_id = ?1 GROUP BY ds.dataset_id) " +
+               DATASET_SUMMARY_SELECT + " AND dv.view_id = ?2 WHERE ds.id = ?1")
+               .setParameter(1, datasetId).setParameter(2, viewId);
+         markAsSummaryList(query);
+         return (DatasetSummary) query.getSingleResult();
+      } catch (NoResultException e) {
+         throw ServiceException.notFound("Cannot find dataset " + datasetId);
+      }
    }
 
    @WithToken

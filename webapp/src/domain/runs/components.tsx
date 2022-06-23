@@ -252,71 +252,79 @@ export function renderCell(renderString: string | undefined, sub: string | undef
                 row: { index },
             },
             data,
-            column,
         } = arg
-        let value = cellValue
-        if (sub && value && typeof value === "object") {
-            value = value[sub]
-        }
-        if (!render) {
-            if (value === null || value === undefined) {
-                return "--"
-            } else if (typeof value === "object") {
-                return JSON.stringify(value)
-            } else if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://"))) {
-                return (
-                    <a href={value} target="_blank ">
-                        {value}
-                    </a>
-                )
-            }
-            return value
-        } else if (typeof render === "string") {
+        return renderImpl(cellValue, render, sub, data[index], token)
+    }
+}
+
+export function renderValue(renderString: string | undefined, sub: string | undefined, token: string | undefined) {
+    const render = renderString ? new Function(renderString)() : undefined
+    return (value: any, fullItem: any) => renderImpl(value, render, sub, fullItem, token)
+}
+
+type RenderFunction = (value: any, fullItem: any, token?: string) => any
+
+function renderImpl(value: any, render: RenderFunction, sub?: string, fullItem?: any, token?: string) {
+    if (sub && value && typeof value === "object") {
+        value = value[sub]
+    }
+    if (!render) {
+        if (value === null || value === undefined) {
+            return "--"
+        } else if (typeof value === "object") {
+            return JSON.stringify(value)
+        } else if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://"))) {
             return (
-                <Tooltip content={"Render failure: " + render}>
-                    <WarningTriangleIcon style={{ color: "#a30000" }} />
-                </Tooltip>
+                <a href={value} target="_blank ">
+                    {value}
+                </a>
             )
         }
-        const useValue = value === null || value === undefined ? (data[index] as any)[column.id.toLowerCase()] : value
-        try {
-            const rendered = render(useValue, data[index], token)
-            if (!rendered) {
-                return "--"
-            } else if (typeof rendered === "string") {
-                //this is a hacky way to see if it looks like html :)
-                if (rendered.trim().startsWith("<") && rendered.trim().endsWith(">")) {
-                    //render it as html
-                    return <div dangerouslySetInnerHTML={{ __html: rendered }} />
-                } else {
-                    return rendered
-                }
-            } else if (typeof rendered === "object") {
-                return JSON.stringify(rendered)
+        return value
+    } else if (typeof render === "string") {
+        return (
+            <Tooltip content={"Render failure: " + render}>
+                <WarningTriangleIcon style={{ color: "#a30000" }} />
+            </Tooltip>
+        )
+    }
+    try {
+        const rendered = render(value, fullItem, token)
+        if (!rendered) {
+            return "--"
+        } else if (typeof rendered === "string") {
+            //this is a hacky way to see if it looks like html :)
+            if (rendered.trim().startsWith("<") && rendered.trim().endsWith(">")) {
+                //render it as html
+                return <div dangerouslySetInnerHTML={{ __html: rendered }} />
             } else {
-                return rendered + ""
+                return rendered
             }
-        } catch (e) {
-            console.warn("Error in render function %s trying to render %O: %O", render.toString(), useValue, e)
-            return (
-                <Tooltip
-                    content={
-                        <span>
-                            Error in render function{" "}
-                            <pre>
-                                <code>{render}</code>
-                            </pre>
-                            trying to render{" "}
-                            <pre>
-                                <code>{JSON.stringify(useValue)}</code>
-                            </pre>
-                            : {e}
-                        </span>
-                    }
-                >
-                    <WarningTriangleIcon style={{ color: "#a30000" }} />
-                </Tooltip>
-            )
+        } else if (typeof rendered === "object") {
+            return JSON.stringify(rendered)
+        } else {
+            return rendered + ""
         }
+    } catch (e) {
+        console.warn("Error in render function %s trying to render %O: %O", render.toString(), value, e)
+        return (
+            <Tooltip
+                content={
+                    <span>
+                        Error in render function{" "}
+                        <pre>
+                            <code>{render}</code>
+                        </pre>
+                        trying to render{" "}
+                        <pre>
+                            <code>{JSON.stringify(value)}</code>
+                        </pre>
+                        : {e}
+                    </span>
+                }
+            >
+                <WarningTriangleIcon style={{ color: "#a30000" }} />
+            </Tooltip>
+        )
     }
 }

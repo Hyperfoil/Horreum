@@ -84,7 +84,7 @@ const ViewComponentForm = ({ c, onChange, isTester }: ViewComponentFormProps) =>
                         c.render = value
                         onChange()
                     }}
-                    defaultFunc="(value, run, token) => value"
+                    defaultFunc="(value, dataset, token) => value"
                     addText="Add render function..."
                     undefinedText="No render function."
                     readOnly={!isTester}

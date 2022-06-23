@@ -27,6 +27,8 @@ export default function FragmentTabs(props: FragmentTabsProps) {
     const [activeKey, setActiveKey] = useState(() => {
         const endOfTab = history.location.hash.indexOf("+")
         const hash = history.location.hash.substring(1, endOfTab >= 0 ? endOfTab : undefined)
+        console.log("Initial hash >" + hash + "<")
+        console.log(children.map(c => c.props.fragment))
         const index = Math.max(
             0,
             children.findIndex(c => hash === c.props.fragment)
@@ -34,6 +36,7 @@ export default function FragmentTabs(props: FragmentTabsProps) {
         if (props.tabIndexRef) {
             props.tabIndexRef.current = index
         }
+        console.log("Initial index " + index)
         return index
     })
     const goToTab = (index: number) => {
@@ -41,7 +44,7 @@ export default function FragmentTabs(props: FragmentTabsProps) {
         if (props.tabIndexRef) {
             props.tabIndexRef.current = index
         }
-        history.replace(history.location.pathname + "#" + children[index].props.fragment)
+        history.replace(history.location.pathname + history.location.search + "#" + children[index].props.fragment)
     }
     return (
         <Tabs

@@ -285,7 +285,7 @@ export default function TestDatasets() {
                         <Table columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
                         <ButtonLink
                             to={
-                                "/dataset/comparison?" +
+                                `/dataset/comparison?testId=${testId}&` +
                                 comparedDatasets.map(ds => `ds=${ds.id}_${ds.runId}_${ds.ordinal}`).join("&") +
                                 "#labels"
                             }

@@ -179,7 +179,7 @@ export default function LabelsSelect(props: LabelsSelectProps) {
         })
         if (props.addResetButton) {
             items.push(
-                <SplitItem style={{ alignSelf: "end" }}>
+                <SplitItem style={{ alignSelf: "end" }} key="__reset_button">
                     <Button
                         onClick={() => {
                             setPartialSelect({})
