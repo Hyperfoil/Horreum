@@ -17,7 +17,12 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.ws.rs.core.HttpHeaders;
 
+import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
@@ -25,6 +30,8 @@ import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.entity.json.View;
+import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
@@ -155,5 +162,39 @@ public class TestServiceTest extends BaseServiceTest {
       hook.active = true;
       hook.url = url;
       return  given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "application/json").body(hook).post("/api/hook");
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testUpdateView(TestInfo info) throws InterruptedException {
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
+      uploadRun(runWithValue(42, schema), test.name);
+      DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(event);
+
+      ViewComponent vc = new ViewComponent();
+      vc.headerName = "Foobar";
+      vc.labels = JsonNodeFactory.instance.arrayNode().add("value");
+      test.defaultView.components.add(vc);
+      updateView(test.id, test.defaultView);
+
+      eventually(() -> {
+         em.clear();
+         List<JsonNode> list = em.createNativeQuery("SELECT value FROM dataset_view WHERE dataset_id = ?1 AND view_id = ?2")
+               .setParameter(1, event.dataset.id).setParameter(2, test.defaultView.id)
+               .unwrap(NativeQuery.class).addScalar("value", JsonNodeBinaryType.INSTANCE)
+               .getResultList();
+         return !list.isEmpty() && !list.get(0).isEmpty();
+      });
+   }
+
+   private void updateView(int testId, View view) {
+      Integer viewId = jsonRequest().body(view).post("/api/test/" + testId + "/view")
+            .then().statusCode(200).extract().body().as(Integer.class);
+      if (view.id != null) {
+         assertEquals(view.id, viewId);
+      }
    }
 }

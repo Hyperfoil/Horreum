@@ -51,6 +51,12 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 name,
                 folder,
                 description,
+                defaultView: {
+                    id: -1,
+                    name: "Default",
+                    components: [],
+                },
+                views: [], // automatically insert default view in backend
                 compareUrl: compareUrl || undefined, // when empty set to undefined
                 notificationsEnabled,
                 fingerprintLabels: [],

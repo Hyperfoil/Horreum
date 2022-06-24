@@ -10,11 +10,8 @@ import {
     DataListCell,
     Form,
     FormGroup,
-    Tab,
-    Tabs,
     TextInput,
 } from "@patternfly/react-core"
-import { NavLink } from "react-router-dom"
 import { useHistory } from "react-router"
 
 import { useTester } from "../../auth"
@@ -24,7 +21,8 @@ import OptionalFunction from "../../components/OptionalFunction"
 import { TestDispatch } from "./reducers"
 import { View, ViewComponent } from "../../api"
 import { TabFunctionsRef } from "../../components/SavedTabs"
-import { updateView } from "./actions"
+import SplitForm from "../../components/SplitForm"
+import { deleteView, updateView } from "./actions"
 
 function swap(array: any[], i1: number, i2: number) {
     const temp = array[i1]
@@ -96,30 +94,54 @@ const ViewComponentForm = ({ c, onChange, isTester }: ViewComponentFormProps) =>
 
 type ViewsProps = {
     testId: number
-    testView: View
+    defaultView: View
+    views: View[]
     testOwner?: string
     funcsRef: TabFunctionsRef
     onModified(modified: boolean): void
 }
 
-function deepCopy(view: View): View {
-    const str = JSON.stringify(view, (_, val) => (typeof val === "function" ? val + "" : val))
-    return JSON.parse(str) as View
+type ViewExtended = View & { modified?: boolean }
+
+function deepCopy(views: View[]): ViewExtended[] {
+    const str = JSON.stringify(views, (_, val) => (typeof val === "function" ? val + "" : val))
+    return JSON.parse(str) as ViewExtended[]
 }
 
-export default function Views({ testId, testView, testOwner, funcsRef, onModified }: ViewsProps) {
+export default function Views({ testId, defaultView, testOwner, funcsRef, onModified, ...props }: ViewsProps) {
     const isTester = useTester(testOwner)
-    const [view, setView] = useState(deepCopy(testView))
+    const [views, setViews] = useState<ViewExtended[]>([])
+    const [deleted, setDeleted] = useState<number[]>([])
+    const [selectedView, setSelectedView] = useState<ViewExtended>()
 
     useEffect(() => {
         // Perform a deep copy of the view object to prevent modifying store
-        setView(deepCopy(testView))
-    }, [testView])
+        const copy = deepCopy(props.views)
+        setViews(copy)
+        if (copy.length > 0) {
+            setSelectedView(copy.find(v => v.id === defaultView.id) || copy[0])
+        }
+    }, [props.views])
 
     const dispatch = useDispatch<TestDispatch>()
     funcsRef.current = {
-        save: () => dispatch(updateView(testId, view)),
-        reset: () => setView(deepCopy(testView)),
+        save: () =>
+            Promise.all([
+                ...views.filter(v => v.modified).map(view => dispatch(updateView(testId, view))),
+                ...deleted.map(id => dispatch(deleteView(testId, id))),
+            ]).then(() => {
+                setDeleted([])
+                setViews(
+                    views.map(v => {
+                        delete v.modified
+                        return v
+                    })
+                )
+            }),
+        reset: () => {
+            setDeleted([])
+            setViews(deepCopy(props.views))
+        },
     }
     const history = useHistory()
     useEffect(() => {
@@ -131,20 +153,38 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
             }
         }
     }, [])
-
+    function update(update: Partial<View>) {
+        if (!selectedView) {
+            throw "Should not happen"
+        }
+        const newView = { ...selectedView, ...update, modified: true }
+        setSelectedView(newView)
+        setViews(views.map(v => (v.id === selectedView.id ? newView : v)))
+        onModified(true)
+    }
     return (
-        <>
-            {/* TODO: display more than default view */}
-            {/* TODO: make tabs secondary, but boxed? */}
-            <Tabs>
-                <Tab key="__default" eventKey={0} title="Default" />
-                <Tab key="__new" eventKey={1} title="+" />
-            </Tabs>
-            <div style={{ width: "100%", textAlign: "right" }}>
-                {isTester && (
+        <SplitForm<ViewExtended>
+            itemType="view"
+            newItem={id => ({ id, name: "", components: [] })}
+            canAddItem={isTester}
+            addItemText="Add view..."
+            noItemTitle="No view defined (should not happen)"
+            noItemText="This test does not have any view defined."
+            canDelete={view => isTester && view.id !== defaultView.id}
+            onDelete={view => {
+                setDeleted([...deleted, view.id])
+                setSelectedView(views[0])
+            }}
+            items={views}
+            onChange={setViews}
+            selected={selectedView}
+            onSelected={setSelectedView}
+            loading={false}
+            actions={
+                isTester && selectedView ? (
                     <Button
                         onClick={() => {
-                            const components = view.components
+                            const components = selectedView.components
                             components.push({
                                 id: -1,
                                 headerName: "",
@@ -152,20 +192,26 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                                 render: "",
                                 headerOrder: components.length,
                             })
-                            setView({ ...view, components })
-                            onModified(true)
+                            update({ components })
                         }}
                     >
                         Add component
                     </Button>
-                )}
-                <NavLink className="pf-c-button pf-m-secondary" to={"/run/list/" + testId}>
-                    Go to runs
-                </NavLink>
-            </div>
-            {(!view.components || view.components.length === 0) && "The view is not defined"}
+                ) : (
+                    []
+                )
+            }
+        >
+            <FormGroup label="View name" fieldId="name">
+                <TextInput
+                    value={selectedView?.name}
+                    isReadOnly={selectedView?.id === defaultView.id}
+                    onChange={name => update({ name })}
+                />
+            </FormGroup>
+            {(!selectedView?.components || selectedView?.components.length === 0) && "The view has no components."}
             <DataList aria-label="List of variables">
-                {view.components.map((c, i) => (
+                {selectedView?.components.map((c, i) => (
                     <DataListItem key={i} aria-labelledby="">
                         <DataListItemRow>
                             <DataListItemCells
@@ -174,8 +220,7 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                                         <ViewComponentForm
                                             c={c}
                                             onChange={() => {
-                                                setView({ ...view })
-                                                onModified(true)
+                                                update({ ...selectedView })
                                             }}
                                             isTester={isTester}
                                         />
@@ -198,11 +243,10 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                                         variant="control"
                                         isDisabled={i === 0}
                                         onClick={() => {
-                                            swap(view.components, i - 1, i)
+                                            swap(selectedView.components, i - 1, i)
                                             c.headerOrder = i - 1
-                                            view.components[i].headerOrder = i
-                                            setView({ ...view })
-                                            onModified(true)
+                                            selectedView.components[i].headerOrder = i
+                                            update({ ...selectedView })
                                         }}
                                     >
                                         Move up
@@ -211,10 +255,9 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                                         style={{ width: "51%" }}
                                         variant="primary"
                                         onClick={() => {
-                                            view.components.splice(i, 1)
-                                            view.components.forEach((c, i) => (c.headerOrder = i))
-                                            setView({ ...view })
-                                            onModified(true)
+                                            selectedView.components.splice(i, 1)
+                                            selectedView.components.forEach((c, i) => (c.headerOrder = i))
+                                            update({ ...selectedView })
                                         }}
                                     >
                                         Delete
@@ -222,13 +265,12 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                                     <Button
                                         style={{ width: "51%" }}
                                         variant="control"
-                                        isDisabled={i === view.components.length - 1}
+                                        isDisabled={i === selectedView.components.length - 1}
                                         onClick={() => {
-                                            swap(view.components, i + 1, i)
+                                            swap(selectedView.components, i + 1, i)
                                             c.headerOrder = i + 1
-                                            view.components[i].headerOrder = i
-                                            setView({ ...view })
-                                            onModified(true)
+                                            selectedView.components[i].headerOrder = i
+                                            update({ ...selectedView })
                                         }}
                                     >
                                         Move down
@@ -239,6 +281,6 @@ export default function Views({ testId, testView, testOwner, funcsRef, onModifie
                     </DataListItem>
                 ))}
             </DataList>
-        </>
+        </SplitForm>
     )
 }

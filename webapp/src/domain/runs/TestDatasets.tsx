@@ -10,6 +10,8 @@ import {
     CardFooter,
     ExpandableSection,
     ExpandableSectionToggle,
+    Flex,
+    FlexItem,
     PageSection,
     Pagination,
     Title,
@@ -46,6 +48,7 @@ import SchemaLink from "../schemas/SchemaLink"
 import { NoSchemaInDataset } from "./NoSchema"
 import ButtonLink from "../../components/ButtonLink"
 import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
+import ViewSelect from "../../components/ViewSelect"
 
 type C = CellProps<DatasetSummary> &
     UseTableOptions<DatasetSummary> &
@@ -130,6 +133,7 @@ export default function TestDatasets() {
     const [perPage, setPerPage] = useState(20)
     const [sort, setSort] = useState("start")
     const [direction, setDirection] = useState("Descending")
+    const [viewId, setViewId] = useState<number>()
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
 
     const dispatch = useDispatch<TestDispatch>()
@@ -149,7 +153,8 @@ export default function TestDatasets() {
             fingerprintToString(filter),
             pagination.perPage,
             pagination.page,
-            pagination.sort
+            pagination.sort,
+            viewId
         )
             .then(setDatasets, error =>
                 dispatchError(dispatch, error, "FETCH_DATASETS", "Failed to fetch datasets in test " + testId).catch(
@@ -157,13 +162,10 @@ export default function TestDatasets() {
                 )
             )
             .finally(() => setLoading(false))
-    }, [dispatch, testId, filter, pagination, teams])
+    }, [dispatch, testId, filter, pagination, teams, viewId])
     useEffect(() => {
         document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
-    useEffect(() => {
-        console.log(filter)
-    }, [filter])
     const columns = useMemo(() => {
         const allColumns = [...staticColumns]
         if (comparedDatasets) {
@@ -193,7 +195,8 @@ export default function TestDatasets() {
                 },
             })
         }
-        const components = test?.defaultView?.components || []
+        const view = test?.views.find(v => v.id === viewId)
+        const components = view?.components || test?.defaultView?.components || []
         components.forEach(vc => {
             allColumns.push({
                 Header: vc.headerName,
@@ -206,7 +209,7 @@ export default function TestDatasets() {
             })
         })
         return allColumns
-    }, [test, token, comparedDatasets])
+    }, [test, token, comparedDatasets, viewId])
     const labelsSource = useCallback(() => Api.testServiceListLabelValues(testId, true, false), [testId, teams, token])
     return (
         <PageSection>
@@ -214,7 +217,7 @@ export default function TestDatasets() {
                 <CardHeader>
                     <Toolbar
                         className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
-                        style={{ width: "70%", display: "flex" }}
+                        style={{ width: "100%", display: "flex" }}
                     >
                         <ToolbarGroup style={{ flexGrow: 100 }}>
                             <ToolbarItem>
@@ -250,15 +253,28 @@ export default function TestDatasets() {
                                     {filterExpanded ? "Hide filters" : "Show filters"}
                                 </ExpandableSectionToggle>
                             </ToolbarItem>
+                            <ToolbarItem style={{ flexGrow: 100 }}></ToolbarItem>
+                            <ToolbarItem>
+                                <Flex>
+                                    <FlexItem>View:</FlexItem>
+                                    <FlexItem>
+                                        <ViewSelect
+                                            views={test?.views || []}
+                                            viewId={viewId || test?.defaultView.id}
+                                            onChange={setViewId}
+                                        />
+                                    </FlexItem>
+                                </Flex>
+                            </ToolbarItem>
                         </ToolbarGroup>
+                        <Pagination
+                            itemCount={datasets?.total}
+                            perPage={perPage}
+                            page={page}
+                            onSetPage={(e, p) => setPage(p)}
+                            onPerPageSelect={(e, pp) => setPerPage(pp)}
+                        />
                     </Toolbar>
-                    <Pagination
-                        itemCount={datasets?.total}
-                        perPage={perPage}
-                        page={page}
-                        onSetPage={(e, p) => setPage(p)}
-                        onPerPageSelect={(e, pp) => setPerPage(pp)}
-                    />
                 </CardHeader>
                 <CardHeader>
                     <ExpandableSection

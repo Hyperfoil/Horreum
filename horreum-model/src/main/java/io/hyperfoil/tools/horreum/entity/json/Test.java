@@ -25,6 +25,7 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.Type;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -71,8 +72,14 @@ public class Test extends PanacheEntityBase {
    @Column(name = "fingerprint_filter")
    public String fingerprintFilter;
 
+   @NotNull
    @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE }, orphanRemoval = true)
    public View defaultView;
+
+   @NotNull
+   @OneToMany(fetch = FetchType.EAGER, cascade = { CascadeType.REMOVE, CascadeType.MERGE }, orphanRemoval = true, mappedBy = "test")
+   @Fetch(FetchMode.SELECT)
+   public Collection<View> views;
 
    public String compareUrl;
 
@@ -90,12 +97,6 @@ public class Test extends PanacheEntityBase {
          defaultView.test = this;
          defaultView.ensureLinked();
       }
-   }
-
-   public void copyIds(Test other) {
-      this.id = other.id;
-      if (defaultView != null && other.defaultView != null) {
-         defaultView.copyIds(other.defaultView);
-      }
+      if (views != null) views.forEach(v -> v.test = this);
    }
 }

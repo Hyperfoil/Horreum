@@ -31,7 +31,7 @@ type SplitFormProps<I extends Item> = {
     addItemText: string
     noItemTitle: string
     noItemText: string
-    canDelete: boolean
+    canDelete: boolean | ((item: I) => boolean)
     onDelete(item: I): void
     children: ReactNode
     items: I[]
@@ -73,6 +73,8 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
         : Array.isArray(props.actions)
         ? (props.actions as ReactNode[])
         : [props.actions as ReactNode]
+    const canDelete =
+        typeof props.canDelete === "boolean" ? props.canDelete : props.selected && props.canDelete(props.selected)
     return (
         <Split hasGutter>
             <SplitItem style={{ minWidth: "20vw", maxWidth: "20vw", overflow: "clip" }}>
@@ -101,7 +103,7 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
                     {actions.map((action, i) => (
                         <FlexItem key={i}>{action}</FlexItem>
                     ))}
-                    {props.canDelete && (
+                    {canDelete && (
                         <FlexItem>
                             <Button variant="danger" onClick={() => setDeleteOpen(true)}>
                                 Delete

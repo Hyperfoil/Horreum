@@ -41,7 +41,8 @@ public interface DatasetService {
                           @QueryParam("limit") Integer limit,
                           @QueryParam("page") Integer page,
                           @QueryParam("sort") String sort,
-                          @QueryParam("direction") String direction);
+                          @QueryParam("direction") String direction,
+                          @QueryParam("viewId") Integer viewId);
 
    @Path("{id}/query")
    @GET

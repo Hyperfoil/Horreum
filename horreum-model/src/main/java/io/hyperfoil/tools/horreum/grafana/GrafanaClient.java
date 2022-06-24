@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.grafana;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -144,6 +145,11 @@ public interface GrafanaClient {
       public boolean basicAuth = false;
       public boolean withCredentials = false;
       public boolean isDefault = true;
-      public Map<String, Object> jsonData = Map.of("oauthPassThru", true, "readOnly", false);
+      public Map<String, Object> jsonData = new HashMap<>();
+
+      public Datasource() {
+         jsonData.put("oauthPassThru", true);
+         jsonData.put("readOnly", false);
+      }
    }
 }

@@ -40,7 +40,7 @@ public class View extends PanacheEntityBase {
    public Test test;
 
    @NotNull
-   @OneToMany(mappedBy = "view", orphanRemoval = true, cascade = CascadeType.ALL)
+   @OneToMany(fetch = FetchType.EAGER, mappedBy = "view", orphanRemoval = true, cascade = CascadeType.ALL)
    @OrderBy("headerorder ASC")
    public List<ViewComponent> components;
 
@@ -51,20 +51,6 @@ public class View extends PanacheEntityBase {
                c.id = null;
             }
             c.view = this;
-         }
-      }
-   }
-
-   public void copyIds(View other) {
-      this.id = other.id;
-      if (components != null && other.components != null) {
-         for (ViewComponent c : components) {
-            other.components.stream()
-                  .filter(o -> o.headerName.equals(c.headerName))
-                  .findFirst().ifPresent(o -> {
-                     c.id = o.id;
-                     c.view = o.view;
-                  });
          }
       }
    }

@@ -28,7 +28,6 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.DatasetService;
@@ -142,24 +141,32 @@ public class DatasetServiceImpl implements DatasetService {
    @PermitAll
    @WithRoles
    @Override
-   public DatasetService.DatasetList listByTest(int testId, String filter, Integer limit, Integer page, String sort, String direction) {
+   public DatasetService.DatasetList listByTest(int testId, String filter, Integer limit, Integer page, String sort, String direction, Integer viewId) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
             .append(SCHEMAS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id")
             .append(") ");
       JsonNode jsonFilter = null;
       if (filter != null && !filter.isBlank()) {
          sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id) ");
-         sql.append(DATASET_SUMMARY_SELECT).append(" AND dv.view_id = defaultview_id");
+         sql.append(DATASET_SUMMARY_SELECT);
+         addViewIdCondition(sql, viewId);
          sql.append(" JOIN all_labels ON all_labels.dataset_id = ds.id WHERE testid = ?1 AND all_labels.values @> ?2");
          jsonFilter = Util.parseFingerprint(filter);
       } else {
-         sql.append(DATASET_SUMMARY_SELECT).append(" AND dv.view_id = defaultview_id").append(" WHERE testid = ?1");
+         sql.append(DATASET_SUMMARY_SELECT);
+         addViewIdCondition(sql, viewId);
+         sql.append(" WHERE testid = ?1 AND ?2 IS NULL");
       }
       addOrderAndPaging(limit, page, sort, direction, sql);
       Query query = em.createNativeQuery(sql.toString())
             .setParameter(1, testId);
       if (jsonFilter != null) {
          query.unwrap(NativeQuery.class).setParameter(2, jsonFilter, JsonNodeBinaryType.INSTANCE);
+      } else {
+         query.setParameter(2, null);
+      }
+      if (viewId != null) {
+         query.setParameter(3, viewId);
       }
       markAsSummaryList(query);
       DatasetService.DatasetList list = new DatasetService.DatasetList();
@@ -167,6 +174,14 @@ public class DatasetServiceImpl implements DatasetService {
       list.datasets = query.getResultList();
       list.total = DataSet.count("testid = ?1", testId);
       return list;
+   }
+
+   private void addViewIdCondition(StringBuilder sql, Integer viewId) {
+      if (viewId == null) {
+         sql.append(" AND dv.view_id = defaultview_id");
+      } else {
+         sql.append(" AND dv.view_id = ?3");
+      }
    }
 
    private void markAsSummaryList(Query query) {

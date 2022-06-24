@@ -84,7 +84,11 @@ public interface TestService {
 
    @POST
    @Path("{testId}/view")
-   void updateView(@PathParam("testId") int testId, @RequestBody(required = true) View view);
+   int updateView(@PathParam("testId") int testId, @RequestBody(required = true) View view);
+
+   @DELETE
+   @Path("{testId}/view/{viewId}")
+   void deleteView(@PathParam("testId") int testId, @PathParam("viewId") int viewId);
 
    @POST
    @Consumes // any

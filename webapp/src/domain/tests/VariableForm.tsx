@@ -240,7 +240,6 @@ export default function VariableForm(props: VariableFormProps) {
                                 <LogSlider
                                     value={changeDetection.config[comp.name] * ((comp.properties as any).scale || 1)}
                                     onChange={value => {
-                                        console.log(comp.name)
                                         const scale = (comp.properties as any).scale
                                         const copy = { ...changeDetection }
                                         copy.config[comp.name] = scale ? value / scale : value

@@ -7,6 +7,7 @@ import {
     DeleteAction,
     UpdateTestWatchAction,
     UpdateViewAction,
+    DeleteViewAction,
     UpdateHookAction,
     UpdateTokensAction,
     RevokeTokenAction,
@@ -60,7 +61,7 @@ export function sendTest(test: Test) {
     return (dispatch: Dispatch<LoadedTestAction | AddAlertAction>) => {
         return Api.testServiceAdd(test).then(
             response => {
-                dispatch({ type: actionTypes.LOADED_TEST, test })
+                dispatch({ type: actionTypes.LOADED_TEST, test: response })
                 return response
             },
             error =>
@@ -90,21 +91,34 @@ export function updateView(testId: number, view: View) {
             }
         }
         return Api.testServiceUpdateView(testId, view).then(
-            response => {
+            viewId => {
                 dispatch({
                     type: actionTypes.UPDATE_VIEW,
                     testId,
-                    view,
+                    view: {
+                        ...view,
+                        id: viewId,
+                    },
                 })
-                return response
+                return viewId
             },
-            error =>
-                dispatchError(
-                    dispatch,
-                    error,
-                    "VIEW_UPDATE",
-                    "View update failed. It is possible that some schema extractors used in this view do not use valid JSON paths."
-                )
+            error => dispatchError(dispatch, error, "VIEW_UPDATE", "View update failed.")
+        )
+    }
+}
+
+export function deleteView(testId: number, viewId: number) {
+    return (dispatch: Dispatch<DeleteViewAction | AddAlertAction>) => {
+        return Api.testServiceDeleteView(testId, viewId).then(
+            _ => {
+                dispatch({
+                    type: actionTypes.DELETE_VIEW,
+                    testId,
+                    viewId,
+                })
+                return viewId
+            },
+            error => dispatchError(dispatch, error, "VIEW_DELETE", "View update failed.")
         )
     }
 }

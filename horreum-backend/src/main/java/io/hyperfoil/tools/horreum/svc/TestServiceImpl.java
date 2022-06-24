@@ -5,6 +5,7 @@ import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.entity.json.*;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -33,6 +34,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -104,12 +106,6 @@ public class TestServiceImpl implements TestService {
       } else if (!identity.getRoles().contains(test.owner)) {
          throw ServiceException.forbidden("You are not an owner of test " + id);
       }
-      test.defaultView = null;
-      em.merge(test);
-      View.find("test_id", id).stream().forEach(view -> {
-         ViewComponent.delete("view_id", ((View) view).id);
-         view.delete();
-      });
       test.delete();
       em.createNativeQuery(TRASH_RUNS).setParameter(1, test.id).executeUpdate();
       em.createNativeQuery("DELETE FROM transformationlog WHERE testid = ?1").setParameter(1, test.id);
@@ -202,25 +198,29 @@ public class TestServiceImpl implements TestService {
          if (!identity.hasRole(existing.owner)) {
             throw ServiceException.forbidden("This user does not have the " + existing.owner + " role!");
          }
-         // We're not updating view using this method
-         if (test.defaultView == null) {
-            test.defaultView = existing.defaultView;
-         }
+         // We're not updating views using this method
+         test.defaultView = existing.defaultView;
+         test.views = existing.views;
          test.tokens = existing.tokens;
-         test.copyIds(existing);
-
          em.merge(test);
       } else {
+         if (test.defaultView == null) {
+            test.defaultView = new View();
+         }
+         test.defaultView.id = null;
+         test.defaultView.test = test;
+         test.defaultView.name = "Default";
+         if (test.defaultView.components == null) {
+            test.defaultView.components = Collections.emptyList();
+         }
+         // We need to persist the test before view in order for RLS to work
          em.persist(test);
-         if (test.defaultView != null) {
-            em.persist(test.defaultView);
+         em.persist(test.defaultView);
+         if (test.views == null) {
+            test.views = Collections.singleton(test.defaultView);
          } else {
-            View view = new View();
-            view.name = "default";
-            view.components = Collections.emptyList();
-            view.test = test;
-            em.persist(view);
-            test.defaultView = view;
+            test.views.removeIf(v -> "Default".equalsIgnoreCase(v.name));
+            test.views.add(test.defaultView);
          }
          try {
             em.flush();
@@ -401,7 +401,7 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @WithRoles
    @Transactional
-   public void updateView(int testId, View view) {
+   public int updateView(int testId, View view) {
       if (testId <= 0) {
          throw ServiceException.badRequest("Missing test id");
       }
@@ -409,20 +409,41 @@ public class TestServiceImpl implements TestService {
          Test test = getTestForUpdate(testId);
          view.ensureLinked();
          view.test = test;
-         if (test.defaultView != null) {
-            view.copyIds(test.defaultView);
-         }
-         if (view.id == null) {
-            em.persist(view);
+         if (view.id == null || view.id < 0) {
+            view.id = null;
+            view.persist();
          } else {
-            test.defaultView = em.merge(view);
+            view = em.merge(view);
+            int viewId = view.id;
+            test.views.removeIf(v -> v.id == viewId);
+         }
+         test.views.add(view);
+         if ("Default".equalsIgnoreCase(view.name)) {
+            test.defaultView = view;
          }
          test.persist();
          em.flush();
       } catch (PersistenceException e) {
          log.error("Failed to persist updated view", e);
-         throw ServiceException.badRequest("Failed to persist the view. It is possible that some schema extractors used in this view do not use valid JSON paths.");
+         throw ServiceException.badRequest("Failed to persist the view.");
       }
+      return view.id;
+   }
+
+   @Override
+   @WithRoles
+   @Transactional
+   public void deleteView(int testId, int viewId) {
+      Test test = getTestForUpdate(testId);
+      if (test.defaultView.id == viewId) {
+         throw ServiceException.badRequest("Cannot remove default view.");
+      }
+      if (!test.views.removeIf(v -> v.id == viewId)) {
+         throw ServiceException.badRequest("Test does not contain this view!");
+      }
+      // the orphan removal doesn't work for some reason, we need to remove if manually
+      View.deleteById(viewId);
+      test.persist();
    }
 
    @Override

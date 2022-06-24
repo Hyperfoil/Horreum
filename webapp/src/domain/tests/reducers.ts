@@ -59,6 +59,12 @@ export interface UpdateViewAction {
     view: View
 }
 
+export interface DeleteViewAction {
+    type: typeof actionTypes.DELETE_VIEW
+    testId: number
+    viewId: number
+}
+
 export interface UpdateHookAction {
     type: typeof actionTypes.UPDATE_HOOK
     testId: number
@@ -117,6 +123,7 @@ export type TestAction =
     | UpdateAccessAction
     | UpdateTestWatchAction
     | UpdateViewAction
+    | DeleteViewAction
     | UpdateHookAction
     | UpdateTokensAction
     | RevokeTokenAction
@@ -172,7 +179,23 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             {
                 const test = state.byId?.get(action.testId)
                 if (test) {
-                    state.byId = state.byId?.set(action.testId, { ...test, defaultView: action.view })
+                    let defaultView = test.defaultView
+                    if (defaultView.id === action.view.id) {
+                        defaultView = action.view
+                    }
+                    state.byId = state.byId?.set(action.testId, { ...test, defaultView })
+                }
+            }
+            break
+        case actionTypes.DELETE_VIEW:
+            {
+                const test = state.byId?.get(action.testId)
+                if (test) {
+                    // just ignore deleting default view, that's not legal
+                    state.byId = state.byId?.set(action.testId, {
+                        ...test,
+                        views: test.views.filter(v => v.id !== action.viewId),
+                    })
                 }
             }
             break

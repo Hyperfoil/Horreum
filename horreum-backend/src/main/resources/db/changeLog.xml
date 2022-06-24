@@ -3505,4 +3505,20 @@
             ) AS extra WHERE dataset_view.dataset_id = extra.dataset_id AND dataset_view.view_id = extra.view_id;
         </sql>
     </changeSet>
+
+    <changeSet id="85" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION dsv_after_vc_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM dataset_view WHERE view_id = OLD.view_id OR view_id = NEW.view_id;
+                INSERT INTO view_recalc_queue(dataset_id, view_id, roles)
+                    SELECT dataset.id, NEW.view_id, current_setting('horreum.userroles', true) FROM dataset
+                    WHERE testid = (
+                        SELECT test_id FROM view WHERE view.id = NEW.view_id
+                    ) ON CONFLICT DO NOTHING;
+            RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+    </changeSet>
 </databaseChangeLog>
