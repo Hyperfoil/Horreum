@@ -167,6 +167,7 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
             envVariables.put("HORREUM_HORREUM_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(HORREUM_HTTP_PORT));
             envVariables.put("HORREUM_QUARKUS_OIDC_AUTH_SERVER_URL", KEYCLOAK_URL_ROOT + "/realms/horreum");
             envVariables.put("HORREUM_QUARKUS_DATASOURCE_JDBC_URL", "jdbc:postgresql://" + CONTAINER_HOST_IP + ":" + getOffsetPort(POSTGRES_PORT) + "/horreum");
+            envVariables.put("QUARKUS_DATASOURCE_MIGRATION_PASSWORD", QUARKUS_DATASOURCE_PASSWORD);
             envVariables.put("CONTAINER_JAVA_OPTIONS", CONTAINER_JAVA_OPTIONS);
 
             envVariables.put("GRAFANA_GF_SERVER_ROOT_URL", CONTAINER_HOST_HTTP_ROOT + getOffsetPort(GRAFANA_HTTP_PORT ) + "/");
