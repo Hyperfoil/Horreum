@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useDispatch } from "react-redux"
+import { useHistory } from "react-router-dom"
 import jsonpath from "jsonpath"
 
 import { RunsDispatch } from "./reducers"
@@ -36,19 +37,8 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
     const [pathTypeOpen, setPathTypeOpen] = useState(false)
     const [pathSuggestions, setPathSuggestions] = useState<string[]>([])
 
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search)
-        const query = urlParams.get("query")
-        if (query) {
-            setPathQuery(query)
-            setPathType("jsonb_path_query_first")
-            // we won't run the query automatically since there would be a race between loading
-            // the data and executing the query and we would have to deal with ordering
-        }
-    }, [])
-
-    const runPathQuery = () => {
-        execQuery(props.originalData, pathType, pathQuery, props.onRemoteQuery).then(
+    function runPathQuery(type?: string, query?: string) {
+        execQuery(props.originalData, type || pathType, query || pathQuery, props.onRemoteQuery).then(
             ([result, valid]) => {
                 props.onDataUpdate(result)
                 setPathInvalid(!valid)
@@ -58,6 +48,35 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
             }
         )
     }
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search)
+        const query = urlParams.get("query")
+        const type = urlParams.get("type")
+        if (type) {
+            setPathType(type)
+        }
+        if (query) {
+            setPathQuery(query)
+            if (props.originalData) {
+                runPathQuery(type || undefined, query)
+            }
+        }
+    }, [props.originalData])
+
+    const history = useHistory()
+    function onQueryUpdate(type: string, query: string) {
+        const loc = window.location
+        const urlParams = new URLSearchParams(window.location.search)
+        urlParams.set("type", type)
+        if (query) {
+            urlParams.set("query", query)
+        } else {
+            urlParams.delete("query")
+        }
+        history.replace(`${loc.pathname}?${urlParams.toString()}${loc.hash}`)
+    }
+
     const inputProps: InputProps<string> = {
         placeholder: "Enter selection path, e.g. $.foo[?(@.bar > 42)]",
         value: pathQuery,
@@ -66,6 +85,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
             const value = (v as any).newValue
             setPathInvalid(false)
             setPathQuery(value)
+            onQueryUpdate(pathType, value)
         },
         onKeyDown: evt => {
             if (evt.key === " " && evt.ctrlKey) {
@@ -103,6 +123,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
                             onSelect={(e?: React.SyntheticEvent<HTMLDivElement>) => {
                                 if (e) {
                                     setPathType(e.currentTarget.id)
+                                    onQueryUpdate(e.currentTarget.id, pathQuery)
                                 }
                                 setPathTypeOpen(false)
                             }}
@@ -147,13 +168,15 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
                                 />
                             )}
                         />
-                        <Button variant="control" onClick={runPathQuery}>
+                        <Button variant="control" onClick={() => runPathQuery()}>
                             Find
                         </Button>
                         <Button
                             variant="control"
                             onClick={() => {
                                 setPathQuery("")
+                                setPathInvalid(false)
+                                onQueryUpdate(pathType, "")
                                 props.onDataUpdate(toString(props.originalData))
                             }}
                         >
@@ -406,7 +429,7 @@ function SearchQueryHelp({ pathType }: SearchQueryHelpProps) {
                 </div>
             }
         >
-            <Button variant={ButtonVariant.control} aria-label="show jsonpath help">
+            <Button variant={ButtonVariant.control} aria-label="show jsonpath help" style={{ maxHeight: "36px" }}>
                 <HelpIcon />
             </Button>
         </Popover>
