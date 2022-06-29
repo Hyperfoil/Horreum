@@ -30,6 +30,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-oidc-server</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.hyperfoil.tools</groupId>
             <artifactId>horreum-client</artifactId>
         </dependency>
@@ -149,6 +154,12 @@
             <directory>../horreum-backend/src/main/resources</directory>
             <includes>
                 <include>application.properties</include>
+            </includes>
+        </testResource>
+        <testResource>
+            <directory>../horreum-backend/src/test/resources</directory>
+            <includes>
+                <include>keystore.jks</include>
             </includes>
         </testResource>
     </testResources>

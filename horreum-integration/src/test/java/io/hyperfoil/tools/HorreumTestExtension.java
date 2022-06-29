@@ -35,16 +35,14 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import io.restassured.RestAssured;
+
+import io.smallrye.jwt.build.Jwt;
 
 public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback, ExtensionContext.Store.CloseableResource  {
 
@@ -81,6 +79,9 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
 
     protected static final ResteasyClientBuilder clientBuilder;
 
+    public static final String[] TESTER_ROLES = { "foo-team", "foo-tester", "tester", "viewer" };
+    public static String TESTER_TOKEN;
+
     static {
         configProperties = new Properties();
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -98,6 +99,7 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
                 horreumProps.load(applicationStream);
                 configProperties.put("quarkus.datasource.password", horreumProps.getProperty("quarkus.datasource.password"));
                 configProperties.put("horreum.grafana.admin.password", horreumProps.getProperty("horreum.grafana.admin.password"));
+                System.setProperty("smallrye.jwt.sign.key.location", "/privateKey.jwk");
             } else {
                 throw new RuntimeException("Could not load application properties");
             }
@@ -128,6 +130,8 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
                   .clientSecret(null)
                   .resteasyClient(clientBuilder.build())
                   .build();
+
+            TESTER_TOKEN = getAccessToken("alice", TESTER_ROLES);
 
         } catch (IOException ioException) {
             throw new RuntimeException("Failed to load configuration properties");
@@ -375,5 +379,15 @@ public class HorreumTestExtension implements BeforeAllCallback, AfterAllCallback
     public static RequestSpecification bareRequest(){
         String access_token = keycloak.tokenManager().getAccessToken().getToken();
         return RestAssured.given().auth().oauth2(access_token);
+    }
+
+    public static String getAccessToken(String userName, String... groups) {
+        return Jwt.preferredUserName(userName)
+                .groups(new HashSet<>(Arrays.asList(groups)))
+                .issuer(HORREUM_KEYCLOAK_BASE_URL + "/realms/horreum")
+                .audience("https://service.example.com")
+                .jws()
+                .keyId("1")
+                .sign();
     }
 }
