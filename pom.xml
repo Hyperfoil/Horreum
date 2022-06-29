@@ -64,6 +64,7 @@
         <!-- maven-compiler-plugin -->
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.source>11</maven.compiler.source>
+        <use.java11plus>true</use.java11plus>
 
         <version.sonatype.nexus>1.6.8</version.sonatype.nexus>
         <version.maven.source>3.0.1</version.maven.source>
@@ -75,7 +76,6 @@
         <commons.math3.version>3.6.1</commons.math3.version>
         <compiler-plugin.version>3.8.1</compiler-plugin.version>
         <graalvm.version>22.0.0.2</graalvm.version>
-        <maven.compiler.parameters>true</maven.compiler.parameters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.version>2.9.2.Final</quarkus.version>
@@ -222,6 +222,11 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.10.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${surefire-plugin.version}</version>
                 </plugin>
@@ -316,6 +321,29 @@
                                 </requireReleaseDeps>
                             </rules>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-maven-plugin</artifactId>
+                <version>1.21</version>
+                <configuration>
+                    <checkTestClasses>true</checkTestClasses>
+                    <signature>
+                        <groupId>org.codehaus.mojo.signature</groupId>
+                        <artifactId>java18</artifactId>
+                        <version>1.0</version>
+                    </signature>
+                    <skip>${use.java11plus}</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>animal-sniffer</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>

@@ -14,6 +14,7 @@
         <!-- Due to Jenkins plugin we will keep model, api and client on Java 8 -->
         <maven.compiler.target>8</maven.compiler.target>
         <maven.compiler.source>8</maven.compiler.source>
+        <use.java11plus>false</use.java11plus>
     </properties>
 
     <dependencies>

@@ -26,6 +26,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -143,7 +144,7 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
             String HORREUM_GRAFANA_ADMIN_PASSWORD = getProperty("horreum.grafana.admin.password");
 
             String horreumCommitId = System.getProperty("horreum.commit.id");
-            if (horreumCommitId == null || horreumCommitId.isBlank()) {
+            if (horreumCommitId == null || horreumCommitId.trim().isEmpty()) {
                 try (InputStream stream = HorreumTestExtension.class.getClassLoader().getResourceAsStream("buildinfo.properties")) {
                     if (stream == null) {
                         throw new IllegalStateException("Cannot determine Horreum commit ID this test should run against.");
@@ -225,22 +226,22 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
 
     private static void prepareDockerCompose() throws URISyntaxException, IOException {
         // this is where .env will be written
-        Path.of("target/docker-compose/horreum-backend").toFile().mkdirs();
-        Path.of("target/docker-compose/infra").toFile().mkdirs();
+        Paths.get("target/docker-compose/horreum-backend").toFile().mkdirs();
+        Paths.get("target/docker-compose/infra").toFile().mkdirs();
         URI root = HorreumTestExtension.class.getClassLoader().getResource("docker-compose").toURI();
         Path source;
         FileSystem fileSystem = null;
         try {
             if ("file".equals(root.getScheme())) {
-                source = Path.of(root);
+                source = Paths.get(root);
             } else {
                 fileSystem = FileSystems.newFileSystem(root, Collections.emptyMap());
                 source = fileSystem.getPath("docker-compose");
             }
-            Files.walkFileTree(source, Collections.emptySet(), 1, new SimpleFileVisitor<>() {
+            Files.walkFileTree(source, Collections.emptySet(), 1, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    Path destPath = Path.of("target/docker-compose/infra/", file.getFileName().toString());
+                    Path destPath = Paths.get("target/docker-compose/infra/", file.getFileName().toString());
                     Files.copy(file, destPath,
                           StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
                     if (file.toString().endsWith(".sh")) {
@@ -253,7 +254,7 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
             });
             //noinspection ConstantConditions
             Files.copy(HorreumTestExtension.class.getClassLoader().getResourceAsStream("testcontainers/horreum-compose.yml"),
-                  Path.of("target/docker-compose/horreum-compose.yml"), StandardCopyOption.REPLACE_EXISTING);
+                  Paths.get("target/docker-compose/horreum-compose.yml"), StandardCopyOption.REPLACE_EXISTING);
         } finally {
             if (fileSystem != null) {
                 fileSystem.close();
