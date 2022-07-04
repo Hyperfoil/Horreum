@@ -18,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
+import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 
@@ -165,6 +166,8 @@ public interface RunService {
       public JsonNode schema; // id -> uri mapping
       @Schema(required = true, implementation = int[].class)
       public ArrayNode datasets;
+      @Schema(implementation = ValidationError[].class)
+      public ArrayNode validationErrors;
    }
 
    class RunExtended extends Run {

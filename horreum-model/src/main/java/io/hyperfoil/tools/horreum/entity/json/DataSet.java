@@ -1,10 +1,13 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
 import java.time.Instant;
+import java.util.Collection;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -21,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.smallrye.common.constraint.NotNull;
 
@@ -35,6 +39,7 @@ public class DataSet extends OwnedEntityBase {
    public static final String EVENT_LABELS_UPDATED = "dataset/updatedlabels";
    public static final String EVENT_MISSING_VALUES = "dataset/missing_values";
    public static final String EVENT_DELETED = "dataset/deleted";
+   public static final String EVENT_VALIDATED = "dataset/validated";
 
    @Id
    @SequenceGenerator(
@@ -70,6 +75,10 @@ public class DataSet extends OwnedEntityBase {
 
    @NotNull
    public int ordinal;
+
+   @CollectionTable
+   @ElementCollection
+   public Collection<ValidationError> validationErrors;
 
    public static class EventNew {
       public final DataSet dataset;

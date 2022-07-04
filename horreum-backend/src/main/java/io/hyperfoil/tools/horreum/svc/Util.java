@@ -36,6 +36,9 @@ import org.eclipse.microprofile.context.ThreadContext;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
+import org.hibernate.ScrollMode;
+import org.hibernate.ScrollableResults;
+import org.hibernate.query.NativeQuery;
 import org.jboss.logging.Logger;
 import org.postgresql.util.PSQLException;
 
@@ -586,6 +589,12 @@ public class Util {
          log.errorf(t, "Query error in %s with params: %s", query, Arrays.asList(params));
          throw t;
       }
+   }
+
+   static ScrollableResults scroll(Query query) {
+      return query
+            .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
+            .scroll(ScrollMode.FORWARD_ONLY);
    }
 
    interface ExecutionExceptionConsumer<T> {

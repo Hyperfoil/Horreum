@@ -91,13 +91,18 @@ public class DatasetServiceImpl implements DatasetService {
             "ELSE '{}'::::jsonb END" +
          ") AS value FROM lvalues";
 
-   private static final String SCHEMAS_SELECT = "SELECT dataset_id, jsonb_agg(uri) as schemas FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id";
-   private static final String DATASET_SUMMARY_SELECT = "SELECT ds.id, ds.runid AS runId, ds.ordinal, " +
+   private static final String SCHEMAS_SELECT = "SELECT dataset_id, jsonb_object_agg(schema_id, uri) AS schemas FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id";
+   private static final String VALIDATION_SELECT = "validation AS (" +
+            "SELECT dataset_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM dataset_validationerrors GROUP BY dataset_id" +
+         ")";
+   private static final String DATASET_SUMMARY_SELECT = " SELECT ds.id, ds.runid AS runId, ds.ordinal, " +
          "ds.testid AS testId, test.name AS testname, ds.description, " +
          "EXTRACT(EPOCH FROM ds.start) * 1000 AS start, EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop, " +
-         "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas " +
+         "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas, " +
+         "COALESCE(validation.errors, '[]') AS validationErrors " +
          "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
          "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
+         "LEFT JOIN validation ON validation.dataset_id = ds.id " +
          "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id";
    private static final String LIST_SCHEMA_DATASETS =
          "WITH ids AS (" +
@@ -144,10 +149,10 @@ public class DatasetServiceImpl implements DatasetService {
    public DatasetService.DatasetList listByTest(int testId, String filter, Integer limit, Integer page, String sort, String direction, Integer viewId) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
             .append(SCHEMAS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id")
-            .append(") ");
+            .append("), ").append(VALIDATION_SELECT);
       JsonNode jsonFilter = null;
       if (filter != null && !filter.isBlank()) {
-         sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id) ");
+         sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id)");
          sql.append(DATASET_SUMMARY_SELECT);
          addViewIdCondition(sql, viewId);
          sql.append(" JOIN all_labels ON all_labels.dataset_id = ds.id WHERE testid = ?1 AND all_labels.values @> ?2");
@@ -199,6 +204,7 @@ public class DatasetServiceImpl implements DatasetService {
             .addScalar("access", IntegerType.INSTANCE)
             .addScalar("view", JsonNodeBinaryType.INSTANCE)
             .addScalar("schemas", JsonNodeBinaryType.INSTANCE)
+            .addScalar("validationErrors", JsonNodeBinaryType.INSTANCE)
             .setResultTransformer(DATASET_SUMMARY_TRANSFORMER);
    }
 
@@ -331,7 +337,7 @@ public class DatasetServiceImpl implements DatasetService {
    public DatasetSummary getSummary(int datasetId, int viewId) {
       try {
          Query query = em.createNativeQuery("WITH schema_agg AS (" + SCHEMAS_SELECT + " WHERE ds.dataset_id = ?1 GROUP BY ds.dataset_id) " +
-               DATASET_SUMMARY_SELECT + " AND dv.view_id = ?2 WHERE ds.id = ?1")
+               VALIDATION_SELECT + DATASET_SUMMARY_SELECT + " AND dv.view_id = ?2 WHERE ds.id = ?1")
                .setParameter(1, datasetId).setParameter(2, viewId);
          markAsSummaryList(query);
          return (DatasetSummary) query.getSingleResult();

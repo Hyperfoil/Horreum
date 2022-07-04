@@ -1,0 +1,9 @@
+{
+  "$id": "https://example.com/allow-none",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Do not allow any properties",
+  "type": "object",
+  "properties": {
+  },
+  "additionalProperties": false
+}

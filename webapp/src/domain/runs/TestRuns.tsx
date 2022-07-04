@@ -8,19 +8,19 @@ import {
     CardHeader,
     CardBody,
     CardFooter,
+    Checkbox,
     PageSection,
     Pagination,
     Title,
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
-    Checkbox,
 } from "@patternfly/react-core"
 import { ArrowRightIcon, TrashIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
-import { toEpochMillis, interleave, noop } from "../../utils"
+import { toEpochMillis, noop } from "../../utils"
 
 import { byTest } from "./actions"
 import * as selectors from "./selectors"
@@ -44,6 +44,7 @@ import { RunsDispatch } from "./reducers"
 import { RunSummary } from "../../api"
 import { NoSchemaInRun } from "./NoSchema"
 import { Description, ExecutionTime, Menu } from "./components"
+import SchemaList from "./SchemaList"
 
 type C = CellProps<RunSummary> &
     UseTableOptions<RunSummary> &
@@ -117,13 +118,11 @@ const tableColumns: RunColumn[] = [
             if (!value || Object.keys(value).length == 0) {
                 return <NoSchemaInRun />
             } else {
-                return interleave(
-                    Object.keys(value).map((key, i) => (
-                        <NavLink key={2 * i} to={`/schema/${key}`}>
-                            {value[key]}
-                        </NavLink>
-                    )),
-                    i => <br key={2 * i + 1} />
+                return (
+                    <SchemaList
+                        schemas={value as Record<number, string>}
+                        validationErrors={arg.row.original.validationErrors || []}
+                    />
                 )
             }
         },

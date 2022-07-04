@@ -2,23 +2,31 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.hyperfoil.tools.horreum.entity.json.Access;
+import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Extractor;
+import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
+import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.vertx.ConsumeEvent;
+import io.vertx.core.Vertx;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.Query;
+import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
 import java.io.ByteArrayInputStream;
@@ -27,16 +35,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.type.IntegerType;
@@ -45,9 +56,9 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.networknt.schema.JsonMetaSchema;
 import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.ValidationMessage;
 import com.networknt.schema.uri.URIFactory;
 import com.networknt.schema.uri.URIFetcher;
 import com.networknt.schema.uri.URLFactory;
@@ -94,6 +105,25 @@ public class SchemaServiceImpl implements SchemaService {
 
    @Inject
    SecurityIdentity identity;
+
+   @Inject
+   SqlServiceImpl sqlService;
+
+   @Inject
+   RunServiceImpl runService;
+
+   @Inject
+   Vertx vertx;
+
+   @Inject
+   TransactionManager tm;
+
+   @PostConstruct
+   void init() {
+      sqlService.registerListener("validate_run_data", params -> validateRunData(Integer.parseInt(params), null));
+      sqlService.registerListener("validate_dataset_data", params -> validateDatasetData(Integer.parseInt(params), null));
+      sqlService.registerListener("revalidate_all", this::revalidateAll);
+   }
 
    @WithToken
    @WithRoles
@@ -154,8 +184,16 @@ public class SchemaServiceImpl implements SchemaService {
    @SuppressWarnings({ "deprecation", "unchecked" })
    @WithRoles
    @Override
-   public List<SchemaDescriptor> descriptors() {
-      return em.createNativeQuery("SELECT id, name, uri FROM schema").unwrap(org.hibernate.query.Query.class)
+   public List<SchemaDescriptor> descriptors(List<Integer> ids) {
+      String sql = "SELECT id, name, uri FROM schema";
+      if (ids != null && !ids.isEmpty()) {
+         sql += " WHERE id IN ?1";
+      }
+      Query query = em.createNativeQuery(sql);
+      if (ids != null && !ids.isEmpty()) {
+         query.setParameter(1, ids);
+      }
+      return query.unwrap(org.hibernate.query.Query.class)
             .setResultTransformer(DESCRIPTOR_TRANSFORMER).getResultList();
    }
 
@@ -206,37 +244,126 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
-   @PermitAll
-   @WithRoles
-   @Override
-   public Collection<ValidationMessage> validate(String schemaUri, JsonNode data) {
-      if (schemaUri == null || schemaUri.isEmpty()) {
-         return null;
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void validateRunData(int runId, Predicate<String> schemaFilter) {
+      log.debugf("About to validate data for run %d", runId);
+      Run run = Run.findById(runId);
+      if (run == null) {
+         log.errorf("Cannot load run %d for schema validation", runId);
+         return;
       }
-      Query fetchSchemas = em.createNativeQuery(FETCH_SCHEMAS_RECURSIVE, Schema.class);
-      fetchSchemas.setParameter(1, schemaUri);
-      @SuppressWarnings("unchecked")
-      Map<String, Schema> schemas = ((Stream<Schema>) fetchSchemas.getResultStream())
-            .collect(Collectors.toMap(s -> s.uri, Function.identity()));
-      Schema rootSchema = schemas.get(schemaUri);
-      if (rootSchema == null || rootSchema.schema == null) {
-         return null;
-      }
-      Set<ValidationMessage> errors;
-      try {
-         URIFetcher uriFetcher = uri -> new ByteArrayInputStream(schemas.get(uri.toString()).schema.toString().getBytes(StandardCharsets.UTF_8));
+      run.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
+      validateData(run.data, schemaFilter, run.validationErrors::add);
+      run.persist();
+      Util.publishLater(tm, vertx.eventBus(), Run.EVENT_VALIDATED, new Schema.ValidationEvent(run.id, run.validationErrors));
+   }
 
-         JsonSchemaFactory factory = JsonSchemaFactory.builder(JSON_SCHEMA_FACTORY)
-               .uriFactory(URN_FACTORY, "urn")
-               .uriFetcher(uriFetcher, ALL_URNS).build();
-
-         errors = factory.getSchema(rootSchema.schema).validate(data);
-      } catch (Exception e) {
-         // Do not let messed up schemas fail the upload
-         log.warn("Schema validation failed", e);
-         return null;
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void validateDatasetData(int datasetId, Predicate<String> schemaFilter) {
+      log.debugf("About to validate data for dataset %d", datasetId);
+      DataSet dataset = DataSet.findById(datasetId);
+      if (dataset == null) {
+         // Don't log error when the dataset is not present and we're revalidating all datasets - it might be
+         // concurrently removed because of URI change
+         if (schemaFilter != null) {
+            log.errorf("Cannot load dataset %d for schema validation", datasetId);
+         }
+         return;
       }
-      return errors;
+      dataset.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
+      validateData(dataset.data, schemaFilter, dataset.validationErrors::add);
+      dataset.persist();
+      Util.publishLater(tm, vertx.eventBus(), DataSet.EVENT_VALIDATED, new Schema.ValidationEvent(dataset.id, dataset.validationErrors));
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   @TransactionConfiguration(timeout = 3600) // 1 hour, this may run a long time
+   void revalidateAll(String params) {
+      int schemaId = Integer.parseInt(params);
+      Schema schema = Schema.findById(schemaId);
+      if (schema == null) {
+         log.errorf("Cannot load schema %d for validation", schemaId);
+         return;
+      }
+      Predicate<String> schemaFilter = uri -> uri.equals(schema.uri);
+      // If the URI was updated together with JSON schema run_schemas are removed and filled-in asynchronously
+      // so we cannot rely on run_schemas
+      runService.findRunsWithUri(schema.uri, runId -> {
+         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> validateRunData(runId, schemaFilter));
+      });
+      // Datasets might be re-created if URI is changing, so we might work on old, non-existent ones
+      ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM dataset WHERE ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')").setParameter(1, schema.uri));
+      while (results.next()) {
+         int datasetId = (int) results.get(0);
+         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> validateDatasetData(datasetId, schemaFilter));
+      }
+   }
+
+   @ConsumeEvent(Run.EVENT_VALIDATED)
+   void consumeValidation(Schema.ValidationEvent e) {
+      // just to let Quarkus register codec for ValidationEvent
+   }
+
+   private void validateData(JsonNode data, Predicate<String> filter, Consumer<ValidationError> consumer) {
+      Map<String, List<JsonNode>> toCheck = new HashMap<>();
+      addIfHasSchema(toCheck, data);
+      for (JsonNode child : data) {
+         addIfHasSchema(toCheck, child);
+      }
+
+      for (String schemaUri: toCheck.keySet()) {
+         if (filter != null && !filter.test(schemaUri)) {
+            continue;
+         }
+         Query fetchSchemas = em.createNativeQuery(FETCH_SCHEMAS_RECURSIVE, Schema.class);
+         fetchSchemas.setParameter(1, schemaUri);
+         @SuppressWarnings("unchecked")
+         Map<String, Schema> schemas = ((Stream<Schema>) fetchSchemas.getResultStream())
+               .collect(Collectors.toMap(s -> s.uri, Function.identity()));
+
+         // this is root in the sense of JSON schema referencing other schemas, NOT Horreum first-level schema
+         Schema rootSchema = schemas.get(schemaUri);
+         if (rootSchema == null || rootSchema.schema == null) {
+            continue;
+         }
+         try {
+            URIFetcher uriFetcher = uri -> {
+               byte[] jsonSchema = schemas.get(uri.toString()).schema.toString().getBytes(StandardCharsets.UTF_8);
+               return new ByteArrayInputStream(jsonSchema);
+            };
+
+            JsonSchemaFactory factory = JsonSchemaFactory.builder(JSON_SCHEMA_FACTORY)
+                  .uriFactory(URN_FACTORY, "urn")
+                  .uriFetcher(uriFetcher, ALL_URNS).build();
+
+            for (JsonNode node : toCheck.get(schemaUri)) {
+               factory.getSchema(rootSchema.schema).validate(node).forEach(msg -> {
+                  ValidationError error = new ValidationError();
+                  error.schema = rootSchema;
+                  error.error = Util.OBJECT_MAPPER.valueToTree(msg);
+                  consumer.accept(error);
+               });
+            }
+         } catch (Throwable e) {
+            // Do not let messed up schemas fail the upload
+            log.error("Schema validation failed", e);
+            ValidationError error = new ValidationError();
+            error.schema = rootSchema;
+            error.error = JsonNodeFactory.instance.objectNode().put("type", "Execution error").put("code", e.getMessage());
+            consumer.accept(error);
+         }
+         log.info("Validation completed");
+      }
+   }
+
+   private void addIfHasSchema(Map<String, List<JsonNode>> toCheck, JsonNode node) {
+      String uri = node.path("$schema").asText();
+      if (uri != null && !uri.isBlank()) {
+         toCheck.computeIfAbsent(uri, u -> new ArrayList<>()).add(node);
+      }
    }
 
    @RolesAllowed("tester")

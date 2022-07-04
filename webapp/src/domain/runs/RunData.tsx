@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { useSelector, useDispatch } from "react-redux"
 
 import * as actions from "./actions"
@@ -18,6 +18,8 @@ import ChangeSchemaModal from "./ChangeSchemaModal"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInRun } from "./NoSchema"
 import Api, { RunExtended } from "../../api"
+import ValidationErrorTable from "./ValidationErrorTable"
+import ErrorBadge from "../../components/ErrorBadge"
 
 function findFirstValue(o: any) {
     if (!o || Object.keys(o).length !== 1) {
@@ -85,29 +87,36 @@ export default function RunData(props: RunDataProps) {
                 <FormGroup label="Schemas" fieldId="schemas">
                     <div
                         style={{
-                            display: "flex",
                             paddingTop: "var(--pf-c-form--m-horizontal__group-label--md--PaddingTop)",
                         }}
                     >
                         {(schemas &&
                             Object.keys(schemas).length > 0 &&
                             interleave(
-                                Object.keys(schemas).map((key, i) => (
-                                    <NavLink key={2 * i} to={`/schema/${key}`}>
-                                        {schemas[key]}
-                                    </NavLink>
-                                )),
+                                Object.keys(schemas).map((key, i) => {
+                                    const schemaId = parseInt(key)
+                                    const errors =
+                                        props.run.validationErrors?.filter(e => e.schemaId === schemaId) || []
+                                    return (
+                                        <React.Fragment key={2 * i}>
+                                            <NavLink to={`/schema/${key}`}>{schemas[key]}</NavLink>
+                                            {errors.length > 0 && <ErrorBadge>{errors.length}</ErrorBadge>}
+                                            {isTester && (
+                                                <Button
+                                                    variant="link"
+                                                    style={{ paddingTop: 0 }}
+                                                    onClick={() => setChangeSchemaModalOpen(true)}
+                                                >
+                                                    <EditIcon />
+                                                </Button>
+                                            )}
+                                        </React.Fragment>
+                                    )
+                                }),
                                 i => <br key={2 * i + 1} />
                             )) || <NoSchemaInRun />}
                         {isTester && (
                             <>
-                                <Button
-                                    variant="link"
-                                    style={{ paddingTop: 0 }}
-                                    onClick={() => setChangeSchemaModalOpen(true)}
-                                >
-                                    <EditIcon />
-                                </Button>
                                 <ChangeSchemaModal
                                     isOpen={changeSchemaModalOpen}
                                     onClose={() => setChangeSchemaModalOpen(false)}
@@ -124,6 +133,14 @@ export default function RunData(props: RunDataProps) {
                         )}
                     </div>
                 </FormGroup>
+                {props.run.validationErrors && props.run.validationErrors.length > 0 && (
+                    <FormGroup label="Validation errors" fieldId="none">
+                        <ValidationErrorTable
+                            errors={props.run.validationErrors}
+                            uris={props.run.schema as Record<number, string>}
+                        />
+                    </FormGroup>
+                )}
             </Form>
             <JsonPathSearchToolbar
                 originalData={data}

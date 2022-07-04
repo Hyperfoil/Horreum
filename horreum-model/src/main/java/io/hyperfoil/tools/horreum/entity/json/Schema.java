@@ -1,5 +1,9 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
+import java.util.Collection;
+import java.util.List;
+
+import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.annotations.Type;
 
@@ -80,4 +84,14 @@ public class Schema extends ProtectedBaseEntity {
 
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public JsonNode schema;
+
+   public static class ValidationEvent {
+      public int id; // context = run/dataset depends on event name
+      public Collection<ValidationError> errors;
+
+      public ValidationEvent(int id, Collection<ValidationError> errors) {
+         this.id = id;
+         this.errors = errors;
+      }
+   }
 }

@@ -3521,4 +3521,112 @@
             $$ LANGUAGE plpgsql;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="86" author="rvansa">
+        <createTable tableName="run_validationerrors">
+            <column name="run_id" type="integer">
+                <constraints nullable="false" foreignKeyName="validationerrors_runid" referencedTableName="run" referencedColumnNames="id" />
+            </column>
+            <column name="schema_id" type="integer">
+                <constraints nullable="false" foreignKeyName="validationerrors_schemaid" referencedTableName="schema" referencedColumnNames="id" />
+            </column>
+            <column name="error" type="jsonb">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <createIndex tableName="run_validationerrors" indexName="validationerrors_by_run_id">
+            <column name="run_id" />
+        </createIndex>
+        <createTable tableName="dataset_validationerrors">
+            <column name="dataset_id" type="integer">
+                <constraints nullable="false" foreignKeyName="validationerrors_datasetid" referencedTableName="dataset" referencedColumnNames="id" />
+            </column>
+            <column name="schema_id" type="integer">
+                <constraints nullable="false" foreignKeyName="validationerrors_schemaid" referencedTableName="schema" referencedColumnNames="id" />
+            </column>
+            <column name="error" type="jsonb">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <createIndex tableName="dataset_validationerrors" indexName="validationerrors_by_dataset_id">
+            <column name="dataset_id" />
+        </createIndex>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION validate_run_data() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_validationerrors WHERE run_id = NEW.id;
+                PERFORM pg_notify('validate_run_data', NEW.id::text );
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION validate_dataset_data() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM dataset_validationerrors WHERE dataset_id = NEW.id;
+                PERFORM pg_notify('validate_dataset_data', NEW.id::text );
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION revalidate_all() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM dataset_validationerrors WHERE schema_id = NEW.id;
+                DELETE FROM run_validationerrors WHERE schema_id = NEW.id;
+                PERFORM pg_notify('revalidate_all', NEW.id::text );
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION delete_run_validations() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_validationerrors WHERE run_id = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION delete_dataset_validations() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM dataset_validationerrors WHERE dataset_id = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION before_schema_update_func() RETURNS TRIGGER AS $$
+            BEGIN
+                IF OLD.uri != NEW.uri THEN
+                    DELETE FROM run_schemas WHERE schemaid = OLD.id;
+                    DELETE FROM dataset_schemas WHERE schema_id = OLD.id;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            GRANT select, insert, delete ON TABLE run_validationerrors, dataset_validationerrors TO "${quarkus.datasource.username}";
+            CREATE POLICY rve_select ON run_validationerrors FOR SELECT
+                USING (exists(SELECT 1 FROM run WHERE id = run_id AND can_view(access, owner, token)));
+            CREATE POLICY rve_insert ON run_validationerrors FOR INSERT
+                WITH CHECK (has_role('horreum.system'));
+            CREATE POLICY rve_delete ON run_validationerrors FOR DELETE
+                USING (has_role2((SELECT owner FROM run WHERE run.id = run_id), 'tester'));
+            CREATE POLICY dve_select ON dataset_validationerrors FOR SELECT
+                USING (exists(SELECT 1 FROM dataset WHERE id = dataset_id AND can_view2(access, owner)));
+            CREATE POLICY dve_insert ON dataset_validationerrors FOR INSERT
+                WITH CHECK (has_role('horreum.system'));
+            CREATE POLICY dve_delete ON dataset_validationerrors FOR DELETE
+                USING (has_role2((SELECT owner FROM dataset WHERE dataset.id = dataset_id), 'tester'));
+
+            CREATE TRIGGER validate_run_data AFTER INSERT OR UPDATE OF data ON run FOR EACH ROW EXECUTE FUNCTION validate_run_data();
+            CREATE TRIGGER validate_dataset_data AFTER INSERT OR UPDATE OF data ON dataset FOR EACH ROW EXECUTE FUNCTION validate_dataset_data();
+            CREATE TRIGGER delete_run_validations BEFORE DELETE ON run FOR EACH ROW EXECUTE FUNCTION delete_run_validations();
+            CREATE TRIGGER delete_dataset_validations BEFORE DELETE ON dataset FOR EACH ROW EXECUTE FUNCTION delete_dataset_validations();
+
+            CREATE TRIGGER revalidate_all AFTER INSERT OR UPDATE OF schema ON schema FOR EACH ROW EXECUTE FUNCTION revalidate_all();
+        </sql>
+    </changeSet>
 </databaseChangeLog>

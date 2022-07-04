@@ -24,11 +24,12 @@ import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
-import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.type.BooleanType;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
+import org.hibernate.type.TimestampType;
 import org.jboss.logging.Logger;
 
 import javax.annotation.PostConstruct;
@@ -56,13 +57,13 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -70,7 +71,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.networknt.schema.ValidationMessage;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 import com.vladmihalcea.hibernate.type.util.MapResultTransformer;
 
@@ -115,9 +115,6 @@ public class RunServiceImpl implements RunService {
    @Inject
    TestServiceImpl testService;
 
-   @Inject
-   SchemaServiceImpl schemaService;
-
    @Context HttpServletResponse response;
 
    @PostConstruct
@@ -145,14 +142,16 @@ public class RunServiceImpl implements RunService {
          return;
       }
       // we don't have to care about races with new runs
-      ScrollableResults results = em.createNativeQuery(FIND_RUNS_WITH_URI)
-            .setParameter(1, schema.uri)
-            .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
-            .scroll(ScrollMode.FORWARD_ONLY);
-      while (results.next()) {
-         int runId = (int) results.get(0);
+      findRunsWithUri(schema.uri, runId -> {
          log.infof("Recalculate DataSets for run %d - schema %d (%s) changed", runId, schema.id, schema.uri);
          Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> onNewOrUpdatedSchemaForRun(runId));
+      });
+   }
+
+   void findRunsWithUri(String uri, IntConsumer consumer) {
+      ScrollableResults results = Util.scroll(em.createNativeQuery(FIND_RUNS_WITH_URI).setParameter(1, uri));
+      while (results.next()) {
+         consumer.accept((int) results.get(0));
       }
    }
 
@@ -168,11 +167,12 @@ public class RunServiceImpl implements RunService {
    @WithToken
    @Override
    public Object getRun(int id, String token) {
-      return Util.runQuery(em, "SELECT (to_jsonb(run) ||" +
-            "jsonb_set('{}', '{schema}', (SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = run.id)::::jsonb, true) || " +
-            "jsonb_set('{}', '{testname}', to_jsonb((SELECT name FROM test WHERE test.id = run.testid)), true) || " +
-            "jsonb_set('{}', '{datasets}', (SELECT jsonb_agg(id ORDER BY id) FROM dataset WHERE runid = run.id), true)" +
-            ")::::text FROM run where id = ?", id);
+      return Util.runQuery(em, "SELECT (to_jsonb(run) || jsonb_build_object(" +
+            "'schema', (SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = run.id), " +
+            "'testname', (SELECT name FROM test WHERE test.id = run.testid), " +
+            "'datasets', (SELECT jsonb_agg(id ORDER BY id) FROM dataset WHERE runid = run.id), " +
+            "'validationErrors', (SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) FROM run_validationerrors WHERE run_id = ?1)" +
+            "))::::text FROM run WHERE id = ?1", id);
    }
 
    @WithRoles
@@ -308,10 +308,7 @@ public class RunServiceImpl implements RunService {
       Object foundStop = findIfNotSet(stop, data);
       Object foundDescription = findIfNotSet(description, data);
 
-      if (schemaUri == null || schemaUri.isEmpty()) {
-         JsonNode schemaNode = data.get("$schema");
-         schemaUri = schemaNode == null ? null : schemaNode.asText();
-      } else {
+      if (schemaUri != null && !schemaUri.isEmpty()) {
          if (data.isObject()) {
             ((ObjectNode) data).set("$schema", TextNode.valueOf(schemaUri));
          }
@@ -335,11 +332,6 @@ public class RunServiceImpl implements RunService {
 
       Test testEntity = testService.ensureTestExists(testNameOrId, token);
 
-      Collection<ValidationMessage> validationErrors = schemaService.validate(schemaUri, data);
-      if (validationErrors != null && !validationErrors.isEmpty()) {
-         log.debugf("Failed to upload for test %s with description %s because of validation errors.", test, description);
-         throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST).entity(validationErrors).build());
-      }
       log.debugf("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id, foundDescription);
 
       Run run = new Run();
@@ -617,10 +609,14 @@ public class RunServiceImpl implements RunService {
             .append("    SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') AS schemas, rs.runid FROM run_schemas rs GROUP BY rs.runid")
             .append("), dataset_agg AS (")
             .append("    SELECT runid, jsonb_agg(id ORDER BY id)::::text as datasets FROM dataset WHERE testid = ?1 GROUP BY runid")
-            .append(") SELECT run.id, run.start, run.stop, run.access, run.owner, schema_agg.schemas::::text AS schemas, ")
-            .append("run.trashed, run.description, COALESCE(dataset_agg.datasets, '[]') FROM run ")
+            .append("), validation AS (")
+            .append("    SELECT run_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM run_validationerrors GROUP BY run_id")
+            .append(") SELECT run.id, run.start, run.stop, run.access, run.owner, schema_agg.schemas AS schemas, ")
+            .append("run.trashed, run.description, COALESCE(dataset_agg.datasets, '[]') AS datasets, ")
+            .append("COALESCE(validation.errors, '[]') AS validationErrors FROM run ")
             .append("LEFT JOIN schema_agg ON schema_agg.runid = run.id ")
             .append("LEFT JOIN dataset_agg ON dataset_agg.runid = run.id ")
+            .append("LEFT JOIN validation ON validation.run_id = run.id ")
             .append("WHERE run.testid = ?1 ");
       if (!trashed) {
          sql.append(" AND NOT run.trashed ");
@@ -633,6 +629,17 @@ public class RunServiceImpl implements RunService {
       }
       Query query = em.createNativeQuery(sql.toString());
       query.setParameter(1, testId);
+      query.unwrap(NativeQuery.class)
+            .addScalar("id", IntegerType.INSTANCE)
+            .addScalar("start", TimestampType.INSTANCE)
+            .addScalar("stop", TimestampType.INSTANCE)
+            .addScalar("access", IntegerType.INSTANCE)
+            .addScalar("owner", TextType.INSTANCE)
+            .addScalar("schemas", JsonNodeBinaryType.INSTANCE)
+            .addScalar("trashed", BooleanType.INSTANCE)
+            .addScalar("description", TextType.INSTANCE)
+            .addScalar("datasets", JsonNodeBinaryType.INSTANCE)
+            .addScalar("validationErrors", JsonNodeBinaryType.INSTANCE);
       @SuppressWarnings("unchecked")
       List<Object[]> resultList = query.getResultList();
       List<RunSummary> runs = new ArrayList<>();
@@ -644,10 +651,11 @@ public class RunServiceImpl implements RunService {
          run.testid = testId;
          run.access = (int) row[3];
          run.owner = (String) row[4];
-         run.schema = Util.toJsonNode((String) row[5]);
+         run.schema = (JsonNode) row[5];
          run.trashed = (boolean) row[6];
          run.description = (String) row[7];
-         run.datasets = (ArrayNode) Util.toJsonNode((String) row[8]);
+         run.datasets = (ArrayNode) row[8];
+         run.validationErrors = (ArrayNode) row[9];
          runs.add(run);
       }
       RunsSummary summary = new RunsSummary();

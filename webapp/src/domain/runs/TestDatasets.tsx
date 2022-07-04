@@ -23,7 +23,7 @@ import { ArrowRightIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
-import { toEpochMillis, interleave, noop, fingerprintToString } from "../../utils"
+import { toEpochMillis, noop, fingerprintToString } from "../../utils"
 
 import { dispatchError } from "../../alerts"
 import { teamsSelector, teamToName, tokenSelector } from "../../auth"
@@ -44,7 +44,7 @@ import {
 import Api, { DatasetSummary, DatasetList } from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
 import { TestDispatch } from "../tests/reducers"
-import SchemaLink from "../schemas/SchemaLink"
+import SchemaList from "./SchemaList"
 import { NoSchemaInDataset } from "./NoSchema"
 import ButtonLink from "../../components/ButtonLink"
 import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
@@ -107,10 +107,11 @@ const staticColumns: DatasetColumn[] = [
             if (!value || (value as string[]).length == 0) {
                 return <NoSchemaInDataset />
             } else {
-                const schemas = value as string[]
-                return interleave(
-                    schemas.map((uri, i) => <SchemaLink key={2 * i} uri={uri} />),
-                    i => <br key={2 * i + 1} />
+                return (
+                    <SchemaList
+                        schemas={value as Record<number, string>}
+                        validationErrors={arg.row.original.validationErrors || []}
+                    />
                 )
             }
         },

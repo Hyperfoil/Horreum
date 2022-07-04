@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
+import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
@@ -8,11 +9,14 @@ import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.validation.constraints.NotNull;
@@ -29,6 +33,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class Run extends ProtectedBaseEntity {
    public static final String EVENT_NEW = "run/new";
    public static final String EVENT_TRASHED = "run/trashed";
+   public static final String EVENT_VALIDATED = "run/validated";
 
    @JsonProperty(required = true)
    @Id
@@ -65,4 +70,8 @@ public class Run extends ProtectedBaseEntity {
    @OneToMany(mappedBy = "run", cascade = CascadeType.ALL, orphanRemoval = true)
    @JsonIgnore
    public Collection<DataSet> datasets;
+
+   @CollectionTable
+   @ElementCollection
+   public Collection<ValidationError> validationErrors;
 }

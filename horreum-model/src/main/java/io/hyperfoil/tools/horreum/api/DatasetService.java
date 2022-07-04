@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Label;
@@ -92,8 +93,10 @@ public interface DatasetService {
       @Schema(required = true, implementation = Access.class)
       public int access;
       public ObjectNode view;
-      @Schema(required = true, implementation = String[].class)
-      public ArrayNode schemas; // list of URIs
+      @Schema(required = true)
+      public JsonNode schemas; // id -> uri mapping
+      @Schema(implementation = ValidationError[].class)
+      public ArrayNode validationErrors;
    }
 
    class DatasetList {

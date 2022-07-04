@@ -53,7 +53,7 @@ public interface SchemaService {
    @GET
    @Path("descriptors")
    @Produces(MediaType.APPLICATION_JSON)
-   List<SchemaDescriptor> descriptors();
+   List<SchemaDescriptor> descriptors(@QueryParam("id") List<Integer> ids);
 
    @POST
    @Produces(MediaType.TEXT_PLAIN)
@@ -72,12 +72,6 @@ public interface SchemaService {
    void updateAccess(@PathParam("id") int id,
                      @Parameter(required = true) @QueryParam("owner") String owner,
                      @Parameter(required = true) @QueryParam("access") int access);
-
-   @POST
-   @Path("validate")
-   @Consumes(MediaType.APPLICATION_JSON)
-   Collection<ValidationMessage> validate(@QueryParam("schema") String schemaUri,
-                                          @RequestBody(required = true) JsonNode data);
 
    @DELETE
    @Path("{id}")

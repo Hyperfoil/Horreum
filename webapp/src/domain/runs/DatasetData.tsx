@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { useDispatch } from "react-redux"
 import { Button, Bullseye, Flex, FlexItem, Form, FormGroup, Spinner } from "@patternfly/react-core"
 
@@ -9,10 +9,12 @@ import Editor from "../../components/Editor/monaco/Editor"
 import SchemaLink from "../schemas/SchemaLink"
 import DatasetLogModal from "../tests/DatasetLogModal"
 
-import Api from "../../api"
+import Api, { ValidationError } from "../../api"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInDataset } from "./NoSchema"
 import LabelValuesModal from "./LabelValuesModal"
+import ValidationErrorTable from "./ValidationErrorTable"
+import ErrorBadge from "../../components/ErrorBadge"
 
 type DatasetDataProps = {
     testId: number
@@ -24,6 +26,8 @@ export default function DatasetData(props: DatasetDataProps) {
     const dispatch = useDispatch()
     const [originalData, setOriginalData] = useState<any>()
     const [editorData, setEditorData] = useState<string>()
+    const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
+    const [erroredSchemas, setErroredSchemas] = useState<Record<number, string>>({})
     const [loading, setLoading] = useState(false)
     const [labelValuesOpen, setLabelValuesOpen] = useState(false)
     const [labelsLogOpen, setLabelsLogOpen] = useState(false)
@@ -34,6 +38,7 @@ export default function DatasetData(props: DatasetDataProps) {
                 dataset => {
                     setOriginalData(dataset.data)
                     setEditorData(toString(dataset.data))
+                    setValidationErrors(dataset.validationErrors || [])
                 },
                 error =>
                     dispatchError(dispatch, error, "FETCH_DATASET", "Failed to fetch dataset " + props.datasetId).catch(
@@ -42,6 +47,23 @@ export default function DatasetData(props: DatasetDataProps) {
             )
             .finally(() => setLoading(false))
     }, [props.datasetId])
+    useEffect(() => {
+        if (validationErrors.length > 0) {
+            Api.schemaServiceDescriptors(validationErrors.map(e => e.schemaId)).then(
+                ds =>
+                    setErroredSchemas(
+                        ds.reduce(
+                            (acc, d) => ({
+                                ...acc,
+                                [d.id]: d.uri,
+                            }),
+                            {}
+                        )
+                    ),
+                e => dispatchError(dispatch, e, "FETCH_SCHEMA_URIS", "Failed to fetch schema URIs").catch(noop)
+            )
+        }
+    }, [validationErrors])
     const schemas = useMemo(() => {
         if (originalData) {
             return [
@@ -58,18 +80,32 @@ export default function DatasetData(props: DatasetDataProps) {
                 <FormGroup label="Schemas" fieldId="schemas">
                     <div
                         style={{
-                            display: "flex",
                             paddingTop: "var(--pf-c-form--m-horizontal__group-label--md--PaddingTop)",
                         }}
                     >
                         {(schemas &&
                             schemas.length > 0 &&
                             interleave(
-                                schemas.map((uri, i) => <SchemaLink uri={uri} key={2 * i} />),
+                                schemas.map((uri, i) => {
+                                    const pair = Object.entries(erroredSchemas).find(([_, eu]) => eu === uri)
+                                    const schemaId = pair && parseInt(pair[0])
+                                    const errors = schemaId ? validationErrors.filter(e => e.schemaId === schemaId) : []
+                                    return (
+                                        <React.Fragment key={2 * i}>
+                                            <SchemaLink uri={uri} />
+                                            {errors.length > 0 && <ErrorBadge>{errors.length}</ErrorBadge>}
+                                        </React.Fragment>
+                                    )
+                                }),
                                 i => <br key={2 * i + 1} />
                             )) || <NoSchemaInDataset />}
                     </div>
                 </FormGroup>
+                {validationErrors.length > 0 && (
+                    <FormGroup label="Validation errors" fieldId="none">
+                        <ValidationErrorTable errors={validationErrors} uris={erroredSchemas} />
+                    </FormGroup>
+                )}
             </Form>
             <Flex alignItems={{ default: "alignItemsCenter" }}>
                 <FlexItem>

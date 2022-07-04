@@ -255,12 +255,20 @@ public class BaseServiceTest {
       return schema;
    }
 
-
    protected Schema createSchema(String name, String uri) {
+      return createSchema(name, uri, null);
+   }
+
+   protected Schema createSchema(String name, String uri, JsonNode jsonSchema) {
       Schema schema = new Schema();
       schema.owner = TESTER_ROLES[0];
       schema.name = name;
       schema.uri = uri;
+      schema.schema = jsonSchema;
+      return addOrUpdateSchema(schema);
+   }
+
+   protected Schema addOrUpdateSchema(Schema schema) {
       Response response = jsonRequest().body(schema).post("/api/schema");
       response.then().statusCode(200);
       schema.id = Integer.parseInt(response.body().asString());
@@ -327,6 +335,8 @@ public class BaseServiceTest {
       eventBus.consumer(eventType, msg -> {
          if (eventClass.isInstance(msg.body())) {
             queue.add(eventClass.cast(msg.body()));
+         } else {
+            throw new IllegalStateException("Unexpected type for event " + eventType + ": " + msg.body());
          }
       });
       return queue;
