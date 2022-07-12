@@ -4,18 +4,14 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
-import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.inject.Provider;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebFilter;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpFilter;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.inject.Singleton;
+import javax.ws.rs.Priorities;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.core.Cookie;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -24,13 +20,13 @@ import org.jboss.logging.Logger;
 import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.jwt.auth.principal.JWTCallerPrincipal;
+import org.jboss.resteasy.reactive.server.ServerRequestFilter;
 
 /**
  * Make sure that matching Grafana user exists. We cache the fact in cookie to avoid querying Grafana all the time.
  */
-@WebFilter(filterName = "GrafanaUserFilter", asyncSupported = true)
-@ApplicationScoped
-public class GrafanaUserFilter extends HttpFilter {
+@Singleton
+public class GrafanaUserFilter {
    private static final Logger log = Logger.getLogger(GrafanaUserFilter.class);
    private static final String GRAFANA_USER = "grafana_user";
 
@@ -43,17 +39,16 @@ public class GrafanaUserFilter extends HttpFilter {
    @ConfigProperty(name = "horreum.grafana.url")
    Optional<String> grafanaBaseUrl;
 
-   @Override
-   protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
+   @ServerRequestFilter(priority = Priorities.HEADER_DECORATOR + 30)
+   public void filter(ContainerRequestContext containerRequestContext) {
       if (grafanaBaseUrl.orElse("").isEmpty()) {
          // ignore in tests if Grafana is disabled
-         chain.doFilter(req, res);
          return;
       }
+
       if (!(identity.getPrincipal() instanceof JWTCallerPrincipal)) {
          // ignore anonymous access
          log.debug("Anonymouse access, ignoring.");
-         chain.doFilter(req, res);
          return;
       }
       JWTCallerPrincipal principal = (JWTCallerPrincipal) identity.getPrincipal();
@@ -62,25 +57,21 @@ public class GrafanaUserFilter extends HttpFilter {
          String username = principal.getName();
          if (username == null) {
             log.debug("Missing email and username, ignoring.");
-            chain.doFilter(req, res);
             return;
          } else {
             email = username + "@horreum";
          }
       }
-      if (req.getCookies() != null) {
-         for (Cookie cookie : req.getCookies()) {
-            if (cookie.getName().equals(GRAFANA_USER) && email.equals(cookie.getValue())) {
-               log.debugf("%s already has cookie, ignoring.", email);
-               chain.doFilter(req, res);
-               return;
-            }
+      for (Cookie cookie : containerRequestContext.getCookies().values()) {
+         if (cookie.getName().equals(GRAFANA_USER) && email.equals(cookie.getValue())) {
+            log.debugf("%s already has cookie, ignoring.", email);
+            return;
          }
       }
       GrafanaClient.UserInfo userInfo = null;
       try {
-          userInfo = grafana.get().lookupUser(email);
-          log.debugf("User %s exists!", email);
+         userInfo = grafana.get().lookupUser(email);
+         log.debugf("User %s exists!", email);
       } catch (WebApplicationException e) {
          if (e.getResponse().getStatus() == 404) {
             ThreadLocalRandom random = ThreadLocalRandom.current();
@@ -102,15 +93,13 @@ public class GrafanaUserFilter extends HttpFilter {
          }
       } catch (ProcessingException e) {
          log.debug("Grafana client failed with exception, ignoring.", e);
-         chain.doFilter(req, res);
          return;
       }
       if (userInfo != null) {
          // Cookie API does not allow to set SameSite attribute
          // res.addCookie(new Cookie(GRAFANA_USER, email));
          // The cookie is to expire in 1 minute to handle Grafana restarts
-         res.addHeader("Set-Cookie", GRAFANA_USER + "=" + email + ";max-age=60;path=/;SameSite=Lax");
+         containerRequestContext.getHeaders().add("Set-Cookie", GRAFANA_USER + "=" + email + ";max-age=60;path=/;SameSite=Lax");
       }
-      chain.doFilter(req, res);
    }
 }

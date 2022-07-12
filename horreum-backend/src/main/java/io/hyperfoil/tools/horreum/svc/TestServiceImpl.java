@@ -19,7 +19,6 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.servlet.http.HttpServletResponse;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.WebApplicationException;
@@ -50,6 +49,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
+import org.jboss.resteasy.reactive.RestResponse;
 
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
@@ -89,9 +89,6 @@ public class TestServiceImpl implements TestService {
 
    @Inject
    HookServiceImpl hookService;
-
-   @Context
-   HttpServletResponse response;
 
    private final ConcurrentHashMap<Integer, RecalculationStatus> recalculations = new ConcurrentHashMap<>();
 
@@ -232,7 +229,6 @@ public class TestServiceImpl implements TestService {
             }
          }
          Util.publishLater(tm, eventBus, Test.EVENT_NEW, test);
-         response.setStatus(Response.Status.CREATED.getStatusCode());
       }
    }
 

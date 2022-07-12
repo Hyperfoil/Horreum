@@ -14,6 +14,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
@@ -27,6 +28,7 @@ import io.hyperfoil.tools.horreum.entity.json.Hook;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.TestToken;
 import io.hyperfoil.tools.horreum.entity.json.View;
+import org.jboss.resteasy.reactive.RestResponse;
 
 @Path("/api/test")
 @Consumes({ MediaType.APPLICATION_JSON})

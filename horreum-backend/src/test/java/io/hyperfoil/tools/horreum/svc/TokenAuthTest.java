@@ -39,7 +39,7 @@ public class TokenAuthTest extends BaseServiceTest {
       given().get("/api/test/" + test.id + "?token=blabla").then().statusCode(404);
 
       given().header(TokenInterceptor.TOKEN_HEADER, "foobar").get("/api/test/" + test.id).then().statusCode(200);
-      given().header(HttpHeaders.AUTHORIZATION, "Bearer foobar").get("/api/test/" + test.id).then().statusCode(200);
+      given().header(HttpHeaders.AUTHORIZATION, "Bearer foobar").get("/api/test/" + test.id).then().statusCode(200); // TODO: this seems wrong as the OIDC server never verifies the token
 
       given().get("/api/test/" + test.id + "?token=" + getAccessToken("alice", TESTER_ROLES)).then().statusCode(400);
    }
