@@ -9,7 +9,7 @@ import javax.annotation.security.PermitAll;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
@@ -36,9 +36,6 @@ import io.hyperfoil.tools.horreum.server.WithRoles;
 public class GrafanaServiceImpl implements GrafanaService {
    @Inject
    EntityManager em;
-
-   @Context
-   HttpServletRequest request;
 
    private final List<String> allowedOrigins = new ArrayList<>();
 
@@ -138,12 +135,11 @@ public class GrafanaServiceImpl implements GrafanaService {
    }
 
    @Override
-   public Response annotations() {
+   public Response annotations(@HeaderParam("Origin") String origin) {
       Response.ResponseBuilder response = Response.ok()
             .header("Access-Control-Allow-Headers", "accept, content-type")
             .header("Access-Control-Allow-Methods", "POST")
             .header("Vary", "Origin");
-      String origin = request.getHeader("Origin");
       for (String allowed : allowedOrigins) {
          if (allowed.equals(origin)) {
             return response.header("Access-Control-Allow-Origin", allowed).build();

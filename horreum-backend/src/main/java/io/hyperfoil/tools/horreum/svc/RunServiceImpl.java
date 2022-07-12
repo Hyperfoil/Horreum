@@ -1,10 +1,44 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
-import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
-import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_TRANSFORMER_TARGETS;
-import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
+import java.math.BigInteger;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
+import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.security.PermitAll;
+import javax.annotation.security.RolesAllowed;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceException;
+import javax.persistence.Query;
+import javax.persistence.TransactionRequiredException;
+import javax.transaction.InvalidTransactionException;
+import javax.transaction.SystemException;
+import javax.transaction.Transaction;
+import javax.transaction.TransactionManager;
+import javax.transaction.Transactional;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
+import com.vladmihalcea.hibernate.type.util.MapResultTransformer;
 import io.hyperfoil.tools.horreum.api.QueryResult;
 import io.hyperfoil.tools.horreum.api.RunService;
 import io.hyperfoil.tools.horreum.api.SqlService;
@@ -23,7 +57,6 @@ import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
-
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.BooleanType;
@@ -31,48 +64,12 @@ import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
 import org.hibernate.type.TimestampType;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.RestResponse;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceException;
-import javax.persistence.Query;
-import javax.persistence.TransactionRequiredException;
-import javax.servlet.http.HttpServletResponse;
-import javax.transaction.InvalidTransactionException;
-import javax.transaction.SystemException;
-import javax.transaction.Transaction;
-import javax.transaction.TransactionManager;
-import javax.transaction.Transactional;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.Response;
-
-import java.math.BigInteger;
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.function.Consumer;
-import java.util.function.IntConsumer;
-import java.util.stream.Collectors;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
-import com.vladmihalcea.hibernate.type.util.MapResultTransformer;
+import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
+import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
+import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
+import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_TRANSFORMER_TARGETS;
 
 @ApplicationScoped
 @Startup
@@ -115,7 +112,6 @@ public class RunServiceImpl implements RunService {
    @Inject
    TestServiceImpl testService;
 
-   @Context HttpServletResponse response;
 
    @PostConstruct
    void init() {
@@ -275,7 +271,7 @@ public class RunServiceImpl implements RunService {
    @WithToken
    @Transactional
    @Override
-   public String add(String testNameOrId, String owner, Access access, String token, Run run) {
+   public Response add(String testNameOrId, String owner, Access access, String token, Run run) {
       if (owner != null) {
          run.owner = owner;
       }
@@ -286,8 +282,7 @@ public class RunServiceImpl implements RunService {
       Test test = testService.ensureTestExists(testNameOrId, token);
       run.testid = test.id;
       Integer runId = addAuthenticated(run, test);
-      response.addHeader(HttpHeaders.LOCATION, "/run/" + runId);
-      return String.valueOf(runId);
+      return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId).build();
    }
 
    @PermitAll // all because of possible token-based upload
@@ -295,7 +290,7 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public String addRunFromData(String start, String stop, String test,
+   public Response addRunFromData(String start, String stop, String test,
                                 String owner, Access access, String token,
                                 String schemaUri, String description,
                                 JsonNode data) {
@@ -350,8 +345,7 @@ public class RunServiceImpl implements RunService {
       if (token != null) {
          // TODO: remove the token
       }
-      response.addHeader(HttpHeaders.LOCATION, "/run/" + runId);
-      return String.valueOf(runId);
+      return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId).build();
    }
 
    private Object findIfNotSet(String value, JsonNode data) {

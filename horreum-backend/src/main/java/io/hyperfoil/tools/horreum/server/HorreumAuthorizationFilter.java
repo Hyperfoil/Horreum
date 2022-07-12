@@ -1,39 +1,34 @@
 package io.hyperfoil.tools.horreum.server;
 
-import java.io.IOException;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.hyperfoil.tools.horreum.svc.Util;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Optional;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebFilter;
-import javax.servlet.http.HttpFilter;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.inject.Singleton;
+import javax.ws.rs.Priorities;
+import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.core.HttpHeaders;
-
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.resteasy.reactive.server.ServerRequestFilter;
 
-import com.fasterxml.jackson.databind.JsonNode;
+@Singleton
+public class HorreumAuthorizationFilter {
 
-import io.hyperfoil.tools.horreum.svc.Util;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
+   private final String authServerUrl;
+   private final Optional<String> issuer;
 
-@WebFilter(filterName = "HorreumAuthorizationFilter", asyncSupported = true)
-@ApplicationScoped
-public class HorreumAuthorizationFilter extends HttpFilter {
-   @ConfigProperty(name = "quarkus.oidc.auth-server-url")
-   String authServerUrl;
+   public HorreumAuthorizationFilter(@ConfigProperty(name = "quarkus.oidc.auth-server-url") String authServerUrl,
+                                     @ConfigProperty(name = "quarkus.oidc.token.issuer") Optional<String> issuer) {
+      this.authServerUrl = authServerUrl;
+      this.issuer = issuer;
+   }
 
-   @ConfigProperty(name = "quarkus.oidc.token.issuer")
-   Optional<String> issuer;
-
-   @Override
-   protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
-      String authorization = req.getHeader(HttpHeaders.AUTHORIZATION);
+   @ServerRequestFilter(priority = Priorities.HEADER_DECORATOR + 10)
+   public Response filter(ContainerRequestContext containerRequestContext) {
+      String authorization = containerRequestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
       if (authorization != null && authorization.toLowerCase(Locale.ROOT).startsWith("bearer ")) {
          int payloadStart = authorization.indexOf('.', 7);
          int payloadEnd = authorization.indexOf('.', payloadStart + 1);
@@ -42,39 +37,31 @@ public class HorreumAuthorizationFilter extends HttpFilter {
             String payload = authorization.substring(payloadStart + 1, payloadEnd);
             JsonNode payloadObject = Util.toJsonNode(Base64.getDecoder().decode(payload));
             if (payloadObject == null) {
-               res.setStatus(403);
-               res.getWriter().println("Invalid authorization token");
-               return;
+               return Response.status(Response.Status.FORBIDDEN).entity("Invalid authorization token").build();
             }
             String iss = payloadObject.path("iss").asText();
             if (iss == null || iss.isBlank()) {
-               res.setStatus(403);
-               res.getWriter().println("Authorization token does not contain issuer ('iss') claim.");
-               return;
+               return Response.status(Response.Status.FORBIDDEN).entity("Authorization token does not contain issuer ('iss') claim.").build();
             }
             if (issuer.isPresent()) {
                if (issuer.get().equals("any")) {
                   // any issuer matches
                } else if (!issuer.get().equals(iss)) {
-                  replyWrongIss(res, iss);
-                  return;
+                  return replyWrongIss(iss);
                }
             } else if (!authServerUrl.equals(iss)) {
-               replyWrongIss(res, iss);
-               return;
+               return replyWrongIss(iss);
             }
-            chain.doFilter(req, res);
-            return;
+            return null;
          }
-         HttpServerExchange exchange = ((HttpServletRequestImpl) req).getExchange();
-         exchange.removeRequestHeader(HttpHeaders.AUTHORIZATION);
-         exchange.addRequestHeader(TokenInterceptor.TOKEN_HEADER, authorization.substring(7));
+         MultivaluedMap<String, String> headers = containerRequestContext.getHeaders();
+         headers.remove(HttpHeaders.AUTHORIZATION);
+         headers.addFirst(TokenInterceptor.TOKEN_HEADER, authorization.substring(7));
       }
-      chain.doFilter(req, res);
+      return null;
    }
 
-   private void replyWrongIss(HttpServletResponse res, String iss) throws IOException {
-      res.setStatus(403);
-      res.getWriter().println("Authorization token has issuer '" + iss + "' but this is not the expected issuer; you have probably received the token from a wrong URL. Please login into Horreum Web UI and check the login URL used.");
+   private Response replyWrongIss(String iss) {
+      return Response.status(Response.Status.FORBIDDEN).entity("Authorization token has issuer '" + iss + "' but this is not the expected issuer; you have probably received the token from a wrong URL. Please login into Horreum Web UI and check the login URL used.").build();
    }
 }

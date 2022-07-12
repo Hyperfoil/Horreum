@@ -1,15 +1,18 @@
 package io.hyperfoil.tools.horreum.server;
 
+import java.util.List;
+
 import javax.annotation.Priority;
 import javax.inject.Inject;
 import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 import javax.persistence.EntityManager;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.UriInfo;
 
 import io.hyperfoil.tools.horreum.svc.Util;
+import org.jboss.resteasy.reactive.server.spi.ServerRequestContext;
 
 @Interceptor
 @Priority(Interceptor.Priority.APPLICATION + 101)
@@ -18,29 +21,26 @@ public class TokenInterceptor {
    public final static String TOKEN_HEADER = "x-horreum-token";
 
    @Inject
-   HttpServletRequest request;
-
-   @Inject
-   HttpServletResponse response;
-
-   @Inject
    RoleManager roleManager;
 
    @Inject
    EntityManager em;
 
+   @Inject
+   UriInfo uriInfo;
+
+   @Inject
+   HttpHeaders httpHeaders;
+
    @AroundInvoke
    public Object wrap(InvocationContext ctx) throws Exception {
       String queryParam = Util.getAnnotation(ctx.getMethod(), WithToken.class).queryParam();
-      String[] tokens = request.getParameterValues(queryParam);
+      List<String> tokens = uriInfo.getQueryParameters().get(queryParam);
       // TODO: fetch tokens from cookie
-      String token = tokens != null && tokens.length > 0 ? tokens[0] : request.getHeader(TOKEN_HEADER);
+      String token = tokens != null && !tokens.isEmpty() ? tokens.get(0) : httpHeaders.getHeaderString(TOKEN_HEADER);
       if (token != null && !token.isBlank()) {
          if (looksLikeJWT(token)) {
-            response.setStatus(400);
-            response.getWriter().println("It seems that you are trying to pass JWT token as Horreum token. Please use HTTP header 'Authorization: Bearer <token>' instead.");
-            response.flushBuffer();
-            return null;
+            throw new JWTBadRequestException();
          }
          roleManager.setToken(em, token);
       }

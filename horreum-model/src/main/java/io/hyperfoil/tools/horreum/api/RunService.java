@@ -13,6 +13,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,6 +28,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.jboss.resteasy.reactive.RestResponse;
 
 @Path("/api/run")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -71,7 +73,7 @@ public interface RunService {
    @POST
    @Path("test/{test}")
    @Consumes(MediaType.APPLICATION_JSON)
-   String add(@PathParam("test") String testNameOrId,
+   Response add(@PathParam("test") String testNameOrId,
               @QueryParam("owner") String owner,
               @QueryParam("access") Access access,
               @QueryParam("token") String token,
@@ -80,7 +82,7 @@ public interface RunService {
    @POST
    @Path("data")
    @Produces(MediaType.TEXT_PLAIN) // run ID as string
-   String addRunFromData(@Parameter(required = true) @QueryParam("start") String start,
+   Response addRunFromData(@Parameter(required = true) @QueryParam("start") String start,
                          @Parameter(required = true) @QueryParam("stop") String stop,
                          @Parameter(required = true) @QueryParam("test") String test,
                          @QueryParam("owner") String owner,
