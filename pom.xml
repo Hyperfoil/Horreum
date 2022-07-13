@@ -82,7 +82,7 @@
         <quinoa.version>1.0.5</quinoa.version>
         <surefire-plugin.version>3.0.0-M6</surefire-plugin.version>
         <failsafe-plugin.version>3.0.0-M5</failsafe-plugin.version>
-        <keycloak-admin-client.version>18.0.0</keycloak-admin-client.version>
+        <keycloak-admin-client.version>17.0.1</keycloak-admin-client.version>
         <validator.version>1.0.69</validator.version>
         <jayway.jsonpath.version>2.7.0</jayway.jsonpath.version>
         <jackson.version>2.13.3</jackson.version>
