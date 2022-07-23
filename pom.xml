@@ -75,7 +75,7 @@
 
         <commons.math3.version>3.6.1</commons.math3.version>
         <compiler-plugin.version>3.8.1</compiler-plugin.version>
-        <graalvm.version>22.0.0.2</graalvm.version>
+        <graalvm.version>22.1.0</graalvm.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.version>2.9.2.Final</quarkus.version>
@@ -269,7 +269,7 @@
                                                <goal>run</goal>
                                            </goals>
                                            <action>
-                                               <ignore />
+                                               <ignore/>
                                            </action>
                                     </pluginExecutionFilter>
                                 </pluginExecution>
@@ -312,7 +312,7 @@
                         </goals>
                         <configuration>
                             <rules>
-                                <dependencyConvergence />
+                                <dependencyConvergence/>
                                 <requireReleaseDeps>
                                     <failWhenParentIsSnapshot>false</failWhenParentIsSnapshot>
                                     <excludes>
