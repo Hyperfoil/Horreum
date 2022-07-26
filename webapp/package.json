@@ -51,7 +51,7 @@
     "react-scripts": "^4.0.3",
     "react-table": "^7.7.0",
     "react-to-print": "^2.13.0",
-    "recharts": "^2.0.10",
+    "recharts": "^2.1.13",
     "redux": "^4.1.0",
     "redux-thunk": "^2.3.0",
     "reselect": "^4.0.0",
