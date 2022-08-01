@@ -41,6 +41,19 @@ PGPASSWORD=secret psql -h localhost -U dbadmin horreum -f example-data.sql
 
 ## Getting Started
 
+> :warning Fedora 36 package distributions of node and openssl have incompatible api versions. You will need to enable the deprecated v1.x openssl provider version for the build to succeed. To do this edit the configuration file `/etc/ssl/openssl.cnf` to uncomment this section
+> ``` openssl.conf
+> [provider_sect]
+> default = default_sect
+> legacy = legacy_sect
+>
+> [default_sect]
+> activate = 1
+>
+> [legacy_sect]
+> activate = 1
+> ```
+ 
 ```bash
 cd webapp && npm install && cd ..
 ./mvnw package
