@@ -120,9 +120,11 @@ public class AlertingServiceTest extends BaseServiceTest {
       MissingValuesEvent event = missingQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
       assertEquals(runId, event.runId);
+      log.tracef("Missing value in dataset %d/%d (%d)", event.runId, event.datasetOrdinal, event.datasetId);
 
       try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
          List<DatasetLog> logs = DatasetLog.find("dataset.run.id", runId).list();
+         log.tracef("Looked up dataset logs for run %d: %s", runId, logs);
          // If this fails this might be a race - I thought it's fixed with quarkus.datasource.jdbc.transaction-isolation-level=serializable
          assertTrue(logs.size() > 0);
 
