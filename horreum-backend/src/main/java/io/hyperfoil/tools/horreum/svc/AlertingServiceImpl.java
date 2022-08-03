@@ -56,7 +56,6 @@ import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetect
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.hibernate.Hibernate;
-import org.hibernate.jpa.TypedParameterValue;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.transform.Transformers;
@@ -136,7 +135,7 @@ public class AlertingServiceImpl implements AlertingService {
    private static final String FIND_LAST_DATAPOINTS =
          "SELECT DISTINCT ON(variable_id) variable_id AS variable, EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp " +
          "FROM datapoint dp LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id " +
-         "WHERE ((fp.fingerprint IS NULL AND ?1 IS NULL) OR json_equals(fp.fingerprint, (?1)::::jsonb)) AND variable_id = ANY(?2) " +
+         "WHERE ((fp.fingerprint IS NULL AND (?1)::::jsonb IS NULL) OR json_equals(fp.fingerprint, (?1)::::jsonb)) AND variable_id = ANY(?2) " +
          "ORDER BY variable_id, timestamp DESC;";
    //@formatter:on
    private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
@@ -926,8 +925,9 @@ public class AlertingServiceImpl implements AlertingService {
    @PermitAll
    public List<DatapointLastTimestamp> findLastDatapoints(LastDatapointsParams params) {
       Query query = em.createNativeQuery(FIND_LAST_DATAPOINTS)
-            .setParameter(1, String.valueOf(Util.parseFingerprint(params.fingerprint)))
-            .setParameter(2, new TypedParameterValue(IntArrayType.INSTANCE, params.variables));
+            .unwrap(NativeQuery.class)
+            .setParameter(1, Util.parseFingerprint(params.fingerprint), JsonNodeBinaryType.INSTANCE)
+            .setParameter(2, params.variables, IntArrayType.INSTANCE);
       SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(DatapointLastTimestamp.class));
       //noinspection unchecked
       return query.getResultList();
