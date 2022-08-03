@@ -244,7 +244,7 @@ export function UpdateDescriptionModal({ isOpen, onClose, run }: UpdateDescripti
 }
 
 export function renderCell(renderString: string | undefined, sub: string | undefined, token: string | undefined) {
-    const render = renderString ? new Function(renderString)() : undefined
+    const render = renderString ? new Function("return " + renderString)() : undefined
     return (arg: any) => {
         const {
             cell: {
@@ -258,7 +258,7 @@ export function renderCell(renderString: string | undefined, sub: string | undef
 }
 
 export function renderValue(renderString: string | undefined, sub: string | undefined, token: string | undefined) {
-    const render = renderString ? new Function(renderString)() : undefined
+    const render = renderString ? new Function("return " + renderString)() : undefined
     return (value: any, fullItem: any) => renderImpl(value, render, sub, fullItem, token)
 }
 

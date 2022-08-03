@@ -27,7 +27,7 @@ import "github-markdown-css"
 
 function formatter(func: string | undefined) {
     // eslint-disable-next-line
-    return func ? new Function(func) : (x: string) => x
+    return func ? new Function("return " + func)() : (x: string) => x
 }
 
 type DataViewProps = {
