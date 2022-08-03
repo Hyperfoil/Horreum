@@ -196,7 +196,7 @@ export default function TestDatasets() {
                 },
             })
         }
-        const view = test?.views.find(v => v.id === viewId)
+        const view = test?.views?.find(v => v.id === viewId)
         const components = view?.components || test?.defaultView?.components || []
         components.forEach(vc => {
             allColumns.push({
@@ -261,7 +261,7 @@ export default function TestDatasets() {
                                     <FlexItem>
                                         <ViewSelect
                                             views={test?.views || []}
-                                            viewId={viewId || test?.defaultView.id}
+                                            viewId={viewId || test?.defaultView?.id || -1}
                                             onChange={setViewId}
                                         />
                                     </FlexItem>
