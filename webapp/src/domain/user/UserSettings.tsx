@@ -8,7 +8,18 @@ import SavedTabs, { SavedTab, TabFunctions } from "../../components/SavedTabs"
 import { updateDefaultTeam, TryLoginAgain } from "../../auth"
 import Api, { NotificationSettings } from "../../api"
 
-import { Alert, Bullseye, Card, CardBody, EmptyState, Form, FormGroup, Spinner, Title } from "@patternfly/react-core"
+import {
+    Alert,
+    Bullseye,
+    Card,
+    CardBody,
+    EmptyState,
+    Form,
+    FormGroup,
+    PageSection,
+    Spinner,
+    Title,
+} from "@patternfly/react-core"
 
 import { UserIcon } from "@patternfly/react-icons"
 
@@ -79,124 +90,128 @@ export function UserSettings() {
         )
     }
     return (
-        <Card>
-            <CardBody>
-                <SavedTabs
-                    afterSave={() => {
-                        setModified(false)
-                        dispatchInfo(dispatch, "SAVE", "Saved!", "User settings succesfully updated!", 3000)
-                    }}
-                    afterReset={() => setModified(false)}
-                >
-                    <SavedTab
-                        title="My profile"
-                        fragment="profile"
-                        onSave={() => updateDefaultTeam(defaultTeam.key).catch(reportError)}
-                        onReset={() => {
-                            setDefaultTeam(createTeam(prevDefaultTeam))
+        <PageSection>
+            <Card>
+                <CardBody>
+                    <SavedTabs
+                        afterSave={() => {
                             setModified(false)
+                            dispatchInfo(dispatch, "SAVE", "Saved!", "User settings succesfully updated!", 3000)
                         }}
-                        isModified={() => modified}
+                        afterReset={() => setModified(false)}
                     >
-                        <Profile
-                            defaultRole={defaultTeam}
-                            onDefaultRoleChange={role => {
-                                setDefaultTeam(role)
-                                setModified(true)
+                        <SavedTab
+                            title="My profile"
+                            fragment="profile"
+                            onSave={() => updateDefaultTeam(defaultTeam.key).catch(reportError)}
+                            onReset={() => {
+                                setDefaultTeam(createTeam(prevDefaultTeam))
+                                setModified(false)
                             }}
-                        />
-                    </SavedTab>
-                    <SavedTab
-                        title="Personal notifications"
-                        fragment="personal-notifications"
-                        onSave={() => {
-                            const username = profile?.username || "user-should-be-set"
-                            return Api.notificationServiceUpdateSettings(username, false, personal || []).catch(
-                                reportError
-                            )
-                        }}
-                        onReset={() => {
-                            setPersonal(undefined)
-                            loadPersonal()
-                        }}
-                        isModified={() => modified}
-                    >
-                        <NotificationSettingsList
-                            title="Personal notifications"
-                            data={personal}
-                            onUpdate={list => {
-                                setPersonal(list)
-                                setModified(true)
-                            }}
-                        />
-                    </SavedTab>
-                    <SavedTab
-                        title="Team-notifications"
-                        fragment="team-notifications"
-                        onSave={() => {
-                            const teamname = selectedTeam || "team-should-be-set"
-                            return Api.notificationServiceUpdateSettings(teamname, true, team || []).catch(reportError)
-                        }}
-                        onReset={() => {
-                            setTeam(undefined)
-                            setSelectedTeam(undefined)
-                        }}
-                        isModified={() => modified}
-                    >
-                        <Form isHorizontal={true} style={{ marginTop: "20px" }}>
-                            <FormGroup label="Notification for team" fieldId="teamSelection">
-                                <TeamSelect
-                                    includeGeneral={false}
-                                    selection={teamToName(selectedTeam) || ""}
-                                    onSelect={role => {
-                                        setTeam(undefined)
-                                        setSelectedTeam(role.key)
-                                        Api.notificationServiceSettings(role.key, true).then(
-                                            response => setTeam(response || []),
-                                            error =>
-                                                dispatch(
-                                                    alertAction(
-                                                        "LOAD_SETTINGS",
-                                                        "Failed to load notification settings",
-                                                        error
-                                                    )
-                                                )
-                                        )
-                                    }}
-                                />
-                            </FormGroup>
-                        </Form>
-                        {selectedTeam && (
-                            <NotificationSettingsList
-                                title="Team notifications"
-                                data={team}
-                                onUpdate={list => {
-                                    setTeam(list)
+                            isModified={() => modified}
+                        >
+                            <Profile
+                                defaultRole={defaultTeam}
+                                onDefaultRoleChange={role => {
+                                    setDefaultTeam(role)
                                     setModified(true)
                                 }}
                             />
-                        )}
-                        {!selectedTeam && (
-                            <EmptyState>
-                                <Title headingLevel="h3">No team selected</Title>
-                            </EmptyState>
-                        )}
-                    </SavedTab>
-                    {managedTeams.length > 0 ? (
-                        <SavedTab
-                            title="Managed teams"
-                            fragment="managed-teams"
-                            isModified={() => modified}
-                            onSave={() => teamFuncsRef.current?.save() || Promise.resolve()}
-                            onReset={() => teamFuncsRef.current?.reset()}
-                        >
-                            <ManagedTeams funcs={teamFuncsRef} onModified={setModified} />
                         </SavedTab>
-                    ) : (
-                        <></>
-                    )}
-                </SavedTabs>
-            </CardBody>
-        </Card>
+                        <SavedTab
+                            title="Personal notifications"
+                            fragment="personal-notifications"
+                            onSave={() => {
+                                const username = profile?.username || "user-should-be-set"
+                                return Api.notificationServiceUpdateSettings(username, false, personal || []).catch(
+                                    reportError
+                                )
+                            }}
+                            onReset={() => {
+                                setPersonal(undefined)
+                                loadPersonal()
+                            }}
+                            isModified={() => modified}
+                        >
+                            <NotificationSettingsList
+                                title="Personal notifications"
+                                data={personal}
+                                onUpdate={list => {
+                                    setPersonal(list)
+                                    setModified(true)
+                                }}
+                            />
+                        </SavedTab>
+                        <SavedTab
+                            title="Team-notifications"
+                            fragment="team-notifications"
+                            onSave={() => {
+                                const teamname = selectedTeam || "team-should-be-set"
+                                return Api.notificationServiceUpdateSettings(teamname, true, team || []).catch(
+                                    reportError
+                                )
+                            }}
+                            onReset={() => {
+                                setTeam(undefined)
+                                setSelectedTeam(undefined)
+                            }}
+                            isModified={() => modified}
+                        >
+                            <Form isHorizontal={true} style={{ marginTop: "20px" }}>
+                                <FormGroup label="Notification for team" fieldId="teamSelection">
+                                    <TeamSelect
+                                        includeGeneral={false}
+                                        selection={teamToName(selectedTeam) || ""}
+                                        onSelect={role => {
+                                            setTeam(undefined)
+                                            setSelectedTeam(role.key)
+                                            Api.notificationServiceSettings(role.key, true).then(
+                                                response => setTeam(response || []),
+                                                error =>
+                                                    dispatch(
+                                                        alertAction(
+                                                            "LOAD_SETTINGS",
+                                                            "Failed to load notification settings",
+                                                            error
+                                                        )
+                                                    )
+                                            )
+                                        }}
+                                    />
+                                </FormGroup>
+                            </Form>
+                            {selectedTeam && (
+                                <NotificationSettingsList
+                                    title="Team notifications"
+                                    data={team}
+                                    onUpdate={list => {
+                                        setTeam(list)
+                                        setModified(true)
+                                    }}
+                                />
+                            )}
+                            {!selectedTeam && (
+                                <EmptyState>
+                                    <Title headingLevel="h3">No team selected</Title>
+                                </EmptyState>
+                            )}
+                        </SavedTab>
+                        {managedTeams.length > 0 ? (
+                            <SavedTab
+                                title="Managed teams"
+                                fragment="managed-teams"
+                                isModified={() => modified}
+                                onSave={() => teamFuncsRef.current?.save() || Promise.resolve()}
+                                onReset={() => teamFuncsRef.current?.reset()}
+                            >
+                                <ManagedTeams funcs={teamFuncsRef} onModified={setModified} />
+                            </SavedTab>
+                        ) : (
+                            <></>
+                        )}
+                    </SavedTabs>
+                </CardBody>
+            </Card>
+        </PageSection>
     )
 }
