@@ -60,6 +60,11 @@ function Main() {
                         topNav={
                             <Nav aria-label="Nav" variant="horizontal">
                                 <NavList>
+                                    <NavItem itemId={-1}>
+                                        <NavLink to="/">
+                                            <img width="24" height="24" src="/logo.png" alt="Horreum Logo" />
+                                        </NavLink>
+                                    </NavItem>
                                     {/* TODO: fix links colors properly */}
                                     <NavItem itemId={0}>
                                         <NavLink

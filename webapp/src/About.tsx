@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Bullseye, Button, Modal, Spinner } from "@patternfly/react-core"
+import { Bullseye, Button, Dropdown, DropdownItem, DropdownToggle, Modal, Spinner } from "@patternfly/react-core"
 import { QuestionCircleIcon } from "@patternfly/react-icons"
 import { Table, TableBody } from "@patternfly/react-table"
 
@@ -21,28 +21,50 @@ const VERSION_ERROR = {
 }
 
 export default function About() {
-    const [isOpen, setOpen] = useState(false)
+    const [isDropdownOpen, setDropdownOpen] = useState(false)
+    const [isModalOpen, setModalOpen] = useState(false)
     const [versionInfo, setVersionInfo] = useState<VersionInfo>()
     useEffect(() => {
-        if (isOpen) {
+        if (isModalOpen) {
             Api.configServiceVersion().then(
                 response => setVersionInfo(response),
                 _ => setVersionInfo(VERSION_ERROR)
             )
         }
-    }, [isOpen])
+    }, [isModalOpen])
     return (
         <>
-            <Button variant="plain" style={{ marginLeft: "16px" }} onClick={() => setOpen(true)}>
-                <QuestionCircleIcon style={{ fill: "#ffffff" }} />
-            </Button>
+            <Dropdown
+                style={{ marginLeft: "16px" }}
+                position="right"
+                menuAppendTo="parent"
+                onSelect={() => setDropdownOpen(false)}
+                toggle={
+                    <DropdownToggle toggleIndicator={null} onToggle={setDropdownOpen} id="toggle-icon-only">
+                        <QuestionCircleIcon style={{ fill: "#ffffff" }} />
+                    </DropdownToggle>
+                }
+                isOpen={isDropdownOpen}
+                isPlain
+                dropdownItems={[
+                    <DropdownItem
+                        onClick={() => {
+                            const newTab = window.open("https://horreum.hyperfoil.io", "_blank")
+                            if (newTab) newTab.focus()
+                        }}
+                    >
+                        Project documentation
+                    </DropdownItem>,
+                    <DropdownItem onClick={() => setModalOpen(true)}>Version info</DropdownItem>,
+                ]}
+            />
             <Modal
                 variant="small"
                 title="About Horreum"
-                isOpen={isOpen}
-                onClose={() => setOpen(false)}
+                isOpen={isModalOpen}
+                onClose={() => setModalOpen(false)}
                 actions={[
-                    <Button key={0} onClick={() => setOpen(false)}>
+                    <Button key={0} onClick={() => setModalOpen(false)}>
                         Close
                     </Button>,
                 ]}
