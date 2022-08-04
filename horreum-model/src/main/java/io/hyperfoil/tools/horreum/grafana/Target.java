@@ -5,6 +5,7 @@ public class Target {
    public String type;
    public String refId;
    public String data = "";
+   public String payload = "";
 
    public Target() {
    }
