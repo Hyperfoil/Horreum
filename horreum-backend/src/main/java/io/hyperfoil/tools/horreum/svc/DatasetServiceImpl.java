@@ -109,7 +109,13 @@ public class DatasetServiceImpl implements DatasetService {
             "SELECT dataset_id AS id FROM dataset_schemas WHERE uri = ?1" +
          "), schema_agg AS (" +
             SCHEMAS_SELECT + " WHERE dataset_id IN (SELECT id FROM ids) GROUP BY dataset_id" +
-         ") " + DATASET_SUMMARY_SELECT + " AND dv.view_id = defaultview_id WHERE ds.id IN (SELECT id FROM ids)";
+         ") SELECT ds.id, ds.runid AS runId, ds.ordinal, " +
+         "ds.testid AS testId, test.name AS testname, ds.description, " +
+         "EXTRACT(EPOCH FROM ds.start) * 1000 AS start, EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop, " +
+         "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas " +
+         "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
+         "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
+         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id WHERE ds.id IN (SELECT id FROM ids)";
    private static final String ALL_LABELS_SELECT = "SELECT dataset_id, " +
          "COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values FROM dataset " +
          "LEFT JOIN label_values lv ON dataset.id = lv.dataset_id " +
@@ -117,6 +123,7 @@ public class DatasetServiceImpl implements DatasetService {
 
    //@formatter:on
    protected static final AliasToBeanResultTransformer DATASET_SUMMARY_TRANSFORMER = new AliasToBeanResultTransformer(DatasetSummary.class);
+   protected static final AliasToBeanResultTransformer DATASET_BY_SCHEMA_TRANSFORMER = new AliasToBeanResultTransformer(DatasetSummary.class);
    @Inject
    EntityManager em;
 
@@ -263,7 +270,21 @@ public class DatasetServiceImpl implements DatasetService {
       // TODO: filtering by fingerprint
       addOrderAndPaging(limit, page, sort, direction, sql);
       Query query = em.createNativeQuery(sql.toString()).setParameter(1, uri);
-      markAsSummaryList(query);
+      //noinspection deprecation
+      ((NativeQuery<?>) query.unwrap(NativeQuery.class))
+            .addScalar("id", IntegerType.INSTANCE)
+            .addScalar("runId", IntegerType.INSTANCE)
+            .addScalar("ordinal", IntegerType.INSTANCE)
+            .addScalar("testId", IntegerType.INSTANCE)
+            .addScalar("testname", TextType.INSTANCE)
+            .addScalar("description", TextType.INSTANCE)
+            .addScalar("start", LongType.INSTANCE)
+            .addScalar("stop", LongType.INSTANCE)
+            .addScalar("owner", TextType.INSTANCE)
+            .addScalar("access", IntegerType.INSTANCE)
+            .addScalar("view", JsonNodeBinaryType.INSTANCE)
+            .addScalar("schemas", JsonNodeBinaryType.INSTANCE)
+            .setResultTransformer(DATASET_BY_SCHEMA_TRANSFORMER);
       DatasetService.DatasetList list = new DatasetService.DatasetList();
       //noinspection unchecked
       list.datasets = query.getResultList();
