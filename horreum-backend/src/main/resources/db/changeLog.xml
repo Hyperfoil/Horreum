@@ -3629,4 +3629,30 @@
             CREATE TRIGGER revalidate_all AFTER INSERT OR UPDATE OF schema ON schema FOR EACH ROW EXECUTE FUNCTION revalidate_all();
         </sql>
     </changeSet>
+
+    <changeSet id="87" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION recalc_dataset_view() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM set_config('horreum.userroles', NEW.roles, true);
+                DELETE FROM dataset_view WHERE dataset_id = NEW.dataset_id AND (NEW.view_id IS NULL OR NEW.view_id = view_id);
+                WITH view_agg AS (
+                    SELECT vc.view_id, vc.id as vcid, array_agg(DISTINCT label.id) as label_ids, jsonb_object_agg(label.name, lv.value) as value FROM dataset_schemas ds
+                    JOIN label ON label.schema_id = ds.schema_id
+                    JOIN viewcomponent vc ON vc.labels ? label.name
+                    JOIN label_values lv ON lv.label_id = label.id AND lv.dataset_id = ds.dataset_id
+                    WHERE ds.dataset_id = NEW.dataset_id
+                    AND (NEW.view_id IS NULL OR NEW.view_id = vc.view_id)
+                    AND vc.view_id IN (SELECT view.id FROM view JOIN dataset ON view.test_id = dataset.testid WHERE dataset.id = NEW.dataset_id)
+                    GROUP BY vc.view_id, vcid
+                ) INSERT INTO dataset_view (dataset_id, view_id, label_ids, value)
+                    SELECT NEW.dataset_id, view_id, array_agg(DISTINCT label_id), jsonb_object_agg(vcid, value) FROM view_agg, unnest(label_ids) as label_id
+                    GROUP BY view_id;
+                DELETE FROM view_recalc_queue WHERE dataset_id = NEW.dataset_id AND (view_id IS NULL OR view_id = NEW.view_id);
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+    </changeSet>
+
 </databaseChangeLog>
