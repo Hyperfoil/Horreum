@@ -485,6 +485,7 @@ public class SchemaServiceImpl implements SchemaService {
          existing.description = transformer.description;
          existing.owner = transformer.owner;
          existing.access = transformer.access;
+         existing.targetSchemaUri = transformer.targetSchemaUri;
          existing.function = transformer.function;
          existing.extractors.clear();
          existing.extractors.addAll(transformer.extractors);
