@@ -2,11 +2,13 @@ import React, { RefObject, useRef, useState, useEffect } from "react"
 import { useDispatch } from "react-redux"
 
 import { NavLink } from "react-router-dom"
+
+import { Checkbox, Select, SelectOption, Tooltip } from "@patternfly/react-core"
+import { ExclamationCircleIcon } from "@patternfly/react-icons"
+
 import Api, { LabelInfo } from "../api"
 
 import { dispatchError } from "../alerts"
-
-import { Checkbox, Select, SelectOption, Tooltip } from "@patternfly/react-core"
 
 type LabelsProps = {
     labels: string[]
@@ -28,11 +30,19 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
             dispatchError(dispatch, error, "LIST_ALL_LABELS", "Failed to list available labels.")
         )
     }, [])
-    const selected = labels
-        .map(l => options.find(l2 => l2.name === l))
-        .filter(o => o !== undefined)
-        .map(o => o as LabelInfo)
-        .map(o => ({ ...o, toString: () => o.name }))
+    const selected = labels.map(l => {
+        const o = options.find(l2 => l2.name === l)
+        if (!o) {
+            return {
+                name: l,
+                metrics: false,
+                filtering: false,
+                schemas: [],
+                toString: () => l,
+            }
+        }
+        return { ...o, toString: () => o.name }
+    })
     const footerRef = useRef<HTMLDivElement>()
     function ensureFooterInView() {
         setTimeout(() => {
@@ -123,6 +133,16 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                         {o.name}
                     </span>{" "}
                     is valid for schemas:{"\u00A0"}
+                    {o.schemas.length === 0 && (
+                        <Tooltip content="No schemas implement this label!">
+                            <ExclamationCircleIcon
+                                style={{
+                                    fill: "var(--pf-global--danger-color--100)",
+                                    marginTop: "4px",
+                                }}
+                            />
+                        </Tooltip>
+                    )}
                     {o.schemas.map((d, i) => (
                         <React.Fragment key={i}>
                             <Tooltip maxWidth="80vw" content={<code>{d.uri}</code>}>
