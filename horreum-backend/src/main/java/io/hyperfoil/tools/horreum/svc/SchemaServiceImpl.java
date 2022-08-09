@@ -33,6 +33,7 @@ import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -95,7 +96,7 @@ public class SchemaServiceImpl implements SchemaService {
       }
    };
    private static final String[] ALL_URNS = Stream.concat(
-         URLFactory.SUPPORTED_SCHEMES.stream(), Stream.of("urn")
+         URLFactory.SUPPORTED_SCHEMES.stream(), Stream.of("urn", "uri")
    ).toArray(String[]::new);
 
    private static final AliasToBeanResultTransformer DESCRIPTOR_TRANSFORMER = new AliasToBeanResultTransformer(SchemaDescriptor.class);
@@ -151,6 +152,9 @@ public class SchemaServiceImpl implements SchemaService {
    @Transactional
    @Override
    public Integer add(Schema schema){
+      if (schema.uri == null || Arrays.stream(ALL_URNS).noneMatch(scheme -> schema.uri.startsWith(scheme + ":"))) {
+         throw ServiceException.badRequest("Please use URI starting with one of these schemes: " + Arrays.toString(ALL_URNS));
+      }
       Schema byName = Schema.find("name", schema.name).firstResult();
       if (byName != null) {
          if (Objects.equals(schema.id, byName.id)) {
@@ -336,7 +340,7 @@ public class SchemaServiceImpl implements SchemaService {
             };
 
             JsonSchemaFactory factory = JsonSchemaFactory.builder(JSON_SCHEMA_FACTORY)
-                  .uriFactory(URN_FACTORY, "urn")
+                  .uriFactory(URN_FACTORY, "urn", "uri")
                   .uriFetcher(uriFetcher, ALL_URNS).build();
 
             for (JsonNode node : toCheck.get(schemaUri)) {
@@ -352,7 +356,7 @@ public class SchemaServiceImpl implements SchemaService {
             log.error("Schema validation failed", e);
             ValidationError error = new ValidationError();
             error.schema = rootSchema;
-            error.error = JsonNodeFactory.instance.objectNode().put("type", "Execution error").put("code", e.getMessage());
+            error.error = JsonNodeFactory.instance.objectNode().put("type", "Execution error").put("message", e.getMessage());
             consumer.accept(error);
          }
          log.info("Validation completed");

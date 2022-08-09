@@ -46,6 +46,8 @@ type GeneralProps = {
     getUri?(): string
 }
 
+const SUPPORTED_SCHEMES = ["uri:", "urn:", "http:", "https:", "ftp:", "file:", "jar:"]
+
 function General(props: GeneralProps) {
     const defaultTeam = useSelector(defaultTeamSelector)
     const isTester = useTester(props.schema?.owner)
@@ -91,50 +93,64 @@ function General(props: GeneralProps) {
                     }}
                 />
             </FormGroup>
-            <FormGroup label="URI" isRequired={true} fieldId="schemaURI" helperTextInvalid="Must provide a valid URI">
-                <>
-                    <div style={{ display: "flex" }}>
-                        {!schema.uri && isTester && props.getUri !== undefined && (
-                            <Tooltip content={"Import URI from the schema"}>
-                                <Button
-                                    variant="control"
-                                    style={{ float: "left" }}
-                                    onClick={() => {
-                                        if (props.getUri) {
-                                            const newUri = props.getUri()
-                                            if (!newUri) {
-                                                setImportFailed(true)
-                                                setInterval(() => setImportFailed(false), 5000)
-                                            } else {
-                                                onChange({ uri: newUri })
-                                            }
+            <FormGroup label="URI" isRequired={true} fieldId="schemaURI">
+                <div style={{ display: "flex" }}>
+                    {!schema.uri && isTester && props.getUri !== undefined && (
+                        <Tooltip content={"Import URI from the schema"}>
+                            <Button
+                                variant="control"
+                                style={{ float: "left" }}
+                                onClick={() => {
+                                    if (props.getUri) {
+                                        const newUri = props.getUri()
+                                        if (!newUri) {
+                                            setImportFailed(true)
+                                            setInterval(() => setImportFailed(false), 5000)
+                                        } else {
+                                            onChange({ uri: newUri })
                                         }
-                                    }}
-                                >
-                                    <ImportIcon />
-                                </Button>
-                            </Tooltip>
-                        )}
-                        <TextInput
-                            value={schema.uri || ""}
-                            isRequired
-                            type="text"
-                            id="schemaURI"
-                            name="schemaURI"
-                            isReadOnly={!isTester}
-                            validated={(schema.uri && schema.uri !== "") || !isTester ? "default" : "error"}
-                            onChange={value => {
-                                onChange({ uri: value })
-                            }}
-                            placeholder={isTester ? "Click button to import" : ""}
-                            style={{ width: "1200px" }}
-                        />
-                    </div>
-                    {schema.uri && otherUri && otherUri !== schema.uri && (
-                        <Alert variant="warning" title="Schema $id in JSON is not matching to this URI" />
+                                    }
+                                }}
+                            >
+                                <ImportIcon />
+                            </Button>
+                        </Tooltip>
                     )}
-                    {importFailed && <Alert variant="warning" title="Schema does not have $id - cannot import." />}
-                </>
+                    <TextInput
+                        value={schema.uri || ""}
+                        isRequired
+                        type="text"
+                        id="schemaURI"
+                        name="schemaURI"
+                        isReadOnly={!isTester}
+                        validated={
+                            (schema.uri && SUPPORTED_SCHEMES.some(s => schema.uri.startsWith(s))) || !isTester
+                                ? "default"
+                                : "error"
+                        }
+                        onChange={value => {
+                            onChange({ uri: value })
+                        }}
+                        placeholder={isTester ? "Click button to import" : ""}
+                        style={{ width: "1200px" }}
+                    />
+                </div>
+                {schema.uri && !SUPPORTED_SCHEMES.some(s => schema.uri.startsWith(s)) && (
+                    <Alert
+                        variant="warning"
+                        title={
+                            <>
+                                Please provide a valid URI starting with one of these schemes: <code>uri</code>,{" "}
+                                <code>urn</code>, <code>http</code>, <code>https</code>, <code>ftp</code>,{" "}
+                                <code>file</code> or <code>jar</code>
+                            </>
+                        }
+                    />
+                )}
+                {schema.uri && otherUri && otherUri !== schema.uri && (
+                    <Alert variant="warning" title="Schema $id in JSON is not matching to this URI" />
+                )}
+                {importFailed && <Alert variant="warning" title="Schema does not have $id - cannot import." />}
             </FormGroup>
             <FormGroup label="Description" fieldId="schemaDescription" helperText="" helperTextInvalid="">
                 <TextArea
