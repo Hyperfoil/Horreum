@@ -174,7 +174,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                                                 <NavLink
                                                     to={`/run/${r.id}?query=${encodeURIComponent(
                                                         props.jsonpath || ""
-                                                    )}`}
+                                                    )}#run`}
                                                 >
                                                     {r.id}
                                                 </NavLink>
@@ -268,7 +268,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     {props.target === "run" && (
                         <NavLink
                             className="pf-c-button pf-m-secondary"
-                            to={`/run/${target?.id}?query=${encodeURIComponent(props.jsonpath || "")}`}
+                            to={`/run/${target?.id}?query=${encodeURIComponent(props.jsonpath || "")}#run`}
                         >
                             Go to run {target?.id}
                         </NavLink>

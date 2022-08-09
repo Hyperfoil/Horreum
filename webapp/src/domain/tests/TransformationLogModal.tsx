@@ -23,7 +23,7 @@ export default function TransformationLogModal(props: TransformationLogModalProp
                         { title: <LogLevelIcon level={log.level} /> },
                         { title: formatDateTime(log.timestamp * 1000) },
                         {
-                            title: <NavLink to={`/run/${log.runId}`}>{log.runId}</NavLink>,
+                            title: <NavLink to={`/run/${log.runId}#run`}>{log.runId}</NavLink>,
                         },
                         { title: <div dangerouslySetInnerHTML={{ __html: log.message }}></div> },
                     ],

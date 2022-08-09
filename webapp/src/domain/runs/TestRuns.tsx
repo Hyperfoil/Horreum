@@ -75,7 +75,7 @@ const tableColumns: RunColumn[] = [
             } = arg
             return (
                 <>
-                    <NavLink to={`/run/${value}`}>
+                    <NavLink to={`/run/${value}#run`}>
                         <ArrowRightIcon />
                         {"\u00A0"}
                         {value}
