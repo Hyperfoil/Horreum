@@ -17,7 +17,7 @@ export default function TransformationLogModal(props: TransformationLogModalProp
     )
     const fetchRows = useCallback(
         (page, limit) =>
-            Api.logServiceGetTransformationLog(props.testId, props.runId, page, limit).then(response =>
+            Api.logServiceGetTransformationLog(props.testId, limit, page, props.runId).then(response =>
                 (response as TransformationLog[]).map(log => ({
                     cells: [
                         { title: <LogLevelIcon level={log.level} /> },
@@ -32,7 +32,7 @@ export default function TransformationLogModal(props: TransformationLogModalProp
         [props.testId]
     )
     const deleteFromTo = useCallback(
-        (from, to) => Api.logServiceDeleteTransformationLogs(props.testId, props.runId, from, to),
+        (from, to) => Api.logServiceDeleteTransformationLogs(props.testId, from, props.runId, to),
         [props.testId]
     )
     return (
