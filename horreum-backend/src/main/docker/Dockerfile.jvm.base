@@ -9,3 +9,4 @@
 FROM docker.io/fabric8/java-alpine-openjdk11-jre
 RUN apk add jq
 COPY src/main/resources/horreum.sh /deployments/
+COPY src/main/resources/k8s-setup.sh /deployments/
