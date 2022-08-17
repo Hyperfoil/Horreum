@@ -69,13 +69,13 @@ public class DatasetServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testDataSetQuerySchema() {
-      String value = testDataSetQuery("$.value", false, "B");
+      String value = testDataSetQuery("$.value", false, "urn:B");
       assertEquals("42", value);
    }
 
    @org.junit.jupiter.api.Test
    public void testDataSetQuerySchemaArray() {
-      String value = testDataSetQuery("$.value", true, "B");
+      String value = testDataSetQuery("$.value", true, "urn:B");
       assertEquals("[42]", value);
    }
 
@@ -85,7 +85,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          QueryResult queryResult = datasetService.queryData(ds.id, jsonPath, array, schemaUri);
          assertTrue(queryResult.valid);
          return queryResult.value;
-      })), "A", "B");
+      })), "urn:A", "urn:B");
       return result.get();
    }
 
@@ -98,17 +98,17 @@ public class DatasetServiceTest extends BaseServiceTest {
          assertEquals(2, values.size());
          assertEquals(24, values.stream().filter(v -> v.labelId == labelA).map(v -> v.value.numberValue()).findFirst().orElse(null));
          assertEquals(43, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
-      }, "A", "B");
+      }, "urn:A", "urn:B");
    }
 
    private ArrayNode createXYData() {
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
       ObjectNode a = JsonNodeFactory.instance.objectNode();
       ObjectNode b = JsonNodeFactory.instance.objectNode();
-      a.put("$schema", "X");
+      a.put("$schema", "urn:X");
       a.put("a", 1);
       a.put("b", 2);
-      b.put("$schema", "Y");
+      b.put("$schema", "urn:Y");
       ArrayNode array = JsonNodeFactory.instance.arrayNode();
       array.add(JsonNodeFactory.instance.objectNode().put("y", 3));
       array.add(JsonNodeFactory.instance.objectNode().put("y", 4));
@@ -141,7 +141,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          assertEquals(7, values.stream().filter(v -> v.labelId == labelReduce).map(v -> v.value.numberValue()).findFirst().orElse(null));
          assertEquals(42, values.stream().filter(v -> v.labelId == labelNoExtractor).map(v -> v.value.numberValue()).findFirst().orElse(null));
 
-      }, "X", "Y");
+      }, "urn:X", "urn:Y");
    }
 
    @org.junit.jupiter.api.Test
@@ -170,7 +170,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          assertEquals(JsonNodeFactory.instance.objectNode().put("a", 1).putNull("value"), values.stream().filter(v -> v.labelId == labelMulti).map(v -> v.value).findFirst().orElse(null));
          assertEquals(trueNode, values.stream().filter(v -> v.labelId == labelMultiFunc).map(v -> v.value).findFirst().orElse(null));
          assertEquals(trueNode, values.stream().filter(v -> v.labelId == labelMultiArray).map(v -> v.value).findFirst().orElse(null));
-      }, "X");
+      }, "urn:X");
    }
 
    @org.junit.jupiter.api.Test
@@ -204,7 +204,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          });
 
 
-      }, "A", "B");
+      }, "urn:A", "urn:B");
    }
 
    private List<Label.Value> withLabelValues(ArrayNode data) {
@@ -221,8 +221,8 @@ public class DatasetServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       BlockingQueue<DataSet.LabelsUpdatedEvent> labelQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
       JsonNode data = JsonNodeFactory.instance.arrayNode()
-            .add(JsonNodeFactory.instance.objectNode().put("$schema", "another"))
-            .add(JsonNodeFactory.instance.objectNode().put("$schema", "foobar").put("value", 42));
+            .add(JsonNodeFactory.instance.objectNode().put("$schema", "urn:another"))
+            .add(JsonNodeFactory.instance.objectNode().put("$schema", "urn:foobar").put("value", 42));
       int runId = uploadRun(data, test.name);
       DataSet.EventNew firstEvent = dsQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(firstEvent);
@@ -234,7 +234,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       assertEquals(firstEvent.dataset.id, firstUpdate.datasetId);
 
       assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM dataset_schemas").getSingleResult()).intValue());
-      Schema schema = createSchema("Foobar", "foobar");
+      Schema schema = createSchema("Foobar", "urn:foobar");
 
       DataSet.EventNew secondEvent = dsQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(secondEvent);
@@ -328,7 +328,7 @@ public class DatasetServiceTest extends BaseServiceTest {
 
             return null;
          });
-      }, "A", "B");
+      }, "urn:A", "urn:B");
    }
 
    private JsonNode fetchDatasetsByTest(int testId) {
@@ -350,9 +350,9 @@ public class DatasetServiceTest extends BaseServiceTest {
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
       ObjectNode a = JsonNodeFactory.instance.objectNode();
       ObjectNode b = JsonNodeFactory.instance.objectNode();
-      a.put("$schema", "A");
+      a.put("$schema", "urn:A");
       a.put("value", 24);
-      b.put("$schema", "B");
+      b.put("$schema", "urn:B");
       b.put("value", 42);
       data.add(a).add(b);
       return data;
