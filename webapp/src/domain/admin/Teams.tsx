@@ -72,7 +72,6 @@ export default function Teams(props: TeamsProps) {
             return Promise.resolve()
         }
         const withExistingTeam = selected.exists ? Promise.resolve() : createTeam(selected)
-        // if (membersModified) {
         return withExistingTeam.then(_ => {
             if (teamFuncsRef.current) {
                 return teamFuncsRef.current.save().then(() => {
@@ -89,9 +88,6 @@ export default function Teams(props: TeamsProps) {
                 return Promise.reject("This should not happen")
             }
         })
-        // } else {
-        //     return withExistingTeam
-        // }
     }
     props.funcs.current = {
         save: () => {
@@ -189,7 +185,7 @@ export default function Teams(props: TeamsProps) {
                             />
                         </FormGroup>
                         <FormGroup label="New user" fieldId="newUser">
-                            <Button>Create new user</Button>
+                            <Button onClick={() => setNewUserModalOpen(true)}>Create new user</Button>
                             <NewUserModal
                                 team={selected.name}
                                 isOpen={newUserModalOpen}
