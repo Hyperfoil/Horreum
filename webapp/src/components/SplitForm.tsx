@@ -32,6 +32,7 @@ type SplitFormProps<I extends Item> = {
     noItemTitle: string
     noItemText: string
     canDelete: boolean | ((item: I) => boolean)
+    confirmDelete?(item: I): boolean
     onDelete(item: I): void
     children: ReactNode
     items: I[]
@@ -75,6 +76,16 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
         : [props.actions as ReactNode]
     const canDelete =
         typeof props.canDelete === "boolean" ? props.canDelete : props.selected && props.canDelete(props.selected)
+
+    function doDelete() {
+        const item = props.items.find(i => i.id === props.selected?.id)
+        if (item !== undefined) {
+            const newItems = props.items.filter(t => t.id !== props.selected?.id)
+            props.onDelete(item)
+            props.onChange(newItems)
+            props.onSelected(newItems.length > 0 ? newItems[0] : undefined)
+        }
+    }
     return (
         <Split hasGutter>
             <SplitItem style={{ minWidth: "20vw", maxWidth: "20vw", overflow: "clip" }}>
@@ -105,20 +116,24 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
                     ))}
                     {canDelete && (
                         <FlexItem>
-                            <Button variant="danger" onClick={() => setDeleteOpen(true)}>
+                            <Button
+                                variant="danger"
+                                onClick={() => {
+                                    const item = props.items.find(i => i.id === props.selected?.id)
+                                    if (props.confirmDelete === undefined || (item && props.confirmDelete(item))) {
+                                        setDeleteOpen(true)
+                                    } else {
+                                        doDelete()
+                                    }
+                                }}
+                            >
                                 Delete
                             </Button>
                             <ConfirmDeleteModal
                                 isOpen={deleteOpen}
                                 onClose={() => setDeleteOpen(false)}
                                 onDelete={() => {
-                                    const item = props.items.find(i => i.id === props.selected?.id)
-                                    if (item !== undefined) {
-                                        const newItems = props.items.filter(t => t.id !== props.selected?.id)
-                                        props.onDelete(item)
-                                        props.onChange(newItems)
-                                        props.onSelected(newItems.length > 0 ? newItems[0] : undefined)
-                                    }
+                                    doDelete()
                                     return Promise.resolve()
                                 }}
                                 description={`${props.itemType} ${(props.selected || props.items[0]).name}`}

@@ -3,7 +3,7 @@ import { useHistory } from "react-router"
 import { Tab, Tabs } from "@patternfly/react-core"
 import { noop } from "../utils"
 
-type FragmentTabProps = {
+export type FragmentTabProps = {
     title: string
     fragment: string
     isHidden?: boolean
@@ -27,8 +27,6 @@ export default function FragmentTabs(props: FragmentTabsProps) {
     const [activeKey, setActiveKey] = useState(() => {
         const endOfTab = history.location.hash.indexOf("+")
         const hash = history.location.hash.substring(1, endOfTab >= 0 ? endOfTab : undefined)
-        console.log("Initial hash >" + hash + "<")
-        console.log(children.map(c => c.props.fragment))
         const index = Math.max(
             0,
             children.findIndex(c => hash === c.props.fragment)
@@ -36,7 +34,6 @@ export default function FragmentTabs(props: FragmentTabsProps) {
         if (props.tabIndexRef) {
             props.tabIndexRef.current = index
         }
-        console.log("Initial index " + index)
         return index
     })
     const goToTab = (index: number) => {

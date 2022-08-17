@@ -1,9 +1,9 @@
-import { MutableRefObject, ReactElement, ReactNode, useEffect, useMemo, useState, useRef } from "react"
+import { MutableRefObject, ReactElement, useEffect, useMemo, useState, useRef } from "react"
 import { useHistory } from "react-router"
 import { Location, UnregisterCallback } from "history"
 import { ActionGroup, Button, Spinner } from "@patternfly/react-core"
 import SaveChangesModal from "./SaveChangesModal"
-import FragmentTabs, { FragmentTab } from "./FragmentTabs"
+import FragmentTabs, { FragmentTab, FragmentTabProps } from "./FragmentTabs"
 import { noop } from "../utils"
 
 export type TabFunctions = {
@@ -24,14 +24,10 @@ export function modifiedFunc(ref: TabFunctionsRef) {
     return () => ref.current?.modified?.() || false
 }
 
-type SavedTabProps = {
-    title: string
-    fragment: string
+type SavedTabProps = FragmentTabProps & {
     onSave(): Promise<any>
     onReset(): void
     isModified(): boolean
-    isHidden?: boolean
-    children: ReactNode
 }
 
 export const SavedTab: React.FunctionComponent<SavedTabProps> = (_props: SavedTabProps) => null
@@ -39,7 +35,7 @@ export const SavedTab: React.FunctionComponent<SavedTabProps> = (_props: SavedTa
 type SavedTabsProps = {
     afterSave?(): Promise<any> | void
     afterReset?(): void
-    children: ReactElement<SavedTabProps> | ReactElement<SavedTabProps>[]
+    children: ReactElement<SavedTabProps | FragmentTabProps> | ReactElement<SavedTabProps | FragmentTabProps>[]
     canSave?: boolean
 }
 
@@ -56,7 +52,8 @@ export default function SavedTabs(props: SavedTabsProps) {
     const historyUnblock = useRef<UnregisterCallback>()
     useEffect(() => {
         const unblock = history.block(location => {
-            if (children[activeKey.current].props.isModified()) {
+            const childProps = children[activeKey.current].props
+            if ("isModified" in childProps && childProps.isModified()) {
                 setRequestedLocation(location)
                 return false
             }
@@ -87,26 +84,35 @@ export default function SavedTabs(props: SavedTabsProps) {
                     setRequestedNavigation(undefined)
                     setRequestedLocation(undefined)
                 }}
-                onSave={() =>
-                    children[activeKey.current].props.onSave().then(_ => {
-                        navigate()
-                        if (props.afterSave) {
-                            return props.afterSave()
-                        }
-                    })
-                }
+                onSave={() => {
+                    const childProps = children[activeKey.current].props
+                    if ("onSave" in childProps) {
+                        return childProps.onSave().then(_ => {
+                            navigate()
+                            if (props.afterSave) {
+                                return props.afterSave()
+                            }
+                        })
+                    } else {
+                        return Promise.reject("Cannot save unsaveable tab!")
+                    }
+                }}
                 onReset={() => {
-                    children[activeKey.current].props.onReset()
-                    if (props.afterReset) {
-                        props.afterReset()
+                    const childProps = children[activeKey.current].props
+                    if ("onReset" in childProps) {
+                        childProps.onReset()
+                        if (props.afterReset) {
+                            props.afterReset()
+                        }
                     }
                     navigate()
                 }}
             />
             <FragmentTabs
                 tabIndexRef={activeKey}
-                navigate={(current, _) => {
-                    if (children[current].props.isModified()) {
+                navigate={_ => {
+                    const childProps = children[activeKey.current].props
+                    if ("isModified" in childProps && childProps.isModified()) {
                         return new Promise((resolve, _) => {
                             setRequestedNavigation(() => resolve)
                         })
@@ -119,23 +125,26 @@ export default function SavedTabs(props: SavedTabsProps) {
                     <FragmentTab key={i} {...c.props} />
                 ))}
             </FragmentTabs>
-            {props.canSave !== false && (
+            {props.canSave !== false && "onSave" in children[activeKey.current].props && (
                 <ActionGroup style={{ marginTop: 0 }}>
                     <Button
                         variant="primary"
                         isDisabled={saving}
                         onClick={() => {
                             setSaving(true)
-                            children[activeKey.current].props
-                                .onSave()
-                                .then(() => {
-                                    if (props.afterSave) {
-                                        return props.afterSave()
-                                    }
-                                }, noop)
-                                .finally(() => {
-                                    setSaving(false)
-                                })
+                            const childProps = children[activeKey.current].props
+                            if ("onSave" in childProps) {
+                                childProps
+                                    .onSave()
+                                    .then(() => {
+                                        if (props.afterSave) {
+                                            return props.afterSave()
+                                        }
+                                    }, noop)
+                                    .finally(() => {
+                                        setSaving(false)
+                                    })
+                            }
                         }}
                     >
                         {saving ? (

@@ -6,7 +6,7 @@ import Keycloak, { KeycloakConfig } from "keycloak-js"
 import fetchival from "fetchival"
 
 import store, { State } from "./store"
-import Api from "./api"
+import Api, { UserData } from "./api"
 import { alertAction, CLEAR_ALERT } from "./alerts"
 import { noop } from "./utils"
 
@@ -254,5 +254,20 @@ export const accessName = (access: Access) => {
             return "PRIVATE"
         default:
             return String(access)
+    }
+}
+
+export function userName(user: UserData) {
+    let str = ""
+    if (user.firstName) {
+        str += user.firstName + " "
+    }
+    if (user.lastName) {
+        str += user.lastName + " "
+    }
+    if (user.firstName || user.lastName) {
+        return str + " [" + user.username + "]"
+    } else {
+        return user.username
     }
 }

@@ -48,6 +48,7 @@ export default function About() {
                 isPlain
                 dropdownItems={[
                     <DropdownItem
+                        key="docs"
                         onClick={() => {
                             const newTab = window.open("https://horreum.hyperfoil.io", "_blank")
                             if (newTab) newTab.focus()
@@ -55,7 +56,9 @@ export default function About() {
                     >
                         Project documentation
                     </DropdownItem>,
-                    <DropdownItem onClick={() => setModalOpen(true)}>Version info</DropdownItem>,
+                    <DropdownItem key="version info" onClick={() => setModalOpen(true)}>
+                        Version info
+                    </DropdownItem>,
                 ]}
             />
             <Modal

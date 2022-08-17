@@ -6,6 +6,7 @@ import java.util.concurrent.CompletionStage;
 
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -55,6 +56,26 @@ public interface UserService {
    @Path("team/{team}/members")
    CompletionStage<Void> updateTeamMembers(@PathParam("team") String team,
                                            @RequestBody(required = true) Map<String, List<String>> roles);
+
+   @GET
+   @Path("allTeams")
+   CompletionStage<List<String>> getAllTeams();
+
+   @Path("team/{team}")
+   @POST
+   CompletionStage<Void> addTeam(@PathParam("team") String team);
+
+   @Path("team/{team}")
+   @DELETE
+   CompletionStage<Void> deleteTeam(@PathParam("team") String team);
+
+   @GET
+   @Path("administrators")
+   CompletionStage<List<UserData>> administrators();
+
+   @POST
+   @Path("administrators")
+   CompletionStage<Void> updateAdministrators(@RequestBody(required = true) List<String> administrators);
 
    // this is a simplified copy of org.keycloak.representations.idm.UserRepresentation
    class UserData {
