@@ -5,10 +5,13 @@ import { useHistory } from "react-router"
 
 import {
     ActionGroup,
+    Breadcrumb,
+    BreadcrumbItem,
     Bullseye,
     Button,
     Card,
     CardBody,
+    CardHeader,
     EmptyState,
     Flex,
     FlexItem,
@@ -24,7 +27,7 @@ import {
     TextInput,
     Title,
 } from "@patternfly/react-core"
-import { NavLink } from "react-router-dom"
+import { Link, NavLink } from "react-router-dom"
 
 import Api, { TableReport, TableReportConfig, ReportComponent } from "../../api"
 import TableReportView from "./TableReportView"
@@ -214,6 +217,16 @@ export default function TableReportConfigPage() {
     return (
         <PageSection>
             <Card>
+                <CardHeader>
+                    <Breadcrumb>
+                        <BreadcrumbItem>
+                            <Link to="/reports">Reports</Link>
+                        </BreadcrumbItem>
+                        <BreadcrumbItem isActive>
+                            {config.id >= 0 ? config.title : "New report configuration"}
+                        </BreadcrumbItem>
+                    </Breadcrumb>
+                </CardHeader>
                 <CardBody>
                     <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
                         <FormGroup

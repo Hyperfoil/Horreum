@@ -11,6 +11,7 @@ import { noop } from "../../utils"
 import Table from "../../components/Table"
 import AccessIcon from "../../components/AccessIcon"
 import ActionMenu, { useShareLink, useChangeAccess, useDelete } from "../../components/ActionMenu"
+import ButtonLink from "../../components/ButtonLink"
 import { CellProps, Column } from "react-table"
 import { SchemaDispatch } from "./reducers"
 import { Access, Schema } from "../../api"
@@ -90,9 +91,7 @@ export default function AllSchema() {
             <Card>
                 {isTester && (
                     <CardHeader>
-                        <NavLink className="pf-c-button pf-m-primary" to="/schema/_new">
-                            New Schema
-                        </NavLink>
+                        <ButtonLink to="/schema/_new">New Schema</ButtonLink>
                     </CardHeader>
                 )}
                 <CardBody style={{ overflowX: "auto" }}>

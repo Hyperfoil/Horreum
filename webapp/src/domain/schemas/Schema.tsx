@@ -4,10 +4,13 @@ import { useSelector, useDispatch } from "react-redux"
 
 import {
     Alert,
+    Breadcrumb,
+    BreadcrumbItem,
     Bullseye,
     Button,
     Card,
     CardBody,
+    CardHeader,
     Form,
     FormGroup,
     PageSection,
@@ -17,6 +20,7 @@ import {
     Tooltip,
 } from "@patternfly/react-core"
 import { ImportIcon } from "@patternfly/react-icons"
+import { Link } from "react-router-dom"
 import jsonpath from "jsonpath"
 
 import * as actions from "./actions"
@@ -264,6 +268,14 @@ export default function Schema() {
             )}
             {!loading && (
                 <Card style={{ height: "100%" }}>
+                    <CardHeader>
+                        <Breadcrumb>
+                            <BreadcrumbItem>
+                                <Link to="/schema">Schemas</Link>
+                            </BreadcrumbItem>
+                            <BreadcrumbItem isActive>{schema?.name}</BreadcrumbItem>
+                        </Breadcrumb>
+                    </CardHeader>
                     <CardBody>
                         <SavedTabs
                             afterSave={() => {

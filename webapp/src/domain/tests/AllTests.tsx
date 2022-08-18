@@ -32,6 +32,7 @@ import * as selectors from "./selectors"
 import Table from "../../components/Table"
 import AccessIcon from "../../components/AccessIcon"
 import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from "../../components/ActionMenu"
+import ButtonLink from "../../components/ButtonLink"
 import TeamSelect, { Team, ONLY_MY_OWN } from "../../components/TeamSelect"
 import FolderSelect from "../../components/FolderSelect"
 import FoldersTree from "./FoldersTree"
@@ -400,11 +401,7 @@ export default function AllTests() {
         <PageSection>
             <Card>
                 <CardHeader>
-                    {isTester && (
-                        <NavLink className="pf-c-button pf-m-primary" to="/test/_new">
-                            New Test
-                        </NavLink>
-                    )}
+                    {isTester && <ButtonLink to="/test/_new">New Test</ButtonLink>}
                     {isAuthenticated && (
                         <div style={{ width: "200px", marginLeft: "16px" }}>
                             <TeamSelect

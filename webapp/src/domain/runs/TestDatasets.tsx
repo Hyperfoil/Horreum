@@ -3,6 +3,8 @@ import { useParams } from "react-router"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
 import {
+    Breadcrumb,
+    BreadcrumbItem,
     Button,
     Card,
     CardHeader,
@@ -20,7 +22,7 @@ import {
     ToolbarItem,
 } from "@patternfly/react-core"
 import { ArrowRightIcon } from "@patternfly/react-icons"
-import { NavLink } from "react-router-dom"
+import { Link, NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
 import { toEpochMillis, noop, fingerprintToString } from "../../utils"
@@ -216,13 +218,39 @@ export default function TestDatasets() {
         <PageSection>
             <Card>
                 <CardHeader>
-                    <Toolbar
-                        className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
-                        style={{ width: "100%", display: "flex" }}
-                    >
-                        <ToolbarGroup style={{ flexGrow: 100 }}>
+                    <Toolbar className="pf-u-justify-content-space-between" style={{ width: "100%" }}>
+                        <ToolbarGroup>
+                            <ToolbarItem style={{ flexGrow: 100 }}>
+                                <Breadcrumb>
+                                    <BreadcrumbItem>
+                                        <Link to="/test">Tests</Link>
+                                    </BreadcrumbItem>
+                                    <BreadcrumbItem>
+                                        {test ? <Link to={"/test/" + test.id}>{test.name}</Link> : "unknown"}
+                                    </BreadcrumbItem>
+                                    <BreadcrumbItem isActive>Datasets</BreadcrumbItem>
+                                </Breadcrumb>
+                            </ToolbarItem>
                             <ToolbarItem>
-                                <Title headingLevel="h2">Test: {`${test?.name || testId}`}</Title>
+                                <Flex>
+                                    <FlexItem>View:</FlexItem>
+                                    <FlexItem>
+                                        <ViewSelect
+                                            views={test?.views || []}
+                                            viewId={viewId || test?.defaultView?.id || -1}
+                                            onChange={setViewId}
+                                        />
+                                    </FlexItem>
+                                </Flex>
+                            </ToolbarItem>
+                            <ToolbarItem>
+                                <ExpandableSectionToggle
+                                    isExpanded={filterExpanded}
+                                    contentId="filter"
+                                    onToggle={setFilterExpanded}
+                                >
+                                    {filterExpanded ? "Hide filters" : "Show filters"}
+                                </ExpandableSectionToggle>
                             </ToolbarItem>
                             <ToolbarItem>
                                 <NavLink className="pf-c-button pf-m-primary" to={`/test/${testId}`}>
@@ -245,39 +273,10 @@ export default function TestDatasets() {
                                     {comparedDatasets ? "Cancel comparison" : "Select for comparison"}
                                 </Button>
                             </ToolbarItem>
-                            <ToolbarItem>
-                                <ExpandableSectionToggle
-                                    isExpanded={filterExpanded}
-                                    contentId="filter"
-                                    onToggle={setFilterExpanded}
-                                >
-                                    {filterExpanded ? "Hide filters" : "Show filters"}
-                                </ExpandableSectionToggle>
-                            </ToolbarItem>
-                            <ToolbarItem style={{ flexGrow: 100 }}></ToolbarItem>
-                            <ToolbarItem>
-                                <Flex>
-                                    <FlexItem>View:</FlexItem>
-                                    <FlexItem>
-                                        <ViewSelect
-                                            views={test?.views || []}
-                                            viewId={viewId || test?.defaultView?.id || -1}
-                                            onChange={setViewId}
-                                        />
-                                    </FlexItem>
-                                </Flex>
-                            </ToolbarItem>
                         </ToolbarGroup>
-                        <Pagination
-                            itemCount={datasets?.total}
-                            perPage={perPage}
-                            page={page}
-                            onSetPage={(e, p) => setPage(p)}
-                            onPerPageSelect={(e, pp) => setPerPage(pp)}
-                        />
                     </Toolbar>
                 </CardHeader>
-                <CardHeader>
+                <CardHeader style={{ margin: 0 }}>
                     <ExpandableSection
                         isDetached
                         isExpanded={filterExpanded}
@@ -312,6 +311,15 @@ export default function TestDatasets() {
                         </ButtonLink>
                     </CardBody>
                 )}
+                <CardHeader style={{ margin: 0, display: "block", textAlign: "right" }}>
+                    <Pagination
+                        itemCount={datasets?.total}
+                        perPage={perPage}
+                        page={page}
+                        onSetPage={(e, p) => setPage(p)}
+                        onPerPageSelect={(e, pp) => setPerPage(pp)}
+                    />
+                </CardHeader>
                 <CardBody style={{ overflowX: "auto" }}>
                     <Table
                         columns={columns}

@@ -4,6 +4,8 @@ import { useParams } from "react-router"
 
 import {
     ActionGroup,
+    Breadcrumb,
+    BreadcrumbItem,
     Button,
     Card,
     CardBody,
@@ -13,6 +15,7 @@ import {
     Spinner,
     PageSection,
 } from "@patternfly/react-core"
+import { Link } from "react-router-dom"
 
 import { alertAction } from "../../alerts"
 import { useTester } from "../../auth"
@@ -68,6 +71,13 @@ export default function TableReportPage() {
         <PageSection>
             <Card>
                 <CardHeader>
+                    <Breadcrumb style={{ flexGrow: 100 }}>
+                        <BreadcrumbItem>
+                            <Link to="/reports">Reports</Link>
+                        </BreadcrumbItem>
+                        <BreadcrumbItem>{report.config.title}</BreadcrumbItem>
+                        <BreadcrumbItem isActive>{report.id}</BreadcrumbItem>
+                    </Breadcrumb>
                     <ActionGroup>
                         <PrintButton printRef={componentRef} />
                         {isTester && (

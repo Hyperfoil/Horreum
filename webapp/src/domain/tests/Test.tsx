@@ -2,7 +2,19 @@ import { useState, useEffect, useRef } from "react"
 import { useParams } from "react-router"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
-import { Bullseye, Card, CardBody, CardHeader, PageSection, Spinner } from "@patternfly/react-core"
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    Bullseye,
+    Card,
+    CardBody,
+    CardHeader,
+    Flex,
+    FlexItem,
+    PageSection,
+    Spinner,
+} from "@patternfly/react-core"
+import { Link } from "react-router-dom"
 
 import * as actions from "./actions"
 import * as selectors from "./selectors"
@@ -63,10 +75,26 @@ export default function Test() {
         <PageSection>
             <Card>
                 <CardHeader>
-                    <ButtonLink to={`/run/dataset/list/${testId}`}>Dataset list</ButtonLink>
-                    <ButtonLink to={`/run/list/${testId}`} variant="secondary">
-                        Run list
-                    </ButtonLink>
+                    <Flex
+                        style={{ marginLeft: "16px", marginRight: "16px", width: "100%" }}
+                        fullWidth={{ default: "fullWidth" }}
+                        justifyContent={{ default: "justifyContentSpaceBetween" }}
+                    >
+                        <FlexItem>
+                            <Breadcrumb>
+                                <BreadcrumbItem>
+                                    <Link to="/test">Tests</Link>
+                                </BreadcrumbItem>
+                                <BreadcrumbItem isActive>{test?.name || "New test"}</BreadcrumbItem>
+                            </Breadcrumb>
+                        </FlexItem>
+                        <FlexItem>
+                            <ButtonLink to={`/run/dataset/list/${testId}`}>Dataset list</ButtonLink>
+                            <ButtonLink to={`/run/list/${testId}`} variant="secondary">
+                                Run list
+                            </ButtonLink>
+                        </FlexItem>
+                    </Flex>
                 </CardHeader>
                 {!loaded && testId !== 0 && (
                     <Bullseye>

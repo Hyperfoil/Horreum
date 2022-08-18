@@ -3,6 +3,8 @@ import { useParams } from "react-router"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
 import {
+    Breadcrumb,
+    BreadcrumbItem,
     Button,
     Card,
     CardHeader,
@@ -11,13 +13,12 @@ import {
     Checkbox,
     PageSection,
     Pagination,
-    Title,
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
 } from "@patternfly/react-core"
 import { ArrowRightIcon, TrashIcon } from "@patternfly/react-icons"
-import { NavLink } from "react-router-dom"
+import { Link, NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
 import { toEpochMillis, noop } from "../../utils"
@@ -199,13 +200,27 @@ export default function TestRuns() {
         <PageSection>
             <Card>
                 <CardHeader>
-                    <Toolbar
-                        className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
-                        style={{ width: "70%", display: "flex" }}
-                    >
-                        <ToolbarGroup style={{ flexGrow: 100 }}>
+                    <Toolbar className="pf-u-justify-content-space-between" style={{ width: "100%" }}>
+                        <ToolbarGroup>
+                            <ToolbarItem style={{ flexGrow: 100 }}>
+                                <Breadcrumb>
+                                    <BreadcrumbItem>
+                                        <Link to="/test">Tests</Link>
+                                    </BreadcrumbItem>
+                                    <BreadcrumbItem>
+                                        {test ? <Link to={"/test/" + test.id}>{test.name}</Link> : "unknown"}
+                                    </BreadcrumbItem>
+                                    <BreadcrumbItem isActive>Runs</BreadcrumbItem>
+                                </Breadcrumb>
+                            </ToolbarItem>
                             <ToolbarItem>
-                                <Title headingLevel="h2">Test: {`${(test && test.name) || testId}`}</Title>
+                                <Checkbox
+                                    id="showTrashed"
+                                    aria-label="show trashed runs"
+                                    label="Show trashed runs"
+                                    isChecked={showTrashed}
+                                    onChange={setShowTrashed}
+                                />
                             </ToolbarItem>
                             <ToolbarItem>
                                 <NavLink className="pf-c-button pf-m-primary" to={`/test/${testId}`}>
@@ -215,9 +230,7 @@ export default function TestRuns() {
                                     View datasets
                                 </NavLink>
                             </ToolbarItem>
-                        </ToolbarGroup>
-                        {test && test.compareUrl && (
-                            <ToolbarGroup>
+                            {test && test.compareUrl && (
                                 <ToolbarItem>
                                     <Button
                                         variant="primary"
@@ -229,20 +242,11 @@ export default function TestRuns() {
                                         Compare runs
                                     </Button>
                                 </ToolbarItem>
-                            </ToolbarGroup>
-                        )}
-                        <ToolbarGroup>
-                            <ToolbarItem>
-                                <Checkbox
-                                    id="showTrashed"
-                                    aria-label="show trashed runs"
-                                    label="Show trashed runs"
-                                    isChecked={showTrashed}
-                                    onChange={setShowTrashed}
-                                />
-                            </ToolbarItem>
+                            )}
                         </ToolbarGroup>
                     </Toolbar>
+                </CardHeader>
+                <CardHeader style={{ margin: 0, display: "block", textAlign: "right" }}>
                     <Pagination
                         itemCount={runCount}
                         perPage={perPage}
