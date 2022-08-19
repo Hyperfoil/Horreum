@@ -116,7 +116,7 @@ public class DatasetServiceImpl implements DatasetService {
          "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
          "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
          "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id WHERE ds.id IN (SELECT id FROM ids)";
-   private static final String ALL_LABELS_SELECT = "SELECT dataset_id, " +
+   private static final String ALL_LABELS_SELECT = "SELECT dataset.id as dataset_id, " +
          "COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values FROM dataset " +
          "LEFT JOIN label_values lv ON dataset.id = lv.dataset_id " +
          "LEFT JOIN label ON label.id = label_id ";
@@ -159,7 +159,7 @@ public class DatasetServiceImpl implements DatasetService {
             .append("), ").append(VALIDATION_SELECT);
       JsonNode jsonFilter = null;
       if (filter != null && !filter.isBlank()) {
-         sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id)");
+         sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset.id)");
          sql.append(DATASET_SUMMARY_SELECT);
          addViewIdCondition(sql, viewId);
          sql.append(" JOIN all_labels ON all_labels.dataset_id = ds.id WHERE testid = ?1 AND all_labels.values @> ?2");

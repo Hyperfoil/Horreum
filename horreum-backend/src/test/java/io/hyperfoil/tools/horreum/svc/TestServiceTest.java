@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -196,5 +197,26 @@ public class TestServiceTest extends BaseServiceTest {
       if (view.id != null) {
          assertEquals(view.id, viewId);
       }
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testLabelValues(TestInfo info) throws InterruptedException {
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+
+      BlockingQueue<DataSet.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+      uploadRun(runWithValue(42, schema), test.name);
+      uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
+      assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
+      assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
+
+      String response = jsonRequest().get("/api/test/" + test.id + "/labelValues").then().statusCode(200).
+            extract().body().asString();
+      JsonNode obj = Util.toJsonNode(response);
+      assertNotNull(obj);
+      assertTrue(obj.isArray());
+      assertEquals(1, StreamSupport.stream(obj.spliterator(), false).filter(item -> item.size() == 0).count());
+      assertEquals(1, StreamSupport.stream(obj.spliterator(), false).filter(item -> item.size() == 1 && item.has("value")).count());
+      assertEquals(2, obj.size());
    }
 }

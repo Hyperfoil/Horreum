@@ -59,10 +59,10 @@ public class TestServiceImpl implements TestService {
    private static final String TRASH_RUNS = "UPDATE run SET trashed = true WHERE testid = ?";
    //@formatter:off
    protected static final String LABEL_VALUES_QUERY =
-         "SELECT DISTINCT jsonb_object_agg(label.name, lv.value) AS values FROM label_values lv " +
-         "JOIN dataset ON dataset.id = lv.dataset_id " +
-         "JOIN label ON label.id = lv.label_id " +
-         "WHERE dataset.testid = ?1 AND ((?2 AND label.filtering) OR (?3 AND label.metrics))" +
+         "SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values FROM dataset " +
+         "LEFT JOIN label_values lv ON dataset.id = lv.dataset_id " +
+         "LEFT JOIN label ON label.id = lv.label_id " +
+         "WHERE dataset.testid = ?1 AND (label.id IS NULL OR (?2 AND label.filtering) OR (?3 AND label.metrics))" +
          "GROUP BY dataset_id";
    //@formatter:on
 
