@@ -2,17 +2,19 @@ package io.hyperfoil.tools.horreum.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.svc.Util;
+import io.quarkus.resteasy.reactive.server.runtime.QuarkusResteasyReactiveRequestContext;
+import io.vertx.core.http.HttpServerRequest;
+
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Optional;
 import javax.inject.Singleton;
 import javax.ws.rs.Priorities;
-import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.reactive.server.ServerRequestFilter;
+import org.jboss.resteasy.reactive.server.spi.ResteasyReactiveContainerRequestContext;
 
 @Singleton
 public class HorreumAuthorizationFilter {
@@ -26,8 +28,8 @@ public class HorreumAuthorizationFilter {
       this.issuer = issuer;
    }
 
-   @ServerRequestFilter(priority = Priorities.HEADER_DECORATOR + 10)
-   public Response filter(ContainerRequestContext containerRequestContext) {
+   @ServerRequestFilter(priority = Priorities.AUTHENTICATION - 1)
+   public Response filter(ResteasyReactiveContainerRequestContext containerRequestContext) {
       String authorization = containerRequestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
       if (authorization != null && authorization.toLowerCase(Locale.ROOT).startsWith("bearer ")) {
          int payloadStart = authorization.indexOf('.', 7);
@@ -54,9 +56,9 @@ public class HorreumAuthorizationFilter {
             }
             return null;
          }
-         MultivaluedMap<String, String> headers = containerRequestContext.getHeaders();
-         headers.remove(HttpHeaders.AUTHORIZATION);
-         headers.addFirst(TokenInterceptor.TOKEN_HEADER, authorization.substring(7));
+         HttpServerRequest actualServerRequest = ((QuarkusResteasyReactiveRequestContext) containerRequestContext.getServerRequestContext()).vertxServerRequest();
+         actualServerRequest.headers().remove(HttpHeaders.AUTHORIZATION);
+         containerRequestContext.getHeaders().addFirst(TokenInterceptor.TOKEN_HEADER, authorization.substring(7));
       }
       return null;
    }
