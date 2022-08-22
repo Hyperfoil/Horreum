@@ -232,7 +232,7 @@ export const LoginLogout = () => {
         return (
             <Button
                 onClick={() => {
-                    keycloak.logout()
+                    keycloak.logout({ redirectUri: window.location.origin })
                     dispatch({ type: AFTER_LOGOUT })
                 }}
             >
