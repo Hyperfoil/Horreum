@@ -25,11 +25,18 @@ export default function FragmentTabs(props: FragmentTabsProps) {
         [props.children]
     )
     const [activeKey, setActiveKey] = useState(() => {
-        const endOfTab = history.location.hash.indexOf("+")
-        const hash = history.location.hash.substring(1, endOfTab >= 0 ? endOfTab : undefined)
+        const hash = history.location.hash
+        let endOfTab = hash.length
+        for (const symbol of ["+", "&"]) {
+            const pos = hash.indexOf(symbol)
+            if (pos >= 0 && pos < endOfTab) {
+                endOfTab = pos
+            }
+        }
+        const fragment = hash.substring(1, endOfTab)
         const index = Math.max(
             0,
-            children.findIndex(c => hash === c.props.fragment)
+            children.findIndex(c => fragment === c.props.fragment)
         )
         if (props.tabIndexRef) {
             props.tabIndexRef.current = index
