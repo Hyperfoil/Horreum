@@ -1,6 +1,6 @@
 package io.hyperfoil.tools.horreum.changedetection;
 
-import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
+import io.hyperfoil.tools.horreum.api.ConditionConfig;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 
@@ -18,25 +18,25 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
     private static final Logger log = Logger.getLogger(RelativeDifferenceChangeDetectionModel.class);
 
     @Override
-    public ChangeDetectionModelConfig config() {
-        return new ChangeDetectionModelConfig(NAME, "Relative difference of means",
+    public ConditionConfig config() {
+        return new ConditionConfig(NAME, "Relative difference of means",
             "This is a generic filter that splits the dataset into two subsets: the 'floating window' " +
                   "and preceding datapoints. It calculates the mean of preceding datapoints and applies " +
                   "the 'filter' function on the window of last datapoints; it compares these two values and " +
                   "if the relative difference is greater than the threshold the change is emitted.\n" +
                   "In case that window is set to 1 this becomes a simple comparison of the most recent datapoint " +
                   "against the previous average value.")
-              .addComponent("threshold", new ChangeDetectionModelConfig.LogSliderComponent(100, 1, 1000, 0.2, "%"),
+              .addComponent("threshold", new ConditionConfig.LogSliderComponent(100, 1, 1000, 0.2, false, "%"),
                     "Threshold for relative difference",
                     "Maximum difference between the aggregated value of last <window> datapoints and the mean of preceding values."
               )
-              .addComponent("window", new ChangeDetectionModelConfig.LogSliderComponent(1, 1, 1000, 1, " "),
+              .addComponent("window", new ConditionConfig.LogSliderComponent(1, 1, 1000, 1, true, " "),
                     "Minimum window",
                     "Number of most recent datapoints used for aggregating the value for comparison.")
-              .addComponent("minPrevious", new ChangeDetectionModelConfig.LogSliderComponent(1, 1, 1000, 5, " "),
+              .addComponent("minPrevious", new ConditionConfig.LogSliderComponent(1, 1, 1000, 5, true, " "),
                     "Minimal number of preceding datapoints",
                     "Number of datapoints preceding the aggregation window.")
-              .addComponent("filter", new ChangeDetectionModelConfig.EnumComponent("mean").add("mean", "Mean value").add("min", "Minimum value").add("max", "Maximum value"),
+              .addComponent("filter", new ConditionConfig.EnumComponent("mean").add("mean", "Mean value").add("min", "Minimum value").add("max", "Maximum value"),
                     "Aggregation function for the floating window",
                     "Function used to aggregate datapoints from the floating window.");
     }

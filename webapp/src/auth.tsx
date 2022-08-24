@@ -28,8 +28,6 @@ export class AuthState {
     initPromise?: Promise<boolean> = undefined
 }
 
-const initialState = new AuthState()
-
 interface InitAction {
     type: typeof INIT
     keycloak: Keycloak.KeycloakInstance
@@ -58,7 +56,7 @@ interface AfterLogoutAction {
 
 type AuthActions = InitAction | UpdateDefaultTeamAction | UpdateRolesAction | StoreProfileAction | AfterLogoutAction
 
-export const reducer = (state = initialState, action: AuthActions) => {
+export function reducer(state = new AuthState(), action: AuthActions) {
     // TODO: is this necessary? It seems that without that the state is not updated at times.
     state = { ...state }
     switch (action.type) {

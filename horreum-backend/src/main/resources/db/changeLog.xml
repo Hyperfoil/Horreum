@@ -3654,5 +3654,76 @@
             $$ LANGUAGE plpgsql;
         </createProcedure>
     </changeSet>
+    
+    <changeSet id="88" author="rvansa">
+        <createTable tableName="experiment_profile">
+            <column name="id" type="integer">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="test_id" type="integer">
+                <constraints nullable="false" foreignKeyName="experiment_profile_test"
+                             referencedTableName="test" referencedColumnNames="id"/>
+            </column>
+            <column name="selector_labels" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+            <column name="selector_filter" type="text" />
+            <column name="baseline_labels" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+            <column name="baseline_filter" type="text" />
+            <column name="extra_labels" type="jsonb" />
+        </createTable>
+        <createTable tableName="experiment_comparisons">
+            <column name="profile_id" type="integer">
+                <constraints nullable="false" foreignKeyName="experiment_comparison_profile"
+                             referencedTableName="experiment_profile" referencedColumnNames="id"/>
+            </column>
+            <column name="variable_id" type="integer">
+                <constraints nullable="false" foreignKeyName="experiment_comparison_variable"
+                             referencedTableName="variable" referencedColumnNames="id" />
+            </column>
+            <column name="model" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="config" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE experiment_profile, experiment_comparisons TO "${quarkus.datasource.username}";
+            ALTER TABLE experiment_profile ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE experiment_comparisons ENABLE ROW LEVEL SECURITY;
+
+            CREATE POLICY ep_select ON experiment_profile FOR SELECT USING(exists(
+                SELECT 1 FROM test WHERE test.id = test_id AND (can_view2(access, owner) OR has_read_token(test.id))
+            ) OR has_role('horreum.system'));
+            CREATE POLICY ep_insert ON experiment_profile FOR INSERT WITH CHECK (exists(
+                SELECT 1 FROM test WHERE test.id = test_id AND (has_role2(owner, 'tester') OR has_modify_token(test.id))
+            ));
+            CREATE POLICY ep_update ON experiment_profile FOR UPDATE USING (exists(
+                SELECT 1 FROM test WHERE test.id = test_id AND (has_role2(owner, 'tester') OR has_modify_token(test.id))
+            ));
+            CREATE POLICY ep_delete ON experiment_profile FOR DELETE USING (exists(
+                SELECT 1 FROM test WHERE test.id = test_id AND (has_role2(owner, 'tester') OR has_modify_token(test.id))
+            ));
+
+            CREATE POLICY ec_select ON experiment_comparisons FOR SELECT USING(exists(
+                SELECT 1 FROM experiment_profile ep JOIN test ON test.id = test_id WHERE profile_id = ep.id AND (can_view2(access, owner) OR has_read_token(test.id))
+            )  OR has_role('horreum.system'));
+            CREATE POLICY ec_insert ON experiment_comparisons FOR INSERT WITH CHECK (exists(
+                SELECT 1 FROM experiment_profile ep JOIN test ON test.id = test_id WHERE profile_id = ep.id AND (has_role2(owner, 'tester') OR has_modify_token(test.id))
+            ));
+            CREATE POLICY ec_update ON experiment_comparisons FOR UPDATE USING (exists(
+                SELECT 1 FROM experiment_profile ep JOIN test ON test.id = test_id WHERE profile_id = ep.id AND (has_role2(owner, 'tester') OR has_modify_token(test.id))
+            ));
+            CREATE POLICY ec_delete ON experiment_comparisons FOR DELETE USING (exists(
+                SELECT 1 FROM experiment_profile ep JOIN test ON test.id = test_id WHERE profile_id = ep.id AND (has_role2(owner, 'tester') OR has_modify_token(test.id))
+            ));
+        </sql>
+    </changeSet>
 
 </databaseChangeLog>

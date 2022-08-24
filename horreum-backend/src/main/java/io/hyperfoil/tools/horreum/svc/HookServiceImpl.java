@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import io.hyperfoil.tools.horreum.api.ExperimentService;
 import io.hyperfoil.tools.horreum.api.HookService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
@@ -244,5 +245,10 @@ public class HookServiceImpl implements HookService {
    @Override
    public void deletePrefix(long id) {
       AllowedHookPrefix.delete("id", id);
+   }
+
+   @ConsumeEvent(ExperimentService.ExperimentResult.NEW_RESULT)
+   public void onNewExperimentResult(ExperimentService.ExperimentResult result) {
+      // TODO
    }
 }

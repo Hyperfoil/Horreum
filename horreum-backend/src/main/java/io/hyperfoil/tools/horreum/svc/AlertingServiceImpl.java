@@ -42,7 +42,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
-import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
+import io.hyperfoil.tools.horreum.api.ConditionConfig;
 import io.hyperfoil.tools.horreum.changedetection.FixedThresholdModel;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
@@ -439,6 +439,7 @@ public class AlertingServiceImpl implements AlertingService {
       if (!missingValueVariables.isEmpty()) {
          Util.publishLater(tm, eventBus, DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.run.id, dataset.id, dataset.ordinal, dataset.testid, missingValueVariables, notify));
       }
+      Util.publishLater(tm, eventBus, DataSet.EVENT_DATAPOINTS_CREATED, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal, dataset.testid));
    }
 
    private void createDataPoint(DataSet dataset, int variableId, double value, boolean notify) {
@@ -964,7 +965,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    @PermitAll
    @Override
-   public List<ChangeDetectionModelConfig> models() {
+   public List<ConditionConfig> changeDetectionModels() {
       return MODELS.values().stream().map(ChangeDetectionModel::config).collect(Collectors.toList());
    }
 

@@ -7,7 +7,7 @@ import { AddAlertAction } from "../../alerts"
 import { Hook } from "../../api"
 
 export const globalEventTypes = ["test/new", "run/new", "change/new"]
-export const testHookEventTypes = ["run/new", "change/new"]
+export const testHookEventTypes = ["run/new", "change/new", "experiment_result/new"]
 
 export class HooksState {
     byId?: Map<string, Hook> = undefined

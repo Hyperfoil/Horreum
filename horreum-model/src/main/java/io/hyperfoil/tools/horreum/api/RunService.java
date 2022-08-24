@@ -112,7 +112,7 @@ public interface RunService {
    RunCount runCount(@Parameter(required = true) @QueryParam("testId") int testId);
 
    @GET
-   @Path("list/{testId}/")
+   @Path("list/{testId}")
    RunsSummary listTestRuns(@PathParam("testId") int testId,
                             @QueryParam("trashed") boolean trashed,
                             @QueryParam("limit") Integer limit,

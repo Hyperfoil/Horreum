@@ -87,8 +87,8 @@ public interface AlertingService {
    List<RunExpectation> expectations();
 
    @GET
-   @Path("/models")
-   List<ChangeDetectionModelConfig> models();
+   @Path("/changeDetectionModels")
+   List<ConditionConfig> changeDetectionModels();
 
    @GET
    @Path("/defaultChangeDetectionConfigs")

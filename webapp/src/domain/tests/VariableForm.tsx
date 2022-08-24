@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react"
 
-import { ChangeDetection, ChangeDetectionModelConfig, Variable } from "../../api"
+import { ChangeDetection, ConditionConfig, Variable } from "../../api"
 
 import {
     ActionList,
     Button,
+    Flex,
+    FlexItem,
     Form,
     FormGroup,
-    Hint,
-    HintBody,
-    HintTitle,
+    Popover,
     Select,
     SelectOption,
     Tab,
@@ -22,38 +22,11 @@ import {
 
 import { AddCircleOIcon } from "@patternfly/react-icons"
 
+import ConditionComponent from "../../components/ConditionComponent"
+import EnumSelect from "../../components/EnumSelect"
 import Labels from "../../components/Labels"
-import LogSlider from "../../components/LogSlider"
-import NumberBound from "../../components/NumberBound"
 import OptionalFunction from "../../components/OptionalFunction"
-
-type EnumSelectProps = {
-    options: any
-    selected: string | undefined
-    onSelect(option: string): void
-}
-
-function EnumSelect(props: EnumSelectProps) {
-    const [isOpen, setOpen] = useState(false)
-    return (
-        <Select
-            isOpen={isOpen}
-            onToggle={setOpen}
-            placeholderText="Please select..."
-            selections={props.selected}
-            onSelect={(_, value) => {
-                props.onSelect(value as string)
-                setOpen(false)
-            }}
-        >
-            {Object.entries(props.options).map(([name, title]) => (
-                <SelectOption key={name} value={name}>
-                    {title as string}
-                </SelectOption>
-            ))}
-        </Select>
-    )
-}
+import HelpButton from "../../components/HelpButton"
 
 type VariableFormProps = {
     variable: Variable
@@ -61,7 +34,7 @@ type VariableFormProps = {
     groups: string[]
     setGroups(gs: string[]): void
     onChange(v: Variable): void
-    models: ChangeDetectionModelConfig[]
+    models: ConditionConfig[]
 }
 
 function checkVariable(v: Variable) {
@@ -216,63 +189,45 @@ export default function VariableForm(props: VariableFormProps) {
 
             {usedModel && changeDetection && (
                 <>
-                    <Hint>
-                        <HintTitle>{usedModel.title}</HintTitle>
-                        <HintBody>{usedModel.description}</HintBody>
-                    </Hint>
-                    {props.isTester && (
-                        <div style={{ textAlign: "right" }}>
-                            <Button
-                                variant="danger"
-                                onClick={() => {
-                                    const newArray = props.variable.changeDetection.filter(rd => rd !== changeDetection)
-                                    props.onChange({ ...props.variable, changeDetection: newArray })
-                                    setChangeDetection(newArray.length > 0 ? newArray[0] : undefined)
-                                }}
+                    <FormGroup label="Model" fieldId="model">
+                        <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
+                            <FlexItem
+                                style={{ paddingTop: "var(--pf-c-form--m-horizontal__group-label--md--PaddingTop)" }}
                             >
-                                Delete condition
-                            </Button>
-                        </div>
-                    )}
+                                {usedModel.title}
+                                <Popover headerContent={usedModel.title} bodyContent={usedModel.description}>
+                                    <HelpButton />
+                                </Popover>
+                            </FlexItem>
+                            {props.isTester && (
+                                <FlexItem>
+                                    <Button
+                                        variant="danger"
+                                        onClick={() => {
+                                            const newArray = props.variable.changeDetection.filter(
+                                                rd => rd !== changeDetection
+                                            )
+                                            props.onChange({ ...props.variable, changeDetection: newArray })
+                                            setChangeDetection(newArray.length > 0 ? newArray[0] : undefined)
+                                        }}
+                                    >
+                                        Delete condition
+                                    </Button>
+                                </FlexItem>
+                            )}
+                        </Flex>
+                    </FormGroup>
                     {usedModel.ui.map(comp => (
-                        <FormGroup fieldId={comp.name} key={comp.name} label={comp.title} helperText={comp.description}>
-                            {comp.type === "LOG_SLIDER" && (
-                                <LogSlider
-                                    value={changeDetection.config[comp.name] * ((comp.properties as any).scale || 1)}
-                                    onChange={value => {
-                                        const scale = (comp.properties as any).scale
-                                        const copy = { ...changeDetection }
-                                        copy.config[comp.name] = scale ? value / scale : value
-                                        update(copy)
-                                    }}
-                                    isDisabled={!props.isTester}
-                                    min={(comp.properties as any).min}
-                                    max={(comp.properties as any).max}
-                                    unit={(comp.properties as any).unit}
-                                />
-                            )}
-                            {comp.type === "ENUM" && (
-                                <EnumSelect
-                                    options={(comp.properties as any).options}
-                                    selected={changeDetection.config[comp.name]}
-                                    onSelect={value => {
-                                        const copy = { ...changeDetection }
-                                        copy.config[comp.name] = value
-                                        update(copy)
-                                    }}
-                                />
-                            )}
-                            {comp.type === "NUMBER_BOUND" && (
-                                <NumberBound
-                                    {...changeDetection.config[comp.name]}
-                                    onChange={(enabled: boolean, inclusive: boolean, value: number) => {
-                                        const copy = { ...changeDetection }
-                                        copy.config[comp.name] = { enabled, inclusive, value }
-                                        update(copy)
-                                    }}
-                                />
-                            )}
-                        </FormGroup>
+                        <ConditionComponent
+                            {...comp}
+                            isTester={props.isTester}
+                            value={changeDetection.config[comp.name]}
+                            onChange={value => {
+                                const copy = { ...changeDetection }
+                                copy.config[comp.name] = value
+                                update(copy)
+                            }}
+                        />
                     ))}
                 </>
             )}

@@ -29,6 +29,7 @@ import { noop } from "../../utils"
 import General from "./General"
 import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
+import Experiments from "./Experiments"
 import Hooks from "./Hooks"
 import Access from "./Access"
 import Subscriptions from "./Subscriptions"
@@ -49,6 +50,7 @@ export default function Test() {
     const viewFuncsRef = useRef<TabFunctions>()
     const variablesFuncsRef = useRef<TabFunctions>()
     const missingDataFuncsRef = useRef<TabFunctions>()
+    const experimentsFuncsRef = useRef<TabFunctions>()
     const hooksFuncsRef = useRef<TabFunctions>()
     const subscriptionsFuncsRef = useRef<TabFunctions>()
     const transformersFuncsRef = useRef<TabFunctions>()
@@ -197,6 +199,15 @@ export default function Test() {
                                     onModified={setModified}
                                     funcsRef={missingDataFuncsRef}
                                 />
+                            </SavedTab>
+                            <SavedTab
+                                title="Experiments"
+                                fragment="experiments"
+                                onSave={saveFunc(experimentsFuncsRef)}
+                                onReset={resetFunc(experimentsFuncsRef)}
+                                isModified={() => modified}
+                            >
+                                <Experiments test={test} funcsRef={experimentsFuncsRef} onModified={setModified} />
                             </SavedTab>
                             <SavedTab
                                 title="Webhooks"

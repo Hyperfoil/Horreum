@@ -4,7 +4,7 @@ import { useHistory } from "react-router"
 
 import { useTester } from "../../auth"
 import { alertAction } from "../../alerts"
-import Api, { ChangeDetection, ChangeDetectionModelConfig, Variable } from "../../api"
+import Api, { ChangeDetection, ConditionConfig, Variable } from "../../api"
 import { NavLink } from "react-router-dom"
 
 import {
@@ -251,7 +251,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
     const [recalcConfirm, setRecalcConfirm] = useState<(_: any) => void>()
     const [ignoreNoSubscriptions, setIgnoreNoSubscriptions] = useState(false)
     const [defaultChangeDetectionConfigs, setDefaultChangeDetectionConfigs] = useState<ChangeDetection[]>([])
-    const [changeDetectionModels, setChangeDetectionModels] = useState<ChangeDetectionModelConfig[]>([])
+    const [changeDetectionModels, setChangeDetectionModels] = useState<ConditionConfig[]>([])
     const dispatch = useDispatch()
     // dummy variable to cause reloading of variables
     const [reload, setReload] = useState(0)
@@ -272,7 +272,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
         )
     }, [test.id, reload, dispatch])
     useEffect(() => {
-        Api.alertingServiceModels().then(setChangeDetectionModels, error =>
+        Api.alertingServiceChangeDetectionModels().then(setChangeDetectionModels, error =>
             dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
         )
         Api.alertingServiceDefaultChangeDetectionConfigs().then(setDefaultChangeDetectionConfigs, error =>

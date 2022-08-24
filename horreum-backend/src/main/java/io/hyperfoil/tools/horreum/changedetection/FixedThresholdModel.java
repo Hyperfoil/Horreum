@@ -7,7 +7,7 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.hyperfoil.tools.horreum.api.ChangeDetectionModelConfig;
+import io.hyperfoil.tools.horreum.api.ConditionConfig;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 
@@ -16,10 +16,10 @@ public class FixedThresholdModel implements ChangeDetectionModel {
    public static final String NAME = "fixedThreshold";
 
    @Override
-   public ChangeDetectionModelConfig config() {
-      return new ChangeDetectionModelConfig(NAME, "Fixed Threshold", "This model checks that the datapoint value is within fixed bounds.")
-            .addComponent("min", new ChangeDetectionModelConfig.NumberBound(), "Minimum", "Lower bound for acceptable datapoint values.")
-            .addComponent("max", new ChangeDetectionModelConfig.NumberBound(), "Maximum", "Upper bound for acceptable datapoint values.");
+   public ConditionConfig config() {
+      return new ConditionConfig(NAME, "Fixed Threshold", "This model checks that the datapoint value is within fixed bounds.")
+            .addComponent("min", new ConditionConfig.NumberBound(), "Minimum", "Lower bound for acceptable datapoint values.")
+            .addComponent("max", new ConditionConfig.NumberBound(), "Maximum", "Upper bound for acceptable datapoint values.");
    }
 
    @Override

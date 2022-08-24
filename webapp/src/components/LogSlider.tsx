@@ -11,11 +11,17 @@ type LogSliderProps = {
 }
 
 function toLog(value: number, min: number, max: number) {
+    if (min === 0) {
+        min = 1
+    }
     if (value < min) return 0
     return (100 * Math.log10(value / min)) / Math.log10(max / min)
 }
 
 function toPow(value: number, min: number, max: number) {
+    if (min === 0) {
+        min = 1
+    }
     if (value < 1) return 0
     return min * Math.pow(10, (value / 100) * Math.log10(max / min))
 }
@@ -36,8 +42,12 @@ export default function LogSlider({
                     value={toLog(value, min, max)}
                     onChange={value => {
                         let x = toPow(value, min, max)
+                        console.log("TOPOW")
+                        console.log(x)
                         if (isDiscrete) {
                             x = Math.round(x)
+                            console.log("DISC")
+                            console.log(x)
                         }
                         props.onChange(x)
                     }}

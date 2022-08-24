@@ -565,7 +565,7 @@ public class Util {
 
    static boolean evaluateTest(String function, JsonNode input,
                                Predicate<Value> onNotBoolean, BiConsumer<String, Throwable> onException, Consumer<String> onOutput) {
-      Boolean res = evaluateOnce("__x => (!!(" + function + ")(__x))", input, result -> {
+      Boolean res = evaluateOnce(makeFilter(function), input, result -> {
          if (result.isBoolean()) {
             return result.asBoolean();
          } else {
@@ -573,6 +573,10 @@ public class Util {
          }
       }, onException, onOutput);
       return res != null && res;
+   }
+
+   public static String makeFilter(String function) {
+      return "__x => (!!(" + function + ")(__x))";
    }
 
    static Object runQuery(EntityManager em, String query, Object... params) {

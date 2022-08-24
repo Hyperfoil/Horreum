@@ -14,6 +14,7 @@ import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInDataset } from "./NoSchema"
 import LabelValuesModal from "./LabelValuesModal"
 import ValidationErrorTable from "./ValidationErrorTable"
+import ExperimentModal from "./ExperimentModal"
 import ErrorBadge from "../../components/ErrorBadge"
 
 type DatasetDataProps = {
@@ -31,6 +32,8 @@ export default function DatasetData(props: DatasetDataProps) {
     const [loading, setLoading] = useState(false)
     const [labelValuesOpen, setLabelValuesOpen] = useState(false)
     const [labelsLogOpen, setLabelsLogOpen] = useState(false)
+    const [hasExperiments, setHasExperiments] = useState(false)
+    const [experimentsOpen, setExperimentsOpen] = useState(false)
     useEffect(() => {
         setLoading(true)
         Api.datasetServiceGetDataSet(props.datasetId)
@@ -64,6 +67,12 @@ export default function DatasetData(props: DatasetDataProps) {
             )
         }
     }, [validationErrors])
+    useEffect(() => {
+        Api.experimentServiceProfiles(props.testId).then(
+            profiles => setHasExperiments(profiles && profiles.length > 0),
+            error => dispatchError(dispatch, error, "FETCH_EXPERIMENT_PROFILES", "Cannot fetch experiment profiles")
+        )
+    }, [props.testId])
     const schemas = useMemo(() => {
         if (originalData) {
             return [
@@ -136,6 +145,18 @@ export default function DatasetData(props: DatasetDataProps) {
                         isOpen={labelsLogOpen}
                         onClose={() => setLabelsLogOpen(false)}
                     />
+                    {hasExperiments && (
+                        <>
+                            <Button variant="primary" onClick={() => setExperimentsOpen(true)}>
+                                Evaluate experiment
+                            </Button>
+                            <ExperimentModal
+                                datasetId={props.datasetId}
+                                isOpen={experimentsOpen}
+                                onClose={() => setExperimentsOpen(false)}
+                            />
+                        </>
+                    )}
                 </FlexItem>
             </Flex>
             {loading ? (

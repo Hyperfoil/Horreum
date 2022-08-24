@@ -12,7 +12,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
-public class ChangeDetectionModelConfig {
+public class ConditionConfig {
    @NotNull
    public String name;
    @NotNull
@@ -23,7 +23,7 @@ public class ChangeDetectionModelConfig {
    public List<Component> ui = new ArrayList<>();
    public Map<String, JsonNode> defaults = new HashMap<>();
 
-   public ChangeDetectionModelConfig(String name, String title, String description) {
+   public ConditionConfig(String name, String title, String description) {
       this.name = name;
       this.title = title;
       this.description = description;
@@ -36,13 +36,13 @@ public class ChangeDetectionModelConfig {
       return component;
    }
 
-   public ChangeDetectionModelConfig addComponent(String name, ComponentTemplate template, String title, String description) {
+   public ConditionConfig addComponent(String name, ComponentTemplate template, String title, String description) {
       Component component = addComponent(name, template.getDefault(), template.getType(), title, description);
       template.addProperties(component);
       return this;
    }
 
-   @Schema(name = "ChangeDetectionComponent")
+   @Schema(name = "ConditionComponent")
    public class Component {
       @NotNull
       public String name;
@@ -69,8 +69,8 @@ public class ChangeDetectionModelConfig {
          return this;
       }
 
-      public ChangeDetectionModelConfig end() {
-         return ChangeDetectionModelConfig.this;
+      public ConditionConfig end() {
+         return ConditionConfig.this;
       }
    }
 
@@ -78,6 +78,7 @@ public class ChangeDetectionModelConfig {
       LOG_SLIDER,
       ENUM,
       NUMBER_BOUND,
+      SWITCH,
    }
 
    public interface ComponentTemplate {
@@ -88,18 +89,20 @@ public class ChangeDetectionModelConfig {
       void addProperties(Component component);
    }
 
-   public static class LogSliderComponent implements ComponentTemplate{
+   public static class LogSliderComponent implements ComponentTemplate {
       private final double scale;
       private final double min;
       private final double max;
       private final double defaultValue;
+      private final boolean discrete;
       private final String unit;
 
-      public LogSliderComponent(double scale, double min, double max, double defaultValue, String unit) {
+      public LogSliderComponent(double scale, double min, double max, double defaultValue, boolean discrete, String unit) {
          this.scale = scale;
          this.min = min;
          this.max = max;
          this.defaultValue = defaultValue;
+         this.discrete = discrete;
          this.unit = unit;
       }
 
@@ -115,7 +118,12 @@ public class ChangeDetectionModelConfig {
 
       @Override
       public void addProperties(Component component) {
-         component.addProperty("scale", scale).addProperty("min", min).addProperty("max", max).addProperty("unit", unit);
+         component
+               .addProperty("scale", scale)
+               .addProperty("min", min)
+               .addProperty("max", max)
+               .addProperty("unit", unit)
+               .addProperty("discrete", discrete);
       }
    }
 
@@ -157,6 +165,22 @@ public class ChangeDetectionModelConfig {
       @Override
       public JsonNode getDefault() {
          return JsonNodeFactory.instance.objectNode().put("value", 0).put("inclusive", true).put("enabled", false);
+      }
+
+      @Override
+      public void addProperties(Component component) {
+      }
+   }
+
+   public static class SwitchComponent implements ComponentTemplate {
+      @Override
+      public ComponentType getType() {
+         return ComponentType.SWITCH;
+      }
+
+      @Override
+      public JsonNode getDefault() {
+         return JsonNodeFactory.instance.booleanNode(true);
       }
 
       @Override
