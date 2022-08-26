@@ -30,7 +30,7 @@ import General from "./General"
 import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
 import Experiments from "./Experiments"
-import Hooks from "./Hooks"
+import Actions from "./Actions"
 import Access from "./Access"
 import Subscriptions from "./Subscriptions"
 import Transformers from "./Transformers"
@@ -51,7 +51,7 @@ export default function Test() {
     const variablesFuncsRef = useRef<TabFunctions>()
     const missingDataFuncsRef = useRef<TabFunctions>()
     const experimentsFuncsRef = useRef<TabFunctions>()
-    const hooksFuncsRef = useRef<TabFunctions>()
+    const actionsFuncsRef = useRef<TabFunctions>()
     const subscriptionsFuncsRef = useRef<TabFunctions>()
     const transformersFuncsRef = useRef<TabFunctions>()
     const [loaded, setLoaded] = useState(false)
@@ -210,18 +210,18 @@ export default function Test() {
                                 <Experiments test={test} funcsRef={experimentsFuncsRef} onModified={setModified} />
                             </SavedTab>
                             <SavedTab
-                                title="Webhooks"
-                                fragment="hooks"
+                                title="Actions"
+                                fragment="actions"
                                 isHidden={testId <= 0 || !isTester}
-                                onSave={saveFunc(hooksFuncsRef)}
-                                onReset={resetFunc(hooksFuncsRef)}
+                                onSave={saveFunc(actionsFuncsRef)}
+                                onReset={resetFunc(actionsFuncsRef)}
                                 isModified={() => modified}
                             >
-                                <Hooks
+                                <Actions
                                     testId={testId}
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
-                                    funcsRef={hooksFuncsRef}
+                                    funcsRef={actionsFuncsRef}
                                 />
                             </SavedTab>
                             <SavedTab

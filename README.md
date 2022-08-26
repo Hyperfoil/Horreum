@@ -115,7 +115,7 @@ There are few generic roles that mostly help the UI and serve as an early line o
 - viewer: general permission to view non-public runs
 - uploader: permission to upload new runs, useful for bot accounts (CI)
 - tester: common user that can define tests, modify or delete data.
-- admin: permission both see and change application-wide configuration such as hooks
+- admin: permission both see and change application-wide configuration such as global actions
 
 Each team should have a role with `-team` suffix that will be the owner of the tests/runs, e.g. `engineers-team`.
 Uploaders for team's data have `engineers-uploader` which is a composite role, including `engineers-team` and `uploader`.

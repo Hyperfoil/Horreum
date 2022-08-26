@@ -6,6 +6,7 @@ type EnumSelectProps = {
     options: any
     selected: string | undefined
     onSelect(option: string): void
+    isDisabled?: boolean
 }
 
 export default function EnumSelect(props: EnumSelectProps) {
@@ -20,6 +21,7 @@ export default function EnumSelect(props: EnumSelectProps) {
                 props.onSelect(value as string)
                 setOpen(false)
             }}
+            isDisabled={props.isDisabled}
         >
             {Object.entries(props.options).map(([name, title]) => (
                 <SelectOption key={name} value={name}>

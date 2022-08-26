@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { Banner, Button, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 import { OutlinedTimesCircleIcon, PlusIcon } from "@patternfly/react-icons"
 
-import { allHooks, addHook, removeHook } from "./actions"
+import { allActions, addAction, removeAction } from "./actions"
 import * as selectors from "./selectors"
 import { isAdminSelector } from "../../auth"
 import { noop } from "../../utils"
@@ -12,29 +12,43 @@ import { noop } from "../../utils"
 import { fetchSummary } from "../tests/actions"
 
 import Table from "../../components/Table"
-import AddHookModal from "./AddHookModal"
+import AddActionModal from "./AddActionModal"
 import { Column } from "react-table"
-import { HooksDispatch } from "./reducers"
-import { Hook } from "../../api"
+import { ActionsDispatch } from "./reducers"
+import { Action } from "../../api"
 
-export default function HookList() {
-    const dispatch = useDispatch<HooksDispatch>()
+export default function ActionList() {
+    const dispatch = useDispatch<ActionsDispatch>()
     useEffect(() => {
         dispatch(fetchSummary()).catch(noop)
     }, [dispatch])
-    const columns: Column<Hook>[] = useMemo(
+    const columns: Column<Action>[] = useMemo(
         () => [
             {
-                Header: "Url",
-                accessor: "url",
+                Header: "Event type",
+                accessor: "event",
             },
             {
-                Header: "Event type",
+                Header: "Action type",
                 accessor: "type",
             },
             {
                 Header: "Active",
                 accessor: "active",
+            },
+            {
+                Header: "Configuration",
+                accessor: "config",
+                Cell: (arg: any) => {
+                    switch (arg.row.original.type) {
+                        case "http":
+                            return arg.cell.value.url
+                        case "github":
+                            return "some github stuff"
+                        default:
+                            return "unknown"
+                    }
+                },
             },
             {
                 Header: "",
@@ -49,7 +63,7 @@ export default function HookList() {
                             variant="link"
                             style={{ color: "#a30000" }}
                             onClick={() => {
-                                dispatch(removeHook(value)).catch(noop)
+                                dispatch(removeAction(value)).catch(noop)
                             }}
                         >
                             <OutlinedTimesCircleIcon />
@@ -65,14 +79,13 @@ export default function HookList() {
     const isAdmin = useSelector(isAdminSelector)
     useEffect(() => {
         if (isAdmin) {
-            dispatch(allHooks()).catch(noop)
+            dispatch(allActions()).catch(noop)
         }
     }, [dispatch, isAdmin])
     return (
         <>
             <Banner variant="info">
-                These Webhooks are global webhooks. For individual test webhooks, please configure in the Test
-                definition.
+                These Actopms are global actions. For individual test actions, please go to Test configuration.
             </Banner>
             <Toolbar
                 className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
@@ -81,15 +94,15 @@ export default function HookList() {
                 <ToolbarContent>
                     <ToolbarItem aria-label="info">
                         <Button variant="primary" onClick={() => setOpen(true)}>
-                            <PlusIcon /> Add Hook
+                            <PlusIcon /> Add Action
                         </Button>
                     </ToolbarItem>
                 </ToolbarContent>
             </Toolbar>
-            <AddHookModal
+            <AddActionModal
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
-                onSubmit={h => dispatch(addHook(h)).catch(noop)}
+                onSubmit={h => dispatch(addAction(h)).catch(noop)}
             />
             <Table columns={columns} data={list || []} />
         </>

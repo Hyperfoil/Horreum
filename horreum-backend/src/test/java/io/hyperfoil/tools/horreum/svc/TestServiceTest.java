@@ -27,7 +27,7 @@ import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.Hook;
+import io.hyperfoil.tools.horreum.entity.json.Action;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -122,11 +122,11 @@ public class TestServiceTest extends BaseServiceTest {
 
       addAllowedPrefix("https://example.com");
 
-      Hook hook = addTestHook(test, Run.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Hook.class);
-      assertNotNull(hook.id);
-      assertTrue(hook.active);
-      hook.active = false;
-      jsonRequest().body(hook).post("/api/test/" + test.id + "/hook").then().statusCode(204);
+      Action action = addTestHook(test, Run.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
+      assertNotNull(action.id);
+      assertTrue(action.active);
+      action.active = false;
+      jsonRequest().body(action).post("/api/test/" + test.id + "/hook").then().statusCode(204);
    }
 
    private void addAllowedPrefix(String prefix) {
@@ -134,12 +134,13 @@ public class TestServiceTest extends BaseServiceTest {
             .body(prefix).post("/api/hook/prefixes").then().statusCode(200);
    }
 
-   private Response addTestHook(Test test, String type, String url) {
-      Hook hook = new Hook();
-      hook.type = type;
-      hook.active = true;
-      hook.url = url;
-      return jsonRequest().body(hook).post("/api/test/" + test.id + "/hook");
+   private Response addTestHook(Test test, String event, String url) {
+      Action action = new Action();
+      action.event = event;
+      action.type = "http";
+      action.active = true;
+      action.config = JsonNodeFactory.instance.objectNode().put("url", url);
+      return jsonRequest().body(action).post("/api/test/" + test.id + "/hook");
    }
 
    @org.junit.jupiter.api.Test
@@ -151,18 +152,19 @@ public class TestServiceTest extends BaseServiceTest {
 
       addAllowedPrefix("https://example.com");
 
-      Hook hook = addGlobalHook(Test.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Hook.class);
-      assertNotNull(hook.id);
-      assertTrue(hook.active);
-      given().auth().oauth2(ADMIN_TOKEN).delete("/api/hook/" + hook.id);
+      Action action = addGlobalHook(Test.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
+      assertNotNull(action.id);
+      assertTrue(action.active);
+      given().auth().oauth2(ADMIN_TOKEN).delete("/api/hook/" + action.id);
    }
 
-   private Response addGlobalHook(String type, String url) {
-      Hook hook = new Hook();
-      hook.type = type;
-      hook.active = true;
-      hook.url = url;
-      return  given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "application/json").body(hook).post("/api/hook");
+   private Response addGlobalHook(String event, String url) {
+      Action action = new Action();
+      action.event = event;
+      action.type = "http";
+      action.active = true;
+      action.config = JsonNodeFactory.instance.objectNode().put("url", url);
+      return  given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/hook");
    }
 
    @org.junit.jupiter.api.Test

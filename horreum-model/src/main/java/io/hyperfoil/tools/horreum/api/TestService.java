@@ -14,7 +14,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
@@ -24,11 +23,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.json.Access;
-import io.hyperfoil.tools.horreum.entity.json.Hook;
+import io.hyperfoil.tools.horreum.entity.json.Action;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.TestToken;
 import io.hyperfoil.tools.horreum.entity.json.View;
-import org.jboss.resteasy.reactive.RestResponse;
 
 @Path("/api/test")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -102,8 +100,8 @@ public interface TestService {
    void updateFolder(@PathParam("id") int id, @QueryParam("folder") String folder);
 
    @POST
-   @Path("{testId}/hook")
-   Hook updateHook(@PathParam("testId") int testId, @RequestBody(required = true) Hook hook);
+   @Path("{testId}/action")
+   Action updateAction(@PathParam("testId") int testId, @RequestBody(required = true) Action action);
 
    @GET
    @Path("{id}/fingerprint")

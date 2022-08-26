@@ -18,7 +18,7 @@ function AddPrefixModal(props: AddPrefixModalProps) {
     }
     return (
         <Modal
-            title="Add allowed hook prefix"
+            title="Add allowed site"
             isOpen={props.isOpen}
             onClose={onClose}
             actions={[
@@ -44,7 +44,7 @@ function AddPrefixModal(props: AddPrefixModalProps) {
                     validated={isValid ? "default" : "warning"}
                     isRequired={true}
                     fieldId="prefix"
-                    helperText="Prefix for all URLs used in webhooks"
+                    helperText="Prefix for all URLs used in HTTP Actions"
                     helperTextInvalid="The prefix should be either empty, or start with 'http://' or 'https://'"
                 >
                     <TextInput

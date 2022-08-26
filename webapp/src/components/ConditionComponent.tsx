@@ -35,6 +35,7 @@ export default function ConditionComponent(props: ConditionComponentProps) {
                     options={(props.properties as any).options}
                     selected={props.value}
                     onSelect={props.onChange}
+                    isDisabled={!props.isTester}
                 />
             )
             break
@@ -45,6 +46,7 @@ export default function ConditionComponent(props: ConditionComponentProps) {
                     onChange={(enabled: boolean, inclusive: boolean, value: number) => {
                         props.onChange({ enabled, inclusive, value })
                     }}
+                    isDisabled={!props.isTester}
                 />
             )
             break
@@ -53,6 +55,7 @@ export default function ConditionComponent(props: ConditionComponentProps) {
                 <Switch
                     label="ON"
                     labelOff="OFF"
+                    isDisabled={!props.isTester}
                     isChecked={props.value}
                     onChange={checked => props.onChange(checked)}
                 />

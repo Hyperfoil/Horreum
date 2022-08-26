@@ -52,11 +52,11 @@ INSERT INTO watch_teams(watch_id, teams) VALUES (18, 'dev-team');
 INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (19, false, 'user', 'email', 'john@example.com');
 INSERT INTO notificationsettings(id, isteam, name, method, data) VALUES (20, true, 'dev-team', 'IRC', 'irc.example.com/#dev-team');
 
-INSERT INTO hook (id,url,type,target,active) VALUES (  1,'http://laptop:8080/api/log','test/new',  1,true);
-INSERT INTO hook (id,url,type,target,active) VALUES (  2,'http://laptop:8080/api/log','test/new', -1,false);
+INSERT INTO "action" (id,event,type,testId,config,secrets) VALUES (1, 'run/new', 'http', 1, '{ "url": "http://laptop:8080/api/log" }', '{}');
+INSERT INTO "action" (id,event,type,testId,config,secrets) VALUES (2, 'test/new', 'http', -1, '{ "url": "http://laptop:8080/api/log" }', '{}');
 
 ALTER SEQUENCE test_id_seq RESTART WITH 3;
 ALTER SEQUENCE schema_id_seq RESTART WITH 4;
-ALTER SEQUENCE hook_id_seq RESTART WITH 3;
+ALTER SEQUENCE action_id_seq RESTART WITH 3;
 ALTER SEQUENCE run_id_seq RESTART WITH 4;
 ALTER SEQUENCE hibernate_sequence RESTART WITH 100;

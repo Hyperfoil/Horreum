@@ -63,7 +63,7 @@ export default function LogSlider({
             <FlexItem alignSelf={{ default: "alignSelfFlexStart" }}>
                 <NumberInput
                     value={Math.round((value + Number.EPSILON) * 100) / 100}
-                    onChange={e => {
+                    onUpdate={e => {
                         let x = Number.parseFloat((e.target as any).value)
                         if (isDiscrete) {
                             x = Math.round(x)

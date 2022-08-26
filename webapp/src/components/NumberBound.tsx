@@ -6,6 +6,7 @@ type NumberBoundProps = {
     enabled: boolean
     inclusive: boolean
     value: number
+    isDisabled?: boolean
     onChange(enabled: boolean, inclusive: boolean, value: number): void
 }
 
@@ -18,6 +19,7 @@ export default function NumberBound(props: NumberBoundProps) {
                 <Switch
                     id={prefix + "_enabled"}
                     isChecked={props.enabled}
+                    isDisabled={props.isDisabled}
                     onChange={enabled => {
                         props.onChange(enabled, props.inclusive, props.value)
                     }}
@@ -29,7 +31,7 @@ export default function NumberBound(props: NumberBoundProps) {
                 <TextInput
                     id={prefix + "_value"}
                     type="number"
-                    isDisabled={!props.enabled}
+                    isDisabled={!props.enabled || props.isDisabled}
                     onChange={value => props.onChange(props.enabled, props.inclusive, Number.parseFloat(value))}
                     value={props.value}
                     onKeyDown={e => {
@@ -40,7 +42,7 @@ export default function NumberBound(props: NumberBoundProps) {
             <FlexItem>
                 <Checkbox
                     id={prefix + "_inclusive"}
-                    isDisabled={!props.enabled}
+                    isDisabled={!props.enabled || props.isDisabled}
                     isChecked={props.inclusive}
                     onChange={inclusive => props.onChange(props.enabled, inclusive, props.value)}
                     label="Inclusive"

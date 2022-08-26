@@ -3,7 +3,7 @@ import { useDispatch } from "react-redux"
 
 import { Dropdown, DropdownItem, DropdownToggle, FormGroup, InputGroup, TextInput } from "@patternfly/react-core"
 
-import Api, { AllowedHookPrefix } from "../api"
+import Api, { AllowedSite } from "../api"
 
 import { alertAction } from "../alerts"
 
@@ -16,7 +16,7 @@ function isValidUrl(url: string) {
     }
 }
 
-type HookUrlSelectorProps = {
+type HttpActionUrlSelectorProps = {
     active: boolean
     value: string
     setValue(value: string): void
@@ -26,13 +26,13 @@ type HookUrlSelectorProps = {
     extraCheck?(value: string): string | boolean
 }
 
-export default function HookUrlSelector(props: HookUrlSelectorProps) {
+export default function HttpActionUrlSelector(props: HttpActionUrlSelectorProps) {
     const dispatch = useDispatch()
-    const [prefixes, setPrefixes] = useState<AllowedHookPrefix[]>([{ id: -1, prefix: "" }])
+    const [prefixes, setPrefixes] = useState<AllowedSite[]>([{ id: -1, prefix: "" }])
     useEffect(() => {
         if (props.active) {
-            Api.hookServiceAllowedPrefixes().then(setPrefixes, e =>
-                dispatch(alertAction("FETCH_HOOK_PREFIXES", "Failed to fetch allowed hook prefixes", e))
+            Api.actionServiceAllowedSites().then(setPrefixes, e =>
+                dispatch(alertAction("FETCH_ALLOWED_SITES", "Failed to fetch allowed sites", e))
             )
         }
     }, [dispatch, props.active])
@@ -47,7 +47,7 @@ export default function HookUrlSelector(props: HookUrlSelectorProps) {
 
     return (
         <FormGroup
-            label="Webhook URL"
+            label="HTTP Action URL"
             validated={isUrlValid && isUrlAllowed && extraCheckResult === true ? "default" : "error"}
             isRequired={true}
             fieldId="url"
@@ -97,8 +97,9 @@ export default function HookUrlSelector(props: HookUrlSelectorProps) {
                     aria-describedby="url-helper"
                     name="url"
                     validated={isUrlValid && isUrlAllowed && extraCheckResult === true ? "default" : "error"}
-                    placeholder="e.g. 'http://example.com/api/hook'"
+                    placeholder="e.g. 'http://example.com/api/action'"
                     onChange={value => {
+                        value = value.trim()
                         if (props.setValid) {
                             props.setValid(
                                 isValidUrl(value) &&

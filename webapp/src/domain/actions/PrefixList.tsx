@@ -5,7 +5,7 @@ import { UseSortByColumnOptions } from "react-table"
 import { Bullseye, Button, Spinner, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 import { OutlinedTimesCircleIcon, PlusIcon } from "@patternfly/react-icons"
 
-import Api, { AllowedHookPrefix } from "../../api"
+import Api, { AllowedSite } from "../../api"
 
 import { alertAction } from "../../alerts"
 
@@ -13,15 +13,15 @@ import Table from "../../components/Table"
 import AddPrefixModal from "./AddPrefixModal"
 import { Column } from "react-table"
 
-type C = Column<AllowedHookPrefix> & UseSortByColumnOptions<AllowedHookPrefix>
+type C = Column<AllowedSite> & UseSortByColumnOptions<AllowedSite>
 
 function PrefixList() {
     const dispatch = useDispatch()
-    const [prefixes, setPrefixes] = useState<AllowedHookPrefix[]>()
+    const [prefixes, setPrefixes] = useState<AllowedSite[]>()
     useEffect(() => {
         setPrefixes(undefined)
-        Api.hookServiceAllowedPrefixes().then(setPrefixes, e =>
-            dispatch(alertAction("FETCH_HOOK_PREFIXES", "Failed to fetch allowed hook prefixes", e))
+        Api.actionServiceAllowedSites().then(setPrefixes, e =>
+            dispatch(alertAction("FETCH_ALLOWED_SITES", "Failed to fetch allowed sites", e))
         )
     }, [dispatch])
     const columns: C[] = [
@@ -51,8 +51,8 @@ function PrefixList() {
                             if (prefixes) {
                                 setPrefixes(prefixes.filter(p => p.id !== value))
                             }
-                            Api.hookServiceDeletePrefix(value).catch(e =>
-                                dispatch(alertAction("REMOVE_HOOK_PREFIX", "Failed to remove hook prefix.", e))
+                            Api.actionServiceDeleteSite(value).catch(e =>
+                                dispatch(alertAction("REMOVE_ALLOWED_SITE", "Failed to remove allowed site", e))
                             )
                         }}
                     >
@@ -70,9 +70,9 @@ function PrefixList() {
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
                 onSubmit={prefix =>
-                    Api.hookServiceAddPrefix(prefix).then(
+                    Api.actionServiceAddSite(prefix).then(
                         p => setPrefixes([...(prefixes || []), p]),
-                        e => dispatch(alertAction("ADD_HOOK_PREFIX", "Failed to add hook prefix.", e))
+                        e => dispatch(alertAction("ADD_ALLOWED_SITE", "Failed to add allowed site.", e))
                     )
                 }
             />

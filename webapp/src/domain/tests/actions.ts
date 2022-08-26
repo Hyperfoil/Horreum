@@ -8,7 +8,7 @@ import {
     UpdateTestWatchAction,
     UpdateViewAction,
     DeleteViewAction,
-    UpdateHookAction,
+    UpdateActionAction,
     UpdateTokensAction,
     RevokeTokenAction,
     UpdateFingerprintAction,
@@ -17,7 +17,7 @@ import {
     UpdateTransformersAction,
     UpdateRunsAndDatasetsAction,
 } from "./reducers"
-import Api, { Access, Hook, Test, Transformer, View, Watch } from "../../api"
+import Api, { Access, Action, Test, Transformer, View, Watch } from "../../api"
 import { Dispatch } from "redux"
 import { Map } from "immutable"
 import { alertAction, AddAlertAction, constraintValidationFormatter, dispatchError } from "../../alerts"
@@ -137,22 +137,27 @@ export function updateFolder(testId: number, prevFolder: string, newFolder: stri
         )
 }
 
-export function updateHooks(testId: number, testWebHooks: Hook[]) {
-    return (dispatch: Dispatch<UpdateHookAction | AddAlertAction>) => {
+export function updateActions(testId: number, actions: Action[]) {
+    return (dispatch: Dispatch<UpdateActionAction | AddAlertAction>) => {
         const promises: any[] = []
-        testWebHooks.forEach(hook => {
+        actions.forEach(action => {
             promises.push(
-                Api.testServiceUpdateHook(testId, hook).then(
+                Api.testServiceUpdateAction(testId, action).then(
                     response => {
                         dispatch({
-                            type: actionTypes.UPDATE_HOOK,
+                            type: actionTypes.UPDATE_ACTION,
                             testId,
-                            hook,
+                            action,
                         })
                         return response
                     },
                     error =>
-                        dispatchError(dispatch, error, "UPDATE_HOOK", `Failed to update hook ${hook.id} (${hook.url}`)
+                        dispatchError(
+                            dispatch,
+                            error,
+                            "UPDATE_ACTION",
+                            `Failed to update action ${action.id} (${JSON.stringify(action.config)}`
+                        )
                 )
             )
         })

@@ -3,16 +3,16 @@ import React from "react"
 import { PageSection } from "@patternfly/react-core"
 
 import PrefixList from "./PrefixList"
-import HookList from "./HookList"
+import ActionList from "./ActionList"
 
-export default function AllHooks() {
-    document.title = "WebHooks | Horreum"
+export default function AllActions() {
+    document.title = "Actions | Horreum"
 
     return (
         <PageSection>
             <PrefixList />
             <br />
-            <HookList />
+            <ActionList />
         </PageSection>
     )
 }

@@ -6,7 +6,7 @@ import thunk from "redux-thunk"
 
 import { RunsState, reducer as runReducer } from "./domain/runs/reducers"
 import { TestsState, reducer as testReducer } from "./domain/tests/reducers"
-import { HooksState, reducer as hookReducer } from "./domain/hooks/reducers"
+import { ActionsState, reducer as actionReducer } from "./domain/actions/reducers"
 import { SchemasState, reducer as schemaReducer } from "./domain/schemas/reducers"
 import { AuthState, reducer as authReducer } from "./auth"
 import { Alert, reducer as alertReducer } from "./alerts"
@@ -16,7 +16,7 @@ export const history = createBrowserHistory()
 export interface State {
     auth: AuthState
     alerts: Alert[]
-    hooks: HooksState
+    actions: ActionsState
     runs: RunsState
     schemas: SchemasState
     tests: TestsState
@@ -26,7 +26,7 @@ const appReducers = combineReducers({
     router: connectRouter(history),
     runs: runReducer,
     tests: testReducer,
-    hooks: hookReducer,
+    actions: actionReducer,
     schemas: schemaReducer,
     auth: authReducer,
     alerts: alertReducer,

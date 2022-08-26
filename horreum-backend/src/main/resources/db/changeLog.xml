@@ -3726,4 +3726,43 @@
         </sql>
     </changeSet>
 
+    <changeSet id="89" author="rvansa">
+        <renameTable oldTableName="allowedhookprefix" newTableName="allowedsite"/>
+        <renameTable oldTableName="hook" newTableName="action"/>
+        <renameColumn tableName="action" oldColumnName="type" newColumnName="event"/>
+        <renameColumn tableName="action" oldColumnName="target" newColumnName="test_id"/>
+        <addColumn tableName="action">
+            <column name="type" type="text" defaultValue="http">
+                <constraints nullable="false"/>
+            </column>
+            <column name="config" type="jsonb" defaultValue="{}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="secrets" type="jsonb" defaultValue="{}">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <dropColumn tableName="action" columnName="active"/>
+        <sql>
+            UPDATE action SET config = jsonb_build_object('url', url);
+
+            DROP POLICY hook_policy ON action;
+            CREATE POLICY action_policy ON action USING (
+                has_role('horreum.system') OR
+                has_role('admin') OR
+                has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester') OR
+                has_modify_token(test_id)
+            );
+            DROP POLICY hook_write_check ON action;
+            CREATE POLICY action_write_check ON action
+                WITH CHECK (config->'url' IS NULL OR exists(SELECT 1 FROM allowedsite site WHERE left(config->>'url', length(site.prefix)) = site.prefix));
+        </sql>
+        <dropUniqueConstraint tableName="action" constraintName="hook_url_type_target_key"/>
+        <dropColumn tableName="action" columnName="url"/>
+        <dropDefaultValue tableName="action" columnName="type"/>
+        <dropDefaultValue tableName="action" columnName="config"/>
+        <dropDefaultValue tableName="action" columnName="secrets"/>
+        <renameSequence oldSequenceName="hook_id_seq" newSequenceName="action_id_seq" />
+    </changeSet>
+
 </databaseChangeLog>

@@ -5,7 +5,6 @@ import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.entity.json.*;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -22,7 +21,6 @@ import javax.persistence.Query;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
 import java.time.Instant;
@@ -33,7 +31,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -49,7 +46,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
-import org.jboss.resteasy.reactive.RestResponse;
 
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
@@ -88,7 +84,7 @@ public class TestServiceImpl implements TestService {
    DatasetServiceImpl datasetService;
 
    @Inject
-   HookServiceImpl hookService;
+   ActionServiceImpl hookService;
 
    private final ConcurrentHashMap<Integer, RecalculationStatus> recalculations = new ConcurrentHashMap<>();
 
@@ -473,27 +469,27 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @WithRoles
    @Transactional
-   public Hook updateHook(int testId, Hook hook) {
+   public Action updateAction(int testId, Action action) {
       if (testId <= 0) {
          throw ServiceException.badRequest("Missing test id");
       }
       // just ensure the test exists
       getTestForUpdate(testId);
-      hook.target = testId;
+      action.testId = testId;
 
-      hookService.checkPrefix(hook);
-      if (hook.id == null) {
-         hook.persist();
+      hookService.validate(action);
+      if (action.id == null) {
+         action.persist();
       } else {
-         if (!hook.active) {
-            Hook.deleteById(hook.id);
+         if (!action.active) {
+            Action.deleteById(action.id);
             return null;
          } else {
-            hook = em.merge(hook);
+            hookService.merge(action);
          }
       }
       em.flush();
-      return hook;
+      return action;
    }
 
    @WithRoles

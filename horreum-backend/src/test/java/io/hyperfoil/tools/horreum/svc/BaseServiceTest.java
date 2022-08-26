@@ -40,9 +40,9 @@ import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.json.Access;
-import io.hyperfoil.tools.horreum.entity.json.AllowedHookPrefix;
+import io.hyperfoil.tools.horreum.entity.json.AllowedSite;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.Hook;
+import io.hyperfoil.tools.horreum.entity.json.Action;
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Extractor;
 import io.hyperfoil.tools.horreum.entity.json.Run;
@@ -144,8 +144,8 @@ public class BaseServiceTest {
             Label.deleteAll();
             Schema.deleteAll();
 
-            Hook.deleteAll();
-            AllowedHookPrefix.deleteAll();
+            Action.deleteAll();
+            AllowedSite.deleteAll();
          }
          return null;
       });

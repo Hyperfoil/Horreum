@@ -121,6 +121,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    public void onDatapointsCreated(DataSet.Info info) {
+      // TODO: experiments can use any datasets, including private ones, possibly leaking the information
       runExperiments(info, result -> Util.publishLater(tm, eventBus, ExperimentResult.NEW_RESULT, result),
             logs -> logs.forEach(log -> log.persist()));
    }
@@ -253,6 +254,7 @@ public class ExperimentServiceImpl implements ExperimentService {
                .unwrap(NativeQuery.class)
                .addScalar("value", JsonNodeBinaryType.INSTANCE)
                .getSingleResult();
+         Hibernate.initialize(profile.test.name);
          resultConsumer.accept(new ExperimentResult(profile, profileLogs, info, baseline, results, extraLabels));
       }
    }

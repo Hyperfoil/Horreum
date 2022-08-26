@@ -411,7 +411,7 @@ export default function Experiments(props: ExperimentsProps) {
                                 Extra labels{" "}
                                 <Popover
                                     headerContent="Extra labels"
-                                    bodyContent="These labels are not used by Horreum but are added to the result event and therefore can be used e.g. whenfiring a webhook."
+                                    bodyContent="These labels are not used by Horreum but are added to the result event and therefore can be used e.g. when firing an Action."
                                 >
                                     <HelpButton />
                                 </Popover>

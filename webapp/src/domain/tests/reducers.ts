@@ -2,7 +2,7 @@ import * as actionTypes from "./actionTypes"
 import { Map } from "immutable"
 import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction } from "../../alerts"
-import { Access, Hook, Run, Test, TestToken, Transformer, View } from "../../api"
+import { Access, Action, Run, Test, TestToken, Transformer, View } from "../../api"
 
 export type CompareFunction = (runs: Run[]) => string
 
@@ -65,10 +65,10 @@ export interface DeleteViewAction {
     viewId: number
 }
 
-export interface UpdateHookAction {
-    type: typeof actionTypes.UPDATE_HOOK
+export interface UpdateActionAction {
+    type: typeof actionTypes.UPDATE_ACTION
     testId: number
-    hook: Hook
+    action: Action
 }
 
 export interface UpdateTokensAction {
@@ -124,7 +124,7 @@ export type TestAction =
     | UpdateTestWatchAction
     | UpdateViewAction
     | DeleteViewAction
-    | UpdateHookAction
+    | UpdateActionAction
     | UpdateTokensAction
     | RevokeTokenAction
     | UpdateFoldersAction
@@ -218,7 +218,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
                 }
             }
             break
-        case actionTypes.UPDATE_HOOK:
+        case actionTypes.UPDATE_ACTION:
             {
                 //TODO: define state changes
             }
