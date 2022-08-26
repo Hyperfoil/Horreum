@@ -23,6 +23,8 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import io.smallrye.mutiny.Uni;
+
 @RegisterRestClient(configKey = "horreum.grafana")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
@@ -51,12 +53,12 @@ public interface GrafanaClient {
    @GET
    @Path("/api/users/lookup")
    @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
-   UserInfo lookupUser(@QueryParam("loginOrEmail") String email);
+   Uni<UserInfo> lookupUser(@QueryParam("loginOrEmail") String email);
 
    @POST
    @Path("/api/admin/users")
    @ClientHeaderParam(name = HttpHeaders.AUTHORIZATION, value = "{authorizationBasic}")
-   void createUser(UserInfo user);
+   Uni<Void> createUser(UserInfo user);
 
    @GET
    @Path("/api/datasources")

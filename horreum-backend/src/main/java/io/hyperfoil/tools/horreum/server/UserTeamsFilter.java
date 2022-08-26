@@ -13,7 +13,10 @@ import javax.ws.rs.core.Cookie;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.svc.UserServiceImpl;
+import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.mutiny.Uni;
+
 import org.jboss.resteasy.reactive.server.ServerRequestFilter;
 
 @Singleton
@@ -22,14 +25,22 @@ public class UserTeamsFilter {
    private static final String TEAMS = "horreum.teams";
 
    @Inject
-   SecurityIdentity identity;
+   CurrentIdentityAssociation identityAssociation;
 
    @Inject
    UserServiceImpl userService;
 
 
    @ServerRequestFilter(priority = Priorities.HEADER_DECORATOR + 20)
-   public void filter(ContainerRequestContext containerRequestContext) {
+   public Uni<Void> filter(ContainerRequestContext containerRequestContext) {
+      return identityAssociation.getDeferredIdentity()
+            .onItem().transform(identity -> {
+               filter(containerRequestContext, identity);
+               return null;
+            });
+   }
+
+   public void filter(ContainerRequestContext containerRequestContext, SecurityIdentity identity) {
       if (identity.isAnonymous()) {
          return;
       }
