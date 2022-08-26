@@ -3,6 +3,8 @@ package io.hyperfoil.tools.horreum.svc;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -372,7 +374,7 @@ public class RunServiceImpl implements RunService {
             // noop
          }
          try {
-            return Instant.parse(time.toString());
+            return ZonedDateTime.parse(time.toString().trim(), DateTimeFormatter.ISO_DATE_TIME).toInstant();
          } catch (DateTimeParseException e) {
             return null;
          }
