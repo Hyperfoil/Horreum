@@ -3,6 +3,8 @@ package io.hyperfoil.tools.horreum.svc;
 import io.hyperfoil.tools.horreum.api.ExperimentService;
 import io.hyperfoil.tools.horreum.api.ActionService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.entity.ActionLog;
+import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.json.AllowedSite;
 import io.hyperfoil.tools.horreum.entity.json.Action;
@@ -10,9 +12,12 @@ import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.action.ActionPlugin;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.vertx.ConsumeEvent;
+import io.smallrye.mutiny.Uni;
+import io.vertx.mutiny.core.Vertx;
 
 import org.jboss.logging.Logger;
 
@@ -25,7 +30,6 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -45,6 +49,9 @@ public class ActionServiceImpl implements ActionService {
    @Inject
    EntityManager em;
 
+   @Inject
+   Vertx vertx;
+
    @PostConstruct()
    public void postConstruct(){
       plugins = hookPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
@@ -52,29 +59,55 @@ public class ActionServiceImpl implements ActionService {
 
    private void executeActions(String event, int testId, Object payload){
       List<Action> actions = getActions(event, testId);
+      if (actions.isEmpty()) {
+         new ActionLog(PersistentLog.INFO, testId, event, null, "No actions found.").persist();
+         return;
+      }
       for (Action action : actions) {
          try {
             ActionPlugin plugin = plugins.get(action.type);
             if (plugin == null) {
-               log.errorf("No plugin for hook type %s", action.type);
+               log.errorf("No plugin for action type %s", action.type);
+               new ActionLog(PersistentLog.ERROR, testId, event, action.type, "No plugin for action type " + action.type).persist();
                continue;
             }
-            plugin.execute(action.config, action.secrets, payload);
+            plugin.execute(action.config, action.secrets, payload).subscribe()
+                  .with(item -> {}, throwable -> logActionError(testId, event, action.type, throwable));
          } catch (Exception e) {
-            log.errorf(e, "Failed to invoke hook %d", action.id);
+            log.errorf(e, "Failed to invoke action %d", action.id);
+            new ActionLog(PersistentLog.ERROR, testId, event, action.type, "Failed to invoke: " + e.getMessage()).persist();
+            new ActionLog(PersistentLog.DEBUG, testId, event, action.type,
+                  "Configuration: <pre>\n<code>" + action.config.toPrettyString() +
+                  "\n<code></pre>Payload: <pre>\n<code>" + Util.OBJECT_MAPPER.valueToTree(payload).toPrettyString() +
+                  "</code>\n</pre>").persist();
          }
       }
    }
 
+   void logActionError(int testId, String event, String type, Throwable throwable) {
+      vertx.executeBlocking(Uni.createFrom().item(() -> {
+         doLogActionError(testId, event, type, throwable);
+         return null;
+      })).subscribe().with(item -> {}, t -> {
+         log.error("Cannot log error in action!", t);
+         log.error("Logged error: ", throwable);
+      });
+   }
 
-   @WithRoles(extras = Roles.ADMIN)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   void doLogActionError(int testId, String event, String type, Throwable throwable) {
+      new ActionLog(PersistentLog.ERROR, testId, event, type, throwable.getMessage()).persist();
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional //Transactional is a workaround for #6059
    @ConsumeEvent(value = Test.EVENT_NEW, blocking = true)
    public void onNewTest(Test test) {
       executeActions(Test.EVENT_NEW, -1, test);
    }
 
-   @WithRoles(extras = Roles.ADMIN)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
@@ -82,7 +115,7 @@ public class ActionServiceImpl implements ActionService {
       executeActions(Run.EVENT_NEW, testId, run);
    }
 
-   @WithRoles(extras = Roles.ADMIN)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
    public void onNewChange(Change.Event changeEvent) {
@@ -153,18 +186,11 @@ public class ActionServiceImpl implements ActionService {
    }
 
    public List<Action> getActions(String event, int testId) {
-      try {
-         List<Action> rtrn;
-         if (testId == -1) {
-            rtrn = Action.find("event = ?1", event).list();
-         } else {
-            rtrn = Action.find("event = ?1 and (test_id = ?2 or test_id < 0)", event, testId).list();
-         }
-         return rtrn;
-      } catch (Exception e) {
-         log.error("Failed to get actions.", e);
+      if (testId < 0) {
+         return Action.find("event = ?1", event).list();
+      } else {
+         return Action.find("event = ?1 and (test_id = ?2 or test_id < 0)", event, testId).list();
       }
-      return Collections.emptyList();
    }
 
    @RolesAllowed(Roles.ADMIN)
@@ -172,11 +198,11 @@ public class ActionServiceImpl implements ActionService {
    @Override
    public List<Action> list(Integer limit, Integer page, String sort, SortDirection direction){
       Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
+      PanacheQuery<Action> query = Action.find("test_id < 0", Sort.by(sort).direction(sortDirection));
       if (limit != null && page != null) {
-         return Action.findAll(Sort.by(sort).direction(sortDirection)).page(Page.of(page, limit)).list();
-      } else {
-         return Action.listAll(Sort.by(sort).direction(sortDirection));
+         query = query.page(Page.of(page, limit));
       }
+      return query.list();
    }
 
 
@@ -214,6 +240,7 @@ public class ActionServiceImpl implements ActionService {
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
    @ConsumeEvent(value = ExperimentService.ExperimentResult.NEW_RESULT, blocking = true)
    public void onNewExperimentResult(ExperimentService.ExperimentResult result) {
       executeActions(ExperimentService.ExperimentResult.NEW_RESULT, result.profile.test.id, result);

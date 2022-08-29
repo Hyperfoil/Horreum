@@ -12,7 +12,7 @@ type AddActionModalProps = {
 
 const DEFAULT_ACTION = {
     id: -1,
-    event: globalEventTypes[0],
+    event: globalEventTypes[0][0],
     type: "http",
     testId: -1,
     config: { url: "" },

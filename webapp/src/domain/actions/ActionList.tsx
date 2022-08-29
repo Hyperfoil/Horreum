@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 
-import { Banner, Button, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
-import { OutlinedTimesCircleIcon, PlusIcon } from "@patternfly/react-icons"
+import { Button, Hint, HintBody, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 
 import { allActions, addAction, removeAction } from "./actions"
 import * as selectors from "./selectors"
@@ -16,8 +15,10 @@ import AddActionModal from "./AddActionModal"
 import { Column } from "react-table"
 import { ActionsDispatch } from "./reducers"
 import { Action } from "../../api"
+import ActionLogModal from "../tests/ActionLogModal"
 
 export default function ActionList() {
+    const [logOpen, setLogOpen] = useState(false)
     const dispatch = useDispatch<ActionsDispatch>()
     useEffect(() => {
         dispatch(fetchSummary()).catch(noop)
@@ -33,18 +34,15 @@ export default function ActionList() {
                 accessor: "type",
             },
             {
-                Header: "Active",
-                accessor: "active",
-            },
-            {
                 Header: "Configuration",
                 accessor: "config",
                 Cell: (arg: any) => {
+                    const config = arg.cell.value
                     switch (arg.row.original.type) {
                         case "http":
-                            return arg.cell.value.url
+                            return config.url
                         case "github":
-                            return "some github stuff"
+                            return config.issueURL || `${config.owner}/${config.repo}/${config.issue}`
                         default:
                             return "unknown"
                     }
@@ -59,15 +57,16 @@ export default function ActionList() {
                         cell: { value },
                     } = arg
                     return (
-                        <Button
-                            variant="link"
-                            style={{ color: "#a30000" }}
-                            onClick={() => {
-                                dispatch(removeAction(value)).catch(noop)
-                            }}
-                        >
-                            <OutlinedTimesCircleIcon />
-                        </Button>
+                        <div style={{ textAlign: "right" }}>
+                            <Button
+                                variant="danger"
+                                onClick={() => {
+                                    dispatch(removeAction(value)).catch(noop)
+                                }}
+                            >
+                                Delete
+                            </Button>
+                        </div>
                     )
                 },
             },
@@ -84,9 +83,11 @@ export default function ActionList() {
     }, [dispatch, isAdmin])
     return (
         <>
-            <Banner variant="info">
-                These Actopms are global actions. For individual test actions, please go to Test configuration.
-            </Banner>
+            <Hint>
+                <HintBody>
+                    These Actions are global actions. For individual test actions, please go to Test configuration.
+                </HintBody>
+            </Hint>
             <Toolbar
                 className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
                 style={{ justifyContent: "space-between" }}
@@ -94,8 +95,18 @@ export default function ActionList() {
                 <ToolbarContent>
                     <ToolbarItem aria-label="info">
                         <Button variant="primary" onClick={() => setOpen(true)}>
-                            <PlusIcon /> Add Action
+                            Add Action
                         </Button>
+                        <Button variant="secondary" onClick={() => setLogOpen(true)}>
+                            Show log
+                        </Button>
+                        <ActionLogModal
+                            isOpen={logOpen}
+                            onClose={() => setLogOpen(false)}
+                            testId={-1}
+                            title="Global actions log"
+                            emptyMessage="There are no logs for global actions."
+                        />
                     </ToolbarItem>
                 </ToolbarContent>
             </Toolbar>

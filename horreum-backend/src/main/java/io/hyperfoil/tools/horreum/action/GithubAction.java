@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.svc.Util;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpVersion;
 import io.vertx.core.http.RequestOptions;
@@ -30,7 +31,7 @@ public class GithubAction implements ActionPlugin {
    private static final Logger log = Logger.getLogger(GithubAction.class);
 
    @Inject
-   Vertx reactiveVertx;
+   Vertx vertx;
 
    @Inject
    Instance<BodyFormatter> formatters;
@@ -44,7 +45,7 @@ public class GithubAction implements ActionPlugin {
             .setMaxPoolSize(1) // we won't use more than 1 connection to prevent GitHub rate limiting
             .setConnectTimeout(2_000) // only wait 2s
             .setKeepAlive(false);
-      http1xClient = WebClient.create(reactiveVertx, new WebClientOptions(options).setProtocolVersion(HttpVersion.HTTP_1_1));
+      http1xClient = WebClient.create(vertx, new WebClientOptions(options).setProtocolVersion(HttpVersion.HTTP_1_1));
    }
 
 
@@ -75,7 +76,7 @@ public class GithubAction implements ActionPlugin {
    }
 
    @Override
-   public void execute(JsonNode config, JsonNode secrets, Object payload) {
+   public Uni<String> execute(JsonNode config, JsonNode secrets, Object payload) {
       JsonNode json = Util.OBJECT_MAPPER.valueToTree(payload);
       // Token should NOT be in the dataset!
       String token = secrets.path("token").asText();
@@ -102,7 +103,7 @@ public class GithubAction implements ActionPlugin {
                throw new IllegalArgumentException("Not a GitHub URL: " + issueUrl);
             }
          } catch (MalformedURLException e) {
-            throw new IllegalArgumentException(e);
+            throw new IllegalArgumentException("Cannot parse URL: " + issueUrl);
          }
       } else {
          String owner = replaceExpressions(config.path("owner").asText(), json);
@@ -117,22 +118,26 @@ public class GithubAction implements ActionPlugin {
             .setPort(443)
             .setURI(path)
             .setSsl(true);
-      http1xClient.request(HttpMethod.POST, options)
+      return http1xClient.request(HttpMethod.POST, options)
             .putHeader("Content-Type", "application/vnd.github+json")
             .putHeader("User-Agent", "Horreum")
             .putHeader("Authorization", "token " + token)
             .sendBuffer(Buffer.buffer(JsonNodeFactory.instance.objectNode().put("body", body).toString()))
-            .subscribe().with(response -> {
+            .onItem().transformToUni(response -> {
                if (response.statusCode() < 400) {
-                  log.debugf("Successfully(%d) added comment to %s", response.statusCode(), path);
+                  return Uni.createFrom().item(String.format("Successfully(%d) added comment to %s", response.statusCode(), path));
                } else if (response.statusCode() == 403 && response.getHeader("Retry-After") != null) {
                   int retryAfter = Integer.parseInt(response.getHeader("Retry-After"));
                   log.warnf("Exceeded Github request limits, retrying after %d seconds", retryAfter);
-                  reactiveVertx.setTimer(TimeUnit.SECONDS.toMillis(retryAfter), id -> execute(config, secrets, payload));
+                  return Uni.createFrom().emitter(em -> {
+                     vertx.setTimer(TimeUnit.SECONDS.toMillis(retryAfter), id -> execute(config, secrets, payload)
+                           .subscribe().with(em::complete, em::fail));
+                  });
                } else {
-                  log.errorf("Failed to add comment to %s, response %d: %s", path, response.statusCode(), response.bodyAsString());
+                  return Uni.createFrom().failure(new RuntimeException(
+                        String.format("Failed to add comment to %s, response %d: %s",
+                              path, response.statusCode(), response.bodyAsString())));
                }
-            },
-            cause -> log.errorf(cause, "Failed to add comment to %s/%s/issues/%s", path));
+            }).onFailure().transform(t -> new RuntimeException("Failed to add comment to " + path + ": " + t.getMessage()));
    }
 }

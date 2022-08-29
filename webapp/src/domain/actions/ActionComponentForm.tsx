@@ -1,4 +1,20 @@
-import { Flex, FlexItem, Form, FormGroup, FormSelect, FormSelectOption, Radio, TextInput } from "@patternfly/react-core"
+import {
+    Button,
+    Flex,
+    FlexItem,
+    Form,
+    FormGroup,
+    FormSelect,
+    FormSelectOption,
+    Popover,
+    Radio,
+    Tab,
+    Tabs,
+    TextInput,
+    Title,
+} from "@patternfly/react-core"
+import { HelpIcon } from "@patternfly/react-icons"
+import { useState } from "react"
 
 import { Action } from "../../api"
 import EnumSelect from "../../components/EnumSelect"
@@ -19,7 +35,7 @@ function defaultConfig(type: string) {
 type ActionComponentFormProps = {
     action: Action
     onUpdate(action: Action): void
-    eventTypes: string[]
+    eventTypes: string[][]
     isTester: boolean
     setValid?(valid: boolean): void
 } & Omit<React.HTMLProps<HTMLFormElement>, "action">
@@ -44,7 +60,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                     aria-label="Event Type"
                 >
                     {props.eventTypes.map((option, index) => {
-                        return <FormSelectOption key={index} value={option} label={option} />
+                        return <FormSelectOption key={index} value={option[0]} label={option[0]} />
                     })}
                 </FormSelect>
             </FormGroup>
@@ -71,7 +87,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
             )}
             {props.action.type === "github" && (
                 <>
-                    <FormGroup label="Token" fieldId="token">
+                    <FormGroup label="Token" labelIcon={<ExpressionHelp {...props} />} fieldId="token">
                         <TextInput
                             id="token"
                             value={props.action.secrets.token || ""}
@@ -96,7 +112,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         </a>{" "}
                         for more info about tokens.
                     </FormGroup>
-                    <FormGroup label="Issue" fieldId="issue">
+                    <FormGroup label="Issue" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
                         <Flex>
                             <FlexItem>
                                 <Radio
@@ -160,5 +176,46 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                 </>
             )}
         </Form>
+    )
+}
+
+type ExpressionHelpProps = {
+    eventTypes: string[][]
+}
+
+function ExpressionHelp(props: ExpressionHelpProps) {
+    const [tab, setTab] = useState<string | number>(props.eventTypes[0][0])
+    return (
+        <Popover
+            minWidth="50vw"
+            maxWidth="50vw"
+            bodyContent={
+                <>
+                    <Title headingLevel="h4">Using expressions</Title>
+                    These text fields support replacing parts of the script with JSON Path expression, identified with{" "}
+                    <code>${"{$.path.to.json.field}"}</code> syntax. This is <b>not</b> the PostgreSQL JSON Path but the
+                    standard{" "}
+                    <a href="https://github.com/json-path/JsonPath" target="_blank">
+                        Java implementation
+                    </a>
+                    . The object depends on the event type, see below for examples:
+                    <Tabs activeKey={tab} onSelect={(_, key) => setTab(key)}>
+                        {props.eventTypes.map(([type, example]) => (
+                            <Tab title={type} eventKey={type}>
+                                <div style={{ maxHeight: "50vh", overflowY: "auto" }}>
+                                    <code>
+                                        <pre>{example}</pre>
+                                    </code>
+                                </div>
+                            </Tab>
+                        ))}
+                    </Tabs>
+                </>
+            }
+        >
+            <Button variant="plain" onClick={e => e.preventDefault()}>
+                <HelpIcon />
+            </Button>
+        </Popover>
     )
 }

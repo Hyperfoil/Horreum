@@ -11,6 +11,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.LogService;
+import io.hyperfoil.tools.horreum.entity.ActionLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLog;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -23,6 +24,8 @@ import io.quarkus.vertx.ConsumeEvent;
 
 public class LogServiceImpl implements LogService {
    private static final Logger log = Logger.getLogger(LogServiceImpl.class);
+   private static final Instant EPOCH_START = Instant.ofEpochMilli(0);
+   private static final Instant FAR_FUTURE = Instant.ofEpochSecond(4 * (long) Integer.MAX_VALUE);
 
    @ConfigProperty(name = "horreum.transformationlog.max.lifespan")
    String transformationLogMaxLifespan;
@@ -63,8 +66,8 @@ public class LogServiceImpl implements LogService {
    @Transactional
    public void deleteDatasetLogs(String source, int testId, Integer datasetId, Long from, Long to) {
       // Not using Instant.MIN/Instant.MAX as Hibernate converts to LocalDateTime internally
-      Instant fromTs = from == null ? Instant.ofEpochMilli(0) : Instant.ofEpochMilli(from);
-      Instant toTs = to == null ? Instant.ofEpochSecond(4 * (long) Integer.MAX_VALUE) : Instant.ofEpochMilli(to);
+      Instant fromTs = from == null ? EPOCH_START : Instant.ofEpochMilli(from);
+      Instant toTs = to == null ? FAR_FUTURE : Instant.ofEpochMilli(to);
       long deleted;
       if (datasetId == null) {
          deleted = DatasetLog.delete("testId = ?1 AND source = ?2 AND timestamp >= ?3 AND timestamp < ?4", testId, source, fromTs, toTs);
@@ -106,8 +109,8 @@ public class LogServiceImpl implements LogService {
    @Transactional
    public void deleteTransformationLogs(int testId, Integer runId, Long from, Long to) {
       // Not using Instant.MIN/Instant.MAX as Hibernate converts to LocalDateTime internally
-      Instant fromTs = from == null ? Instant.ofEpochMilli(0) : Instant.ofEpochMilli(from);
-      Instant toTs = to == null ? Instant.ofEpochSecond(4 * (long) Integer.MAX_VALUE) : Instant.ofEpochMilli(to);
+      Instant fromTs = from == null ? EPOCH_START : Instant.ofEpochMilli(from);
+      Instant toTs = to == null ? FAR_FUTURE : Instant.ofEpochMilli(to);
       long deleted;
       if (runId == null || runId <= 0) {
          deleted = TransformationLog.delete("testid = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
@@ -115,6 +118,34 @@ public class LogServiceImpl implements LogService {
          deleted = TransformationLog.delete("testid = ?1 AND runid = ?2 AND timestamp >= ?3 AND timestamp < ?4", testId, runId, fromTs, toTs);
       }
       log.debugf("Deleted %d logs for test %d, run %d", deleted, testId, runId == null ? -1 : 0);
+   }
+
+   @Override
+   @WithRoles
+   @RolesAllowed(Roles.TESTER)
+   public List<ActionLog> getActionLog(int testId, Integer page, Integer limit) {
+      page = withDefault(page, 0);
+      limit = withDefault(limit, 25);
+      return ActionLog.find("testid", Sort.descending("timestamp"), testId)
+               .page(Page.of(page, limit)).list();
+   }
+
+   @Override
+   @WithRoles
+   @RolesAllowed(Roles.TESTER)
+   public long getActionLogCount(int testId) {
+      return ActionLog.find("testid", testId).count();
+   }
+
+   @Override
+   @WithRoles
+   @RolesAllowed(Roles.TESTER)
+   @Transactional
+   public void deleteActionLogs(int testId, Long from, Long to) {
+      Instant fromTs = from == null ? EPOCH_START : Instant.ofEpochMilli(from);
+      Instant toTs = to == null ? FAR_FUTURE : Instant.ofEpochMilli(to);
+      long deleted = ActionLog.delete("testid = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
+      log.debugf("Deleted %d logs for test %d", deleted, testId);
    }
 
    @ConsumeEvent(value = Test.EVENT_DELETED, blocking = true)

@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.entity.json.AllowedSite;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.hyperfoil.tools.horreum.svc.Util;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpVersion;
 import io.vertx.core.http.RequestOptions;
@@ -68,11 +69,10 @@ public class HttpAction implements ActionPlugin {
    }
 
    @Override
-   public void execute(JsonNode config, JsonNode secrets, Object payload) {
+   public Uni<String> execute(JsonNode config, JsonNode secrets, Object payload) {
       String urlPattern = config.path("url").asText();
       if (urlPattern == null) {
-         log.error("HTTP hook does not have any URL configured.");
-         return;
+         throw new IllegalArgumentException("URL is not configured.");
       }
       String input = urlPattern.startsWith("http") ? urlPattern : "http://" + urlPattern;
       JsonNode body = Util.OBJECT_MAPPER.valueToTree(payload);
@@ -81,24 +81,22 @@ public class HttpAction implements ActionPlugin {
       try {
          url = new URL(replacedUrl);
       } catch (MalformedURLException e) {
-         throw new RuntimeException(e);
+         throw new IllegalArgumentException("URL cannot be parsed: " + replacedUrl);
       }
       RequestOptions options = new RequestOptions()
                .setHost(url.getHost())
                .setPort(url.getPort() >= 0 ? url.getPort() : url.getDefaultPort())
                .setURI(url.getFile())
                .setSsl("https".equalsIgnoreCase(url.getProtocol()));
-      http1xClient.request(HttpMethod.POST, options)
+      return http1xClient.request(HttpMethod.POST, options)
             .putHeader("Content-Type", "application/json")
             .sendBuffer(Buffer.buffer(body.toString()))
-            .subscribe().with(response -> {
-               if (response.statusCode() < 400) {
-                  log.debugf("Successfully(%d) notified hook: %s", response.statusCode(), url);
-               } else {
-                  log.errorf("Failed to notify hook %s, response %d: %s", url, response.statusCode(), response.bodyAsString());
-               }
-            },
-            cause -> log.errorf(cause, "Failed to notify hook %s", url));
+            .onItem().transform(response -> {
+         if (response.statusCode() < 400) {
+            return String.format("Successfully(%d) notified hook: %s", response.statusCode(), url);
+         } else {
+            throw new IllegalArgumentException("Failed to POST " + url + ", response " + response.statusCode() + ": " + response.bodyAsString());
+         }
+      }).onFailure().transform(t -> new RuntimeException("Failed to POST " + url + ": " + t.getMessage()));
    }
-
 }

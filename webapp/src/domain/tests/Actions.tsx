@@ -22,6 +22,8 @@ import { TabFunctionsRef } from "../../components/SavedTabs"
 import { updateActions } from "./actions"
 import { testEventTypes } from "../actions/reducers"
 import ActionComponentForm from "../actions/ActionComponentForm"
+import ActionLogModal from "./ActionLogModal"
+import { Redirect } from "react-router-dom"
 
 type ActionsProps = {
     testId: number
@@ -32,6 +34,7 @@ type ActionsProps = {
 
 export default function Actions({ testId, testOwner, funcsRef, onModified }: ActionsProps) {
     const [actions, setActions] = useState<Action[]>([])
+    const [logModalOpen, setLogModalOpen] = useState(false)
     const isTester = useTester(testOwner)
     const hasDuplicates = new Set(actions.map(h => h.event + "_" + h.config.url)).size !== actions.length
 
@@ -54,6 +57,9 @@ export default function Actions({ testId, testOwner, funcsRef, onModified }: Act
         },
     }
 
+    if (!isTester) {
+        return <Redirect to="/" />
+    }
     return (
         <>
             {hasDuplicates && (
@@ -67,15 +73,16 @@ export default function Actions({ testId, testOwner, funcsRef, onModified }: Act
                     marginBottom: "16px",
                     width: "100%",
                     display: "flex",
-                    justifyContent: "space-between",
                 }}
             >
-                <Title headingLevel="h3">Actions</Title>
+                <Title headingLevel="h3" style={{ flexGrow: 100 }}>
+                    Actions
+                </Title>
                 <Button
                     onClick={() => {
                         const newAction: Action = {
                             id: -1,
-                            event: testEventTypes[0],
+                            event: testEventTypes[0][0],
                             type: "http",
                             config: { url: "" },
                             secrets: {},
@@ -88,6 +95,16 @@ export default function Actions({ testId, testOwner, funcsRef, onModified }: Act
                 >
                     New Action
                 </Button>
+                <Button variant="secondary" onClick={() => setLogModalOpen(true)}>
+                    Show log
+                </Button>
+                <ActionLogModal
+                    testId={testId}
+                    title={"Actions log"}
+                    emptyMessage={"There are no log messages."}
+                    isOpen={logModalOpen}
+                    onClose={() => setLogModalOpen(false)}
+                />
             </div>
 
             {(!actions || actions.length === 0) && "The are no Actions defined"}

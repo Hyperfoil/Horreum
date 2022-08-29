@@ -64,8 +64,11 @@ export default function LogModal(props: LogModalProps) {
             return
         }
         props.fetchCount().then(
-            response => setCount(response),
-            error => dispatch(alertAction("LOG", "Cannot get logs.", error))
+            response => setCount(typeof response === "number" ? response : parseInt(response)),
+            error => {
+                dispatch(alertAction("LOG", "Cannot get logs.", error))
+                props.onClose()
+            }
         )
     }, [props.isOpen, props.fetchCount, dispatch, updateCounter])
     useEffect(() => {
@@ -76,7 +79,10 @@ export default function LogModal(props: LogModalProps) {
         props
             .fetchLogs(page, limit)
             .then(setRows)
-            .catch(error => dispatch(alertAction("LOG", "Cannot get logs.", error)))
+            .catch(error => {
+                dispatch(alertAction("LOG", "Cannot get logs.", error))
+                props.onClose()
+            })
             .finally(() => setLoading(false))
     }, [page, limit, props.isOpen, props.fetchLogs, dispatch, updateCounter])
     const timeRangeOptions: TimeRange[] = useMemo(

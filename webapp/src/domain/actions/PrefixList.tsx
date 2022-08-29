@@ -3,7 +3,6 @@ import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
 import { UseSortByColumnOptions } from "react-table"
 import { Bullseye, Button, Spinner, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
-import { OutlinedTimesCircleIcon, PlusIcon } from "@patternfly/react-icons"
 
 import Api, { AllowedSite } from "../../api"
 
@@ -44,20 +43,21 @@ function PrefixList() {
                     cell: { value },
                 } = arg
                 return (
-                    <Button
-                        variant="link"
-                        style={{ color: "#a30000" }}
-                        onClick={() => {
-                            if (prefixes) {
-                                setPrefixes(prefixes.filter(p => p.id !== value))
-                            }
-                            Api.actionServiceDeleteSite(value).catch(e =>
-                                dispatch(alertAction("REMOVE_ALLOWED_SITE", "Failed to remove allowed site", e))
-                            )
-                        }}
-                    >
-                        <OutlinedTimesCircleIcon />
-                    </Button>
+                    <div style={{ textAlign: "right" }}>
+                        <Button
+                            variant="danger"
+                            onClick={() => {
+                                if (prefixes) {
+                                    setPrefixes(prefixes.filter(p => p.id !== value))
+                                }
+                                Api.actionServiceDeleteSite(value).catch(e =>
+                                    dispatch(alertAction("REMOVE_ALLOWED_SITE", "Failed to remove allowed site", e))
+                                )
+                            }}
+                        >
+                            Delete
+                        </Button>
+                    </div>
                 )
             },
         },
@@ -82,9 +82,7 @@ function PrefixList() {
             >
                 <ToolbarContent>
                     <ToolbarItem aria-label="info">
-                        <Button onClick={() => setOpen(true)}>
-                            <PlusIcon /> Add Prefix
-                        </Button>
+                        <Button onClick={() => setOpen(true)}>Add Prefix</Button>
                     </ToolbarItem>
                 </ToolbarContent>
             </Toolbar>

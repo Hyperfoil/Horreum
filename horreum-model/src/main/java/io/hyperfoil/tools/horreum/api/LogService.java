@@ -10,6 +10,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import io.hyperfoil.tools.horreum.entity.ActionLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLog;
 
@@ -53,4 +54,20 @@ public interface LogService {
                                  @QueryParam("runId") Integer runId,
                                  @QueryParam("from") Long from,
                                  @QueryParam("to") Long to);
+
+   @GET
+   @Path("action/{testId}")
+   List<ActionLog> getActionLog(@PathParam("testId") int testId,
+                                @QueryParam("page") Integer page,
+                                @QueryParam("limit") Integer limit);
+
+   @GET
+   @Path("action/{testId}/count")
+   long getActionLogCount(@PathParam("testId") int testId);
+
+   @DELETE
+   @Path("action/{testId}")
+   void deleteActionLogs(@PathParam("testId") int testId,
+                         @QueryParam("from") Long from,
+                         @QueryParam("to") Long to);
 }
