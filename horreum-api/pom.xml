@@ -81,6 +81,9 @@
                                 <package>org.hibernate.annotations</package>
                                 <package>io.quarkus.hibernate</package>
                             </erasedPackages>
+                            <ignoreAnnotation>
+                                io.hyperfoil.tools.horreum.entity.IgnoreInApi
+                            </ignoreAnnotation>
                         </configuration>
                     </execution>
                 </executions>

@@ -1,0 +1,1 @@
+{#if it == "BETTER"}:green_square:{#else if it == "WORSE"}:red_square:{#else}:white_check_mark:{/if}

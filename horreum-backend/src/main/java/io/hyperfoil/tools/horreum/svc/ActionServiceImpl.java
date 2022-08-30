@@ -43,7 +43,7 @@ public class ActionServiceImpl implements ActionService {
    private static final Logger log = Logger.getLogger(ActionServiceImpl.class);
 
    @Inject
-   Instance<ActionPlugin> hookPlugins;
+   Instance<ActionPlugin> actionPlugins;
    Map<String, ActionPlugin> plugins;
 
    @Inject
@@ -54,7 +54,7 @@ public class ActionServiceImpl implements ActionService {
 
    @PostConstruct()
    public void postConstruct(){
-      plugins = hookPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
+      plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
    }
 
    private void executeActions(String event, int testId, Object payload){
@@ -121,7 +121,7 @@ public class ActionServiceImpl implements ActionService {
    public void onNewChange(Change.Event changeEvent) {
       int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
             .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
-      executeActions(Change.EVENT_NEW, testId, changeEvent.change);
+      executeActions(Change.EVENT_NEW, testId, changeEvent);
    }
 
    void validate(Action action) {

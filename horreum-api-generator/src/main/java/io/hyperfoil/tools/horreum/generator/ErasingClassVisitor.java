@@ -10,11 +10,13 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 class ErasingClassVisitor extends ClassVisitor {
+   private final String ignoreAnnotation;
    private final List<String> erasedPackages;
 
-   public ErasingClassVisitor(List<String> erasedPackages, ClassVisitor delegated) {
+   public ErasingClassVisitor(List<String> erasedPackages, ClassVisitor delegated, String ignoreAnnotation) {
       super(Opcodes.ASM7, delegated);
       this.erasedPackages = erasedPackages;
+      this.ignoreAnnotation = ignoreAnnotation;
    }
 
    private boolean isDescriptorErased(String descriptor) {
@@ -46,8 +48,14 @@ class ErasingClassVisitor extends ClassVisitor {
       MethodVisitor visitor = super.visitMethod(access, name, descriptor, signature, exceptions);
       boolean isConstructor = name.equals("<init>");
       return new MethodVisitor(Opcodes.ASM7, visitor) {
+         private boolean ignored = false;
+
          @Override
          public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+            if (ignoreAnnotation.equals(descriptor.substring(1).replaceAll("/", "."))) {
+               ignored = true;
+               return null;
+            }
             return isDescriptorErased(descriptor) ? null : super.visitAnnotation(descriptor, visible);
          }
 
@@ -57,6 +65,13 @@ class ErasingClassVisitor extends ClassVisitor {
                owner = "java/lang/Object";
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+         }
+
+         @Override
+         public void visitFrame(int type, int numLocal, Object[] local, int numStack, Object[] stack) {
+            if (!ignored) {
+               super.visitFrame(type, numLocal, local, numStack, stack);
+            }
          }
       };
    }

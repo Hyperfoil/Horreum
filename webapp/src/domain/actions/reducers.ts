@@ -7,6 +7,7 @@ import { AddAlertAction } from "../../alerts"
 import { Action } from "../../api"
 
 export const EXPERIMENT_RESULT_NEW = "experiment_result/new"
+export const CHANGE_NEW = "change/new"
 export const testEventTypes = [
     [
         "run/new",
@@ -26,25 +27,30 @@ export const testEventTypes = [
 }`,
     ],
     [
-        "change/new",
+        CHANGE_NEW,
         `{
-  "id": 123,
-  "variable": {
-    "id": 456,
-    "testId": 789,
-    "name": "my-variable",
-    "group": null,
-    ...
+  "change": {
+    "id": 123,
+    "variable": {
+        "id": 456,
+        "testId": 789,
+        "name": "my-variable",
+        "group": null,
+        ...
+    },
+    "timestamp": "2022-08-29T12:28:14+02:00",
+    "dataset": {
+        "id": 1234,
+        "runId": 999,
+        "ordinal": 0,
+        "testId": 789
+    },
+    "confirmed": false,
+    "description": "Some generated description"
   },
-  "timestamp": "2022-08-29T12:28:14+02:00",
-  "dataset": {
-      "id": 1234,
-      "runId": 999,
-      "ordinal": 0,
-      "testId": 789
-  },
-  "confirmed": false,
-  "description": "Some generated description"
+  "testName": "My test",
+  "dataset": ...,
+  "notify": true
 }`,
     ],
     [

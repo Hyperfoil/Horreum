@@ -386,9 +386,9 @@ public class Util {
                case NUMBER:
                   double value = node.asDouble();
                   if (value == Math.rint(value)) {
-                     return value;
-                  } else {
                      return (long) value;
+                  } else {
+                     return value;
                   }
             }
          }

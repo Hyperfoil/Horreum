@@ -538,7 +538,8 @@ public class AlertingServiceImpl implements AlertingService {
             DataSet.Info info = (DataSet.Info) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
             em.persist(change);
             Hibernate.initialize(change.dataset.run.id);
-            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, info, event.notify));
+            String testName = Test.<Test>findByIdOptional(event.testId).map(test -> test.name).orElse("<unknown>");
+            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, testName, info, event.notify));
          });
       }
    }

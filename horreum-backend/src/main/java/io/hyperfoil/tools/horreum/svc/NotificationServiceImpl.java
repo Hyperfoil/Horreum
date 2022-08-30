@@ -80,24 +80,11 @@ public class NotificationServiceImpl implements NotificationService {
       Test test = Test.findById(variable.testId);
       // Test might be null when it's private
       String testName = test == null ? "unknown" : test.name;
-      String fingerprint = getFingerprint(event.change.dataset.id);
+      String fingerprint = event.change.dataset.getFingerprint();
       log.infof("Received new change in test %d (%s), dataset %d/%d (fingerprint: %s), variable %d (%s)",
             variable.testId, testName, event.dataset.runId, event.dataset.ordinal, fingerprint, variable.id, variable.name);
 
       notifyAll(variable.testId, n -> n.notifyChange(testName, fingerprint, event));
-   }
-
-   private String getFingerprint(int datasetId) {
-      @SuppressWarnings("rawtypes")
-      List fingerprintList = em.createNativeQuery("SELECT fingerprint::::text FROM fingerprint WHERE dataset_id = ?")
-              .setParameter(1, datasetId)
-              .getResultList();
-      if (fingerprintList.size() > 0) {
-         Object fingerprintResult = fingerprintList.stream().findFirst().get();
-         return fingerprintToString(Util.toJsonNode(String.valueOf(fingerprintResult)));
-      } else {
-         return "";
-      }
    }
 
    @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
@@ -112,7 +99,7 @@ public class NotificationServiceImpl implements NotificationService {
       String testName = test == null ? "unknown" : test.name;
       log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.testId, testName, event.datasetId, event.variables);
 
-      String fingerprint = getFingerprint(event.datasetId);
+      String fingerprint = em.getReference(DataSet.class, event.datasetId).getFingerprint();
       notifyAll(event.testId, n -> n.notifyMissingValues(testName, fingerprint, event));
    }
 
@@ -137,20 +124,6 @@ public class NotificationServiceImpl implements NotificationService {
             consumer.accept(plugin.create(userName, data));
          }
       }
-   }
-
-   private static String fingerprintToString(JsonNode fpObject) {
-      if (fpObject == null) {
-         return null;
-      }
-      StringBuilder sb = new StringBuilder();
-      Util.toMap(fpObject).forEach((key, value) -> {
-         if (sb.length() != 0) {
-            sb.append(';');
-         }
-         sb.append(key).append(':').append(value);
-      });
-      return sb.toString();
    }
 
    @PermitAll

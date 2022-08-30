@@ -2,6 +2,9 @@ package io.hyperfoil.tools.horreum.entity.json;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
@@ -19,11 +22,14 @@ import javax.persistence.SequenceGenerator;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.hibernate.annotations.Type;
+import org.hibernate.query.NativeQuery;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
+import io.hyperfoil.tools.horreum.entity.ApiIgnore;
 import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.smallrye.common.constraint.NotNull;
@@ -80,6 +86,30 @@ public class DataSet extends OwnedEntityBase {
    @CollectionTable
    @ElementCollection
    public Collection<ValidationError> validationErrors;
+
+   @ApiIgnore
+   public String getFingerprint() {
+      @SuppressWarnings("unchecked")
+      List<JsonNode> fingerprintList = DataSet.getEntityManager()
+            .createNativeQuery("SELECT fingerprint FROM fingerprint WHERE dataset_id = ?")
+            .setParameter(1, id).unwrap(NativeQuery.class)
+            .addScalar("fingerprint", JsonNodeBinaryType.INSTANCE)
+            .getResultList();
+      if (fingerprintList.size() > 0) {
+         StringBuilder sb = new StringBuilder();
+         Iterator<Map.Entry<String, JsonNode>> it = fingerprintList.stream().findFirst().get().fields();
+         while (it.hasNext()) {
+            Map.Entry<String, JsonNode> entry = it.next();
+            if (sb.length() != 0) {
+               sb.append(';');
+            }
+            sb.append(entry.getKey()).append(':').append(entry.getValue().toString());
+         }
+         return sb.toString();
+      } else {
+         return "";
+      }
+   }
 
    public Info getInfo() {
       return new Info(id, run.id, ordinal, testid);

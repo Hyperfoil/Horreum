@@ -30,6 +30,9 @@ public class GeneratorMojo extends AbstractMojo {
    @Parameter
    private List<String> erasedPackages;
 
+   @Parameter
+   private String ignoreAnnotation;
+
    @Parameter(defaultValue = "${project.build.outputDirectory}")
    private String target;
 
@@ -60,7 +63,7 @@ public class GeneratorMojo extends AbstractMojo {
    }
 
    private ErasingClassVisitor buildVisitorChain(ClassWriter writer) {
-      return new ErasingClassVisitor(erasedPackages, new PathParamEncodingVisitor(writer));
+      return new ErasingClassVisitor(erasedPackages, new PathParamEncodingVisitor(writer), ignoreAnnotation);
    }
 
 }

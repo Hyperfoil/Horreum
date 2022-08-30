@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.notification;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Date;
@@ -69,15 +71,14 @@ public class EmailPlugin implements NotificationPlugin {
          String content = changeNotificationEmail
                .data("username", username)
                .data("testName", testName)
-               .data("fingerprint", fingerprint)
+               .data("testNameEncoded", URLEncoder.encode(testName, StandardCharsets.UTF_8))
+               .data("fingerprint", URLEncoder.encode(fingerprint, StandardCharsets.UTF_8))
                .data("baseUrl", baseUrl)
                .data("testId", String.valueOf(event.change.variable.testId))
                .data("variable", event.change.variable.name)
                .data("group", event.change.variable.group)
                .data("runId", event.dataset.runId)
                .data("datasetOrdinal", event.dataset.ordinal)
-               // arithmetic is not implemented in Qute: https://github.com/quarkusio/quarkus/issues/25824
-               .data("datasetOrdinalPlusOne", event.dataset.ordinal + 1)
                .data("description", event.change.description)
                .render();
          mailer.send(Mail.withHtml(data, subject, content));

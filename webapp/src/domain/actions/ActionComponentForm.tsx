@@ -14,12 +14,12 @@ import {
     Title,
 } from "@patternfly/react-core"
 import { HelpIcon } from "@patternfly/react-icons"
-import { useState } from "react"
+import { ReactElement, useState } from "react"
 
 import { Action } from "../../api"
 import EnumSelect from "../../components/EnumSelect"
 import HttpActionUrlSelector from "../../components/HttpActionUrlSelector"
-import { EXPERIMENT_RESULT_NEW } from "./reducers"
+import { CHANGE_NEW, EXPERIMENT_RESULT_NEW } from "./reducers"
 
 function defaultConfig(type: string) {
     switch (type) {
@@ -66,7 +66,11 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
             </FormGroup>
             <FormGroup label="Action type" fieldId="type">
                 <EnumSelect
-                    options={{ http: "Generic HTTP POST request", github: "Github issue comment" }}
+                    options={{
+                        http: "Generic HTTP POST request",
+                        "github-issue-comment": "GitHub issue comment",
+                        "github-issue-create": "Create GitHub issue",
+                    }}
                     selected={props.action.type}
                     onSelect={type => {
                         update({ type, config: defaultConfig(type) })
@@ -85,35 +89,15 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                     setValid={props.setValid}
                 />
             )}
-            {props.action.type === "github" && (
+            {props.action.type === "github-issue-comment" && (
                 <>
-                    <FormGroup label="Token" labelIcon={<ExpressionHelp {...props} />} fieldId="token">
-                        <TextInput
-                            id="token"
-                            value={props.action.secrets.token || ""}
-                            onFocus={() => {
-                                if (!props.action.secrets.modified) {
-                                    update({ secrets: { token: "" } })
-                                }
-                            }}
-                            onBlur={() => {
-                                if (!props.action.secrets.token && !props.action.secrets.modified) {
-                                    update({ secrets: { token: "********" } })
-                                }
-                            }}
-                            onChange={token => update({ secrets: { token, modified: true } })}
-                        />
-                        See{" "}
-                        <a
-                            href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token"
-                            target="_blank"
-                        >
-                            Github Docs
-                        </a>{" "}
-                        for more info about tokens.
-                    </FormGroup>
-                    <FormGroup label="Issue" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
-                        <Flex>
+                    <GitHubTokenInput
+                        helpIcon={<ExpressionHelp {...props} />}
+                        secrets={props.action.secrets}
+                        onChange={secrets => update({ secrets })}
+                    />
+                    <FormGroup label="Issue source" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
+                        <Flex style={{ paddingTop: "14px" }}>
                             <FlexItem>
                                 <Radio
                                     name="issue"
@@ -133,41 +117,86 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                 />
                             </FlexItem>
                         </Flex>
-                        {props.action.config.issueUrl !== undefined ? (
+                    </FormGroup>
+
+                    {props.action.config.issueUrl !== undefined ? (
+                        <FormGroup label="Issue URL" labelIcon={<ExpressionHelp {...props} />} fieldId="issueUrl">
                             <TextInput
                                 id="issueUrl"
                                 value={props.action.config.issueUrl}
                                 onChange={issueUrl => update({ config: { ...props.action.config, issueUrl } })}
                             />
-                        ) : (
-                            <>
-                                Owner:{" "}
+                        </FormGroup>
+                    ) : (
+                        <>
+                            <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
                                 <TextInput
                                     id="owner"
                                     value={props.action.config.owner}
                                     onChange={owner => updateConfig({ owner })}
                                 />
-                                Repository:{" "}
+                            </FormGroup>
+                            <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
                                 <TextInput
                                     id="repo"
                                     value={props.action.config.repo}
                                     onChange={repo => updateConfig({ repo })}
                                 />
-                                Issue:
+                            </FormGroup>
+                            <FormGroup label="Issue" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
                                 <TextInput
                                     id="issue"
                                     value={props.action.config.issue}
                                     onChange={issue => updateConfig({ issue })}
                                 />
-                            </>
-                        )}
-                    </FormGroup>
+                            </FormGroup>
+                        </>
+                    )}
                     <FormGroup label="Formatter" fieldId="formatter">
                         <EnumSelect
                             options={
                                 props.action.event === EXPERIMENT_RESULT_NEW
                                     ? { experimentResultToMarkdown: "Experiment result to Markdown" }
                                     : {}
+                            }
+                            selected={props.action.config.formatter}
+                            onSelect={formatter => updateConfig({ formatter })}
+                        />
+                    </FormGroup>
+                </>
+            )}
+            {props.action.type === "github-issue-create" && (
+                <>
+                    <GitHubTokenInput
+                        helpIcon={<ExpressionHelp {...props} />}
+                        secrets={props.action.secrets}
+                        onChange={secrets => update({ secrets })}
+                    />
+                    <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
+                        <TextInput
+                            id="owner"
+                            value={props.action.config.owner}
+                            onChange={owner => updateConfig({ owner })}
+                        />
+                    </FormGroup>
+                    <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
+                        <TextInput
+                            id="repo"
+                            value={props.action.config.repo}
+                            onChange={repo => updateConfig({ repo })}
+                        />
+                    </FormGroup>
+                    <FormGroup label="Title" labelIcon={<ExpressionHelp {...props} />} fieldId="title">
+                        <TextInput
+                            id="title"
+                            value={props.action.config.title}
+                            onChange={title => updateConfig({ title })}
+                        />
+                    </FormGroup>
+                    <FormGroup label="Formatter" fieldId="formatter">
+                        <EnumSelect
+                            options={
+                                props.action.event === CHANGE_NEW ? { changeToMarkdown: "Change to Markdown" } : {}
                             }
                             selected={props.action.config.formatter}
                             onSelect={formatter => updateConfig({ formatter })}
@@ -217,5 +246,41 @@ function ExpressionHelp(props: ExpressionHelpProps) {
                 <HelpIcon />
             </Button>
         </Popover>
+    )
+}
+
+type GitHubTokenInputProps = {
+    helpIcon: ReactElement
+    secrets: any
+    onChange(secrets: any): void
+}
+
+function GitHubTokenInput(props: GitHubTokenInputProps) {
+    return (
+        <FormGroup label="Token" labelIcon={props.helpIcon} fieldId="token">
+            <TextInput
+                id="token"
+                value={props.secrets.token || ""}
+                onFocus={() => {
+                    if (!props.secrets.modified) {
+                        props.onChange({ token: "" })
+                    }
+                }}
+                onBlur={() => {
+                    if (!props.secrets.token && !props.secrets.modified) {
+                        props.onChange({ token: "********" })
+                    }
+                }}
+                onChange={token => props.onChange({ token, modified: true })}
+            />
+            See{" "}
+            <a
+                href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token"
+                target="_blank"
+            >
+                Github Docs
+            </a>{" "}
+            for more info about tokens.
+        </FormGroup>
     )
 }

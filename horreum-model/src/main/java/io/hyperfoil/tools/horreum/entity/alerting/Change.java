@@ -81,11 +81,13 @@ public class Change extends PanacheEntityBase {
 
    public static class Event {
       public Change change;
+      public String testName;
       public DataSet.Info dataset;
       public boolean notify;
 
-      public Event(Change change, DataSet.Info dataset, boolean notify) {
+      public Event(Change change, String testName, DataSet.Info dataset, boolean notify) {
          this.change = change;
+         this.testName = testName;
          this.dataset = dataset;
          this.notify = notify;
       }
