@@ -112,7 +112,7 @@ public class ExperimentServiceImpl implements ExperimentService {
          throw ServiceException.notFound("No dataset " + datasetId);
       }
       List<ExperimentService.ExperimentResult> results = new ArrayList<>();
-      DataSet.Info info = new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal, dataset.testid);
+      DataSet.Info info = dataset.getInfo();
       runExperiments(info, results::add, logs -> results.add(new ExperimentResult(null, logs, info, Collections.emptyList(), Collections.emptyMap(), null)));
       return results;
    }

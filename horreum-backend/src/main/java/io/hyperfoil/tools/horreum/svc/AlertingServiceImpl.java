@@ -395,7 +395,7 @@ public class AlertingServiceImpl implements AlertingService {
                   createDataPoint(dataset, data.variableId, value, notify);
                } else {
                   if (recalculation != null) {
-                     recalculation.datasetsWithoutValue.put(dataset.id, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal, dataset.testid));
+                     recalculation.datasetsWithoutValue.put(dataset.id, dataset.getInfo());
                   }
                   missingValueVariables.add(data.fullName());
                }
@@ -407,7 +407,7 @@ public class AlertingServiceImpl implements AlertingService {
                if (data.value == null || data.value.isNull()) {
                   logCalculationMessage(dataset, PersistentLog.INFO, "Null value for variable %s - datapoint is not created", data.fullName());
                   if (recalculation != null) {
-                     recalculation.datasetsWithoutValue.put(dataset.id, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal, dataset.testid));
+                     recalculation.datasetsWithoutValue.put(dataset.id, dataset.getInfo());
                   }
                   missingValueVariables.add(data.fullName());
                   return;
@@ -439,7 +439,7 @@ public class AlertingServiceImpl implements AlertingService {
       if (!missingValueVariables.isEmpty()) {
          Util.publishLater(tm, eventBus, DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.run.id, dataset.id, dataset.ordinal, dataset.testid, missingValueVariables, notify));
       }
-      Util.publishLater(tm, eventBus, DataSet.EVENT_DATAPOINTS_CREATED, new DataSet.Info(dataset.id, dataset.run.id, dataset.ordinal, dataset.testid));
+      Util.publishLater(tm, eventBus, DataSet.EVENT_DATAPOINTS_CREATED, dataset.getInfo());
    }
 
    private void createDataPoint(DataSet dataset, int variableId, double value, boolean notify) {
@@ -479,18 +479,6 @@ public class AlertingServiceImpl implements AlertingService {
       log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
       new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
             level, "changes", msg).persist();
-   }
-
-   @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   @Transactional
-   @ConsumeEvent(value = Run.EVENT_TRASHED, blocking = true)
-   public void onRunTrashed(Integer runId) {
-      log.infof("Trashing datapoints for run %d", runId);
-      // Hibernate would generate DELETE FROM change CROSS JOIN ... and that's not a valid PostgreSQL
-      em.createNativeQuery("DELETE FROM change USING dataset WHERE change.dataset_id = dataset.id AND dataset.runid = ?")
-            .setParameter(1, runId).executeUpdate();
-      em.createNativeQuery("DELETE FROM datapoint USING dataset WHERE datapoint.dataset_id = dataset.id AND dataset.runid = ?")
-            .setParameter(1, runId).executeUpdate();
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -1096,6 +1084,7 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onDatasetDeleted(DataSet.Info info) {
+      log.infof("Removing datasets and changes for dataset %d (%d/%d, test %d)", info.id, info.runId, info.ordinal, info.testId);
       for (DataPoint dp : DataPoint.<DataPoint>list("dataset_id", info.id)) {
          Util.publishLater(tm, eventBus, DataPoint.EVENT_DELETED, new DataPoint.Event(dp, info.testId, false));
          dp.delete();

@@ -705,7 +705,10 @@ public class RunServiceImpl implements RunService {
       boolean trashed = isTrashed == null || isTrashed;
       updateRun(id, run -> run.trashed = trashed);
       if (trashed) {
-         DataSet.delete("run.id", id);
+         for (var dataset : DataSet.<DataSet>list("run.id", id)) {
+            Util.publishLater(tm, eventBus, DataSet.EVENT_DELETED, dataset.getInfo());
+            dataset.delete();
+         }
          Util.publishLater(tm, eventBus, Run.EVENT_TRASHED, id);
       } else {
          transform(id, true);
@@ -807,7 +810,7 @@ public class RunServiceImpl implements RunService {
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
       for (DataSet old : DataSet.<DataSet>list("runid", runId)) {
-         Util.publishLater(tm, eventBus, DataSet.EVENT_DELETED, new DataSet.Info(old.id, old.run.id, old.ordinal, old.testid));
+         Util.publishLater(tm, eventBus, DataSet.EVENT_DELETED, old.getInfo());
          old.delete();
       }
 

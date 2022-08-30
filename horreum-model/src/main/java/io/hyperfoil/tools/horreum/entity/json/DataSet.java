@@ -81,6 +81,10 @@ public class DataSet extends OwnedEntityBase {
    @ElementCollection
    public Collection<ValidationError> validationErrors;
 
+   public Info getInfo() {
+      return new Info(id, run.id, ordinal, testid);
+   }
+
    public static class EventNew {
       public final DataSet dataset;
       public final boolean isRecalculation;
