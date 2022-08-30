@@ -84,7 +84,7 @@ public class TestServiceImpl implements TestService {
    DatasetServiceImpl datasetService;
 
    @Inject
-   ActionServiceImpl hookService;
+   ActionServiceImpl actionService;
 
    private final ConcurrentHashMap<Integer, RecalculationStatus> recalculations = new ConcurrentHashMap<>();
 
@@ -477,7 +477,7 @@ public class TestServiceImpl implements TestService {
       getTestForUpdate(testId);
       action.testId = testId;
 
-      hookService.validate(action);
+      actionService.validate(action);
       if (action.id == null) {
          action.persist();
       } else {
@@ -485,7 +485,7 @@ public class TestServiceImpl implements TestService {
             Action.deleteById(action.id);
             return null;
          } else {
-            hookService.merge(action);
+            actionService.merge(action);
          }
       }
       em.flush();

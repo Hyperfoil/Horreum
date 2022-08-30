@@ -116,55 +116,56 @@ public class TestServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testAddTestHook(TestInfo info) {
+   public void testAddTestAction(TestInfo info) {
       Test test = createTest(createExampleTest(getTestName(info)));
-      addTestHook(test, Run.EVENT_NEW, "https://attacker.ru").then().statusCode(400);;
+      addTestAction(test, Run.EVENT_NEW, "https://attacker.ru").then().statusCode(400);;
 
-      addAllowedPrefix("https://example.com");
+      addAllowedSite("https://example.com");
 
-      Action action = addTestHook(test, Run.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
+      Action action = addTestAction(test, Run.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       action.active = false;
-      jsonRequest().body(action).post("/api/test/" + test.id + "/hook").then().statusCode(204);
+      jsonRequest().body(action).post("/api/test/" + test.id + "/action").then().statusCode(204);
    }
 
-   private void addAllowedPrefix(String prefix) {
+   private void addAllowedSite(String prefix) {
       given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "text/plain")
-            .body(prefix).post("/api/hook/prefixes").then().statusCode(200);
+            .body(prefix).post("/api/action/allowedSites").then().statusCode(200);
    }
 
-   private Response addTestHook(Test test, String event, String url) {
+   private Response addTestAction(Test test, String event, String url) {
       Action action = new Action();
       action.event = event;
       action.type = "http";
       action.active = true;
       action.config = JsonNodeFactory.instance.objectNode().put("url", url);
-      return jsonRequest().body(action).post("/api/test/" + test.id + "/hook");
+      return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
    }
 
    @org.junit.jupiter.api.Test
-   public void testAddGlobalHook() {
-      String responseType = addGlobalHook(Test.EVENT_NEW, "https://attacker.ru")
+   public void testAddGlobalAction() {
+      String responseType = addGlobalAction(Test.EVENT_NEW, "https://attacker.ru")
             .then().statusCode(400).extract().header(HttpHeaders.CONTENT_TYPE);
       // constraint violations are mapped to 400 + JSON response, we want explicit error
       assertTrue(responseType.startsWith("text/plain")); // text/plain;charset=UTF-8
 
-      addAllowedPrefix("https://example.com");
+      addAllowedSite("https://example.com");
 
-      Action action = addGlobalHook(Test.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
+      Action action = addGlobalAction(Test.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
-      given().auth().oauth2(ADMIN_TOKEN).delete("/api/hook/" + action.id);
+      given().auth().oauth2(ADMIN_TOKEN).delete("/api/action/" + action.id);
    }
 
-   private Response addGlobalHook(String event, String url) {
+   private Response addGlobalAction(String event, String url) {
       Action action = new Action();
       action.event = event;
       action.type = "http";
       action.active = true;
       action.config = JsonNodeFactory.instance.objectNode().put("url", url);
-      return  given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/hook");
+      return given().auth().oauth2(ADMIN_TOKEN)
+            .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
    }
 
    @org.junit.jupiter.api.Test

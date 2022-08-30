@@ -63,7 +63,7 @@ public class Action extends PanacheEntityBase {
    // accesses to use of that method
    @JsonProperty("secrets")
    public JsonNode getMaskedSecrets() {
-      if (secrets.isObject()) {
+      if (secrets != null && secrets.isObject()) {
          ObjectNode masked = JsonNodeFactory.instance.objectNode();
          secrets.fieldNames().forEachRemaining(name -> {
             masked.put(name, "********");
