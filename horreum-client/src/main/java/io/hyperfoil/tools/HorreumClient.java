@@ -16,11 +16,11 @@ import java.security.NoSuchAlgorithmException;
 
 public class HorreumClient implements Closeable {
     private final ResteasyClient client;
+    public final ActionService actionService;
     public final AlertingService alertingService;
     public final BannerService bannerService;
     public final DatasetService datasetService;
     public final GrafanaService grafanaService;
-    public final HookService hookService;
     public final NotificationService notificationService;
     public final ReportService reportService;
     public final RunService runService;
@@ -30,8 +30,8 @@ public class HorreumClient implements Closeable {
     public final TestService testService;
     public final UserService userService;
 
-    public HorreumClient(ResteasyClient client,
-                         AlertingService alertingService, BannerService bannerService, DatasetService datasetService, GrafanaService grafanaService, HookService hookService,
+    private HorreumClient(ResteasyClient client,
+                         ActionService actionService, AlertingService alertingService, BannerService bannerService, DatasetService datasetService, GrafanaService grafanaService,
                          NotificationService notificationService, ReportService reportService, RunService horreumRunService, SchemaService schemaService, SqlService sqlService,
                          SubscriptionService subscriptionService, TestService horreumTestService, UserService userService) {
         this.client = client;
@@ -39,7 +39,7 @@ public class HorreumClient implements Closeable {
         this.bannerService = bannerService;
         this.datasetService = datasetService;
         this.grafanaService = grafanaService;
-        this.hookService = hookService;
+        this.actionService = actionService;
         this.notificationService = notificationService;
         this.reportService = reportService;
         this.runService = horreumRunService;
@@ -131,19 +131,19 @@ public class HorreumClient implements Closeable {
             ResteasyWebTarget target = client.target(UriBuilder.fromPath(this.horreumUrl));
 
             return new HorreumClient(client,
-                    target.proxyBuilder(AlertingService.class).build(),
-                    target.proxyBuilder(BannerService.class).build(),
-                    target.proxyBuilder(DatasetService.class).build(),
-                    target.proxyBuilder(GrafanaService.class).build(),
-                    target.proxyBuilder(HookService.class).build(),
-                    target.proxyBuilder(NotificationService.class).build(),
-                    target.proxyBuilder(ReportService.class).build(),
-                    target.proxyBuilder(RunService.class).build(),
-                    target.proxyBuilder(SchemaService.class).build(),
-                    target.proxyBuilder(SqlService.class).build(),
-                    target.proxyBuilder(SubscriptionService.class).build(),
-                    target.proxyBuilder(TestService.class).build(),
-                    target.proxyBuilder(UserService.class).build());
+                  target.proxyBuilder(ActionService.class).build(),
+                  target.proxyBuilder(AlertingService.class).build(),
+                  target.proxyBuilder(BannerService.class).build(),
+                  target.proxyBuilder(DatasetService.class).build(),
+                  target.proxyBuilder(GrafanaService.class).build(),
+                  target.proxyBuilder(NotificationService.class).build(),
+                  target.proxyBuilder(ReportService.class).build(),
+                  target.proxyBuilder(RunService.class).build(),
+                  target.proxyBuilder(SchemaService.class).build(),
+                  target.proxyBuilder(SqlService.class).build(),
+                  target.proxyBuilder(SubscriptionService.class).build(),
+                  target.proxyBuilder(TestService.class).build(),
+                  target.proxyBuilder(UserService.class).build());
         }
     }
 
