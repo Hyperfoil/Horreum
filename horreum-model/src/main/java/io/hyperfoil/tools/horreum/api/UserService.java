@@ -28,7 +28,7 @@ public interface UserService {
 
    @POST
    @Path("info")
-   CompletionStage<List<UserData>> info(@Parameter(required = true) List<String> usernames);
+   CompletionStage<List<UserData>> info(@RequestBody(required = true) List<String> usernames);
 
    @POST
    @Path("createUser")

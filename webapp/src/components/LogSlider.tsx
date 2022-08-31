@@ -42,12 +42,8 @@ export default function LogSlider({
                     value={toLog(value, min, max)}
                     onChange={value => {
                         let x = toPow(value, min, max)
-                        console.log("TOPOW")
-                        console.log(x)
                         if (isDiscrete) {
                             x = Math.round(x)
-                            console.log("DISC")
-                            console.log(x)
                         }
                         props.onChange(x)
                     }}
@@ -63,7 +59,7 @@ export default function LogSlider({
             <FlexItem alignSelf={{ default: "alignSelfFlexStart" }}>
                 <NumberInput
                     value={Math.round((value + Number.EPSILON) * 100) / 100}
-                    onUpdate={e => {
+                    onChange={e => {
                         let x = Number.parseFloat((e.target as any).value)
                         if (isDiscrete) {
                             x = Math.round(x)
