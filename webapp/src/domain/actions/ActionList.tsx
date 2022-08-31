@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 
-import { Button, Hint, HintBody, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
+import { Button, Hint, HintBody, Switch, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 
 import { allActions, addAction, removeAction } from "./actions"
 import * as selectors from "./selectors"
@@ -32,6 +32,20 @@ export default function ActionList() {
             {
                 Header: "Action type",
                 accessor: "type",
+            },
+            {
+                Header: "Run always",
+                accessor: "runAlways",
+                Cell: (arg: any) => {
+                    return (
+                        <Switch
+                            isChecked={arg.cell.value}
+                            label="Enabled"
+                            labelOff="Disabled"
+                            onChange={(_, e) => e.preventDefault()}
+                        />
+                    )
+                },
             },
             {
                 Header: "Configuration",

@@ -70,14 +70,16 @@ public interface ExperimentService {
       @JsonSerialize(keyUsing = ExperimentComparisonSerializer.class)
       public final Map<ExperimentComparison, ComparisonResult> results;
       public final JsonNode extraLabels;
+      public final boolean notify;
 
-      public ExperimentResult(ExperimentProfile profile, List<DatasetLog> logs, DataSet.Info datasetInfo, List<DataSet.Info> baseline, Map<ExperimentComparison, ComparisonResult> results, JsonNode extraLabels) {
+      public ExperimentResult(ExperimentProfile profile, List<DatasetLog> logs, DataSet.Info datasetInfo, List<DataSet.Info> baseline, Map<ExperimentComparison, ComparisonResult> results, JsonNode extraLabels, boolean notify) {
          this.profile = profile;
          this.logs = logs;
          this.datasetInfo = datasetInfo;
          this.baseline = baseline;
          this.results = results;
          this.extraLabels = extraLabels;
+         this.notify = notify;
       }
    }
 

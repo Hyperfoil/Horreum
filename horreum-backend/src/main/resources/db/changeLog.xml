@@ -3814,4 +3814,12 @@
     <changeSet id="92" author="rvansa">
         <dropNotNullConstraint tableName="dataset_validationerrors" columnName="schema_id"/>
     </changeSet>
+
+    <changeSet id="93" author="rvansa">
+        <addColumn tableName="action">
+            <column name="run_always" type="boolean" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

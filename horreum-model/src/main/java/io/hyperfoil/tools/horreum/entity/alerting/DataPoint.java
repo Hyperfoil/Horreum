@@ -25,6 +25,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 public class DataPoint extends PanacheEntityBase {
    public static final String EVENT_NEW = "datapoint/new";
    public static final String EVENT_DELETED = "datapoint/deleted";
+   public static final String EVENT_DATASET_PROCESSED = "datapoint/dataset_processed";
 
    @Id
    @GeneratedValue(strategy = GenerationType.AUTO)
@@ -79,6 +80,16 @@ public class DataPoint extends PanacheEntityBase {
                "dataPoint=" + dataPoint +
                ", notify=" + notify +
                '}';
+      }
+   }
+
+   public static class DatasetProcessedEvent {
+      public DataSet.Info dataset;
+      public boolean notify;
+
+      public DatasetProcessedEvent(DataSet.Info dataset, boolean notify) {
+         this.dataset = dataset;
+         this.notify = notify;
       }
    }
 }

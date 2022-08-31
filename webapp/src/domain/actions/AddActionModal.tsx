@@ -18,6 +18,7 @@ const DEFAULT_ACTION = {
     config: { url: "" },
     secrets: {},
     active: true,
+    runAlways: false,
 }
 
 function AddActionModal(props: AddActionModalProps) {

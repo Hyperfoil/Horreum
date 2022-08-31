@@ -113,17 +113,17 @@ public class ExperimentServiceImpl implements ExperimentService {
       }
       List<ExperimentService.ExperimentResult> results = new ArrayList<>();
       DataSet.Info info = dataset.getInfo();
-      runExperiments(info, results::add, logs -> results.add(new ExperimentResult(null, logs, info, Collections.emptyList(), Collections.emptyMap(), null)));
+      runExperiments(info, results::add, logs -> results.add(new ExperimentResult(null, logs, info, Collections.emptyList(), Collections.emptyMap(), null, false)), false);
       return results;
    }
 
-   @ConsumeEvent(value = DataSet.EVENT_DATAPOINTS_CREATED, blocking = true)
+   @ConsumeEvent(value = DataPoint.EVENT_DATASET_PROCESSED, blocking = true)
    @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   public void onDatapointsCreated(DataSet.Info info) {
+   public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
-      runExperiments(info, result -> Util.publishLater(tm, eventBus, ExperimentResult.NEW_RESULT, result),
-            logs -> logs.forEach(log -> log.persist()));
+      runExperiments(event.dataset, result -> Util.publishLater(tm, eventBus, ExperimentResult.NEW_RESULT, result),
+            logs -> logs.forEach(log -> log.persist()), event.notify);
    }
 
    private void addLog(List<DatasetLog> logs, int testId, int datasetId, int level, String format, Object... args) {
@@ -133,7 +133,7 @@ public class ExperimentServiceImpl implements ExperimentService {
             level, "experiment", msg));
    }
 
-   private void runExperiments(DataSet.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLog>> noProfileConsumer) {
+   private void runExperiments(DataSet.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLog>> noProfileConsumer, boolean notify) {
       List<DatasetLog> logs = new ArrayList<>();
 
       Query selectorQuery = em.createNativeQuery("WITH lvalues AS (" +
@@ -255,7 +255,7 @@ public class ExperimentServiceImpl implements ExperimentService {
                .addScalar("value", JsonNodeBinaryType.INSTANCE)
                .getSingleResult();
          Hibernate.initialize(profile.test.name);
-         resultConsumer.accept(new ExperimentResult(profile, profileLogs, info, baseline, results, extraLabels));
+         resultConsumer.accept(new ExperimentResult(profile, profileLogs, info, baseline, results, extraLabels, notify));
       }
    }
 }

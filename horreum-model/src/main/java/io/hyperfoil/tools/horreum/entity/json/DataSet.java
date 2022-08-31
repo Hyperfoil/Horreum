@@ -46,7 +46,6 @@ public class DataSet extends OwnedEntityBase {
    public static final String EVENT_MISSING_VALUES = "dataset/missing_values";
    public static final String EVENT_DELETED = "dataset/deleted";
    public static final String EVENT_VALIDATED = "dataset/validated";
-   public static final String EVENT_DATAPOINTS_CREATED = "dataset/datapointsCreated";
 
    @Id
    @SequenceGenerator(

@@ -88,6 +88,7 @@ export default function Actions({ testId, testOwner, funcsRef, onModified }: Act
                             secrets: {},
                             testId,
                             active: true,
+                            runAlways: false,
                         }
                         setActions([...actions, newAction])
                         onModified(true)

@@ -439,7 +439,7 @@ public class AlertingServiceImpl implements AlertingService {
       if (!missingValueVariables.isEmpty()) {
          Util.publishLater(tm, eventBus, DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.run.id, dataset.id, dataset.ordinal, dataset.testid, missingValueVariables, notify));
       }
-      Util.publishLater(tm, eventBus, DataSet.EVENT_DATAPOINTS_CREATED, dataset.getInfo());
+      Util.publishLater(tm, eventBus, DataPoint.EVENT_DATASET_PROCESSED, new DataPoint.DatasetProcessedEvent(dataset.getInfo(), notify));
    }
 
    private void createDataPoint(DataSet dataset, int variableId, double value, boolean notify) {

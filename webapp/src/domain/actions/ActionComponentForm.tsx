@@ -8,6 +8,7 @@ import {
     FormSelectOption,
     Popover,
     Radio,
+    Switch,
     Tab,
     Tabs,
     TextInput,
@@ -76,6 +77,18 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         update({ type, config: defaultConfig(type) })
                     }}
                     isDisabled={!props.isTester}
+                />
+            </FormGroup>
+            <FormGroup
+                label="Run always"
+                fieldId="runAlways"
+                helperText="Run this action even when notifications are disabled, this event is caused by a recalculation etc."
+            >
+                <Switch
+                    label="Enabled"
+                    labelOff="Disabled"
+                    isChecked={props.action.runAlways}
+                    onChange={runAlways => update({ runAlways })}
                 />
             </FormGroup>
             {props.action.type === "http" && (

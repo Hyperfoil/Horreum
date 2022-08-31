@@ -15,6 +15,7 @@ import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
+import io.quarkus.runtime.Startup;
 import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.core.Vertx;
@@ -39,6 +40,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @ApplicationScoped
+@Startup
 public class ActionServiceImpl implements ActionService {
    private static final Logger log = Logger.getLogger(ActionServiceImpl.class);
 
@@ -57,13 +59,17 @@ public class ActionServiceImpl implements ActionService {
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
    }
 
-   private void executeActions(String event, int testId, Object payload){
+   private void executeActions(String event, int testId, Object payload, boolean notify){
       List<Action> actions = getActions(event, testId);
       if (actions.isEmpty()) {
          new ActionLog(PersistentLog.INFO, testId, event, null, "No actions found.").persist();
          return;
       }
       for (Action action : actions) {
+         if (!notify && !action.runAlways) {
+            log.debugf("Ignoring action for event %s in test %d, type %s as this event should not notfiy", event, testId, action.type);
+            continue;
+         }
          try {
             ActionPlugin plugin = plugins.get(action.type);
             if (plugin == null) {
@@ -104,7 +110,7 @@ public class ActionServiceImpl implements ActionService {
    @Transactional //Transactional is a workaround for #6059
    @ConsumeEvent(value = Test.EVENT_NEW, blocking = true)
    public void onNewTest(Test test) {
-      executeActions(Test.EVENT_NEW, -1, test);
+      executeActions(Test.EVENT_NEW, -1, test, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -112,7 +118,7 @@ public class ActionServiceImpl implements ActionService {
    @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
       Integer testId = run.testid;
-      executeActions(Run.EVENT_NEW, testId, run);
+      executeActions(Run.EVENT_NEW, testId, run, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -121,7 +127,7 @@ public class ActionServiceImpl implements ActionService {
    public void onNewChange(Change.Event changeEvent) {
       int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
             .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
-      executeActions(Change.EVENT_NEW, testId, changeEvent);
+      executeActions(Change.EVENT_NEW, testId, changeEvent, changeEvent.notify);
    }
 
    void validate(Action action) {
@@ -243,6 +249,6 @@ public class ActionServiceImpl implements ActionService {
    @Transactional
    @ConsumeEvent(value = ExperimentService.ExperimentResult.NEW_RESULT, blocking = true)
    public void onNewExperimentResult(ExperimentService.ExperimentResult result) {
-      executeActions(ExperimentService.ExperimentResult.NEW_RESULT, result.profile.test.id, result);
+      executeActions(ExperimentService.ExperimentResult.NEW_RESULT, result.profile.test.id, result, result.notify);
    }
 }
