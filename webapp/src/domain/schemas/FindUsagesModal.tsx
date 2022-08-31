@@ -14,7 +14,6 @@ import {
     Spinner,
     Title,
 } from "@patternfly/react-core"
-import { NavLink } from "react-router-dom"
 
 import Api, {
     LabelLocation,
