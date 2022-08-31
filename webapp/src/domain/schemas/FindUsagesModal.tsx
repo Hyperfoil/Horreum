@@ -28,6 +28,7 @@ import Api, {
 import { SchemaDispatch } from "./reducers"
 import { dispatchError } from "../../alerts"
 import ButtonLink from "../../components/ButtonLink"
+import NameUri from "../../components/NameUri"
 
 function usageToCells(u: LabelLocation) {
     switch (u.type) {
@@ -145,24 +146,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                         {schemas.map((s, i) => (
                             <ListItem key={i}>
                                 {/* TODO: looks like this is not navigating anywhere but IDK why */}
-                                {s.id ? (
-                                    <NavLink to={`/schema/${s.id}#labels`} onClick={() => props.onClose()}>
-                                        {s.name}
-                                    </NavLink>
-                                ) : (
-                                    s.name
-                                )}
-                                {"\u00A0"}
-                                <span
-                                    style={{
-                                        border: "1px solid #888",
-                                        borderRadius: "4px",
-                                        padding: "4px",
-                                        backgroundColor: "#f0f0f0",
-                                    }}
-                                >
-                                    {s.uri}
-                                </span>
+                                <NameUri isLink={true} onNavigate={() => props.onClose()} descriptor={s} />
                             </ListItem>
                         ))}
                     </List>

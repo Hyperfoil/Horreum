@@ -1,9 +1,9 @@
-import { useState } from "react"
+import { ReactNode, useState } from "react"
 
 import { Select, SelectOption } from "@patternfly/react-core"
 
 type EnumSelectProps = {
-    options: any
+    options: Record<string, ReactNode>
     selected: string | undefined
     onSelect(option: string): void
     isDisabled?: boolean
@@ -25,7 +25,7 @@ export default function EnumSelect(props: EnumSelectProps) {
         >
             {Object.entries(props.options).map(([name, title]) => (
                 <SelectOption key={name} value={name}>
-                    {title as string}
+                    {title}
                 </SelectOption>
             ))}
         </Select>

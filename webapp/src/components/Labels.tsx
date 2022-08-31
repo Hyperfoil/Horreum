@@ -1,14 +1,16 @@
-import React, { RefObject, useRef, useState, useEffect } from "react"
+import React, { ReactNode, RefObject, useEffect, useMemo, useRef, useState } from "react"
 import { useDispatch } from "react-redux"
 
 import { NavLink } from "react-router-dom"
 
-import { Checkbox, Select, SelectOption, Tooltip } from "@patternfly/react-core"
+import { Checkbox, Flex, FlexItem, Select, SelectOption, Tooltip } from "@patternfly/react-core"
 import { ExclamationCircleIcon } from "@patternfly/react-icons"
 
 import Api, { LabelInfo } from "../api"
 
 import { dispatchError } from "../alerts"
+import EnumSelect from "./EnumSelect"
+import NameUri from "./NameUri"
 
 type LabelsProps = {
     labels: string[]
@@ -19,17 +21,34 @@ type LabelsProps = {
     defaultFiltering?: boolean
 }
 
+const ALL_SCHEMAS = "__all__"
+
 export default function Labels({ labels, onChange, isReadOnly, error, defaultMetrics, defaultFiltering }: LabelsProps) {
     const [isExpanded, setExpanded] = useState(false)
     const [options, setOptions] = useState<LabelInfo[]>([])
+    const [schemaFilter, setSchemaFilter] = useState(ALL_SCHEMAS)
+    const [schemaFilterOptions, setSchemaFilterOptions] = useState<Record<string, ReactNode>>({
+        __all__: "All schemas",
+    })
     const [metrics, setMetrics] = useState(defaultMetrics === undefined || defaultMetrics)
     const [filtering, setFiltering] = useState(defaultFiltering === undefined || defaultFiltering)
     const dispatch = useDispatch()
     useEffect(() => {
-        Api.schemaServiceAllLabels().then(setOptions, error =>
-            dispatchError(dispatch, error, "LIST_ALL_LABELS", "Failed to list available labels.")
+        Api.schemaServiceAllLabels().then(
+            labels => {
+                setOptions(labels)
+                const sfo: Record<string, ReactNode> = { ...schemaFilterOptions }
+                labels.flatMap(l => l.schemas).forEach(s => (sfo[s.uri] = <NameUri descriptor={s} />))
+                setSchemaFilterOptions(sfo)
+            },
+            error => dispatchError(dispatch, error, "LIST_ALL_LABELS", "Failed to list available labels.")
         )
     }, [])
+    useEffect(() => {
+        if (!isExpanded) {
+            setSchemaFilter(ALL_SCHEMAS)
+        }
+    }, [isExpanded])
     const selected = labels.map(l => {
         const o = options.find(l2 => l2.name === l)
         if (!o) {
@@ -54,6 +73,15 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
             }
         }, 300)
     }
+    const filteredOptions = useMemo(
+        () =>
+            options
+                .filter(o => schemaFilter === "__all__" || o.schemas.some(s => s.uri === schemaFilter))
+                .filter(o => !labels.includes(o.name) && ((o.metrics && metrics) || (o.filtering && filtering)))
+                .sort()
+                .map((o, index) => <SelectOption key={index} value={o.name} />),
+        [options, schemaFilter, labels]
+    )
     return (
         <>
             <Select
@@ -75,13 +103,24 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                     setExpanded(false)
                     onChange([])
                 }}
-                onSelect={(e, newValue) => {
+                onFilter={(_, value) => filteredOptions.filter(o => (o.props.value as string).indexOf(value) >= 0)}
+                onSelect={(_, newValue) => {
                     setExpanded(false)
                     const label = newValue.toString()
                     onChange(labels.includes(label) ? labels.filter(l => l !== label) : [...labels, label])
                 }}
                 footer={
                     <div ref={footerRef as RefObject<HTMLDivElement>}>
+                        <Flex>
+                            <FlexItem>Filter by schema:</FlexItem>
+                            <FlexItem>
+                                <EnumSelect
+                                    options={schemaFilterOptions}
+                                    selected={schemaFilter}
+                                    onSelect={setSchemaFilter}
+                                />
+                            </FlexItem>
+                        </Flex>
                         <Checkbox
                             id="metrics"
                             label="Include metrics labels"
@@ -103,12 +142,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                     </div>
                 }
             >
-                {options
-                    .filter(o => !labels.includes(o.name) && ((o.metrics && metrics) || (o.filtering && filtering)))
-                    .sort()
-                    .map((o, index) => (
-                        <SelectOption key={index} value={o.name} />
-                    ))}
+                {filteredOptions}
             </Select>
             {error && (
                 <span
