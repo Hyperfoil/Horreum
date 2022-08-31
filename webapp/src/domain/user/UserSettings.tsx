@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { NavLink } from "react-router-dom"
 
-import { defaultTeamSelector, teamToName, useManagedTeams, userProfileSelector } from "../../auth"
-import { alertAction, dispatchInfo } from "../../alerts"
+import { AuthDispatch, defaultTeamSelector, teamToName, useManagedTeams, userProfileSelector } from "../../auth"
+import { alertAction, dispatchError, dispatchInfo } from "../../alerts"
 import SavedTabs, { SavedTab, TabFunctions } from "../../components/SavedTabs"
 import { updateDefaultTeam, TryLoginAgain } from "../../auth"
 import Api, { NotificationSettings } from "../../api"
@@ -49,7 +49,7 @@ export const UserProfileLink = () => {
 
 export function UserSettings() {
     document.title = "User settings | Horreum"
-    const dispatch = useDispatch()
+    const dispatch = useDispatch<AuthDispatch>()
     const profile = useSelector(userProfileSelector)
     const prevDefaultTeam = useSelector(defaultTeamSelector)
     const [defaultTeam, setDefaultTeam] = useState<Team>(createTeam(prevDefaultTeam))
@@ -69,12 +69,11 @@ export function UserSettings() {
         }
     }
     useEffect(loadPersonal, [profile, dispatch])
-    const reportError = (error: any) => {
-        dispatch(alertAction("UPDATE_SETTINGS", "Failed to update settings", error))
-        return Promise.reject()
-    }
     const managedTeams = useManagedTeams()
     const teamFuncsRef = useRef<TabFunctions>()
+    function reportError(error: any) {
+        return dispatchError(dispatch, error, "UPDATE_SETTINGS", "Failed to update user settings")
+    }
     if (!profile) {
         return (
             <Bullseye>
@@ -103,7 +102,7 @@ export function UserSettings() {
                         <SavedTab
                             title="My profile"
                             fragment="profile"
-                            onSave={() => updateDefaultTeam(defaultTeam.key).catch(reportError)}
+                            onSave={() => dispatch(updateDefaultTeam(defaultTeam.key))}
                             onReset={() => {
                                 setDefaultTeam(createTeam(prevDefaultTeam))
                                 setModified(false)

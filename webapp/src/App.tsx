@@ -9,7 +9,8 @@ import { Provider, useSelector } from "react-redux"
 import { Route, Switch } from "react-router"
 
 import store, { history } from "./store"
-import { initKeycloak, isAdminSelector, LoginLogout } from "./auth"
+import { isAdminSelector, LoginLogout } from "./auth"
+import { initKeycloak } from "./keycloak"
 import { UserProfileLink, UserSettings } from "./domain/user/UserSettings"
 
 import TestRuns from "./domain/runs/TestRuns"

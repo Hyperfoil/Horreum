@@ -2,18 +2,16 @@ import { useDispatch, useSelector } from "react-redux"
 
 import { Button } from "@patternfly/react-core"
 
-import Keycloak, { KeycloakConfig } from "keycloak-js"
-import fetchival from "fetchival"
-
-import store, { State } from "./store"
+import { State } from "./store"
 import Api, { UserData } from "./api"
-import { alertAction, CLEAR_ALERT } from "./alerts"
-import { noop } from "./utils"
+import { AddAlertAction, dispatchError } from "./alerts"
+import { Dispatch } from "redux"
+import { ThunkDispatch } from "redux-thunk"
 
-const INIT = "auth/INIT"
-const UPDATE_DEFAULT_TEAM = "auth/UPDATE_DEFAULT_TEAM"
-const UPDATE_ROLES = "auth/UPDATE_ROLES"
-const STORE_PROFILE = "auth/STORE_PROFILE"
+export const INIT = "auth/INIT"
+export const UPDATE_DEFAULT_TEAM = "auth/UPDATE_DEFAULT_TEAM"
+export const UPDATE_ROLES = "auth/UPDATE_ROLES"
+export const STORE_PROFILE = "auth/STORE_PROFILE"
 const AFTER_LOGOUT = "auth/AFTER_LOGOUT"
 
 export type Access = 0 | 1 | 2
@@ -54,9 +52,11 @@ interface AfterLogoutAction {
     type: typeof AFTER_LOGOUT
 }
 
-type AuthActions = InitAction | UpdateDefaultTeamAction | UpdateRolesAction | StoreProfileAction | AfterLogoutAction
+type AuthAction = InitAction | UpdateDefaultTeamAction | UpdateRolesAction | StoreProfileAction | AfterLogoutAction
 
-export function reducer(state = new AuthState(), action: AuthActions) {
+export type AuthDispatch = ThunkDispatch<any, unknown, AuthAction | AddAlertAction>
+
+export function reducer(state = new AuthState(), action: AuthAction) {
     // TODO: is this necessary? It seems that without that the state is not updated at times.
     state = { ...state }
     switch (action.type) {
@@ -147,63 +147,12 @@ export const defaultTeamSelector = (state: State) => {
     return teamRoles.length > 0 ? teamRoles[0] : undefined
 }
 
-export const initKeycloak = (state: State) => {
-    const keycloak = keycloakSelector(state)
-    let keycloakPromise
-    if (!keycloak) {
-        keycloakPromise = fetchival("/api/config/keycloak", { responseAs: "json" })
-            .get()
-            .then((response: any) => Keycloak(response as KeycloakConfig))
-    } else {
-        keycloakPromise = Promise.resolve(keycloak)
-    }
-    keycloakPromise
-        .then((keycloak: Keycloak.KeycloakInstance) => {
-            let initPromise: Promise<boolean> | undefined = undefined
-            if (!keycloak.authenticated) {
-                // Typecast required due to https://github.com/keycloak/keycloak/pull/5858
-                initPromise = keycloak.init({
-                    onLoad: "check-sso",
-                    silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
-                    promiseType: "native",
-                } as Keycloak.KeycloakInitOptions)
-                initPromise?.then(authenticated => {
-                    store.dispatch({ type: CLEAR_ALERT })
-                    store.dispatch({
-                        type: UPDATE_ROLES,
-                        authenticated,
-                        roles: keycloak?.realmAccess?.roles || [],
-                    })
-                    if (authenticated) {
-                        keycloak
-                            .loadUserProfile()
-                            .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
-                            .catch(error =>
-                                store.dispatch(
-                                    alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error)
-                                )
-                            )
-                        Api.userServiceDefaultTeam().then(
-                            response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
-                            error =>
-                                store.dispatch(
-                                    alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve default role", error)
-                                )
-                        )
-                        keycloak.onTokenExpired = () =>
-                            keycloak.updateToken(30).catch(e => console.log("Expired token update failed: " + e))
-                    } else {
-                        store.dispatch({ type: STORE_PROFILE, profile: {} })
-                    }
-                })
-            }
-            store.dispatch({ type: INIT, keycloak: keycloak, initPromise: initPromise })
-        })
-        .catch(noop)
-}
-
 export function updateDefaultTeam(team: string) {
-    return Api.userServiceSetDefaultTeam(team).then(_ => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team }))
+    return (dispatch: Dispatch<UpdateDefaultTeamAction | AddAlertAction>) =>
+        Api.userServiceSetDefaultTeam(team).then(
+            _ => dispatch({ type: UPDATE_DEFAULT_TEAM, team }),
+            error => dispatchError(dispatch, error, "SET_DEFAULT_TEAM", "Failed to update default team.")
+        )
 }
 
 export const TryLoginAgain = () => {

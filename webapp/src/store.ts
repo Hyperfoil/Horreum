@@ -2,7 +2,6 @@ import { createBrowserHistory } from "history"
 import { createStore, combineReducers, compose, applyMiddleware, StoreEnhancer } from "redux"
 import { connectRouter } from "connected-react-router"
 import thunk from "redux-thunk"
-//import { persistStore, autoRehydrate } from 'redux-persist';
 
 import { RunsState, reducer as runReducer } from "./domain/runs/reducers"
 import { TestsState, reducer as testReducer } from "./domain/tests/reducers"
