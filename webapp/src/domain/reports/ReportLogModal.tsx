@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { ReactElement, useMemo } from "react"
 
 import { formatDateTime } from "../../utils"
 import { ReportLog } from "../../api"
@@ -27,8 +27,14 @@ export default function ReportLogModal(props: ReportLogModalProps) {
             emptyMessage="There are no logs"
             {...props}
             columns={["Level", "Timestamp", "Message"]}
-            fetchCount={() => Promise.resolve(props.logs.length)}
-            fetchLogs={(page, limit) => Promise.resolve(rows.slice(page * limit, (page + 1) * limit))}
+            fetchCount={level => Promise.resolve(props.logs.filter(l => l.level >= level).length)}
+            fetchLogs={(level, page, limit) =>
+                Promise.resolve(
+                    rows
+                        .filter(r => (r.cells[0].title as ReactElement).props.level >= level)
+                        .slice(page * limit, (page + 1) * limit)
+                )
+            }
         />
     )
 }

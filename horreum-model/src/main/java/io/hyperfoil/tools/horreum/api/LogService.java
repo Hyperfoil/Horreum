@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api;
 import java.util.List;
 
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -21,13 +22,17 @@ public interface LogService {
    @Path("dataset/{source}/{testId}")
    List<DatasetLog> getDatasetLog(@PathParam("source") String source,
                                   @PathParam("testId") int testId,
+                                  @QueryParam("level") @DefaultValue("1") int level,
                                   @QueryParam("datasetId") Integer datasetId,
                                   @QueryParam("page") Integer page,
                                   @QueryParam("limit") Integer limit);
 
    @GET
    @Path("dataset/{source}/{testId}/count")
-   long getDatasetLogCount(@PathParam("source") String source, @PathParam("testId") int testId, @QueryParam("datasetId") Integer datasetId);
+   long getDatasetLogCount(@PathParam("source") String source,
+                           @PathParam("testId") int testId,
+                           @QueryParam("level") @DefaultValue("1") int level,
+                           @QueryParam("datasetId") Integer datasetId);
 
    @DELETE
    @Path("dataset/{source}/{testId}")
@@ -40,13 +45,16 @@ public interface LogService {
    @GET
    @Path("transformation/{testId}")
    List<TransformationLog> getTransformationLog(@PathParam("testId") int testId,
+                                                @QueryParam("level") @DefaultValue("1") int level,
                                                 @QueryParam("runId") Integer runId,
                                                 @QueryParam("page") Integer page,
                                                 @QueryParam("limit") Integer limit);
 
    @GET
    @Path("transformation/{testId}/count")
-   long getTransformationLogCount(@PathParam("testId") int testId, @QueryParam("runId") Integer runId);
+   long getTransformationLogCount(@PathParam("testId") int testId,
+                                  @QueryParam("level") @DefaultValue("1") int level,
+                                  @QueryParam("runId") Integer runId);
 
    @DELETE
    @Path("transformation/{testId}")
@@ -58,12 +66,14 @@ public interface LogService {
    @GET
    @Path("action/{testId}")
    List<ActionLog> getActionLog(@PathParam("testId") int testId,
+                                @QueryParam("level") @DefaultValue("1") int level,
                                 @QueryParam("page") Integer page,
                                 @QueryParam("limit") Integer limit);
 
    @GET
    @Path("action/{testId}/count")
-   long getActionLogCount(@PathParam("testId") int testId);
+   long getActionLogCount(@PathParam("testId") int testId,
+                          @QueryParam("level") @DefaultValue("1") int level);
 
    @DELETE
    @Path("action/{testId}")

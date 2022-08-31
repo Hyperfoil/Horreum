@@ -37,14 +37,14 @@ public class LogServiceImpl implements LogService {
    @WithRoles
    @RolesAllowed(Roles.TESTER)
    @Override
-   public List<DatasetLog> getDatasetLog(String source, int testId, Integer datasetId, Integer page, Integer limit) {
+   public List<DatasetLog> getDatasetLog(String source, int testId, int level, Integer datasetId, Integer page, Integer limit) {
       page = withDefault(page, 0);
       limit = withDefault(limit, 25);
       PanacheQuery<DatasetLog> query;
       if (datasetId == null) {
-         query = DatasetLog.find("testId = ?1 AND source = ?2", Sort.descending("timestamp"), testId, source);
+         query = DatasetLog.find("testId = ?1 AND source = ?2 AND level >= ?3", Sort.descending("timestamp"), testId, source, level);
       } else {
-         query = DatasetLog.find("dataset_id = ?1 AND source = ?2", Sort.descending("timestamp"), datasetId, source);
+         query = DatasetLog.find("dataset_id = ?1 AND source = ?2 AND level >= ?3", Sort.descending("timestamp"), datasetId, source, level);
       }
       return query.page(Page.of(page, limit)).list();
    }
@@ -52,11 +52,11 @@ public class LogServiceImpl implements LogService {
    @Override
    @WithRoles
    @RolesAllowed(Roles.TESTER)
-   public long getDatasetLogCount(String source, int testId, Integer datasetId) {
+   public long getDatasetLogCount(String source, int testId, int level, Integer datasetId) {
       if (datasetId == null) {
-         return DatasetLog.count("testId = ?1 AND source = ?2", testId, source);
+         return DatasetLog.count("testId = ?1 AND source = ?2 AND level >= ?3", testId, source, level);
       } else {
-         return DatasetLog.count("dataset_id = ?1 AND source = ?2", datasetId, source);
+         return DatasetLog.count("dataset_id = ?1 AND source = ?2 AND level > ?3", datasetId, source, level);
       }
    }
 
@@ -80,14 +80,14 @@ public class LogServiceImpl implements LogService {
    @RolesAllowed(Roles.TESTER)
    @WithRoles
    @Override
-   public List<TransformationLog> getTransformationLog(int testId, Integer runId, Integer page, Integer limit) {
+   public List<TransformationLog> getTransformationLog(int testId, int level, Integer runId, Integer page, Integer limit) {
       page = withDefault(page, 0);
       limit = withDefault(limit, 25);
       if (runId == null || runId <= 0) {
-         return TransformationLog.find("testid = ?1", Sort.descending("timestamp"), testId)
+         return TransformationLog.find("testid = ?1 AND level >= ?2", Sort.descending("timestamp"), testId, level)
                .page(Page.of(page, limit)).list();
       } else {
-         return TransformationLog.find("testid = ?1 AND runid = ?2", Sort.descending("timestamp"), testId, runId)
+         return TransformationLog.find("testid = ?1 AND level >= ?2 AND runid = ?3", Sort.descending("timestamp"), testId, level, runId)
                .page(Page.of(page, limit)).list();
       }
    }
@@ -95,11 +95,11 @@ public class LogServiceImpl implements LogService {
    @RolesAllowed(Roles.TESTER)
    @WithRoles
    @Override
-   public long getTransformationLogCount(int testId, Integer runId) {
+   public long getTransformationLogCount(int testId, int level, Integer runId) {
       if (runId == null || runId <= 0) {
-         return TransformationLog.count("testid = ?1", testId);
+         return TransformationLog.count("testid = ?1 AND level >= ?2", testId, level);
       } else {
-         return TransformationLog.count("testid = ?1 AND runid = ?2", testId, runId);
+         return TransformationLog.count("testid = ?1 AND level >= ?2 AND runid = ?3", testId, level, runId);
       }
    }
 
@@ -123,18 +123,18 @@ public class LogServiceImpl implements LogService {
    @Override
    @WithRoles
    @RolesAllowed(Roles.TESTER)
-   public List<ActionLog> getActionLog(int testId, Integer page, Integer limit) {
+   public List<ActionLog> getActionLog(int testId, int level, Integer page, Integer limit) {
       page = withDefault(page, 0);
       limit = withDefault(limit, 25);
-      return ActionLog.find("testid", Sort.descending("timestamp"), testId)
+      return ActionLog.find("testid = ?1 AND level >= ?2", Sort.descending("timestamp"), testId, level)
                .page(Page.of(page, limit)).list();
    }
 
    @Override
    @WithRoles
    @RolesAllowed(Roles.TESTER)
-   public long getActionLogCount(int testId) {
-      return ActionLog.find("testid", testId).count();
+   public long getActionLogCount(int testId, int level) {
+      return ActionLog.find("testid = ?1 AND level >= ?2", testId, level).count();
    }
 
    @Override

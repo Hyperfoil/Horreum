@@ -9,10 +9,10 @@ type ActionLogModalProps = {
 } & CommonLogModalProps
 
 export default function ActionLogModal(props: ActionLogModalProps) {
-    const fetchCount = useCallback(() => Api.logServiceGetActionLogCount(props.testId), [props.testId])
+    const fetchCount = useCallback(level => Api.logServiceGetActionLogCount(props.testId, level), [props.testId])
     const fetchLogs = useCallback(
-        (page, limit) =>
-            Api.logServiceGetActionLog(props.testId, limit, page).then(response =>
+        (level, page, limit) =>
+            Api.logServiceGetActionLog(props.testId, level, limit, page).then(response =>
                 (response as ActionLog[]).map(log => ({
                     cells: [
                         { title: <LogLevelIcon level={log.level} /> },

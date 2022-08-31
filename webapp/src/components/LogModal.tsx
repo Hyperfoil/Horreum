@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { ReactElement, useEffect, useMemo, useState } from "react"
 import { useDispatch } from "react-redux"
 import { IRow, Table, TableHeader, TableBody } from "@patternfly/react-table"
 import {
@@ -24,6 +24,7 @@ import TimeRangeSelect, { TimeRange } from "./TimeRangeSelect"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
 import { alertAction } from "../alerts"
 import "./LogModal.css"
+import EnumSelect from "./EnumSelect"
 
 export type CommonLogModalProps = {
     title: string
@@ -42,14 +43,33 @@ export function LogLevelIcon(props: { level: number }) {
     return levels[props.level]
 }
 
+const LOG_LEVELS = [
+    <>
+        <LogLevelIcon level={0} /> DEBUG
+    </>,
+    <>
+        <LogLevelIcon level={1} /> INFO
+    </>,
+    <>
+        <LogLevelIcon level={2} /> WARNING
+    </>,
+    <>
+        <LogLevelIcon level={3} /> ERROR
+    </>,
+].reduce((acc, el, i) => {
+    acc[i.toString()] = el
+    return acc
+}, {} as Record<string, ReactElement>)
+
 type LogModalProps = {
     columns: string[]
-    fetchCount(): Promise<number>
-    fetchLogs(page: number, limit: number): Promise<IRow[]>
+    fetchCount(level: number): Promise<number>
+    fetchLogs(level: number, page: number, limit: number): Promise<IRow[]>
     deleteLogs?(from?: number, to?: number): Promise<unknown>
 } & CommonLogModalProps
 
 export default function LogModal(props: LogModalProps) {
+    const [level, setLevel] = useState(1)
     const [count, setCount] = useState(0)
     const [page, setPage] = useState(0)
     const [limit, setLimit] = useState(25)
@@ -63,28 +83,28 @@ export default function LogModal(props: LogModalProps) {
         if (!props.isOpen) {
             return
         }
-        props.fetchCount().then(
+        props.fetchCount(level).then(
             response => setCount(typeof response === "number" ? response : parseInt(response)),
             error => {
                 dispatch(alertAction("LOG", "Cannot get logs.", error))
                 props.onClose()
             }
         )
-    }, [props.isOpen, props.fetchCount, dispatch, updateCounter])
+    }, [props.isOpen, props.fetchCount, dispatch, updateCounter, level])
     useEffect(() => {
         if (!props.isOpen) {
             return
         }
         setLoading(true)
         props
-            .fetchLogs(page, limit)
+            .fetchLogs(level, page, limit)
             .then(setRows)
             .catch(error => {
                 dispatch(alertAction("LOG", "Cannot get logs.", error))
                 props.onClose()
             })
             .finally(() => setLoading(false))
-    }, [page, limit, props.isOpen, props.fetchLogs, dispatch, updateCounter])
+    }, [page, limit, props.isOpen, props.fetchLogs, dispatch, updateCounter, level])
     const timeRangeOptions: TimeRange[] = useMemo(
         () => [
             { toString: () => "delete all" },
@@ -106,13 +126,26 @@ export default function LogModal(props: LogModalProps) {
                     <Title headingLevel="h4" size="lg">
                         No logs
                     </Title>
-                    <EmptyStateBody>{props.emptyMessage}</EmptyStateBody>
+                    <EmptyStateBody>
+                        {props.emptyMessage}
+                        <div style={{ marginTop: "16px" }}>
+                            {level == 1 && <Button onClick={() => setLevel(0)}>Show debug logs</Button>}
+                            {level > 1 && <Button onClick={() => setLevel(1)}>Show info logs</Button>}
+                        </div>
+                    </EmptyStateBody>
                 </EmptyState>
             )}
             {!loading && count > 0 && (
                 <>
                     {props.deleteLogs && (
                         <Flex>
+                            <FlexItem>
+                                <EnumSelect
+                                    options={LOG_LEVELS}
+                                    selected={level.toString()}
+                                    onSelect={value => setLevel(parseInt(value))}
+                                />
+                            </FlexItem>
                             <FlexItem>
                                 <Button onClick={() => setDeleteRequest(deleteRange)}>Delete logs older than...</Button>
                             </FlexItem>

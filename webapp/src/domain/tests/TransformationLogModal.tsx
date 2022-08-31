@@ -12,12 +12,12 @@ type TransformationLogModalProps = {
 
 export default function TransformationLogModal(props: TransformationLogModalProps) {
     const fetchCount = useCallback(
-        () => Api.logServiceGetTransformationLogCount(props.testId, props.runId),
+        level => Api.logServiceGetTransformationLogCount(props.testId, level, props.runId),
         [props.testId]
     )
     const fetchRows = useCallback(
-        (page, limit) =>
-            Api.logServiceGetTransformationLog(props.testId, limit, page, props.runId).then(response =>
+        (level, page, limit) =>
+            Api.logServiceGetTransformationLog(props.testId, level, limit, page, props.runId).then(response =>
                 (response as TransformationLog[]).map(log => ({
                     cells: [
                         { title: <LogLevelIcon level={log.level} /> },
