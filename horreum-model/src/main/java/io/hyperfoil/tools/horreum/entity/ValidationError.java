@@ -15,7 +15,6 @@ import io.hyperfoil.tools.horreum.entity.json.Schema;
 
 @Embeddable
 public class ValidationError {
-   @NotNull
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
    @JsonIgnore
    public Schema schema;
@@ -30,7 +29,7 @@ public class ValidationError {
    }
 
    @JsonProperty(value = "schemaId", required = true)
-   public int getSchemaId() {
-      return schema.id;
+   public Integer getSchemaId() {
+      return schema == null ? null : schema.id;
    }
 }

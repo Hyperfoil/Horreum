@@ -15,9 +15,13 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
             props.errors &&
             props.errors.map(e => ({
                 cells: [
-                    <NavLink key="schema" to={`/schema/${e.schemaId}`}>
-                        {props.uris[e.schemaId] || "unknown schema " + e.schemaId}
-                    </NavLink>,
+                    e.schemaId ? (
+                        <NavLink key="schema" to={`/schema/${e.schemaId}`}>
+                            {props.uris[e.schemaId] || "unknown schema " + e.schemaId}
+                        </NavLink>
+                    ) : (
+                        "No schema"
+                    ),
                     e.error.type,
                     <code>{e.error.path}</code>,
                     <code>{e.error.schemaPath}</code>,
@@ -28,7 +32,12 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
         [props.errors, props.uris]
     )
     return (
-        <Table variant="compact" cells={["Schema", "Type", "Path", "SchemaPath", "Arguments", "Message"]} rows={rows}>
+        <Table
+            aria-label="validation-errors"
+            variant="compact"
+            cells={["Schema", "Type", "Path", "SchemaPath", "Arguments", "Message"]}
+            rows={rows}
+        >
             <TableHeader />
             <TableBody />
         </Table>

@@ -15,6 +15,7 @@ import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
+import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Vertx;
@@ -65,6 +66,7 @@ import com.networknt.schema.uri.URIFetcher;
 import com.networknt.schema.uri.URLFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
+@Startup
 public class SchemaServiceImpl implements SchemaService {
    private static final Logger log = Logger.getLogger(SchemaServiceImpl.class);
 
@@ -251,14 +253,14 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void validateRunData(int runId, Predicate<String> schemaFilter) {
-      log.debugf("About to validate data for run %d", runId);
+      log.infof("About to validate data for run %d", runId);
       Run run = Run.findById(runId);
       if (run == null) {
          log.errorf("Cannot load run %d for schema validation", runId);
          return;
       }
       run.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
-      validateData(run.data, schemaFilter, run.validationErrors::add);
+      validateData(run.data, schemaFilter, run.validationErrors::add, true);
       run.persist();
       Util.publishLater(tm, vertx.eventBus(), Run.EVENT_VALIDATED, new Schema.ValidationEvent(run.id, run.validationErrors));
    }
@@ -266,7 +268,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void validateDatasetData(int datasetId, Predicate<String> schemaFilter) {
-      log.debugf("About to validate data for dataset %d", datasetId);
+      log.infof("About to validate data for dataset %d", datasetId);
       DataSet dataset = DataSet.findById(datasetId);
       if (dataset == null) {
          // Don't log error when the dataset is not present and we're revalidating all datasets - it might be
@@ -277,7 +279,15 @@ public class SchemaServiceImpl implements SchemaService {
          return;
       }
       dataset.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
-      validateData(dataset.data, schemaFilter, dataset.validationErrors::add);
+      validateData(dataset.data, schemaFilter, dataset.validationErrors::add, false);
+      for (var item : dataset.data) {
+         String uri = item.path("$schema").asText();
+         if (uri == null || uri.isBlank()) {
+            ValidationError error = new ValidationError();
+            error.error = JsonNodeFactory.instance.objectNode().put("type", "No schema").put("message", "Element in the dataset does not reference any schema through the '$schema' property.");
+            dataset.validationErrors.add(error);
+         }
+      }
       dataset.persist();
       Util.publishLater(tm, vertx.eventBus(), DataSet.EVENT_VALIDATED, new Schema.ValidationEvent(dataset.id, dataset.validationErrors));
    }
@@ -311,7 +321,7 @@ public class SchemaServiceImpl implements SchemaService {
       // just to let Quarkus register codec for ValidationEvent
    }
 
-   private void validateData(JsonNode data, Predicate<String> filter, Consumer<ValidationError> consumer) {
+   private void validateData(JsonNode data, Predicate<String> filter, Consumer<ValidationError> consumer, boolean allowUnknownSchema) {
       Map<String, List<JsonNode>> toCheck = new HashMap<>();
       addIfHasSchema(toCheck, data);
       for (JsonNode child : data) {
@@ -331,6 +341,11 @@ public class SchemaServiceImpl implements SchemaService {
          // this is root in the sense of JSON schema referencing other schemas, NOT Horreum first-level schema
          Schema rootSchema = schemas.get(schemaUri);
          if (rootSchema == null || rootSchema.schema == null) {
+            if (!allowUnknownSchema) {
+               ValidationError error = new ValidationError();
+               error.error = JsonNodeFactory.instance.objectNode().put("type", "Schema not defined").put("message", "Schema '" + schemaUri + "' is not defined in Horreum");
+               consumer.accept(error);
+            }
             continue;
          }
          try {

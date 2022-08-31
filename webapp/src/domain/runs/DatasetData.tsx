@@ -51,8 +51,9 @@ export default function DatasetData(props: DatasetDataProps) {
             .finally(() => setLoading(false))
     }, [props.datasetId])
     useEffect(() => {
-        if (validationErrors.length > 0) {
-            Api.schemaServiceDescriptors(validationErrors.map(e => e.schemaId)).then(
+        const schemaErrors = validationErrors.filter(e => e.schemaId)
+        if (schemaErrors.length > 0) {
+            Api.schemaServiceDescriptors(schemaErrors.map(e => e.schemaId)).then(
                 ds =>
                     setErroredSchemas(
                         ds.reduce(

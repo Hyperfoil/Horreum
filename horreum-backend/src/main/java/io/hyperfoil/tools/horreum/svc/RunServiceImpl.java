@@ -15,6 +15,7 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
@@ -902,6 +903,9 @@ public class RunServiceImpl implements RunService {
                   result = instance.objectNode()
                         .put("$schema", t.targetSchemaUri).set("value", result);
                }
+            } else if (!result.isContainerNode() || (result.isObject() && !result.has("$schema")) ||
+                  (result.isArray() && StreamSupport.stream(result.spliterator(), false).anyMatch(item -> !item.has("$schema")))) {
+               logMessage(run, PersistentLog.WARN, "Dataset will contain element without a schema.");
             }
             JsonNode existing = transformerResults.get(transformerId);
             if (existing == null) {

@@ -3811,4 +3811,7 @@
         <dropDefaultValue tableName="datapoint" columnName="timestamp"/>
     </changeSet>
 
+    <changeSet id="92" author="rvansa">
+        <dropNotNullConstraint tableName="dataset_validationerrors" columnName="schema_id"/>
+    </changeSet>
 </databaseChangeLog>
