@@ -64,6 +64,7 @@ import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.vladmihalcea.hibernate.type.array.IntArrayType;
@@ -93,6 +94,18 @@ public class AlertingServiceImpl implements AlertingService {
    private static final Logger log = Logger.getLogger(AlertingServiceImpl.class);
 
    //@formatter:off
+   private static final String LOOKUP_TIMESTAMP =
+         "SELECT timeline_function, (CASE " + "" +
+            "WHEN jsonb_array_length(timeline_labels) = 1 THEN jsonb_agg(lv.value)->0 " +
+            "ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) " +
+         "END) as value FROM test " +
+         "JOIN label ON json_contains(timeline_labels, label.name) " +
+         "JOIN label_values lv ON label.id = lv.label_id " +
+         "WHERE test.id = ?1 AND lv.dataset_id = ?2 " +
+            // the typeof check is needed as jsonb_array_length would fail on JSON nulls
+            "AND timeline_labels IS NOT NULL AND jsonb_typeof(timeline_labels) = 'array' AND jsonb_array_length(timeline_labels) > 0 " +
+         "GROUP BY timeline_function, timeline_labels";
+
    private static final String LOOKUP_VARIABLES =
          "SELECT var.id as variableId, var.name, var.\"group\", var.calculation, jsonb_array_length(var.labels) AS numLabels, (CASE " +
             "WHEN jsonb_array_length(var.labels) = 1 THEN jsonb_agg(lv.value)->0 " +
@@ -386,13 +399,36 @@ public class AlertingServiceImpl implements AlertingService {
             logCalculationMessage(dataset, PersistentLog.DEBUG, "Fetched value for variable %s: <pre>%s</pre>", data.fullName(), data.value);
          }
       }
+      @SuppressWarnings("unchecked") List<Object[]> timestampList = em.createNativeQuery(LOOKUP_TIMESTAMP)
+            .setParameter(1, dataset.testid)
+            .setParameter(2, dataset.id)
+            .unwrap(NativeQuery.class)
+            .addScalar("timeline_function", TextType.INSTANCE)
+            .addScalar("value", JsonNodeBinaryType.INSTANCE)
+            .getResultList();
+      Instant timestamp = dataset.start;
+      if (!timestampList.isEmpty()) {
+         String timestampFunction = (String) timestampList.get(0)[0];
+         JsonNode value = (JsonNode) timestampList.get(0)[1];
+         if (timestampFunction != null && !timestampFunction.isBlank()) {
+            value = Util.evaluateOnce(timestampFunction, value, Util::convertToJson,
+                  (code, throwable) -> logCalculationMessage(dataset, PersistentLog.ERROR, "Evaluation of timestamp failed: '%s' Code: <code><pre>%s</pre></code>", throwable.getMessage(), code),
+                  output -> logCalculationMessage(dataset, PersistentLog.DEBUG, "Output while calculating timestamp: <pre>%s</pre>", output));
+         }
+         timestamp = Util.toInstant(value);
+         if (timestamp == null) {
+            logCalculationMessage(dataset, PersistentLog.ERROR, "Cannot parse timestamp, must be number or ISO-8601 timestamp: %s", value);
+            timestamp = dataset.start;
+         }
+      }
+      Instant finalTimestamp = timestamp;
       Util.evaluateMany(values, data -> data.calculation, data -> data.value,
             (data, result) -> {
                Double value = Util.toDoubleOrNull(result,
                      error -> logCalculationMessage(dataset, PersistentLog.ERROR, "Evaluation of variable %s failed: %s", data.fullName(), error),
                      info -> logCalculationMessage(dataset, PersistentLog.INFO, "Evaluation of variable %s: %s", data.fullName(), info));
                if (value != null) {
-                  createDataPoint(dataset, data.variableId, value, notify);
+                  createDataPoint(dataset, finalTimestamp, data.variableId, value, notify);
                } else {
                   if (recalculation != null) {
                      recalculation.datasetsWithoutValue.put(dataset.id, dataset.getInfo());
@@ -430,7 +466,7 @@ public class AlertingServiceImpl implements AlertingService {
                   }
                   missingValueVariables.add(data.fullName());
                } else {
-                  createDataPoint(dataset, data.variableId, value, notify);
+                  createDataPoint(dataset, finalTimestamp, data.variableId, value, notify);
                }
             },
             (data, exception, code) -> logCalculationMessage(dataset, PersistentLog.ERROR, "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", data.fullName(), exception.getMessage(), code),
@@ -442,11 +478,11 @@ public class AlertingServiceImpl implements AlertingService {
       Util.publishLater(tm, eventBus, DataPoint.EVENT_DATASET_PROCESSED, new DataPoint.DatasetProcessedEvent(dataset.getInfo(), notify));
    }
 
-   private void createDataPoint(DataSet dataset, int variableId, double value, boolean notify) {
+   private void createDataPoint(DataSet dataset, Instant timestamp, int variableId, double value, boolean notify) {
       DataPoint dataPoint = new DataPoint();
       dataPoint.variable = em.getReference(Variable.class, variableId);
       dataPoint.dataset = dataset;
-      dataPoint.timestamp = dataset.start;
+      dataPoint.timestamp = timestamp;
       dataPoint.value = value;
       dataPoint.persist();
       Util.publishLater(tm, eventBus, DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, dataset.testid, notify));
@@ -486,17 +522,16 @@ public class AlertingServiceImpl implements AlertingService {
    @ConsumeEvent(value = DataPoint.EVENT_NEW, blocking = true, ordered = true)
    public void onNewDataPoint(DataPoint.Event event) {
       DataPoint dataPoint = event.dataPoint;
-      // The variable referenced by datapoint is a fake
-      Variable variable = Variable.findById(dataPoint.variable.id);
+      dataPoint.variable = Variable.findById(dataPoint.variable.id);
       log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.dataset.id,
-            dataPoint.variable.id, variable != null ? variable.name : "<unknown>", dataPoint.value);
+            dataPoint.variable.id, dataPoint.variable.name, dataPoint.value);
       // We'll simply ignore newer changes as this recalculation might be a result of re-transformation of runs.
       // The changes that are about to come are going to be removed soon.
       Change lastChange = em.createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
             "WHERE c.variable = ?1 AND c.timestamp < ?2 AND " +
             "TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?3)) " +
             "ORDER by c.timestamp DESC", Change.class)
-            .setParameter(1, variable).setParameter(2, event.dataPoint.timestamp)
+            .setParameter(1, dataPoint.variable).setParameter(2, event.dataPoint.timestamp)
             .setParameter(3, event.dataPoint.dataset.id).setMaxResults(1)
             .getResultStream().findFirst().orElse(null);
       Instant changeTimestamp = LONG_TIME_AGO;
@@ -509,7 +544,7 @@ public class AlertingServiceImpl implements AlertingService {
             "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 " +
             "AND TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?4)) " +
             "ORDER BY dp.timestamp DESC", DataPoint.class)
-            .setParameter(1, variable).setParameter(2, changeTimestamp)
+            .setParameter(1, dataPoint.variable).setParameter(2, changeTimestamp)
             .setParameter(3, dataPoint.timestamp).setParameter(4, dataPoint.dataset.id).getResultList();
       // Last datapoint is already in the list
       if (dataPoints.isEmpty()) {
@@ -524,7 +559,7 @@ public class AlertingServiceImpl implements AlertingService {
          return;
       }
 
-      for (ChangeDetection detection : ChangeDetection.<ChangeDetection>find("variable", variable).list()) {
+      for (ChangeDetection detection : ChangeDetection.<ChangeDetection>find("variable", dataPoint.variable).list()) {
          ChangeDetectionModel model = MODELS.get(detection.model);
          if (model == null) {
             logChangeDetectionMessage(event.testId, dataPoint.id, PersistentLog.ERROR, "Cannot find change detection model %s", detection.model);
@@ -816,9 +851,16 @@ public class AlertingServiceImpl implements AlertingService {
       // Without thread context propagation we would get an exception in Run.findById, though the interceptors would be invoked correctly.
       Util.executeBlocking(vertx, new CachedSecurityIdentity(identity), () -> {
          Recalculation recalculation = new Recalculation();
-         if (recalcProgress.putIfAbsent(testId, recalculation) != null) {
-            log.infof("Already started recalculation on test %d, ignoring.", testId);
-            return;
+         Recalculation previous = recalcProgress.putIfAbsent(testId, recalculation);
+         while (previous != null) {
+            if (!previous.done) {
+               log.infof("Already started recalculation on test %d, ignoring.", testId);
+               return;
+            }
+            if (recalcProgress.replace(testId, previous, recalculation)) {
+               break;
+            }
+            previous = recalcProgress.putIfAbsent(testId, recalculation);
          }
          try {
             recalculation.datasets = getDatasetsForRecalculation(testId, from, to);
@@ -950,6 +992,28 @@ public class AlertingServiceImpl implements AlertingService {
          throw ServiceException.notFound("Not available without test mode.");
       }
       return RunExpectation.listAll();
+   }
+
+   @WithRoles
+   @Transactional
+   @Override
+   public void updateChangeDetection(int testId, AlertingService.ChangeDetectionUpdate update) {
+      Test test = testService.getTestForUpdate(testId);
+      test.timelineLabels = toJsonArray(update.timelineLabels);
+      test.timelineFunction = "";
+      test.timelineFunction = update.timelineFunction;
+      test.fingerprintLabels = toJsonArray(update.fingerprintLabels);
+      // In case the filter is null we need to force the property to be dirty
+      test.fingerprintFilter = "";
+      test.fingerprintFilter = update.fingerprintFilter;
+      test.persistAndFlush();
+   }
+
+   private ArrayNode toJsonArray(List<String> labels) {
+      if (labels == null) {
+         return null;
+      }
+      return labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll);
    }
 
    @PermitAll

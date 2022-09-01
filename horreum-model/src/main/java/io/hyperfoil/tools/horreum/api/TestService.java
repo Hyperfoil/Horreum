@@ -119,10 +119,6 @@ public interface TestService {
    void updateTransformers(@PathParam("id") int testId, @RequestBody(required = true) List<Integer> transformerIds);
 
    @POST
-   @Path("{id}/fingerprint")
-   void updateFingerprint(@PathParam("id") int testId, @RequestBody(required = true) FingerprintUpdate update);
-
-   @POST
    @Path("{id}/recalculate")
    void recalculateDatasets(@PathParam("id") int testId);
 
@@ -148,11 +144,6 @@ public interface TestService {
       public String owner;
       @Schema(implementation = Access.class, required = true)
       public int access;
-   }
-
-   class FingerprintUpdate {
-      public List<String> labels;
-      public String filter;
    }
 
    class RecalculationStatus {

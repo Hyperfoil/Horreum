@@ -41,7 +41,7 @@ import { dispatchError } from "../../alerts"
 
 import DatasetLogModal from "./DatasetLogModal"
 import { subscriptions as subscriptionsSelector } from "./selectors"
-import { updateFingerprint } from "./actions"
+import { updateChangeDetection } from "./actions"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { Test } from "../../api"
 import VariableForm from "./VariableForm"
@@ -243,8 +243,10 @@ function groupNames(vars: Variable[]) {
 }
 
 export default function ChangeDetectionForm({ test, onModified, funcsRef }: ChangeDetectionFormProps) {
-    const [labels, setLabels] = useState<string[]>(test.fingerprintLabels || [])
-    const [filter, setFilter] = useState(() => test.fingerprintFilter)
+    const [timelineLabels, setTimelineLabels] = useState(test.timelineLabels || [])
+    const [timelineFunction, setTimelineFunction] = useState(test.timelineFunction)
+    const [fingerprintLabels, setFingerprintLabels] = useState(test.fingerprintLabels || [])
+    const [fingerprintFilter, setFingerprintFilter] = useState(() => test.fingerprintFilter)
     const [variables, setVariables] = useState<Variable[]>([])
     const [groups, setGroups] = useState<string[]>([])
     const [selectedVariable, setSelectedVariable] = useState<Variable>()
@@ -300,7 +302,15 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 return Promise.reject("No test!")
             }
             return Promise.all([
-                dispatch(updateFingerprint(test?.id || -1, labels, filter)),
+                dispatch(
+                    updateChangeDetection(
+                        test?.id || -1,
+                        timelineLabels,
+                        timelineFunction,
+                        fingerprintLabels,
+                        fingerprintFilter
+                    )
+                ),
                 Api.alertingServiceUpdateVariables(test.id, variables)
                     .catch(error =>
                         dispatchError(
@@ -382,9 +392,81 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
             </Bullseye>
         )
     }
+    let timelineError = undefined
+    if (timelineLabels?.length > 1 && !timelineFunction) {
+        timelineError = "When using more than one label please set the timeline function."
+    } else if (!timelineLabels || (timelineLabels.length == 0 && timelineFunction)) {
+        timelineError = "Timeline function is defined but there are no labels it could process."
+    }
     return (
         <>
             <Form isHorizontal>
+                <FormGroup
+                    fieldId="timelineLabels"
+                    label="Timeline labels"
+                    labelIcon={
+                        <Popover
+                            headerContent="Labels used to extract timeline"
+                            bodyContent={
+                                <div>
+                                    <p>
+                                        By default the datasets used to create a series are ordered based on their{" "}
+                                        <code>startTime</code>
+                                        property. This might not be useful e.g. when you'd like this to represent actual
+                                        execution time but you're not running the benchmarks in order, for example when
+                                        you are bi-secting commits.
+                                    </p>
+                                    <p>
+                                        These labels and optional function should let you set up a custom ordering that
+                                        will be used for the purpose of change detection. The output of these should be
+                                        either an ISO-8601 formatted date (e.g. <code>2022-09-03T10:15:30+02:00</code>)
+                                        or an integer number that will be displayed as the number of <b>milliseconds</b>{" "}
+                                        since epoch (1970-01-01T00:00:00).
+                                    </p>
+                                </div>
+                            }
+                        >
+                            <HelpButton />
+                        </Popover>
+                    }
+                >
+                    <Labels
+                        labels={timelineLabels}
+                        onChange={setTimelineLabels}
+                        isReadOnly={!isTester}
+                        defaultMetrics={true}
+                        defaultFiltering={true}
+                        error={timelineError}
+                    />
+                </FormGroup>
+                <FormGroup
+                    fieldId="timelineFunction"
+                    label="Timeline function"
+                    labelIcon={
+                        <Popover
+                            headerContent="Transform timeline labels into timestamp"
+                            bodyContent={
+                                <div>
+                                    This function will receive the label value or object with properties matching labels
+                                    as its sole argument. The output of these should be either an ISO-8601 formatted
+                                    date (e.g. <code>2022-09-03T10:15:30+02:00</code>) or an integer number that will be
+                                    displayed as the number of <b>milliseconds</b> since epoch (1970-01-01T00:00:00).
+                                </div>
+                            }
+                        >
+                            <HelpButton />
+                        </Popover>
+                    }
+                >
+                    <OptionalFunction
+                        func={timelineFunction}
+                        onChange={setTimelineFunction}
+                        readOnly={!isTester}
+                        undefinedText={"No timeline function"}
+                        addText={"Add timeline function"}
+                        defaultFunc={"timestamp => timestamp"}
+                    />
+                </FormGroup>
                 <FormGroup
                     fieldId="fingerprintLabels"
                     label="Fingerprint labels"
@@ -404,9 +486,9 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                     }
                 >
                     <Labels
-                        labels={labels}
+                        labels={fingerprintLabels}
                         onChange={labels => {
-                            setLabels(labels)
+                            setFingerprintLabels(labels)
                             onModified(true)
                         }}
                         isReadOnly={!isTester}
@@ -419,7 +501,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                     label="Fingerprint filter"
                     labelIcon={
                         <Popover
-                            headerContent="Labels used to extract fingerprint"
+                            headerContent="Filter fingerprints where change detection is applied"
                             bodyContent={
                                 <div>
                                     This function will receive the label value or object with properties matching labels
@@ -436,9 +518,9 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                     }
                 >
                     <OptionalFunction
-                        func={filter}
+                        func={fingerprintFilter}
                         onChange={func => {
-                            setFilter(func)
+                            setFingerprintFilter(func)
                             onModified(true)
                         }}
                         readOnly={!isTester}

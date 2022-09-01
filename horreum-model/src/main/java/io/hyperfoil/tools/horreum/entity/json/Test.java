@@ -65,6 +65,14 @@ public class Test extends PanacheEntityBase {
    public Collection<TestToken> tokens;
 
    @Schema(implementation = String[].class)
+   @Column(name = "timeline_labels")
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public JsonNode timelineLabels;
+
+   @Column(name = "timeline_function")
+   public String timelineFunction;
+
+   @Schema(implementation = String[].class)
    @Column(name = "fingerprint_labels")
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public JsonNode fingerprintLabels;

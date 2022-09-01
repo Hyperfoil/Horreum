@@ -86,6 +86,10 @@ public interface AlertingService {
    @Path("/expectations")
    List<RunExpectation> expectations();
 
+   @POST
+   @Path("/changeDetection")
+   void updateChangeDetection(@QueryParam("testId") @Parameter(required = true) int testId, @RequestBody(required = true) AlertingService.ChangeDetectionUpdate update);
+
    @GET
    @Path("/changeDetectionModels")
    List<ConditionConfig> changeDetectionModels();
@@ -182,5 +186,12 @@ public interface AlertingService {
       public int[] variables;
       @NotNull
       public String fingerprint;
+   }
+
+   class ChangeDetectionUpdate {
+      public List<String> timelineLabels;
+      public String timelineFunction;
+      public List<String> fingerprintLabels;
+      public String fingerprintFilter;
    }
 }

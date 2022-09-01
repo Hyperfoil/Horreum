@@ -11,7 +11,7 @@ import {
     UpdateActionAction,
     UpdateTokensAction,
     RevokeTokenAction,
-    UpdateFingerprintAction,
+    UpdateChangeDetectionAction,
     UpdateFoldersAction,
     UpdateFolderAction,
     UpdateTransformersAction,
@@ -326,10 +326,27 @@ export function updateTransformers(testId: number, transformers: Transformer[]) 
     }
 }
 
-export function updateFingerprint(testId: number, labels: string[], filter?: string) {
-    return (dispatch: Dispatch<UpdateFingerprintAction | AddAlertAction>) => {
-        return Api.testServiceUpdateFingerprint(testId, { labels, filter }).then(
-            () => dispatch({ type: actionTypes.UPDATE_FINGERPRINT, testId, labels, filter }),
+export function updateChangeDetection(
+    testId: number,
+    timelineLabels: string[] | undefined,
+    timelineFunction: string | undefined,
+    fingerprintLabels: string[],
+    fingerprintFilter: string | undefined
+) {
+    return (dispatch: Dispatch<UpdateChangeDetectionAction | AddAlertAction>) => {
+        const update = {
+            timelineLabels,
+            timelineFunction,
+            fingerprintLabels,
+            fingerprintFilter,
+        }
+        return Api.alertingServiceUpdateChangeDetection(testId, update).then(
+            () =>
+                dispatch({
+                    type: actionTypes.UPDATE_CHANGE_DETECTION,
+                    testId,
+                    ...update,
+                }),
             error =>
                 dispatchError(dispatch, error, "UPDATE_FINGERPRINT", "Failed to update fingerprint for test " + testId)
         )

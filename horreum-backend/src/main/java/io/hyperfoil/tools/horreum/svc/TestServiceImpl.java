@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.entity.json.*;
@@ -528,18 +529,6 @@ public class TestServiceImpl implements TestService {
       test.persistAndFlush();
    }
 
-   @WithRoles
-   @Transactional
-   @Override
-   public void updateFingerprint(int testId, FingerprintUpdate update) {
-      Test test = getTestForUpdate(testId);
-      test.fingerprintLabels = update.labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll);
-      // In case the filter is null we need to force the property to be dirty
-      test.fingerprintFilter = "";
-      test.fingerprintFilter = update.filter;
-      test.persistAndFlush();
-   }
-
    @Override
    @WithRoles
    @Transactional
@@ -606,7 +595,7 @@ public class TestServiceImpl implements TestService {
       return status;
    }
 
-   private Test getTestForUpdate(int testId) {
+   Test getTestForUpdate(int testId) {
       Test test = Test.findById(testId);
       if (test == null) {
          throw ServiceException.notFound("Test " + testId + " was not found");

@@ -19,6 +19,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import javax.inject.Inject;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -628,5 +630,55 @@ public class AlertingServiceTest extends BaseServiceTest {
       Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent2);
       assertEquals(run4, changeEvent2.change.dataset.run.id);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testCustomTimeline(TestInfo info) throws InterruptedException {
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+      addLabel(schema, "timestamp", null, new Extractor("ts", "$.timestamp", false));
+      ChangeDetection cd = addChangeDetectionVariable(test);
+      setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
+
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+
+      long ts = System.currentTimeMillis();
+      uploadRun(ts, ts, runWithValue(1, schema).put("timestamp", 1662023776000L), test.name);
+      DataPoint.Event dp11 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(Instant.ofEpochSecond(1662023776), dp11.dataPoint.timestamp);
+
+      uploadRun(ts - 1, ts - 1, runWithValue(2, schema).put("timestamp", "1662023777000"), test.name);
+      DataPoint.Event dp12 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(Instant.ofEpochSecond(1662023777), dp12.dataPoint.timestamp);
+
+      uploadRun(ts + 1, ts + 1, runWithValue(3, schema).put("timestamp", "2022-09-01T11:16:18+02:00"), test.name);
+      DataPoint.Event dp13 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(Instant.ofEpochSecond(1662023778), dp13.dataPoint.timestamp);
+
+      setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), "timestamp => timestamp");
+      // The DataSets will be recalculated based on DataSet.start, not DataPoint.timestamp
+      recalculateDatapoints(test.id);
+      DataPoint.Event dp22 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(Instant.ofEpochSecond(1662023777), dp22.dataPoint.timestamp);
+      DataPoint.Event dp21 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(Instant.ofEpochSecond(1662023776), dp21.dataPoint.timestamp);
+      DataPoint.Event dp23 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(Instant.ofEpochSecond(1662023778), dp23.dataPoint.timestamp);
+
+      setChangeDetectionTimeline(test, Arrays.asList("timestamp", "value"), "({ timestamp, value }) => timestamp");
+      recalculateDatapoints(test.id);
+      DataPoint.Event dp32 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(Instant.ofEpochSecond(1662023777), dp32.dataPoint.timestamp);
+      DataPoint.Event dp31 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(Instant.ofEpochSecond(1662023776), dp31.dataPoint.timestamp);
+      DataPoint.Event dp33 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertEquals(Instant.ofEpochSecond(1662023778), dp33.dataPoint.timestamp);
+   }
+
+   private void setChangeDetectionTimeline(Test test, List<String> labels, String function) {
+      ObjectNode update = JsonNodeFactory.instance.objectNode();
+      update.putArray("timelineLabels").addAll(labels.stream().map(JsonNodeFactory.instance::textNode).collect(Collectors.toList()));
+      update.put("timelineFunction", function);
+      jsonRequest().queryParam("testId", test.id).body(update).post("/api/alerting/changeDetection").then().statusCode(204);
    }
 }

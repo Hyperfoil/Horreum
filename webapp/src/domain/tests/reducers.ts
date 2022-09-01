@@ -101,11 +101,13 @@ export interface UpdateTransformersAction {
     transformers: Transformer[]
 }
 
-export interface UpdateFingerprintAction {
-    type: typeof actionTypes.UPDATE_FINGERPRINT
+export interface UpdateChangeDetectionAction {
+    type: typeof actionTypes.UPDATE_CHANGE_DETECTION
     testId: number
-    labels: string[]
-    filter?: string
+    timelineLabels?: string[]
+    timelineFunction?: string
+    fingerprintLabels: string[]
+    fingerprintFilter?: string
 }
 
 export interface UpdateRunsAndDatasetsAction {
@@ -130,7 +132,7 @@ export type TestAction =
     | UpdateFoldersAction
     | UpdateFolderAction
     | UpdateTransformersAction
-    | UpdateFingerprintAction
+    | UpdateChangeDetectionAction
     | UpdateRunsAndDatasetsAction
 
 export type TestDispatch = ThunkDispatch<any, unknown, TestAction | AddAlertAction>
@@ -241,13 +243,13 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             }
             break
         }
-        case actionTypes.UPDATE_FINGERPRINT: {
+        case actionTypes.UPDATE_CHANGE_DETECTION: {
             const test = state.byId?.get(action.testId)
             if (test) {
                 state.byId = state.byId?.set(action.testId, {
                     ...test,
-                    fingerprintLabels: action.labels,
-                    fingerprintFilter: action.filter,
+                    fingerprintLabels: action.fingerprintLabels,
+                    fingerprintFilter: action.fingerprintFilter,
                 })
             }
             break

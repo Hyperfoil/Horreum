@@ -88,7 +88,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                 variant="typeaheadmulti"
                 aria-label="Select label(s)"
                 validated={error ? "error" : "default"}
-                placeholderText="Select label(s)"
+                placeholderText={isReadOnly ? "No labels" : "Select label(s)"}
                 isOpen={isExpanded}
                 maxHeight={"50vh"}
                 onToggle={expanded => {

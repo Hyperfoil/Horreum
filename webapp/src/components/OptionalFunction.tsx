@@ -38,7 +38,7 @@ export default function OptionalFunction(props: OptionalFunctionProps) {
                 <Editor
                     value={funcAsString}
                     onChange={value => {
-                        props.onChange(value || "")
+                        props.onChange(value?.trim() || "")
                     }}
                     language="typescript"
                     options={{

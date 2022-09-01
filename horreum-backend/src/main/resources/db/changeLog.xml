@@ -3822,4 +3822,11 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="94" author="rvansa">
+        <addColumn tableName="test">
+            <column name="timeline_labels" type="jsonb" />
+            <column name="timeline_function" type="text" />
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

@@ -6,6 +6,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -599,6 +603,28 @@ public class Util {
       return query
             .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
             .scroll(ScrollMode.FORWARD_ONLY);
+   }
+
+   public static Instant toInstant(JsonNode value) {
+      if (value == null) {
+         return null;
+      } else if (value.isNumber()) {
+         return Instant.ofEpochMilli(value.longValue());
+      } else if (value.isTextual()) {
+         String str = value.asText();
+         //noinspection CatchMayIgnoreException
+         try {
+            return Instant.ofEpochMilli(Long.parseLong(str));
+         } catch (NumberFormatException e) {
+         }
+         try {
+            return ZonedDateTime.parse(str.trim(), DateTimeFormatter.ISO_DATE_TIME).toInstant();
+         } catch (DateTimeParseException e) {
+            return null;
+         }
+      } else {
+         return null;
+      }
    }
 
    interface ExecutionExceptionConsumer<T> {
