@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -34,6 +35,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
@@ -44,6 +46,7 @@ import javax.ws.rs.core.Response;
 import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
 import io.hyperfoil.tools.horreum.changedetection.FixedThresholdModel;
+import io.hyperfoil.tools.horreum.entity.Fingerprint;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
@@ -59,8 +62,10 @@ import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.transform.Transformers;
+import org.hibernate.type.InstantType;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
+import org.hibernate.type.TimestampType;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -198,6 +203,8 @@ public class AlertingServiceImpl implements AlertingService {
    // entries can be removed from timer thread while normally this is updated from one of blocking threads
    private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
 
+   private final ConcurrentMap<VarAndFingerprint, Instant> nextChangeDetection = new ConcurrentHashMap<>();
+
    static {
       System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
    }
@@ -207,6 +214,7 @@ public class AlertingServiceImpl implements AlertingService {
    @ConsumeEvent(value = DataSet.EVENT_LABELS_UPDATED, blocking = true)
    public void onLabelsUpdated(DataSet.LabelsUpdatedEvent event) {
       boolean sendNotifications;
+      DataPoint.delete("dataset_id", event.datasetId);
       DataSet dataset = DataSet.findById(event.datasetId);
       if (dataset == null) {
          // The run is not committed yet?
@@ -525,56 +533,111 @@ public class AlertingServiceImpl implements AlertingService {
       dataPoint.variable = Variable.findById(dataPoint.variable.id);
       log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.dataset.id,
             dataPoint.variable.id, dataPoint.variable.name, dataPoint.value);
-      // We'll simply ignore newer changes as this recalculation might be a result of re-transformation of runs.
-      // The changes that are about to come are going to be removed soon.
-      Change lastChange = em.createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
+      JsonNode fingerprint = Fingerprint.<Fingerprint>findByIdOptional(dataPoint.dataset.id).map(fp -> fp.fingerprint).orElse(null);
+      tryRunChangeDetection(dataPoint.variable, fingerprint, dataPoint.timestamp, event.notify, true);
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void doTryRunChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify) {
+      tryRunChangeDetection(variable, fingerprint, timestamp, notify, false);
+   }
+
+   private void tryRunChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify, boolean expectExists) {
+      VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
+      log.debugf("Try with timestamp %s, current value is %s", timestamp, nextChangeDetection.get(key));
+      if (timestamp == nextChangeDetection.compute(key, (ignored, current) -> {
+         if (current == null || current.isAfter(timestamp)) {
+            return timestamp;
+         } else {
+            return current;
+         }
+      })) {
+         runChangeDetection(Variable.findById(variable.id), timestamp, fingerprint, notify, expectExists);
+      }
+   }
+
+   // datasetId is necessary to specify the fingerprint
+   private void runChangeDetection(Variable variable, Instant timestamp, JsonNode fingerprint, boolean notify, boolean expectExists) {
+      int numDeleted = em.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
+            "SELECT id FROM change c LEFT JOIN fingerprint fp ON c.dataset_id = fp.dataset_id " +
+            "WHERE NOT c.confirmed AND c.variable_id = ?1 AND c.timestamp >= ?2 AND json_equals(fp.fingerprint, ?3))")
+            .unwrap(NativeQuery.class)
+            .setParameter(1, variable.id)
+            .setParameter(2, timestamp, InstantType.INSTANCE)
+            .setParameter(3, fingerprint, JsonNodeBinaryType.INSTANCE)
+            .executeUpdate();
+      log.debugf("Deleted %d changes newer than %s for variable %d, fingerprint %s", numDeleted, timestamp, variable.id, fingerprint);
+
+      var changeQuery = em.createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
             "WHERE c.variable = ?1 AND c.timestamp < ?2 AND " +
-            "TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?3)) " +
-            "ORDER by c.timestamp DESC", Change.class)
-            .setParameter(1, dataPoint.variable).setParameter(2, event.dataPoint.timestamp)
-            .setParameter(3, event.dataPoint.dataset.id).setMaxResults(1)
-            .getResultStream().findFirst().orElse(null);
+            "TRUE = function('json_equals', fp.fingerprint, ?3) " +
+            "ORDER by c.timestamp DESC", Change.class);
+      changeQuery.setParameter(1, variable).setParameter(2, timestamp)
+            .unwrap(org.hibernate.query.Query.class)
+            .setParameter(3, fingerprint, JsonNodeBinaryType.INSTANCE);
+      Change lastChange = changeQuery.setMaxResults(1).getResultStream().findFirst().orElse(null);
       Instant changeTimestamp = LONG_TIME_AGO;
       if (lastChange != null) {
          log.debugf("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
          changeTimestamp = lastChange.timestamp;
       }
-      List<DataPoint> dataPoints = em.createQuery("SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
+      @SuppressWarnings("unchecked") List<DataPoint> dataPoints = em.createQuery(
+            "SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
             "JOIN dp.dataset " + // ignore datapoints (that were not deleted yet) from deleted datasets
             "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 " +
-            "AND TRUE = function('json_equals', fp.fingerprint, (SELECT fp2.fingerprint FROM Fingerprint fp2 WHERE dataset.id = ?4)) " +
-            "ORDER BY dp.timestamp DESC", DataPoint.class)
-            .setParameter(1, dataPoint.variable).setParameter(2, changeTimestamp)
-            .setParameter(3, dataPoint.timestamp).setParameter(4, dataPoint.dataset.id).getResultList();
+            "AND TRUE = function('json_equals', fp.fingerprint, ?4) " +
+            "ORDER BY dp.timestamp DESC, dp.dataset.id DESC", DataPoint.class)
+            .setParameter(1, variable)
+            .setParameter(2, changeTimestamp)
+            .setParameter(3, timestamp)
+            .unwrap(org.hibernate.query.Query.class).setParameter(4, fingerprint, JsonNodeBinaryType.INSTANCE)
+            .getResultList();
       // Last datapoint is already in the list
       if (dataPoints.isEmpty()) {
-         log.error("The published datapoint should be already in the list");
-         return;
-      }
-      DataPoint lastDatapoint = dataPoints.get(0);
-      if (!lastDatapoint.id.equals(dataPoint.id)) {
-         logChangeDetectionMessage(event.testId, dataPoint.getDatasetId(), PersistentLog.DEBUG,
-               "Ignoring datapoint %d from %s - it is not the last datapoint in %s",
-               dataPoint.id, dataPoint.timestamp, reversedAndLimited(dataPoints));
-         return;
-      }
-
-      for (ChangeDetection detection : ChangeDetection.<ChangeDetection>find("variable", dataPoint.variable).list()) {
-         ChangeDetectionModel model = MODELS.get(detection.model);
-         if (model == null) {
-            logChangeDetectionMessage(event.testId, dataPoint.id, PersistentLog.ERROR, "Cannot find change detection model %s", detection.model);
-            continue;
+         if (expectExists) {
+            log.error("The published datapoint should be already in the list");
          }
-         model.analyze(dataPoints, detection.config, change -> {
-            logChangeDetectionMessage(event.testId, dataPoint.id, PersistentLog.DEBUG,
-                  "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
-            Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal FROM dataset WHERE id = ?1");
-            SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSet.Info.class));
-            DataSet.Info info = (DataSet.Info) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
-            em.persist(change);
-            Hibernate.initialize(change.dataset.run.id);
-            String testName = Test.<Test>findByIdOptional(event.testId).map(test -> test.name).orElse("<unknown>");
-            Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, testName, info, event.notify));
+      } else {
+         int datasetId = dataPoints.get(0).getDatasetId();
+         for (ChangeDetection detection : ChangeDetection.<ChangeDetection>find("variable", variable).list()) {
+            ChangeDetectionModel model = MODELS.get(detection.model);
+            if (model == null) {
+               logChangeDetectionMessage(variable.testId, datasetId, PersistentLog.ERROR, "Cannot find change detection model %s", detection.model);
+               continue;
+            }
+            model.analyze(dataPoints, detection.config, change -> {
+               logChangeDetectionMessage(variable.testId, datasetId, PersistentLog.DEBUG,
+                     "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
+               Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal FROM dataset WHERE id = ?1");
+               SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSet.Info.class));
+               DataSet.Info info = (DataSet.Info) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
+               em.persist(change);
+               Hibernate.initialize(change.dataset.run.id);
+               String testName = Test.<Test>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
+               Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, testName, info, notify));
+            });
+         }
+      }
+      @SuppressWarnings("unchecked") Timestamp nextTimestamp = (Timestamp) em.createNativeQuery(
+            "SELECT timestamp FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
+            "WHERE timestamp > ?1 AND json_equals(fp.fingerprint, ?2) ORDER BY timestamp LIMIT 1")
+            .unwrap(NativeQuery.class)
+            .setParameter(1, timestamp, InstantType.INSTANCE)
+            .setParameter(2, fingerprint, JsonNodeBinaryType.INSTANCE)
+            .getResultStream().findFirst().orElse(null);
+      if (nextTimestamp != null) {
+         Instant next = nextTimestamp.toInstant();
+         Util.doAfterCommit(tm, () -> {
+            nextChangeDetection.remove(new VarAndFingerprint(variable.id, fingerprint), timestamp);
+            Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS,
+                  () -> doTryRunChangeDetection(variable, fingerprint, next, notify));
+         });
+      } else {
+         Util.doAfterCommit(tm, () -> {
+            VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
+            log.debugf("Removing ts %s, current is %s", timestamp, nextChangeDetection.get(key));
+            nextChangeDetection.remove(key, timestamp);
          });
       }
    }
@@ -1185,5 +1248,28 @@ public class AlertingServiceImpl implements AlertingService {
       boolean done;
       public int errors;
       Map<Integer, DataSet.Info> datasetsWithoutValue = new HashMap<>();
+   }
+
+   static final class VarAndFingerprint {
+      final int varId;
+      final JsonNode fingerprint;
+
+      VarAndFingerprint(int varId, JsonNode fingerprint) {
+         this.varId = varId;
+         this.fingerprint = fingerprint;
+      }
+
+      @Override
+      public boolean equals(Object o) {
+         if (this == o) return true;
+         if (o == null || getClass() != o.getClass()) return false;
+         VarAndFingerprint that = (VarAndFingerprint) o;
+         return varId == that.varId && Objects.equals(fingerprint, that.fingerprint);
+      }
+
+      @Override
+      public int hashCode() {
+         return Objects.hash(varId, fingerprint);
+      }
    }
 }

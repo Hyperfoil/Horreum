@@ -30,7 +30,6 @@ import org.junit.jupiter.api.TestInfo;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -48,6 +47,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRuleResult;
 import io.hyperfoil.tools.horreum.entity.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Extractor;
+import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
@@ -235,11 +235,15 @@ public class AlertingServiceTest extends BaseServiceTest {
    }
 
    private ChangeDetection addChangeDetectionVariable(Test test) {
-      ChangeDetection rd = new ChangeDetection();
-      rd.model = RelativeDifferenceChangeDetectionModel.NAME;
-      rd.config = JsonNodeFactory.instance.objectNode().put("threshold", 0.1).put("minPrevious", 2).put("window", 2).put("filter", "mean");
-      setTestVariables(test, "Value", "value", rd);
-      return rd;
+      return addChangeDetectionVariable(test, 0.1, 2);
+   }
+
+   private ChangeDetection addChangeDetectionVariable(Test test, double threshold, int window) {
+      ChangeDetection cd = new ChangeDetection();
+      cd.model = RelativeDifferenceChangeDetectionModel.NAME;
+      cd.config = JsonNodeFactory.instance.objectNode().put("threshold", threshold).put("minPrevious", window).put("window", window).put("filter", "mean");
+      setTestVariables(test, "Value", "value", cd);
+      return cd;
    }
 
    private DataPoint assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
@@ -637,7 +641,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
       addLabel(schema, "timestamp", null, new Extractor("ts", "$.timestamp", false));
-      ChangeDetection cd = addChangeDetectionVariable(test);
+      addChangeDetectionVariable(test);
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
@@ -680,5 +684,77 @@ public class AlertingServiceTest extends BaseServiceTest {
       update.putArray("timelineLabels").addAll(labels.stream().map(JsonNodeFactory.instance::textNode).collect(Collectors.toList()));
       update.put("timelineFunction", function);
       jsonRequest().queryParam("testId", test.id).body(update).post("/api/alerting/changeDetection").then().statusCode(204);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testLabelsChange(TestInfo info) throws InterruptedException {
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+      addChangeDetectionVariable(test);
+      Label label = Label.find("name", "value").firstResult();
+
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+
+      long ts = System.currentTimeMillis();
+      uploadRun(ts, ts, runWithValue(1, schema), test.name);
+      DataPoint.Event dpe1 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(dpe1);
+
+      // The datapoint will have to be recalculated due to label function update
+      updateLabel(schema, label.id, label.name, "val => val", label.extractors.toArray(Extractor[]::new));
+      DataPoint.Event dpe2 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(dpe2);
+
+      em.clear();
+      // the old datapoint should be deleted
+      assertEquals(1, DataPoint.count());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testRandomOrder(TestInfo info) throws InterruptedException {
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+      addChangeDetectionVariable(test, 0.1, 1);
+      addLabel(schema, "timestamp", null, new Extractor("ts", "$.timestamp", false));
+      setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
+
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
+
+      int[] order = new int[] { 5, 0, 1, 7, 4, 8, 2, 3, 9, 6 };
+      double[] values = new double[] { 1, 2, 2, 2, 1, 1, 2, 1, 1, 2};
+      assertEquals(order.length, values.length);
+
+      long now = System.currentTimeMillis();
+      for (int i = 0; i < order.length; ++i) {
+         uploadRun(now + i, runWithValue(values[order[i]], schema).put("timestamp", order[i]), test.name);
+      }
+      drainQueue(datapointQueue, order.length);
+      drainQueue(changeQueue);
+      assertEquals(5, Change.count());
+
+      recalculateDatapoints(test.id);
+      drainQueue(datapointQueue, order.length);
+      drainQueue(changeQueue);
+      assertEquals(5, Change.count());
+
+      recalculateDatasets(test.id, true);
+      drainQueue(datapointQueue, order.length);
+      drainQueue(changeQueue);
+      assertEquals(5, Change.count());
+   }
+
+   private void drainQueue(BlockingQueue<DataPoint.Event> datapointQueue, int expectedItems) throws InterruptedException {
+      for (int i = 0; i < expectedItems; ++i) {
+         assertNotNull(datapointQueue.poll(10, TimeUnit.SECONDS));
+      }
+   }
+
+   private void drainQueue(BlockingQueue<Change.Event> changeQueue) throws InterruptedException {
+      // we don't know exactly how many changes are going to be created and deleted
+      Change.Event changeEvent;
+      do {
+         changeEvent = changeQueue.poll(100, TimeUnit.MILLISECONDS);
+      } while (changeEvent != null);
    }
 }

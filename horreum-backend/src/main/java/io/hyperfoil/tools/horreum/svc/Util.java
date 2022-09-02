@@ -478,7 +478,7 @@ public class Util {
             RolesInterceptor.setCurrentIdentity(null);
             promise.complete();
          }
-      }, result -> {});
+      }, true, result -> {});
    }
 
    public static boolean lookupRetryHint(Throwable ex, Set<Throwable> causes) {

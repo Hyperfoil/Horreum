@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.server;
 
 import java.util.HashSet;
+import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Priority;
 import javax.inject.Inject;
@@ -38,7 +39,9 @@ public class BaseTransactionRetryInterceptor {
             if (!Util.lookupRetryHint(t, new HashSet<>())) {
                throw t;
             }
-            Thread.yield(); // give the other transaction a bit more chance to complete
+            // give the other transaction a bit more chance to complete
+            //noinspection BusyWait
+            Thread.sleep(ThreadLocalRandom.current().nextInt(i*i) * 10L);
             log.infof("Retrying failed transaction, attempt %d/%d", i, Util.MAX_TRANSACTION_RETRIES);
             log.trace("This is the exception that caused retry: ", t);
          }
