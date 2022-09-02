@@ -142,3 +142,17 @@ HTTPS=true mvn quarkus:dev
 as usual - the `HTTPS=true` will use secured connections on the live-reload proxy on port 3000.
 
 When you want to revert back to plain HTTP, run `./disable-https.sh` and drop the `HTTPS=true` env var.
+
+## SSL in `horreum-client`
+You can set a certificate in runtime for `HorreumClient`
+```java
+HorreumClient.Builder builder = ..
+builder.sslContext(certFilePath);
+```
+or create a custom SSLContext
+```java
+SSLContext ctx = ...
+
+HorreumClient.Builder builder = ..
+builder.sslContext(ctx);
+```

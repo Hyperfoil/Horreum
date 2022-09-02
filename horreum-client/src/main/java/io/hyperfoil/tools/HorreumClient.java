@@ -9,10 +9,20 @@ import org.jboss.resteasy.plugins.providers.DefaultTextPlain;
 import org.jboss.resteasy.plugins.providers.StringTextStar;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 import javax.ws.rs.core.UriBuilder;
 
 import java.io.Closeable;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 
 public class HorreumClient implements Closeable {
     private final ResteasyClient client;
@@ -63,6 +73,7 @@ public class HorreumClient implements Closeable {
         private String horreumPassword;
         private String clientId = "horreum-ui";
         private String clientSecret;
+        private SSLContext sslContext;
 
         public Builder() {
         }
@@ -102,24 +113,55 @@ public class HorreumClient implements Closeable {
             return this;
         }
 
+        public Builder sslContext(SSLContext sslContext) {
+            this.sslContext = sslContext;
+            return this;
+        }
+
+        public Builder sslContext(String certFilePath) {
+            String type = "X.509";
+            String alias = "horreum";
+            String protocol = "TLS";
+            try {
+                InputStream fis = new FileInputStream(certFilePath);
+                CertificateFactory cf = CertificateFactory.getInstance(type);
+                Certificate cert = cf.generateCertificate(fis);
+                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                keyStore.load(null, null);
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                keyStore.setCertificateEntry(alias, cert);
+                tmf.init(keyStore);
+                this.sslContext = SSLContext.getInstance(protocol);
+                this.sslContext.init(null, tmf.getTrustManagers(), null);
+                return this;
+            } catch (CertificateException | KeyStoreException | IOException | NoSuchAlgorithmException | KeyManagementException e) {
+                throw new RuntimeException("Cannot create SSLContext", e);
+            }
+        }
+
         public HorreumClient build() throws IllegalStateException {
+
+            if (sslContext == null) {
+                try {
+                    sslContext = SSLContext.getDefault();
+                } catch (NoSuchAlgorithmException e) {
+                    // Do nothing
+                }
+            }
 
             KeycloakClientRequestFilter requestFilter = new KeycloakClientRequestFilter(keycloakUrl,
                     keycloakRealm,
                     horreumUser,
                     horreumPassword,
                     clientId,
-                    clientSecret);
+                    clientSecret,
+                    sslContext);
 
             ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
 
             //Override default ObjectMapper Provider
             clientBuilder.register(new CustomResteasyJackson2Provider(), 100);
-            try {
-                clientBuilder.sslContext(SSLContext.getDefault());
-            } catch (NoSuchAlgorithmException e) {
-                // Do nothing
-            }
+            clientBuilder.sslContext(sslContext);
 
             //Register Keycloak Request Filter
             clientBuilder.register(requestFilter);
