@@ -13,7 +13,6 @@ import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
-import java.security.NoSuchAlgorithmException;
 
 public class KeycloakClientRequestFilter implements ClientRequestFilter {
 
@@ -27,15 +26,12 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 			String username,
 			String password,
 			String clientId,
-			String clientSecret) {
+			String clientSecret,
+			SSLContext sslContext) {
 
 		ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl().connectionPoolSize(20);
 		clientBuilder.connectionPoolSize(20);
-		try {
-			clientBuilder.sslContext(SSLContext.getDefault());
-		} catch (NoSuchAlgorithmException e) {
-			throw new RuntimeException(e);
-		}
+		clientBuilder.sslContext(sslContext);
 
 		// We need to register the necessary providers manually in case this is used in Jenkins
 		// where the hierarchical classloader structure prevents provider lookup via ServiceLoader
