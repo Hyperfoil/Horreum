@@ -16,6 +16,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -284,22 +285,24 @@ public class BaseServiceTest {
    }
 
    protected int addLabel(Schema schema, String name, String function, Extractor... extractors) {
-      return postLabel(schema, name, function, new Label(), extractors);
+      return postLabel(schema, name, function, null, extractors);
    }
 
    protected int updateLabel(Schema schema, int labelId, String name, String function, Extractor... extractors) {
-      Label l = new Label();
-      l.id = labelId;
-      return postLabel(schema, name, function, l, extractors);
+      return postLabel(schema, name, function, l -> l.id = labelId, extractors);
    }
 
-   private int postLabel(Schema schema, String name, String function, Label l, Extractor[] extractors) {
+   protected int postLabel(Schema schema, String name, String function, Consumer<Label> mutate, Extractor... extractors) {
+      Label l = new Label();
       l.name = name;
       l.function = function;
       l.schema = schema;
       l.owner = TESTER_ROLES[0];
       l.access = Access.PUBLIC;
       l.extractors = Arrays.asList(extractors);
+      if (mutate != null) {
+         mutate.accept(l);
+      }
       Response response = jsonRequest().body(l).post("/api/schema/" + schema.id + "/labels");
       response.then().statusCode(200);
       return Integer.parseInt(response.body().asString());

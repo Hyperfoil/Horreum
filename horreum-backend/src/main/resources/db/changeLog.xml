@@ -3829,4 +3829,35 @@
             <column name="timeline_function" type="text" />
         </addColumn>
     </changeSet>
+
+    <changeSet id="95" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION run_exists(runid INTEGER, test_id INTEGER) RETURNS boolean AS $$
+            BEGIN
+                RETURN exists(SELECT 1 FROM run WHERE run.id = runid AND run.testid = test_id);
+            END;
+            $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION is_uploader_for_run(runid INTEGER) RETURNS boolean AS $$
+            BEGIN
+                RETURN exists(SELECT 1 FROM run WHERE run.id = runid AND has_role2(owner, 'uploader'));
+            END;
+            $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+        </createProcedure>
+        <sql>
+            ALTER POLICY rs_insert_validate ON run_schemas WITH CHECK (run_exists(runid, testid));
+            ALTER POLICY rs_insert ON run_schemas
+                WITH CHECK (
+                    is_uploader_for_run(runid) OR
+                    has_upload_token(testid) OR
+                    has_role2((SELECT owner FROM schema WHERE schema.id = schemaid), 'tester')
+                );
+            <!-- Uploader cannot normally read schemas but we need to give him access in order to create run_schemas -->
+            ALTER POLICY schema_select ON schema USING (can_view(access, owner, token) OR has_role2(owner, 'uploader'));
+            ALTER POLICY ds_select ON dataset_schemas USING (has_role('horreum.system') OR (exists(
+                SELECT 1 FROM dataset WHERE dataset.id = dataset_id AND can_view2(access, owner)
+            )));
+        </sql>
+    </changeSet>
 </databaseChangeLog>

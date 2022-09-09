@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.DatasetService;
 import io.hyperfoil.tools.horreum.api.QueryResult;
+import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Extractor;
 import io.hyperfoil.tools.horreum.entity.json.Label;
@@ -367,4 +368,34 @@ public class DatasetServiceTest extends BaseServiceTest {
          fail(e);
       }
    }
+
+   @org.junit.jupiter.api.Test
+   public void testEverythingPrivate() throws InterruptedException {
+      Schema schema = new Schema();
+      schema.owner = TESTER_ROLES[0];
+      schema.access = Access.PRIVATE;
+      schema.name = "private-schema";
+      schema.uri = "urn:private";
+      addOrUpdateSchema(schema);
+      postLabel(schema, "value", null, l -> l.access = Access.PRIVATE, new Extractor("value", "$.value", false));
+
+      Test test = createExampleTest("private-test");
+      test.access = Access.PRIVATE;
+      test = createTest(test);
+
+      BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+      long timestamp = System.currentTimeMillis();
+      uploadRun(timestamp, timestamp,
+            JsonNodeFactory.instance.objectNode().put("$schema", schema.uri).put("value", 42),
+            test.name, TESTER_ROLES[0], Access.PRIVATE);
+
+      DataSet.LabelsUpdatedEvent event = updateQueue.poll(10000, TimeUnit.SECONDS);
+      assertNotNull(event);
+
+      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+         List<Label.Value> labels = Label.Value.<Label.Value>find("dataset_id", event.datasetId).list();
+         assertEquals(1, labels.size());
+      }
+   }
+
 }
