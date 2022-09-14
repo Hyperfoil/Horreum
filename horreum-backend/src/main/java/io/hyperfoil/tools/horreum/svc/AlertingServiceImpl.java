@@ -211,7 +211,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   @ConsumeEvent(value = DataSet.EVENT_LABELS_UPDATED, blocking = true)
+   @ConsumeEvent(value = DataSet.EVENT_LABELS_UPDATED, blocking = true, ordered = true)
    public void onLabelsUpdated(DataSet.LabelsUpdatedEvent event) {
       boolean sendNotifications;
       DataPoint.delete("dataset_id", event.datasetId);
