@@ -6,18 +6,18 @@ type ShareLinkModalProps = {
     isOpen: boolean
     onClose(): void
     link: string
-    isOwner: boolean
+    isTester: boolean
     onReset(): void
     onDrop(): void
 }
 
-export default function ShareLinkModal({ isOpen, onClose, link, isOwner, onReset, onDrop }: ShareLinkModalProps) {
+export default function ShareLinkModal({ isOpen, onClose, link, isTester, onReset, onDrop }: ShareLinkModalProps) {
     return (
         <Modal variant="small" title="Shareable link" isOpen={isOpen} onClose={onClose}>
             {link ? (
                 <>
                     <ClipboardCopy isReadOnly>{window.location.origin + link}</ClipboardCopy>
-                    {isOwner && (
+                    {isTester && (
                         <>
                             <Button variant="secondary" onClick={onReset}>
                                 Reset link

@@ -1,17 +1,15 @@
 import { useState, useEffect, ReactElement, ReactNode } from "react"
 
-import { useSelector } from "react-redux"
-
 import { Dropdown, DropdownItem, KebabToggle } from "@patternfly/react-core"
 
-import { teamsSelector, Access } from "../auth"
+import { Access, useTester } from "../auth"
 
 import ShareLinkModal from "./ShareLinkModal"
 import ChangeAccessModal from "./ChangeAccessModal"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
 
 interface MenuItemProvider<C> {
-    (props: ActionMenuProps, isOwner: boolean, close: () => void, config: C): {
+    (props: ActionMenuProps, isTester: boolean, close: () => void, config: C): {
         item: ReactElement
         modal: ReactNode
     }
@@ -37,12 +35,12 @@ type ShareLinkConfig = {
 export function useShareLink(config: ShareLinkConfig): MenuItem<ShareLinkConfig> {
     const [shareLinkModalOpen, setShareLinkModalOpen] = useState(false)
     return [
-        (props: ActionMenuProps, isOwner: boolean, close: () => void, config: ShareLinkConfig) => {
+        (props: ActionMenuProps, isTester: boolean, close: () => void, config: ShareLinkConfig) => {
             return {
                 item: (
                     <DropdownItem
                         key="link"
-                        isDisabled={props.access === 0 || (!config.token && !isOwner)}
+                        isDisabled={props.access === 0 || (!config.token && !isTester)}
                         onClick={() => {
                             close()
                             setShareLinkModalOpen(true)
@@ -56,7 +54,7 @@ export function useShareLink(config: ShareLinkConfig): MenuItem<ShareLinkConfig>
                         key="link"
                         isOpen={shareLinkModalOpen}
                         onClose={() => setShareLinkModalOpen(false)}
-                        isOwner={isOwner}
+                        isTester={isTester}
                         link={config.token ? config.tokenToLink(props.id, config.token) : ""}
                         onReset={() => config.onTokenReset(props.id)}
                         onDrop={() => config.onTokenDrop(props.id)}
@@ -72,7 +70,12 @@ type ChangeAccessConfig = {
     onAccessUpdate(id: number, owner: string, access: Access): void
 }
 
-function ChangeAccessProvider(props: ActionMenuProps, isOwner: boolean, close: () => void, config: ChangeAccessConfig) {
+function ChangeAccessProvider(
+    props: ActionMenuProps,
+    isTester: boolean,
+    close: () => void,
+    config: ChangeAccessConfig
+) {
     const [changeAccessModalOpen, setChangeAccessModalOpen] = useState(false)
     const [newAccess, setNewAccess] = useState<Access>(0)
     const [newOwner, setNewOwner] = useState<string>("")
@@ -97,7 +100,7 @@ function ChangeAccessProvider(props: ActionMenuProps, isOwner: boolean, close: (
                     close()
                     setChangeAccessModalOpen(true)
                 }}
-                isDisabled={!isOwner}
+                isDisabled={!isTester}
             >
                 Change access
             </DropdownItem>
@@ -131,7 +134,7 @@ type DeleteConfig = {
 export function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
     const [confirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false)
     return [
-        (props: ActionMenuProps, isOwner: boolean, close: () => void, config: DeleteConfig) => {
+        (props: ActionMenuProps, isTester: boolean, close: () => void, config: DeleteConfig) => {
             return {
                 item: (
                     <DropdownItem
@@ -140,7 +143,7 @@ export function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
                             close()
                             setConfirmDeleteModalOpen(true)
                         }}
-                        isDisabled={!isOwner || !config.onDelete}
+                        isDisabled={!isTester || !config.onDelete}
                     >
                         Delete
                     </DropdownItem>
@@ -169,11 +172,9 @@ export function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
 
 export default function ActionMenu(props: ActionMenuProps) {
     const [menuOpen, setMenuOpen] = useState(false)
-    const teams = useSelector(teamsSelector)
+    const isTester = useTester(props.owner)
 
-    const isOwner = teams && teams.includes(props.owner)
-
-    const items = props.items.map(([provider, config]) => provider(props, isOwner, () => setMenuOpen(false), config))
+    const items = props.items.map(([provider, config]) => provider(props, isTester, () => setMenuOpen(false), config))
     return (
         <>
             <Dropdown

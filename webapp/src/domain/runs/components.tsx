@@ -75,7 +75,7 @@ export const ExecutionTime = (timestamps: StartStop) => (
 function useRestore(run: RunSummary): MenuItem<RunSummary> {
     const dispatch = useDispatch<RunsDispatch>()
     return [
-        (props: ActionMenuProps, isOwner: boolean, close: () => void, run: RunSummary) => {
+        (props: ActionMenuProps, isTester: boolean, close: () => void, run: RunSummary) => {
             return {
                 item: (
                     <DropdownItem
@@ -99,12 +99,12 @@ function useRecalculateDatasets(run: RunSummary): MenuItem<RunSummary> {
     const dispatch = useDispatch<RunsDispatch>()
     const [recalculating, setRecalculating] = useState(false)
     return [
-        (props: ActionMenuProps, isOwner: boolean, close: () => void) => {
+        (props: ActionMenuProps, isTester: boolean, close: () => void) => {
             return {
                 item: (
                     <DropdownItem
                         key="recalculate"
-                        isDisabled={!isOwner || recalculating}
+                        isDisabled={!isTester || recalculating}
                         onClick={() => {
                             setRecalculating(true)
                             dispatch(recalculateDatasets(props.id, run.testid))
@@ -128,7 +128,7 @@ function useRecalculateDatasets(run: RunSummary): MenuItem<RunSummary> {
 function useUpdateDescription(run: RunSummary): MenuItem<RunSummary> {
     const [updateDescriptionOpen, setUpdateDescriptionOpen] = useState(false)
     return [
-        (props: ActionMenuProps, isOwner: boolean, close: () => void, run: RunSummary) => {
+        (props: ActionMenuProps, isTester: boolean, close: () => void, run: RunSummary) => {
             return {
                 item: (
                     <DropdownItem
