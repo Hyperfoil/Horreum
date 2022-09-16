@@ -7,7 +7,7 @@ if [ $# -ne 2 -o ! -f $2 ]; then
   exit 1
 fi
 
-KEYCLOAK_URL=http://127.0.0.1:8180
+KEYCLOAK_URL=http://localhost:8180
 HORREUM_USER=user
 HORREUM_PASSWORD=secret
 TOKEN=$(curl -s -X POST $KEYCLOAK_URL/realms/horreum/protocol/openid-connect/token \

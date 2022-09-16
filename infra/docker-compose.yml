@@ -5,8 +5,9 @@ services:
   postgres:
     image: docker.io/postgres:12
     env_file: postgres.env
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    network_mode: host
+    environment:
+      PGPORT: ${POSTGRES_PORT:-5432}
     volumes:
     - horreum_pg12:/var/lib/postgresql/data
   db-init:
@@ -16,7 +17,8 @@ services:
     restart: on-failure
     env_file: postgres.env
     environment:
-    - PGHOST=${CONTAINER_HOST_IP:-postgres}
+    # DB-init resolves localhost to ::1 rather than 127.0.0.1
+    - PGHOST=127.0.0.1
     - PGPORT=${POSTGRES_PORT:-5432}
     volumes:
     - "${WORKING_PATH:-../}:/cwd:ro,z"
@@ -24,6 +26,7 @@ services:
     - bash
     - -x
     - /cwd/infra/create-db.sh
+    network_mode: host
   keycloak:
     build:
       context: .
@@ -31,10 +34,11 @@ services:
     depends_on:
     - postgres
     environment:
-    - DB_ADDR=${CONTAINER_HOST_IP:-postgres}
-    - DB_PORT=${POSTGRES_PORT:-5432}
-    ports:
-    - "${KEYCLOAK_HTTP_PORT:-8180}:8180"
+      KC_HTTP_HOST: localhost
+      KC_HTTP_PORT: "${KEYCLOAK_HTTP_PORT:-8180}"
+      DB_ADDR: 127.0.0.1
+      DB_PORT: "${POSTGRES_PORT:-5432}"
+    network_mode: host
     stop_signal: "${STOP_SIGNAL:-SIGTERM}"
     volumes:
     - "${WORKING_PATH:-../}:/cwd:ro,z"
@@ -43,15 +47,15 @@ services:
     - keycloak
     image: docker.io/dwdraju/alpine-curl-jq
     restart: on-failure
-    environment:
-    # We cannot use postgres/keycloak here because the address is relayed to Horreum app
-    - POSTGRES_HOST=${CONTAINER_HOST_IP:-172.17.0.1}
-    - KEYCLOAK_HOST=${CONTAINER_HOST_IP:-172.17.0.1}
     command:
     - bash
     - -x
     - /cwd/infra/app-init.sh
     - "${PORT_OFFSET:-0}"
+    environment:
+    - POSTGRES_HOST=127.0.0.1
+    - KEYCLOAK_HOST=localhost
+    network_mode: host
     volumes:
     - "${WORKING_PATH:-../}:/cwd:rw,z"
   grafana:
@@ -62,12 +66,9 @@ services:
     entrypoint: /cwd/infra/grafana.sh
     env_file: grafana.env
     environment:
-    - GF_SERVER_ROOT_URL=${GRAFANA_GF_SERVER_ROOT_URL:-http://localhost:4040/}
-    - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=${GF_AUTH_GENERIC_OAUTH_TOKEN_URL:-http://172.17.0.1:8180/realms/horreum/protocol/openid-connect/token}
-    - GF_AUTH_GENERIC_OAUTH_API_URL=${GF_AUTH_GENERIC_OAUTH_API_URL:-http://172.17.0.1:8180/realms/horreum/protocol/openid-connect/userinfo}
-    - GF_AUTH_GENERIC_OAUTH_AUTH_URL=${GF_AUTH_GENERIC_OAUTH_AUTH_URL:-http://172.17.0.1:8180/realms/horreum/protocol/openid-connect/auth}
-    ports:
-    - "${GRAFANA_HTTP_PORT:-4040}:4040"
+      GF_SERVER_HTTP_PORT: "${GRAFANA_HTTP_PORT:-4040}"
+    network_mode: host
     stop_signal: "${STOP_SIGNAL:-SIGTERM}"
+    user: "0:0"
     volumes:
     - "${WORKING_PATH:-../}:/cwd:ro,z"

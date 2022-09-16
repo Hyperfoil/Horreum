@@ -9,16 +9,17 @@ if [ -n "$CONTAINERS" ]; then
     podman rm $CONTAINERS
 fi
 
+ORIGINAL_DIR=$(pwd)
+cd $(dirname $0)
+
 # Delete leftovers from Docker runs: files owned by root
-rm horreum-backend/.env .grafana
+rm -rf ../horreum-backend/.env ../.grafana ../horreum-integration/target
 
 # Force rebuild but keeping the cache
 podman untag horreum_keycloak:latest
 
-ORIGINAL_DIR=$(pwd)
-cd $(dirname $0)
 # Get the definition and filter out "--net horreum_default"
-podman-compose -p horreum -f podman-compose.yml --dry-run up -d | \
+podman-compose -p horreum -f docker-compose.yml --dry-run up -d | \
     grep -e '^podman' | \
     sed 's/--net horreum_default//' | \
     sed 's/--network-alias [a-zA-Z0-9_-]*//' | \
