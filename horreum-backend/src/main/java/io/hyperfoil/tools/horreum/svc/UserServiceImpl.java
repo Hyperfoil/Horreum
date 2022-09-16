@@ -20,7 +20,6 @@ import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.PersistenceException;
 import javax.transaction.Transactional;
@@ -61,12 +60,6 @@ public class UserServiceImpl implements UserService {
 
    @Inject
    SecurityIdentity identity;
-
-   @Inject
-   SqlServiceImpl sqlService;
-
-   @Inject
-   EntityManager em;
 
    @Inject
    Vertx vertx;
@@ -139,10 +132,10 @@ public class UserServiceImpl implements UserService {
       if (user == null) {
          throw ServiceException.badRequest("Missing user as the request body");
       } else if (user.team != null && !user.team.endsWith("-team")) {
-         throw ServiceException.badRequest("Team must end with -team: " + (user != null ? user.team : "<team is missing>"));
+         throw ServiceException.badRequest("Team must end with -team: " + user.team);
       }
       String prefix = user.team == null ? null : user.team.substring(0, user.team.length() - 4);
-      if (prefix != null && !identity.getRoles().contains(prefix + Roles.MANAGER)) {
+      if (prefix != null && !identity.getRoles().contains(prefix + Roles.MANAGER) && !identity.getRoles().contains(Roles.ADMIN)) {
          throw ServiceException.forbidden("This user is not a manager for team " + user.team);
       }
       // do not blindly use the existing representation
@@ -361,9 +354,7 @@ public class UserServiceImpl implements UserService {
                }
             }
             promise.complete();
-         }).onSuccess(future).onFailure(t -> {
-            future.completeExceptionally(ServiceException.serverError("Cannot remove user roles"));
-         });
+         }).onSuccess(future).onFailure(t -> future.completeExceptionally(ServiceException.serverError("Cannot remove user roles")));
       }
       return future;
    }
@@ -384,10 +375,9 @@ public class UserServiceImpl implements UserService {
    @RolesAllowed(Roles.ADMIN)
    @Override
    public CompletionStage<List<String>> getAllTeams() {
-      return vertx.<List<String>>executeBlocking(promise -> {
-         promise.complete(keycloak.realm(REALM).roles().list().stream()
-               .map(RoleRepresentation::getName).filter(role -> role.endsWith("-team")).collect(Collectors.toList()));
-      }).toCompletionStage().exceptionally(this::wrapException);
+      return vertx.<List<String>>executeBlocking(promise ->
+            promise.complete(keycloak.realm(REALM).roles().list().stream()
+               .map(RoleRepresentation::getName).filter(role -> role.endsWith("-team")).collect(Collectors.toList()))).toCompletionStage().exceptionally(this::wrapException);
    }
 
    @RolesAllowed(Roles.ADMIN)
