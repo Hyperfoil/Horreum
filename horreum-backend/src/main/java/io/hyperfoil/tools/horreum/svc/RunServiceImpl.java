@@ -886,6 +886,10 @@ public class RunServiceImpl implements RunService {
                      (code, e) -> logMessage(run, PersistentLog.ERROR,
                            "Evaluation of transformer %s/%s failed: '%s' Code: <pre>%s</pre>", uri, t.name, e.getMessage(), code),
                      output -> logMessage(run, PersistentLog.DEBUG, "Output while running transformer %s/%s: <pre>%s</pre>", uri, t.name, output));
+               if (result == null) {
+                  // this happens upon error
+                  result = JsonNodeFactory.instance.nullNode();
+               }
             } else {
                result = root;
             }
