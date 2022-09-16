@@ -104,6 +104,8 @@ public class UserServiceImpl implements UserService {
             .map(UserServiceImpl::toUserInfo).collect(Collectors.toList());
    }
 
+   @RolesAllowed({Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
+   @Blocking // TODO: identity.isAnonymous() is a blocking call
    @Override
    public CompletionStage<List<UserData>> info(List<String> usernames) {
       if (identity.isAnonymous()) {
@@ -252,6 +254,7 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
+   @Blocking //TODO: identity.getRoles() could block
    public CompletionStage<Map<String, List<String>>> teamMembers(String team) {
       String prefix = getTeamPrefix(team);
       if (!identity.getRoles().contains(prefix + Roles.MANAGER) && !identity.getRoles().contains(Roles.ADMIN)) {
@@ -284,6 +287,7 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
+   @Blocking //TODO: identity.getRoles() could block
    public CompletionStage<Void> updateTeamMembers(String team, Map<String, List<String>> roles) {
       String prefix = getTeamPrefix(team);
       if (!identity.getRoles().contains(prefix + Roles.MANAGER) && !identity.getRoles().contains(Roles.ADMIN)) {
