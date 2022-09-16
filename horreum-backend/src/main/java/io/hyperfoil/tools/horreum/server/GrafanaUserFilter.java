@@ -91,7 +91,7 @@ public class GrafanaUserFilter {
                         log.infof("Created Grafana user %s (%s)", userInfo.login, userInfo.email);
                         return userInfo;
                      })
-                     .onFailure().transform(t2 -> {
+                     .onFailure().recoverWithItem(t2 -> {
                   if (t2 instanceof WebApplicationException && ((WebApplicationException) t2).getResponse().getStatus() == 412) {
                      log.infof("This request did not create user %s due to a mid-air collision.", userInfo.login);
                   } else {
@@ -105,7 +105,7 @@ public class GrafanaUserFilter {
          } else if (t instanceof ProcessingException) {
             log.debug("Grafana client failed with exception, ignoring.", t);
          }
-         return null;
+         return Uni.createFrom().nullItem();
       }).onItem().transform(userInfo -> {
          if (userInfo != null) {
             // Cookie API does not allow to set SameSite attribute
