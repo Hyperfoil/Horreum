@@ -1,9 +1,9 @@
 package io.hyperfoil.tools.horreum.server;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.ws.rs.Priorities;
@@ -12,10 +12,12 @@ import javax.ws.rs.core.Cookie;
 
 import org.jboss.logging.Logger;
 
+import io.hyperfoil.tools.horreum.svc.CachedSecurityIdentity;
 import io.hyperfoil.tools.horreum.svc.UserServiceImpl;
 import io.quarkus.security.identity.CurrentIdentityAssociation;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.mutiny.Uni;
+import io.vertx.mutiny.core.Vertx;
 
 import org.jboss.resteasy.reactive.server.ServerRequestFilter;
 
@@ -30,6 +32,10 @@ public class UserTeamsFilter {
    @Inject
    UserServiceImpl userService;
 
+   // Injecting Vertx here directly seems to cause a dependency cycle
+   // https://github.com/quarkusio/quarkus/issues/27752
+   @Inject
+   Instance<Vertx> vertxInstance;
 
    @ServerRequestFilter(priority = Priorities.HEADER_DECORATOR + 20)
    public Uni<Void> filter(ContainerRequestContext containerRequestContext) {
@@ -67,7 +73,19 @@ public class UserTeamsFilter {
             }
          }
       }
-      userService.cacheUserTeams(username, teams);
+
+      CachedSecurityIdentity copy = new CachedSecurityIdentity(identity);
+      vertxInstance.get().executeBlocking(Uni.createFrom().item(() -> {
+         RolesInterceptor.setCurrentIdentity(copy);
+         try {
+            userService.cacheUserTeams(username, teams);
+         } finally {
+            RolesInterceptor.setCurrentIdentity(null);
+         }
+         return null;
+      })).subscribe().with(nil -> {}, t -> {
+         log.warn("Failed to cache teams for user " + username, t);
+      });
       // Cookie API does not allow to set SameSite attribute
       containerRequestContext.getHeaders().add("Set-Cookie", TEAMS + "=" + username + "!" + String.join("+", teams) + ";path=/;SameSite=Lax");
    }
