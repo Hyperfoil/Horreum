@@ -25,6 +25,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
     const [loading, setLoading] = useState(false)
     const [result, setResult] = useState<any>()
     const [output, setOutput] = useState<string>()
+    const [hasResult, setHasResult] = useState(false)
     const pagination = useMemo(() => ({ page, perPage, sort: "start", direction: "Descending" }), [page, perPage])
     const dispatch = useDispatch()
     useEffect(() => {
@@ -51,17 +52,21 @@ export default function TestLabelModal(props: TestLabelModalProps) {
             )
             .finally(() => setLoading(false))
     }, [props.uri, pagination, dispatch, props.onClose])
+    function reset() {
+        setDatasets(undefined)
+        setCount(0)
+        setPage(1)
+        setPerPage(20)
+        setResult(undefined)
+        setHasResult(false)
+        setOutput(undefined)
+    }
     return (
         <Modal
             variant="large"
             isOpen={props.isOpen}
             onClose={() => {
-                setDatasets(undefined)
-                setCount(0)
-                setPage(1)
-                setPerPage(20)
-                setResult(undefined)
-                setOutput(undefined)
+                reset()
                 props.onClose()
             }}
             title="Test label calculation"
@@ -71,7 +76,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
                     <Spinner size="xl" />
                 </Bullseye>
             )}
-            {datasets && result === undefined && (
+            {datasets && !hasResult && (
                 <>
                     <Table
                         aria-label="Available datasets"
@@ -97,6 +102,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
                                                     .then(
                                                         preview => {
                                                             setResult(preview.value)
+                                                            setHasResult(true)
                                                             setOutput(preview.output)
                                                         },
                                                         error => {
@@ -107,6 +113,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
                                                                     error
                                                                 )
                                                             )
+                                                            reset()
                                                             props.onClose()
                                                         }
                                                     )
@@ -132,11 +139,11 @@ export default function TestLabelModal(props: TestLabelModalProps) {
                     />
                 </>
             )}
-            {result !== undefined && (
+            {hasResult && (
                 <>
                     <Title headingLevel="h4">Result:</Title>
                     <div style={{ minHeight: "100px", height: "250px", resize: "vertical", overflow: "auto" }}>
-                        <Editor value={toString(result)} options={{ readOnly: true }} />
+                        <Editor value={result === undefined ? "null" : toString(result)} options={{ readOnly: true }} />
                     </div>
                 </>
             )}
