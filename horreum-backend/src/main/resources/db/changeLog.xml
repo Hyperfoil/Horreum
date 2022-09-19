@@ -5,7 +5,7 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext
                                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
                                        http://www.liquibase.org/xml/ns/dbchangelog
-                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.15.xsd">
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
     <!-- This should be overridden in production by a system property -->
     <property name="horreum.db.secret" value="secret"/>
