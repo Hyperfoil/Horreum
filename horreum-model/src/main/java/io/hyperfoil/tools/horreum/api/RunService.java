@@ -28,7 +28,6 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
-import org.jboss.resteasy.reactive.RestResponse;
 
 @Path("/api/run")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -145,6 +144,10 @@ public interface RunService {
    @POST
    @Path("{id}/recalculate")
    List<Integer> recalculateDatasets(@PathParam("id") int runId);
+
+   @POST
+   @Path("recalculateAll")
+   void recalculateAll(@QueryParam("from") String from, @QueryParam("to") String to);
 
    class RunSummary {
       @JsonProperty(required = true)

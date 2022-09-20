@@ -60,6 +60,8 @@ import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+
+import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.BooleanType;
@@ -114,6 +116,9 @@ public class RunServiceImpl implements RunService {
 
    @Inject
    TestServiceImpl testService;
+
+   @Inject
+   DatasetServiceImpl datasetService;
 
 
    @PostConstruct
@@ -785,6 +790,38 @@ public class RunServiceImpl implements RunService {
       //noinspection unchecked
       return em.createNativeQuery("SELECT id FROM dataset WHERE runid = ? ORDER BY ordinal")
             .setParameter(1, runId).getResultList();
+   }
+
+   @RolesAllowed(Roles.ADMIN)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   @Override
+   public void recalculateAll(String fromStr, String toStr) {
+      Instant from = toInstant(fromStr);
+      Instant to = toInstant(toStr);
+      if (from == null || to == null) {
+         throw ServiceException.badRequest("Time range is required");
+      } else if (to.isBefore(from)) {
+         throw ServiceException.badRequest("Time range is invalid (from > to)");
+      }
+      long deleted = em.createNativeQuery("DELETE FROM dataset USING run WHERE run.id = dataset.runid AND run.trashed AND run.start BETWEEN ?1 AND ?2")
+            .setParameter(1, from).setParameter(2, to).executeUpdate();
+      if (deleted > 0) {
+         log.infof("Deleted %d datasets for trashed runs between %s and %s", deleted, from, to);
+      }
+
+      ScrollableResults results = em.createNativeQuery("SELECT id FROM run WHERE start BETWEEN ?1 AND ?2 AND NOT trashed ORDER BY start")
+            .setParameter(1, from).setParameter(2, to)
+            .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
+            .scroll(ScrollMode.FORWARD_ONLY);
+      while (results.next()) {
+         int runId = (int) results.get(0);
+         log.infof("Recalculate DataSets for run %d - forcing recalculation of all between %s and %s", runId, from, to);
+         // transform will add proper roles anyway
+         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> datasetService.withRecalculationLock(() -> {
+               transform(runId, true);
+         }));
+      }
    }
 
    private void onCalculateDataSets(String param) {

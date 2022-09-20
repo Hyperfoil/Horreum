@@ -1195,7 +1195,7 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
+   @ConsumeEvent(value = Run.EVENT_NEW, blocking = true, ordered = true)
    @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
    public void removeExpected(Run run) {
@@ -1208,7 +1208,7 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   @ConsumeEvent(value = DataSet.EVENT_DELETED, blocking = true)
+   @ConsumeEvent(value = DataSet.EVENT_DELETED, blocking = true, ordered = true)
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onDatasetDeleted(DataSet.Info info) {

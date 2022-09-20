@@ -117,7 +117,7 @@ public class ExperimentServiceImpl implements ExperimentService {
       return results;
    }
 
-   @ConsumeEvent(value = DataPoint.EVENT_DATASET_PROCESSED, blocking = true)
+   @ConsumeEvent(value = DataPoint.EVENT_DATASET_PROCESSED, blocking = true, ordered = true)
    @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {

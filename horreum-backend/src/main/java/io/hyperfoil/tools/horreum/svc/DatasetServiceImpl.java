@@ -434,7 +434,7 @@ public class DatasetServiceImpl implements DatasetService {
       }
    }
 
-   @ConsumeEvent(value = DataSet.EVENT_NEW, blocking = true)
+   @ConsumeEvent(value = DataSet.EVENT_NEW, blocking = true, ordered = true)
    public void onNewDataset(DataSet.EventNew event) {
       withRecalculationLock(() -> calculateLabels(event.dataset.id, -1, event.isRecalculation));
    }
