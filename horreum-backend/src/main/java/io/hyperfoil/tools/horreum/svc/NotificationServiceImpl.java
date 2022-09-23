@@ -21,14 +21,11 @@ import javax.transaction.Transactional;
 
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 import io.hyperfoil.tools.horreum.api.NotificationService;
-import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
-import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -69,38 +66,31 @@ public class NotificationServiceImpl implements NotificationService {
    }
 
    @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
-   @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
-   public void onNewChange(Change.Event event) {
-      if (!event.notify) {
+   @ConsumeEvent(value = DatasetChanges.EVENT_NEW, blocking = true)
+   public void onNewChanges(DatasetChanges event) {
+      if (!event.isNotify()) {
          log.debug("Notification skipped");
          return;
       }
-      Variable variable = event.change.variable;
-      // TODO: breaks storage/alerting separation!
-      Test test = Test.findById(variable.testId);
-      // Test might be null when it's private
-      String testName = test == null ? "unknown" : test.name;
-      String fingerprint = event.change.dataset.getFingerprint();
-      log.infof("Received new change in test %d (%s), dataset %d/%d (fingerprint: %s), variable %d (%s)",
-            variable.testId, testName, event.dataset.runId, event.dataset.ordinal, fingerprint, variable.id, variable.name);
-
-      notifyAll(variable.testId, n -> n.notifyChange(testName, fingerprint, event));
+      log.infof("Received new changes in test %d (%s), dataset %d/%d (fingerprint: %s)",
+            event.dataset.testId, event.testName, event.dataset.runId, event.dataset.ordinal, event.fingerprint);
+      notifyAll(event.dataset.testId, n -> n.notifyChanges(event));
    }
 
    @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
    @ConsumeEvent(value = DataSet.EVENT_MISSING_VALUES, blocking = true)
    public void onMissingValues(MissingValuesEvent event) {
       if (!event.notify) {
-         log.debugf("Skipping notification for missing run values on test %d, run %d", event.testId, event.datasetId);
+         log.debugf("Skipping notification for missing run values on test %d, run %d", event.dataset.testId, event.dataset.id);
          return;
       }
       // TODO: breaks storage/alerting separation!
-      Test test = Test.findById(event.testId);
+      Test test = Test.findById(event.dataset.testId);
       String testName = test == null ? "unknown" : test.name;
-      log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.testId, testName, event.datasetId, event.variables);
+      log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.dataset.testId, testName, event.dataset.id, event.variables);
 
-      String fingerprint = em.getReference(DataSet.class, event.datasetId).getFingerprint();
-      notifyAll(event.testId, n -> n.notifyMissingValues(testName, fingerprint, event));
+      String fingerprint = em.getReference(DataSet.class, event.dataset.id).getFingerprint();
+      notifyAll(event.dataset.testId, n -> n.notifyMissingValues(testName, fingerprint, event));
    }
 
    private void notifyAll(int testId, Consumer<Notification> consumer) {

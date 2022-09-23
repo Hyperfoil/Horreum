@@ -42,10 +42,10 @@ public class ChangeToMarkdown implements BodyFormatter {
             .data("testId", String.valueOf(change.variable.testId))
             .data("variable", change.variable.name)
             .data("group", change.variable.group)
-            .data("runId", change.dataset.run.id)
-            .data("datasetOrdinal", change.dataset.ordinal)
-            // arithmetic is not implemented in Qute: https://github.com/quarkusio/quarkus/issues/25824
-            .data("datasetOrdinalPlusOne", change.dataset.ordinal + 1)
+            .data("runId", event.dataset.runId)
+            .data("datasetOrdinal", event.dataset.ordinal)
+            // TODO: remove me after Quarkus update >= 2.12
+            .data("datasetOrdinalPlusOne", event.dataset.ordinal + 1)
             .data("description", change.description)
             .render();
    }

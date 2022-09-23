@@ -108,16 +108,15 @@ public class RoleManager {
       setToken.getSingleResult();
    }
 
-   public CloseMe withToken(EntityManager em, String token) {
-      setToken(em, token);
-      return () -> setToken(em, null);
-   }
-
    public String getDebugQuery(SecurityIdentity identity) {
       List<String> roles = new ArrayList<>(identity.getRoles());
       if (identity.getPrincipal() != null) {
          roles.add(identity.getPrincipal().getName());
       }
+      return getDebugQuery(roles);
+   }
+
+   public String getDebugQuery(Collection<String> roles) {
       try {
          return SET_ROLES.replace("?", '\'' + getSignedRoles(roles) + '\'');
       } catch (NoSuchAlgorithmException e) {

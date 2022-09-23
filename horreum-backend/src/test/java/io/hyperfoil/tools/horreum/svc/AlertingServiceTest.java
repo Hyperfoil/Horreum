@@ -121,7 +121,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       MissingValuesEvent event = missingQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
-      assertEquals(runId, event.runId);
+      assertEquals(runId, event.dataset.runId);
 
       try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
          List<DatasetLog> logs = DatasetLog.find("dataset.run.id", runId).list();
@@ -226,12 +226,14 @@ public class AlertingServiceTest extends BaseServiceTest {
       int run13 = uploadRun(ts + 12, ts + 12, runWithValue(2, schema).put("config", "foo"), test.name);
       Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent1);
-      assertEquals(run13, changeEvent1.change.dataset.id);
+      assertEquals(run13, changeEvent1.change.dataset.run.id);
+      assertEquals(run13, changeEvent1.dataset.runId);
 
       int run14 = uploadRun(ts + 13, ts + 13, runWithValue(2, schema), test.name);
       Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent2);
-      assertEquals(run14, changeEvent2.change.dataset.id);
+      assertEquals(run14, changeEvent2.change.dataset.run.id);
+      assertEquals(run14, changeEvent2.dataset.runId);
    }
 
    private ChangeDetection addChangeDetectionVariable(Test test) {

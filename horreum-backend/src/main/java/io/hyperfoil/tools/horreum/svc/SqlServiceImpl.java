@@ -20,12 +20,14 @@ import javax.persistence.Query;
 import javax.transaction.TransactionManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.hibernate.JDBCException;
 import org.hibernate.transform.ResultTransformer;
@@ -112,7 +114,10 @@ public class SqlServiceImpl implements SqlService {
 
    @PostConstruct
    void init() {
-      initListenerConnection();
+      String datasourceJdbcUrl = ConfigProvider.getConfig().getValue("quarkus.datasource.jdbc.url", String.class);
+      if (datasourceJdbcUrl != null && !datasourceJdbcUrl.isBlank()) {
+         initListenerConnection();
+      }
    }
 
    private void initListenerConnection() {
@@ -207,12 +212,19 @@ public class SqlServiceImpl implements SqlService {
 
    @Override
    @PermitAll
-   public String roles() {
+   public String roles(boolean system) {
       if (!debug.orElse(false)) {
          throw ServiceException.notFound("Not available without debug mode.");
       }
       if (identity.isAnonymous()) {
          return "<anonymous>";
+      }
+      if (system) {
+         if (identity.hasRole(Roles.ADMIN)) {
+            return roleManager.getDebugQuery(Arrays.asList(Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING));
+         } else {
+            throw ServiceException.forbidden("Only Admin can request system roles");
+         }
       }
       return roleManager.getDebugQuery(identity);
    }

@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -18,6 +19,8 @@ import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
 import org.hibernate.Hibernate;
+import org.hibernate.Session;
+import org.hibernate.internal.SessionImpl;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.type.IntegerType;
@@ -395,18 +398,25 @@ public class DatasetServiceImpl implements DatasetService {
    @Transactional
    void calculateLabels(int datasetId, int queryLabelId, boolean isRecalculation) {
       log.infof("Calculating labels for dataset %d, label %d", datasetId, queryLabelId);
-      // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
-      // to the uploading user. However, the uploader should not have rights to fetch these anyway...
-      @SuppressWarnings("unchecked") List<Object[]> extracted =
-            (List<Object[]>) em.createNativeQuery(LABEL_QUERY)
-                  .setParameter(1, datasetId)
-                  .setParameter(2, queryLabelId)
-                  .unwrap(NativeQuery.class)
-                  .addScalar("label_id", IntegerType.INSTANCE)
-                  .addScalar("name", TextType.INSTANCE)
-                  .addScalar("function", TextType.INSTANCE)
-                  .addScalar("value", JsonNodeBinaryType.INSTANCE)
-                  .getResultList();
+      List<Object[]> extracted;
+      try {
+         // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
+         // to the uploading user. However, the uploader should not have rights to fetch these anyway...
+         //noinspection unchecked
+         extracted = (List<Object[]>) em.createNativeQuery(LABEL_QUERY)
+                     .setParameter(1, datasetId)
+                     .setParameter(2, queryLabelId)
+                     .unwrap(NativeQuery.class)
+                     .addScalar("label_id", IntegerType.INSTANCE)
+                     .addScalar("name", TextType.INSTANCE)
+                     .addScalar("function", TextType.INSTANCE)
+                     .addScalar("value", JsonNodeBinaryType.INSTANCE)
+                     .getResultList();
+      } catch (PersistenceException e) {
+         logMessageInNewTx(datasetId, PersistentLog.ERROR, "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
+         findFailingExtractor(datasetId);
+         return;
+      }
 
       Util.evaluateMany(extracted, row -> (String) row[2], row -> (JsonNode) row[3],
             (row, result) -> createLabel(datasetId, (int) row[0], Util.convertToJson(result)),
@@ -415,6 +425,28 @@ public class DatasetServiceImpl implements DatasetService {
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
             out -> logMessage(datasetId, PersistentLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
       Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId, isRecalculation));
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   protected void findFailingExtractor(int datasetId) {
+      @SuppressWarnings("unchecked") List<Object[]> extractors = em.createNativeQuery(
+            "SELECT ds.uri, label.name AS name, le.name AS extractor_name, ds.index, le.jsonpath FROM dataset_schemas ds " +
+            "JOIN label ON label.schema_id = ds.schema_id " +
+            "JOIN label_extractors le ON le.label_id = label.id " +
+            "WHERE ds.dataset_id = ?1").setParameter(1, datasetId).getResultList();
+      for (Object[] row : extractors) {
+         try {
+            // actual result of query is ignored
+            em.createNativeQuery("SELECT jsonb_path_query_first(data -> (?1), (?2)::::jsonpath)#>>'{}' FROM dataset WHERE id = ?3")
+                  .setParameter(1, row[3]).setParameter(2, row[4]).setParameter(3, datasetId).getSingleResult();
+         } catch (PersistenceException e) {
+            logMessageInNewTx(datasetId, PersistentLog.ERROR, "There seems to be an error in schema <code>%s</code> label <code>%s</code>, extractor <code>%s</code>, JSONPath expression <code>%s</code>: %s",
+                  row[0], row[1], row[2], row[4], Util.explainCauses(e));
+            return;
+         }
+      }
+      logMessage(datasetId, PersistentLog.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
    }
 
    private void createLabel(int datasetId, int labelId, JsonNode value) {
@@ -437,6 +469,12 @@ public class DatasetServiceImpl implements DatasetService {
    @ConsumeEvent(value = DataSet.EVENT_NEW, blocking = true, ordered = true)
    public void onNewDataset(DataSet.EventNew event) {
       withRecalculationLock(() -> calculateLabels(event.dataset.id, -1, event.isRecalculation));
+   }
+
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   void logMessageInNewTx(int datasetId, int level, String message, Object... params) {
+      logMessage(datasetId, level, message, params);
    }
 
    private void logMessage(int datasetId, int level, String message, Object... params) {

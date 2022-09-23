@@ -14,7 +14,7 @@ type DatasetLogModalProps = {
 export default function DatasetLogModal(props: DatasetLogModalProps) {
     const fetchCount = useCallback(
         level => Api.logServiceGetDatasetLogCount(props.source, props.testId, props.datasetId, level),
-        [props.testId, props.source]
+        [props.testId, props.datasetId, props.source, props.isOpen]
     )
     const fetchRows = useCallback(
         (level, page, limit) =>
@@ -35,7 +35,7 @@ export default function DatasetLogModal(props: DatasetLogModalProps) {
                         ],
                     }))
             ),
-        [props.testId, props.source]
+        [props.testId, props.datasetId, props.source]
     )
     const deleteFromTo = useCallback(
         (from, to) => Api.logServiceDeleteDatasetLogs(props.source, props.testId, props.datasetId, from, to),

@@ -11,7 +11,7 @@ import javax.inject.Inject;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import io.hyperfoil.tools.horreum.entity.alerting.Change;
+import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.svc.MissingValuesEvent;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.quarkus.mailer.Mail;
@@ -66,27 +66,27 @@ public class EmailPlugin implements NotificationPlugin {
       }
 
       @Override
-      public void notifyChange(String testName, String fingerprint, Change.Event event) {
-         String subject = subjectPrefix + " Change in " + testName + "/" + event.change.variable.name;
+      public void notifyChanges(DatasetChanges event) {
+         String subject = subjectPrefix + " Change in " + event.testName;
          String content = changeNotificationEmail
                .data("username", username)
-               .data("testName", testName)
-               .data("testNameEncoded", URLEncoder.encode(testName, StandardCharsets.UTF_8))
-               .data("fingerprint", URLEncoder.encode(fingerprint, StandardCharsets.UTF_8))
+               .data("testName", event.testName)
+               .data("testNameEncoded", URLEncoder.encode(event.testName, StandardCharsets.UTF_8))
+               .data("fingerprint", URLEncoder.encode(event.fingerprint != null ? event.fingerprint : "", StandardCharsets.UTF_8))
                .data("baseUrl", baseUrl)
-               .data("testId", String.valueOf(event.change.variable.testId))
-               .data("variable", event.change.variable.name)
-               .data("group", event.change.variable.group)
+               .data("testId", String.valueOf(event.dataset.testId))
                .data("runId", event.dataset.runId)
                .data("datasetOrdinal", event.dataset.ordinal)
-               .data("description", event.change.description)
+               // TODO: remove me after Quarkus update >= 2.12
+               .data("datasetOrdinalPlusOne", event.dataset.ordinal + 1)
+               .data("changes", event.changes())
                .render();
          mailer.send(Mail.withHtml(data, subject, content));
       }
 
       @Override
       public void notifyMissingDataset(String testName, int testId, String ruleName, long maxStaleness, Instant lastTimestamp) {
-         String subject = subjectPrefix + " Missing expected data for " + testName + "/" + ruleName;
+         String subject = String.format("%s Missing expected data for %s/%s", subjectPrefix, testName, ruleName);
          String content = missingDatasetNotificationEmail
                .data("username", username)
                .data("testName", testName)
@@ -102,16 +102,19 @@ public class EmailPlugin implements NotificationPlugin {
 
       @Override
       public void notifyMissingValues(String testName, String fingerprint, MissingValuesEvent event) {
-         String subject = subjectPrefix + " Missing change detection values for " + testName + "/" + fingerprint + ", run " + event.datasetId;
+         String subject = String.format("%s Missing change detection values in test %s, dataset %d#%d",
+               subjectPrefix, testName, event.dataset.runId, event.dataset.ordinal + 1);
          String content = missingValuesNotificationEmail
                .data("username", username)
                .data("testName", testName)
-               .data("testId", String.valueOf(event.testId))
+               .data("testId", String.valueOf(event.dataset.testId))
                .data("fingerprint", fingerprint)
                .data("baseUrl", baseUrl)
-               .data("runId", event.runId)
-               .data("datasetOrdinal", event.datasetOrdinal)
-               .data("variables", String.join(", ", event.variables))
+               .data("runId", event.dataset.runId)
+               .data("datasetOrdinal", event.dataset.ordinal)
+               // TODO: remove me after Quarkus update >= 2.12
+               .data("datasetOrdinalPlusOne", event.dataset.ordinal + 1)
+               .data("variables", event.variables)
                .render();
          mailer.send(Mail.withHtml(data, subject, content));
       }

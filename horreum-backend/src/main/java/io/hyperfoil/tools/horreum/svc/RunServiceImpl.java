@@ -888,21 +888,27 @@ public class RunServiceImpl implements RunService {
             JsonNode result;
             if (t.extractors != null && !t.extractors.isEmpty()) {
                List<Object[]> extractedData;
-               if (type == Schema.TYPE_1ST_LEVEL) {
-                  extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
-                        .setParameter(1, run.id).setParameter(2, transformerId)
-                        .unwrap(NativeQuery.class)
-                        .addScalar("name", TextType.INSTANCE)
-                        .addScalar("value", JsonNodeBinaryType.INSTANCE)
-                        .getResultList());
-               } else {
-                  extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
-                        .setParameter(1, run.id).setParameter(2, transformerId)
-                        .setParameter(3, type == Schema.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
-                        .unwrap(NativeQuery.class)
-                        .addScalar("name", TextType.INSTANCE)
-                        .addScalar("value", JsonNodeBinaryType.INSTANCE)
-                        .getResultList());
+               try {
+                  if (type == Schema.TYPE_1ST_LEVEL) {
+                     extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
+                           .setParameter(1, run.id).setParameter(2, transformerId)
+                           .unwrap(NativeQuery.class)
+                           .addScalar("name", TextType.INSTANCE)
+                           .addScalar("value", JsonNodeBinaryType.INSTANCE)
+                           .getResultList());
+                  } else {
+                     extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
+                           .setParameter(1, run.id).setParameter(2, transformerId)
+                           .setParameter(3, type == Schema.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
+                           .unwrap(NativeQuery.class)
+                           .addScalar("name", TextType.INSTANCE)
+                           .addScalar("value", JsonNodeBinaryType.INSTANCE)
+                           .getResultList());
+                  }
+               } catch (PersistenceException e) {
+                  logMessage(run, PersistentLog.ERROR, "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
+                  findFailingExtractor(runId);
+                  extractedData = Collections.emptyList();
                }
                addExtracted((ObjectNode) root, extractedData);
             }
@@ -1040,6 +1046,37 @@ public class RunServiceImpl implements RunService {
       String msg = args.length > 0 ? String.format(format, args) : format;
       new TransformationLog(em.getReference(Test.class, run.testid), run, level, msg).persist();
    }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   protected void findFailingExtractor(int runId) {
+      @SuppressWarnings("unchecked") List<Object[]> extractors = em.createNativeQuery(
+            "SELECT rs.uri, rs.type, rs.key, t.name, te.name AS extractor_name, te.jsonpath FROM run_schemas rs " +
+            "JOIN transformer t ON t.schema_id = rs.schemaid AND t.id IN (SELECT transformer_id FROM test_transformers WHERE test_id = rs.testid) " +
+            "JOIN transformer_extractors te ON te.transformer_id = t.id " +
+            "WHERE rs.runid = ?1").setParameter(1, runId).getResultList();
+      for (Object[] row : extractors) {
+         try {
+            int type = (int) row[1];
+            // actual result of query is ignored
+            if (type == Schema.TYPE_1ST_LEVEL) {
+               em.createNativeQuery("SELECT jsonb_path_query_first(data, (?1)::::jsonpath)#>>'{}' FROM dataset WHERE id = ?2")
+                     .setParameter(1, row[5]).setParameter(2, runId).getSingleResult();
+            } else {
+               em.createNativeQuery("SELECT jsonb_path_query_first(data -> (?1), (?2)::::jsonpath)#>>'{}' FROM dataset WHERE id = ?3")
+                     .setParameter(1, type == Schema.TYPE_2ND_LEVEL ? row[2] : Integer.parseInt((String) row[2]))
+                     .setParameter(2, row[5])
+                     .setParameter(3, runId).getSingleResult();
+            }
+         } catch (PersistenceException e) {
+            logMessage(em.getReference(Run.class, runId), PersistentLog.ERROR, "There seems to be an error in schema <code>%s</code> transformer <code>%s</code>, extractor <code>%s</code>, JSONPath expression <code>%s</code>: %s",
+                  row[0], row[3], row[4], row[5], Util.explainCauses(e));
+            return;
+         }
+      }
+      logMessage(em.getReference(Run.class, runId), PersistentLog.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
+   }
+
 
    @SuppressWarnings("unchecked")
    private List<Object[]> unchecked(@SuppressWarnings("rawtypes") List list) {

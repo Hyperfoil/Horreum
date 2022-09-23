@@ -129,7 +129,8 @@ export default function VariableForm(props: VariableFormProps) {
             <Title headingLevel="h3">Conditions</Title>
             <Tabs
                 activeKey={changeDetection ? props.variable.changeDetection.indexOf(changeDetection) : "__add"}
-                onSelect={(_, index) => {
+                onSelect={(e, index) => {
+                    e.preventDefault()
                     if (index === "__add") {
                         setChangeDetection(undefined)
                         setAdding(true)

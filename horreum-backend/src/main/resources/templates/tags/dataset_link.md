@@ -1,1 +1,1 @@
-[{it.runId}#{it.ordinal + 1}]({publicUrl}/run/{it.runId}#dataset{it.ordinal})
+[{it.runId}#{it.ordinalPlusOne}]({publicUrl}/run/{it.runId}#dataset{it.ordinal})

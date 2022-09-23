@@ -481,7 +481,7 @@ public class AlertingServiceImpl implements AlertingService {
             output -> logCalculationMessage(dataset, PersistentLog.DEBUG, "Output while calculating variable: <pre>%s</pre>", output)
       );
       if (!missingValueVariables.isEmpty()) {
-         Util.publishLater(tm, eventBus, DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.run.id, dataset.id, dataset.ordinal, dataset.testid, missingValueVariables, notify));
+         Util.publishLater(tm, eventBus, DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify));
       }
       Util.publishLater(tm, eventBus, DataPoint.EVENT_DATASET_PROCESSED, new DataPoint.DatasetProcessedEvent(dataset.getInfo(), notify));
    }
@@ -609,7 +609,7 @@ public class AlertingServiceImpl implements AlertingService {
             model.analyze(dataPoints, detection.config, change -> {
                logChangeDetectionMessage(variable.testId, datasetId, PersistentLog.DEBUG,
                      "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
-               Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal FROM dataset WHERE id = ?1");
+               Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id = ?1");
                SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSet.Info.class));
                DataSet.Info info = (DataSet.Info) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
                em.persist(change);

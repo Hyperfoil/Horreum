@@ -11,6 +11,10 @@ import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 import javax.persistence.EntityManager;
+import javax.transaction.Status;
+import javax.transaction.TransactionManager;
+
+import org.hibernate.Session;
 
 import io.hyperfoil.tools.horreum.svc.Util;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -29,6 +33,9 @@ public class RolesInterceptor {
 
    @Inject
    EntityManager em;
+
+   @Inject
+   TransactionManager tm;
 
    public static void setCurrentIdentity(SecurityIdentity identity) {
       currentIdentity.set(identity);
@@ -65,14 +72,17 @@ public class RolesInterceptor {
          t1 = t;
          throw t;
       } finally {
-         try {
-            roleManager.setRoles(em, previousRoles);
-         } catch (Throwable t2) {
-            if (t1 != null) {
-               t2.addSuppressed(t1);
+         int status = tm.getStatus();
+         if (status == Status.STATUS_ACTIVE || status == Status.STATUS_NO_TRANSACTION) {
+            try {
+               roleManager.setRoles(em, previousRoles);
+            } catch (Throwable t2) {
+               if (t1 != null) {
+                  t2.addSuppressed(t1);
+               }
+               //noinspection ThrowFromFinallyBlock
+               throw t2;
             }
-            //noinspection ThrowFromFinallyBlock
-            throw t2;
          }
       }
    }

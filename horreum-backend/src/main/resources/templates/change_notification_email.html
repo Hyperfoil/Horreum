@@ -1,5 +1,11 @@
 <p>Hello {username},</p>
-<p>there has been a recent change in results for test <a href="{baseUrl}/test/{testId}">{testName}</a>, change detection variable {#if group != null}{group}/{/if}{variable}, introduced with dataset <a href="{baseUrl}/run/{runId}#dataset{datasetOrdinal}">{runId}/{datasetOrdinal + 1}</a>.</p>
-<p>This is the current explanation for the change: {description}.</p>
+<p>Horreum detected a recent change in test <a href="{baseUrl}/test/{testId}">{testName}</a>, introduced with dataset <a href="{baseUrl}/run/{runId}#dataset{datasetOrdinal}">{runId}#{datasetOrdinalPlusOne}</a>.</p>
+<p>These change detection variables observed a change:</p>
+<ul>{#each changes}
+    <li>{#if it.variable.group != null}{it.variable.group}/{/if}{it.variable.name}{#if it.description}{it.description}{/if}</li>
+{/each}</ul>
 <p>Please <a href="{baseUrl}/changes?test={testNameEncoded}&fingerprint={fingerprint}">check it out</a> and provide an explanatory description.</p>
+
+change detection variable
+
 Horreum Alerting

@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
@@ -176,6 +177,24 @@ public class DataSet extends OwnedEntityBase {
          this.runId = runId;
          this.ordinal = ordinal;
          this.testId = testId;
+      }
+
+      // TODO: remove me after update to Quarkus >= 2.12
+      public int getOrdinalPlusOne() {
+         return ordinal + 1;
+      }
+
+      @Override
+      public boolean equals(Object o) {
+         if (this == o) return true;
+         if (o == null || getClass() != o.getClass()) return false;
+         Info info = (Info) o;
+         return id == info.id && runId == info.runId && ordinal == info.ordinal && testId == info.testId;
+      }
+
+      @Override
+      public int hashCode() {
+         return Objects.hash(id, runId, ordinal, testId);
       }
 
       @Override
