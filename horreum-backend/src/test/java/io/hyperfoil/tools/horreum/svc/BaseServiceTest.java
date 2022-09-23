@@ -458,4 +458,36 @@ public class BaseServiceTest {
       return RestAssured.given().auth().oauth2(TESTER_TOKEN);
    }
 
+   protected void addTransformer(Test test, Transformer... transformers){
+      List<Integer> ids = new ArrayList<>();
+      assertNotNull(test.id);
+      for (Transformer t : transformers) {
+         ids.add(t.id);
+      }
+      jsonRequest().body(ids).post("/api/test/" + test.id + "/transformers").then().assertThat().statusCode(204);
+   }
+
+   protected Transformer createTransformer(String name, Schema schema, String function, Extractor... paths) {
+      Transformer transformer = new Transformer();
+      transformer.name = name;
+      transformer.extractors = new ArrayList<>();
+      for (Extractor path : paths) {
+         if (path != null) {
+            transformer.extractors.add(path);
+         }
+      }
+      transformer.owner = TESTER_ROLES[0];
+      transformer.access = Access.PUBLIC;
+      transformer.schema = schema;
+      transformer.function = function;
+      transformer.targetSchemaUri = postFunctionSchemaUri(schema);
+      Integer id = jsonRequest().body(transformer).post("/api/schema/"+schema.id+"/transformers")
+            .then().statusCode(200).extract().as(Integer.class);
+      transformer.id = id;
+      return transformer;
+   }
+
+   protected String postFunctionSchemaUri(Schema s) {
+      return "uri:" + s.name + "-post-function";
+   }
 }

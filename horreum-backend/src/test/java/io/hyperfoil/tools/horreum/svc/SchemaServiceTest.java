@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,9 +15,12 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
+import io.hyperfoil.tools.horreum.entity.json.Extractor;
+import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -84,6 +86,37 @@ public class SchemaServiceTest extends BaseServiceTest {
 
       assertEquals(4, em.createNativeQuery("SELECT COUNT(*)::::int FROM run_validationerrors").getSingleResult());
       assertEquals(4, em.createNativeQuery("SELECT COUNT(*)::::int FROM dataset_validationerrors").getSingleResult());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testEditSchema() {
+      Schema schema = createSchema("My schema", "urn:my:schema");
+      int labelId = addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
+      int transformerId = createTransformer("my-transformer", schema, "value => value", new Extractor("all", "$.", false)).id;
+
+      schema.name = "Different name";
+      schema.description = "Bla bla";
+      addOrUpdateSchema(schema);
+      checkEntities(labelId, transformerId);
+
+      schema.uri = "http://example.com/otherschema";
+      schema.description = null;
+      addOrUpdateSchema(schema);
+      checkEntities(labelId, transformerId);
+
+      // back to original
+      schema.name = "My schema";
+      schema.uri = "urn:my:schema";
+      addOrUpdateSchema(schema);
+      checkEntities(labelId, transformerId);
+   }
+
+   private void checkEntities(int labelId, int transformerId) {
+      assertEquals(1, Schema.count());
+      assertEquals(1, Label.count());
+      assertEquals(1, Transformer.count());
+      assertNotNull(Label.findById(labelId));
+      assertNotNull(Transformer.findById(transformerId));
    }
 
    private static JsonNode load(String resource) throws IOException {

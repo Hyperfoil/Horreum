@@ -3,7 +3,6 @@ package io.hyperfoil.tools.horreum.svc;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import java.util.concurrent.BlockingQueue;
@@ -50,7 +49,7 @@ public class RunServiceTest extends BaseServiceTest {
       Extractor path = new Extractor("foo", "$.value", false);
       Schema schema = createExampleSchema(info);
 
-      Transformer transformer = createTransformerWithJsonPaths("acme", schema, "", path);
+      Transformer transformer = createTransformer("acme", schema, "", path);
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
       addTransformer(test, transformer);
@@ -120,7 +119,7 @@ public class RunServiceTest extends BaseServiceTest {
       BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
       Schema schema = createExampleSchema(info);
 
-      Transformer transformer = createTransformerWithJsonPaths("acme", schema, "");
+      Transformer transformer = createTransformer("acme", schema, "");
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
       addTransformer(test, transformer);
@@ -141,7 +140,7 @@ public class RunServiceTest extends BaseServiceTest {
       Schema schema = createExampleSchema("AcneCorp", "AcneInc", "AcneRrUs", false);
 
       Extractor path = new Extractor("foo", "$.value", false);
-      Transformer transformer = createTransformerWithJsonPaths("acme", schema, "", path); // blank function
+      Transformer transformer = createTransformer("acme", schema, "", path); // blank function
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
       addTransformer(test, transformer);
@@ -162,9 +161,9 @@ public class RunServiceTest extends BaseServiceTest {
       Schema roadRunnerSchema = createExampleSchema("RoadRunnerCorp", "RoadRunnerInc", "RoadRunnerRrUs", false);
 
       Extractor acmePath = new Extractor("foo", "$.value", false);
-      Transformer acmeTransformer = createTransformerWithJsonPaths("acme", acmeSchema, "value => ({ acme: value })", acmePath);
+      Transformer acmeTransformer = createTransformer("acme", acmeSchema, "value => ({ acme: value })", acmePath);
       Extractor roadRunnerPath = new Extractor("bah", "$.value", false);
-      Transformer roadRunnerTransformer = createTransformerWithJsonPaths("roadrunner", roadRunnerSchema, "value => ({ outcome: value })", roadRunnerPath);
+      Transformer roadRunnerTransformer = createTransformer("roadrunner", roadRunnerSchema, "value => ({ outcome: value })", roadRunnerPath);
 
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
@@ -282,8 +281,8 @@ public class RunServiceTest extends BaseServiceTest {
       Extractor scalarPath = new Extractor("sheep", "$.value", false);
       String scalarFunction = "sheep => { return ({  \"outcome\": { sheep } }) }";
 
-      Transformer arrayTransformer = createTransformerWithJsonPaths("arrayT", schema, arrayFunction, arrayPath);
-      Transformer scalarTransformer = createTransformerWithJsonPaths("scalarT", schema, scalarFunction, scalarPath);
+      Transformer arrayTransformer = createTransformer("arrayT", schema, arrayFunction, arrayPath);
+      Transformer scalarTransformer = createTransformer("scalarT", schema, scalarFunction, scalarPath);
 
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
@@ -313,10 +312,10 @@ public class RunServiceTest extends BaseServiceTest {
 
       Schema schemaA = createExampleSchema("Aba", "Aba", "Aba", false);
       Extractor path = new Extractor("value", "$.value", false);
-      Transformer transformerA = createTransformerWithJsonPaths("A", schemaA, "value => ({\"by\": \"A\"})", path);
+      Transformer transformerA = createTransformer("A", schemaA, "value => ({\"by\": \"A\"})", path);
 
       Schema schemaB = createExampleSchema("Bcb", "Bcb", "Bcb", false);
-      Transformer transformerB = createTransformerWithJsonPaths("B", schemaB, "value => ({\"by\": \"B\"})");
+      Transformer transformerB = createTransformer("B", schemaB, "value => ({\"by\": \"B\"})");
 
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerA, transformerB);
@@ -350,7 +349,7 @@ public class RunServiceTest extends BaseServiceTest {
 
       Schema schema = createExampleSchema("DDDD", "DDDDInc", "DDDDRrUs", true);
       Extractor scalarPath = new Extractor("sheep", "$.duff", false);
-      Transformer scalarTransformer = createTransformerWithJsonPaths("tranProcessNullExtractorValue", schema, "sheep => ({ outcome: { sheep }})", scalarPath);
+      Transformer scalarTransformer = createTransformer("tranProcessNullExtractorValue", schema, "sheep => ({ outcome: { sheep }})", scalarPath);
 
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
@@ -379,9 +378,9 @@ public class RunServiceTest extends BaseServiceTest {
       Extractor values = new Extractor("values", "$.values[*]", false);
       values.array = true;
 
-      Transformer transformerNoFunc = createTransformerWithJsonPaths("noFunc", schema, null, firstMatch, allMatches);
-      Transformer transformerFunc = createTransformerWithJsonPaths("func", schema, "({foo, bar}) => ({ foo, bar })", firstMatch, allMatches);
-      Transformer transformerCombined = createTransformerWithJsonPaths("combined", schema, null, firstMatch, allMatches, value, values);
+      Transformer transformerNoFunc = createTransformer("noFunc", schema, null, firstMatch, allMatches);
+      Transformer transformerFunc = createTransformer("func", schema, "({foo, bar}) => ({ foo, bar })", firstMatch, allMatches);
+      Transformer transformerCombined = createTransformer("combined", schema, null, firstMatch, allMatches, value, values);
 
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerNoFunc, transformerFunc, transformerCombined);
@@ -447,34 +446,6 @@ public class RunServiceTest extends BaseServiceTest {
       return list;
    }
 
-   private Transformer createTransformerWithJsonPaths(String name, Schema schema, String function, Extractor... paths) {
-      Transformer transformer = new Transformer();
-      transformer.name = name;
-      transformer.extractors = new ArrayList<>();
-      for (Extractor path : paths) {
-         if (path != null) {
-            transformer.extractors.add(path);
-         }
-      }
-      transformer.owner = TESTER_ROLES[0];
-      transformer.access = Access.PUBLIC;
-      transformer.schema = schema;
-      transformer.function = function;
-      transformer.targetSchemaUri = postFunctionSchemaUri(schema);
-      Integer id = jsonRequest().body(transformer).post("/api/schema/"+schema.id+"/transformers").then().statusCode(200).extract().as(Integer.class);
-      transformer.id = id;
-      return transformer;
-   }
-
-   private void addTransformer(Test test, Transformer... transformers){
-      List<Integer> ids = new ArrayList<>();
-      assertNotNull(test.id);
-      for (Transformer t : transformers) {
-         ids.add(t.id);
-      }
-      jsonRequest().body(ids).post("/api/test/" + test.id + "/transformers").then().assertThat().statusCode(204);
-   }
-
    private void validateScalarArray(DataSet ds, String expectedTarget) {
       JsonNode n = ds.data;
       int outcome = n.path(0).findValue("outcome").asInt();
@@ -485,10 +456,6 @@ public class RunServiceTest extends BaseServiceTest {
       assertEquals(expectedTarget, scalarTarget);
       String arrayTarget = n.path(1).path("$schema").textValue();
       assertEquals(expectedTarget, arrayTarget);
-   }
-
-   private String postFunctionSchemaUri(Schema s) {
-      return "uri:" + s.name + "-post-function";
    }
 
    @After

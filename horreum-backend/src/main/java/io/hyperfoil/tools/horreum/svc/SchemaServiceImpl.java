@@ -158,17 +158,19 @@ public class SchemaServiceImpl implements SchemaService {
          throw ServiceException.badRequest("Please use URI starting with one of these schemes: " + Arrays.toString(ALL_URNS));
       }
       Schema byName = Schema.find("name", schema.name).firstResult();
-      if (byName != null) {
-         if (Objects.equals(schema.id, byName.id)) {
-            em.merge(schema);
-         } else {
-            throw ServiceException.serverError("Name already used");
-         }
-      } else {
-         schema.id = null; //remove the id so we don't override an existing entry
-         em.persist(schema);
+      if (byName != null && !Objects.equals(byName.id, schema.id)) {
+         throw ServiceException.serverError("Name already used");
       }
-      em.flush();//manually flush to validate constraints
+      Schema byUri = Schema.find("uri", schema.uri).firstResult();
+      if (byUri != null && !Objects.equals(byUri.id, schema.id)) {
+         throw ServiceException.serverError("URI already used");
+      }
+      if (schema.id != null) {
+         em.merge(schema);
+      } else {
+         schema.persist();
+      }
+      em.flush(); //manually flush to validate constraints
       return schema.id;
    }
 
