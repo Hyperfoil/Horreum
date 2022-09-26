@@ -96,16 +96,7 @@ public class DataSet extends OwnedEntityBase {
             .addScalar("fingerprint", JsonNodeBinaryType.INSTANCE)
             .getResultList();
       if (fingerprintList.size() > 0) {
-         StringBuilder sb = new StringBuilder();
-         Iterator<Map.Entry<String, JsonNode>> it = fingerprintList.stream().findFirst().get().fields();
-         while (it.hasNext()) {
-            Map.Entry<String, JsonNode> entry = it.next();
-            if (sb.length() != 0) {
-               sb.append(';');
-            }
-            sb.append(entry.getKey()).append(':').append(entry.getValue().toString());
-         }
-         return sb.toString();
+         return fingerprintList.stream().findFirst().get().toString();
       } else {
          return "";
       }

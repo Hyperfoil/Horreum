@@ -147,9 +147,20 @@ export default function Changes() {
         if (!paramFingerprint) {
             return undefined
         }
-        const fingerprint = JSON.parse(paramFingerprint)
-        const str = convertLabels(fingerprint)
-        return { ...fingerprint, toString: () => str }
+        try {
+            const fingerprint = JSON.parse(paramFingerprint)
+            const str = convertLabels(fingerprint)
+            return { ...fingerprint, toString: () => str }
+        } catch (e) {
+            dispatch(
+                alertAction(
+                    "PARSE_FINGERPRINT",
+                    "Fingerprint parsing failed",
+                    "Failed to parse fingerprint <code>" + paramFingerprint + "</code>"
+                )
+            )
+            return undefined
+        }
     })
     const [dashboardUrl, setDashboardUrl] = useState("")
     const [panels, setPanels] = useState<PanelInfo[]>([])
