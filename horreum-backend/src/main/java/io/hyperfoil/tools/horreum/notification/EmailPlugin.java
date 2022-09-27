@@ -77,8 +77,6 @@ public class EmailPlugin implements NotificationPlugin {
                .data("testId", String.valueOf(event.dataset.testId))
                .data("runId", event.dataset.runId)
                .data("datasetOrdinal", event.dataset.ordinal)
-               // TODO: remove me after Quarkus update >= 2.12
-               .data("datasetOrdinalPlusOne", event.dataset.ordinal + 1)
                .data("changes", event.changes())
                .render();
          mailer.send(Mail.withHtml(data, subject, content));
@@ -112,8 +110,6 @@ public class EmailPlugin implements NotificationPlugin {
                .data("baseUrl", baseUrl)
                .data("runId", event.dataset.runId)
                .data("datasetOrdinal", event.dataset.ordinal)
-               // TODO: remove me after Quarkus update >= 2.12
-               .data("datasetOrdinalPlusOne", event.dataset.ordinal + 1)
                .data("variables", event.variables)
                .render();
          mailer.send(Mail.withHtml(data, subject, content));

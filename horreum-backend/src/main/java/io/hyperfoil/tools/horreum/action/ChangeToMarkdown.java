@@ -44,8 +44,6 @@ public class ChangeToMarkdown implements BodyFormatter {
             .data("group", change.variable.group)
             .data("runId", event.dataset.runId)
             .data("datasetOrdinal", event.dataset.ordinal)
-            // TODO: remove me after Quarkus update >= 2.12
-            .data("datasetOrdinalPlusOne", event.dataset.ordinal + 1)
             .data("description", change.description)
             .render();
    }

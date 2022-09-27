@@ -1,5 +1,5 @@
 <p>Hello {username},</p>
-<p>Horreum detected a recent change in test <a href="{baseUrl}/test/{testId}">{testName}</a>, introduced with dataset <a href="{baseUrl}/run/{runId}#dataset{datasetOrdinal}">{runId}#{datasetOrdinalPlusOne}</a>.</p>
+<p>Horreum detected a recent change in test <a href="{baseUrl}/test/{testId}">{testName}</a>, introduced with dataset <a href="{baseUrl}/run/{runId}#dataset{datasetOrdinal}">{runId}#{datasetOrdinal + 1}</a>.</p>
 <p>These change detection variables observed a change:</p>
 <ul>{#each changes}
     <li>{#if it.variable.group != null}{it.variable.group}/{/if}{it.variable.name}{#if it.description}{it.description}{/if}</li>

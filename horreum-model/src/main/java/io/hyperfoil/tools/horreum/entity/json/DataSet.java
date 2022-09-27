@@ -170,11 +170,6 @@ public class DataSet extends OwnedEntityBase {
          this.testId = testId;
       }
 
-      // TODO: remove me after update to Quarkus >= 2.12
-      public int getOrdinalPlusOne() {
-         return ordinal + 1;
-      }
-
       @Override
       public boolean equals(Object o) {
          if (this == o) return true;
