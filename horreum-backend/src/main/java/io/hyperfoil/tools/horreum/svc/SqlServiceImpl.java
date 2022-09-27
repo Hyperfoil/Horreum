@@ -211,12 +211,12 @@ public class SqlServiceImpl implements SqlService {
                   log.errorf(e, "Exception in listener for channel %s, payload %s", channel, payload);
                   if (adminMail.isPresent()) {
                      ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                     PrintWriter writer = new PrintWriter(bos);
-                     writer.write(String.format("Exception in listener for channel %s, payload %s%n%n", channel, payload));
-                     writer.write(e.toString());
-                     writer.write("\n");
+                     PrintWriter writer = new PrintWriter(bos, true);
+                     writer.printf("Exception in listener for channel %s, payload %s%n%n", channel, payload);
+                     writer.println(e);
                      e.printStackTrace(writer);
-                     mailer.send(Mail.withText(adminMail.get(), subjectPrefix + "Error in DB listener", bos.toString(StandardCharsets.UTF_8)));
+                     writer.flush();
+                     mailer.send(Mail.withText(adminMail.get(), subjectPrefix + " Error in DB listener", bos.toString(StandardCharsets.UTF_8)));
                   }
                }
             }
