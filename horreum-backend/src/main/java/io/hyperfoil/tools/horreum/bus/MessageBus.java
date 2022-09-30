@@ -126,7 +126,7 @@ public class MessageBus {
          }
       });
       int index = registerIndex(channel, component);
-      log.debugf("Channel %s, component %s has index %d", channel, component, index);
+      log.infof("Channel %s, component %s has index %d", channel, component, index);
       MessageConsumer<Object> consumer = eventBus.consumer(channel, event -> {
          if (!(event.body() instanceof Message)) {
             log.errorf("Not a message on %s: %s", channel, event.body());
@@ -147,9 +147,9 @@ public class MessageBus {
                      if (tm.getStatus() == Status.STATUS_ACTIVE) {
                         // It's not possible to do the DELETE in the same query (e.g. CTE support only one update per row)
                         // so we'll remove the record with a trigger
-                        em.createNativeQuery("UPDATE messagebus SET flags = flags & ~(1 << ?1) WHERE id = ?2")
+                        int updateCount = em.createNativeQuery("UPDATE messagebus SET flags = flags & ~(1 << ?1) WHERE id = ?2")
                               .setParameter(1, index).setParameter(2, msg.id).executeUpdate();
-                        log.debugf("%s consumed %d on %s", component, msg.id, channel);
+                        log.debugf("%s consumed %d on %s - %d records updated", component, msg.id, channel, updateCount);
                      } else {
                         log.debugf("Rolling back, %s cannot consume %d on %s", component, msg.id, channel);
                      }
@@ -196,6 +196,7 @@ public class MessageBus {
       List<?> list = em.createNativeQuery("SELECT index FROM messagebus_subscriptions WHERE channel = ?1 AND component = ?2")
             .setParameter(1, channel).setParameter(2, component).getResultList();
       if (list.isEmpty()) {
+         log.debugf("Component %s is not registered on channel %s", component, channel);
          Integer index = (Integer) em.createNativeQuery("SELECT COALESCE(MAX(index) + 1, 0) FROM messagebus_subscriptions WHERE channel = ?1")
                .setParameter(1, channel).getSingleResult();
          if (em.createNativeQuery("INSERT INTO messagebus_subscriptions(channel, index, component) VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING")
@@ -220,7 +221,10 @@ public class MessageBus {
       }
    }
 
-   @Scheduled(every = "{horreum.messagebus.retry.check:5m}", delayed = "{horreum.messagebus.retry.delay:1m}")
+   @Scheduled(
+         every = "{horreum.messagebus.retry.check:5m}",
+         delayed = "{horreum.messagebus.retry.delay:1m}",
+         concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
    public void retryFailedMessages() {
       Query query = em.createNativeQuery("SELECT channel, id, flags, message FROM messagebus WHERE \"timestamp\" + make_interval(secs => ?1) <= now()")
             .setParameter(1, retryAfter.toSeconds())
@@ -229,22 +233,28 @@ public class MessageBus {
             .addScalar("id", LongType.INSTANCE)
             .addScalar("flags", IntegerType.INSTANCE)
             .addScalar("message", JsonNodeBinaryType.INSTANCE);
-      ScrollableResults results = Util.scroll(query);
-      while (results.next()) {
-         Object[] row = results.get();
-         String channel = (String) row[0];
-         Class<?> type = payloadClasses.get(channel);
-         // theoretically the type might not be set if the initial delay is too short
-         // and components are not registered yet
-         if (type != null) {
-            JsonNode json = (JsonNode) row[3];
-            try {
-               Object payload = Util.OBJECT_MAPPER.treeToValue(json, type);
-               eventBus.publish(channel, new Message((long) row[1], (int) row[2], payload));
-            } catch (JsonProcessingException e) {
-               errorReporter.reportException(e, ERROR_SUBJECT, "Exception loading message to retry in bus channel %s, message %s%n%n", channel, json);
+      try (ScrollableResults results = Util.scroll(query)) {
+         while (results.next()) {
+            Object[] row = results.get();
+            String channel = (String) row[0];
+            long id = (long) row[1];
+            int flags = (int) row[2];
+            Class<?> type = payloadClasses.get(channel);
+            // theoretically the type might not be set if the initial delay is too short
+            // and components are not registered yet
+            if (type != null) {
+               JsonNode json = (JsonNode) row[3];
+               log.infof("Retrying message %d (#%d) in channel %s (%s)", id, results.getRowNumber(), channel, type.getName());
+               try {
+                  Object payload = Util.OBJECT_MAPPER.treeToValue(json, type);
+                  eventBus.publish(channel, new Message(id, flags, payload));
+               } catch (JsonProcessingException e) {
+                  errorReporter.reportException(e, ERROR_SUBJECT, "Exception loading message to retry in bus channel %s, message %s%n%n", channel, json);
+               }
             }
          }
+      } catch (Throwable t) {
+         log.error("Failed to retry publishing some messages", t);
       }
    }
 
