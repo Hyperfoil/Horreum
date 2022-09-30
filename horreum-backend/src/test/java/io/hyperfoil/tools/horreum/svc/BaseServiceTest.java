@@ -471,4 +471,23 @@ public class BaseServiceTest {
       return "uri:" + s.name + "-post-function";
    }
 
+   protected boolean checkTestId(int datasetId, int testId) {
+      return Util.withTx(tm, () -> {
+         try (CloseMe ignored = roleManager.withRoles(em, Collections.singleton(Roles.HORREUM_SYSTEM))) {
+            List<?> list = em.createNativeQuery("SELECT testid FROM dataset WHERE id = ?1").setParameter(1, datasetId).getResultList();
+            assertEquals(1, list.size());
+            return testId == (int) list.get(0);
+         }
+      });
+   }
+
+   protected boolean checkRunTestId(int runId, int testId) {
+      return Util.withTx(tm, () -> {
+         try (CloseMe ignored = roleManager.withRoles(em, Collections.singleton(Roles.HORREUM_SYSTEM))) {
+            List<?> list = em.createNativeQuery("SELECT testid FROM run WHERE id = ?1").setParameter(1, runId).getResultList();
+            assertEquals(1, list.size());
+            return testId == (int) list.get(0);
+         }
+      });
+   }
 }
