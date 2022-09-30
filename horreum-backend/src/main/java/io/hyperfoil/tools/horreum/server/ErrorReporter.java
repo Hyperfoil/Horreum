@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.server;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -12,11 +13,11 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.Mailer;
+import io.quarkus.mailer.reactive.ReactiveMailer;
 
 @ApplicationScoped
 public class ErrorReporter {
-   private static Logger log = Logger.getLogger(ErrorReporter.class);
+   private static final Logger log = Logger.getLogger(ErrorReporter.class);
 
    @ConfigProperty(name = "horreum.admin.mail")
    Optional<String> adminMail;
@@ -25,7 +26,7 @@ public class ErrorReporter {
    String subjectPrefix;
 
    @Inject
-   Mailer mailer;
+   ReactiveMailer mailer;
 
    public void reportException(Throwable t, String subject, String format, Object... params) {
       String message = String.format(format, params);
@@ -38,7 +39,12 @@ public class ErrorReporter {
          writer.write("\n");
          t.printStackTrace(writer);
          writer.flush();
-         mailer.send(Mail.withText(adminMail.get(), subjectPrefix + subject, bos.toString(StandardCharsets.UTF_8)));
+         try {
+            mailer.send(Mail.withText(adminMail.get(), subjectPrefix + subject, bos.toString(StandardCharsets.UTF_8)))
+                  .await().atMost(Duration.ofSeconds(10));
+         } catch (Throwable t2) {
+            log.error("Cannot send notification to admin!", t);
+         }
       }
    }
 }

@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.notification;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 
@@ -15,12 +16,14 @@ import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.svc.MissingValuesEvent;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.Mailer;
+import io.quarkus.mailer.reactive.ReactiveMailer;
 import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
 
 @ApplicationScoped
 public class EmailPlugin implements NotificationPlugin {
+   private static final Duration MAX_SEND_MAIL_DURATION = Duration.ofSeconds(10);
+
    @ConfigProperty(name = "horreum.url")
    String baseUrl;
 
@@ -40,7 +43,7 @@ public class EmailPlugin implements NotificationPlugin {
    Template expectedRunNotificationEmail;
 
    @Inject
-   Mailer mailer;
+   ReactiveMailer mailer;
 
    @Override
    public String method() {
@@ -79,7 +82,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("datasetOrdinal", event.dataset.ordinal)
                .data("changes", event.changes())
                .render();
-         mailer.send(Mail.withHtml(data, subject, content));
+         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(MAX_SEND_MAIL_DURATION);
       }
 
       @Override
@@ -95,7 +98,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("currentStaleness", lastTimestamp == null ? "yet" : "in " + prettyPrintTime(System.currentTimeMillis() - lastTimestamp.toEpochMilli()))
                .data("lastTimestamp", lastTimestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date.from(lastTimestamp)))
                .render();
-         mailer.send(Mail.withHtml(data, subject, content));
+         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(MAX_SEND_MAIL_DURATION);
       }
 
       @Override
@@ -112,7 +115,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("datasetOrdinal", event.dataset.ordinal)
                .data("variables", event.variables)
                .render();
-         mailer.send(Mail.withHtml(data, subject, content));
+         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(MAX_SEND_MAIL_DURATION);
       }
 
       @Override
@@ -127,7 +130,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("expectedBy", expectedBy)
                .data("backlink", backlink)
                .render();
-         mailer.send(Mail.withHtml(data, subject, content));
+         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(MAX_SEND_MAIL_DURATION);
       }
    }
 
