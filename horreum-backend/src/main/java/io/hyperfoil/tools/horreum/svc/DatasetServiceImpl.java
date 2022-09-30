@@ -353,7 +353,7 @@ public class DatasetServiceImpl implements DatasetService {
    @Override
    public DatasetSummary getSummary(int datasetId, int viewId) {
       try {
-         Query query = em.createNativeQuery("WITH schema_agg AS (" + SCHEMAS_SELECT + " WHERE ds.dataset_id = ?1 GROUP BY ds.dataset_id) " +
+         Query query = em.createNativeQuery("WITH schema_agg AS (" + SCHEMAS_SELECT + " WHERE ds.dataset_id = ?1 GROUP BY ds.dataset_id), " +
                VALIDATION_SELECT + DATASET_SUMMARY_SELECT + " AND dv.view_id = ?2 WHERE ds.id = ?1")
                .setParameter(1, datasetId).setParameter(2, viewId);
          markAsSummaryList(query);

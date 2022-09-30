@@ -395,6 +395,8 @@ public class BaseServiceTest {
          DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertNotNull(event.dataset);
+         // only to cover the summary call in API
+         jsonRequest().get("/api/dataset/" + event.dataset.id + "/summary").then().statusCode(200);
          T value = testLogic.apply(event.dataset);
          tm.begin();
          Throwable error = null;
