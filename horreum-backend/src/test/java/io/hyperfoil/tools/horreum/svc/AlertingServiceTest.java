@@ -29,6 +29,8 @@ import org.junit.jupiter.api.TestInfo;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -169,6 +171,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent1);
+      testSerialization(changeEvent1, Change.Event.class);
       // The change is detected already at run 4 because it's > than the previous mean
       assertEquals(run4, changeEvent1.change.dataset.run.id);
 
@@ -200,6 +203,16 @@ public class AlertingServiceTest extends BaseServiceTest {
       Change.Event changeEvent3 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent3);
       assertEquals(run6, changeEvent3.change.dataset.run.id);
+   }
+
+   private <T> void testSerialization(T event, Class<T> eventClass) {
+      // test serialization and deserialization
+      JsonNode changeJson = Util.OBJECT_MAPPER.valueToTree(event);
+      try {
+         Util.OBJECT_MAPPER.treeToValue(changeJson, eventClass);
+      } catch (JsonProcessingException e) {
+         throw new AssertionError("Cannot deserialize " + event + " from " + changeJson.toPrettyString(), e);
+      }
    }
 
    @org.junit.jupiter.api.Test
@@ -256,6 +269,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(dpe);
       assertEquals(value, dpe.dataPoint.value);
+      testSerialization(dpe, DataPoint.Event.class);
       return dpe.dataPoint;
    }
 

@@ -85,6 +85,8 @@ public class Change extends PanacheEntityBase {
       public DataSet.Info dataset;
       public boolean notify;
 
+      public Event() {}
+
       public Event(Change change, String testName, DataSet.Info dataset, boolean notify) {
          this.change = change;
          this.testName = testName;

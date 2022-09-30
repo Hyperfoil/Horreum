@@ -59,6 +59,11 @@ public class DataPoint extends PanacheEntityBase {
    public Variable variable;
 
    @JsonProperty("datasetId")
+   public void setDatasetId(int datasetId) {
+      dataset = DataSet.getEntityManager().getReference(DataSet.class, datasetId);
+   }
+
+   @JsonProperty("datasetId")
    public int getDatasetId() {
       return dataset.id;
    }
@@ -67,6 +72,9 @@ public class DataPoint extends PanacheEntityBase {
       public DataPoint dataPoint;
       public int testId;
       public boolean notify;
+
+      public Event() {
+      }
 
       public Event(DataPoint dataPoint, int testId, boolean notify) {
          this.dataPoint = dataPoint;

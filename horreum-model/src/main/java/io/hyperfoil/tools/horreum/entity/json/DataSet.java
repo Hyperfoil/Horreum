@@ -107,8 +107,10 @@ public class DataSet extends OwnedEntityBase {
    }
 
    public static class EventNew {
-      public final DataSet dataset;
-      public final boolean isRecalculation;
+      public DataSet dataset;
+      public boolean isRecalculation;
+
+      public EventNew() {}
 
       public EventNew(DataSet dataset, boolean isRecalculation) {
          this.dataset = dataset;
@@ -125,8 +127,11 @@ public class DataSet extends OwnedEntityBase {
    }
 
    public static class LabelsUpdatedEvent {
-      public final int datasetId;
-      public final boolean isRecalculation;
+      public int datasetId;
+      public boolean isRecalculation;
+
+      public LabelsUpdatedEvent() {
+      }
 
       public LabelsUpdatedEvent(int datasetId, boolean isRecalculation) {
          this.datasetId = datasetId;
