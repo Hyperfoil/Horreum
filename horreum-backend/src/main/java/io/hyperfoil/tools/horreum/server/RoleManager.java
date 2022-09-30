@@ -17,11 +17,14 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 public class RoleManager {
+   private static final Logger log = Logger.getLogger(RoleManager.class);
+
    static final String SET_ROLES = "SELECT current_setting('horreum.userroles', true), set_config('horreum.userroles', ?, false)";
    static final String SET_TOKEN = "SELECT set_config('horreum.token', ?, false)";
    static final CloseMe NOOP = () -> {};
@@ -95,8 +98,8 @@ public class RoleManager {
       if (signedRoles == null || signedRoles.isEmpty()) {
          return NOOP;
       }
-      setRoles(em, signedRoles);
-      return () -> setRoles(em, "");
+      String previous = setRoles(em, signedRoles);
+      return () -> setRoles(em, previous);
    }
 
    void setToken(EntityManager em, String token) {

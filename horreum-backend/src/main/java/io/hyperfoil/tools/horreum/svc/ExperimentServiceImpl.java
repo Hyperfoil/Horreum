@@ -10,12 +10,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
-import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
 import org.hibernate.Hibernate;
@@ -30,6 +31,7 @@ import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.ExperimentService;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.ExperimentComparison;
 import io.hyperfoil.tools.horreum.entity.ExperimentProfile;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
@@ -41,9 +43,10 @@ import io.hyperfoil.tools.horreum.experiment.ExperimentConditionModel;
 import io.hyperfoil.tools.horreum.experiment.RelativeDifferenceExperimentModel;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.panache.common.Sort;
-import io.quarkus.vertx.ConsumeEvent;
-import io.vertx.core.eventbus.EventBus;
+import io.quarkus.runtime.Startup;
 
+@ApplicationScoped
+@Startup
 public class ExperimentServiceImpl implements ExperimentService {
    private static final Logger log = Logger.getLogger(ExperimentServiceImpl.class);
    private static final Map<String, ExperimentConditionModel> MODELS = Map.of(
@@ -53,10 +56,12 @@ public class ExperimentServiceImpl implements ExperimentService {
    EntityManager em;
 
    @Inject
-   TransactionManager tm;
+   MessageBus messageBus;
 
-   @Inject
-   EventBus eventBus;
+   @PostConstruct
+   void init() {
+      messageBus.subscribe(DataPoint.EVENT_DATASET_PROCESSED, "ExperimentService", DataPoint.DatasetProcessedEvent.class, this::onDatapointsCreated);
+   }
 
    @WithRoles
    @PermitAll
@@ -117,12 +122,11 @@ public class ExperimentServiceImpl implements ExperimentService {
       return results;
    }
 
-   @ConsumeEvent(value = DataPoint.EVENT_DATASET_PROCESSED, blocking = true, ordered = true)
-   @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
    public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
-      runExperiments(event.dataset, result -> Util.publishLater(tm, eventBus, ExperimentResult.NEW_RESULT, result),
+      runExperiments(event.dataset, result -> messageBus.publish(ExperimentResult.NEW_RESULT, result),
             logs -> logs.forEach(log -> log.persist()), event.notify);
    }
 

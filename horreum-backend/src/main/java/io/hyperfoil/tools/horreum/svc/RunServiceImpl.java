@@ -45,6 +45,7 @@ import com.vladmihalcea.hibernate.type.util.MapResultTransformer;
 import io.hyperfoil.tools.horreum.api.QueryResult;
 import io.hyperfoil.tools.horreum.api.RunService;
 import io.hyperfoil.tools.horreum.api.SqlService;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLog;
 import io.hyperfoil.tools.horreum.entity.json.Access;
@@ -59,7 +60,6 @@ import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
 
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
@@ -69,7 +69,6 @@ import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
 import org.hibernate.type.TimestampType;
 import org.jboss.logging.Logger;
-import org.jboss.resteasy.reactive.RestResponse;
 
 import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
 import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
@@ -112,7 +111,7 @@ public class RunServiceImpl implements RunService {
    Vertx vertx;
 
    @Inject
-   EventBus eventBus;
+   MessageBus messageBus;
 
    @Inject
    TestServiceImpl testService;
@@ -420,7 +419,7 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.serverError("Failed to persist run");
       }
       log.debugf("Upload flushed, run ID %d", run.id);
-      Util.publishLater(tm, eventBus, Run.EVENT_NEW, run);
+      messageBus.publish(Run.EVENT_NEW, run);
 
       return run.id;
    }
@@ -712,10 +711,10 @@ public class RunServiceImpl implements RunService {
       updateRun(id, run -> run.trashed = trashed);
       if (trashed) {
          for (var dataset : DataSet.<DataSet>list("run.id", id)) {
-            Util.publishLater(tm, eventBus, DataSet.EVENT_DELETED, dataset.getInfo());
+            messageBus.publish(DataSet.EVENT_DELETED, dataset.getInfo());
             dataset.delete();
          }
-         Util.publishLater(tm, eventBus, Run.EVENT_TRASHED, id);
+         messageBus.publish(Run.EVENT_TRASHED, id);
       } else {
          transform(id, true);
       }
@@ -848,7 +847,7 @@ public class RunServiceImpl implements RunService {
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
       for (DataSet old : DataSet.<DataSet>list("runid", runId)) {
-         Util.publishLater(tm, eventBus, DataSet.EVENT_DELETED, old.getInfo());
+         messageBus.publish(DataSet.EVENT_DELETED, old.getInfo());
          old.delete();
       }
 
@@ -1034,7 +1033,7 @@ public class RunServiceImpl implements RunService {
    private void createDataset(DataSet ds, boolean isRecalculation) {
       try {
          ds.persist();
-         Util.publishLater(tm, eventBus, DataSet.EVENT_NEW, new DataSet.EventNew(ds, isRecalculation));
+         messageBus.publish(DataSet.EVENT_NEW, new DataSet.EventNew(ds, isRecalculation));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.", tre);
       }

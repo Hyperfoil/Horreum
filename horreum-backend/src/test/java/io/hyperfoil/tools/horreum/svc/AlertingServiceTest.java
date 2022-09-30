@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import javax.inject.Inject;
-import javax.persistence.EntityManager;
 
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.TestInfo;
@@ -55,6 +54,7 @@ import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
+import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusMock;
@@ -71,9 +71,6 @@ public class AlertingServiceTest extends BaseServiceTest {
    private static final Logger log = Logger.getLogger(AlertingServiceTest.class);
 
    @Inject
-   EntityManager em;
-
-   @Inject
    RoleManager roleManager;
 
    @Inject
@@ -85,7 +82,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       Schema schema = createExampleSchema(info);
       setTestVariables(test, "Value", "value");
 
-      BlockingQueue<DataPoint.Event> dpe = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> dpe = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == test.id);
       uploadRun(runWithValue(42, schema).toString(), test.name);
 
       DataPoint.Event event1 = dpe.poll(10, TimeUnit.SECONDS);
@@ -101,8 +98,12 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       DataPoint.Event event2 = dpe.poll(10, TimeUnit.SECONDS);
       assertNotNull(event2);
-      assertEquals(0, event2.dataPoint.value);
+      assertEquals(0, event2.dataPoint.value, prettyPrint(event2));
       assertFalse(event2.notify);
+   }
+
+   private String prettyPrint(Object obj) {
+      return Util.OBJECT_MAPPER.valueToTree(obj).toPrettyString();
    }
 
    @org.junit.jupiter.api.Test
@@ -115,7 +116,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
       runJson.put("$schema", schema.uri);
 
-      BlockingQueue<MissingValuesEvent> missingQueue = eventConsumerQueue(MissingValuesEvent.class, DataSet.EVENT_MISSING_VALUES);
+      BlockingQueue<MissingValuesEvent> missingQueue = eventConsumerQueue(MissingValuesEvent.class, DataSet.EVENT_MISSING_VALUES, e -> e.dataset.testId == test.id);
       missingQueue.drainTo(new ArrayList<>());
       int runId = uploadRun(runJson, test.name);
 
@@ -123,14 +124,18 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertNotNull(event);
       assertEquals(runId, event.dataset.runId);
 
-      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
-         List<DatasetLog> logs = DatasetLog.find("dataset.run.id", runId).list();
-         // If this fails this might be a race - I thought it's fixed with quarkus.datasource.jdbc.transaction-isolation-level=serializable
-         assertTrue(logs.size() > 0);
+      Util.withTx(tm, () -> {
+         try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+            List<DatasetLog> logs = DatasetLog.find("dataset.run.id", runId).list();
+            assertTrue(logs.size() > 0);
+            return null;
+         }
+      });
 
+      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
          deleteTest(test);
 
-         eventually(() -> {
+         TestUtil.eventually(() -> {
             em.clear();
             List<DatasetLog> currentLogs = DatasetLog.find("dataset.run.id", runId).list();
             assertEquals(0, currentLogs.size());
@@ -144,18 +149,17 @@ public class AlertingServiceTest extends BaseServiceTest {
       Schema schema = createExampleSchema(info);
       ChangeDetection cd = addChangeDetectionVariable(test);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
-      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(1, schema), test.name);
+      assertValue(datapointQueue, 1);
       uploadRun(ts + 1, ts + 1, runWithValue(2, schema), test.name);
-      int run3 = uploadRun(ts + 2, ts + 2, runWithValue(1, schema), test.name);
-      int run4 = uploadRun(ts + 3, ts + 3, runWithValue(2, schema), test.name);
-
-      assertValue(datapointQueue, 1);
       assertValue(datapointQueue, 2);
+      int run3 = uploadRun(ts + 2, ts + 2, runWithValue(1, schema), test.name);
       assertValue(datapointQueue, 1);
+      int run4 = uploadRun(ts + 3, ts + 3, runWithValue(2, schema), test.name);
       assertValue(datapointQueue, 2);
 
       assertNull(changeQueue.poll(50, TimeUnit.MILLISECONDS));
@@ -173,11 +177,10 @@ public class AlertingServiceTest extends BaseServiceTest {
       // After changing the variable the past datapoints and changes are removed; we need to recalculate them again
       jsonRequest().post("/api/alerting/recalculate?test=" + test.id).then().statusCode(204);
 
-      assertValue(datapointQueue, 1);
-      assertValue(datapointQueue, 2);
-      assertValue(datapointQueue, 1);
-      assertValue(datapointQueue, 2);
-      assertValue(datapointQueue, 3);
+      for (int i = 0; i < 5; ++i) {
+         DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
+         assertNotNull(dpe);
+      }
 
       // now we'll find a change already at run3
       Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
@@ -204,13 +207,14 @@ public class AlertingServiceTest extends BaseServiceTest {
       Test test = createExampleTest(getTestName(info));
       test.fingerprintLabels = jsonArray("config");
       test = createTest(test);
+      int testId = test.id;
       Schema schema = createExampleSchema(info);
       addLabel(schema, "config", null, new Extractor("config", "$.config", false));
 
       addChangeDetectionVariable(test);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
-      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == testId);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == testId);
 
       long ts = System.currentTimeMillis();
       for (int i = 0; i < 12; i += 3) {
@@ -260,13 +264,14 @@ public class AlertingServiceTest extends BaseServiceTest {
       Test test = createExampleTest(getTestName(info));
       test.fingerprintLabels = jsonArray("foo");
       test = createTest(test);
+      int testId = test.id;
       addChangeDetectionVariable(test);
       Schema schema = createExampleSchema(info);
       addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
       addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
       uploadRun(runWithValue(42, schema).put("foo", "aaa").put("bar", "bbb"), test.name);
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == testId);
       assertValue(datapointQueue, 42);
 
       List<Fingerprint> fingerprintsBefore = Fingerprint.listAll();
@@ -293,12 +298,13 @@ public class AlertingServiceTest extends BaseServiceTest {
       test.fingerprintLabels = jsonArray("foo");
       test.fingerprintFilter = "value => value === 'aaa'";
       test = createTest(test);
+      int testId = test.id;
       addChangeDetectionVariable(test);
       Schema schema = createExampleSchema(info);
       addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
       addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == testId);
 
       uploadRun(runWithValue(1, schema).put("foo", "aaa").put("bar", "bbb"), test.name);
       assertValue(datapointQueue, 1);
@@ -360,7 +366,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       int firstRuleId = addMissingDataRule(test, "my rule", jsonArray("value"), "value => value > 2", 10000);
       assertTrue(firstRuleId > 0);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       long now = System.currentTimeMillis();
       uploadRun(now - 20000, runWithValue(3, schema), test.name);
       DataSet.EventNew firstEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
@@ -557,8 +563,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       Schema schema = createExampleSchema(info);
       addChangeDetectionVariable(test);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
-      BlockingQueue<DataPoint.Event> datapointDeletedQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_DELETED);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointDeletedQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_DELETED, e -> e.testId == test.id);
 
       uploadRun(runWithValue(42, schema), test.name);
       DataPoint first = assertValue(datapointQueue, 42);
@@ -614,8 +620,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       rd.config = config;
       setTestVariables(test, "Value", "value", rd);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
-      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(4, schema), test.name);
@@ -646,7 +652,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       addChangeDetectionVariable(test);
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(1, schema).put("timestamp", 1662023776000L), test.name);
@@ -695,7 +701,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       addChangeDetectionVariable(test);
       Label label = Label.find("name", "value").firstResult();
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(1, schema), test.name);
@@ -720,8 +726,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       addLabel(schema, "timestamp", null, new Extractor("ts", "$.timestamp", false));
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW);
-      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPoint.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == test.id);
 
       int[] order = new int[] { 5, 0, 1, 7, 4, 8, 2, 3, 9, 6 };
       double[] values = new double[] { 1, 2, 2, 2, 1, 1, 2, 1, 1, 2};
@@ -733,30 +739,38 @@ public class AlertingServiceTest extends BaseServiceTest {
       }
       drainQueue(datapointQueue, order.length);
       drainQueue(changeQueue);
-      assertEquals(5, Change.count());
+      List<Change> list = Change.list("variable.testId", test.id);
+      assertEquals(5, list.size(), prettyPrint(list));
 
+      em.clear();
       recalculateDatapoints(test.id);
       drainQueue(datapointQueue, order.length);
       drainQueue(changeQueue);
-      assertEquals(5, Change.count());
+      list = Change.list("variable.testId", test.id);
+      assertEquals(5, list.size(), prettyPrint(list));
 
+      em.clear();
       recalculateDatasets(test.id, true);
       drainQueue(datapointQueue, order.length);
       drainQueue(changeQueue);
-      assertEquals(5, Change.count());
+      list = Change.list("variable.testId", test.id);
+      assertEquals(5, list.size(), prettyPrint(list));
    }
 
    private void drainQueue(BlockingQueue<DataPoint.Event> datapointQueue, int expectedItems) throws InterruptedException {
       for (int i = 0; i < expectedItems; ++i) {
-         assertNotNull(datapointQueue.poll(10, TimeUnit.SECONDS));
+         DataPoint.Event event = datapointQueue.poll(10, TimeUnit.SECONDS);
+         assertNotNull(event);
       }
    }
 
    private void drainQueue(BlockingQueue<Change.Event> changeQueue) throws InterruptedException {
       // we don't know exactly how many changes are going to be created and deleted
-      Change.Event changeEvent;
-      do {
-         changeEvent = changeQueue.poll(100, TimeUnit.MILLISECONDS);
-      } while (changeEvent != null);
+      for (;;) {
+         Change.Event changeEvent = changeQueue.poll(100, TimeUnit.MILLISECONDS);
+         if (changeEvent == null && TestUtil.isMessageBusEmpty(tm, em)) {
+            return;
+         }
+      }
    }
 }

@@ -18,7 +18,6 @@ import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
-import io.hyperfoil.tools.horreum.test.NoPostgresProfile;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -26,7 +25,7 @@ import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 
 @QuarkusTest
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(NoPostgresProfile.class)
+@TestProfile(NoGrafanaProfile.class)
 public class NotificationPluginTest {
    @Inject
    Instance<NotificationPlugin> plugins;

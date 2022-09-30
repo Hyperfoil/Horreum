@@ -14,8 +14,10 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -37,6 +39,7 @@ import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.ReportService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.report.ReportComment;
@@ -45,9 +48,11 @@ import io.hyperfoil.tools.horreum.entity.report.ReportLog;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
 import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.quarkus.vertx.ConsumeEvent;
 
+@ApplicationScoped
+@Startup
 public class ReportServiceImpl implements ReportService {
    private static final Logger log = Logger.getLogger(ReportServiceImpl.class);
 
@@ -60,6 +65,14 @@ public class ReportServiceImpl implements ReportService {
 
    @Inject
    EntityManager em;
+
+   @Inject
+   MessageBus messageBus;
+
+   @PostConstruct
+   void init() {
+      messageBus.subscribe(Test.EVENT_DELETED, "ReportService", Test.class, this::onTestDelete);
+   }
 
    @PermitAll
    @WithRoles
@@ -671,7 +684,6 @@ public class ReportServiceImpl implements ReportService {
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   @ConsumeEvent(value = Test.EVENT_DELETED, blocking = true)
    @Transactional
    public void onTestDelete(Test test) {
       int changedRows = em.createNativeQuery("UPDATE tablereportconfig SET testid = NULL WHERE testid = ?")

@@ -177,7 +177,7 @@ public class Util {
       }
    }
 
-   private static void doAfterCommitThrowing(TransactionManager tm, Runnable runnable) throws SystemException, RollbackException {
+   public static void doAfterCommitThrowing(TransactionManager tm, Runnable runnable) throws SystemException, RollbackException {
       tm.getTransaction().registerSynchronization(new Synchronization() {
          @Override
          public void beforeCompletion() {
@@ -185,14 +185,19 @@ public class Util {
 
          @Override
          public void afterCompletion(int status) {
-            if (status == Status.STATUS_COMMITTED || status == Status.STATUS_COMMITTING) {
-               runnable.run();
+            try {
+               if (status == Status.STATUS_COMMITTED || status == Status.STATUS_COMMITTING) {
+                  runnable.run();
+               }
+            } catch (Throwable t) {
+               log.error("Error in TX synchronization", t);
+               throw t;
             }
          }
       });
    }
 
-   static void doAfterCommit(TransactionManager tm, Runnable runnable) {
+   public static void doAfterCommit(TransactionManager tm, Runnable runnable) {
       try {
          doAfterCommitThrowing(tm, runnable);
       } catch (RollbackException e) {
@@ -402,7 +407,7 @@ public class Util {
       }
    }
 
-   static <T> T withTx(TransactionManager tm, Supplier<T> supplier) {
+   public static <T> T withTx(TransactionManager tm, Supplier<T> supplier) {
       for (int retry = 1;; ++retry) {
          try {
             tm.begin();
@@ -599,7 +604,7 @@ public class Util {
       }
    }
 
-   static ScrollableResults scroll(Query query) {
+   public static ScrollableResults scroll(Query query) {
       return query
             .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
             .scroll(ScrollMode.FORWARD_ONLY);

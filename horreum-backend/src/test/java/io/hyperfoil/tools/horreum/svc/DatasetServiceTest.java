@@ -36,6 +36,7 @@ import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
+import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -180,7 +181,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          int labelA = addLabel(schemas[0], "A", null, new Extractor("value", "$.value", false));
          int labelB = addLabel(schemas[1], "B", "v => v + 1", new Extractor("value", "$.value", false));
          int labelC = addLabel(schemas[1], "C", null, new Extractor("value", "$.value", false));
-         BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+         BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED, e -> true);
          withExampleDataset(createTest(createExampleTest("dummy")), createABData(), ds -> {
             waitForUpdate(updateQueue, ds);
             List<Label.Value> values = Label.Value.<Label.Value>find("dataset_id", ds.id).list();
@@ -209,7 +210,7 @@ public class DatasetServiceTest extends BaseServiceTest {
    }
 
    private List<Label.Value> withLabelValues(ArrayNode data) {
-      BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+      BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED, e -> true);
       return withExampleDataset(createTest(createExampleTest("dummy")), data, ds -> {
          waitForUpdate(updateQueue, ds);
          return Label.Value.<Label.Value>find("dataset_id", ds.id).list();
@@ -219,8 +220,8 @@ public class DatasetServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testSchemaAfterData() throws InterruptedException {
       Test test = createTest(createExampleTest("xxx"));
-      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
-      BlockingQueue<DataSet.LabelsUpdatedEvent> labelQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.LabelsUpdatedEvent> labelQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED, e -> true);
       JsonNode data = JsonNodeFactory.instance.arrayNode()
             .add(JsonNodeFactory.instance.objectNode().put("$schema", "urn:another"))
             .add(JsonNodeFactory.instance.objectNode().put("$schema", "urn:foobar").put("value", 42));
@@ -228,7 +229,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       DataSet.EventNew firstEvent = dsQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(firstEvent);
       assertEquals(runId, firstEvent.dataset.run.id);
-      assertEmptyArray(firstEvent.dataset.data);
+      TestUtil.assertEmptyArray(firstEvent.dataset.data);
       // this update is for no label values - there's no schema
       DataSet.LabelsUpdatedEvent firstUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(firstUpdate);
@@ -290,7 +291,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          int labelA = addLabel(schemas[0], "a", null, valuePath);
          int labelB = addLabel(schemas[1], "b", null, valuePath);
          // view update should happen in the same transaction as labels update so we can use the event
-         BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+         BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED, e -> true);
          withExampleDataset(test, createABData(), ds -> {
             waitForUpdate(updateQueue, ds);
             JsonNode datasets = fetchDatasetsByTest(test.id);
@@ -383,7 +384,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       test.access = Access.PRIVATE;
       test = createTest(test);
 
-      BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+      BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED, e -> true);
       long timestamp = System.currentTimeMillis();
       uploadRun(timestamp, timestamp,
             JsonNodeFactory.instance.objectNode().put("$schema", schema.uri).put("value", 42),

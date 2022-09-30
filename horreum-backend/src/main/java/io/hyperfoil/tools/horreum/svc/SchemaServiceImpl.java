@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
@@ -17,7 +18,6 @@ import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Vertx;
 
 import javax.annotation.PostConstruct;
@@ -119,7 +119,7 @@ public class SchemaServiceImpl implements SchemaService {
    Vertx vertx;
 
    @Inject
-   TransactionManager tm;
+   MessageBus messageBus;
 
    @PostConstruct
    void init() {
@@ -264,7 +264,7 @@ public class SchemaServiceImpl implements SchemaService {
       run.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
       validateData(run.data, schemaFilter, run.validationErrors::add, true);
       run.persist();
-      Util.publishLater(tm, vertx.eventBus(), Run.EVENT_VALIDATED, new Schema.ValidationEvent(run.id, run.validationErrors));
+      messageBus.publish(Run.EVENT_VALIDATED, new Schema.ValidationEvent(run.id, run.validationErrors));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -291,7 +291,7 @@ public class SchemaServiceImpl implements SchemaService {
          }
       }
       dataset.persist();
-      Util.publishLater(tm, vertx.eventBus(), DataSet.EVENT_VALIDATED, new Schema.ValidationEvent(dataset.id, dataset.validationErrors));
+      messageBus.publish(DataSet.EVENT_VALIDATED, new Schema.ValidationEvent(dataset.id, dataset.validationErrors));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -316,11 +316,6 @@ public class SchemaServiceImpl implements SchemaService {
          int datasetId = (int) results.get(0);
          Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> validateDatasetData(datasetId, schemaFilter));
       }
-   }
-
-   @ConsumeEvent(Run.EVENT_VALIDATED)
-   void consumeValidation(Schema.ValidationEvent e) {
-      // just to let Quarkus register codec for ValidationEvent
    }
 
    private void validateData(JsonNode data, Predicate<String> filter, Consumer<ValidationError> consumer, boolean allowUnknownSchema) {

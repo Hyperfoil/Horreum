@@ -22,6 +22,7 @@ import javax.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.NotificationService;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Test;
@@ -29,9 +30,10 @@ import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.quarkus.vertx.ConsumeEvent;
+import io.quarkus.runtime.Startup;
 
 @ApplicationScoped
+@Startup
 public class NotificationServiceImpl implements NotificationService {
    private static final Logger log = Logger.getLogger(NotificationServiceImpl.class);
    //@formatter:off
@@ -60,13 +62,18 @@ public class NotificationServiceImpl implements NotificationService {
    @Inject
    TransactionManager tm;
 
+   @Inject
+   MessageBus messageBus;
+
    @PostConstruct
    public void init() {
       notificationPlugins.forEach(plugin -> plugins.put(plugin.method(), plugin));
+      messageBus.subscribe(DatasetChanges.EVENT_NEW, "NotificationService", DatasetChanges.class, this::onNewChanges);
+      messageBus.subscribe(DataSet.EVENT_MISSING_VALUES, "NotificationService", MissingValuesEvent.class, this::onMissingValues);
    }
 
    @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
-   @ConsumeEvent(value = DatasetChanges.EVENT_NEW, blocking = true)
+   @Transactional
    public void onNewChanges(DatasetChanges event) {
       if (!event.isNotify()) {
          log.debug("Notification skipped");
@@ -78,7 +85,7 @@ public class NotificationServiceImpl implements NotificationService {
    }
 
    @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
-   @ConsumeEvent(value = DataSet.EVENT_MISSING_VALUES, blocking = true)
+   @Transactional
    public void onMissingValues(MissingValuesEvent event) {
       if (!event.notify) {
          log.debugf("Skipping notification for missing run values on test %d, run %d", event.dataset.testId, event.dataset.id);

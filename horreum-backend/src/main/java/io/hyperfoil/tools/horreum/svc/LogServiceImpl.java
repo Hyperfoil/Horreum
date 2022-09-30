@@ -4,13 +4,17 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.security.RolesAllowed;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.transaction.Transactional;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.LogService;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.ActionLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLog;
@@ -19,9 +23,11 @@ import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
+import io.quarkus.runtime.Startup;
 import io.quarkus.scheduler.Scheduled;
-import io.quarkus.vertx.ConsumeEvent;
 
+@ApplicationScoped
+@Startup
 public class LogServiceImpl implements LogService {
    private static final Logger log = Logger.getLogger(LogServiceImpl.class);
    private static final Instant EPOCH_START = Instant.ofEpochMilli(0);
@@ -29,6 +35,14 @@ public class LogServiceImpl implements LogService {
 
    @ConfigProperty(name = "horreum.transformationlog.max.lifespan")
    String transformationLogMaxLifespan;
+
+   @Inject
+   MessageBus messageBus;
+
+   @PostConstruct
+   void init() {
+      messageBus.subscribe(Test.EVENT_DELETED, "LogService", Test.class, this::onTestDelete);
+   }
 
    private Integer withDefault(Integer value, Integer defValue) {
       return value != null ? value : defValue;
@@ -148,9 +162,8 @@ public class LogServiceImpl implements LogService {
       log.debugf("Deleted %d logs for test %d", deleted, testId);
    }
 
-   @ConsumeEvent(value = Test.EVENT_DELETED, blocking = true)
-   @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
    public void onTestDelete(Test test) {
       DatasetLog.delete("testid", test.id);
    }

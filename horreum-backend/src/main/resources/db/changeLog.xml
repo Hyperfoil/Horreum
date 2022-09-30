@@ -3860,4 +3860,55 @@
             )));
         </sql>
     </changeSet>
+
+    <changeSet id="96" author="rvansa">
+        <createTable tableName="messagebus_subscriptions">
+            <column name="channel" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="index" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="component" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="messagebus_subscriptions" columnNames="channel,index"/>
+        <addUniqueConstraint tableName="messagebus_subscriptions" columnNames="channel,component"/>
+        <createTable tableName="messagebus">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="timestamp" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="channel" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="jsonb"/>
+            <column name="flags" type="int">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createSequence sequenceName="messagebus_seq"/>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION messagebus_delete() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM messagebus WHERE id = OLD.id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            GRANT select, insert, update, delete ON TABLE messagebus, messagebus_subscriptions TO "${quarkus.datasource.username}";
+            GRANT ALL ON SEQUENCE messagebus_seq TO "${quarkus.datasource.username}";
+
+            CREATE POLICY messagebus_insert ON messagebus FOR INSERT WITH CHECK (has_role('horreum.messagebus'));
+            CREATE POLICY messagebus_all ON messagebus FOR ALL USING (has_role('horreum.system'));
+
+            CREATE POLICY mbs_all ON messagebus_subscriptions FOR ALL USING (has_role('horreum.system'));
+
+            CREATE TRIGGER messagebus_delete AFTER UPDATE OF flags ON messagebus FOR EACH ROW WHEN (NEW.flags = 0) EXECUTE FUNCTION messagebus_delete();
+        </sql>
+    </changeSet>
 </databaseChangeLog>

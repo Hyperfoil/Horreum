@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.svc;
 import io.hyperfoil.tools.horreum.api.ExperimentService;
 import io.hyperfoil.tools.horreum.api.ActionService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.ActionLog;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
@@ -16,7 +17,6 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.runtime.Startup;
-import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.core.Vertx;
 
@@ -54,9 +54,16 @@ public class ActionServiceImpl implements ActionService {
    @Inject
    Vertx vertx;
 
+   @Inject
+   MessageBus messageBus;
+
    @PostConstruct()
    public void postConstruct(){
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
+      messageBus.subscribe(Test.EVENT_NEW, "ActionService", Test.class, this::onNewTest);
+      messageBus.subscribe(Run.EVENT_NEW, "ActionService", Run.class, this::onNewRun);
+      messageBus.subscribe(Change.EVENT_NEW, "ActionService", Change.Event.class, this::onNewChange);
+      messageBus.subscribe(ExperimentService.ExperimentResult.NEW_RESULT, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
    }
 
    private void executeActions(String event, int testId, Object payload, boolean notify){
@@ -107,15 +114,13 @@ public class ActionServiceImpl implements ActionService {
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   @Transactional //Transactional is a workaround for #6059
-   @ConsumeEvent(value = Test.EVENT_NEW, blocking = true)
+   @Transactional
    public void onNewTest(Test test) {
       executeActions(Test.EVENT_NEW, -1, test, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   @ConsumeEvent(value = Run.EVENT_NEW, blocking = true)
    public void onNewRun(Run run) {
       Integer testId = run.testid;
       executeActions(Run.EVENT_NEW, testId, run, true);
@@ -123,7 +128,6 @@ public class ActionServiceImpl implements ActionService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   @ConsumeEvent(value = Change.EVENT_NEW, blocking = true)
    public void onNewChange(Change.Event changeEvent) {
       int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
             .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
@@ -247,7 +251,6 @@ public class ActionServiceImpl implements ActionService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   @ConsumeEvent(value = ExperimentService.ExperimentResult.NEW_RESULT, blocking = true)
    public void onNewExperimentResult(ExperimentService.ExperimentResult result) {
       executeActions(ExperimentService.ExperimentResult.NEW_RESULT, result.profile.test.id, result, result.notify);
    }

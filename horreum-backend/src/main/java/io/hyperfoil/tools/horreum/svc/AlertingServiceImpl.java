@@ -35,7 +35,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.persistence.TypedQuery;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
@@ -45,6 +44,7 @@ import javax.ws.rs.core.Response;
 
 import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.changedetection.FixedThresholdModel;
 import io.hyperfoil.tools.horreum.entity.Fingerprint;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
@@ -65,7 +65,6 @@ import org.hibernate.transform.Transformers;
 import org.hibernate.type.InstantType;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
-import org.hibernate.type.TimestampType;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -89,9 +88,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.Startup;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
 
 @ApplicationScoped
 @Startup
@@ -169,7 +166,7 @@ public class AlertingServiceImpl implements AlertingService {
    EntityManager em;
 
    @Inject
-   EventBus eventBus;
+   MessageBus messageBus;
 
    @Inject
    SecurityIdentity identity;
@@ -211,7 +208,6 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   @ConsumeEvent(value = DataSet.EVENT_LABELS_UPDATED, blocking = true, ordered = true)
    public void onLabelsUpdated(DataSet.LabelsUpdatedEvent event) {
       boolean sendNotifications;
       DataPoint.delete("dataset_id", event.datasetId);
@@ -219,7 +215,10 @@ public class AlertingServiceImpl implements AlertingService {
       if (dataset == null) {
          // The run is not committed yet?
          vertx.setTimer(1000, timerId -> Util.executeBlocking(vertx,
-               CachedSecurityIdentity.ANONYMOUS, () -> onLabelsUpdated(event)
+               CachedSecurityIdentity.ANONYMOUS, () -> Util.withTx(tm, () -> {
+                  onLabelsUpdated(event);
+                  return null;
+               })
          ));
          return;
       }
@@ -270,6 +269,10 @@ public class AlertingServiceImpl implements AlertingService {
 
    @PostConstruct
    void init() {
+      messageBus.subscribe(DataSet.EVENT_LABELS_UPDATED, "AlertingService", DataSet.LabelsUpdatedEvent.class, this::onLabelsUpdated);
+      messageBus.subscribe(DataSet.EVENT_DELETED, "AlertingService", DataSet.Info.class, this::onDatasetDeleted);
+      messageBus.subscribe(DataPoint.EVENT_NEW, "AlertingService", DataPoint.Event.class, this::onNewDataPoint);
+      messageBus.subscribe(Run.EVENT_NEW, "AlertingService", Run.class, this::removeExpected);
       if (grafanaBaseUrl.isPresent() && updateGrafanaDatasource.orElse(true)) {
          setupGrafanaDatasource(0);
       }
@@ -327,20 +330,16 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void recalculateDatapointsForDataset(DataSet dataset, boolean notify, boolean debug, Recalculation recalculation) {
       log.infof("Analyzing dataset %d (%d/%d)", dataset.id, dataset.run.id, dataset.ordinal);
-      try {
-         Test test = Test.findById(dataset.testid);
-         if (test == null) {
-            log.errorf("Cannot load test ID %d", dataset.testid);
-            return;
-         }
-         if (!testFingerprint(dataset, test.fingerprintFilter)) {
-            return;
-         }
-
-         emitDatapoints(dataset, notify, debug, recalculation);
-      } catch (Throwable t) {
-         log.error("Failed to create new datapoints", t);
+      Test test = Test.findById(dataset.testid);
+      if (test == null) {
+         log.errorf("Cannot load test ID %d", dataset.testid);
+         return;
       }
+      if (!testFingerprint(dataset, test.fingerprintFilter)) {
+         return;
+      }
+
+      emitDatapoints(dataset, notify, debug, recalculation);
    }
 
    private boolean testFingerprint(DataSet dataset, String filter) {
@@ -481,9 +480,9 @@ public class AlertingServiceImpl implements AlertingService {
             output -> logCalculationMessage(dataset, PersistentLog.DEBUG, "Output while calculating variable: <pre>%s</pre>", output)
       );
       if (!missingValueVariables.isEmpty()) {
-         Util.publishLater(tm, eventBus, DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify));
+         messageBus.publish(DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify));
       }
-      Util.publishLater(tm, eventBus, DataPoint.EVENT_DATASET_PROCESSED, new DataPoint.DatasetProcessedEvent(dataset.getInfo(), notify));
+      messageBus.publish(DataPoint.EVENT_DATASET_PROCESSED, new DataPoint.DatasetProcessedEvent(dataset.getInfo(), notify));
    }
 
    private void createDataPoint(DataSet dataset, Instant timestamp, int variableId, double value, boolean notify) {
@@ -493,7 +492,7 @@ public class AlertingServiceImpl implements AlertingService {
       dataPoint.timestamp = timestamp;
       dataPoint.value = value;
       dataPoint.persist();
-      Util.publishLater(tm, eventBus, DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, dataset.testid, notify));
+      messageBus.publish(DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, dataset.testid, notify));
    }
 
    private void logCalculationMessage(DataSet dataSet, int level, String format, Object... args) {
@@ -527,7 +526,6 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   @ConsumeEvent(value = DataPoint.EVENT_NEW, blocking = true, ordered = true)
    public void onNewDataPoint(DataPoint.Event event) {
       DataPoint dataPoint = event.dataPoint;
       dataPoint.variable = Variable.findById(dataPoint.variable.id);
@@ -615,7 +613,7 @@ public class AlertingServiceImpl implements AlertingService {
                em.persist(change);
                Hibernate.initialize(change.dataset.run.id);
                String testName = Test.<Test>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
-               Util.publishLater(tm, eventBus, Change.EVENT_NEW, new Change.Event(change, testName, info, notify));
+               messageBus.publish(Change.EVENT_NEW, new Change.Event(change, testName, info, notify));
             });
          }
       }
@@ -1195,7 +1193,6 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   @ConsumeEvent(value = Run.EVENT_NEW, blocking = true, ordered = true)
    @WithRoles(extras = Roles.HORREUM_ALERTING)
    @Transactional
    public void removeExpected(Run run) {
@@ -1208,13 +1205,12 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   @ConsumeEvent(value = DataSet.EVENT_DELETED, blocking = true, ordered = true)
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onDatasetDeleted(DataSet.Info info) {
       log.infof("Removing datasets and changes for dataset %d (%d/%d, test %d)", info.id, info.runId, info.ordinal, info.testId);
       for (DataPoint dp : DataPoint.<DataPoint>list("dataset_id", info.id)) {
-         Util.publishLater(tm, eventBus, DataPoint.EVENT_DELETED, new DataPoint.Event(dp, info.testId, false));
+         messageBus.publish(DataPoint.EVENT_DELETED, new DataPoint.Event(dp, info.testId, false));
          dp.delete();
       }
       for (Change c: Change.<Change>list("dataset_id = ?1 AND confirmed = false", info.id)) {

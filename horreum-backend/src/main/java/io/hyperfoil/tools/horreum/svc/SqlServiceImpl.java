@@ -1,9 +1,8 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SqlService;
+import io.hyperfoil.tools.horreum.server.ErrorReporter;
 import io.hyperfoil.tools.horreum.server.RoleManager;
-import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.Mailer;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.mutiny.subscription.UniSubscriber;
 import io.smallrye.mutiny.subscription.UniSubscription;
@@ -20,9 +19,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -64,14 +60,8 @@ public class SqlServiceImpl implements SqlService {
    @ConfigProperty(name = "horreum.debug")
    Optional<Boolean> debug;
 
-   @ConfigProperty(name = "horreum.admin.mail")
-   Optional<String> adminMail;
-
-   @ConfigProperty(name = "horreum.mail.subject.prefix", defaultValue = "[Horreum]")
-   String subjectPrefix;
-
    @Inject
-   Mailer mailer;
+   ErrorReporter errorReporter;
 
    @SuppressWarnings("deprecation")
    public static void setResultTransformer(Query query, ResultTransformer transformer) {
@@ -208,16 +198,7 @@ public class SqlServiceImpl implements SqlService {
                try {
                   c.accept(payload);
                } catch (Exception e) {
-                  log.errorf(e, "Exception in listener for channel %s, payload %s", channel, payload);
-                  if (adminMail.isPresent()) {
-                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                     PrintWriter writer = new PrintWriter(bos, true);
-                     writer.printf("Exception in listener for channel %s, payload %s%n%n", channel, payload);
-                     writer.println(e);
-                     e.printStackTrace(writer);
-                     writer.flush();
-                     mailer.send(Mail.withText(adminMail.get(), subjectPrefix + " Error in DB listener", bos.toString(StandardCharsets.UTF_8)));
-                  }
+                  errorReporter.reportException(e, "Error in DB listener", "Exception in listener for channel %s, payload %s", channel, payload);
                }
             }
          }

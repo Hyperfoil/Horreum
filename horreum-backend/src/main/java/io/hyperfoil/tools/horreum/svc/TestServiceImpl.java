@@ -1,8 +1,8 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import io.hyperfoil.tools.horreum.api.AlertingService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.TestService;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.json.*;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
@@ -11,7 +11,6 @@ import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
 
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -44,8 +43,6 @@ import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 public class TestServiceImpl implements TestService {
@@ -67,10 +64,7 @@ public class TestServiceImpl implements TestService {
    EntityManager em;
 
    @Inject
-   TransactionManager tm;
-
-   @Inject
-   EventBus eventBus;
+   MessageBus messageBus;
 
    @Inject
    SecurityIdentity identity;
@@ -103,7 +97,7 @@ public class TestServiceImpl implements TestService {
       test.delete();
       em.createNativeQuery(TRASH_RUNS).setParameter(1, test.id).executeUpdate();
       em.createNativeQuery("DELETE FROM transformationlog WHERE testid = ?1").setParameter(1, test.id);
-      Util.publishLater(tm, eventBus, Test.EVENT_DELETED, test);
+      messageBus.publish(Test.EVENT_DELETED, test);
    }
 
    @Override
@@ -225,7 +219,7 @@ public class TestServiceImpl implements TestService {
                throw new WebApplicationException(e, Response.serverError().build());
             }
          }
-         Util.publishLater(tm, eventBus, Test.EVENT_NEW, test);
+         messageBus.publish(Test.EVENT_NEW, test);
       }
    }
 

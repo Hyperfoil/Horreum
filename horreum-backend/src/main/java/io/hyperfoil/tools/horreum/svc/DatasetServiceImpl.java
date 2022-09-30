@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -15,12 +14,9 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
 import org.hibernate.Hibernate;
-import org.hibernate.Session;
-import org.hibernate.internal.SessionImpl;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.type.IntegerType;
@@ -36,6 +32,7 @@ import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 import io.hyperfoil.tools.horreum.api.DatasetService;
 import io.hyperfoil.tools.horreum.api.QueryResult;
 import io.hyperfoil.tools.horreum.api.SchemaService;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
@@ -45,8 +42,6 @@ import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.quarkus.vertx.ConsumeEvent;
-import io.vertx.core.eventbus.EventBus;
 
 @ApplicationScoped
 @Startup
@@ -134,10 +129,7 @@ public class DatasetServiceImpl implements DatasetService {
    SqlServiceImpl sqlService;
 
    @Inject
-   TransactionManager tm;
-
-   @Inject
-   EventBus eventBus;
+   MessageBus messageBus;
 
    @Inject
    SecurityIdentity identity;
@@ -151,6 +143,7 @@ public class DatasetServiceImpl implements DatasetService {
    @PostConstruct
    void init() {
       sqlService.registerListener("calculate_labels", this::onLabelChanged);
+      messageBus.subscribe(DataSet.EVENT_NEW, "DatasetService", DataSet.EventNew.class, this::onNewDataset);
    }
 
    @PermitAll
@@ -424,7 +417,7 @@ public class DatasetServiceImpl implements DatasetService {
             (row, e, jsCode) -> logMessage(datasetId, PersistentLog.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
             out -> logMessage(datasetId, PersistentLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
-      Util.publishLater(tm, eventBus, DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId, isRecalculation));
+      messageBus.publish(DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId, isRecalculation));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -466,7 +459,6 @@ public class DatasetServiceImpl implements DatasetService {
       }
    }
 
-   @ConsumeEvent(value = DataSet.EVENT_NEW, blocking = true, ordered = true)
    public void onNewDataset(DataSet.EventNew event) {
       withRecalculationLock(() -> calculateLabels(event.dataset.id, -1, event.isRecalculation));
    }

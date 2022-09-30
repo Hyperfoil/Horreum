@@ -40,10 +40,10 @@ public class SchemaServiceTest extends BaseServiceTest {
       JsonNode allowNone = load("/allow-none.json");
       Schema allowNoneSchema = createSchema("none", allowNone.path("$id").asText(), allowNone);
 
-      BlockingQueue<Schema.ValidationEvent> runValidations = eventConsumerQueue(Schema.ValidationEvent.class, Run.EVENT_VALIDATED);
-      BlockingQueue<Schema.ValidationEvent> datasetValidations = eventConsumerQueue(Schema.ValidationEvent.class, DataSet.EVENT_VALIDATED);
-
       Test test = createTest(createExampleTest("schemaTest"));
+      BlockingQueue<Schema.ValidationEvent> runValidations = eventConsumerQueue(Schema.ValidationEvent.class, Run.EVENT_VALIDATED, e -> true);
+      BlockingQueue<Schema.ValidationEvent> datasetValidations = eventConsumerQueue(Schema.ValidationEvent.class, DataSet.EVENT_VALIDATED, e -> true);
+
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
       data.addObject().put("$schema", allowAnySchema.uri).put("foo", "bar");
       data.addObject().put("$schema", allowNoneSchema.uri).put("foo", "bar");

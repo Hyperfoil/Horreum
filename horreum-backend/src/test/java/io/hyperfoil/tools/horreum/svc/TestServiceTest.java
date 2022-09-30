@@ -37,6 +37,7 @@ import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
+import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -81,7 +82,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       final int NUM_DATASETS = 5;
       for (int i = 0; i < NUM_DATASETS; ++i) {
          uploadRun(runWithValue(i, schema), test.name);
@@ -94,7 +95,7 @@ public class TestServiceTest extends BaseServiceTest {
       int maxId = datasets.stream().mapToInt(ds -> ds.id).max().orElse(0);
 
       jsonRequest().post("/api/test/" + test.id + "/recalculate").then().statusCode(204);
-      eventually(() -> {
+      TestUtil.eventually(() -> {
          TestService.RecalculationStatus status = jsonRequest().get("/api/test/" + test.id + "/recalculate")
                .then().statusCode(200).extract().body().as(TestService.RecalculationStatus.class);
          assertEquals(NUM_DATASETS, status.totalRuns);
@@ -118,7 +119,7 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testAddTestAction(TestInfo info) {
       Test test = createTest(createExampleTest(getTestName(info)));
-      addTestAction(test, Run.EVENT_NEW, "https://attacker.ru").then().statusCode(400);;
+      addTestAction(test, Run.EVENT_NEW, "https://attacker.ru").then().statusCode(400);
 
       addAllowedSite("https://example.com");
 
@@ -173,7 +174,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       uploadRun(runWithValue(42, schema), test.name);
       DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
@@ -184,7 +185,7 @@ public class TestServiceTest extends BaseServiceTest {
       test.defaultView.components.add(vc);
       updateView(test.id, test.defaultView);
 
-      eventually(() -> {
+      TestUtil.eventually(() -> {
          em.clear();
          List<JsonNode> list = em.createNativeQuery("SELECT value FROM dataset_view WHERE dataset_id = ?1 AND view_id = ?2")
                .setParameter(1, event.dataset.id).setParameter(2, test.defaultView.id)
@@ -207,7 +208,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED);
+      BlockingQueue<DataSet.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED, e -> true);
       uploadRun(runWithValue(42, schema), test.name);
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));

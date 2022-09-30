@@ -14,10 +14,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -37,6 +38,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
@@ -54,11 +56,11 @@ import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
+import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import io.smallrye.jwt.build.Jwt;
-import io.vertx.core.eventbus.EventBus;
 
 public class BaseServiceTest {
    static final String[] UPLOADER_ROLES = { "foo-team", "foo-uploader", "uploader" };
@@ -77,13 +79,9 @@ public class BaseServiceTest {
    @Inject
    protected RoleManager roleManager;
    @Inject
-   EventBus eventBus;
+   MessageBus messageBus;
 
-   protected static void assertEmptyArray(JsonNode node) {
-      assertNotNull(node);
-      assertTrue(node.isArray());
-      assertTrue(node.isEmpty());
-   }
+   List<Runnable> afterMethodCleanup = new ArrayList<>();
 
    protected static ObjectNode runWithValue(double value, Schema schema) {
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
@@ -119,6 +117,8 @@ public class BaseServiceTest {
    public void afterMethod(TestInfo info) {
       log.infof("Completed test %s.%s", info.getTestClass().map(Class::getName).orElse("<unknown>"), info.getDisplayName());
       dropAllViewsAndTests();
+      afterMethodCleanup.forEach(Runnable::run);
+      afterMethodCleanup.clear();
       log.infof("Finished cleanup of test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"), info.getDisplayName());
    }
 
@@ -150,6 +150,7 @@ public class BaseServiceTest {
          }
          return null;
       });
+      TestUtil.eventually(() -> TestUtil.isMessageBusEmpty(tm, em));
    }
 
    public static Test createExampleTest(String testName) {
@@ -333,13 +334,25 @@ public class BaseServiceTest {
       jsonRequest().body(variables.toString()).post("/api/alerting/variables?test=" + test.id).then().statusCode(204);
    }
 
-   protected <E> BlockingQueue<E> eventConsumerQueue(Class<? extends E> eventClass, String eventType) {
+   protected <E> BlockingQueue<E> eventConsumerQueue(Class<? extends E> eventClass, String eventType, Predicate<E> filter) {
       BlockingQueue<E> queue = new LinkedBlockingDeque<>();
-      eventBus.consumer(eventType, msg -> {
-         if (eventClass.isInstance(msg.body())) {
-            queue.add(eventClass.cast(msg.body()));
+      AutoCloseable closeable = messageBus.subscribe(eventType, getClass().getName() + "_" + ThreadLocalRandom.current().nextLong(), eventClass, msg -> {
+         if (eventClass.isInstance(msg)) {
+            E event = eventClass.cast(msg);
+            if (filter.test(event)) {
+               queue.add(event);
+            } else {
+               log.infof("Ignoring event %s", event);
+            }
          } else {
-            throw new IllegalStateException("Unexpected type for event " + eventType + ": " + msg.body());
+            throw new IllegalStateException("Unexpected type for event " + eventType + ": " + msg);
+         }
+      });
+      afterMethodCleanup.add(() -> {
+         try {
+            closeable.close();
+         } catch (Exception e) {
+            throw new RuntimeException(e);
          }
       });
       return queue;
@@ -354,49 +367,14 @@ public class BaseServiceTest {
    }
 
    protected BlockingQueue<Integer> trashRun(int runId) throws InterruptedException {
-      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, Run.EVENT_TRASHED);
+      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, Run.EVENT_TRASHED, r -> true);
       jsonRequest().post("/api/run/" + runId + "/trash").then().statusCode(204);
       assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
       return trashedQueue;
    }
 
-   @SuppressWarnings("BusyWait")
-   protected void eventually(Runnable test) {
-      long now = System.currentTimeMillis();
-      do {
-         try {
-            test.run();
-            return;
-         } catch (AssertionError e) {
-            log.debug("Ignoring failed assertion", e);
-         }
-         try {
-            Thread.sleep(10);
-         } catch (InterruptedException e) {
-            fail("Interrupted while polling condition.");
-         }
-      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(10));
-      test.run();
-   }
-
-   protected void eventually(BooleanSupplier test) {
-      long now = System.currentTimeMillis();
-      do {
-         if (test.getAsBoolean()) {
-            return;
-         }
-         try {
-            //noinspection BusyWait
-            Thread.sleep(10);
-         } catch (InterruptedException e) {
-            fail("Interrupted while polling condition.");
-         }
-      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(10));
-      fail("Failed waiting for test to become true");
-   }
-
    protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW);
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       try {
          Run run = new Run();
          tm.begin();
@@ -490,4 +468,5 @@ public class BaseServiceTest {
    protected String postFunctionSchemaUri(Schema s) {
       return "uri:" + s.name + "-post-function";
    }
+
 }

@@ -18,6 +18,7 @@ public final class Roles {
    // TODO: These roles should be probably consolidated?
    public static final String HORREUM_ALERTING = "horreum.alerting";
    public static final String HORREUM_SYSTEM = "horreum.system";
+   public static final String HORREUM_MESSAGEBUS = "horreum.messagebus";
 
    private static final String MY_ROLES = "__my";
    private static final String ALL_ROLES = "__all";

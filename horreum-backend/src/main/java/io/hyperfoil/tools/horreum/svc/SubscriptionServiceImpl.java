@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -17,19 +18,29 @@ import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SubscriptionService;
+import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.quarkus.vertx.ConsumeEvent;
 
 @ApplicationScoped
+@Startup
 public class SubscriptionServiceImpl implements SubscriptionService {
    @Inject
    EntityManager em;
 
    @Inject
    SecurityIdentity identity;
+
+   @Inject
+   MessageBus messageBus;
+
+   @PostConstruct
+   void init() {
+      messageBus.subscribe(Test.EVENT_DELETED, "SubscriptionService", Test.class, this::onTestDelete);
+   }
 
    private static Set<String> merge(Set<String> set, String item) {
       if (set == null) {
@@ -216,9 +227,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       return all;
    }
 
-   @ConsumeEvent(value = Test.EVENT_DELETED, blocking = true)
-   @Transactional
    @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @Transactional
    public void onTestDelete(Test test) {
       for (Watch w : Watch.<Watch>find("testid = ?1", test.id).list()) {
          w.delete();
