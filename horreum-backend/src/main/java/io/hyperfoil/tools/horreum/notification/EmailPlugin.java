@@ -60,7 +60,7 @@ public class EmailPlugin implements NotificationPlugin {
       if (data == null || data.isBlank() || !data.contains("@")) {
          throw ServiceException.badRequest("Mail notifications require an email as a data parameter: '" + data + "' is not a valid email.");
       }
-      mailer.send(Mail.withText(data, "Test message", "This is a test message from Horreum. Please ignore."));
+      mailer.send(Mail.withText(data, "Test message", "This is a test message from Horreum. Please ignore.")).await().atMost(MAX_SEND_MAIL_DURATION);
    }
 
    public class EmailNotification extends Notification {
