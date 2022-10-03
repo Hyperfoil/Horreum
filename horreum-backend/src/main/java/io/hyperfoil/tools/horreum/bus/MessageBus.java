@@ -223,7 +223,7 @@ public class MessageBus {
 
    @Scheduled(
          every = "{horreum.messagebus.retry.check:5m}",
-         delayed = "{horreum.messagebus.retry.delay:1m}",
+         delayed = "{horreum.messagebus.retry.delay:30s}",
          concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
    public void retryFailedMessages() {
       Query query = em.createNativeQuery("SELECT channel, id, flags, message FROM messagebus WHERE \"timestamp\" + make_interval(secs => ?1) <= now()")
@@ -249,7 +249,11 @@ public class MessageBus {
                   Object payload = Util.OBJECT_MAPPER.treeToValue(json, type);
                   eventBus.publish(channel, new Message(id, flags, payload));
                } catch (JsonProcessingException e) {
-                  errorReporter.reportException(e, ERROR_SUBJECT, "Exception loading message to retry in bus channel %s, message %s%n%n", channel, json);
+                  String jsonStr = String.valueOf(json);
+                  if (jsonStr.length() > 200) {
+                     jsonStr = jsonStr.substring(0, 200) + "...";
+                  }
+                  errorReporter.reportException(e, ERROR_SUBJECT, "Exception loading message to retry in bus channel %s, message %s%n%n", channel, jsonStr);
                }
             }
          }
