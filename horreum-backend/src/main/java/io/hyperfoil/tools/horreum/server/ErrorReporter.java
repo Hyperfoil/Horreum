@@ -25,6 +25,9 @@ public class ErrorReporter {
    @ConfigProperty(name = "horreum.mail.subject.prefix", defaultValue = "[Horreum]")
    String subjectPrefix;
 
+   @ConfigProperty(name = "horreum.mail.timeout", defaultValue = "15s")
+   Duration sendMailTimeout;
+
    @Inject
    ReactiveMailer mailer;
 
@@ -41,7 +44,7 @@ public class ErrorReporter {
          writer.flush();
          try {
             mailer.send(Mail.withText(adminMail.get(), subjectPrefix + subject, bos.toString(StandardCharsets.UTF_8)))
-                  .await().atMost(Duration.ofSeconds(10));
+                  .await().atMost(sendMailTimeout);
          } catch (Throwable t2) {
             log.error("Cannot send notification to admin!", t);
          }

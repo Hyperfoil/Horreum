@@ -22,13 +22,14 @@ import io.quarkus.qute.Template;
 
 @ApplicationScoped
 public class EmailPlugin implements NotificationPlugin {
-   private static final Duration MAX_SEND_MAIL_DURATION = Duration.ofSeconds(10);
-
    @ConfigProperty(name = "horreum.url")
    String baseUrl;
 
    @ConfigProperty(name = "horreum.mail.subject.prefix", defaultValue = "[Horreum]")
    String subjectPrefix;
+
+   @ConfigProperty(name = "horreum.mail.timeout", defaultValue = "15s")
+   Duration sendMailTimeout;
 
    @Location("change_notification_email")
    Template changeNotificationEmail;
@@ -60,7 +61,7 @@ public class EmailPlugin implements NotificationPlugin {
       if (data == null || data.isBlank() || !data.contains("@")) {
          throw ServiceException.badRequest("Mail notifications require an email as a data parameter: '" + data + "' is not a valid email.");
       }
-      mailer.send(Mail.withText(data, "Test message", "This is a test message from Horreum. Please ignore.")).await().atMost(MAX_SEND_MAIL_DURATION);
+      mailer.send(Mail.withText(data, "Test message", "This is a test message from Horreum. Please ignore.")).await().atMost(sendMailTimeout);
    }
 
    public class EmailNotification extends Notification {
@@ -82,7 +83,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("datasetOrdinal", event.dataset.ordinal)
                .data("changes", event.changes())
                .render();
-         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(MAX_SEND_MAIL_DURATION);
+         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
       }
 
       @Override
@@ -98,7 +99,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("currentStaleness", lastTimestamp == null ? "yet" : "in " + prettyPrintTime(System.currentTimeMillis() - lastTimestamp.toEpochMilli()))
                .data("lastTimestamp", lastTimestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date.from(lastTimestamp)))
                .render();
-         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(MAX_SEND_MAIL_DURATION);
+         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
       }
 
       @Override
@@ -115,7 +116,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("datasetOrdinal", event.dataset.ordinal)
                .data("variables", event.variables)
                .render();
-         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(MAX_SEND_MAIL_DURATION);
+         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
       }
 
       @Override
@@ -130,7 +131,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("expectedBy", expectedBy)
                .data("backlink", backlink)
                .render();
-         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(MAX_SEND_MAIL_DURATION);
+         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
       }
    }
 
