@@ -87,6 +87,7 @@ public class DataSet extends OwnedEntityBase {
    @ElementCollection
    public Collection<ValidationError> validationErrors;
 
+   @JsonIgnore
    @ApiIgnore
    public String getFingerprint() {
       @SuppressWarnings("unchecked")
@@ -102,6 +103,7 @@ public class DataSet extends OwnedEntityBase {
       }
    }
 
+   @JsonIgnore
    public Info getInfo() {
       return new Info(id, run.id, ordinal, testid);
    }

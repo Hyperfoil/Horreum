@@ -12,12 +12,14 @@ public class DatasetChanges {
    public static final String EVENT_NEW = "datasetChanges/new";
 
    private static final long EMIT_DELAY = 1000;
-   public final DataSet.Info dataset;
-   public final String fingerprint;
-   public final String testName;
+   public DataSet.Info dataset;
+   public String fingerprint;
+   public String testName;
    private boolean notify;
    private final List<Change> changes = new ArrayList<>();
    private long emitTimestamp = Long.MIN_VALUE;
+
+   public DatasetChanges() {}
 
    public DatasetChanges(DataSet.Info dataset, String fingerprint, String testName, boolean notify) {
       this.dataset = Objects.requireNonNull(dataset);
