@@ -64,6 +64,7 @@ import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.context.SmallRyeContextManagerProvider;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
@@ -484,6 +485,13 @@ public class Util {
             promise.complete();
          }
       }, true, result -> {});
+   }
+
+   public static Uni<Void> executeBlocking(io.vertx.mutiny.core.Vertx vertx, SecurityIdentity identity, Uni<Void> uni) {
+      return vertx.executeBlocking(Uni.createFrom().voidItem()
+            .invoke(() -> RolesInterceptor.setCurrentIdentity(identity))
+            .chain(() -> uni)
+            .eventually(() -> RolesInterceptor.setCurrentIdentity(null)));
    }
 
    public static boolean lookupRetryHint(Throwable ex, Set<Throwable> causes) {

@@ -98,7 +98,7 @@ public class ActionServiceImpl implements ActionService {
    }
 
    void logActionError(int testId, String event, String type, Throwable throwable) {
-      vertx.executeBlocking(Uni.createFrom().item(() -> {
+      Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, Uni.createFrom().item(() -> {
          doLogActionError(testId, event, type, throwable);
          return null;
       })).subscribe().with(item -> {}, t -> {
@@ -147,7 +147,7 @@ public class ActionServiceImpl implements ActionService {
    @Transactional
    @Override
    public Action add(Action action){
-      if(action == null){
+      if (action == null){
          throw ServiceException.badRequest("Send action as request body.");
       }
       if (action.id != null && action.id <= 0) {

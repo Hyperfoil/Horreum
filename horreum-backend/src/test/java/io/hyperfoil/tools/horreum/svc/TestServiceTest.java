@@ -16,7 +16,6 @@ import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import javax.ws.rs.core.HttpHeaders;
 
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
@@ -42,7 +41,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-import io.restassured.response.Response;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -119,54 +117,15 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testAddTestAction(TestInfo info) {
       Test test = createTest(createExampleTest(getTestName(info)));
-      addTestAction(test, Run.EVENT_NEW, "https://attacker.ru").then().statusCode(400);
+      addTestHttpAction(test, Run.EVENT_NEW, "https://attacker.ru").then().statusCode(400);
 
       addAllowedSite("https://example.com");
 
-      Action action = addTestAction(test, Run.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
+      Action action = addTestHttpAction(test, Run.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       action.active = false;
       jsonRequest().body(action).post("/api/test/" + test.id + "/action").then().statusCode(204);
-   }
-
-   private void addAllowedSite(String prefix) {
-      given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "text/plain")
-            .body(prefix).post("/api/action/allowedSites").then().statusCode(200);
-   }
-
-   private Response addTestAction(Test test, String event, String url) {
-      Action action = new Action();
-      action.event = event;
-      action.type = "http";
-      action.active = true;
-      action.config = JsonNodeFactory.instance.objectNode().put("url", url);
-      return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
-   }
-
-   @org.junit.jupiter.api.Test
-   public void testAddGlobalAction() {
-      String responseType = addGlobalAction(Test.EVENT_NEW, "https://attacker.ru")
-            .then().statusCode(400).extract().header(HttpHeaders.CONTENT_TYPE);
-      // constraint violations are mapped to 400 + JSON response, we want explicit error
-      assertTrue(responseType.startsWith("text/plain")); // text/plain;charset=UTF-8
-
-      addAllowedSite("https://example.com");
-
-      Action action = addGlobalAction(Test.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
-      assertNotNull(action.id);
-      assertTrue(action.active);
-      given().auth().oauth2(ADMIN_TOKEN).delete("/api/action/" + action.id);
-   }
-
-   private Response addGlobalAction(String event, String url) {
-      Action action = new Action();
-      action.event = event;
-      action.type = "http";
-      action.active = true;
-      action.config = JsonNodeFactory.instance.objectNode().put("url", url);
-      return given().auth().oauth2(ADMIN_TOKEN)
-            .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
    }
 
    @org.junit.jupiter.api.Test

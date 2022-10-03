@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -38,6 +39,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.hyperfoil.tools.horreum.action.HttpAction;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
@@ -489,5 +491,29 @@ public class BaseServiceTest {
             return testId == (int) list.get(0);
          }
       });
+   }
+
+   protected void addAllowedSite(String prefix) {
+      given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "text/plain")
+            .body(prefix).post("/api/action/allowedSites").then().statusCode(200);
+   }
+
+   protected Response addTestHttpAction(Test test, String event, String url) {
+      Action action = new Action();
+      action.event = event;
+      action.type = HttpAction.TYPE_HTTP;
+      action.active = true;
+      action.config = JsonNodeFactory.instance.objectNode().put("url", url);
+      return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
+   }
+
+   protected Response addGlobalAction(String event, String url) {
+      Action action = new Action();
+      action.event = event;
+      action.type = "http";
+      action.active = true;
+      action.config = JsonNodeFactory.instance.objectNode().put("url", url);
+      return given().auth().oauth2(ADMIN_TOKEN)
+            .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
    }
 }

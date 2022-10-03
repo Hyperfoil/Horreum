@@ -28,6 +28,8 @@ import io.vertx.mutiny.ext.web.client.WebClient;
 public class HttpAction implements ActionPlugin {
    private static final Logger log = Logger.getLogger(HttpAction.class);
 
+   public static final String TYPE_HTTP = "http";
+
    @Inject
    Vertx reactiveVertx;
 
@@ -56,7 +58,7 @@ public class HttpAction implements ActionPlugin {
 
    @Override
    public String type() {
-      return "http";
+      return TYPE_HTTP;
    }
 
    @Override
@@ -88,6 +90,7 @@ public class HttpAction implements ActionPlugin {
                .setPort(url.getPort() >= 0 ? url.getPort() : url.getDefaultPort())
                .setURI(url.getFile())
                .setSsl("https".equalsIgnoreCase(url.getProtocol()));
+      log.infof("Sending event to %s", url);
       return http1xClient.request(HttpMethod.POST, options)
             .putHeader("Content-Type", "application/json")
             .sendBuffer(Buffer.buffer(body.toString()))
