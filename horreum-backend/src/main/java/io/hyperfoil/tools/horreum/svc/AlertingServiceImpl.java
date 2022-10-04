@@ -529,7 +529,7 @@ public class AlertingServiceImpl implements AlertingService {
    public void onNewDataPoint(DataPoint.Event event) {
       DataPoint dataPoint = event.dataPoint;
       dataPoint.variable = Variable.findById(dataPoint.variable.id);
-      log.debugf("Processing new datapoint for run %d, variable %d (%s), value %f", dataPoint.dataset.id,
+      log.debugf("Processing new datapoint for dataset %d, variable %d (%s), value %f", dataPoint.dataset.id,
             dataPoint.variable.id, dataPoint.variable.name, dataPoint.value);
       JsonNode fingerprint = Fingerprint.<Fingerprint>findByIdOptional(dataPoint.dataset.id).map(fp -> fp.fingerprint).orElse(null);
       tryRunChangeDetection(dataPoint.variable, fingerprint, dataPoint.timestamp, event.notify, true);
@@ -618,12 +618,13 @@ public class AlertingServiceImpl implements AlertingService {
          }
       }
       @SuppressWarnings("unchecked") Timestamp nextTimestamp = (Timestamp) em.createNativeQuery(
-            "SELECT timestamp FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
-            "WHERE timestamp > ?1 AND json_equals(fp.fingerprint, ?2) ORDER BY timestamp LIMIT 1")
+            "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
+            "WHERE dp.variable_id = ?1 AND timestamp > ?2 AND json_equals(fp.fingerprint, ?3)")
             .unwrap(NativeQuery.class)
-            .setParameter(1, timestamp, InstantType.INSTANCE)
-            .setParameter(2, fingerprint, JsonNodeBinaryType.INSTANCE)
-            .getResultStream().findFirst().orElse(null);
+            .setParameter(1, variable.id)
+            .setParameter(2, timestamp, InstantType.INSTANCE)
+            .setParameter(3, fingerprint, JsonNodeBinaryType.INSTANCE)
+            .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
       if (nextTimestamp != null) {
          Instant next = nextTimestamp.toInstant();
          Util.doAfterCommit(tm, () -> {
@@ -727,6 +728,7 @@ public class AlertingServiceImpl implements AlertingService {
 
          em.flush();
       } catch (PersistenceException e) {
+         log.error("Failed to update variables", e);
          throw new WebApplicationException(e, Response.serverError().build());
       }
    }

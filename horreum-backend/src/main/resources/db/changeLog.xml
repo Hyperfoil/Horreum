@@ -3911,4 +3911,16 @@
             CREATE TRIGGER messagebus_delete AFTER UPDATE OF flags ON messagebus FOR EACH ROW WHEN (NEW.flags = 0) EXECUTE FUNCTION messagebus_delete();
         </sql>
     </changeSet>
+
+    <changeSet id="97" author="rvansa">
+        <createIndex tableName="datapoint" indexName="datapoint_datasets">
+            <column name="dataset_id" />
+        </createIndex>
+        <createIndex tableName="datapoint" indexName="datapoint_timestamps">
+            <column name="timestamp" />
+        </createIndex>
+        <createIndex tableName="change" indexName="change_datasets">
+            <column name="dataset_id" />
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
