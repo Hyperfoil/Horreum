@@ -924,6 +924,7 @@ public class AlertingServiceImpl implements AlertingService {
             previous = recalcProgress.putIfAbsent(testId, recalculation);
          }
          try {
+            log.infof("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
             recalculation.datasets = getDatasetsForRecalculation(testId, from, to);
             int numRuns = recalculation.datasets.size();
             log.infof("Starting recalculation of test %d, %d runs", testId, numRuns);

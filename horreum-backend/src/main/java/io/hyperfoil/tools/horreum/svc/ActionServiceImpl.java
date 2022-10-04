@@ -98,6 +98,8 @@ public class ActionServiceImpl implements ActionService {
    }
 
    void logActionError(int testId, String event, String type, Throwable throwable) {
+      log.errorf("Error executing action '%s' for event %s on test %d: %s: %s",
+            type, event, testId, throwable.getClass().getName(), throwable.getMessage());
       Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, Uni.createFrom().item(() -> {
          doLogActionError(testId, event, type, throwable);
          return null;
