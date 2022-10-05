@@ -1,13 +1,13 @@
 import React, { useState } from "react"
 import { Button, ButtonVariant, Form, FormGroup, Modal, TextInput } from "@patternfly/react-core"
 
-type AddPrefixModalProps = {
+type AddAllowedSiteModalProps = {
     isOpen: boolean
     onClose(): void
     onSubmit(prefix: string): Promise<any>
 }
 
-function AddPrefixModal(props: AddPrefixModalProps) {
+export default function AddAllowedSiteModal(props: AddAllowedSiteModalProps) {
     const [prefix, setPrefix] = useState("")
     const [isSaving, setSaving] = useState(false)
     const isValid = prefix === "" || prefix.startsWith("http://") || prefix.startsWith("https://")
@@ -40,11 +40,11 @@ function AddPrefixModal(props: AddPrefixModalProps) {
         >
             <Form isHorizontal={true}>
                 <FormGroup
-                    label="Prefix"
+                    label="Site prefix"
                     validated={isValid ? "default" : "warning"}
                     isRequired={true}
                     fieldId="prefix"
-                    helperText="Prefix for all URLs used in HTTP Actions"
+                    helperText="Prefix (protocol, domain and optionally port and path) for all URLs used in HTTP Actions"
                     helperTextInvalid="The prefix should be either empty, or start with 'http://' or 'https://'"
                 >
                     <TextInput
@@ -65,5 +65,3 @@ function AddPrefixModal(props: AddPrefixModalProps) {
         </Modal>
     )
 }
-
-export default AddPrefixModal

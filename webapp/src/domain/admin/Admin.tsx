@@ -3,7 +3,7 @@ import { Card, CardBody, PageSection } from "@patternfly/react-core"
 
 import SavedTabs, { SavedTab, TabFunctions, saveFunc, resetFunc, modifiedFunc } from "../../components/SavedTabs"
 import { FragmentTab } from "../../components/FragmentTabs"
-import PrefixList from "../actions/PrefixList"
+import AllowedSiteList from "../actions/AllowedSiteList"
 import ActionList from "../actions/ActionList"
 import BannerConfig from "./BannerConfig"
 import Notifications from "./Notifications"
@@ -37,7 +37,7 @@ export default function Admin() {
                             <Teams funcs={teamsFuncsRef} />
                         </SavedTab>
                         <FragmentTab title="Global Actions" fragment="actions">
-                            <PrefixList />
+                            <AllowedSiteList />
                             <br />
                             <ActionList />
                         </FragmentTab>

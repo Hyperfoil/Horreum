@@ -9,12 +9,12 @@ import Api, { AllowedSite } from "../../api"
 import { alertAction } from "../../alerts"
 
 import Table from "../../components/Table"
-import AddPrefixModal from "./AddPrefixModal"
+import AddAllowedSiteModal from "./AddAllowedSiteModal"
 import { Column } from "react-table"
 
 type C = Column<AllowedSite> & UseSortByColumnOptions<AllowedSite>
 
-function PrefixList() {
+function AllowedSiteList() {
     const dispatch = useDispatch()
     const [prefixes, setPrefixes] = useState<AllowedSite[]>()
     useEffect(() => {
@@ -25,7 +25,7 @@ function PrefixList() {
     }, [dispatch])
     const columns: C[] = [
         {
-            Header: "Prefix",
+            Header: "Site prefix",
             accessor: "prefix",
             Cell: (arg: any) => {
                 const {
@@ -66,7 +66,7 @@ function PrefixList() {
 
     return (
         <>
-            <AddPrefixModal
+            <AddAllowedSiteModal
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
                 onSubmit={prefix =>
@@ -82,7 +82,7 @@ function PrefixList() {
             >
                 <ToolbarContent>
                     <ToolbarItem aria-label="info">
-                        <Button onClick={() => setOpen(true)}>Add Prefix</Button>
+                        <Button onClick={() => setOpen(true)}>Add Allowed Site</Button>
                     </ToolbarItem>
                 </ToolbarContent>
             </Toolbar>
@@ -96,4 +96,4 @@ function PrefixList() {
     )
 }
 
-export default PrefixList
+export default AllowedSiteList
