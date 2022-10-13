@@ -95,6 +95,8 @@ public class DataPoint extends PanacheEntityBase {
       public DataSet.Info dataset;
       public boolean notify;
 
+      public DatasetProcessedEvent() {}
+
       public DatasetProcessedEvent(DataSet.Info dataset, boolean notify) {
          this.dataset = dataset;
          this.notify = notify;
