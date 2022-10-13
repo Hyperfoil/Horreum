@@ -3923,4 +3923,36 @@
             <column name="dataset_id" />
         </createIndex>
     </changeSet>
+
+    <changeSet id="98" author="rvansa">
+        <sql>
+            ALTER POLICY cl_all_alerting ON datasetlog USING (has_role('horreum.system'));
+            ALTER POLICY notificationsettings_policies ON notificationsettings USING ((has_role('horreum.system'::text) OR has_role(name)));
+            ALTER POLICY run_expectation_delete ON run_expectation USING (has_role('horreum.system'));
+            ALTER POLICY run_expectation_select ON run_expectation USING (has_role('horreum.system'));
+            ALTER POLICY userinfo_teams_read ON userinfo_teams USING (has_role('horreum.system'));
+            DROP POLICY userinfo_read ON userinfo_teams;
+            CREATE POLICY userinfo_read ON userinfo FOR SELECT USING (has_role('horreum.system'));
+            ALTER POLICY watch_delete ON watch USING (has_role('horreum.system'));
+            ALTER POLICY watch_update ON watch USING (has_role('horreum.system'));
+            ALTER POLICY watch_teams_policies ON watch_teams USING ((has_role('horreum.system') OR has_role(teams)));
+            ALTER POLICY watch_users_policies ON watch_users USING ((has_role('horreum.system') OR has_role(users)));
+            ALTER POLICY watch_optout_policies ON watch_optout USING ((has_role('horreum.system') OR has_role(optout)));
+            ALTER POLICY variable_access ON variable USING (has_role('horreum.system'));
+            ALTER POLICY rd_access ON changedetection USING (has_role('horreum.system'));
+        </sql>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION can_view(access INTEGER, owner TEXT, token TEXT) RETURNS boolean AS $$
+            BEGIN
+                RETURN (
+                    access = 0
+                    OR (access = 1 AND has_role('viewer'))
+                    OR (access = 2 AND has_role(owner) AND has_role('viewer'))
+                    OR token = current_setting('horreum.token', true)
+                    OR has_role('horreum.system')
+                );
+            END;
+            $$ LANGUAGE plpgsql STABLE;
+        </createProcedure>
+    </changeSet>
 </databaseChangeLog>

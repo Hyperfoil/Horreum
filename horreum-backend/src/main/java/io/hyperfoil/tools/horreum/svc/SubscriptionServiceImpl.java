@@ -227,7 +227,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       return all;
    }
 
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onTestDelete(Test test) {
       for (Watch w : Watch.<Watch>find("testid = ?1", test.id).list()) {

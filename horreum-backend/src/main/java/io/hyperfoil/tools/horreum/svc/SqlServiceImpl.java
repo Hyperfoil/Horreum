@@ -20,7 +20,7 @@ import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -224,7 +224,7 @@ public class SqlServiceImpl implements SqlService {
       }
       if (system) {
          if (identity.hasRole(Roles.ADMIN)) {
-            return roleManager.getDebugQuery(Arrays.asList(Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING));
+            return roleManager.getDebugQuery(Collections.singletonList(Roles.HORREUM_SYSTEM));
          } else {
             throw ServiceException.forbidden("Only Admin can request system roles");
          }

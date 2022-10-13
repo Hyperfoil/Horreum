@@ -1049,7 +1049,7 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    @PermitAll
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Override
    public List<RunExpectation> expectations() {
       if (!isTest.orElse(false)) {
@@ -1196,7 +1196,7 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void removeExpected(Run run) {
       // delete at most one expectation
@@ -1222,7 +1222,7 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    @Transactional
-   @WithRoles(extras = Roles.HORREUM_ALERTING)
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Scheduled(every = "{horreum.alerting.expected.run.check}")
    public void checkExpectedRuns() {
       for (RunExpectation expectation : RunExpectation.<RunExpectation>find("expectedbefore < ?1", Instant.now()).list()) {

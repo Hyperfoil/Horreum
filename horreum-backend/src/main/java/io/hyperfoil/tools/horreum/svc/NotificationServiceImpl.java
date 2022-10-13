@@ -72,7 +72,7 @@ public class NotificationServiceImpl implements NotificationService {
       messageBus.subscribe(DataSet.EVENT_MISSING_VALUES, "NotificationService", MissingValuesEvent.class, this::onMissingValues);
    }
 
-   @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onNewChanges(DatasetChanges event) {
       if (!event.isNotify()) {
@@ -84,7 +84,7 @@ public class NotificationServiceImpl implements NotificationService {
       notifyAll(event.dataset.testId, n -> n.notifyChanges(event));
    }
 
-   @WithRoles(extras = { Roles.HORREUM_SYSTEM, Roles.HORREUM_ALERTING })
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onMissingValues(MissingValuesEvent event) {
       if (!event.notify) {
