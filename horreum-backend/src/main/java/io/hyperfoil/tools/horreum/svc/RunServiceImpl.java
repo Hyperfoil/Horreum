@@ -202,8 +202,17 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public Object getData(int id, String token) {
-      return Util.runQuery(em, "SELECT data#>>'{}' from run where id = ?", id);
+   public Object getData(int id, String token, String schemaUri) {
+      if (schemaUri == null || schemaUri.isEmpty()) {
+         return Util.runQuery(em, "SELECT data#>>'{}' from run where id = ?", id);
+      } else {
+         String sqlQuery = "SELECT (CASE " +
+               "WHEN rs.type = 0 THEN run.data " +
+               "WHEN rs.type = 1 THEN run.data->rs.key " +
+               "ELSE run.data->(rs.key::::integer) " +
+               "END)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?1 AND rs.uri = ?2";
+         return Util.runQuery(em, sqlQuery, id, schemaUri);
+      }
    }
 
    @PermitAll

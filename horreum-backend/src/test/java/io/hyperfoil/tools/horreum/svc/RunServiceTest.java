@@ -35,6 +35,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.RestAssured;
+import io.restassured.specification.RequestSpecification;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -490,5 +491,53 @@ public class RunServiceTest extends BaseServiceTest {
             .then()
             .statusCode(200)
             .extract().asString();
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testRetrieveData() {
+      Test test = createTest(createExampleTest("dummy"));
+      Schema schemaA = createExampleSchema("A", "A", "A", false);
+      Schema schemaB = createExampleSchema("B", "B", "B", false);
+
+      ObjectNode data1 = JsonNodeFactory.instance.objectNode()
+            .put("$schema", schemaA.uri).put("value", 42);
+      int run1 = uploadRun(data1, test.name);
+
+      JsonNode data1Full = getData(run1, null);
+      assertEquals(data1, data1Full);
+      JsonNode data1A = getData(run1, schemaA);
+      assertEquals(data1, data1A);
+
+      ArrayNode data2 = JsonNodeFactory.instance.arrayNode();
+      data2.addObject().put("$schema", schemaA.uri).put("value", 43);
+      data2.addObject().put("$schema", schemaB.uri).put("value", 44);
+      int run2 = uploadRun(data2, test.name);
+
+      JsonNode data2Full = getData(run2, null);
+      assertEquals(data2, data2Full);
+      JsonNode data2A = getData(run2, schemaA);
+      assertEquals(data2.get(0), data2A);
+      JsonNode data2B = getData(run2, schemaB);
+      assertEquals(data2.get(1), data2B);
+
+      ObjectNode data3 = JsonNodeFactory.instance.objectNode();
+      data3.putObject("foo").put("$schema", schemaA.uri).put("value", 45);
+      data3.putObject("bar").put("$schema", schemaB.uri).put("value", 46);
+      int run3 = uploadRun(data3, test.name);
+
+      JsonNode data3Full = getData(run3, null);
+      assertEquals(data3, data3Full);
+      JsonNode data3A = getData(run3, schemaA);
+      assertEquals(data3.get("foo"), data3A);
+      JsonNode data3B = getData(run3, schemaB);
+      assertEquals(data3.get("bar"), data3B);
+   }
+
+   private JsonNode getData(int runId, Schema schema) {
+      RequestSpecification request = jsonRequest();
+      if (schema != null) {
+         request = request.queryParam("schemaUri", schema.uri);
+      }
+      return request.get("/api/run/" + runId + "/data").then().extract().body().as(JsonNode.class);
    }
 }

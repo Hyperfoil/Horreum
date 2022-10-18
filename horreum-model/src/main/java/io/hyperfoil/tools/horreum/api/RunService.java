@@ -45,7 +45,7 @@ public interface RunService {
 
    @GET
    @Path("{id}/data")
-   Object getData(@PathParam("id") int id, @QueryParam("token") String token);
+   Object getData(@PathParam("id") int id, @QueryParam("token") String token, @QueryParam("schemaUri") String schemaUri);
 
    @GET
    @Path("{id}/query")
