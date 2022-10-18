@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -81,6 +82,12 @@ public class MessageBus {
    @PostConstruct
    void init() {
       eventBus.registerDefaultCodec(Message.class, new MessageBusCodec());
+   }
+
+   @PreDestroy
+   void destroy() {
+      // required for dev-mode to work correctly
+      eventBus.unregisterDefaultCodec(Message.class);
    }
 
    @Transactional(Transactional.TxType.MANDATORY)
