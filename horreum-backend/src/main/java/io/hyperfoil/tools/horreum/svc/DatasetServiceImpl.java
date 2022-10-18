@@ -329,13 +329,19 @@ public class DatasetServiceImpl implements DatasetService {
          log.error("Cannot serialize label extractors", e);
          throw ServiceException.badRequest("Cannot serialize label extractors");
       }
-      JsonNode extracted = (JsonNode) em.createNativeQuery(LABEL_PREVIEW).unwrap(NativeQuery.class)
-            .setParameter(1, extractors)
-            .setParameter(2, datasetId)
-            .setParameter(3, label.schema.id)
-            .addScalar("value", JsonNodeBinaryType.INSTANCE).getSingleResult();
-
+      JsonNode extracted;
       LabelPreview preview = new LabelPreview();
+      try {
+         extracted = (JsonNode) em.createNativeQuery(LABEL_PREVIEW).unwrap(NativeQuery.class)
+               .setParameter(1, extractors)
+               .setParameter(2, datasetId)
+               .setParameter(3, label.schema.id)
+               .addScalar("value", JsonNodeBinaryType.INSTANCE).getSingleResult();
+      } catch (PersistenceException e) {
+         preview.output = Util.explainCauses(e);
+         return preview;
+      }
+
       if (label.function == null || label.function.isBlank()) {
          preview.value = extracted;
       } else {
