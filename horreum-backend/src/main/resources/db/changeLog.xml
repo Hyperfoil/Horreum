@@ -3955,4 +3955,23 @@
             $$ LANGUAGE plpgsql STABLE;
         </createProcedure>
     </changeSet>
+
+    <changeSet id="99" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION recalc_label_values() RETURNS TRIGGER AS $$
+            BEGIN
+                PERFORM pg_notify('calculate_labels', (SELECT testid FROM dataset WHERE id = dataset_id)::text || ';' || dataset_id::text || ';' || NEW.label_id) FROM dataset_schemas
+                WHERE dataset_schemas.schema_id = NEW.schema_id;
+                DELETE FROM label_recalc_queue WHERE label_id = NEW.label_id;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <addColumn tableName="messagebus">
+            <column name="testid" type="integer" defaultValue="-1">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <dropDefaultValue tableName="messagebus" columnName="testid"/>
+    </changeSet>
 </databaseChangeLog>

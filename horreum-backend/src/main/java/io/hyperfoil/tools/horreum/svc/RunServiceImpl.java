@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -87,7 +87,7 @@ public class RunServiceImpl implements RunService {
             "FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
-   protected static final String FIND_RUNS_WITH_URI = "SELECT id FROM run WHERE data->>'$schema' = ?1 OR (" +
+   protected static final String FIND_RUNS_WITH_URI = "SELECT id, testid FROM run WHERE data->>'$schema' = ?1 OR (" +
          "CASE WHEN jsonb_typeof(data) = 'object' THEN ?1 IN (SELECT values.value->>'$schema' FROM jsonb_each(data) as values) " +
          "WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema') ELSE false END)";
    //@formatter:on
@@ -126,12 +126,7 @@ public class RunServiceImpl implements RunService {
       sqlService.registerListener("new_or_updated_schema", this::onNewOrUpdatedSchema);
    }
 
-   // We cannot run this without a transaction (to avoid timeout) because we have not request going on
-   // and EM has to bind its lifecycle either to current request or transaction.
-   @Transactional(Transactional.TxType.REQUIRES_NEW)
-   @TransactionConfiguration(timeout = 3600) // 1 hour, this may run a long time
-   @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   void onNewOrUpdatedSchema(String schemaIdString) {
+   private void onNewOrUpdatedSchema(String schemaIdString) {
       int schemaId;
       try {
          schemaId = Integer.parseInt(schemaIdString);
@@ -139,22 +134,31 @@ public class RunServiceImpl implements RunService {
          log.errorf("Cannot process schema add/update: invalid id %s", schemaIdString);
          return;
       }
+      Util.executeBlocking(vertx, () -> onNewOrUpdatedSchema(schemaId));
+   }
+
+   // We cannot run this without a transaction (to avoid timeout) because we have not request going on
+   // and EM has to bind its lifecycle either to current request or transaction.
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
+   @TransactionConfiguration(timeout = 3600) // 1 hour, this may run a long time
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   void onNewOrUpdatedSchema(int schemaId) {
       Schema schema = Schema.findById(schemaId);
       if (schema == null) {
          log.errorf("Cannot process schema add/update: cannot load schema %d", schemaId);
          return;
       }
       // we don't have to care about races with new runs
-      findRunsWithUri(schema.uri, runId -> {
+      findRunsWithUri(schema.uri, (runId, testId) -> {
          log.infof("Recalculate DataSets for run %d - schema %d (%s) changed", runId, schema.id, schema.uri);
-         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> onNewOrUpdatedSchemaForRun(runId));
+         messageBus.executeForTest(testId, () -> onNewOrUpdatedSchemaForRun(runId));
       });
    }
 
-   void findRunsWithUri(String uri, IntConsumer consumer) {
+   void findRunsWithUri(String uri, BiConsumer<Integer, Integer> consumer) {
       ScrollableResults results = Util.scroll(em.createNativeQuery(FIND_RUNS_WITH_URI).setParameter(1, uri));
       while (results.next()) {
-         consumer.accept((int) results.get(0));
+         consumer.accept((Integer) results.get(0), (Integer) results.get(1));
       }
    }
 
@@ -428,7 +432,7 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.serverError("Failed to persist run");
       }
       log.debugf("Upload flushed, run ID %d", run.id);
-      messageBus.publish(Run.EVENT_NEW, run);
+      messageBus.publish(Run.EVENT_NEW, test.id, run);
 
       return run.id;
    }
@@ -717,13 +721,13 @@ public class RunServiceImpl implements RunService {
    @Override
    public void trash(int id, Boolean isTrashed) {
       boolean trashed = isTrashed == null || isTrashed;
-      updateRun(id, run -> run.trashed = trashed);
+      Run run = updateRun(id, r -> r.trashed = trashed);
       if (trashed) {
          for (var dataset : DataSet.<DataSet>list("run.id", id)) {
-            messageBus.publish(DataSet.EVENT_DELETED, dataset.getInfo());
+            messageBus.publish(DataSet.EVENT_DELETED, run.testid, dataset.getInfo());
             dataset.delete();
          }
-         messageBus.publish(Run.EVENT_TRASHED, id);
+         messageBus.publish(Run.EVENT_TRASHED, run.testid, id);
       } else {
          transform(id, true);
       }
@@ -738,13 +742,14 @@ public class RunServiceImpl implements RunService {
       updateRun(id, run -> run.description = Util.destringify(description));
    }
 
-   public void updateRun(int id, Consumer<Run> consumer) {
+   public Run updateRun(int id, Consumer<Run> consumer) {
       Run run = Run.findById(id);
       if (run == null) {
          throw ServiceException.notFound("Run not found");
       }
       consumer.accept(run);
       run.persistAndFlush();
+      return run;
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -818,17 +823,16 @@ public class RunServiceImpl implements RunService {
          log.infof("Deleted %d datasets for trashed runs between %s and %s", deleted, from, to);
       }
 
-      ScrollableResults results = em.createNativeQuery("SELECT id FROM run WHERE start BETWEEN ?1 AND ?2 AND NOT trashed ORDER BY start")
+      ScrollableResults results = em.createNativeQuery("SELECT id, testid FROM run WHERE start BETWEEN ?1 AND ?2 AND NOT trashed ORDER BY start")
             .setParameter(1, from).setParameter(2, to)
             .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
             .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
          int runId = (int) results.get(0);
+         int testId = (int) results.get(1);
          log.infof("Recalculate DataSets for run %d - forcing recalculation of all between %s and %s", runId, from, to);
          // transform will add proper roles anyway
-         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> datasetService.withRecalculationLock(() -> {
-               transform(runId, true);
-         }));
+         messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> transform(runId, true)));
       }
    }
 
@@ -842,7 +846,7 @@ public class RunServiceImpl implements RunService {
          return;
       }
       boolean isRecalculation = parts.length > 1 && Boolean.parseBoolean(parts[1]);
-      transform(runId, isRecalculation);
+      Util.executeBlocking(vertx, () -> transform(runId, isRecalculation));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -856,7 +860,7 @@ public class RunServiceImpl implements RunService {
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
       for (DataSet old : DataSet.<DataSet>list("runid", runId)) {
-         messageBus.publish(DataSet.EVENT_DELETED, old.getInfo());
+         messageBus.publish(DataSet.EVENT_DELETED, old.testid, old.getInfo());
          old.delete();
       }
 
@@ -1042,7 +1046,7 @@ public class RunServiceImpl implements RunService {
    private void createDataset(DataSet ds, boolean isRecalculation) {
       try {
          ds.persist();
-         messageBus.publish(DataSet.EVENT_NEW, new DataSet.EventNew(ds, isRecalculation));
+         messageBus.publish(DataSet.EVENT_NEW, ds.testid, new DataSet.EventNew(ds, isRecalculation));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.", tre);
       }

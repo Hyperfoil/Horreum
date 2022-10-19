@@ -127,14 +127,14 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(runId, event.dataset.runId);
 
       Util.withTx(tm, () -> {
-         try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+         try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
             List<DatasetLog> logs = DatasetLog.find("dataset.run.id", runId).list();
             assertTrue(logs.size() > 0);
             return null;
          }
       });
 
-      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+      try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
          deleteTest(test);
 
          TestUtil.eventually(() -> {
@@ -400,7 +400,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(1, notifications.size());
 
       Util.withTx(tm, () -> {
-         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
+         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(SYSTEM_ROLES)) {
             MissingDataRule currentRule = MissingDataRule.findById(firstRuleId);
             assertNotNull(currentRule.lastNotification);
             assertTrue(currentRule.lastNotification.isAfter(Instant.ofEpochMilli(now - 1)));
@@ -435,7 +435,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(2, notifications.size());
 
       Util.withTx(tm, () -> {
-         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
+         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(SYSTEM_ROLES)) {
             MissingDataRule otherRule = MissingDataRule.findById(otherRuleId);
             otherRule.maxStaleness = 1000;
             otherRule.persistAndFlush();
@@ -448,7 +448,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       em.clear();
 
       Util.withTx(tm, () -> {
-         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
+         try (@SuppressWarnings("unused") CloseMe h = roleManager.withRoles(SYSTEM_ROLES)) {
             MissingDataRule otherRule = MissingDataRule.findById(otherRuleId);
             assertNotNull(otherRule.lastNotification);
             otherRule.lastNotification = Instant.ofEpochMilli(now - 2000);
@@ -466,7 +466,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    }
 
    private void pollMissingDataRuleResultsByRule(int ruleId, int... datasetIds) throws InterruptedException {
-      try (CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
+      try (CloseMe h = roleManager.withRoles(SYSTEM_ROLES)) {
          for (int i = 0; i < 1000; ++i) {
             em.clear();
             List<MissingDataRuleResult> results = MissingDataRuleResult.list("rule_id", ruleId);
@@ -482,7 +482,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    }
 
    private void pollMissingDataRuleResultsByDataset(int datasetId, long expectedResults) throws InterruptedException {
-      try (CloseMe h = roleManager.withRoles(em, SYSTEM_ROLES)) {
+      try (CloseMe h = roleManager.withRoles(SYSTEM_ROLES)) {
          // there's no event when the results are updated, we need to poll
          for (int i = 0; i < 1000; ++i) {
             em.clear();
@@ -599,7 +599,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       em.clear();
       // We need to use system role in the test because as the policy fetches ownership from dataset
       // and this is missing we wouldn't find the old datapoint anyway
-      try (CloseMe ignored = roleManager.withRoles(em, SYSTEM_ROLES)) {
+      try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
          assertNotNull(DataPoint.findById(second.id));
          assertNull(DataPoint.findById(first.id));
          assertEquals(1, DataPoint.count());
@@ -769,6 +769,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       drainQueue(changeQueue);
       list = Change.list("variable.testId", test.id);
       assertEquals(5, list.size(), prettyPrint(list));
+      assertEquals(Arrays.asList(1L, 4L, 6L, 7L, 9L),
+            list.stream().map(c -> c.timestamp.toEpochMilli()).sorted().collect(Collectors.toList()));
    }
 
    private void drainQueue(BlockingQueue<DataPoint.Event> datapointQueue, int expectedItems) throws InterruptedException {

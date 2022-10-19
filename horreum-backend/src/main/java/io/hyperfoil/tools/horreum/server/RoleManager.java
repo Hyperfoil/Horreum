@@ -13,6 +13,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
@@ -34,6 +35,9 @@ public class RoleManager {
    @ConfigProperty(name = "horreum.db.secret")
    String dbSecret;
    byte[] dbSecretBytes;
+
+   @Inject
+   EntityManager em;
 
    @PostConstruct
    void init() {
@@ -63,7 +67,7 @@ public class RoleManager {
       return sb.toString();
    }
 
-   String setRoles(EntityManager em, Collection<String> roles) {
+   String setRoles(Collection<String> roles) {
       String signedRoles;
       if (roles == null || roles.isEmpty()) {
          signedRoles = "";
@@ -74,32 +78,32 @@ public class RoleManager {
             throw new IllegalStateException(e);
          }
       }
-      return setRoles(em, signedRoles);
+      return setRoles(signedRoles);
    }
 
-   String setRoles(EntityManager em, String signedRoles) {
+   String setRoles(String signedRoles) {
       Query setRoles = em.createNativeQuery(SET_ROLES);
       setRoles.setParameter(1, signedRoles == null ? "" : signedRoles);
       Object[] row = (Object[]) setRoles.getSingleResult();
       return (String) row[0];
    }
 
-   public CloseMe withRoles(EntityManager em, Iterable<String> roles) {
+   public CloseMe withRoles(Iterable<String> roles) {
       String signedRoles;
       try {
          signedRoles = getSignedRoles(roles);
       } catch (NoSuchAlgorithmException e) {
          throw new IllegalStateException(e);
       }
-      return withRoles(em, signedRoles);
+      return withRoles(signedRoles);
    }
 
-   public CloseMe withRoles(EntityManager em, String signedRoles) {
+   public CloseMe withRoles(String signedRoles) {
       if (signedRoles == null || signedRoles.isEmpty()) {
          return NOOP;
       }
-      String previous = setRoles(em, signedRoles);
-      return () -> setRoles(em, previous);
+      String previous = setRoles(signedRoles);
+      return () -> setRoles(previous);
    }
 
    void setToken(EntityManager em, String token) {

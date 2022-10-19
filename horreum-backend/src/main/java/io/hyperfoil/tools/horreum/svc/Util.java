@@ -470,12 +470,13 @@ public class Util {
       return causes.toString();
    }
 
-   public static void executeBlocking(Vertx vertx, SecurityIdentity identity, Runnable runnable) {
-      // Note that we cannot use @ThreadContextConfig in Quarkus
+   public static void executeBlocking(Vertx vertx, Runnable runnable) {
+      // CDI needs to be propagated - without that the interceptors wouldn't run.
+      // Without thread context propagation we would get an exception in Run.findById, though the interceptors would be invoked correctly.
       Runnable wrapped = SmallRyeContextManagerProvider.getManager().newThreadContextBuilder()
             .propagated(ThreadContext.CDI).build().contextualRunnable(runnable);
       vertx.executeBlocking(promise -> {
-         RolesInterceptor.setCurrentIdentity(identity);
+         RolesInterceptor.setCurrentIdentity(CachedSecurityIdentity.ANONYMOUS);
          try {
             wrapped.run();
          } catch (Exception e) {
@@ -484,7 +485,7 @@ public class Util {
             RolesInterceptor.setCurrentIdentity(null);
             promise.complete();
          }
-      }, true, result -> {});
+      }, result -> {});
    }
 
    public static Uni<Void> executeBlocking(io.vertx.mutiny.core.Vertx vertx, SecurityIdentity identity, Uni<Void> uni) {

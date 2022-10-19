@@ -63,8 +63,8 @@ public class Change extends PanacheEntityBase {
    public String toString() {
       return "Change{" +
             "id=" + id +
-            ", variable=" + variable +
-            ", runId=" + dataset.id +
+            ", variable=" + variable.id +
+            ", dataset=" + dataset.id + " (" + dataset.run.id + "/" + dataset.ordinal + ")" +
             ", timestamp=" + timestamp +
             ", confirmed=" + confirmed +
             ", description='" + description + '\'' +

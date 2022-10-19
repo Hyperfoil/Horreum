@@ -50,7 +50,6 @@ public class DatasetServiceTest extends BaseServiceTest {
    @Inject
    DatasetService datasetService;
 
-
    @org.junit.jupiter.api.Test
    public void testDataSetQueryNoSchema() {
       String value = testDataSetQuery("$.value", false, null);
@@ -270,7 +269,7 @@ public class DatasetServiceTest extends BaseServiceTest {
    public void testDatasetView() {
       Test test = createTest(createExampleTest("dummy"));
       Util.withTx(tm, () -> {
-         try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+         try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
             View view = View.findById(test.defaultView.id);
             view.components.clear();
             ViewComponent vc1 = new ViewComponent();
@@ -318,7 +317,7 @@ public class DatasetServiceTest extends BaseServiceTest {
             assertTrue(ids.contains(labelB));
 
             Util.withTx(tm, () -> {
-               try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+               try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
                   int vcs = em.createNativeQuery("UPDATE viewcomponent SET labels = '[\"a\",\"b\"]'").executeUpdate();
                   assertEquals(2, vcs);
                }
@@ -396,7 +395,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       DataSet.LabelsUpdatedEvent event = updateQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
 
-      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+      try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
          List<Label.Value> labels = Label.Value.<Label.Value>find("dataset_id", event.datasetId).list();
          assertEquals(1, labels.size());
       }

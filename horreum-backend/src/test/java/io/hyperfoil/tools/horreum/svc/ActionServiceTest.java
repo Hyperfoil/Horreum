@@ -40,7 +40,7 @@ public class ActionServiceTest extends BaseServiceTest {
 
       eventually(() -> (Boolean) Util.withTx(tm, () -> {
          em.clear();
-         try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+         try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
             return ActionLog.find("testId", test.id).count() == 1;
          }
       }));

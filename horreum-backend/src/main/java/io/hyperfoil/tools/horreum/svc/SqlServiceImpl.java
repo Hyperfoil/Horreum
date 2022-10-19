@@ -134,8 +134,7 @@ public class SqlServiceImpl implements SqlService {
             synchronized (listeners) {
                listenerConnection = (PgConnection) connection.getDelegate();
                listenerConnection.notificationHandler(notification ->
-                     Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS,
-                           () -> handleNotification(notification.getChannel(), notification.getPayload())));
+                     handleNotification(notification.getChannel(), notification.getPayload()));
                listenerConnection.exceptionHandler(t -> log.error("Listener connection experienced an exception!"));
                for (String channel : listeners.keySet()) {
                   listenOn(channel);

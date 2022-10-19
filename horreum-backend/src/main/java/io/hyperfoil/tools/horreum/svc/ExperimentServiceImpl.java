@@ -126,7 +126,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @Transactional
    public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
-      runExperiments(event.dataset, result -> messageBus.publish(ExperimentResult.NEW_RESULT, result),
+      runExperiments(event.dataset, result -> messageBus.publish(ExperimentResult.NEW_RESULT, event.dataset.testId, result),
             logs -> logs.forEach(log -> log.persist()), event.notify);
    }
 

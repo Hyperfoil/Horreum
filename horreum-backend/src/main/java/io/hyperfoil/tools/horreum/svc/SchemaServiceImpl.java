@@ -27,7 +27,6 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.Query;
-import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
 import java.io.ByteArrayInputStream;
@@ -123,8 +122,8 @@ public class SchemaServiceImpl implements SchemaService {
 
    @PostConstruct
    void init() {
-      sqlService.registerListener("validate_run_data", params -> validateRunData(Integer.parseInt(params), null));
-      sqlService.registerListener("validate_dataset_data", params -> validateDatasetData(Integer.parseInt(params), null));
+      sqlService.registerListener("validate_run_data", this::validateRunData);
+      sqlService.registerListener("validate_dataset_data", this::validateDatasetData);
       sqlService.registerListener("revalidate_all", this::revalidateAll);
    }
 
@@ -252,6 +251,11 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
+   private void validateRunData(String params) {
+      int runId = Integer.parseInt(params);
+      Util.executeBlocking(vertx, () -> validateRunData(runId, null));
+   }
+
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void validateRunData(int runId, Predicate<String> schemaFilter) {
@@ -264,7 +268,12 @@ public class SchemaServiceImpl implements SchemaService {
       run.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
       validateData(run.data, schemaFilter, run.validationErrors::add, true);
       run.persist();
-      messageBus.publish(Run.EVENT_VALIDATED, new Schema.ValidationEvent(run.id, run.validationErrors));
+      messageBus.publish(Run.EVENT_VALIDATED, run.testid, new Schema.ValidationEvent(run.id, run.validationErrors));
+   }
+
+   private void validateDatasetData(String params) {
+      int datasetId = Integer.parseInt(params);
+      Util.executeBlocking(vertx, () -> validateDatasetData(datasetId, null));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -291,14 +300,18 @@ public class SchemaServiceImpl implements SchemaService {
          }
       }
       dataset.persist();
-      messageBus.publish(DataSet.EVENT_VALIDATED, new Schema.ValidationEvent(dataset.id, dataset.validationErrors));
+      messageBus.publish(DataSet.EVENT_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, dataset.validationErrors));
+   }
+
+   private void revalidateAll(String params) {
+      int schemaId = Integer.parseInt(params);
+      Util.executeBlocking(vertx, () -> revalidateAll(schemaId));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    @TransactionConfiguration(timeout = 3600) // 1 hour, this may run a long time
-   void revalidateAll(String params) {
-      int schemaId = Integer.parseInt(params);
+   void revalidateAll(int schemaId) {
       Schema schema = Schema.findById(schemaId);
       if (schema == null) {
          log.errorf("Cannot load schema %d for validation", schemaId);
@@ -307,14 +320,15 @@ public class SchemaServiceImpl implements SchemaService {
       Predicate<String> schemaFilter = uri -> uri.equals(schema.uri);
       // If the URI was updated together with JSON schema run_schemas are removed and filled-in asynchronously
       // so we cannot rely on run_schemas
-      runService.findRunsWithUri(schema.uri, runId -> {
-         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> validateRunData(runId, schemaFilter));
-      });
+      runService.findRunsWithUri(schema.uri, (runId, testId) ->
+         messageBus.executeForTest(testId, () -> validateRunData(runId, schemaFilter))
+      );
       // Datasets might be re-created if URI is changing, so we might work on old, non-existent ones
-      ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM dataset WHERE ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')").setParameter(1, schema.uri));
+      ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id, testid FROM dataset WHERE ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')").setParameter(1, schema.uri));
       while (results.next()) {
          int datasetId = (int) results.get(0);
-         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> validateDatasetData(datasetId, schemaFilter));
+         int testId = (int) results.get(1);
+         messageBus.executeForTest(testId, () -> validateDatasetData(datasetId, schemaFilter));
       }
    }
 

@@ -416,7 +416,7 @@ public class RunServiceTest extends BaseServiceTest {
    public void testRecalculateDatasets() {
       withExampleDataset(createTest(createExampleTest("dummy")), JsonNodeFactory.instance.objectNode(), ds -> {
          Util.withTx(tm, () -> {
-            try (CloseMe ignored = roleManager.withRoles(em, SYSTEM_ROLES)) {
+            try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
                DataSet dbDs = DataSet.findById(ds.id);
                assertNotNull(dbDs);
                dbDs.delete();
@@ -427,14 +427,14 @@ public class RunServiceTest extends BaseServiceTest {
          });
          List<Integer> dsIds1 = recalculateDataset(ds.run.id);
          assertEquals(1, dsIds1.size());
-         try (CloseMe ignored = roleManager.withRoles(em, SYSTEM_ROLES)) {
+         try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
             List<DataSet> dataSets = DataSet.find("runid", ds.run.id).list();
             assertEquals(1, dataSets.size());
             assertEquals(dsIds1.get(0), dataSets.get(0).id);
             em.clear();
          }
          List<Integer> dsIds2 = recalculateDataset(ds.run.id);
-         try (CloseMe ignored = roleManager.withRoles(em, SYSTEM_ROLES)) {
+         try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
             List<DataSet> dataSets = DataSet.find("runid", ds.run.id).list();
             assertEquals(1, dataSets.size());
             assertEquals(dsIds2.get(0), dataSets.get(0).id);

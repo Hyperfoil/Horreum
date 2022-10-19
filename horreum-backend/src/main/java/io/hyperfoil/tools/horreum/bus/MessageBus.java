@@ -34,9 +34,7 @@ import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.ErrorReporter;
 import io.hyperfoil.tools.horreum.server.RoleManager;
-import io.hyperfoil.tools.horreum.server.RolesInterceptor;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.hyperfoil.tools.horreum.svc.CachedSecurityIdentity;
 import io.hyperfoil.tools.horreum.svc.Roles;
 import io.hyperfoil.tools.horreum.svc.Util;
 import io.quarkus.runtime.Startup;
@@ -78,6 +76,7 @@ public class MessageBus {
 
    private final ConcurrentMap<String, Integer> flags = new ConcurrentHashMap<>();
    private final ConcurrentMap<String, Class<?>> payloadClasses = new ConcurrentHashMap<>();
+   private final ConcurrentMap<Integer, TaskQueue> taskQueues = new ConcurrentHashMap<>();
 
    @PostConstruct
    void init() {
@@ -91,17 +90,18 @@ public class MessageBus {
    }
 
    @Transactional(Transactional.TxType.MANDATORY)
-   public void publish(String channel, Object payload) {
+   public void publish(String channel, int testId, Object payload) {
       JsonNode json = Util.OBJECT_MAPPER.valueToTree(payload);
       Integer componentFlag = flags.get(channel);
       BigInteger id;
       if (componentFlag != null && componentFlag != 0) {
-         try (CloseMe ignored = roleManager.withRoles(em, Collections.singleton(Roles.HORREUM_MESSAGEBUS))) {
-            id = (BigInteger) em.createNativeQuery("INSERT INTO messagebus (id, \"timestamp\", channel, message, flags) VALUES (nextval('messagebus_seq'), NOW(), ?1, ?2, ?3) RETURNING id")
+         try (CloseMe ignored = roleManager.withRoles(Collections.singleton(Roles.HORREUM_MESSAGEBUS))) {
+            id = (BigInteger) em.createNativeQuery("INSERT INTO messagebus (id, \"timestamp\", channel, testid, message, flags) VALUES (nextval('messagebus_seq'), NOW(), ?1, ?2, ?3, ?4) RETURNING id")
                   .unwrap(NativeQuery.class)
                   .setParameter(1, channel)
-                  .setParameter(2, json, JsonNodeBinaryType.INSTANCE)
-                  .setParameter(3, componentFlag)
+                  .setParameter(2, testId)
+                  .setParameter(3, json, JsonNodeBinaryType.INSTANCE)
+                  .setParameter(4, componentFlag)
                   .getSingleResult();
          }
       } else {
@@ -110,10 +110,10 @@ public class MessageBus {
       }
       try {
          int flag = componentFlag;
-         log.debugf("Publishing %d with flag %X on %s ", id.longValue(), flag, channel);
+         log.debugf("Publishing %d on test %d with flag %X on %s: %s", id.longValue(), testId, flag, channel, payload);
          Util.doAfterCommitThrowing(tm, () -> {
-            log.debugf("Sending %d with flag %X to eventbus %s ", id.longValue(), flag, channel);
-            eventBus.publish(channel, new Message(id.longValue(), flag, payload));
+            log.debugf("Sending %d on test %d with flag %X to eventbus %s ", id.longValue(), testId, flag, channel);
+            eventBus.publish(channel, new Message(id.longValue(), testId, flag, payload));
          });
       } catch (RollbackException e) {
          log.debug("Not publishing the event as the transaction has been marked rollback-only");
@@ -144,9 +144,7 @@ public class MessageBus {
             log.debugf("%s ignoring message %d on %s with flags %X: doesn't match index %d", component, msg.id, channel, msg.componentFlags, index);
             return;
          }
-         vertx.executeBlocking(promise -> {
-            // Anonymous is fine since the methods will usually request system role as extra anyway
-            RolesInterceptor.setCurrentIdentity(CachedSecurityIdentity.ANONYMOUS);
+         executeForTest(msg.testId, () -> {
             try {
                handler.handle(payloadClass.cast(msg.payload));
                Util.withTx(tm, () -> {
@@ -172,11 +170,8 @@ public class MessageBus {
                });
             } catch (Throwable t) {
                errorReporter.reportException(t, ERROR_SUBJECT, "Exception in handler for message bus channel %s, message %s%n%n", channel, msg.payload);
-            } finally {
-               RolesInterceptor.setCurrentIdentity(null);
-               promise.complete();
             }
-         }, true);
+         });
       });
       return () -> {
          removeIndex(channel, index);
@@ -233,11 +228,12 @@ public class MessageBus {
          delayed = "{horreum.messagebus.retry.delay:30s}",
          concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
    public void retryFailedMessages() {
-      Query query = em.createNativeQuery("SELECT channel, id, flags, message FROM messagebus WHERE \"timestamp\" + make_interval(secs => ?1) <= now()")
+      Query query = em.createNativeQuery("SELECT channel, id, testid, flags, message FROM messagebus WHERE \"timestamp\" + make_interval(secs => ?1) <= now()")
             .setParameter(1, retryAfter.toSeconds())
             .unwrap(NativeQuery.class)
             .addScalar("channel", TextType.INSTANCE)
             .addScalar("id", LongType.INSTANCE)
+            .addScalar("testid", IntegerType.INSTANCE)
             .addScalar("flags", IntegerType.INSTANCE)
             .addScalar("message", JsonNodeBinaryType.INSTANCE);
       try (ScrollableResults results = Util.scroll(query)) {
@@ -245,16 +241,17 @@ public class MessageBus {
             Object[] row = results.get();
             String channel = (String) row[0];
             long id = (long) row[1];
-            int flags = (int) row[2];
+            int testId = (int) row[2];
+            int flags = (int) row[3];
             Class<?> type = payloadClasses.get(channel);
             // theoretically the type might not be set if the initial delay is too short
             // and components are not registered yet
             if (type != null) {
-               JsonNode json = (JsonNode) row[3];
+               JsonNode json = (JsonNode) row[4];
                log.infof("Retrying message %d (#%d) in channel %s (%s)", id, results.getRowNumber(), channel, type.getName());
                try {
                   Object payload = Util.OBJECT_MAPPER.treeToValue(json, type);
-                  eventBus.publish(channel, new Message(id, flags, payload));
+                  eventBus.publish(channel, new Message(id, testId, flags, payload));
                } catch (JsonProcessingException e) {
                   String jsonStr = String.valueOf(json);
                   if (jsonStr.length() > 200) {
@@ -269,13 +266,22 @@ public class MessageBus {
       }
    }
 
+   public void executeForTest(int testId, Runnable runnable) {
+      Util.executeBlocking(vertx, () -> {
+         TaskQueue queue = taskQueues.computeIfAbsent(testId, TaskQueue::new);
+         queue.executeOrAdd(runnable);
+      });
+   }
+
    static class Message {
       final long id;
+      final int testId;
       final int componentFlags;
       final Object payload;
 
-      public Message(long id, int componentFlags, Object payload) {
+      public Message(long id, int testId, int componentFlags, Object payload) {
          this.id = id;
+         this.testId = testId;
          this.componentFlags = componentFlags;
          this.payload = payload;
       }

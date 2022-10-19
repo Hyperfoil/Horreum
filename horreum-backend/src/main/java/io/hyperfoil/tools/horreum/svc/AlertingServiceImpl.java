@@ -200,7 +200,9 @@ public class AlertingServiceImpl implements AlertingService {
    // entries can be removed from timer thread while normally this is updated from one of blocking threads
    private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
 
-   private final ConcurrentMap<VarAndFingerprint, Instant> nextChangeDetection = new ConcurrentHashMap<>();
+   // A new datapoint invalidates anything past its timestamp. Any attempt to recalculate starts
+   // at the timestamp.
+   private final ConcurrentMap<VarAndFingerprint, UpTo> validUpTo = new ConcurrentHashMap<>();
 
    static {
       System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
@@ -214,8 +216,8 @@ public class AlertingServiceImpl implements AlertingService {
       DataSet dataset = DataSet.findById(event.datasetId);
       if (dataset == null) {
          // The run is not committed yet?
-         vertx.setTimer(1000, timerId -> Util.executeBlocking(vertx,
-               CachedSecurityIdentity.ANONYMOUS, () -> Util.withTx(tm, () -> {
+         vertx.setTimer(1000, timerId -> messageBus.executeForTest(event.datasetId,
+               () -> Util.withTx(tm, () -> {
                   onLabelsUpdated(event);
                   return null;
                })
@@ -480,9 +482,9 @@ public class AlertingServiceImpl implements AlertingService {
             output -> logCalculationMessage(dataset, PersistentLog.DEBUG, "Output while calculating variable: <pre>%s</pre>", output)
       );
       if (!missingValueVariables.isEmpty()) {
-         messageBus.publish(DataSet.EVENT_MISSING_VALUES, new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify));
+         messageBus.publish(DataSet.EVENT_MISSING_VALUES, dataset.testid, new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify));
       }
-      messageBus.publish(DataPoint.EVENT_DATASET_PROCESSED, new DataPoint.DatasetProcessedEvent(dataset.getInfo(), notify));
+      messageBus.publish(DataPoint.EVENT_DATASET_PROCESSED, dataset.testid, new DataPoint.DatasetProcessedEvent(dataset.getInfo(), notify));
    }
 
    private void createDataPoint(DataSet dataset, Instant timestamp, int variableId, double value, boolean notify) {
@@ -492,7 +494,7 @@ public class AlertingServiceImpl implements AlertingService {
       dataPoint.timestamp = timestamp;
       dataPoint.value = value;
       dataPoint.persist();
-      messageBus.publish(DataPoint.EVENT_NEW, new DataPoint.Event(dataPoint, dataset.testid, notify));
+      messageBus.publish(DataPoint.EVENT_NEW, dataset.testid, new DataPoint.Event(dataPoint, dataset.testid, notify));
    }
 
    private void logCalculationMessage(DataSet dataSet, int level, String format, Object... args) {
@@ -526,37 +528,46 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onNewDataPoint(DataPoint.Event event) {
+   void onNewDataPoint(DataPoint.Event event) {
       DataPoint dataPoint = event.dataPoint;
       dataPoint.variable = Variable.findById(dataPoint.variable.id);
-      log.debugf("Processing new datapoint for dataset %d, variable %d (%s), value %f", dataPoint.dataset.id,
+      log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
+            dataPoint.dataset.id, dataPoint.timestamp,
             dataPoint.variable.id, dataPoint.variable.name, dataPoint.value);
       JsonNode fingerprint = Fingerprint.<Fingerprint>findByIdOptional(dataPoint.dataset.id).map(fp -> fp.fingerprint).orElse(null);
-      tryRunChangeDetection(dataPoint.variable, fingerprint, dataPoint.timestamp, event.notify, true);
+      invalidateAndRunChangeDetection(dataPoint.variable, fingerprint, dataPoint.timestamp, event.notify);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void doTryRunChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify) {
-      tryRunChangeDetection(variable, fingerprint, timestamp, notify, false);
-   }
-
-   private void tryRunChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify, boolean expectExists) {
-      VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
-      log.debugf("Try with timestamp %s, current value is %s", timestamp, nextChangeDetection.get(key));
-      if (timestamp == nextChangeDetection.compute(key, (ignored, current) -> {
-         if (current == null || current.isAfter(timestamp)) {
-            return timestamp;
-         } else {
-            return current;
-         }
-      })) {
-         runChangeDetection(Variable.findById(variable.id), timestamp, fingerprint, notify, expectExists);
+   void tryRunChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify) {
+      UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
+      if (timestamp.isAfter(valid.timestamp) || (timestamp.equals(valid.timestamp) && !valid.inclusive)) {
+         runChangeDetection(variable, fingerprint, timestamp, notify, false);
       }
    }
 
-   // datasetId is necessary to specify the fingerprint
-   private void runChangeDetection(Variable variable, Instant timestamp, JsonNode fingerprint, boolean notify, boolean expectExists) {
+   private void invalidateAndRunChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify) {
+      VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
+      log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint, timestamp, validUpTo.get(key));
+      UpTo newValid = validUpTo.compute(key, (ignored, current) -> {
+         if (current == null || !timestamp.isAfter(current.timestamp)) {
+            return new UpTo(timestamp, false);
+         } else {
+            return current;
+         }
+      });
+      Instant nextTimestamp;
+      if (newValid.inclusive) {
+         // a bit hacky way to start from the next moment
+         nextTimestamp = newValid.timestamp.plusMillis(1);
+      } else {
+         nextTimestamp = newValid.timestamp;
+      }
+      runChangeDetection(Variable.findById(variable.id), fingerprint, nextTimestamp, notify, true);
+   }
+
+   private void runChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify, boolean expectExists) {
       int numDeleted = em.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
             "SELECT id FROM change c LEFT JOIN fingerprint fp ON c.dataset_id = fp.dataset_id " +
             "WHERE NOT c.confirmed AND c.variable_id = ?1 AND c.timestamp >= ?2 AND json_equals(fp.fingerprint, ?3))")
@@ -613,7 +624,7 @@ public class AlertingServiceImpl implements AlertingService {
                em.persist(change);
                Hibernate.initialize(change.dataset.run.id);
                String testName = Test.<Test>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
-               messageBus.publish(Change.EVENT_NEW, new Change.Event(change, testName, info, notify));
+               messageBus.publish(Change.EVENT_NEW, change.dataset.testid, new Change.Event(change, testName, info, notify));
             });
          }
       }
@@ -625,20 +636,23 @@ public class AlertingServiceImpl implements AlertingService {
             .setParameter(2, timestamp, InstantType.INSTANCE)
             .setParameter(3, fingerprint, JsonNodeBinaryType.INSTANCE)
             .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
-      if (nextTimestamp != null) {
-         Instant next = nextTimestamp.toInstant();
-         Util.doAfterCommit(tm, () -> {
-            nextChangeDetection.remove(new VarAndFingerprint(variable.id, fingerprint), timestamp);
-            Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS,
-                  () -> doTryRunChangeDetection(variable, fingerprint, next, notify));
-         });
-      } else {
-         Util.doAfterCommit(tm, () -> {
-            VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
-            log.debugf("Removing ts %s, current is %s", timestamp, nextChangeDetection.get(key));
-            nextChangeDetection.remove(key, timestamp);
-         });
-      }
+      Util.doAfterCommit(tm, () -> {
+         validateUpTo(variable, fingerprint, timestamp);
+         if (nextTimestamp != null) {
+            Instant next = nextTimestamp.toInstant();
+            messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, next, notify));
+         }
+      });
+   }
+
+   private void validateUpTo(Variable variable, JsonNode fingerprint, Instant timestamp) {
+      validUpTo.compute(new VarAndFingerprint(variable.id, fingerprint), (ignored, current) -> {
+         if (current == null || !current.timestamp.isAfter(timestamp)) {
+            return new UpTo(timestamp, true);
+         } else {
+            return current;
+         }
+      });
    }
 
    private String reversedAndLimited(List<DataPoint> list) {
@@ -905,51 +919,59 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Override
    @RolesAllowed(Roles.TESTER)
+   @WithRoles
    public void recalculateDatapoints(int testId, boolean notify,
                                      boolean debug, Long from, Long to) {
-      // We cannot use resteasy propagation because when the request completes the request data
-      // are terminated anyway (it's not reference counter) - therefore we need to manually copy the identity
-      // to the new context in a different thread.
-      // CDI needs to be propagated - without that the interceptors wouldn't run.
-      // Without thread context propagation we would get an exception in Run.findById, though the interceptors would be invoked correctly.
-      Util.executeBlocking(vertx, new CachedSecurityIdentity(identity), () -> {
-         Recalculation recalculation = new Recalculation();
-         Recalculation previous = recalcProgress.putIfAbsent(testId, recalculation);
-         while (previous != null) {
-            if (!previous.done) {
-               log.infof("Already started recalculation on test %d, ignoring.", testId);
-               return;
-            }
-            if (recalcProgress.replace(testId, previous, recalculation)) {
-               break;
-            }
-            previous = recalcProgress.putIfAbsent(testId, recalculation);
-         }
-         try {
-            log.infof("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
-            recalculation.datasets = getDatasetsForRecalculation(testId, from, to);
-            int numRuns = recalculation.datasets.size();
-            log.infof("Starting recalculation of test %d, %d runs", testId, numRuns);
-            int completed = 0;
-            recalcProgress.put(testId, recalculation);
-            for (int datasetId : recalculation.datasets) {
-               // Since the evaluation might take few moments and we're dealing potentially with thousands
-               // of runs we'll process each run in a separate transaction
-               recalulateForDataset(datasetId, notify, debug, recalculation);
-               recalculation.progress = 100 * ++completed / numRuns;
-            }
-
-         } catch (Throwable t) {
-            log.error("Recalculation failed", t);
-            throw t;
-         } finally {
-            recalculation.done = true;
-            vertx.setTimer(30_000, timerId -> recalcProgress.remove(testId, recalculation));
-         }
+      Test test = Test.findById(testId);
+      if (test == null) {
+         throw ServiceException.notFound("Test " + testId + " does not exist or is not available.");
+      } else if (!Roles.hasRoleWithSuffix(identity, test.owner, "-tester")) {
+         throw ServiceException.forbidden("This user cannot trigger the recalculation");
+      }
+      messageBus.executeForTest(testId, () -> {
+         startRecalculation(testId, notify, debug, from, to);
       });
    }
 
-   @WithRoles
+   void startRecalculation(int testId, boolean notify, boolean debug, Long from, Long to) {
+      Recalculation recalculation = new Recalculation();
+      Recalculation previous = recalcProgress.putIfAbsent(testId, recalculation);
+      while (previous != null) {
+         if (!previous.done) {
+            log.infof("Already started recalculation on test %d, ignoring.", testId);
+            return;
+         }
+         if (recalcProgress.replace(testId, previous, recalculation)) {
+            break;
+         }
+         previous = recalcProgress.putIfAbsent(testId, recalculation);
+      }
+      try {
+         log.infof("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
+         recalculation.datasets = getDatasetsForRecalculation(testId, from, to);
+         int numRuns = recalculation.datasets.size();
+         log.infof("Starting recalculation of test %d, %d runs", testId, numRuns);
+         int completed = 0;
+         recalcProgress.put(testId, recalculation);
+         for (int datasetId : recalculation.datasets) {
+            // Since the evaluation might take few moments and we're dealing potentially with thousands
+            // of runs we'll process each run in a separate transaction
+            recalulateForDataset(datasetId, notify, debug, recalculation);
+            recalculation.progress = 100 * ++completed / numRuns;
+         }
+
+      } catch (Throwable t) {
+         log.error("Recalculation failed", t);
+         throw t;
+      } finally {
+         recalculation.done = true;
+         vertx.setTimer(30_000, timerId -> recalcProgress.remove(testId, recalculation));
+      }
+   }
+
+   // It doesn't make sense to limit access to particular user when doing the recalculation,
+   // normally the calculation happens with system privileges anyway.
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    List<Integer> getDatasetsForRecalculation(Integer testId, Long from, Long to) {
       Query query = em.createNativeQuery("SELECT id FROM dataset WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) ORDER BY start")
@@ -1113,9 +1135,8 @@ public class AlertingServiceImpl implements AlertingService {
    @Transactional
    @Override
    public int updateMissingDataRule(int testId, MissingDataRule rule) {
-      if (testId <= 0) {
-         throw ServiceException.badRequest("Invalid test ID: " + testId);
-      }
+      // check test existence and ownership
+      testService.getTestForUpdate(testId);
       if (rule.id != null && rule.id <= 0) {
          rule.id = null;
       }
@@ -1141,15 +1162,23 @@ public class AlertingServiceImpl implements AlertingService {
       }
       // The recalculations are executed in independent transactions, therefore we need to make sure that
       // this rule is committed in DB before starting to reevaluate it.
-      Util.doAfterCommit(tm, () -> Util.executeBlocking(vertx, new CachedSecurityIdentity(identity), () -> {
-         @SuppressWarnings("unchecked") List<Object[]> idsAndTimestamps = Util.withTx(tm,
-               () -> em.createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?1"
-               ).setParameter(1, testId).getResultList());
-         for (Object[] row : idsAndTimestamps) {
-            recalculateMissingDataRule((int) row[0], ((Timestamp) row[1]).toInstant(), rule);
-         }
-      }));
+      Util.doAfterCommit(tm, () -> {
+         messageBus.executeForTest(testId, () -> {
+            recalculateMissingDataRules(testId, rule);
+         });
+      });
       return rule.id;
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void recalculateMissingDataRules(int testId, MissingDataRule rule) {
+      @SuppressWarnings("unchecked") List<Object[]> idsAndTimestamps =
+            em.createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?1")
+                  .setParameter(1, testId).getResultList();
+      for (Object[] row : idsAndTimestamps) {
+         recalculateMissingDataRule((int) row[0], ((Timestamp) row[1]).toInstant(), rule);
+      }
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -1213,7 +1242,7 @@ public class AlertingServiceImpl implements AlertingService {
    public void onDatasetDeleted(DataSet.Info info) {
       log.infof("Removing datasets and changes for dataset %d (%d/%d, test %d)", info.id, info.runId, info.ordinal, info.testId);
       for (DataPoint dp : DataPoint.<DataPoint>list("dataset_id", info.id)) {
-         messageBus.publish(DataPoint.EVENT_DELETED, new DataPoint.Event(dp, info.testId, false));
+         messageBus.publish(DataPoint.EVENT_DELETED, info.testId, new DataPoint.Event(dp, info.testId, false));
          dp.delete();
       }
       for (Change c: Change.<Change>list("dataset_id = ?1 AND confirmed = false", info.id)) {
@@ -1269,6 +1298,24 @@ public class AlertingServiceImpl implements AlertingService {
       @Override
       public int hashCode() {
          return Objects.hash(varId, fingerprint);
+      }
+   }
+
+   private static class UpTo {
+      final Instant timestamp;
+      final boolean inclusive;
+
+      private UpTo(Instant timestamp, boolean inclusive) {
+         this.timestamp = timestamp;
+         this.inclusive = inclusive;
+      }
+
+      @Override
+      public String toString() {
+         return "UpTo{" +
+               "timestamp=" + timestamp +
+               ", inclusive=" + inclusive +
+               '}';
       }
    }
 }

@@ -64,7 +64,7 @@ public class RolesInterceptor {
             Collections.addAll(roles, fromParams.apply(ctx.getParameters()));
          }
       }
-      String previousRoles = roleManager.setRoles(em, roles);
+      String previousRoles = roleManager.setRoles(roles);
       Throwable t1 = null;
       try {
          return ctx.proceed();
@@ -75,7 +75,7 @@ public class RolesInterceptor {
          int status = tm.getStatus();
          if (status == Status.STATUS_ACTIVE || status == Status.STATUS_NO_TRANSACTION) {
             try {
-               roleManager.setRoles(em, previousRoles);
+               roleManager.setRoles(previousRoles);
             } catch (Throwable t2) {
                if (t1 != null) {
                   t2.addSuppressed(t1);

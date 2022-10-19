@@ -382,20 +382,21 @@ public class DatasetServiceImpl implements DatasetService {
 
    private void onLabelChanged(String param) {
       String[] parts = param.split(";");
-      if (parts.length != 2) {
+      if (parts.length != 3) {
          log.errorf("Invalid parameter to onLabelChanged: %s", param);
          return;
       }
-      int datasetId = Integer.parseInt(parts[0]);
-      int labelId = Integer.parseInt(parts[1]);
+      int testId = Integer.parseInt(parts[0]);
+      int datasetId = Integer.parseInt(parts[1]);
+      int labelId = Integer.parseInt(parts[2]);
       // This is invoked when the label is added/updated. We won't send notifications
       // for that (user can check if there are any changes on his own).
-      calculateLabels(datasetId, labelId, true);
+      messageBus.executeForTest(testId, () -> calculateLabels(testId, datasetId, labelId, true));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void calculateLabels(int datasetId, int queryLabelId, boolean isRecalculation) {
+   void calculateLabels(int testId, int datasetId, int queryLabelId, boolean isRecalculation) {
       log.infof("Calculating labels for dataset %d, label %d", datasetId, queryLabelId);
       List<Object[]> extracted;
       try {
@@ -423,7 +424,7 @@ public class DatasetServiceImpl implements DatasetService {
             (row, e, jsCode) -> logMessage(datasetId, PersistentLog.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
             out -> logMessage(datasetId, PersistentLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
-      messageBus.publish(DataSet.EVENT_LABELS_UPDATED, new DataSet.LabelsUpdatedEvent(datasetId, isRecalculation));
+      messageBus.publish(DataSet.EVENT_LABELS_UPDATED, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -466,7 +467,7 @@ public class DatasetServiceImpl implements DatasetService {
    }
 
    public void onNewDataset(DataSet.EventNew event) {
-      withRecalculationLock(() -> calculateLabels(event.dataset.id, -1, event.isRecalculation));
+      withRecalculationLock(() -> calculateLabels(event.dataset.testid, event.dataset.id, -1, event.isRecalculation));
    }
 
    @Transactional(Transactional.TxType.REQUIRES_NEW)

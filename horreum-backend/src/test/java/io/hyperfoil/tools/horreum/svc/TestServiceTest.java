@@ -47,10 +47,6 @@ import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(NoGrafanaProfile.class)
 public class TestServiceTest extends BaseServiceTest {
-
-   @Inject
-   EntityManager em;
-
    @Inject
    RoleManager roleManager;
 
@@ -58,7 +54,7 @@ public class TestServiceTest extends BaseServiceTest {
    public void testCreateDelete(TestInfo info) {
 
       Test test = createTest(createExampleTest(getTestName(info)));
-      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+      try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
          assertNotNull(Test.findById(test.id));
       }
 
@@ -66,7 +62,7 @@ public class TestServiceTest extends BaseServiceTest {
 
       deleteTest(test);
       em.clear();
-      try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(TESTER_ROLES))) {
+      try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
          assertNull(Test.findById(test.id));
          // There's no constraint between runs and tests; therefore the run is not deleted
          Run run = Run.findById(runId);

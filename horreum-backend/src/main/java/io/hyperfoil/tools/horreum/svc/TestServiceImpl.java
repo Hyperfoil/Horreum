@@ -18,7 +18,6 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
@@ -97,7 +96,7 @@ public class TestServiceImpl implements TestService {
       test.delete();
       em.createNativeQuery(TRASH_RUNS).setParameter(1, test.id).executeUpdate();
       em.createNativeQuery("DELETE FROM transformationlog WHERE testid = ?1").setParameter(1, test.id);
-      messageBus.publish(Test.EVENT_DELETED, test);
+      messageBus.publish(Test.EVENT_DELETED, test.id, test);
    }
 
    @Override
@@ -219,7 +218,7 @@ public class TestServiceImpl implements TestService {
                throw new WebApplicationException(e, Response.serverError().build());
             }
          }
-         messageBus.publish(Test.EVENT_NEW, test);
+         messageBus.publish(Test.EVENT_NEW, test.id, test);
       }
    }
 
@@ -560,7 +559,7 @@ public class TestServiceImpl implements TestService {
          int runId = (int) results.get(0);
          log.infof("Recalculate DataSets for run %d - forcing recalculation for test %d (%s)", runId, testId, test.name);
          // transform will add proper roles anyway
-         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, () -> datasetService.withRecalculationLock(() -> {
+         messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> {
             int newDatasets = 0;
             try {
                newDatasets = runService.transform(runId, true);

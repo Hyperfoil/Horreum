@@ -57,7 +57,7 @@ public class MessageBusTest {
          secondLatch.countDown();
       });
       Util.withTx(tm, () -> {
-         messageBus.publish(CHANNEL, "foo");
+         messageBus.publish(CHANNEL, 1, "foo");
          return null;
       });
       assertTrue(firstLatch.await(10, TimeUnit.SECONDS));
@@ -94,7 +94,7 @@ public class MessageBusTest {
       });
       Util.withTx(tm, () -> {
          for (int i = 0; i < 100; ++i) {
-            messageBus.publish(CHANNEL, "foo" + i);
+            messageBus.publish(CHANNEL, 1, "foo" + i);
          }
          return null;
       });

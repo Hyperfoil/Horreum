@@ -52,14 +52,14 @@ public class EventAggregator {
          if (next == null) {
             return;
          } else if (next.emitTimestamp() <= now) {
-            messageBus.publish(DatasetChanges.EVENT_NEW, next);
+            messageBus.publish(DatasetChanges.EVENT_NEW, next.dataset.testId, next);
             datasetChanges.remove(next.dataset.id);
          } else {
             if (timerId >= 0) {
                vertx.cancelTimer(timerId);
             }
             timerId = vertx.setTimer(next.emitTimestamp() - now,
-                  timerId -> Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, this::handleDatasetChanges));
+                  timerId -> messageBus.executeForTest(next.dataset.testId, this::handleDatasetChanges));
             return;
          }
       }

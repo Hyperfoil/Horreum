@@ -126,7 +126,7 @@ public class BaseServiceTest {
 
    protected void dropAllViewsAndTests() {
       Util.withTx(tm, () -> {
-         try (CloseMe ignored = roleManager.withRoles(em, Stream.concat(Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
+         try (CloseMe ignored = roleManager.withRoles(Stream.concat(Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
                .collect(Collectors.toList()))) {
             em.createNativeQuery("UPDATE test SET defaultview_id = NULL").executeUpdate();
             ViewComponent.deleteAll();
@@ -380,7 +380,7 @@ public class BaseServiceTest {
       try {
          Run run = new Run();
          tm.begin();
-         try (CloseMe ignored = roleManager.withRoles(em, Arrays.asList(UPLOADER_ROLES))) {
+         try (CloseMe ignored = roleManager.withRoles(Arrays.asList(UPLOADER_ROLES))) {
             run.data = data;
             run.testid = test.id;
             run.start = run.stop = Instant.now();
@@ -402,7 +402,7 @@ public class BaseServiceTest {
          T value = testLogic.apply(event.dataset);
          tm.begin();
          Throwable error = null;
-         try (CloseMe ignored = roleManager.withRoles(em, SYSTEM_ROLES)) {
+         try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
             DataSet oldDs = DataSet.findById(event.dataset.id);
             if (oldDs != null) {
                oldDs.delete();
@@ -475,7 +475,7 @@ public class BaseServiceTest {
 
    protected boolean checkTestId(int datasetId, int testId) {
       return Util.withTx(tm, () -> {
-         try (CloseMe ignored = roleManager.withRoles(em, Collections.singleton(Roles.HORREUM_SYSTEM))) {
+         try (CloseMe ignored = roleManager.withRoles(Collections.singleton(Roles.HORREUM_SYSTEM))) {
             List<?> list = em.createNativeQuery("SELECT testid FROM dataset WHERE id = ?1").setParameter(1, datasetId).getResultList();
             assertEquals(1, list.size());
             return testId == (int) list.get(0);
@@ -485,7 +485,7 @@ public class BaseServiceTest {
 
    protected boolean checkRunTestId(int runId, int testId) {
       return Util.withTx(tm, () -> {
-         try (CloseMe ignored = roleManager.withRoles(em, Collections.singleton(Roles.HORREUM_SYSTEM))) {
+         try (CloseMe ignored = roleManager.withRoles(Collections.singleton(Roles.HORREUM_SYSTEM))) {
             List<?> list = em.createNativeQuery("SELECT testid FROM run WHERE id = ?1").setParameter(1, runId).getResultList();
             assertEquals(1, list.size());
             return testId == (int) list.get(0);
