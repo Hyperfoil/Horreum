@@ -154,6 +154,7 @@ public class AlertingServiceImpl implements AlertingService {
          "ORDER BY variable_id, timestamp DESC;";
    //@formatter:on
    private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
+   private static final Instant VERY_DISTANT_FUTURE = Instant.parse("2666-06-06T06:06:06.00Z");
 
    private static final Map<String, ChangeDetectionModel> MODELS = Map.of(
          RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel(),
@@ -535,62 +536,74 @@ public class AlertingServiceImpl implements AlertingService {
             dataPoint.dataset.id, dataPoint.timestamp,
             dataPoint.variable.id, dataPoint.variable.name, dataPoint.value);
       JsonNode fingerprint = Fingerprint.<Fingerprint>findByIdOptional(dataPoint.dataset.id).map(fp -> fp.fingerprint).orElse(null);
-      invalidateAndRunChangeDetection(dataPoint.variable, fingerprint, dataPoint.timestamp, event.notify);
-   }
 
-   @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   @Transactional
-   void tryRunChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify) {
-      UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
-      if (timestamp.isAfter(valid.timestamp) || (timestamp.equals(valid.timestamp) && !valid.inclusive)) {
-         runChangeDetection(variable, fingerprint, timestamp, notify, false);
-      }
-   }
-
-   private void invalidateAndRunChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify) {
-      VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
-      log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint, timestamp, validUpTo.get(key));
-      UpTo newValid = validUpTo.compute(key, (ignored, current) -> {
-         if (current == null || !timestamp.isAfter(current.timestamp)) {
-            return new UpTo(timestamp, false);
+      VarAndFingerprint key = new VarAndFingerprint(dataPoint.variable.id, fingerprint);
+      log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", dataPoint.variable.id, fingerprint, dataPoint.timestamp, validUpTo.get(key));
+      validUpTo.compute(key, (ignored, current) -> {
+         if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
+            return new UpTo(dataPoint.timestamp, false);
          } else {
             return current;
          }
       });
-      Instant nextTimestamp;
-      if (newValid.inclusive) {
-         // a bit hacky way to start from the next moment
-         nextTimestamp = newValid.timestamp.plusMillis(1);
-      } else {
-         nextTimestamp = newValid.timestamp;
-      }
-      runChangeDetection(Variable.findById(variable.id), fingerprint, nextTimestamp, notify, true);
+      runChangeDetection(Variable.findById(dataPoint.variable.id), fingerprint, event.notify, true);
    }
 
-   private void runChangeDetection(Variable variable, JsonNode fingerprint, Instant timestamp, boolean notify, boolean expectExists) {
-      int numDeleted = em.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
-            "SELECT id FROM change c LEFT JOIN fingerprint fp ON c.dataset_id = fp.dataset_id " +
-            "WHERE NOT c.confirmed AND c.variable_id = ?1 AND c.timestamp >= ?2 AND json_equals(fp.fingerprint, ?3))")
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void tryRunChangeDetection(Variable variable, JsonNode fingerprint, boolean notify) {
+      runChangeDetection(variable, fingerprint, notify, false);
+   }
+
+   private void runChangeDetection(Variable variable, JsonNode fingerprint, boolean notify, boolean expectExists) {
+      UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
+      @SuppressWarnings("unchecked") Timestamp nextTimestamp = (Timestamp) em.createNativeQuery(
+            "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
+                  "WHERE dp.variable_id = ?1 AND (timestamp > ?2 OR (timestamp = ?2 AND ?3)) AND json_equals(fp.fingerprint, ?4)")
             .unwrap(NativeQuery.class)
             .setParameter(1, variable.id)
-            .setParameter(2, timestamp, InstantType.INSTANCE)
-            .setParameter(3, fingerprint, JsonNodeBinaryType.INSTANCE)
-            .executeUpdate();
-      log.debugf("Deleted %d changes newer than %s for variable %d, fingerprint %s", numDeleted, timestamp, variable.id, fingerprint);
+            .setParameter(2, valid != null ? valid.timestamp : LONG_TIME_AGO, InstantType.INSTANCE)
+            .setParameter(3, valid == null || !valid.inclusive)
+            .setParameter(4, fingerprint, JsonNodeBinaryType.INSTANCE)
+            .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
+      if (nextTimestamp == null) {
+         log.debugf("No further datapoints for change detection");
+         return;
+      }
+
+      // this should happen only after reboot, let's start with last change
+      if (valid != null) {
+         int numDeleted = em.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
+               "SELECT id FROM change c LEFT JOIN fingerprint fp ON c.dataset_id = fp.dataset_id " +
+               "WHERE NOT c.confirmed AND c.variable_id = ?1 AND (c.timestamp > ?2 OR (c.timestamp = ?2 AND ?3)) " +
+               "AND json_equals(fp.fingerprint, ?4))")
+               .unwrap(NativeQuery.class)
+               .setParameter(1, variable.id)
+               .setParameter(2, valid.timestamp, InstantType.INSTANCE)
+               .setParameter(3, !valid.inclusive)
+               .setParameter(4, fingerprint, JsonNodeBinaryType.INSTANCE)
+               .executeUpdate();
+         log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=", valid.timestamp, variable.id, fingerprint);
+      }
 
       var changeQuery = em.createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
-            "WHERE c.variable = ?1 AND c.timestamp < ?2 AND " +
-            "TRUE = function('json_equals', fp.fingerprint, ?3) " +
+            "WHERE c.variable = ?1 AND (c.timestamp < ?2 OR (c.timestamp = ?2 AND ?3 = TRUE)) AND " +
+            "TRUE = function('json_equals', fp.fingerprint, ?4) " +
             "ORDER by c.timestamp DESC", Change.class);
-      changeQuery.setParameter(1, variable).setParameter(2, timestamp)
+      changeQuery
+            .setParameter(1, variable)
+            .setParameter(2, valid != null ? valid.timestamp : VERY_DISTANT_FUTURE)
+            .setParameter(3, valid == null || valid.inclusive)
             .unwrap(org.hibernate.query.Query.class)
-            .setParameter(3, fingerprint, JsonNodeBinaryType.INSTANCE);
+            .setParameter(4, fingerprint, JsonNodeBinaryType.INSTANCE);
       Change lastChange = changeQuery.setMaxResults(1).getResultStream().findFirst().orElse(null);
+
       Instant changeTimestamp = LONG_TIME_AGO;
       if (lastChange != null) {
-         log.debugf("Filtering datapoints newer than %s (change %d)", lastChange.timestamp, lastChange.id);
+         log.debugf("Filtering DP between %s (change %d) and %s", lastChange.timestamp, lastChange.id, nextTimestamp);
          changeTimestamp = lastChange.timestamp;
       }
+
       @SuppressWarnings("unchecked") List<DataPoint> dataPoints = em.createQuery(
             "SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
             "JOIN dp.dataset " + // ignore datapoints (that were not deleted yet) from deleted datasets
@@ -599,7 +612,7 @@ public class AlertingServiceImpl implements AlertingService {
             "ORDER BY dp.timestamp DESC, dp.dataset.id DESC", DataPoint.class)
             .setParameter(1, variable)
             .setParameter(2, changeTimestamp)
-            .setParameter(3, timestamp)
+            .setParameter(3, nextTimestamp.toInstant())
             .unwrap(org.hibernate.query.Query.class).setParameter(4, fingerprint, JsonNodeBinaryType.INSTANCE)
             .getResultList();
       // Last datapoint is already in the list
@@ -628,25 +641,15 @@ public class AlertingServiceImpl implements AlertingService {
             });
          }
       }
-      @SuppressWarnings("unchecked") Timestamp nextTimestamp = (Timestamp) em.createNativeQuery(
-            "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
-            "WHERE dp.variable_id = ?1 AND timestamp > ?2 AND json_equals(fp.fingerprint, ?3)")
-            .unwrap(NativeQuery.class)
-            .setParameter(1, variable.id)
-            .setParameter(2, timestamp, InstantType.INSTANCE)
-            .setParameter(3, fingerprint, JsonNodeBinaryType.INSTANCE)
-            .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
       Util.doAfterCommit(tm, () -> {
-         validateUpTo(variable, fingerprint, timestamp);
-         if (nextTimestamp != null) {
-            Instant next = nextTimestamp.toInstant();
-            messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, next, notify));
-         }
+         validateUpTo(variable, fingerprint, nextTimestamp.toInstant());
+         messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, notify));
       });
    }
 
    private void validateUpTo(Variable variable, JsonNode fingerprint, Instant timestamp) {
       validUpTo.compute(new VarAndFingerprint(variable.id, fingerprint), (ignored, current) -> {
+         log.debugf("Attempt %s, valid up to %s, ", timestamp, current);
          if (current == null || !current.timestamp.isAfter(timestamp)) {
             return new UpTo(timestamp, true);
          } else {
@@ -1312,9 +1315,8 @@ public class AlertingServiceImpl implements AlertingService {
 
       @Override
       public String toString() {
-         return "UpTo{" +
-               "timestamp=" + timestamp +
-               ", inclusive=" + inclusive +
+         return "{ts=" + timestamp +
+               ", incl=" + inclusive +
                '}';
       }
    }

@@ -753,22 +753,25 @@ public class AlertingServiceTest extends BaseServiceTest {
       }
       drainQueue(datapointQueue, order.length);
       drainQueue(changeQueue);
-      List<Change> list = Change.list("variable.testId", test.id);
-      assertEquals(5, list.size(), prettyPrint(list));
+      checkChanges(test);
 
       em.clear();
       recalculateDatapoints(test.id);
       drainQueue(datapointQueue, order.length);
       drainQueue(changeQueue);
-      list = Change.list("variable.testId", test.id);
-      assertEquals(5, list.size(), prettyPrint(list));
+      Thread.sleep(2000);
+      checkChanges(test);
 
       em.clear();
       recalculateDatasets(test.id, true);
       drainQueue(datapointQueue, order.length);
       drainQueue(changeQueue);
-      list = Change.list("variable.testId", test.id);
-      assertEquals(5, list.size(), prettyPrint(list));
+      Thread.sleep(2000);
+      checkChanges(test);
+   }
+
+   private void checkChanges(Test test) {
+      List<Change> list = Change.list("variable.testId", test.id);
       assertEquals(Arrays.asList(1L, 4L, 6L, 7L, 9L),
             list.stream().map(c -> c.timestamp.toEpochMilli()).sorted().collect(Collectors.toList()));
    }
