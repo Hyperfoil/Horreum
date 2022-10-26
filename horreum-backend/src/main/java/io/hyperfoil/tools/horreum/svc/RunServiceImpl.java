@@ -999,7 +999,7 @@ public class RunServiceImpl implements RunService {
                   throw new IllegalStateException("Unknown type " + type);
             }
             nakedNodes.add(node);
-            logMessage(run, PersistentLog.DEBUG, "No transformer for schema %s (key %s), passing as-is.", uri, key);
+            logMessage(run, PersistentLog.DEBUG, "This test (%d) does not use any transformer for schema %s (key %s), passing as-is.", run.testid, uri, key);
          }
       }
       if (schemasAndTransformers > 0) {
