@@ -122,7 +122,7 @@ public class DataSet extends OwnedEntityBase {
       @Override
       public String toString() {
          return "DataSet.EventNew{" +
-               "dataset=" + dataset.id + " (" + dataset.run.id + "/" + dataset.ordinal +
+               "dataset=" + dataset == null ? "" : dataset.id + " (" + dataset.run.id + "/" + dataset.ordinal +
                "), isRecalculation=" + isRecalculation +
                '}';
       }
