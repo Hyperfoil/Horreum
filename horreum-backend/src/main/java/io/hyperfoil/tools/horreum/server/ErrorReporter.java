@@ -46,7 +46,7 @@ public class ErrorReporter {
             mailer.send(Mail.withText(adminMail.get(), subjectPrefix + subject, bos.toString(StandardCharsets.UTF_8)))
                   .await().atMost(sendMailTimeout);
          } catch (Throwable t2) {
-            log.error("Cannot send notification to admin!", t);
+            log.error("Cannot send notification to admin!", t2);
          }
       }
    }
