@@ -87,6 +87,16 @@ public class DataSet extends OwnedEntityBase {
    @ElementCollection
    public Collection<ValidationError> validationErrors;
 
+   @JsonProperty("runId")
+   public int getRunId() {
+      return run.id;
+   }
+
+   @JsonProperty("runId")
+   public void setRunId(int runId) {
+      run = Run.getEntityManager().getReference(Run.class, runId);
+   }
+
    @JsonIgnore
    @ApiIgnore
    public String getFingerprint() {
