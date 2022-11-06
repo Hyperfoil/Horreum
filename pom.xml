@@ -85,7 +85,7 @@
         <keycloak-admin-client.version>17.0.1</keycloak-admin-client.version>
         <validator.version>1.0.69</validator.version>
         <jayway.jsonpath.version>2.7.0</jayway.jsonpath.version>
-        <jackson.version>2.13.3</jackson.version>
+        <jackson.version>2.14.0</jackson.version>
         <netty.version>4.1.77.Final</netty.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
@@ -269,7 +269,7 @@
                                                <goal>run</goal>
                                            </goals>
                                            <action>
-                                               <ignore />
+                                               <ignore/>
                                            </action>
                                     </pluginExecutionFilter>
                                 </pluginExecution>
@@ -312,7 +312,7 @@
                         </goals>
                         <configuration>
                             <rules>
-                                <dependencyConvergence />
+                                <dependencyConvergence/>
                                 <requireReleaseDeps>
                                     <failWhenParentIsSnapshot>false</failWhenParentIsSnapshot>
                                     <excludes>
