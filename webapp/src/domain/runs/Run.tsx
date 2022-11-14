@@ -95,7 +95,7 @@ export default function Run() {
                                                                 .finally(() => setRecalculating(false))
                                                         }}
                                                     >
-                                                        Recalculate datasets {recalculating && <Spinner size="md" />}
+                                                        Re-transform datasets {recalculating && <Spinner size="md" />}
                                                     </Button>
                                                     <Button
                                                         variant="secondary"

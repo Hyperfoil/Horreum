@@ -189,7 +189,7 @@ export default function Transformers(props: TransformersProps) {
                     </FlexItem>,
                     <FlexItem key="recalculate">
                         <Button variant="secondary" onClick={() => setRecalculateModalOpen(true)}>
-                            Recalculate datasets
+                            Re-transform datasets
                         </Button>
                     </FlexItem>,
                 ]}

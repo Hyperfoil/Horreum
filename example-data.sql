@@ -46,6 +46,12 @@ INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (15,13,2,'20
 INSERT INTO datapoint (id,variable_id,runid,timestamp,value) VALUES (16,13,3,'2020-07-30 12:00:54.678',205);
 INSERT INTO change(id, confirmed, description, variable_id, runid, timestamp) VALUES (17, false, 'Test annotation <a href="http://localhost:3000/" target="_parent">with a link</a>', 13, 3, '2020-07-30 12:00:54.678');
 
+INSERT INTO public.schema (id,name,uri,owner,access) VALUES (4,'Acme Schema','urn:acme:foobar:0.1','dev-team',0);
+INSERT INTO public.test (id,name,description,defaultview_id,owner,access) VALUES (3,'Roadrunner Test','acme.com 2049 benchmark',NULL,'perf-team',0);
+INSERT INTO public.transformer(id,name,description,schema_id,function,owner,access,targetschemauri) VALUES (1,'Acme Transformer','Transformer for converting a Roadrunner Test Run.',4,'','perf-team',0,'urn:acme:foobar:0.1');
+INSERT INTO public.test_transformers (test_id,transformer_id) VALUES (3,1);
+INSERT INTO public.run (id, access, data, owner, start, stop, testid, token) VALUES (4, 0, '{ "all.json": {"tags": [ "foo" ], "job": "otherjob", "info": {"id": "0002", "errors": [], "benchmark": "road-runner", "cancelled": false, "startTime": 1580906854462, "description": null, "terminateTime": 1580906854678}, "$schema": "http://hyperfoil.io/road-run-schema/0.1"}, "other.json": { "$schema": "foobar" }}', 'dev-team', '2020-04-06 12:00:54.462', '2020-04-06 12:00:54.678', 3, NULL);
+
 INSERT INTO watch(id, testid) VALUES (18, 2);
 INSERT INTO watch_users(watch_id, users) VALUES (18, 'user');
 INSERT INTO watch_teams(watch_id, teams) VALUES (18, 'dev-team');
