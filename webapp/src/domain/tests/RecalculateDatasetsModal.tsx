@@ -37,7 +37,7 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
     }, [test])
     return (
         <Modal
-            title={`Recalculate datasets for test ${test?.name || "<unknown test>"}`}
+            title={`Re-transform datasets for test ${test?.name || "<unknown test>"}`}
             variant="small"
             showClose={true}
             isOpen={props.isOpen}
