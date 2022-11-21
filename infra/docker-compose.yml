@@ -62,7 +62,7 @@ services:
     depends_on:
     - keycloak
     - app-init
-    image: grafana/grafana
+    image: docker.io/grafana/grafana
     entrypoint: /cwd/infra/grafana.sh
     env_file: grafana.env
     environment:
