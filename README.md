@@ -34,7 +34,15 @@ and after a few moments everything should be up and ready. The script will creat
 Install:
 
 ``` bash
-dnf install -y podman podman-plugins podman-compose
+dnf install -y podman podman-plugins podman-compose podman-docker
+```
+
+Enable socket environment:
+
+``` bash
+systemctl --user enable --now podman.socket
+export DOCKER_HOST=unix:///run/user/${UID}/podman/podman.sock
+export TESTCONTAINERS_RYUK_DISABLED=true
 ```
 
 ### PostgreSQL
@@ -42,7 +50,7 @@ dnf install -y podman podman-plugins podman-compose
 You can preload the database with some example data with
 
 ```bash
-PGPASSWORD=secret psql -h localhost -U dbadmin horreum -f example-data.sql
+PGPASSWORD=secret psql -h localhost -U dbadmin -f example-data.sql horreum
 ```
 
 If postgres fails to start remove the volume using: `podman volume rm horreum_horreum_pg12`
