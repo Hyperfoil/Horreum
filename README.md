@@ -14,7 +14,7 @@ Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io)
 
 ### Docker
 
-We have prepared a `docker-compose` script to setup Keycloak, PosgreSQL and Grafana using
+We have prepared a `docker-compose` script to setup Keycloak, PostgreSQL and Grafana using
 
 ```bash
 docker-compose -p horreum -f infra/docker-compose.yml up -d
@@ -23,7 +23,7 @@ and after a few moments everything should be up and ready. The script will creat
 
 ### podman
 
-We have prepared a `podman-compose` script to setup Keycloak, PosgreSQL and Grafana using
+We have prepared a `podman-compose` script to setup Keycloak, PostgreSQL and Grafana using
 
 ```bash
 infra/podman-compose.sh
