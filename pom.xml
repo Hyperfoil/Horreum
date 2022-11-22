@@ -75,18 +75,18 @@
 
         <commons.math3.version>3.6.1</commons.math3.version>
         <compiler-plugin.version>3.8.1</compiler-plugin.version>
-        <graalvm.version>22.2.0</graalvm.version>
+        <graalvm.version>22.3.0</graalvm.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>2.12.3.Final</quarkus.version>
-        <quinoa.version>1.0.5</quinoa.version>
-        <surefire-plugin.version>3.0.0-M6</surefire-plugin.version>
-        <failsafe-plugin.version>3.0.0-M5</failsafe-plugin.version>
+        <quarkus.version>2.14.1.Final</quarkus.version>
+        <quinoa.version>1.2.3</quinoa.version>
+        <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
+        <failsafe-plugin.version>3.3.0</failsafe-plugin.version>
         <keycloak-admin-client.version>17.0.1</keycloak-admin-client.version>
         <validator.version>1.0.69</validator.version>
         <jayway.jsonpath.version>2.7.0</jayway.jsonpath.version>
         <jackson.version>2.13.3</jackson.version>
-        <netty.version>4.1.77.Final</netty.version>
+        <netty.version>4.1.85.Final</netty.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
     </properties>
@@ -119,6 +119,12 @@
         <developer>
             <name>Jeremy Whiting</name>
             <email>jwhiting@redhat.com</email>
+            <organization>Red Hat</organization>
+            <organizationUrl>http://www.redhat.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Jesper Pedersen</name>
+            <email>jpederse@redhat.com</email>
             <organization>Red Hat</organization>
             <organizationUrl>http://www.redhat.com</organizationUrl>
         </developer>
