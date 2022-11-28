@@ -20,7 +20,7 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
                             {props.uris[e.schemaId] || "unknown schema " + e.schemaId}
                         </NavLink>
                     ) : (
-                        "No schema"
+                        "(none)"
                     ),
                     e.error.type,
                     <code>{e.error.path}</code>,

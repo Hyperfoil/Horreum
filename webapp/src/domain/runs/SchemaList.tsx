@@ -45,7 +45,7 @@ export default function SchemaList(props: SchemaListProps) {
         lines = [
             ...lines,
             <React.Fragment key="no_schema">
-                No schema{" "}
+                (none){" "}
                 <Tooltip
                     isContentLeftAligned
                     content={
