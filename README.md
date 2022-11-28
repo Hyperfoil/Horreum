@@ -26,7 +26,7 @@ and after a few moments everything should be up and ready. The script will creat
 We have prepared a `podman-compose` script to setup Keycloak, PostgreSQL and Grafana using
 
 ```bash
-. ./infra/podman-compose.sh
+./infra/podman-compose.sh
 ```
 
 and after a few moments everything should be up and ready. The script will create some example users.
@@ -44,6 +44,8 @@ systemctl --user enable --now podman.socket
 export DOCKER_HOST=unix:///run/user/${UID}/podman/podman.sock
 export TESTCONTAINERS_RYUK_DISABLED=true
 ```
+
+in order to run the test suite.
 
 Shutdown:
 
