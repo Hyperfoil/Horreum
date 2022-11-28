@@ -121,21 +121,21 @@ Keycloak is running on [localhost:8180](http://localhost:8180)
 ## Getting Started
 
 ```bash
-./mvnw package
-./mvnw quarkus:dev
+mvn package
+mvn quarkus:dev
 ```
 
 To run without test cases do
 
 ```bash
-./mvnw -DskipTests=true package
-./mvnw -Dquarkus.test.continuous-testing=disabled quarkus:dev
+mvn -DskipTests=true package
+mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev
 ```
 
 Access
 
-* `localhost:3000` for the create-react-app live code server
-* `localhost:8080` for the Quarkus development server
+* [localhost:3000](http://localhost:3000) for the create-react-app live code server
+* [localhost:8080](http://localhost:8080) for the Quarkus development server
 
 ## Operator
 

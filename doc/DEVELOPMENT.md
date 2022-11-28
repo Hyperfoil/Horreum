@@ -16,7 +16,7 @@ Alternatively you can build Horreum image (with `dev` tag) and run it (assuming 
 # The base image contains tools like curl and jq and horreum.sh script
 podman build -f src/main/docker/Dockerfile.jvm.base -t quay.io/hyperfoil/horreum-base:latest .
 podman push quay.io/hyperfoil/horreum-base:latest
-./mvnw package
+mvn package
 podman run --rm --name horreum_app --env-file horreum-backend/.env --network=host quay.io/hyperfoil/horreum:dev
 ```
 
