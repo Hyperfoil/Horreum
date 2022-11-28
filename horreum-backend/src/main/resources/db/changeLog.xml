@@ -3974,4 +3974,20 @@
         </addColumn>
         <dropDefaultValue tableName="messagebus" columnName="testid"/>
     </changeSet>
+
+    <changeSet id="100" author="rvansa">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rs_after_run_trash() RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM run_schemas WHERE runid = OLD.id;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE TRIGGER rs_after_run_trash AFTER UPDATE OF trashed ON run FOR EACH ROW WHEN (NEW.trashed) EXECUTE FUNCTION rs_after_run_trash();
+            CREATE TRIGGER rs_after_run_untrash AFTER UPDATE OF trashed ON run FOR EACH ROW WHEN (NOT NEW.trashed) EXECUTE FUNCTION rs_after_run_update();
+            ALTER POLICY run_update ON run USING (has_role2(owner, 'tester') OR has_role('horreum.system'));
+        </sql>
+    </changeSet>
 </databaseChangeLog>

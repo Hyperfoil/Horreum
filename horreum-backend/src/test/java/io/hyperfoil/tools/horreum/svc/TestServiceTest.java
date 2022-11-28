@@ -51,7 +51,7 @@ public class TestServiceTest extends BaseServiceTest {
    RoleManager roleManager;
 
    @org.junit.jupiter.api.Test
-   public void testCreateDelete(TestInfo info) {
+   public void testCreateDelete(TestInfo info) throws InterruptedException {
 
       Test test = createTest(createExampleTest(getTestName(info)));
       try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
@@ -61,6 +61,9 @@ public class TestServiceTest extends BaseServiceTest {
       int runId = uploadRun("{ \"foo\" : \"bar\" }", test.name);
 
       deleteTest(test);
+      BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, Run.EVENT_TRASHED, id -> id == runId);
+      assertNotNull(events.poll(10, TimeUnit.SECONDS));
+
       em.clear();
       try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
          assertNull(Test.findById(test.id));
@@ -68,6 +71,8 @@ public class TestServiceTest extends BaseServiceTest {
          Run run = Run.findById(runId);
          assertNotNull(run);
          assertTrue(run.trashed);
+
+         assertEquals(0, DataSet.count("testid", test.id));
       }
    }
 

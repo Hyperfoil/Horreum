@@ -60,6 +60,21 @@ public class Transformer extends OwnedEntityBase implements Comparable<Transform
       return schema.name;
    }
 
+   @JsonProperty(value = "schemaId")
+   public void setSchemaId(int schemaId) {
+      schema = Schema.getEntityManager().getReference(Schema.class, schemaId);
+   }
+
+   // This gets invoked during deserialization on message bus
+   @JsonProperty(value = "schemaUri")
+   public void ignoreSchemaUri(String uri) {
+   }
+
+   // This gets invoked during deserialization on message bus
+   @JsonProperty(value = "schemaName")
+   public void ignoreSchemaName(String name) {
+   }
+
    @Override
    public int compareTo(Transformer o) {
       if (o != null) {

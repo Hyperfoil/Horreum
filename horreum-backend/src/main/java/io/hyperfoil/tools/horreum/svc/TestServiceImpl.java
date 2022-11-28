@@ -49,7 +49,6 @@ public class TestServiceImpl implements TestService {
 
    private static final String UPDATE_NOTIFICATIONS = "UPDATE test SET notificationsenabled = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
-   private static final String TRASH_RUNS = "UPDATE run SET trashed = true WHERE testid = ?";
    //@formatter:off
    protected static final String LABEL_VALUES_QUERY =
          "SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values FROM dataset " +
@@ -93,8 +92,8 @@ public class TestServiceImpl implements TestService {
       } else if (!identity.getRoles().contains(test.owner)) {
          throw ServiceException.forbidden("You are not an owner of test " + id);
       }
+      log.infof("Deleting test %s (%d)", test.name, test.id);
       test.delete();
-      em.createNativeQuery(TRASH_RUNS).setParameter(1, test.id).executeUpdate();
       em.createNativeQuery("DELETE FROM transformationlog WHERE testid = ?1").setParameter(1, test.id);
       messageBus.publish(Test.EVENT_DELETED, test.id, test);
    }
@@ -192,13 +191,22 @@ public class TestServiceImpl implements TestService {
          em.merge(test);
       } else {
          if (test.defaultView == null) {
-            test.defaultView = new View();
+            if (test.views != null) {
+               test.defaultView = test.views.stream()
+                     .filter(v -> "Default".equalsIgnoreCase(v.name)).findFirst().orElse(null);
+            }
+            if (test.defaultView == null) {
+               test.defaultView = new View();
+            }
          }
          test.defaultView.id = null;
          test.defaultView.test = test;
          test.defaultView.name = "Default";
          if (test.defaultView.components == null) {
             test.defaultView.components = Collections.emptyList();
+         }
+         if (test.views != null) {
+            test.views.forEach(View::ensureLinked);
          }
          // We need to persist the test before view in order for RLS to work
          em.persist(test);

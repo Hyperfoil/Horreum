@@ -87,9 +87,9 @@ public class RunServiceImpl implements RunService {
             "FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q " +
             "WHERE jsonb_typeof(q) = 'object') AS keys " +
          "WHERE keys.key LIKE CONCAT(?, '%');";
-   protected static final String FIND_RUNS_WITH_URI = "SELECT id, testid FROM run WHERE data->>'$schema' = ?1 OR (" +
+   protected static final String FIND_RUNS_WITH_URI = "SELECT id, testid FROM run WHERE NOT trashed AND (data->>'$schema' = ?1 OR (" +
          "CASE WHEN jsonb_typeof(data) = 'object' THEN ?1 IN (SELECT values.value->>'$schema' FROM jsonb_each(data) as values) " +
-         "WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema') ELSE false END)";
+         "WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema') ELSE false END))";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -124,6 +124,25 @@ public class RunServiceImpl implements RunService {
    void init() {
       sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
       sqlService.registerListener("new_or_updated_schema", this::onNewOrUpdatedSchema);
+      messageBus.subscribe(Test.EVENT_DELETED, "RunService", Test.class, this::onTestDeleted);
+   }
+
+   @Transactional
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   void onTestDeleted(Test test) {
+      log.infof("Trashing runs for test %s (%d)", test.name, test.id);
+      ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, test.id));
+      while (results.next()) {
+         int id = (int) results.get(0);
+         messageBus.executeForTest(test.id, () -> trashDueToTestDeleted(id));
+      }
+   }
+
+   // plain trash does not have the right priviledges and @RolesAllowed would cause ContextNotActiveException
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void trashDueToTestDeleted(int id) {
+      trashInternal(id, true);
    }
 
    private void onNewOrUpdatedSchema(String schemaIdString) {
@@ -720,10 +739,15 @@ public class RunServiceImpl implements RunService {
    @Transactional
    @Override
    public void trash(int id, Boolean isTrashed) {
-      boolean trashed = isTrashed == null || isTrashed;
+      trashInternal(id, isTrashed == null || isTrashed);
+   }
+
+   private void trashInternal(int id, boolean trashed) {
       Run run = updateRun(id, r -> r.trashed = trashed);
       if (trashed) {
-         for (var dataset : DataSet.<DataSet>list("run.id", id)) {
+         List<DataSet> datasets = DataSet.list("run.id", id);
+         log.infof("Trashing run %d (test %d, %d datasets)", run.id, run.testid, datasets.size());
+         for (var dataset : datasets) {
             messageBus.publish(DataSet.EVENT_DELETED, run.testid, dataset.getInfo());
             dataset.delete();
          }
@@ -789,6 +813,7 @@ public class RunServiceImpl implements RunService {
       run.persist();
       Query query = em.createNativeQuery("SELECT schemaid AS key, uri AS value FROM run_schemas WHERE runid = ?");
       query.setParameter(1, run.id);
+      //noinspection deprecation
       query.unwrap(NativeQuery.class).setResultTransformer(new MapResultTransformer<Integer, String>());
       @SuppressWarnings("unchecked") Map<Integer, String> schemas = (Map<Integer, String>) query.getSingleResult();
       em.flush();
