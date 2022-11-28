@@ -169,6 +169,7 @@ public class SchemaServiceImpl implements SchemaService {
       } else {
          schema.persist();
       }
+      log.infof("Added schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
       em.flush(); //manually flush to validate constraints
       return schema.id;
    }
@@ -289,7 +290,7 @@ public class SchemaServiceImpl implements SchemaService {
          }
          return;
       }
-      dataset.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
+      dataset.validationErrors.removeIf(e -> schemaFilter == null || (e.schema != null && schemaFilter.test(e.schema.uri)));
       validateData(dataset.data, schemaFilter, dataset.validationErrors::add, false);
       for (var item : dataset.data) {
          String uri = item.path("$schema").asText();
@@ -354,7 +355,7 @@ public class SchemaServiceImpl implements SchemaService {
          if (rootSchema == null || rootSchema.schema == null) {
             if (!allowUnknownSchema) {
                ValidationError error = new ValidationError();
-               error.error = JsonNodeFactory.instance.objectNode().put("type", "Schema not defined").put("message", "Schema '" + schemaUri + "' is not defined in Horreum");
+               error.error = JsonNodeFactory.instance.objectNode().put("type", "JSON schema not defined").put("message", "JSON schema '" + schemaUri + "' is not defined in Horreum");
                consumer.accept(error);
             }
             continue;
@@ -405,9 +406,14 @@ public class SchemaServiceImpl implements SchemaService {
       if (schema == null) {
          throw ServiceException.notFound("Schema not found");
       } else {
+         log.infof("Deleting schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
          em.createNativeQuery("DELETE FROM label_extractors WHERE label_id IN (SELECT id FROM label WHERE schema_id = ?1)")
                .setParameter(1, id).executeUpdate();
          Label.delete("schema_id", id);
+         em.createNativeQuery("DELETE FROM transformer_extractors WHERE transformer_id IN (SELECT id FROM transformer WHERE schema_id = ?1)")
+               .setParameter(1, id).executeUpdate();
+         em.createNativeQuery("DELETE FROM test_transformers WHERE transformer_id IN (SELECT id FROM transformer WHERE schema_id = ?1)")
+               .setParameter(1, id).executeUpdate();
          Transformer.delete("schema_id", id);
          schema.delete();
       }
