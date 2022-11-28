@@ -418,6 +418,16 @@ public class DatasetServiceImpl implements DatasetService {
          return;
       }
 
+      // While any change should remove the label_value first via trigger it is possible
+      // that something triggers two events after each other, removing the data (twice)
+      // before the first event is processed. The second event would then find the label_value
+      // already present and would fail with a constraint violation.
+      if (queryLabelId < 0) {
+         Label.Value.delete("datasetId", datasetId);
+      } else {
+         Label.Value.delete("datasetId = ?1 AND labelId = ?2", datasetId, queryLabelId);
+      }
+
       Util.evaluateMany(extracted, row -> (String) row[2], row -> (JsonNode) row[3],
             (row, result) -> createLabel(datasetId, (int) row[0], Util.convertToJson(result)),
             row -> createLabel(datasetId, (int) row[0], (JsonNode) row[3]),
