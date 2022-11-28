@@ -58,7 +58,7 @@ podman-compose -p horreum -f infra/docker-compose.yml down
 You can preload the database with some example data with
 
 ```bash
-PGPASSWORD=secret psql -h localhost -U dbadmin -f example-data.sql horreum
+PGPASSWORD=secret psql -h localhost -U dbadmin -f horreum-backend/src/test/resources/sql/example-data.sql horreum
 ```
 
 If postgres fails to start remove the volume using: `podman volume rm horreum_horreum_pg12`
