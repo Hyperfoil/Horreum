@@ -471,21 +471,32 @@ public class Util {
    }
 
    public static void executeBlocking(Vertx vertx, Runnable runnable) {
-      // CDI needs to be propagated - without that the interceptors wouldn't run.
-      // Without thread context propagation we would get an exception in Run.findById, though the interceptors would be invoked correctly.
-      Runnable wrapped = SmallRyeContextManagerProvider.getManager().newThreadContextBuilder()
-            .propagated(ThreadContext.CDI).build().contextualRunnable(runnable);
+      Runnable wrapped = wrapForBlockingExecution(runnable);
       vertx.executeBlocking(promise -> {
-         RolesInterceptor.setCurrentIdentity(CachedSecurityIdentity.ANONYMOUS);
          try {
             wrapped.run();
          } catch (Exception e) {
             log.error("Failed to execute blocking task", e);
          } finally {
-            RolesInterceptor.setCurrentIdentity(null);
             promise.complete();
          }
       }, result -> {});
+   }
+
+   public static Runnable wrapForBlockingExecution(Runnable runnable) {
+      // CDI needs to be propagated - without that the interceptors wouldn't run.
+      // Without thread context propagation we would get an exception in Run.findById, though the interceptors would be invoked correctly.
+      Runnable withThreadContext = SmallRyeContextManagerProvider.getManager().newThreadContextBuilder()
+            .propagated(ThreadContext.CDI).build().contextualRunnable(runnable);
+      return () -> {
+         // Note: this won't help with accessing the injected security identity
+         RolesInterceptor.setCurrentIdentity(CachedSecurityIdentity.ANONYMOUS);
+         try {
+            withThreadContext.run();
+         } finally {
+            RolesInterceptor.setCurrentIdentity(null);
+         }
+      };
    }
 
    public static Uni<Void> executeBlocking(io.vertx.mutiny.core.Vertx vertx, SecurityIdentity identity, Uni<Void> uni) {

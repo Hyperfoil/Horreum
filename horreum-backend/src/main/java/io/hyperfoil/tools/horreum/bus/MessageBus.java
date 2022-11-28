@@ -272,9 +272,16 @@ public class MessageBus {
    }
 
    public void executeForTest(int testId, Runnable runnable) {
-      Util.executeBlocking(vertx, () -> {
-         TaskQueue queue = taskQueues.computeIfAbsent(testId, TaskQueue::new);
-         queue.executeOrAdd(runnable);
+      Runnable task = Util.wrapForBlockingExecution(runnable);
+      vertx.executeBlocking(promise -> {
+         try {
+            TaskQueue queue = taskQueues.computeIfAbsent(testId, TaskQueue::new);
+            queue.executeOrAdd(task);
+         } catch (Exception e) {
+            log.error("Failed to execute blocking task", e);
+         } finally {
+            promise.complete();
+         }
       });
    }
 
