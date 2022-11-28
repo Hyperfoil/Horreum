@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.bus;
 
 import java.math.BigInteger;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -78,6 +79,8 @@ public class MessageBus {
    private final ConcurrentMap<String, Class<?>> payloadClasses = new ConcurrentHashMap<>();
    private final ConcurrentMap<Integer, TaskQueue> taskQueues = new ConcurrentHashMap<>();
 
+   private final List<Runnable> unregisters = new ArrayList<>();
+
    @PostConstruct
    void init() {
       eventBus.registerDefaultCodec(Message.class, new MessageBusCodec());
@@ -87,6 +90,7 @@ public class MessageBus {
    void destroy() {
       // required for dev-mode to work correctly
       eventBus.unregisterDefaultCodec(Message.class);
+      unregisters.forEach(Runnable::run);
    }
 
    @Transactional(Transactional.TxType.MANDATORY)
@@ -173,6 +177,7 @@ public class MessageBus {
             }
          });
       });
+      unregisters.add(consumer::unregister);
       return () -> {
          removeIndex(channel, index);
          int newFlags = flags.compute(channel, (c, current) -> current != null ? current & ~(1 << index) : 0);
