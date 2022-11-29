@@ -37,7 +37,7 @@ Install:
 dnf install -y podman podman-plugins podman-compose podman-docker
 ```
 
-Enable socket environment:
+In order to run the test suite please enable socket environment:
 
 ``` bash
 systemctl --user enable --now podman.socket
@@ -45,33 +45,19 @@ export DOCKER_HOST=unix:///run/user/${UID}/podman/podman.sock
 export TESTCONTAINERS_RYUK_DISABLED=true
 ```
 
-in order to run the test suite.
-
 Shutdown:
 
 ``` bash
 podman-compose -p horreum -f infra/docker-compose.yml down
 ```
 
-### PostgreSQL
+### Example configuration
 
-You can preload the database with some example data with
+You can preload Horreum with some example data with
 
 ```bash
-PGPASSWORD=secret psql -h localhost -U dbadmin -f horreum-backend/src/test/resources/sql/example-data.sql horreum
+infra/example-configuration.sh
 ```
-
-If postgres fails to start remove the volume using: `podman volume rm horreum_horreum_pg12`
-
-### Grafana
-
-If you are having problems with Grafana login after restarting the infrastructure run
-
-``` bash
-rm horreum-backend/.env .grafana
-```
-
-to wipe out old environment files.
 
 ### OpenSSL
 
@@ -136,6 +122,20 @@ Access
 
 * [localhost:3000](http://localhost:3000) for the create-react-app live code server
 * [localhost:8080](http://localhost:8080) for the Quarkus development server
+
+### Troubleshooting development infrastructure
+
+If PostgreSQL container fails to start try removing the volume using:
+
+```bash
+podman volume rm horreum_horreum_pg12
+```
+
+If you are having problems with Grafana login after restarting the infrastructure wipe out old environment files using:
+
+```bash
+rm horreum-backend/.env .grafana
+```
 
 ## Operator
 
