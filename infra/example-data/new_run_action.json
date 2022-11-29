@@ -1,0 +1,7 @@
+{
+  "event": "run/new",
+  "type": "http",
+  "config": {
+    "url": "http://example.com/stuff-handling-runs"
+  }
+}

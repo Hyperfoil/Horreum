@@ -1,0 +1,8 @@
+{
+  "event": "test/new",
+  "type": "http",
+  "testId": -1,
+  "config": {
+    "url": "http://example.com/stuff-handling-runs"
+  }
+}

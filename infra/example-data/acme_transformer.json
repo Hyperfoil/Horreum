@@ -1,0 +1,21 @@
+{
+  "name": "Acme Transformer",
+  "description": "Transformer for converting complex runs into individual datasets",
+  "owner": "dev-team",
+  "access": "PUBLIC",
+  "targetSchemaUri": "urn:acme:horreum:0.1",
+  "extractors": [
+    {
+      "name": "hash",
+      "jsonpath": "$.buildHash",
+      "array": false
+    },
+    {
+      "name": "results",
+      "jsonpath": "$.results",
+      "array": false
+    }
+  ],
+  "function": "({results, hash}) => results.map(r => ({ ...r, hash }))"
+}
+

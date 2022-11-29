@@ -30,12 +30,14 @@ import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
+import javax.validation.constraints.NotNull;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -158,6 +160,8 @@ public class ActionServiceImpl implements ActionService {
       if (action.testId == null) {
          action.testId = -1;
       }
+      action.config = ensureNotNull(action.config);
+      action.secrets = ensureNotNull(action.secrets);
       validate(action);
       if (action.id == null) {
          action.persist();
@@ -166,6 +170,10 @@ public class ActionServiceImpl implements ActionService {
       }
       em.flush();
       return action;
+   }
+
+   private JsonNode ensureNotNull(@NotNull JsonNode node) {
+      return node == null || node.isNull() || node.isMissingNode() ? JsonNodeFactory.instance.objectNode() : node;
    }
 
    void merge(Action action) {

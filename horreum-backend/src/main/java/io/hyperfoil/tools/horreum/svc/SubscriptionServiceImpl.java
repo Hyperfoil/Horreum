@@ -200,6 +200,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       if (existing == null) {
          watch.id = null;
          watch.test = em.getReference(Test.class, testId);
+         if (watch.users == null) {
+            watch.users = Collections.emptyList();
+         }
+         if (watch.teams == null) {
+            watch.teams = Collections.emptyList();
+         }
+         if (watch.optout == null) {
+            watch.optout = Collections.emptyList();
+         }
          watch.persistAndFlush();
       } else {
          existing.users = watch.users;

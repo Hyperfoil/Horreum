@@ -1,0 +1,24 @@
+{
+  "description": "Example run of Roadrunner",
+  "owner": "dev-team",
+  "access": "PUBLIC",
+  "start": "2022-11-25T15:08:51Z",
+  "stop": "2022-11-25T15:08:52Z",
+  "data": {
+    "$schema": "urn:acme:benchmark:0.1",
+    "something": "This gets lost by the transformer",
+    "buildHash": "defec8eddeadbeafcafebabeb16b00b5",
+    "results": [
+      {
+        "test": "Foo",
+        "requests": 123,
+        "duration": 10
+      },
+      {
+        "test": "Bar",
+        "requests": 456,
+        "duration": 20
+      }
+    ]
+  }
+}

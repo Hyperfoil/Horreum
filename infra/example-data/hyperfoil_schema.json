@@ -1,0 +1,7 @@
+{
+  "name": "Hyperfoil",
+  "description": "Results from Hyperfoil benchmark",
+  "owner": "dev-team",
+  "access": "PUBLIC",
+  "uri": "http://hyperfoil.io/run-schema/v3.0"
+}

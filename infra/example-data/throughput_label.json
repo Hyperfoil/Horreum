@@ -1,0 +1,18 @@
+{
+  "name": "throughput",
+  "owner": "dev-team",
+  "access": "PUBLIC",
+  "filtering": false,
+  "metrics": true,
+  "extractors": [
+    {
+      "name": "requests",
+      "jsonpath": "$.requests"
+    },
+    {
+      "name": "duration",
+      "jsonpath": "$.duration"
+    }
+  ],
+  "function": "({requests, duration}) => requests/duration"
+}

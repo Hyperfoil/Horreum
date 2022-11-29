@@ -756,6 +756,9 @@ public class AlertingServiceImpl implements AlertingService {
          if (model == null) {
             throw ServiceException.badRequest("Unknown model " + rd.model);
          }
+         if (rd.config == null || rd.config.isNull() || rd.config.isMissingNode()) {
+            rd.config = JsonNodeFactory.instance.objectNode();
+         }
          if (!(rd.config instanceof ObjectNode)) {
             throw ServiceException.badRequest("Invalid config for model " + rd.model + " - not an object: " + rd.config);
          }

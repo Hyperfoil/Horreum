@@ -1,0 +1,13 @@
+{
+  "name": "benchmark_test",
+  "owner": "dev-team",
+  "access": "PUBLIC",
+  "filtering": true,
+  "metrics": false,
+  "extractors": [
+    {
+      "name": "test",
+      "jsonpath": "$.test"
+    }
+  ]
+}

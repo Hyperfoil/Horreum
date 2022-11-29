@@ -1,0 +1,11 @@
+[
+  {
+    "name": "throughput",
+    "labels": [ "throughput" ],
+    "changeDetection": [
+      {
+        "model": "relativeDifference"
+      }
+    ]
+  }
+]

@@ -1,0 +1,7 @@
+{
+  "name": "ACME Benchmark Schema",
+  "description": "Data produced by benchmarking tool",
+  "owner": "dev-team",
+  "access": "PUBLIC",
+  "uri": "urn:acme:benchmark:0.1"
+}
