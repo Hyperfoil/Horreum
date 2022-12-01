@@ -33,7 +33,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 @Consumes({ MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 public interface RunService {
-   @APIResponse(content = @Content(schema = @Schema(implementation = RunExtended.class)))
+   @APIResponse(content = @Content(schema = @Schema(implementation = RunExtended.class)), description = "Returns an instance of RunExtended")
    @GET
    @Path("{id}")
    Object getRun(@PathParam("id") int id,
