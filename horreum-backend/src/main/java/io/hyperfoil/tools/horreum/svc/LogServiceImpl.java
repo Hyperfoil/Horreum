@@ -39,6 +39,9 @@ public class LogServiceImpl implements LogService {
    @Inject
    MessageBus messageBus;
 
+   @Inject
+   TimeService timeService;
+
    @PostConstruct
    void init() {
       messageBus.subscribe(Test.EVENT_DELETED, "LogService", Test.class, this::onTestDelete);
@@ -173,7 +176,7 @@ public class LogServiceImpl implements LogService {
    @Transactional
    void checkExpiredTransformationLogs() {
       Duration maxLifespan = Duration.parse(transformationLogMaxLifespan);
-      long logsDeleted = TransformationLog.delete("timestamp < ?1", Instant.now().minus(maxLifespan));
+      long logsDeleted = TransformationLog.delete("timestamp < ?1", timeService.now().minus(maxLifespan));
       log.debugf("Deleted %d expired transformation log messages", logsDeleted);
    }
 }

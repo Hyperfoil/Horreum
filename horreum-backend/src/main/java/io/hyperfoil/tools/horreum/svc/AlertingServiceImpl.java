@@ -196,6 +196,9 @@ public class AlertingServiceImpl implements AlertingService {
    @Inject
    NotificationServiceImpl notificationService;
 
+   @Inject
+   TimeService timeService;
+
    long grafanaDatasourceTimerId;
 
    // entries can be removed from timer thread while normally this is updated from one of blocking threads
@@ -1030,13 +1033,13 @@ public class AlertingServiceImpl implements AlertingService {
          long maxStaleness = ((BigInteger) row[3]).longValue();
          Timestamp ts = (Timestamp) row[4];
          Instant timestamp = ts == null ? null : ts.toInstant();
-         if (timestamp == null || timestamp.isBefore(Instant.now().minusMillis(maxStaleness))) {
+         if (timestamp == null || timestamp.isBefore(timeService.now().minusMillis(maxStaleness))) {
             if (ruleName == null) {
                ruleName = "rule #" + ruleId;
             }
             notificationService.notifyMissingDataset(testId, ruleName, maxStaleness, timestamp);
             int numUpdated = em.createNativeQuery("UPDATE missingdata_rule SET last_notification = ?1 WHERE id = ?2")
-                  .setParameter(1, Instant.now()).setParameter(2, ruleId).executeUpdate();
+                  .setParameter(1, timeService.now()).setParameter(2, ruleId).executeUpdate();
             if (numUpdated != 1) {
                log.errorf("Missing data rules update for rule %d (test %d) didn't work: updated: %d", ruleId, testId, numUpdated);
             }
@@ -1070,7 +1073,7 @@ public class AlertingServiceImpl implements AlertingService {
       Test test = testService.ensureTestExists(testNameOrId, null);
       RunExpectation runExpectation = new RunExpectation();
       runExpectation.testId = test.id;
-      runExpectation.expectedBefore = Instant.now().plusSeconds(timeoutSeconds);
+      runExpectation.expectedBefore = timeService.now().plusSeconds(timeoutSeconds);
       runExpectation.expectedBy = expectedBy != null ? expectedBy : identity.getPrincipal().getName();
       runExpectation.backlink = backlink;
       runExpectation.persist();
@@ -1260,7 +1263,7 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Scheduled(every = "{horreum.alerting.expected.run.check}")
    public void checkExpectedRuns() {
-      for (RunExpectation expectation : RunExpectation.<RunExpectation>find("expectedbefore < ?1", Instant.now()).list()) {
+      for (RunExpectation expectation : RunExpectation.<RunExpectation>find("expectedbefore < ?1", timeService.now()).list()) {
          boolean sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
                .setParameter(1, expectation.testId).getSingleResult();
          if (sendNotifications) {

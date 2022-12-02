@@ -34,6 +34,9 @@ public class BannerServiceImpl implements BannerService {
    @Inject
    EntityManager em;
 
+   @Inject
+   TimeService timeService;
+
    @RolesAllowed(Roles.ADMIN)
    @WithRoles
    @Transactional
@@ -47,7 +50,7 @@ public class BannerServiceImpl implements BannerService {
       boolean hasBanner = false;
       if (!"none".equals(banner.severity)) {
          banner.id = null;
-         banner.created = Instant.now();
+         banner.created = timeService.now();
          banner.active = true;
          hasBanner = true;
          em.persist(banner);

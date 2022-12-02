@@ -69,6 +69,9 @@ public class ReportServiceImpl implements ReportService {
    @Inject
    MessageBus messageBus;
 
+   @Inject
+   TimeService timeService;
+
    @PostConstruct
    void init() {
       messageBus.subscribe(Test.EVENT_DELETED, "ReportService", Test.class, this::onTestDelete);
@@ -283,7 +286,7 @@ public class ReportServiceImpl implements ReportService {
       if (reportId == null) {
          report = new TableReport();
          report.comments = Collections.emptyList();
-         report.created = Instant.now();
+         report.created = timeService.now();
       } else {
          report = TableReport.findById(reportId);
          if (report == null) {

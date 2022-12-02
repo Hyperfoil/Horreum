@@ -7,9 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.when;
 
-import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +16,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -26,7 +23,6 @@ import javax.inject.Inject;
 
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.TestInfo;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -508,15 +504,16 @@ public class AlertingServiceTest extends BaseServiceTest {
       return Integer.parseInt(ruleIdString);
    }
 
-   private MockedStatic<Clock> mockInstant(AtomicLong current) {
-      Clock spyClock = Mockito.spy(Clock.class);
-      MockedStatic<Clock> clockMock = Mockito.mockStatic(Clock.class);
-      clockMock.when(Clock::systemUTC).thenReturn(spyClock);
-      when(spyClock.instant()).thenAnswer(invocation -> Instant.ofEpochMilli(current.get()));
-      return clockMock;
+   private AtomicLong mockInstantNow() {
+      TimeService timeService = Mockito.mock(TimeService.class);
+      AtomicLong current = new AtomicLong(System.currentTimeMillis());
+      Mockito.doAnswer(invocation -> Instant.ofEpochMilli(current.get()))
+         .when(timeService).now();
+      QuarkusMock.installMockForType(timeService, TimeService.class);
+      return current;
    }
 
-   private void withMockedRunExpectations(BiConsumer<AtomicLong, List<String>> consumer) {
+   private List<String> mockNotifyExpectedRun() {
       NotificationServiceImpl notificationService = Mockito.mock(NotificationServiceImpl.class);
       List<String> notifications = Collections.synchronizedList(new ArrayList<>());
       Mockito.doAnswer(invocation -> {
@@ -524,48 +521,46 @@ public class AlertingServiceTest extends BaseServiceTest {
          return null;
       }).when(notificationService).notifyExpectedRun(Mockito.anyInt(), Mockito.anyLong(), Mockito.anyString(), Mockito.anyString());
       QuarkusMock.installMockForType(notificationService, NotificationServiceImpl.class);
-
-      AtomicLong current = new AtomicLong(System.currentTimeMillis());
-      try (var h = mockInstant(current)) {
-         consumer.accept(current, notifications);
-      }
+      return notifications;
    }
 
    @org.junit.jupiter.api.Test
    public void testExpectRunTimeout() {
       Test test = createTest(createExampleTest("timeout"));
-      withMockedRunExpectations((current, notifications) -> {
-         jsonUploaderRequest().post("/api/alerting/expectRun?test=" + test.name + "&timeout=10&expectedby=foo&backlink=bar").then().statusCode(204);
-         List<RunExpectation> expectations = jsonRequest().get("/api/alerting/expectations")
-               .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectation.class));
-         assertEquals(1, expectations.size());
-         alertingService.checkExpectedRuns();
-         assertEquals(0, notifications.size());
+      AtomicLong current = mockInstantNow();
+      List<String> notifications = mockNotifyExpectedRun();
 
-         current.addAndGet(20000);
-         alertingService.checkExpectedRuns();
-         assertEquals(1, notifications.size());
-         assertEquals("foo", notifications.get(0));
-      });
+      jsonUploaderRequest().post("/api/alerting/expectRun?test=" + test.name + "&timeout=10&expectedby=foo&backlink=bar").then().statusCode(204);
+      List<RunExpectation> expectations = jsonRequest().get("/api/alerting/expectations")
+            .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectation.class));
+      assertEquals(1, expectations.size());
+      alertingService.checkExpectedRuns();
+      assertEquals(0, notifications.size());
+
+      current.addAndGet(20000);
+      alertingService.checkExpectedRuns();
+      assertEquals(1, notifications.size());
+      assertEquals("foo", notifications.get(0));
    }
 
    @org.junit.jupiter.api.Test
    public void testExpectRunUploaded() {
       Test test = createTest(createExampleTest("uploaded"));
-      withMockedRunExpectations((current, notifications) -> {
-         jsonUploaderRequest().post("/api/alerting/expectRun?test=" + test.name + "&timeout=10").then().statusCode(204);
-         List<RunExpectation> expectations = jsonRequest().get("/api/alerting/expectations")
-               .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectation.class));
-         assertEquals(1, expectations.size());
-         alertingService.checkExpectedRuns();
-         assertEquals(0, notifications.size());
+      AtomicLong current = mockInstantNow();
+      List<String> notifications = mockNotifyExpectedRun();
 
-         uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
+      jsonUploaderRequest().post("/api/alerting/expectRun?test=" + test.name + "&timeout=10").then().statusCode(204);
+      List<RunExpectation> expectations = jsonRequest().get("/api/alerting/expectations")
+            .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectation.class));
+      assertEquals(1, expectations.size());
+      alertingService.checkExpectedRuns();
+      assertEquals(0, notifications.size());
 
-         current.addAndGet(20000);
-         alertingService.checkExpectedRuns();
-         assertEquals(0, notifications.size());
-      });
+      uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
+
+      current.addAndGet(20000);
+      alertingService.checkExpectedRuns();
+      assertEquals(0, notifications.size());
    }
 
    // This tests recalculation of run -> dataset, not dataset -> datapoint
