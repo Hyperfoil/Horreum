@@ -948,7 +948,6 @@ public class RunServiceImpl implements RunService {
 
       Run run = Run.findById(runId);
       if (run == null) {
-         logMessage(run, PersistentLog.ERROR, "Cannot load run ID %d", runId);
          log.errorf("Cannot load run ID %d for transformation", runId);
          return 0;
       }
