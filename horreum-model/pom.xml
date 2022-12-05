@@ -99,6 +99,9 @@
                             <generatorName>typescript-fetch</generatorName>
                             <skipValidateSpec>true</skipValidateSpec>
                             <typeMappings>Array=any</typeMappings>
+                            <globalProperties>
+                                <skipFormModel>false</skipFormModel>
+                            </globalProperties>
                             <configOptions>
                                 <supportsES6>true</supportsES6>
                                 <useSingleRequestParameter>false</useSingleRequestParameter>
