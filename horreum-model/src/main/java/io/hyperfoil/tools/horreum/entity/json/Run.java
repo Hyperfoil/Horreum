@@ -63,6 +63,9 @@ public class Run extends ProtectedBaseEntity {
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public JsonNode data;
 
+   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   public JsonNode metadata;
+
    @NotNull
    @Column(columnDefinition = "boolean default false")
    public boolean trashed;

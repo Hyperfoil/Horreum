@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -17,6 +18,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import javax.activation.MimeType;
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -33,6 +35,7 @@ import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -69,6 +72,7 @@ import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
 import org.hibernate.type.TimestampType;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
 import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
@@ -324,15 +328,67 @@ public class RunServiceImpl implements RunService {
       return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId).build();
    }
 
+
+   @Override
+   public Response addRunFromData(String start, String stop, String test,
+                                  String owner, Access access, String token,
+                                  String schemaUri, String description,
+                                  JsonNode data) {
+      return addRunFromData(start, stop, test, owner, access, token, schemaUri, description, data, null);
+   }
+
+   @Override
+   public Response addRunFromData(String start, String stop, String test, String owner, Access access, String token, String schemaUri, String description, FileUpload data, FileUpload metadata) {
+      if (data == null) {
+         log.debugf("Failed to upload for test %s with description %s because of missing data.", test, description);
+         throw ServiceException.badRequest("No data!");
+      } else if (!MediaType.APPLICATION_JSON.equals(data.contentType())) {
+         log.debugf("Failed to upload for test %s with description %s because of wrong data content type: %s.", test, description, data.contentType());
+         throw ServiceException.badRequest("Part 'data' must use content-type: application/json, currently: " + data.contentType());
+      }
+      if (metadata != null && !MediaType.APPLICATION_JSON.equals(metadata.contentType())) {
+         log.debugf("Failed to upload for test %s with description %s because of wrong metadata content type: %s.", test, description, metadata.contentType());
+         throw ServiceException.badRequest("Part 'metadata' must use content-type: application/json, currently: " + metadata.contentType());
+      }
+      JsonNode dataNode;
+      JsonNode metadataNode = null;
+      try {
+         dataNode = Util.OBJECT_MAPPER.readTree(data.uploadedFile().toFile());
+         if (metadata != null) {
+            metadataNode = Util.OBJECT_MAPPER.readTree(metadata.uploadedFile().toFile());
+            if (metadataNode.isArray()) {
+               for (JsonNode item : metadataNode) {
+                  if (!item.isObject()) {
+                     log.debugf("Failed to upload for test %s with description %s because of wrong item in metadata: %s.", test, description, item);
+                     throw ServiceException.badRequest("One of metadata elements is not an object!");
+                  } else if (!item.has("$schema")) {
+                     log.debugf("Failed to upload for test %s with description %s because of missing schema in metadata: %s.", test, description, item);
+                     throw ServiceException.badRequest("One of metadata elements is missing a schema!");
+                  }
+               }
+            } else if (metadataNode.isObject()) {
+               if (!metadataNode.has("$schema")) {
+                  log.debugf("Failed to upload for test %s with description %s because of missing schema in metadata.", test, description);
+                  throw ServiceException.badRequest("Metadata is missing schema!");
+               }
+               metadataNode = instance.arrayNode().add(metadataNode);
+            }
+         }
+      } catch (IOException e) {
+         log.error("Failed to read data/metadata from upload file", e);
+         throw ServiceException.badRequest("Provided data/metadata can't be read (JSON encoding problem?)");
+      }
+      return addRunFromData(start, stop, test, owner, access, token, schemaUri, description, dataNode, metadataNode);
+   }
+
    @PermitAll // all because of possible token-based upload
    @Transactional
    @WithRoles
    @WithToken
-   @Override
-   public Response addRunFromData(String start, String stop, String test,
+   Response addRunFromData(String start, String stop, String test,
                                 String owner, Access access, String token,
                                 String schemaUri, String description,
-                                JsonNode data) {
+                                JsonNode data, JsonNode metadata) {
       if (data == null) {
          log.debugf("Failed to upload for test %s with description %s because of missing data.", test, description);
          throw ServiceException.badRequest("No data!");
@@ -374,6 +430,7 @@ public class RunServiceImpl implements RunService {
       run.stop = stopInstant;
       run.description = foundDescription != null ? foundDescription.toString() : null;
       run.data = data;
+      run.metadata = metadata;
       run.owner = owner;
       run.access = access;
       // Some triggered functions in the database need to be able to read the just-inserted run
@@ -890,6 +947,11 @@ public class RunServiceImpl implements RunService {
       }
 
       Run run = Run.findById(runId);
+      if (run == null) {
+         logMessage(run, PersistentLog.ERROR, "Cannot load run ID %d", runId);
+         log.errorf("Cannot load run ID %d for transformation", runId);
+         return 0;
+      }
       int ordinal = 0;
       Map<Integer, JsonNode> transformerResults = new TreeMap<>();
       // naked nodes (those produced by implicit identity transformers) are all added to each dataset
@@ -902,6 +964,7 @@ public class RunServiceImpl implements RunService {
             .addScalar("key", TextType.INSTANCE)
             .addScalar("transformer_id", IntegerType.INSTANCE)
             .addScalar("uri", TextType.INSTANCE)
+            .addScalar("source", IntegerType.INSTANCE)
             .getResultList() );
 
       int schemasAndTransformers = relevantSchemas.size();
@@ -910,6 +973,7 @@ public class RunServiceImpl implements RunService {
          String key = (String) relevantSchema[1];
          Integer transformerId = (Integer) relevantSchema[2];
          String uri = (String) relevantSchema[3];
+         Integer source = (Integer) relevantSchema[4];
 
          Transformer t;
          if (transformerId != null) {
@@ -927,6 +991,7 @@ public class RunServiceImpl implements RunService {
                List<Object[]> extractedData;
                try {
                   if (type == Schema.TYPE_1ST_LEVEL) {
+                     // note: metadata always follow the 2nd level format
                      extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
                            .setParameter(1, run.id).setParameter(2, transformerId)
                            .unwrap(NativeQuery.class)
@@ -937,6 +1002,7 @@ public class RunServiceImpl implements RunService {
                      extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
                            .setParameter(1, run.id).setParameter(2, transformerId)
                            .setParameter(3, type == Schema.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
+                           .setParameter(4, source)
                            .unwrap(NativeQuery.class)
                            .addScalar("name", TextType.INSTANCE)
                            .addScalar("value", JsonNodeBinaryType.INSTANCE)
@@ -975,12 +1041,12 @@ public class RunServiceImpl implements RunService {
             }
             if (t.targetSchemaUri != null) {
                if (result.isObject()) {
-                  putIfAbsent(t.targetSchemaUri, (ObjectNode) result);
+                  putIfAbsent(run, t.targetSchemaUri, (ObjectNode) result);
                } else if (result.isArray()) {
                   ArrayNode array = (ArrayNode) result;
                   for (JsonNode node : array) {
                      if (node.isObject()) {
-                        putIfAbsent(t.targetSchemaUri, (ObjectNode) node);
+                        putIfAbsent(run, t.targetSchemaUri, (ObjectNode) node);
                      }
                   }
                } else {
@@ -1010,15 +1076,16 @@ public class RunServiceImpl implements RunService {
             }
          } else {
             JsonNode node;
+            JsonNode sourceNode = source == 0 ? run.data : run.metadata;
             switch (type) {
                case Schema.TYPE_1ST_LEVEL:
-                  node = run.data;
+                  node = sourceNode;
                   break;
                case Schema.TYPE_2ND_LEVEL:
-                  node = run.data.path(key);
+                  node = sourceNode.path(key);
                   break;
                case Schema.TYPE_ARRAY_ELEMENT:
-                  node = run.data.path(Integer.parseInt(key));
+                  node = sourceNode.path(Integer.parseInt(key));
                   break;
                default:
                   throw new IllegalStateException("Unknown type " + type);
@@ -1047,6 +1114,7 @@ public class RunServiceImpl implements RunService {
                      log.warnf(message);
                   }
                } else {
+                  logMessage(run, PersistentLog.WARN, "Unexpected result provided by one of the transformers: %s", node);
                   log.warnf("Unexpected result provided by one of the transformers: %s", node);
                }
             }
@@ -1128,9 +1196,13 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   private void putIfAbsent(String uri, ObjectNode node) {
-      if (uri != null && !uri.isBlank() && node != null && node.path("$schema").isMissingNode()) {
-         node.put("$schema", uri);
+   private void putIfAbsent(Run run, String uri, ObjectNode node) {
+      if (uri != null && !uri.isBlank() && node != null) {
+         if (node.path("$schema").isMissingNode()) {
+            node.put("$schema", uri);
+         } else {
+            logMessage(run, PersistentLog.DEBUG, "<code>$schema</code> present (%s), not overriding with %s", node.path("$schema").asText(), uri);
+         }
       }
    }
 }

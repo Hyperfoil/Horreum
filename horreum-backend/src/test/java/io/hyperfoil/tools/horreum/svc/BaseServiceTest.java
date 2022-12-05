@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +28,9 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.transaction.Status;
 import javax.transaction.TransactionManager;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
@@ -203,6 +206,25 @@ public class BaseServiceTest {
             .statusCode(200)
             .extract().asString();
       return Integer.parseInt(runIdString);
+   }
+
+   protected int uploadRun(long timestamp, JsonNode data, JsonNode metadata, String testName) {
+      return uploadRun(timestamp, timestamp, data, metadata, testName, UPLOADER_ROLES[0], Access.PUBLIC);
+   }
+
+   protected int uploadRun(long start, long stop, JsonNode data, JsonNode metadata, String testName, String owner, Access access) {
+      String runIdString = given().auth().oauth2(UPLOADER_TOKEN)
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA)
+            // the .toString().getBytes(...) is required because RestAssured otherwise won't send the filename
+            // and Quarkus in turn will use null FileUpload: https://github.com/quarkusio/quarkus/issues/20938
+            .multiPart("data", "data.json", data.toString().getBytes(StandardCharsets.UTF_8), MediaType.APPLICATION_JSON)
+            .multiPart("metadata", "metadata.json", metadata.toString().getBytes(StandardCharsets.UTF_8), MediaType.APPLICATION_JSON)
+            .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + testName + "&owner=" + owner + "&access=" + access)
+            .then()
+            .statusCode(200)
+            .extract().asString();
+      int runId = Integer.parseInt(runIdString);
+      return runId;
    }
 
    protected Test createTest(Test test) {

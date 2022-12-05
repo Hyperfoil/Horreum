@@ -35,15 +35,15 @@ import com.fasterxml.jackson.databind.JsonNode;
    @NamedNativeQuery(
       name = Schema.QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID,
       query = "SELECT te.name, (" +
-            "CASE WHEN te.isarray THEN jsonb_path_query_array(r.data->?3, te.jsonpath::::jsonpath) " +
-            "ELSE jsonb_path_query_first(r.data->?3, te.jsonpath::::jsonpath) END) AS value " +
+            "CASE WHEN te.isarray THEN jsonb_path_query_array((CASE WHEN ?4 = 0 THEN r.data ELSE r.metadata END)->?3, te.jsonpath::::jsonpath) " +
+            "ELSE jsonb_path_query_first((CASE WHEN ?4 = 0 THEN r.data ELSE r.metadata END)->?3, te.jsonpath::::jsonpath) END) AS value " +
             "FROM run r, transformer t " +
             "JOIN transformer_extractors te ON te.transformer_id = t.id " +
             "WHERE r.id = ?1 AND t.id = ?2"
    ),
    @NamedNativeQuery(
          name = Schema.QUERY_TRANSFORMER_TARGETS,
-         query = "SELECT rs.type, rs.key, t.id as transformer_id, rs.uri FROM run_schemas rs " +
+         query = "SELECT rs.type, rs.key, t.id as transformer_id, rs.uri, rs.source FROM run_schemas rs " +
                "LEFT JOIN transformer t ON t.schema_id = rs.schemaid AND t.id IN (SELECT transformer_id FROM test_transformers WHERE test_id = rs.testid) " +
                "WHERE rs.runid = ?1 ORDER BY transformer_id NULLS LAST, type, key"
          )

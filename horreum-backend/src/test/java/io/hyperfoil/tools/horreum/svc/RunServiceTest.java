@@ -469,7 +469,7 @@ public class RunServiceTest extends BaseServiceTest {
       test = createTest(test);
 
       long now = System.currentTimeMillis();
-      uploadRun(now, now, org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode(), test.name, test.owner, Access.PRIVATE);
+      uploadRun(now, now, JsonNodeFactory.instance.objectNode(), test.name, test.owner, Access.PRIVATE);
    }
 
    @org.junit.jupiter.api.Test
@@ -531,6 +531,62 @@ public class RunServiceTest extends BaseServiceTest {
       assertEquals(data3.get("foo"), data3A);
       JsonNode data3B = getData(run3, schemaB);
       assertEquals(data3.get("bar"), data3B);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testUploadWithMetadata() throws InterruptedException {
+      Test test = createTest(createExampleTest("with_meta"));
+      createSchema("Foo", "urn:foo");
+      createSchema("Bar", "urn:bar");
+      createSchema("Q", "urn:q");
+      Schema gooSchema = createSchema("Goo", "urn:goo");
+      Transformer transformer = createTransformer("ttt", gooSchema, "goo => ({ oog: goo })", new Extractor("goo", "$.goo", false));
+      addTransformer(test, transformer);
+      Schema postSchema = createSchema("Post", "uri:Goo-post-function");
+
+      long now = System.currentTimeMillis();
+      ObjectNode data = simpleObject("urn:foo", "foo", "xxx");
+      ArrayNode metadata = JsonNodeFactory.instance.arrayNode();
+      metadata.add(simpleObject("urn:bar", "bar", "yyy"));
+      metadata.add(simpleObject("urn:goo", "goo", "zzz"));
+
+      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW, e -> e.dataset.testid == (int) test.id);
+
+      int run1 = uploadRun(now, data, metadata, test.name);
+
+      DataSet.EventNew event1 = dsQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(event1);
+      assertEquals(run1, event1.dataset.getRunId());
+      assertEquals(3, event1.dataset.data.size());
+      JsonNode foo = getBySchema(event1.dataset.data, "urn:foo");
+      assertEquals("xxx", foo.path("foo").asText());
+      JsonNode bar = getBySchema(event1.dataset.data, "urn:bar");
+      assertEquals("yyy", bar.path("bar").asText());
+      JsonNode goo = getBySchema(event1.dataset.data, postSchema.uri);
+      assertEquals("zzz", goo.path("oog").asText());
+
+      // test auto-wrapping of object metadata into array
+      int run2 = uploadRun(now + 1, data, simpleObject("urn:q", "qqq", "xxx"), test.name);
+      DataSet.EventNew event2 = dsQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(event2);
+      assertEquals(run2, event2.dataset.getRunId());
+      assertEquals(2, event2.dataset.data.size());
+      JsonNode qqq = getBySchema(event2.dataset.data, "urn:q");
+      assertEquals("xxx", qqq.path("qqq").asText());
+   }
+
+   private JsonNode getBySchema(JsonNode data, String schema) {
+      JsonNode foo = StreamSupport.stream(data.spliterator(), false)
+            .filter(item -> schema.equals(item.path("$schema").asText())).findFirst().orElse(null);
+      assertNotNull(foo);
+      return foo;
+   }
+
+   private ObjectNode simpleObject(String schema, String key, String value) {
+      ObjectNode data = JsonNodeFactory.instance.objectNode();
+      data.put("$schema", schema);
+      data.put(key, value);
+      return data;
    }
 
    private JsonNode getData(int runId, Schema schema) {

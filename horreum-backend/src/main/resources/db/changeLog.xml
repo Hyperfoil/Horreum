@@ -3990,4 +3990,52 @@
             ALTER POLICY run_update ON run USING (has_role2(owner, 'tester') OR has_role('horreum.system'));
         </sql>
     </changeSet>
+
+    <changeSet id="101" author="rvansa">
+        <addColumn tableName="run">
+            <column name="metadata" type="jsonb">
+                <constraints checkConstraint="metadata IS NULL OR jsonb_typeof(metadata) = 'array'" />
+            </column>
+        </addColumn>
+        <addColumn tableName="run_schemas">
+            <column name="source" type="integer" defaultValue="0">
+                <!-- 0 means run.data, 1 is run.metadata -->
+                <constraints nullable="false" checkConstraint="source BETWEEN 0 AND 1"/>
+            </column>
+        </addColumn>
+        <dropDefaultValue tableName="run_schemas" columnName="source"/>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION rs_after_run_update() RETURNS TRIGGER AS $$
+            BEGIN
+                WITH rs AS (
+                    SELECT 0 AS type, NULL AS key, NEW.data->>'$schema' AS uri, 0 AS source
+                    UNION SELECT 1 AS type, values.key, values.value->>'$schema' AS uri, 0 AS source FROM jsonb_each(NEW.data) as values WHERE jsonb_typeof(NEW.data) = 'object'
+                    UNION SELECT 2 AS type, (row_number() OVER () - 1)::text AS key, value->>'$schema' as uri, 0 AS source FROM jsonb_array_elements(NEW.data) WHERE jsonb_typeof(NEW.data) = 'array'
+                    UNION SELECT 2 AS type, (row_number() OVER () - 1)::text AS key, value->>'$schema' as uri, 1 AS source FROM jsonb_array_elements(NEW.metadata) WHERE NEW.metadata IS NOT NULL
+                ) INSERT INTO run_schemas(runid, testid, source, type, key, uri, schemaid)
+                    SELECT NEW.id, NEW.testid, rs.source, rs.type, rs.key, rs.uri, schema.id FROM rs
+                    JOIN schema ON schema.uri = rs.uri;
+                    RETURN NULL;
+                END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION update_run_schemas(runid INTEGER) RETURNS void AS $$
+            BEGIN
+                WITH rs AS (
+                    SELECT id, testid, 0 AS type, NULL AS key, data->>'$schema' AS uri, 0 AS source FROM run WHERE id = runid
+                    UNION SELECT id, testid, 1 AS type, values.key, values.value->>'$schema' AS uri, 0 AS source FROM run, jsonb_each(run.data) as values WHERE id = runid AND jsonb_typeof(data) = 'object'
+                    UNION SELECT id, testid, 2 AS type, (row_number() OVER () - 1)::text AS key, value->>'$schema' as uri, 0 AS source FROM run, jsonb_array_elements(data) WHERE id = runid AND jsonb_typeof(data) = 'array'
+                    UNION SELECT id, testid, 2 AS type, (row_number() OVER () - 1)::text AS key, value->>'$schema' as uri, 1 AS source FROM run, jsonb_array_elements(metadata) WHERE id = runid AND metadata IS NOT NULL
+                ) INSERT INTO run_schemas(runid, testid, source, type, key, uri, schemaid)
+                    SELECT rs.id, rs.testid, rs.source, rs.type, rs.key, rs.uri, schema.id FROM rs
+                    JOIN schema ON schema.uri = rs.uri;
+                END;
+            $$ LANGUAGE plpgsql VOLATILE;
+        </createProcedure>
+        <sql>
+            DROP TRIGGER rs_after_run_update ON run;
+            CREATE TRIGGER rs_after_run_update AFTER INSERT OR UPDATE OF data, metadata ON run FOR EACH ROW EXECUTE FUNCTION rs_after_run_update();
+        </sql>
+    </changeSet>
 </databaseChangeLog>

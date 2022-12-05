@@ -28,6 +28,10 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.jboss.resteasy.reactive.MultipartForm;
+import org.jboss.resteasy.reactive.PartType;
+import org.jboss.resteasy.reactive.RestForm;
+import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 @Path("/api/run")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -90,6 +94,21 @@ public interface RunService {
                          @QueryParam("schema") String schemaUri,
                          @QueryParam("description") String description,
                          @RequestBody(required = true) JsonNode data);
+
+   @POST
+   @Path("data")
+   @Consumes(MediaType.MULTIPART_FORM_DATA)
+   @Produces(MediaType.TEXT_PLAIN) // run ID as string
+   Response addRunFromData(@Parameter(required = true) @QueryParam("start") String start,
+                           @Parameter(required = true) @QueryParam("stop") String stop,
+                           @Parameter(required = true) @QueryParam("test") String test,
+                           @QueryParam("owner") String owner,
+                           @QueryParam("access") Access access,
+                           @Parameter(description = "Horreum internal token. Incompatible with Keycloak") @QueryParam("token") String token,
+                           @QueryParam("schema") String schemaUri,
+                           @QueryParam("description") String description,
+                           @RestForm("data") FileUpload data,
+                           @RestForm("metadata") FileUpload metadata);
 
    @GET
    @Path("autocomplete")
