@@ -10,13 +10,13 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 class ErasingClassVisitor extends ClassVisitor {
-   private final String ignoreAnnotation;
+   private final String ignoreDescriptor;
    private final List<String> erasedPackages;
 
    public ErasingClassVisitor(List<String> erasedPackages, ClassVisitor delegated, String ignoreAnnotation) {
       super(Opcodes.ASM7, delegated);
       this.erasedPackages = erasedPackages;
-      this.ignoreAnnotation = ignoreAnnotation;
+      this.ignoreDescriptor = "L" + ignoreAnnotation.replaceAll("\\.", "/") + ";";
    }
 
    private boolean isDescriptorErased(String descriptor) {
@@ -45,14 +45,14 @@ class ErasingClassVisitor extends ClassVisitor {
 
    @Override
    public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-      MethodVisitor visitor = super.visitMethod(access, name, descriptor, signature, exceptions);
+      BufferingMethodVisitor buffering = new BufferingMethodVisitor(api, () -> super.visitMethod(access, name, descriptor, signature, exceptions));
       boolean isConstructor = name.equals("<init>");
-      return new MethodVisitor(Opcodes.ASM7, visitor) {
+      return new MethodVisitor(Opcodes.ASM7, buffering) {
          private boolean ignored = false;
 
          @Override
          public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-            if (ignoreAnnotation.equals(descriptor.substring(1).replaceAll("/", "."))) {
+            if (ignoreDescriptor.equals(descriptor)) {
                ignored = true;
                return null;
             }
@@ -68,9 +68,10 @@ class ErasingClassVisitor extends ClassVisitor {
          }
 
          @Override
-         public void visitFrame(int type, int numLocal, Object[] local, int numStack, Object[] stack) {
+         public void visitEnd() {
             if (!ignored) {
-               super.visitFrame(type, numLocal, local, numStack, stack);
+               super.visitEnd();
+               buffering.commit();
             }
          }
       };

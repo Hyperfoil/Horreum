@@ -33,7 +33,7 @@ public class HorreumClient implements Closeable {
     public final GrafanaService grafanaService;
     public final NotificationService notificationService;
     public final ReportService reportService;
-    public final RunService runService;
+    public final RunServiceExtension runService;
     public final SchemaService schemaService;
     public final SqlService sqlService;
     public final SubscriptionService subscriptionService;
@@ -41,9 +41,9 @@ public class HorreumClient implements Closeable {
     public final UserService userService;
 
     private HorreumClient(ResteasyClient client,
-                         ActionService actionService, AlertingService alertingService, BannerService bannerService, DatasetService datasetService, GrafanaService grafanaService,
-                         NotificationService notificationService, ReportService reportService, RunService horreumRunService, SchemaService schemaService, SqlService sqlService,
-                         SubscriptionService subscriptionService, TestService horreumTestService, UserService userService) {
+                          ActionService actionService, AlertingService alertingService, BannerService bannerService, DatasetService datasetService, GrafanaService grafanaService,
+                          NotificationService notificationService, ReportService reportService, RunServiceExtension runServiceExtension, SchemaService schemaService, SqlService sqlService,
+                          SubscriptionService subscriptionService, TestService horreumTestService, UserService userService) {
         this.client = client;
         this.alertingService = alertingService;
         this.bannerService = bannerService;
@@ -52,7 +52,7 @@ public class HorreumClient implements Closeable {
         this.actionService = actionService;
         this.notificationService = notificationService;
         this.reportService = reportService;
-        this.runService = horreumRunService;
+        this.runService = runServiceExtension;
         this.schemaService = schemaService;
         this.sqlService = sqlService;
         this.subscriptionService = subscriptionService;
@@ -180,7 +180,7 @@ public class HorreumClient implements Closeable {
                   target.proxyBuilder(GrafanaService.class).build(),
                   target.proxyBuilder(NotificationService.class).build(),
                   target.proxyBuilder(ReportService.class).build(),
-                  target.proxyBuilder(RunService.class).build(),
+                  new RunServiceExtension(target, target.proxyBuilder(RunService.class).build()),
                   target.proxyBuilder(SchemaService.class).build(),
                   target.proxyBuilder(SqlService.class).build(),
                   target.proxyBuilder(SubscriptionService.class).build(),

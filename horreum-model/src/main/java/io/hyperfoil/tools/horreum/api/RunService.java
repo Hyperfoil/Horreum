@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
+import io.hyperfoil.tools.horreum.entity.ApiIgnore;
 import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.Run;
@@ -97,6 +98,7 @@ public interface RunService {
    @Path("data")
    @Consumes(MediaType.MULTIPART_FORM_DATA)
    @Produces(MediaType.TEXT_PLAIN) // run ID as string
+   @ApiIgnore
    Response addRunFromData(@Parameter(required = true) @QueryParam("start") String start,
                            @Parameter(required = true) @QueryParam("stop") String stop,
                            @Parameter(required = true) @QueryParam("test") String test,

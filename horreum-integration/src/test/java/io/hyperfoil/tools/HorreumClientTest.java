@@ -41,6 +41,18 @@ public class HorreumClientTest {
     }
 
     @Test
+    public void testAddRunWithMetadataData() throws JsonProcessingException {
+        JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
+        JsonNode metadata = JsonNodeFactory.instance.objectNode().put("$schema", "urn:foobar").put("foo", "bar");
+
+        try {
+            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC, null, null, "test", payload, metadata);
+        } catch (BadRequestException badRequestException) {
+            fail(badRequestException.getMessage() + (badRequestException.getCause() != null ? " : " + badRequestException.getCause().getMessage() : ""));
+        }
+    }
+
+    @Test
     public void testAddRun() throws JsonProcessingException {
         Run run = new Run();
         run.start = Instant.now();

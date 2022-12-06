@@ -17,6 +17,7 @@ import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.hyperfoil.tools.horreum.entity.ApiIgnore;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -44,6 +45,7 @@ public class View extends PanacheEntityBase {
    @OrderBy("headerorder ASC")
    public List<ViewComponent> components;
 
+   @ApiIgnore
    public void ensureLinked() {
       if (components != null) {
          for (ViewComponent c : components) {
