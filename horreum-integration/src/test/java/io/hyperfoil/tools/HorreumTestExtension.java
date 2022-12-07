@@ -15,6 +15,8 @@ import org.testcontainers.utility.LogUtils;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -189,9 +191,30 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
             waitForContainerReady(infrastructureContainer, "keycloak_1", "started in");
             waitForContainerReady(infrastructureContainer, "app-init_1", "Horreum initialization complete");
 
+            writeOutputToFile(horreumContainer, "horreum_1");
             horreumContainer.start();
             waitForContainerReady(horreumContainer, "horreum_1", "started in");
         }
+    }
+
+    private static void writeOutputToFile(TestContainer container, String serviceName) throws FileNotFoundException {
+        new File("./target/docker-logs").mkdirs();
+        FileOutputStream output = new FileOutputStream("./target/docker-logs/" + serviceName + ".log");
+        container.withLogConsumer(serviceName, frame -> {
+            try {
+                switch (frame.getType()) {
+                    case STDOUT:
+                    case STDERR:
+                        output.write(frame.getBytes());
+                        break;
+                    case END:
+                        output.close();
+                        break;
+                }
+            } catch (IOException e) {
+                log.errorf("Cannot write output for %s", "horreum_1");
+            }
+        });
     }
 
     @Override
