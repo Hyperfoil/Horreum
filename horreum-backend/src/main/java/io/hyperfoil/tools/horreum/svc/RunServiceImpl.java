@@ -400,7 +400,13 @@ public class RunServiceImpl implements RunService {
 
       if (schemaUri != null && !schemaUri.isEmpty()) {
          if (data.isObject()) {
-            ((ObjectNode) data).set("$schema", TextNode.valueOf(schemaUri));
+            ((ObjectNode) data).put("$schema", schemaUri);
+         } else if (data.isArray()) {
+            data.forEach(node -> {
+               if (node.isObject() && !node.hasNonNull("$schema")) {
+                  ((ObjectNode) node).put("$schema", schemaUri);
+               }
+            });
          }
       }
 
