@@ -1,4 +1,4 @@
-import { ReactElement, useEffect, useMemo, useState } from "react"
+import { CSSProperties, ReactElement, useEffect, useMemo, useState } from "react"
 import { useSelector } from "react-redux"
 import { teamsSelector } from "../auth"
 
@@ -54,6 +54,7 @@ type LabelsSelectProps = {
     fireOnPartial?: boolean
     showKeyHelper?: boolean
     addResetButton?: boolean
+    style?: CSSProperties
 }
 
 export default function LabelsSelect(props: LabelsSelectProps) {
@@ -124,6 +125,7 @@ export default function LabelsSelect(props: LabelsSelectProps) {
                 options={options}
                 onSelect={props.onSelect}
                 placeholderText="Choose labels..."
+                style={props.style}
             />
         )
     } else {
@@ -191,7 +193,7 @@ export default function LabelsSelect(props: LabelsSelectProps) {
                 </SplitItem>
             )
         }
-        return <Split>{items}</Split>
+        return <Split style={props.style}>{items}</Split>
     }
 }
 
@@ -205,6 +207,7 @@ type InnerSelectProps = {
     onSelect(opt: SelectedLabels | undefined): void
     onOpen?(): void
     placeholderText: string
+    style?: CSSProperties
 }
 
 function InnerSelect(props: InnerSelectProps) {
@@ -228,6 +231,8 @@ function InnerSelect(props: InnerSelectProps) {
             onClear={props.hasOnlyOneOption ? undefined : () => props.onSelect(undefined)}
             menuAppendTo="parent"
             placeholderText={props.placeholderText}
+            style={props.style}
+            width={props.style?.width || "auto"}
         >
             {props.options.map((labels: SelectOptionObject | string, i: number) => (
                 <SelectOption key={i} value={labels} />

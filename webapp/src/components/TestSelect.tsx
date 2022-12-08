@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { CSSProperties, useEffect, useMemo, useState } from "react"
 
 import { Select, SelectGroup, SelectOption, SelectOptionObject, Split, SplitItem } from "@patternfly/react-core"
 
@@ -24,6 +24,7 @@ type TestSelectProps = {
     direction?: "up" | "down"
     initialTestName?: string
     isDisabled?: boolean
+    style?: CSSProperties
 }
 
 function groupByFolder(tests: Test[] | undefined | false) {
@@ -100,6 +101,8 @@ function FewTestsSelect(props: FewTestsSelectProps) {
             placeholderText="Select test..."
             hasPlaceholderStyle={true}
             isDisabled={props.isDisabled}
+            style={props.style}
+            width={props.style?.width || "auto"}
         >
             {[
                 ...(props.extraOptions
@@ -141,7 +144,7 @@ function ManyTestsSelect(props: ManyTestsSelectProps) {
         [props.tests]
     )
     return (
-        <Split>
+        <Split style={props.style}>
             <SplitItem>
                 <Select
                     isOpen={foldersOpen}
