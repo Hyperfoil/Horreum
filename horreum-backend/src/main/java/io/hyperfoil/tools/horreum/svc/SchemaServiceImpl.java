@@ -600,6 +600,10 @@ public class SchemaServiceImpl implements SchemaService {
          label.persistAndFlush();
       } else {
          Label existing = Label.findById(label.id);
+         if (existing == null) {
+            label.id = -1;
+            existing = label;
+         }
          if (!Objects.equals(existing.schema.id, schemaId)) {
             throw ServiceException.badRequest("Label id=" + label.id + ", name=" + existing.name +
                   " belongs to a different schema: " + existing.schema.id + "(" + existing.schema.uri + ")");
