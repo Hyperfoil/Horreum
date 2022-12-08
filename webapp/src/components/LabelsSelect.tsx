@@ -59,8 +59,14 @@ type LabelsSelectProps = {
 
 export default function LabelsSelect(props: LabelsSelectProps) {
     const [availableLabels, setAvailableLabels] = useState<any[]>([])
-    const initialSelect = { ...props.selection }
-    delete initialSelect.toString
+    const initialSelect = props.selection
+        ? Object.entries(props.selection).reduce((acc, [key, value]) => {
+              if (key !== "toString") {
+                  acc[key] = convertPartial(value)
+              }
+              return acc
+          }, {} as Record<string, any>)
+        : {}
     const [partialSelect, setPartialSelect] = useState<any>(initialSelect)
 
     const dispatch = useDispatch()
