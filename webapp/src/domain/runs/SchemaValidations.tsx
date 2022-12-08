@@ -3,14 +3,14 @@ import React, { ReactElement } from "react"
 import { interleave } from "../../utils"
 
 import { Button, Form, FormGroup, Tooltip } from "@patternfly/react-core"
-import { EditIcon } from "@patternfly/react-icons"
+import { EditIcon, TimesIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
-import { SchemaDescriptor, ValidationError } from "../../api"
+import { SchemaUsage, ValidationError } from "../../api"
 import ValidationErrorTable from "./ValidationErrorTable"
 import ErrorBadge from "../../components/ErrorBadge"
 
 type SchemaValidationsProps = {
-    schemas: SchemaDescriptor[]
+    schemas: SchemaUsage[]
     errors: ValidationError[]
     onEdit?(): void
     noSchema: ReactElement
@@ -35,6 +35,11 @@ export default function SchemaValidations(props: SchemaValidationsProps) {
                                         <Tooltip content={<code>{schema.uri} </code>}>
                                             <NavLink to={`/schema/${schema.id}`}>{schema.name}</NavLink>
                                         </Tooltip>
+                                        {!schema.hasJsonSchema && (
+                                            <Tooltip content="JSON schema for validation is not defined">
+                                                <TimesIcon style={{ fill: "#AAA" }} />
+                                            </Tooltip>
+                                        )}
                                         {errors.length > 0 && <ErrorBadge>{errors.length}</ErrorBadge>}
                                         {props.onEdit && (
                                             <Button variant="link" style={{ paddingTop: 0 }} onClick={props.onEdit}>

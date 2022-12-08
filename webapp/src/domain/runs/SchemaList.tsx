@@ -1,13 +1,14 @@
 import React from "react"
 import { NavLink } from "react-router-dom"
 import { Tooltip } from "@patternfly/react-core"
+import { TimesIcon } from "@patternfly/react-icons"
 import { interleave } from "../../utils"
-import { SchemaDescriptor, ValidationError } from "../../api"
+import { SchemaUsage, ValidationError } from "../../api"
 import ErrorBadge from "../../components/ErrorBadge"
 import WarnBadge from "../../components/WarnBadge"
 
 type SchemaListProps = {
-    schemas: SchemaDescriptor[]
+    schemas: SchemaUsage[]
     validationErrors: ValidationError[]
 }
 
@@ -16,7 +17,14 @@ export default function SchemaList(props: SchemaListProps) {
         const validationErrors = props.validationErrors?.filter(e => e.schemaId === schema.id)
         return (
             <React.Fragment key={2 * i}>
-                <NavLink to={`/schema/${schema.id}`}>{schema.name}</NavLink>{" "}
+                <Tooltip content={<code>{schema.uri}</code>}>
+                    <NavLink to={`/schema/${schema.id}`}>{schema.name}</NavLink>
+                </Tooltip>{" "}
+                {!schema.hasJsonSchema && (
+                    <Tooltip content="JSON schema for validation is not defined">
+                        <TimesIcon style={{ fill: "#AAA" }} />
+                    </Tooltip>
+                )}
                 {validationErrors.length > 0 && (
                     <Tooltip
                         isContentLeftAligned

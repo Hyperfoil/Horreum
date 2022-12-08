@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useSelector, useDispatch } from "react-redux"
 
-import { Bullseye, Spinner } from "@patternfly/react-core"
-
 import * as actions from "./actions"
 import { RunsDispatch } from "./reducers"
 import { noop } from "../../utils"

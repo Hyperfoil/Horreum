@@ -4038,4 +4038,11 @@
             CREATE TRIGGER rs_after_run_update AFTER INSERT OR UPDATE OF data, metadata ON run FOR EACH ROW EXECUTE FUNCTION rs_after_run_update();
         </sql>
     </changeSet>
+
+    <changeSet id="102" author="rvansa">
+        <sql>
+            DELETE FROM dataset_validationerrors WHERE error->>'type' LIKE '% not defined';
+            UPDATE schema SET schema = NULL WHERE jsonb_typeof(schema) != 'object';
+        </sql>
+    </changeSet>
 </databaseChangeLog>

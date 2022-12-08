@@ -91,7 +91,7 @@ public class DatasetServiceImpl implements DatasetService {
          ") AS value FROM lvalues";
 
    private static final String SCHEMAS_SELECT = "SELECT dataset_id, jsonb_agg(jsonb_build_object(" +
-         "'id', schema.id, 'uri', ds.uri, 'name', schema.name, 'source', 0, 'type', 2, 'key', ds.index::::text)) AS schemas " +
+         "'id', schema.id, 'uri', ds.uri, 'name', schema.name, 'source', 0, 'type', 2, 'key', ds.index::::text, 'hasJsonSchema', schema.schema IS NOT NULL)) AS schemas " +
          "FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id JOIN schema ON schema.id = ds.schema_id";
    private static final String VALIDATION_SELECT = "validation AS (" +
             "SELECT dataset_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM dataset_validationerrors GROUP BY dataset_id" +

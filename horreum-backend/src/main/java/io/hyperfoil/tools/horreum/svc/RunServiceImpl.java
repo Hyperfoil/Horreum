@@ -100,6 +100,9 @@ public class RunServiceImpl implements RunService {
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE run SET owner = ?, access = ? WHERE id = ?";
+   private static final String SCHEMA_USAGE = "COALESCE(jsonb_agg(jsonb_build_object(" +
+         "'id', schema.id, 'uri', rs.uri, 'name', schema.name, 'source', rs.source, " +
+         "'type', rs.type, 'key', rs.key, 'hasJsonSchema', schema.schema IS NOT NULL)), '[]')";
 
    @Inject
    EntityManager em;
@@ -200,7 +203,7 @@ public class RunServiceImpl implements RunService {
    @Override
    public Object getRun(int id, String token) {
       return Util.runQuery(em, "SELECT (to_jsonb(run) || jsonb_build_object(" +
-            "'schemas', (SELECT COALESCE(jsonb_agg(jsonb_build_object('id', schema.id, 'uri', rs.uri, 'name', schema.name, 'source', rs.source, 'type', rs.type, 'key', rs.key)), '[]') FROM run_schemas rs JOIN schema ON rs.schemaid = schema.id WHERE runid = run.id), " +
+            "'schemas', (SELECT " + SCHEMA_USAGE + " FROM run_schemas rs JOIN schema ON rs.schemaid = schema.id WHERE runid = run.id), " +
             "'testname', (SELECT name FROM test WHERE test.id = run.testid), " +
             "'datasets', (SELECT jsonb_agg(id ORDER BY id) FROM dataset WHERE runid = run.id), " +
             "'validationErrors', (SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) FROM run_validationerrors WHERE run_id = ?1)" +
@@ -213,7 +216,7 @@ public class RunServiceImpl implements RunService {
       Query query = em.createNativeQuery("SELECT run.id, run.start, run.stop, run.testid, " +
             "run.owner, run.access, run.token, run.trashed, run.description, run.metadata IS NOT NULL as has_metadata, " +
             "(SELECT name FROM test WHERE test.id = run.testid) as testname, " +
-            "(SELECT COALESCE(jsonb_agg(jsonb_build_object('id', schema.id, 'uri', rs.uri, 'name', schema.name, 'source', rs.source, 'type', rs.type, 'key', rs.key)), '[]') FROM run_schemas rs JOIN schema ON schema.id = rs.schemaid WHERE rs.runid = run.id) as schemas, " +
+            "(SELECT " + SCHEMA_USAGE + " FROM run_schemas rs JOIN schema ON schema.id = rs.schemaid WHERE rs.runid = run.id) as schemas, " +
             "(SELECT json_agg(id ORDER BY id) FROM dataset WHERE runid = run.id) as datasets, " +
             "(SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM run_validationerrors WHERE run_id = ?1 GROUP BY run_id) AS validationErrors " +
             "FROM run where id = ?1").setParameter(1, id);
@@ -734,7 +737,7 @@ public class RunServiceImpl implements RunService {
    public RunsSummary listTestRuns(int testId, boolean trashed,
                                    Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
-            .append("    SELECT COALESCE(jsonb_agg(jsonb_build_object('id', schemaid, 'uri', rs.uri, 'name', schema.name, 'source', rs.source, 'type', rs.type, 'key', rs.key)), '[]') AS schemas, rs.runid ")
+            .append("    SELECT " + SCHEMA_USAGE + " AS schemas, rs.runid ")
             .append("        FROM run_schemas rs JOIN schema ON schema.id = rs.schemaid WHERE rs.testid = ?1 GROUP BY rs.runid")
             .append("), dataset_agg AS (")
             .append("    SELECT runid, jsonb_agg(id ORDER BY id) as datasets FROM dataset WHERE testid = ?1 GROUP BY runid")

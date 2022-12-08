@@ -9,7 +9,7 @@ import Editor from "../../components/Editor/monaco/Editor"
 import MaybeLoading from "../../components/MaybeLoading"
 import DatasetLogModal from "../tests/DatasetLogModal"
 
-import Api, { SchemaDescriptor, ValidationError } from "../../api"
+import Api, { SchemaUsage, ValidationError } from "../../api"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInDataset } from "./NoSchema"
 import LabelValuesModal from "./LabelValuesModal"
@@ -27,7 +27,7 @@ export default function DatasetData(props: DatasetDataProps) {
     const [originalData, setOriginalData] = useState<any>()
     const [editorData, setEditorData] = useState<string>()
     const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
-    const [schemas, setSchemas] = useState<SchemaDescriptor[]>()
+    const [schemas, setSchemas] = useState<SchemaUsage[]>()
     const [loading, setLoading] = useState(false)
     const [labelValuesOpen, setLabelValuesOpen] = useState(false)
     const [labelsLogOpen, setLabelsLogOpen] = useState(false)

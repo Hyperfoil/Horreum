@@ -164,6 +164,10 @@ public class SchemaServiceImpl implements SchemaService {
       if (byUri != null && !Objects.equals(byUri.id, schema.id)) {
          throw ServiceException.serverError("URI already used");
       }
+      // Note: isEmpty is true for all non-object and non-array nodes
+      if (schema.schema != null && schema.schema.isEmpty()) {
+         schema.schema = null;
+      }
       if (schema.id != null) {
          em.merge(schema);
       } else {
@@ -267,9 +271,9 @@ public class SchemaServiceImpl implements SchemaService {
          return;
       }
       run.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
-      validateData(run.data, schemaFilter, run.validationErrors::add, true);
+      validateData(run.data, schemaFilter, run.validationErrors::add);
       if (run.metadata != null) {
-         validateData(run.metadata, schemaFilter, run.validationErrors::add, true);
+         validateData(run.metadata, schemaFilter, run.validationErrors::add);
       }
       run.persist();
       messageBus.publish(Run.EVENT_VALIDATED, run.testid, new Schema.ValidationEvent(run.id, run.validationErrors));
@@ -294,7 +298,7 @@ public class SchemaServiceImpl implements SchemaService {
          return;
       }
       dataset.validationErrors.removeIf(e -> schemaFilter == null || (e.schema != null && schemaFilter.test(e.schema.uri)));
-      validateData(dataset.data, schemaFilter, dataset.validationErrors::add, false);
+      validateData(dataset.data, schemaFilter, dataset.validationErrors::add);
       for (var item : dataset.data) {
          String uri = item.path("$schema").asText();
          if (uri == null || uri.isBlank()) {
@@ -336,7 +340,7 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
-   private void validateData(JsonNode data, Predicate<String> filter, Consumer<ValidationError> consumer, boolean allowUnknownSchema) {
+   private void validateData(JsonNode data, Predicate<String> filter, Consumer<ValidationError> consumer) {
       Map<String, List<JsonNode>> toCheck = new HashMap<>();
       addIfHasSchema(toCheck, data);
       for (JsonNode child : data) {
@@ -356,11 +360,6 @@ public class SchemaServiceImpl implements SchemaService {
          // this is root in the sense of JSON schema referencing other schemas, NOT Horreum first-level schema
          Schema rootSchema = schemas.get(schemaUri);
          if (rootSchema == null || rootSchema.schema == null) {
-            if (!allowUnknownSchema) {
-               ValidationError error = new ValidationError();
-               error.error = JsonNodeFactory.instance.objectNode().put("type", "JSON schema not defined").put("message", "JSON schema '" + schemaUri + "' is not defined in Horreum");
-               consumer.accept(error);
-            }
             continue;
          }
          try {

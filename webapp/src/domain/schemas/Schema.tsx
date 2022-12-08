@@ -330,7 +330,7 @@ export default function Schema() {
                                         />
                                     </div>
                                 )}
-                                {!editorSchema && (
+                                {editorSchema === undefined && (
                                     <>
                                         This schema does not have a validation JSON schema defined.
                                         <br />

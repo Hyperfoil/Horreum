@@ -235,6 +235,9 @@ public interface SchemaService {
       public int type;
 
       public String key;
+
+      @JsonProperty(required = true)
+      public boolean hasJsonSchema;
    }
 
    class LabelInfo {
