@@ -47,7 +47,10 @@ public class GrafanaServiceImpl implements GrafanaService {
       if (baseUrl.contains("//localhost")) {
          // allow live-coding port
          int colonIndex = baseUrl.indexOf(':', 8);
-         allowedOrigins.add(baseUrl.substring(0, colonIndex < 0 ? baseUrl.length() : colonIndex) + ":" + config.getValue("quarkus.quinoa.dev-server-port", int.class));
+         int devServerPort = config.getOptionalValue("quarkus.quinoa.dev-server.port", int.class).orElse(-1);
+         if (devServerPort > 0) {
+            allowedOrigins.add(baseUrl.substring(0, colonIndex < 0 ? baseUrl.length() : colonIndex) + ":" + devServerPort);
+         }
       }
       config.getOptionalValue("horreum.internal.url", String.class).ifPresent(url -> allowedOrigins.add(getOrigin(url)));
       config.getOptionalValue("horreum.grafana.url", String.class).ifPresent(url -> allowedOrigins.add(getOrigin(url)));
