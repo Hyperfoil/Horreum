@@ -59,7 +59,9 @@ type LabelsSelectProps = {
 
 export default function LabelsSelect(props: LabelsSelectProps) {
     const [availableLabels, setAvailableLabels] = useState<any[]>([])
-    const [partialSelect, setPartialSelect] = useState<any>({})
+    const initialSelect = { ...props.selection }
+    delete initialSelect.toString
+    const [partialSelect, setPartialSelect] = useState<any>(initialSelect)
 
     const dispatch = useDispatch()
     const teams = useSelector(teamsSelector)
