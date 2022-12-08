@@ -98,7 +98,7 @@ const staticColumns: DatasetColumn[] = [
             Duration.fromMillis(toEpochMillis(dataset.stop) - toEpochMillis(dataset.start)).toFormat("hh:mm:ss.SSS"),
     },
     {
-        Header: "Schema",
+        Header: "Schema(s)",
         accessor: "schemas",
         disableSortBy: true,
         Cell: (arg: C) => {
@@ -109,12 +109,7 @@ const staticColumns: DatasetColumn[] = [
             if (!value || (value as string[]).length == 0) {
                 return <NoSchemaInDataset />
             } else {
-                return (
-                    <SchemaList
-                        schemas={value as Record<number, string>}
-                        validationErrors={arg.row.original.validationErrors || []}
-                    />
-                )
+                return <SchemaList schemas={value} validationErrors={arg.row.original.validationErrors || []} />
             }
         },
     },

@@ -108,8 +108,8 @@ const tableColumns: RunColumn[] = [
             Duration.fromMillis(toEpochMillis(run.stop) - toEpochMillis(run.start)).toFormat("hh:mm:ss.SSS"),
     },
     {
-        Header: "Schema",
-        accessor: "schema",
+        Header: "Schema(s)",
+        accessor: "schemas",
         disableSortBy: true,
         Cell: (arg: C) => {
             const {
@@ -119,12 +119,7 @@ const tableColumns: RunColumn[] = [
             if (!value || Object.keys(value).length == 0) {
                 return <NoSchemaInRun />
             } else {
-                return (
-                    <SchemaList
-                        schemas={value as Record<number, string>}
-                        validationErrors={arg.row.original.validationErrors || []}
-                    />
-                )
+                return <SchemaList schemas={value} validationErrors={arg.row.original.validationErrors || []} />
             }
         },
     },

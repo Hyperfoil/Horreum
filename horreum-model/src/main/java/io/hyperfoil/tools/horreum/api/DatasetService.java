@@ -94,7 +94,7 @@ public interface DatasetService {
       public int access;
       public ObjectNode view;
       @Schema(required = true)
-      public JsonNode schemas; // id -> uri mapping
+      public List<SchemaService.SchemaUsage> schemas;
       @Schema(implementation = ValidationError[].class)
       public ArrayNode validationErrors;
    }

@@ -268,6 +268,9 @@ public class SchemaServiceImpl implements SchemaService {
       }
       run.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
       validateData(run.data, schemaFilter, run.validationErrors::add, true);
+      if (run.metadata != null) {
+         validateData(run.metadata, schemaFilter, run.validationErrors::add, true);
+      }
       run.persist();
       messageBus.publish(Run.EVENT_VALIDATED, run.testid, new Schema.ValidationEvent(run.id, run.validationErrors));
    }

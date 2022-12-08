@@ -2,22 +2,21 @@ import React from "react"
 import { NavLink } from "react-router-dom"
 import { Tooltip } from "@patternfly/react-core"
 import { interleave } from "../../utils"
-import { ValidationError } from "../../generated"
+import { SchemaDescriptor, ValidationError } from "../../api"
 import ErrorBadge from "../../components/ErrorBadge"
 import WarnBadge from "../../components/WarnBadge"
 
 type SchemaListProps = {
-    schemas: Record<number, string> // id -> uri mapping
+    schemas: SchemaDescriptor[]
     validationErrors: ValidationError[]
 }
 
 export default function SchemaList(props: SchemaListProps) {
-    let lines = Object.entries(props.schemas).map(([key, uri], i) => {
-        const schemaId = parseInt(key)
-        const validationErrors = props.validationErrors?.filter(e => e.schemaId === schemaId)
+    let lines = props.schemas.map((schema, i) => {
+        const validationErrors = props.validationErrors?.filter(e => e.schemaId === schema.id)
         return (
             <React.Fragment key={2 * i}>
-                <NavLink to={`/schema/${key}`}>{uri}</NavLink>{" "}
+                <NavLink to={`/schema/${schema.id}`}>{schema.name}</NavLink>{" "}
                 {validationErrors.length > 0 && (
                     <Tooltip
                         isContentLeftAligned

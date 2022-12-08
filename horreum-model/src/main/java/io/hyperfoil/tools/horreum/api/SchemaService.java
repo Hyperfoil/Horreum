@@ -225,6 +225,18 @@ public interface SchemaService {
       }
    }
 
+   // this roughly matches run_schemas table
+   class SchemaUsage extends SchemaDescriptor {
+      // 0 is data, 1 is metadata. DataSets always use 0
+      @JsonProperty(required = true)
+      public int source;
+
+      @JsonProperty(required = true)
+      public int type;
+
+      public String key;
+   }
+
    class LabelInfo {
       @NotNull
       public String name;

@@ -51,6 +51,10 @@ public interface RunService {
    Object getData(@PathParam("id") int id, @QueryParam("token") String token, @QueryParam("schemaUri") String schemaUri);
 
    @GET
+   @Path("{id}/metadata")
+   Object getMetadata(@PathParam("id") int id, @QueryParam("token") String token, @QueryParam("schemaUri") String schemaUri);
+
+   @GET
    @Path("{id}/query")
    QueryResult queryData(@PathParam("id") int id,
                          @Parameter(required = true) @QueryParam("query") String jsonpath,
@@ -186,8 +190,10 @@ public interface RunService {
       public String testname;
       @JsonProperty(required = true)
       public boolean trashed;
+      @JsonProperty(required = true)
+      public boolean hasMetadata;
       public String description;
-      public JsonNode schema; // id -> uri mapping
+      public List<SchemaService.SchemaUsage> schemas;
       @Schema(required = true, implementation = int[].class)
       public ArrayNode datasets;
       @Schema(implementation = ValidationError[].class)
@@ -196,7 +202,7 @@ public interface RunService {
 
    class RunExtended extends Run {
       @NotNull
-      public JsonNode schema;
+      public List<SchemaService.SchemaUsage> schemas;
       @NotNull
       public String testname;
       @Schema(required = true, implementation = int[].class)

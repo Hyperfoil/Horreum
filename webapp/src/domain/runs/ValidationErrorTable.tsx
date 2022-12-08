@@ -1,12 +1,12 @@
-import React, { useMemo } from "react"
+import { useMemo } from "react"
 import { NavLink } from "react-router-dom"
 
-import { ValidationError } from "../../api"
+import { SchemaDescriptor, ValidationError } from "../../api"
 import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 
 type ValidationErrorTableProps = {
     errors: ValidationError[]
-    uris: Record<number, string>
+    schemas: SchemaDescriptor[]
 }
 
 export default function ValidationErrorTable(props: ValidationErrorTableProps) {
@@ -17,7 +17,7 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
                 cells: [
                     e.schemaId ? (
                         <NavLink key="schema" to={`/schema/${e.schemaId}`}>
-                            {props.uris[e.schemaId] || "unknown schema " + e.schemaId}
+                            {props.schemas.find(s => s.id === e.schemaId)?.name || "unknown schema " + e.schemaId}
                         </NavLink>
                     ) : (
                         "(none)"
@@ -29,7 +29,7 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
                     e.error.message,
                 ],
             })),
-        [props.errors, props.uris]
+        [props.errors, props.schemas]
     )
     return (
         <Table

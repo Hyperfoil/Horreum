@@ -47,6 +47,26 @@ export function get(id: number, token?: string) {
         )
 }
 
+export function getSummary(id: number, token?: string) {
+    return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
+        Api.runServiceGetRunSummary(id, token).then(
+            response =>
+                dispatch(
+                    loaded({
+                        data: undefined,
+                        schemas: [],
+                        metadata: response.hasMetadata ? {} : undefined,
+                        ...response,
+                    })
+                ),
+            error => {
+                dispatch(alertAction("FETCH_RUN_SUMMARY", "Failed to fetch data for run " + id, error))
+                dispatch(loaded(undefined, 0))
+                return Promise.reject(error)
+            }
+        )
+}
+
 export function byTest(id: number, pagination: PaginationInfo, trashed: boolean) {
     return (dispatch: Dispatch<LoadingAction | TestIdAction | AddAlertAction>) => {
         dispatch({ type: actionTypes.LOADING })

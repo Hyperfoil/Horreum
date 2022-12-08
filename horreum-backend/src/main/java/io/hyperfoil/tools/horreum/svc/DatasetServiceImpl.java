@@ -25,6 +25,7 @@ import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
@@ -89,14 +90,17 @@ public class DatasetServiceImpl implements DatasetService {
             "ELSE '{}'::::jsonb END" +
          ") AS value FROM lvalues";
 
-   private static final String SCHEMAS_SELECT = "SELECT dataset_id, jsonb_object_agg(schema_id, uri) AS schemas FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id";
+   private static final String SCHEMAS_SELECT = "SELECT dataset_id, jsonb_agg(jsonb_build_object(" +
+         "'id', schema.id, 'uri', ds.uri, 'name', schema.name, 'source', 0, 'type', 2, 'key', ds.index::::text)) AS schemas " +
+         "FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id JOIN schema ON schema.id = ds.schema_id";
    private static final String VALIDATION_SELECT = "validation AS (" +
             "SELECT dataset_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM dataset_validationerrors GROUP BY dataset_id" +
          ")";
    private static final String DATASET_SUMMARY_SELECT = " SELECT ds.id, ds.runid AS runId, ds.ordinal, " +
          "ds.testid AS testId, test.name AS testname, ds.description, " +
          "EXTRACT(EPOCH FROM ds.start) * 1000 AS start, EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop, " +
-         "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas, " +
+         "ds.owner, ds.access, dv.value AS view, " +
+         "COALESCE(schema_agg.schemas, '[]') AS schemas, " +
          "COALESCE(validation.errors, '[]') AS validationErrors " +
          "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
          "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
@@ -110,7 +114,7 @@ public class DatasetServiceImpl implements DatasetService {
          ") SELECT ds.id, ds.runid AS runId, ds.ordinal, " +
          "ds.testid AS testId, test.name AS testname, ds.description, " +
          "EXTRACT(EPOCH FROM ds.start) * 1000 AS start, EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop, " +
-         "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas " +
+         "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas, '[]'::::jsonb AS validationErrors " +
          "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
          "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
          "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id WHERE ds.id IN (SELECT id FROM ids)";
@@ -120,8 +124,17 @@ public class DatasetServiceImpl implements DatasetService {
          "LEFT JOIN label ON label.id = label_id ";
 
    //@formatter:on
-   protected static final AliasToBeanResultTransformer DATASET_SUMMARY_TRANSFORMER = new AliasToBeanResultTransformer(DatasetSummary.class);
-   protected static final AliasToBeanResultTransformer DATASET_BY_SCHEMA_TRANSFORMER = new AliasToBeanResultTransformer(DatasetSummary.class);
+   protected static final AliasToBeanResultTransformer DATASET_SUMMARY_TRANSFORMER = new AliasToBeanResultTransformer(DatasetSummary.class) {
+      @Override
+      public Object transformTuple(Object[] tuple, String[] aliases) {
+         for (int i = 0; i < aliases.length; ++i) {
+            if ("schemas".equals(aliases[i])) {
+               tuple[i] = Util.OBJECT_MAPPER.convertValue(tuple[i], new TypeReference<List<SchemaService.SchemaUsage>>() {});
+            }
+         }
+         return super.transformTuple(tuple, aliases);
+      }
+   };
    @Inject
    EntityManager em;
 
@@ -176,7 +189,7 @@ public class DatasetServiceImpl implements DatasetService {
       if (viewId != null) {
          query.setParameter(3, viewId);
       }
-      markAsSummaryList(query);
+      initTypes(query);
       DatasetService.DatasetList list = new DatasetService.DatasetList();
       //noinspection unchecked
       list.datasets = query.getResultList();
@@ -192,7 +205,7 @@ public class DatasetServiceImpl implements DatasetService {
       }
    }
 
-   private void markAsSummaryList(Query query) {
+   private void initTypes(Query query) {
       //noinspection deprecation
       query.unwrap(NativeQuery.class)
             .addScalar("id", IntegerType.INSTANCE)
@@ -266,21 +279,7 @@ public class DatasetServiceImpl implements DatasetService {
       // TODO: filtering by fingerprint
       addOrderAndPaging(limit, page, sort, direction, sql);
       Query query = em.createNativeQuery(sql.toString()).setParameter(1, uri);
-      //noinspection deprecation
-      ((NativeQuery<?>) query.unwrap(NativeQuery.class))
-            .addScalar("id", IntegerType.INSTANCE)
-            .addScalar("runId", IntegerType.INSTANCE)
-            .addScalar("ordinal", IntegerType.INSTANCE)
-            .addScalar("testId", IntegerType.INSTANCE)
-            .addScalar("testname", TextType.INSTANCE)
-            .addScalar("description", TextType.INSTANCE)
-            .addScalar("start", LongType.INSTANCE)
-            .addScalar("stop", LongType.INSTANCE)
-            .addScalar("owner", TextType.INSTANCE)
-            .addScalar("access", IntegerType.INSTANCE)
-            .addScalar("view", JsonNodeBinaryType.INSTANCE)
-            .addScalar("schemas", JsonNodeBinaryType.INSTANCE)
-            .setResultTransformer(DATASET_BY_SCHEMA_TRANSFORMER);
+      initTypes(query);
       DatasetService.DatasetList list = new DatasetService.DatasetList();
       //noinspection unchecked
       list.datasets = query.getResultList();
@@ -362,7 +361,7 @@ public class DatasetServiceImpl implements DatasetService {
          Query query = em.createNativeQuery("WITH schema_agg AS (" + SCHEMAS_SELECT + " WHERE ds.dataset_id = ?1 GROUP BY ds.dataset_id), " +
                VALIDATION_SELECT + DATASET_SUMMARY_SELECT + " AND dv.view_id = ?2 WHERE ds.id = ?1")
                .setParameter(1, datasetId).setParameter(2, viewId);
-         markAsSummaryList(query);
+         initTypes(query);
          return (DatasetSummary) query.getSingleResult();
       } catch (NoResultException e) {
          throw ServiceException.notFound("Cannot find dataset " + datasetId);

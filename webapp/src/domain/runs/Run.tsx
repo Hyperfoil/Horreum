@@ -15,6 +15,7 @@ import OwnerAccess from "../../components/OwnerAccess"
 import { NavLink } from "react-router-dom"
 import { Description } from "./components"
 import DatasetData from "./DatasetData"
+import MetaData from "./MetaData"
 import RunData from "./RunData"
 import TransformationLogModal from "../tests/TransformationLogModal"
 import { Access } from "../../api"
@@ -28,6 +29,7 @@ export default function Run() {
     const [loading, setLoading] = useState(false)
     const [recalculating, setRecalculating] = useState(false)
     const [transformationLogOpen, setTransformationLogOpen] = useState(false)
+    const [updateCounter, setUpdateCounter] = useState(0)
 
     const dispatch = useDispatch<RunsDispatch>()
     const teams = useSelector(teamsSelector)
@@ -35,12 +37,12 @@ export default function Run() {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get("token")
         setLoading(true)
-        dispatch(actions.get(id, token || undefined))
+        dispatch(actions.getSummary(id, token || undefined))
             .catch(noop)
             .finally(() => setLoading(false))
-    }, [dispatch, id, teams])
+    }, [dispatch, id, teams, updateCounter])
     const isTester = useTester(run?.owner)
-
+    console.log(run)
     return (
         <PageSection>
             {loading && (
@@ -127,7 +129,15 @@ export default function Run() {
                                         </FragmentTab>
                                     )),
                                     <FragmentTab title="Original run data" fragment="run" key="original">
-                                        <RunData run={run} />
+                                        <RunData run={run} onUpdate={() => setUpdateCounter(updateCounter + 1)} />
+                                    </FragmentTab>,
+                                    <FragmentTab
+                                        title="Metadata"
+                                        fragment="metadata"
+                                        key="metadata"
+                                        isHidden={!run.metadata}
+                                    >
+                                        <MetaData run={run} />
                                     </FragmentTab>,
                                 ]}
                             </FragmentTabs>

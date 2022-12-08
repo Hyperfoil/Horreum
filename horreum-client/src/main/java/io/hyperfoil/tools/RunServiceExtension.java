@@ -47,6 +47,11 @@ public class RunServiceExtension implements RunService {
    }
 
    @Override
+   public Object getMetadata(int id, String token, String schemaUri) {
+      return delegate.getMetadata(id, token, schemaUri);
+   }
+
+   @Override
    public QueryResult queryData(int id, String jsonpath, String schemaUri, boolean array) {
       return delegate.queryData(id, jsonpath, schemaUri, array);
    }

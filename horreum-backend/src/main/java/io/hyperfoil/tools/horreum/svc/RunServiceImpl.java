@@ -18,7 +18,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import javax.activation.MimeType;
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -38,6 +37,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -47,6 +47,7 @@ import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 import com.vladmihalcea.hibernate.type.util.MapResultTransformer;
 import io.hyperfoil.tools.horreum.api.QueryResult;
 import io.hyperfoil.tools.horreum.api.RunService;
+import io.hyperfoil.tools.horreum.api.SchemaService;
 import io.hyperfoil.tools.horreum.api.SqlService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
@@ -93,7 +94,8 @@ public class RunServiceImpl implements RunService {
          "WHERE keys.key LIKE CONCAT(?, '%');";
    protected static final String FIND_RUNS_WITH_URI = "SELECT id, testid FROM run WHERE NOT trashed AND (data->>'$schema' = ?1 OR (" +
          "CASE WHEN jsonb_typeof(data) = 'object' THEN ?1 IN (SELECT values.value->>'$schema' FROM jsonb_each(data) as values) " +
-         "WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema') ELSE false END))";
+         "WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema') ELSE false END) OR " +
+         "(metadata IS NOT NULL AND ?1 IN (SELECT jsonb_array_elements(metadata)->>'$schema')))";
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
@@ -198,7 +200,7 @@ public class RunServiceImpl implements RunService {
    @Override
    public Object getRun(int id, String token) {
       return Util.runQuery(em, "SELECT (to_jsonb(run) || jsonb_build_object(" +
-            "'schema', (SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = run.id), " +
+            "'schemas', (SELECT COALESCE(jsonb_agg(jsonb_build_object('id', schema.id, 'uri', rs.uri, 'name', schema.name, 'source', rs.source, 'type', rs.type, 'key', rs.key)), '[]') FROM run_schemas rs JOIN schema ON rs.schemaid = schema.id WHERE runid = run.id), " +
             "'testname', (SELECT name FROM test WHERE test.id = run.testid), " +
             "'datasets', (SELECT jsonb_agg(id ORDER BY id) FROM dataset WHERE runid = run.id), " +
             "'validationErrors', (SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) FROM run_validationerrors WHERE run_id = ?1)" +
@@ -208,21 +210,15 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @Override
    public RunSummary getRunSummary(int id, String token) {
-      // TODO: define the result set mapping properly without transforming jsonb and int[] to text
       Query query = em.createNativeQuery("SELECT run.id, run.start, run.stop, run.testid, " +
-            "run.owner, run.access, run.token, run.trashed, run.description, " +
+            "run.owner, run.access, run.token, run.trashed, run.description, run.metadata IS NOT NULL as has_metadata, " +
             "(SELECT name FROM test WHERE test.id = run.testid) as testname, " +
-            "(SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') FROM run_schemas WHERE runid = run.id)::::text as schema, " +
-            "(SELECT json_agg(id ORDER BY id) FROM dataset WHERE runid = run.id)::::text as datasets " +
-            " FROM run where id = ?").setParameter(1, id);
-      query.unwrap(org.hibernate.query.Query.class);
-
-      Object[] row = (Object[]) query.getSingleResult();
-      RunSummary summary = new RunSummary();
-      initSummary(row, summary);
-      summary.schema = Util.toJsonNode((String) row[10]);
-      summary.datasets = (ArrayNode) Util.toJsonNode((String) row[11]);
-      return summary;
+            "(SELECT COALESCE(jsonb_agg(jsonb_build_object('id', schema.id, 'uri', rs.uri, 'name', schema.name, 'source', rs.source, 'type', rs.type, 'key', rs.key)), '[]') FROM run_schemas rs JOIN schema ON schema.id = rs.schemaid WHERE rs.runid = run.id) as schemas, " +
+            "(SELECT json_agg(id ORDER BY id) FROM dataset WHERE runid = run.id) as datasets, " +
+            "(SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM run_validationerrors WHERE run_id = ?1 GROUP BY run_id) AS validationErrors " +
+            "FROM run where id = ?1").setParameter(1, id);
+      initTypes(query);
+      return createSummary((Object[]) query.getSingleResult());
    }
 
    @PermitAll
@@ -237,7 +233,21 @@ public class RunServiceImpl implements RunService {
                "WHEN rs.type = 0 THEN run.data " +
                "WHEN rs.type = 1 THEN run.data->rs.key " +
                "ELSE run.data->(rs.key::::integer) " +
-               "END)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?1 AND rs.uri = ?2";
+               "END)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?1 AND rs.source = 0 AND rs.uri = ?2";
+         return Util.runQuery(em, sqlQuery, id, schemaUri);
+      }
+   }
+
+   @PermitAll
+   @WithRoles
+   @WithToken
+   @Override
+   public Object getMetadata(int id, String token, String schemaUri) {
+      if (schemaUri == null || schemaUri.isEmpty()) {
+         return Util.runQuery(em, "SELECT metadata#>>'{}' from run where id = ?", id);
+      } else {
+         String sqlQuery = "SELECT run.metadata->(rs.key::::integer)#>>'{}' FROM run " +
+               "JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?1 AND rs.source = 1 AND rs.uri = ?2";
          return Util.runQuery(em, sqlQuery, id, schemaUri);
       }
    }
@@ -589,7 +599,9 @@ public class RunServiceImpl implements RunService {
    public RunsSummary listAllRuns(String query, boolean matchAll, String roles, boolean trashed,
                                   Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
-         .append("run.owner, run.access, run.token, run.trashed, run.description, test.name AS testname ")
+         .append("run.owner, run.access, run.token, run.trashed, run.description, ")
+         .append("run.metadata IS NOT NULL AS has_metadata, test.name AS testname, ")
+         .append("'[]'::::jsonb AS schemas, '[]'::::jsonb AS datasets, '[]'::::jsonb AS validationErrors ")
          .append("FROM run JOIN test ON test.id = run.testId WHERE ");
       String[] queryParts;
       boolean whereStarted = false;
@@ -643,11 +655,7 @@ public class RunServiceImpl implements RunService {
          RunsSummary summary = new RunsSummary();
          // TODO: total does not consider the query but evaluating all the expressions would be expensive
          summary.total = trashed ? Run.count() : Run.count("trashed = false");
-         summary.runs = runs.stream().map(row -> {
-            RunSummary run = new RunSummary();
-            initSummary(row, run);
-            return run;
-         }).collect(Collectors.toList());
+         summary.runs = runs.stream().map(this::createSummary).collect(Collectors.toList());
          return summary;
       } catch (PersistenceException pe) {
          // In case of an error PostgreSQL won't let us execute another query in the same transaction
@@ -670,7 +678,26 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   private void initSummary(Object[] row, RunSummary run) {
+   private void initTypes(Query query) {
+      query.unwrap(NativeQuery.class)
+            .addScalar("id", IntegerType.INSTANCE)
+            .addScalar("start", TimestampType.INSTANCE)
+            .addScalar("stop", TimestampType.INSTANCE)
+            .addScalar("testid", IntegerType.INSTANCE)
+            .addScalar("owner", TextType.INSTANCE)
+            .addScalar("access", IntegerType.INSTANCE)
+            .addScalar("token", TextType.INSTANCE)
+            .addScalar("trashed", BooleanType.INSTANCE)
+            .addScalar("description", TextType.INSTANCE)
+            .addScalar("has_metadata", BooleanType.INSTANCE)
+            .addScalar("testname", TextType.INSTANCE)
+            .addScalar("schemas", JsonNodeBinaryType.INSTANCE)
+            .addScalar("datasets", JsonNodeBinaryType.INSTANCE)
+            .addScalar("validationErrors", JsonNodeBinaryType.INSTANCE);
+   }
+
+   private RunSummary createSummary(Object[] row) {
+      RunSummary run = new RunSummary();
       run.id = (int) row[0];
       run.start = ((Timestamp) row[1]).getTime();
       run.stop = ((Timestamp) row[2]).getTime();
@@ -680,7 +707,12 @@ public class RunServiceImpl implements RunService {
       run.token = (String) row[6];
       run.trashed = (boolean) row[7];
       run.description = (String) row[8];
-      run.testname = (String) row[9];
+      run.hasMetadata = (boolean) row[9];
+      run.testname = (String) row[10];
+      run.schemas = Util.OBJECT_MAPPER.convertValue(row[11], new TypeReference<List<SchemaService.SchemaUsage>>() {});
+      run.datasets = (ArrayNode) row[12];
+      run.validationErrors = (ArrayNode) row[13];
+      return run;
    }
 
    @PermitAll
@@ -702,17 +734,21 @@ public class RunServiceImpl implements RunService {
    public RunsSummary listTestRuns(int testId, boolean trashed,
                                    Integer limit, Integer page, String sort, String direction) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
-            .append("    SELECT COALESCE(jsonb_object_agg(schemaid, uri), '{}') AS schemas, rs.runid FROM run_schemas rs GROUP BY rs.runid")
+            .append("    SELECT COALESCE(jsonb_agg(jsonb_build_object('id', schemaid, 'uri', rs.uri, 'name', schema.name, 'source', rs.source, 'type', rs.type, 'key', rs.key)), '[]') AS schemas, rs.runid ")
+            .append("        FROM run_schemas rs JOIN schema ON schema.id = rs.schemaid WHERE rs.testid = ?1 GROUP BY rs.runid")
             .append("), dataset_agg AS (")
-            .append("    SELECT runid, jsonb_agg(id ORDER BY id)::::text as datasets FROM dataset WHERE testid = ?1 GROUP BY runid")
+            .append("    SELECT runid, jsonb_agg(id ORDER BY id) as datasets FROM dataset WHERE testid = ?1 GROUP BY runid")
             .append("), validation AS (")
             .append("    SELECT run_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM run_validationerrors GROUP BY run_id")
-            .append(") SELECT run.id, run.start, run.stop, run.access, run.owner, schema_agg.schemas AS schemas, ")
-            .append("run.trashed, run.description, COALESCE(dataset_agg.datasets, '[]') AS datasets, ")
+            .append(") SELECT run.id, run.start, run.stop, run.testid, run.owner, run.access, run.token, run.trashed, run.description, ")
+            .append("run.metadata IS NOT NULL AS has_metadata, test.name AS testname, ")
+            .append("schema_agg.schemas AS schemas, ")
+            .append("COALESCE(dataset_agg.datasets, '[]') AS datasets, ")
             .append("COALESCE(validation.errors, '[]') AS validationErrors FROM run ")
             .append("LEFT JOIN schema_agg ON schema_agg.runid = run.id ")
             .append("LEFT JOIN dataset_agg ON dataset_agg.runid = run.id ")
             .append("LEFT JOIN validation ON validation.run_id = run.id ")
+            .append("JOIN test ON test.id = run.testid ")
             .append("WHERE run.testid = ?1 ");
       if (!trashed) {
          sql.append(" AND NOT run.trashed ");
@@ -725,38 +761,12 @@ public class RunServiceImpl implements RunService {
       }
       Query query = em.createNativeQuery(sql.toString());
       query.setParameter(1, testId);
-      query.unwrap(NativeQuery.class)
-            .addScalar("id", IntegerType.INSTANCE)
-            .addScalar("start", TimestampType.INSTANCE)
-            .addScalar("stop", TimestampType.INSTANCE)
-            .addScalar("access", IntegerType.INSTANCE)
-            .addScalar("owner", TextType.INSTANCE)
-            .addScalar("schemas", JsonNodeBinaryType.INSTANCE)
-            .addScalar("trashed", BooleanType.INSTANCE)
-            .addScalar("description", TextType.INSTANCE)
-            .addScalar("datasets", JsonNodeBinaryType.INSTANCE)
-            .addScalar("validationErrors", JsonNodeBinaryType.INSTANCE);
+      initTypes(query);
       @SuppressWarnings("unchecked")
       List<Object[]> resultList = query.getResultList();
-      List<RunSummary> runs = new ArrayList<>();
-      for (Object[] row : resultList) {
-         RunSummary run = new RunSummary();
-         run.id = (int) row[0];
-         run.start = ((Timestamp) row[1]).getTime();
-         run.stop = ((Timestamp) row[2]).getTime();
-         run.testid = testId;
-         run.access = (int) row[3];
-         run.owner = (String) row[4];
-         run.schema = (JsonNode) row[5];
-         run.trashed = (boolean) row[6];
-         run.description = (String) row[7];
-         run.datasets = (ArrayNode) row[8];
-         run.validationErrors = (ArrayNode) row[9];
-         runs.add(run);
-      }
       RunsSummary summary = new RunsSummary();
       summary.total = trashed ? Run.count("testid = ?1", testId) : Run.count("testid = ?1 AND trashed = false", testId);
-      summary.runs = runs;
+      summary.runs = resultList.stream().map(this::createSummary).collect(Collectors.toList());
       return summary;
    }
 
@@ -769,7 +779,9 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.badRequest("No `uri` query parameter given.");
       }
       StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
-            .append("run.owner, run.access, run.token, test.name AS testname, run.description ")
+            .append("run.owner, run.access, run.token, run.trashed, run.description, ")
+            .append("run.metadata IS NOT NULL AS has_metadata, test.name AS testname, ")
+            .append("'[]'::::jsonb AS schemas, '[]'::::jsonb AS datasets, '[]'::::jsonb AS validationErrors ")
             .append("FROM run_schemas rs JOIN run ON rs.runid = run.id JOIN test ON rs.testid = test.id ")
             .append("WHERE uri = ? AND NOT run.trashed");
       Util.addPaging(sql, limit, page, sort, direction);
@@ -779,19 +791,7 @@ public class RunServiceImpl implements RunService {
       List<Object[]> runs = query.getResultList();
 
       RunsSummary summary = new RunsSummary();
-      summary.runs = runs.stream().map(row -> {
-         RunSummary run = new RunSummary();
-         run.id = (int) row[0];
-         run.start = ((Timestamp) row[1]).getTime();
-         run.stop = ((Timestamp) row[2]).getTime();
-         run.testid = (int) row[3];
-         run.owner = (String) row[4];
-         run.access = (int) row[5];
-         run.token = (String) row[6];
-         run.testname = (String) row[7];
-         run.description = (String) row[8];
-         return run;
-      }).collect(Collectors.toList());
+      summary.runs = runs.stream().map(this::createSummary).collect(Collectors.toList());
       summary.total = ((BigInteger) em.createNativeQuery("SELECT count(*) FROM run_schemas WHERE uri = ?")
             .setParameter(1, uri).getSingleResult()).longValue();
       return summary;
