@@ -262,7 +262,7 @@ export default function Changes() {
                 <CardHeader>
                     {
                         <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
-                            <div style={{ display: "flex" }}>
+                            <div style={{ display: "flex", flexWrap: "wrap" }}>
                                 <TestSelect
                                     initialTestName={paramTest}
                                     onSelect={onSelectTest}
