@@ -12,6 +12,7 @@ import store, { history } from "./store"
 import { isAdminSelector, LoginLogout } from "./auth"
 import { initKeycloak } from "./keycloak"
 import { UserProfileLink, UserSettings } from "./domain/user/UserSettings"
+import ContextHelp from "./components/ContextHelp"
 
 import TestRuns from "./domain/runs/TestRuns"
 import TestDatasets from "./domain/runs/TestDatasets"
@@ -146,6 +147,7 @@ function Main() {
                     <Route exact path="/usersettings" component={UserSettings} />
                 </Switch>
             </Page>
+            <ContextHelp />
         </ConnectedRouter>
     )
 }
