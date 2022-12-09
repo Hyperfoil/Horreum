@@ -24,7 +24,6 @@ START=$(date -Iseconds | tr -d '\n' | jq -sRr "@uri" )
 STOP=$START
 OWNER='dev-team'
 ACCESS='PUBLIC'
-set -x
 if [ $# -eq 2 ]; then
   curl $HORREUM_URL'/api/run/data?test='"$TEST"'&start='$START'&stop='$STOP'&owner='$OWNER'&access='$ACCESS \
       -s -X POST -H 'content-type: application/json' \
