@@ -26,7 +26,7 @@ export function formatDate(timestamp: any): string {
     } else if (timestamp instanceof Date) {
         datetime = DateTime.fromJSDate(timestamp)
     } else {
-        return String(datetime)
+        return String(timestamp)
     }
     return datetime.toFormat("yyyy-LL-dd")
 }
@@ -42,9 +42,9 @@ export function formatDateTime(timestamp: any): string {
     } else if (timestamp instanceof Date) {
         datetime = DateTime.fromJSDate(timestamp)
     } else {
-        return String(datetime)
+        return String(timestamp)
     }
-    return datetime.toFormat("yyyy-LL-dd HH:mm:ss ZZZ")
+    return datetime.toFormat("yyyy-LL-dd HH:mm:ss")
 }
 
 export function toEpochMillis(timestamp: any): number {

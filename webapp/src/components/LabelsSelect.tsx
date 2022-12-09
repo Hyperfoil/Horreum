@@ -46,7 +46,7 @@ export type SelectedLabels = SelectOptionObject | null
 type LabelsSelectProps = {
     disabled?: boolean
     selection?: SelectedLabels
-    onSelect(selection: SelectedLabels): void
+    onSelect(selection: SelectedLabels | undefined): void
     source(): Promise<any[]>
     emptyPlaceholder?: ReactElement | null
     optionForAll?: string
@@ -117,7 +117,8 @@ export default function LabelsSelect(props: LabelsSelectProps) {
     const filteredOptions = useMemo(() => getFilteredOptions(partialSelect), [availableLabels, partialSelect])
     useEffect(() => {
         if (!props.fireOnPartial && filteredOptions.length === 1) {
-            props.onSelect(filteredOptions[0])
+            const str = convertLabels(filteredOptions[0])
+            props.onSelect({ ...filteredOptions[0], toString: () => str })
         }
     }, [filteredOptions])
 
