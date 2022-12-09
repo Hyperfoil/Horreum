@@ -23,7 +23,7 @@ export default function DatasetLogModal(props: DatasetLogModalProps) {
                     (response as DatasetLog[]).map(log => ({
                         cells: [
                             { title: <LogLevelIcon level={log.level} /> },
-                            { title: formatDateTime(log.timestamp * 1000) },
+                            { title: formatDateTime(log.timestamp) },
                             {
                                 title: (
                                     <NavLink to={`/run/${log.runId}#dataset${log.datasetOrdinal}`}>

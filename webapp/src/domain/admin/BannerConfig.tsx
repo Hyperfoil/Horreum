@@ -18,7 +18,7 @@ import { isAdminSelector } from "../../auth"
 import Api from "../../api"
 
 function setBanner(severity: string, title: string, message: string) {
-    return Api.bannerServiceSet({ severity, title, message, active: true, created: -1 })
+    return Api.bannerServiceSet({ severity, title, message, active: true })
 }
 
 export default function BannerConfig() {

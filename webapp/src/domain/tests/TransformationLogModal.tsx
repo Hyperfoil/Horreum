@@ -21,7 +21,7 @@ export default function TransformationLogModal(props: TransformationLogModalProp
                 (response as TransformationLog[]).map(log => ({
                     cells: [
                         { title: <LogLevelIcon level={log.level} /> },
-                        { title: formatDateTime(log.timestamp * 1000) },
+                        { title: formatDateTime(log.timestamp) },
                         {
                             title: <NavLink to={`/run/${log.runId}#run`}>{log.runId}</NavLink>,
                         },

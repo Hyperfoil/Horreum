@@ -31,7 +31,7 @@ public abstract class PersistentLog extends PanacheEntityBase {
    @NotNull
    public int level;
 
-   @Schema(required = true, type = SchemaType.NUMBER)
+   @Schema(required = true)
    @NotNull
    @Column(columnDefinition = "timestamp")
    public Instant timestamp;

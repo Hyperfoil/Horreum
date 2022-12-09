@@ -85,7 +85,7 @@ public interface ReportService {
       public int id;
       @JsonProperty(required = true)
       public int configId;
-      @Schema(required = true, type = SchemaType.NUMBER)
+      @Schema(required = true)
       public Instant created;
    }
 }

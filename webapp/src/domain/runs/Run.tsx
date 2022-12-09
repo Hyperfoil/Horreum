@@ -42,7 +42,6 @@ export default function Run() {
             .finally(() => setLoading(false))
     }, [dispatch, id, teams, updateCounter])
     const isTester = useTester(run?.owner)
-    console.log(run)
     return (
         <PageSection>
             {loading && (

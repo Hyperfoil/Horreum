@@ -16,8 +16,6 @@ public class Banner {
    @GeneratedValue
    public Integer id;
 
-   @Schema(type = SchemaType.NUMBER)
-   @NotNull
    public Instant created;
 
    @NotNull

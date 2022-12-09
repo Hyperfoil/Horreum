@@ -14,7 +14,7 @@ export default function ReportLogModal(props: ReportLogModalProps) {
             props.logs.map(log => ({
                 cells: [
                     { title: <LogLevelIcon level={log.level} /> },
-                    { title: formatDateTime(log.timestamp * 1000) },
+                    { title: formatDateTime(log.timestamp) },
                     { title: <div dangerouslySetInnerHTML={{ __html: log.message }}></div> },
                 ],
             })),

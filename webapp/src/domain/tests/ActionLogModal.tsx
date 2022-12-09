@@ -16,7 +16,7 @@ export default function ActionLogModal(props: ActionLogModalProps) {
                 (response as ActionLog[]).map(log => ({
                     cells: [
                         { title: <LogLevelIcon level={log.level} /> },
-                        { title: formatDateTime(log.timestamp * 1000) },
+                        { title: formatDateTime(log.timestamp) },
                         { title: log.event },
                         { title: log.type },
                         { title: <div dangerouslySetInnerHTML={{ __html: log.message }}></div> },

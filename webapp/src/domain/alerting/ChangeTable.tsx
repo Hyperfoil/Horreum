@@ -166,7 +166,8 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
         {
             Header: "Time",
             accessor: "timestamp",
-            Cell: (arg: any) => formatDateTime(arg.cell.value * 1000),
+            sortType: "datetime",
+            Cell: (arg: any) => formatDateTime(arg.cell.value),
         },
         {
             Header: "Dataset",

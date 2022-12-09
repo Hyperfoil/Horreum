@@ -50,7 +50,7 @@ export default function ListReportsModal(props: ListReportsModalProps) {
                                             {id}
                                         </NavLink>
                                     </Td>
-                                    <Td>{formatDateTime(created * 1000)}</Td>
+                                    <Td>{formatDateTime(created)}</Td>
                                     <Td>
                                         <Button onClick={() => setDeleteId(id)} variant="danger">
                                             Delete
