@@ -279,6 +279,7 @@ public class AlertingServiceImpl implements AlertingService {
       messageBus.subscribe(DataSet.EVENT_DELETED, "AlertingService", DataSet.Info.class, this::onDatasetDeleted);
       messageBus.subscribe(DataPoint.EVENT_NEW, "AlertingService", DataPoint.Event.class, this::onNewDataPoint);
       messageBus.subscribe(Run.EVENT_NEW, "AlertingService", Run.class, this::removeExpected);
+      messageBus.subscribe(Test.EVENT_DELETED, "AlertingService", Test.class, this::onTestDeleted);
       if (grafanaBaseUrl.isPresent() && updateGrafanaDatasource.orElse(true)) {
          setupGrafanaDatasource(0);
       }
@@ -1248,7 +1249,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onDatasetDeleted(DataSet.Info info) {
+   void onDatasetDeleted(DataSet.Info info) {
       log.infof("Removing datasets and changes for dataset %d (%d/%d, test %d)", info.id, info.runId, info.ordinal, info.testId);
       for (DataPoint dp : DataPoint.<DataPoint>list("dataset_id", info.id)) {
          messageBus.publish(DataPoint.EVENT_DELETED, info.testId, new DataPoint.Event(dp, info.testId, false));
@@ -1256,6 +1257,17 @@ public class AlertingServiceImpl implements AlertingService {
       }
       for (Change c: Change.<Change>list("dataset_id = ?1 AND confirmed = false", info.id)) {
          c.delete();
+      }
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   void onTestDeleted(Test test) {
+      // We need to delete in a loop to cascade this to ChangeDetection
+      List<Variable> variables = Variable.find("testid", test.id).list();
+      log.infof("Deleting %d variables for test %s (%d)", variables.size(), test.name, test.id);
+      for (var variable: variables) {
+         variable.delete();
       }
    }
 

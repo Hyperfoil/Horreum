@@ -94,7 +94,6 @@ public class TestServiceImpl implements TestService {
       }
       log.infof("Deleting test %s (%d)", test.name, test.id);
       test.delete();
-      em.createNativeQuery("DELETE FROM transformationlog WHERE testid = ?1").setParameter(1, test.id);
       messageBus.publish(Test.EVENT_DELETED, test.id, test);
    }
 

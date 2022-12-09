@@ -169,6 +169,7 @@ public class LogServiceImpl implements LogService {
    @Transactional
    public void onTestDelete(Test test) {
       DatasetLog.delete("testid", test.id);
+      TransformationLog.delete("testid", test.id);
    }
 
    @Scheduled(every = "{horreum.transformationlog.check}")

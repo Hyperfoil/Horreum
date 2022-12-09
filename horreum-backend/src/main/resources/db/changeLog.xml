@@ -4045,4 +4045,11 @@
             UPDATE schema SET schema = NULL WHERE jsonb_typeof(schema) != 'object';
         </sql>
     </changeSet>
+
+    <changeSet id="103" author="rvansa">
+        <sql>
+            DELETE FROM changedetection WHERE variable_id IN (SELECT variable.id FROM variable LEFT JOIN test ON test.id = testid WHERE test.id IS NULL);
+            DELETE FROM variable WHERE id IN (SELECT variable.id FROM variable LEFT JOIN test ON test.id = testid WHERE test.id IS NULL);
+        </sql>
+    </changeSet>
 </databaseChangeLog>
