@@ -10,7 +10,6 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.vertx.core.Vertx;
 
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -66,9 +65,6 @@ public class TestServiceImpl implements TestService {
 
    @Inject
    SecurityIdentity identity;
-
-   @Inject
-   Vertx vertx;
 
    @Inject
    RunServiceImpl runService;
@@ -184,37 +180,18 @@ public class TestServiceImpl implements TestService {
             throw ServiceException.forbidden("This user does not have the " + existing.owner + " role!");
          }
          // We're not updating views using this method
-         test.defaultView = existing.defaultView;
          test.views = existing.views;
          test.tokens = existing.tokens;
          em.merge(test);
       } else {
-         if (test.defaultView == null) {
-            if (test.views != null) {
-               test.defaultView = test.views.stream()
-                     .filter(v -> "Default".equalsIgnoreCase(v.name)).findFirst().orElse(null);
-            }
-            if (test.defaultView == null) {
-               test.defaultView = new View();
-            }
-         }
-         test.defaultView.id = null;
-         test.defaultView.test = test;
-         test.defaultView.name = "Default";
-         if (test.defaultView.components == null) {
-            test.defaultView.components = Collections.emptyList();
-         }
          if (test.views != null) {
             test.views.forEach(View::ensureLinked);
          }
          // We need to persist the test before view in order for RLS to work
-         em.persist(test);
-         em.persist(test.defaultView);
-         if (test.views == null) {
-            test.views = Collections.singleton(test.defaultView);
-         } else {
-            test.views.removeIf(v -> "Default".equalsIgnoreCase(v.name));
-            test.views.add(test.defaultView);
+         test.persist();
+         if (test.views == null || test.views.isEmpty()) {
+            test.views = Collections.singleton(new View("Default", test));
+            test.persist();
          }
          try {
             em.flush();
@@ -398,28 +375,20 @@ public class TestServiceImpl implements TestService {
       if (testId <= 0) {
          throw ServiceException.badRequest("Missing test id");
       }
-      try {
-         Test test = getTestForUpdate(testId);
-         view.ensureLinked();
-         view.test = test;
-         if (view.id == null || view.id < 0) {
-            view.id = null;
-            view.persist();
-         } else {
-            view = em.merge(view);
-            int viewId = view.id;
-            test.views.removeIf(v -> v.id == viewId);
-         }
-         test.views.add(view);
-         if ("Default".equalsIgnoreCase(view.name)) {
-            test.defaultView = view;
-         }
-         test.persist();
-         em.flush();
-      } catch (PersistenceException e) {
-         log.error("Failed to persist updated view", e);
-         throw ServiceException.badRequest("Failed to persist the view.");
+      Test test = getTestForUpdate(testId);
+      view.ensureLinked();
+      view.test = test;
+      if (view.id == null || view.id < 0) {
+         view.id = null;
+         view.persist();
+      } else {
+         view = em.merge(view);
+         int viewId = view.id;
+         test.views.removeIf(v -> v.id == viewId);
       }
+      test.views.add(view);
+      test.persist();
+      em.flush();
       return view.id;
    }
 
@@ -428,7 +397,9 @@ public class TestServiceImpl implements TestService {
    @Transactional
    public void deleteView(int testId, int viewId) {
       Test test = getTestForUpdate(testId);
-      if (test.defaultView.id == viewId) {
+      if (test.views == null) {
+         test.views = Collections.singleton(new View("Default", test));
+      } else if (test.views.stream().anyMatch(v -> v.id == viewId && "Default".equals(v.name))) {
          throw ServiceException.badRequest("Cannot remove default view.");
       }
       if (!test.views.removeIf(v -> v.id == viewId)) {

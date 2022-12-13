@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -15,7 +14,6 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
-import javax.persistence.EntityManager;
 
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
@@ -142,13 +140,15 @@ public class TestServiceTest extends BaseServiceTest {
       ViewComponent vc = new ViewComponent();
       vc.headerName = "Foobar";
       vc.labels = JsonNodeFactory.instance.arrayNode().add("value");
-      test.defaultView.components.add(vc);
-      updateView(test.id, test.defaultView);
+      View defaultView = test.views.stream().filter(v -> "Default".equals(v.name)).findFirst().orElseThrow();
+      defaultView.components.add(vc);
+      updateView(test.id, defaultView);
 
       TestUtil.eventually(() -> {
          em.clear();
-         List<JsonNode> list = em.createNativeQuery("SELECT value FROM dataset_view WHERE dataset_id = ?1 AND view_id = ?2")
-               .setParameter(1, event.dataset.id).setParameter(2, test.defaultView.id)
+         @SuppressWarnings("unchecked") List<JsonNode> list = em.createNativeQuery(
+               "SELECT value FROM dataset_view WHERE dataset_id = ?1 AND view_id = ?2")
+               .setParameter(1, event.dataset.id).setParameter(2, defaultView.id)
                .unwrap(NativeQuery.class).addScalar("value", JsonNodeBinaryType.INSTANCE)
                .getResultList();
          return !list.isEmpty() && !list.get(0).isEmpty();

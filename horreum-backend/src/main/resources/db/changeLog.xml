@@ -4052,4 +4052,8 @@
             DELETE FROM variable WHERE id IN (SELECT variable.id FROM variable LEFT JOIN test ON test.id = testid WHERE test.id IS NULL);
         </sql>
     </changeSet>
+
+    <changeSet id="104" author="rvansa">
+        <dropColumn tableName="test" columnName="defaultview_id" />
+    </changeSet>
 </databaseChangeLog>

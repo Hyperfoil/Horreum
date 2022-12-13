@@ -125,6 +125,7 @@ export default function TestDatasets() {
     const testId = parseInt(stringTestId)
 
     const test = useSelector(get(testId))
+    console.log(test)
     const [filter, setFilter] = useState<SelectedLabels>()
     const [filterExpanded, setFilterExpanded] = useState(false)
     const [page, setPage] = useState(1)
@@ -193,8 +194,8 @@ export default function TestDatasets() {
                 },
             })
         }
-        const view = test?.views?.find(v => v.id === viewId)
-        const components = view?.components || test?.defaultView?.components || []
+        const view = test?.views.find(v => v.id === viewId) || test?.views.find(v => v.name === "Default")
+        const components = view?.components || []
         components.forEach(vc => {
             allColumns.push({
                 Header: vc.headerName,
@@ -232,7 +233,7 @@ export default function TestDatasets() {
                                     <FlexItem>
                                         <ViewSelect
                                             views={test?.views || []}
-                                            viewId={viewId || test?.defaultView?.id || -1}
+                                            viewId={viewId || test?.views.find(v => v.name === "Default")?.id || -1}
                                             onChange={setViewId}
                                         />
                                     </FlexItem>

@@ -101,13 +101,14 @@ export const alertAction = (
     }
 }
 
+// this method will always reject so we can type it with 'any', reason is 'any' anyway
 export function dispatchError(
     dispatch: Dispatch<AddAlertAction>,
     error: any,
     type: string,
     title: string,
     ...errorFormatter: ((error: any) => any)[]
-): Promise<unknown> {
+): Promise<any> {
     dispatch(alertAction(type, title, error, ...errorFormatter))
     return Promise.reject(error)
 }

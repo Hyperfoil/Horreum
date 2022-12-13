@@ -71,6 +71,7 @@ export default function DatasetComparison() {
         [datasets]
     )
 
+    const defaultView = test?.views.find(v => (v.name = "Default"))
     return (
         <PageSection>
             <Card>
@@ -85,8 +86,8 @@ export default function DatasetComparison() {
                                 <LabelsComparison headers={headers} datasets={datasets} />
                             </FragmentTab>
                             <FragmentTab title="Default view" fragment="view_default" isHidden={!test}>
-                                {test?.defaultView ? (
-                                    <ViewComparison headers={headers} view={test?.defaultView} datasets={datasets} />
+                                {defaultView ? (
+                                    <ViewComparison headers={headers} view={defaultView} datasets={datasets} />
                                 ) : (
                                     <Bullseye>
                                         <Spinner size="xl" />

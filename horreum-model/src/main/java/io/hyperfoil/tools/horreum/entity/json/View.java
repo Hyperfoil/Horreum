@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
+import java.util.Collections;
 import java.util.List;
 
 import javax.persistence.CascadeType;
@@ -44,6 +45,15 @@ public class View extends PanacheEntityBase {
    @OneToMany(fetch = FetchType.EAGER, mappedBy = "view", orphanRemoval = true, cascade = CascadeType.ALL)
    @OrderBy("headerorder ASC")
    public List<ViewComponent> components;
+
+   public View() {
+   }
+
+   public View(String name, Test test) {
+      this.name = name;
+      this.test = test;
+      this.components = Collections.emptyList();
+   }
 
    @ApiIgnore
    public void ensureLinked() {

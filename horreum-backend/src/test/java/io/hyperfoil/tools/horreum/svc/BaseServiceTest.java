@@ -131,7 +131,6 @@ public class BaseServiceTest {
       Util.withTx(tm, () -> {
          try (CloseMe ignored = roleManager.withRoles(Stream.concat(Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
                .collect(Collectors.toList()))) {
-            em.createNativeQuery("UPDATE test SET defaultview_id = NULL").executeUpdate();
             ViewComponent.deleteAll();
             View.deleteAll();
 
@@ -167,7 +166,7 @@ public class BaseServiceTest {
       defaultView.name = "Default";
       defaultView.components = new ArrayList<>();
       defaultView.components.add(new ViewComponent("Some column", null, "foo"));
-      test.defaultView = defaultView;
+      test.views = Collections.singleton(defaultView);
       test.transformers = new ArrayList<>();
       return test;
    }

@@ -94,7 +94,6 @@ const ViewComponentForm = ({ c, onChange, isTester }: ViewComponentFormProps) =>
 
 type ViewsProps = {
     testId: number
-    defaultView: View
     views: View[]
     testOwner?: string
     funcsRef: TabFunctionsRef
@@ -108,7 +107,7 @@ function deepCopy(views: View[]): ViewExtended[] {
     return JSON.parse(str) as ViewExtended[]
 }
 
-export default function Views({ testId, defaultView, testOwner, funcsRef, onModified, ...props }: ViewsProps) {
+export default function Views({ testId, testOwner, funcsRef, onModified, ...props }: ViewsProps) {
     const isTester = useTester(testOwner)
     const [views, setViews] = useState<ViewExtended[]>([])
     const [deleted, setDeleted] = useState<number[]>([])
@@ -119,7 +118,7 @@ export default function Views({ testId, defaultView, testOwner, funcsRef, onModi
         const copy = deepCopy(props.views)
         setViews(copy)
         if (copy.length > 0) {
-            setSelectedView(copy.find(v => v.id === defaultView.id) || copy[0])
+            setSelectedView(copy.find(v => v.name === "Default") || copy[0])
         }
     }, [props.views])
 
@@ -127,7 +126,9 @@ export default function Views({ testId, defaultView, testOwner, funcsRef, onModi
     funcsRef.current = {
         save: () =>
             Promise.all([
-                ...views.filter(v => v.modified).map(view => dispatch(updateView(testId, view))),
+                ...views
+                    .filter(v => v.modified)
+                    .map(view => dispatch(updateView(testId, view)).then(id => (view.id = id))),
                 ...deleted.map(id => dispatch(deleteView(testId, id))),
             ]).then(() => {
                 setDeleted([])
@@ -170,9 +171,11 @@ export default function Views({ testId, defaultView, testOwner, funcsRef, onModi
             addItemText="Add view..."
             noItemTitle="No view defined (should not happen)"
             noItemText="This test does not have any view defined."
-            canDelete={view => isTester && view.id !== defaultView.id}
+            canDelete={view => isTester && view.name !== "Default"}
             onDelete={view => {
-                setDeleted([...deleted, view.id])
+                if (view.id && view.id > 0) {
+                    setDeleted([...deleted, view.id])
+                }
                 setSelectedView(views[0])
             }}
             items={views}
@@ -204,8 +207,9 @@ export default function Views({ testId, defaultView, testOwner, funcsRef, onModi
         >
             <FormGroup label="View name" fieldId="name">
                 <TextInput
+                    id="name"
                     value={selectedView?.name}
-                    isReadOnly={selectedView?.id === defaultView.id}
+                    isReadOnly={selectedView?.name === "Default"}
                     onChange={name => update({ name })}
                 />
             </FormGroup>

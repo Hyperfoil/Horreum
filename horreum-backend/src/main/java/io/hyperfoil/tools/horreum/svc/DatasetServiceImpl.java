@@ -105,7 +105,7 @@ public class DatasetServiceImpl implements DatasetService {
          "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
          "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
          "LEFT JOIN validation ON validation.dataset_id = ds.id " +
-         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id";
+         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = ";
    private static final String LIST_SCHEMA_DATASETS =
          "WITH ids AS (" +
             "SELECT dataset_id AS id FROM dataset_schemas WHERE uri = ?1" +
@@ -199,9 +199,9 @@ public class DatasetServiceImpl implements DatasetService {
 
    private void addViewIdCondition(StringBuilder sql, Integer viewId) {
       if (viewId == null) {
-         sql.append(" AND dv.view_id = defaultview_id");
+         sql.append("(SELECT id FROM view WHERE test_id = ?1 AND name = 'Default')");
       } else {
-         sql.append(" AND dv.view_id = ?3");
+         sql.append("?3");
       }
    }
 
@@ -359,7 +359,7 @@ public class DatasetServiceImpl implements DatasetService {
    public DatasetSummary getSummary(int datasetId, int viewId) {
       try {
          Query query = em.createNativeQuery("WITH schema_agg AS (" + SCHEMAS_SELECT + " WHERE ds.dataset_id = ?1 GROUP BY ds.dataset_id), " +
-               VALIDATION_SELECT + DATASET_SUMMARY_SELECT + " AND dv.view_id = ?2 WHERE ds.id = ?1")
+               VALIDATION_SELECT + DATASET_SUMMARY_SELECT + "?2 WHERE ds.id = ?1")
                .setParameter(1, datasetId).setParameter(2, viewId);
          initTypes(query);
          return (DatasetSummary) query.getSingleResult();

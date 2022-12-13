@@ -81,11 +81,7 @@ public class Test extends PanacheEntityBase {
    public String fingerprintFilter;
 
    @NotNull
-   @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE }, orphanRemoval = true)
-   public View defaultView;
-
-   @NotNull
-   @OneToMany(fetch = FetchType.EAGER, cascade = { CascadeType.REMOVE, CascadeType.MERGE }, orphanRemoval = true, mappedBy = "test")
+   @OneToMany(fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true, mappedBy = "test")
    @Fetch(FetchMode.SELECT)
    public Collection<View> views;
 
@@ -101,10 +97,9 @@ public class Test extends PanacheEntityBase {
    public Boolean notificationsEnabled;
 
    public void ensureLinked() {
-      if (defaultView != null) {
-         defaultView.test = this;
-         defaultView.ensureLinked();
-      }
-      if (views != null) views.forEach(v -> v.test = this);
+      if (views != null) views.forEach(v -> {
+         v.test = this;
+         v.ensureLinked();
+      });
    }
 }

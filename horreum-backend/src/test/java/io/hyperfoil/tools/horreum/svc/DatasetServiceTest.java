@@ -270,7 +270,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest("dummy"));
       Util.withTx(tm, () -> {
          try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-            View view = View.findById(test.defaultView.id);
+            View view = View.findById(test.views.iterator().next().id);
             view.components.clear();
             ViewComponent vc1 = new ViewComponent();
             vc1.view = view;

@@ -181,11 +181,13 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             {
                 const test = state.byId?.get(action.testId)
                 if (test) {
-                    let defaultView = test.defaultView
-                    if (defaultView.id === action.view.id) {
-                        defaultView = action.view
+                    let views
+                    if (test.views.some(v => v.id === action.view.id)) {
+                        views = test.views.map(v => (v.id === action.view.id ? action.view : v))
+                    } else {
+                        views = [...test.views, action.view]
                     }
-                    state.byId = state.byId?.set(action.testId, { ...test, defaultView })
+                    state.byId = state.byId?.set(action.testId, { ...test, views })
                 }
             }
             break

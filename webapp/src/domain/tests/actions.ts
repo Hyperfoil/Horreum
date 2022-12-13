@@ -30,7 +30,11 @@ export function fetchSummary(roles?: string, folder?: string) {
     return (dispatch: Dispatch<LoadingAction | LoadedSummaryAction | AddAlertAction>) => {
         dispatch(loading(true))
         return Api.testServiceSummary(folder, roles).then(
-            listing => dispatch({ type: actionTypes.LOADED_SUMMARY, tests: listing.tests?.map(t => t as Test) || [] }),
+            listing =>
+                dispatch({
+                    type: actionTypes.LOADED_SUMMARY,
+                    tests: listing.tests?.map(t => ({ ...t, views: [], notificationsEnabled: false })) || [],
+                }),
             error => {
                 dispatch(loading(false))
                 return dispatchError(dispatch, error, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
@@ -77,7 +81,7 @@ export function sendTest(test: Test) {
 }
 
 export function updateView(testId: number, view: View) {
-    return (dispatch: Dispatch<UpdateViewAction | AddAlertAction>) => {
+    return (dispatch: Dispatch<UpdateViewAction | AddAlertAction>): Promise<number> => {
         for (const c of view.components) {
             if (c.labels.length === 0) {
                 dispatch(
@@ -92,15 +96,16 @@ export function updateView(testId: number, view: View) {
         }
         return Api.testServiceUpdateView(testId, view).then(
             viewId => {
+                const id: number = ensureInteger(viewId)
                 dispatch({
                     type: actionTypes.UPDATE_VIEW,
                     testId,
                     view: {
                         ...view,
-                        id: viewId,
+                        id,
                     },
                 })
-                return viewId
+                return id
             },
             error => dispatchError(dispatch, error, "VIEW_UPDATE", "View update failed.")
         )
@@ -359,4 +364,14 @@ export function updateRunsAndDatasetsAction(
     datasets: number
 ): UpdateRunsAndDatasetsAction {
     return { type: actionTypes.UPDATE_RUNS_AND_DATASETS, testId, runs, datasets }
+}
+
+function ensureInteger(id: any): number {
+    if (typeof id === "string") {
+        return parseInt(id)
+    } else if (typeof id === "number") {
+        return id
+    } else {
+        throw "Cannot convert " + id + " to integer"
+    }
 }

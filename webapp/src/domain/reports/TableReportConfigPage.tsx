@@ -262,7 +262,6 @@ export default function TableReportConfigPage() {
                                             owner: "",
                                             access: 0,
                                             notificationsEnabled: false,
-                                            defaultView: { id: -1, name: "ignored", components: [] },
                                             views: [],
                                         },
                                     })
