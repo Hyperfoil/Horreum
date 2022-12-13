@@ -5,7 +5,11 @@ import java.util.List;
 
 import io.hyperfoil.tools.horreum.entity.ValidationError;
 import io.quarkus.runtime.annotations.RegisterForReflection;
+
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
+import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -66,11 +70,15 @@ public class Schema extends ProtectedBaseEntity {
 
    @JsonProperty(required = true)
    @Id
-   @SequenceGenerator(
-      name = "schemaSequence",
-      sequenceName = "schema_id_seq",
-      allocationSize = 1)
-   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "schemaSequence")
+   @GenericGenerator(
+         name = "schemaIdGenerator",
+         strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
+         parameters = {
+               @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "schema_id_seq"),
+               @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
+         }
+   )
+   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "schemaIdGenerator")
    public Integer id;
 
    @NotNull

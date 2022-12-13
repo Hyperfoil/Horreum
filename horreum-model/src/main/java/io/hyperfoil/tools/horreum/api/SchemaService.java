@@ -122,6 +122,16 @@ public interface SchemaService {
    @Produces(MediaType.APPLICATION_JSON)
    List<TransformerInfo> allTransformers();
 
+   @GET
+   @Path("{id}/export")
+   @Produces(MediaType.APPLICATION_JSON)
+   JsonNode exportSchema(@PathParam("id") int id);
+
+   @POST
+   @Path("import")
+   @Consumes(MediaType.APPLICATION_JSON)
+   void importSchema(JsonNode config);
+
    @org.eclipse.microprofile.openapi.annotations.media.Schema(anyOf = {
          LabelInFingerprint.class, LabelInRule.class, LabelInReport.class, LabelInVariable.class, LabelInView.class
    })

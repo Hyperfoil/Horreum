@@ -11,8 +11,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadLocalRandom;
@@ -30,6 +32,7 @@ import javax.transaction.TransactionManager;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
+import org.hibernate.query.NativeQuery;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +42,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.action.GitHubIssueCommentAction;
 import io.hyperfoil.tools.horreum.action.HttpAction;
@@ -85,10 +89,13 @@ public class BaseServiceTest {
 
    @Inject
    protected EntityManager em;
+
    @Inject
    TransactionManager tm;
+
    @Inject
    protected RoleManager roleManager;
+
    @Inject
    MessageBus messageBus;
 
@@ -603,5 +610,55 @@ public class BaseServiceTest {
       }).collect(Collectors.toList());
 
       jsonRequest().body(profile).post("/api/experiments/" + test.id + "/profiles");
+   }
+
+   protected void validateDatabaseContents(HashMap<String, List<JsonNode>> tableContents) {
+      Util.withTx(tm, () -> {
+         em.clear();
+         try (var h = roleManager.withRoles(Collections.singleton(Roles.HORREUM_SYSTEM))) {
+            for (String table : tableContents.keySet()) {
+               //noinspection unchecked
+               List<JsonNode> rows = em.createNativeQuery("SELECT to_jsonb(t) AS json FROM \"" + table + "\" t;")
+                     .unwrap(NativeQuery.class).addScalar("json", JsonNodeBinaryType.INSTANCE).getResultList();
+               List<JsonNode> expected = tableContents.get(table);
+
+               assertEquals(expected.size(), rows.size());
+               // If the table does not have ID column we won't compare values
+               if (!rows.isEmpty() && rows.get(0).hasNonNull("id")) {
+                  Map<Integer, JsonNode> byId = rows.stream().collect(Collectors.toMap(row -> row.path("id").asInt(), Function.identity()));
+                  assertEquals(rows.size(), byId.size());
+                  for (var expectedRow : expected) {
+                     JsonNode row = byId.get(expectedRow.path("id").asInt());
+                     assertEquals(expectedRow, row, "Comparison failed in table " + table);
+                  }
+               }
+            }
+         }
+         return null;
+      });
+   }
+
+   protected HashMap<String, List<JsonNode>> dumpDatabaseContents() {
+      @SuppressWarnings("unchecked") List<String> tables = em.createNativeQuery(
+            "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';").getResultList();
+      tables.remove("databasechangelog");
+      tables.remove("databasechangeloglock");
+      tables.remove("dbsecret");
+      tables.remove("view_recalc_queue");
+      tables.remove("label_recalc_queue");
+      tables.remove("fingerprint_recalc_queue");
+
+      HashMap<String, List<JsonNode>> tableContents = new HashMap<>();
+      Util.withTx(tm, () -> {
+         try (var h = roleManager.withRoles(Collections.singleton(Roles.HORREUM_SYSTEM))) {
+            for (String table : tables) {
+               //noinspection unchecked
+               tableContents.put(table, em.createNativeQuery("SELECT to_jsonb(t) AS json FROM \"" + table + "\" t;")
+                     .unwrap(NativeQuery.class).addScalar("json", JsonNodeBinaryType.INSTANCE).getResultList());
+            }
+         }
+         return null;
+      });
+      return tableContents;
    }
 }

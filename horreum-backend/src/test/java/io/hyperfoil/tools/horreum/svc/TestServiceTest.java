@@ -10,19 +10,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
-import javax.inject.Inject;
 
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
@@ -45,7 +40,6 @@ import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
-import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
@@ -59,8 +53,6 @@ import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(NoGrafanaProfile.class)
 public class TestServiceTest extends BaseServiceTest {
-   @Inject
-   RoleManager roleManager;
 
    @org.junit.jupiter.api.Test
    public void testCreateDelete(TestInfo info) throws InterruptedException {
@@ -234,26 +226,7 @@ public class TestServiceTest extends BaseServiceTest {
       addExperimentProfile(test, "Some profile", Variable.<Variable>listAll().get(0));
       addSubscription(test);
 
-      @SuppressWarnings("unchecked") List<String> tables = em.createNativeQuery(
-            "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';").getResultList();
-      tables.remove("databasechangelog");
-      tables.remove("databasechangeloglock");
-      tables.remove("dbsecret");
-      tables.remove("view_recalc_queue");
-      tables.remove("label_recalc_queue");
-      tables.remove("fingerprint_recalc_queue");
-
-      HashMap<String, List<JsonNode>> tableContents = new HashMap<>();
-      Util.withTx(tm, () -> {
-         try (var h = roleManager.withRoles(Collections.singleton(Roles.HORREUM_SYSTEM))) {
-            for (String table : tables) {
-               //noinspection unchecked
-               tableContents.put(table, em.createNativeQuery("SELECT to_jsonb(t) AS json FROM \"" + table + "\" t;")
-                     .unwrap(NativeQuery.class).addScalar("json", JsonNodeBinaryType.INSTANCE).getResultList());
-            }
-         }
-         return null;
-      });
+      HashMap<String, List<JsonNode>> db = dumpDatabaseContents();
 
       String testJson = jsonRequest().get("/api/test/" + test.id + "/export").then()
             .statusCode(200).extract().body().asString();
@@ -277,29 +250,7 @@ public class TestServiceTest extends BaseServiceTest {
 
       jsonRequest().body(testJson).post("/api/test/import").then().statusCode(204);
 
-      Util.withTx(tm, () -> {
-         em.clear();
-         try (var h = roleManager.withRoles(Collections.singleton(Roles.HORREUM_SYSTEM))) {
-            for (String table : tables) {
-               //noinspection unchecked
-               List<JsonNode> rows = em.createNativeQuery("SELECT to_jsonb(t) AS json FROM \"" + table + "\" t;")
-                     .unwrap(NativeQuery.class).addScalar("json", JsonNodeBinaryType.INSTANCE).getResultList();
-               List<JsonNode> expected = tableContents.get(table);
-
-               assertEquals(expected.size(), rows.size());
-               // If the table does not have ID column we won't compare values
-               if (!rows.isEmpty() && rows.get(0).hasNonNull("id")) {
-                  Map<Integer, JsonNode> byId = rows.stream().collect(Collectors.toMap(row -> row.path("id").asInt(), Function.identity()));
-                  assertEquals(rows.size(), byId.size());
-                  for (var expectedRow : expected) {
-                     JsonNode row = byId.get(expectedRow.path("id").asInt());
-                     assertEquals(expectedRow, row, "Comparison failed in table " + table);
-                  }
-               }
-            }
-         }
-         return null;
-      });
+      validateDatabaseContents(db);
    }
 
    private void addSubscription(Test test) {

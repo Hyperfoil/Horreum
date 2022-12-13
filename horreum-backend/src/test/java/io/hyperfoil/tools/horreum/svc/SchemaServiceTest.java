@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -23,6 +25,7 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
+import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -123,5 +126,44 @@ public class SchemaServiceTest extends BaseServiceTest {
       try (InputStream stream = SchemaServiceTest.class.getResourceAsStream(resource)) {
          return Util.OBJECT_MAPPER.reader().readValue(stream, JsonNode.class);
       }
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testExportImportWithWipe() {
+      testExportImport(true);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testExportImportWithoutWipe() {
+      testExportImport(false);
+   }
+
+   private void testExportImport(boolean wipe) {
+      Schema schema = createSchema("Test schema", "urn:xxx:1.0");
+      addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
+      addLabel(schema, "bar", "({bar, goo}) => ({ bar, goo })",
+            new Extractor("bar", "$.bar", true), new Extractor("goo", "$.goo", false));
+
+      createTransformer("Blabla", schema, "({x, y}) => ({ z: 1 })",
+            new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
+
+      String exportJson = jsonRequest().get("/api/schema/" + schema.id + "/export").then().statusCode(200).extract().body().asString();
+      HashMap<String, List<JsonNode>> db = dumpDatabaseContents();
+
+      if (wipe) {
+         deleteSchema(schema);
+         TestUtil.eventually(() -> {
+            Util.withTx(tm, () -> {
+               em.clear();
+               assertEquals(0, Schema.count());
+               assertEquals(0, Label.count());
+               assertEquals(0, Transformer.count());
+               return null;
+            });
+         });
+      }
+
+      jsonRequest().body(exportJson).post("/api/schema/import").then().statusCode(204);
+      validateDatabaseContents(db);
    }
 }

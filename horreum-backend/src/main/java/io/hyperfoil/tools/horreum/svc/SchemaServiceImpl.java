@@ -55,9 +55,11 @@ import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.networknt.schema.JsonMetaSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.uri.URIFactory;
@@ -696,6 +698,69 @@ public class SchemaServiceImpl implements SchemaService {
          transformers.add(info);
       }
       return transformers;
+   }
+
+   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @WithRoles
+   @Transactional
+   @Override
+   public JsonNode exportSchema(int id) {
+      Schema schema = Schema.findById(id);
+      if (schema == null) {
+         throw ServiceException.notFound("Schema not found");
+      }
+      ObjectNode exported = Util.OBJECT_MAPPER.valueToTree(schema);
+      exported.set("labels", Util.OBJECT_MAPPER.valueToTree(Label.list("schema", schema)));
+      exported.set("transformers", Util.OBJECT_MAPPER.valueToTree(Transformer.list("schema", schema)));
+      return exported;
+   }
+
+   @RolesAllowed({Roles.TESTER, Roles.ADMIN})
+   @WithRoles
+   @Transactional
+   @Override
+   public void importSchema(JsonNode config) {
+      // deep copy if we need to retry
+      ObjectNode cfg = config.deepCopy();
+      JsonNode labels = cfg.remove("labels");
+      JsonNode transformers = cfg.remove("transformers");
+      Schema schema;
+      try {
+         schema = Util.OBJECT_MAPPER.treeToValue(cfg, Schema.class);
+      } catch (JsonProcessingException e) {
+         throw ServiceException.badRequest("Cannot deserialize schema: " + e.getMessage());
+      }
+      em.merge(schema);
+      if (labels == null || labels.isNull() || labels.isMissingNode()) {
+         log.infof("Import schema %d: no labels", schema.id);
+      } else if (labels.isArray()) {
+         for (JsonNode node : labels) {
+            try {
+               Label label = Util.OBJECT_MAPPER.treeToValue(node, Label.class);
+               label.schema = schema;
+               em.merge(label);
+            } catch (JsonProcessingException e) {
+               throw ServiceException.badRequest("Cannot deserialize label: " + e.getMessage());
+            }
+         }
+      } else {
+         throw ServiceException.badRequest("Wrong node type for labels: " + labels.getNodeType());
+      }
+      if (transformers == null || transformers.isNull() || transformers.isMissingNode()) {
+         log.infof("Import schema %d: no transformers", schema.id);
+      } else if (transformers.isArray()) {
+         for (JsonNode node : transformers) {
+            try {
+               Transformer transformer = Util.OBJECT_MAPPER.treeToValue(node, Transformer.class);
+               transformer.schema = schema;
+               em.merge(transformer);
+            } catch (JsonProcessingException e) {
+               throw ServiceException.badRequest("Cannot deserialize transformer: " + e.getMessage());
+            }
+         }
+      } else {
+         throw ServiceException.badRequest("Wrong node type for transformers: " + transformers.getNodeType());
+      }
    }
 
    private void addPart(StringBuilder where, ArrayNode column, String label, String type) {

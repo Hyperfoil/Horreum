@@ -18,7 +18,10 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
+import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -32,12 +35,15 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 public class Label extends OwnedEntityBase {
    @JsonProperty(required = true)
    @Id
-   @SequenceGenerator(
-         name="labelSequence",
-         sequenceName="label_id_seq",
-         allocationSize=1)
-   @GeneratedValue(strategy=GenerationType.SEQUENCE,
-         generator= "labelSequence")
+   @GenericGenerator(
+         name = "labelIdGenerator",
+         strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
+         parameters = {
+               @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "label_id_seq"),
+               @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
+         }
+   )
+   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "labelIdGenerator")
    public Integer id;
 
    @NotNull
