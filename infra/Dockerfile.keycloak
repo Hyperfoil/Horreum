@@ -1,4 +1,4 @@
-FROM quay.io/keycloak/keycloak:18.0.0
+FROM quay.io/keycloak/keycloak:20.0.1
 COPY keycloak-horreum.json /opt/keycloak/data/import/
 COPY keycloak.sh /opt/keycloak/bin/keycloak.sh
 
