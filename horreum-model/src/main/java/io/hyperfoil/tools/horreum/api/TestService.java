@@ -126,6 +126,14 @@ public interface TestService {
    @Path("{id}/recalculate")
    RecalculationStatus getRecalculationStatus(@PathParam("id") int testId);
 
+   @GET
+   @Path("{id}/export")
+   JsonNode export(@PathParam("id") int testId);
+
+   @POST
+   @Path("import")
+   void importTest(JsonNode testConfig);
+
    class TestListing {
       public List<TestSummary> tests;
    }

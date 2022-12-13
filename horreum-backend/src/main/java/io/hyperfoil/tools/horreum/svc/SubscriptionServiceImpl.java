@@ -17,17 +17,26 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
+import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.hyperfoil.tools.horreum.api.SubscriptionService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
+import io.hyperfoil.tools.horreum.entity.ExperimentProfile;
 import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 @Startup
 public class SubscriptionServiceImpl implements SubscriptionService {
+   private static final Logger log = Logger.getLogger(SubscriptionService.class);
+
    @Inject
    EntityManager em;
 
@@ -239,8 +248,29 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onTestDelete(Test test) {
-      for (Watch w : Watch.<Watch>find("testid = ?1", test.id).list()) {
-         w.delete();
+      var subscriptions = Watch.list("testid = ?1", test.id);
+      log.infof("Deleting %d subscriptions for test %s (%d)", subscriptions.size(), test.name, test.id);
+      for (var subscription : subscriptions) {
+         log.infof("Deletgin watch %s", subscription);
+         subscription.delete();
+      }
+   }
+
+   JsonNode exportSubscriptions(int testId) {
+      return Util.OBJECT_MAPPER.valueToTree(get(testId));
+   }
+
+   void importSubscriptions(int testId, JsonNode subscriptions) {
+      if (subscriptions.isMissingNode() || subscriptions.isNull()) {
+         log.infof("Import test %d: no subscriptions", testId);
+      } else {
+         try {
+            Watch watch = Util.OBJECT_MAPPER.treeToValue(subscriptions, Watch.class);
+            watch.test = em.getReference(Test.class, testId);
+            em.merge(watch);
+         } catch (JsonProcessingException e) {
+            throw ServiceException.badRequest("Cannot deserialize subscription id '" + subscriptions.path("id").asText() + "': " + e.getMessage());
+         }
       }
    }
 }

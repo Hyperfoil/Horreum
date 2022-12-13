@@ -6,7 +6,10 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
+import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -19,11 +22,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class Action extends PanacheEntityBase {
    @JsonProperty(required = true)
    @Id
-   @SequenceGenerator(
-      name = "actionSequence",
-      sequenceName = "action_id_seq",
-      allocationSize = 1,
-      initialValue = 1)
+   @GenericGenerator(
+         name = "actionSequence",
+         strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
+         parameters = {
+               @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "action_id_seq"),
+               @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
+         }
+   )
    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "actionSequence")
    public Integer id;
 

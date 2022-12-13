@@ -26,6 +26,7 @@ import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
@@ -61,6 +62,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @PostConstruct
    void init() {
       messageBus.subscribe(DataPoint.EVENT_DATASET_PROCESSED, "ExperimentService", DataPoint.DatasetProcessedEvent.class, this::onDatapointsCreated);
+      messageBus.subscribe(Test.EVENT_DELETED, "ExperimentService", Test.class, this::onTestDeleted);
    }
 
    @WithRoles
@@ -128,6 +130,15 @@ public class ExperimentServiceImpl implements ExperimentService {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
       runExperiments(event.dataset, result -> messageBus.publish(ExperimentResult.NEW_RESULT, event.dataset.testId, result),
             logs -> logs.forEach(log -> log.persist()), event.notify);
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   public void onTestDeleted(Test test) {
+      // we need to iterate in order to cascade the operation
+      for (var profile : ExperimentProfile.list("test_id", test.id)) {
+         profile.delete();
+      }
    }
 
    private void addLog(List<DatasetLog> logs, int testId, int datasetId, int level, String format, Object... args) {
@@ -260,6 +271,31 @@ public class ExperimentServiceImpl implements ExperimentService {
                .getSingleResult();
          Hibernate.initialize(profile.test.name);
          resultConsumer.accept(new ExperimentResult(profile, profileLogs, info, baseline, results, extraLabels, notify));
+      }
+   }
+
+   JsonNode exportTest(int testId) {
+      return Util.OBJECT_MAPPER.valueToTree(ExperimentProfile.list("test_id", testId));
+   }
+
+   void importTest(int testId, JsonNode experiments) {
+      if (experiments.isMissingNode() || experiments.isNull()) {
+         log.infof("Import test %d: no experiment profiles", testId);
+      } else if (experiments.isArray()) {
+         for (JsonNode node : experiments) {
+            ExperimentProfile profile;
+            try {
+               profile = Util.OBJECT_MAPPER.treeToValue(node, ExperimentProfile.class);
+            } catch (JsonProcessingException e) {
+               throw ServiceException.badRequest("Cannot deserialize experiment profile id '" + node.path("id").asText() + "': " + e.getMessage());
+            }
+            if (profile.test.id != testId) {
+               throw ServiceException.badRequest("Wrong test id in experiment profile id '" + node.path("id").asText() + "'");
+            }
+            em.merge(profile);
+         }
+      } else {
+         throw ServiceException.badRequest("Experiment profiles are invalid: " + experiments.getNodeType());
       }
    }
 }

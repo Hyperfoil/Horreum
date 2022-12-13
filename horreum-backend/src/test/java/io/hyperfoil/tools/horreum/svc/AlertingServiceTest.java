@@ -249,18 +249,6 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(run14, changeEvent2.dataset.runId);
    }
 
-   private ChangeDetection addChangeDetectionVariable(Test test) {
-      return addChangeDetectionVariable(test, 0.1, 2);
-   }
-
-   private ChangeDetection addChangeDetectionVariable(Test test, double threshold, int window) {
-      ChangeDetection cd = new ChangeDetection();
-      cd.model = RelativeDifferenceChangeDetectionModel.NAME;
-      cd.config = JsonNodeFactory.instance.objectNode().put("threshold", threshold).put("minPrevious", window).put("window", window).put("filter", "mean");
-      setTestVariables(test, "Value", "value", cd);
-      return cd;
-   }
-
    private DataPoint assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
       DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(dpe);
@@ -491,17 +479,6 @@ public class AlertingServiceTest extends BaseServiceTest {
          }
          fail();
       }
-   }
-
-   private int addMissingDataRule(Test test, String ruleName, ArrayNode labels, String condition, int maxStaleness) {
-      MissingDataRule rule = new MissingDataRule();
-      rule.test = test;
-      rule.name = ruleName;
-      rule.condition = condition;
-      rule.labels = labels;
-      rule.maxStaleness = maxStaleness;
-      String ruleIdString = jsonRequest().body(rule).post("/api/alerting/missingdatarule?testId=" + test.id).then().statusCode(200).extract().body().asString();
-      return Integer.parseInt(ruleIdString);
    }
 
    private AtomicLong mockInstantNow() {

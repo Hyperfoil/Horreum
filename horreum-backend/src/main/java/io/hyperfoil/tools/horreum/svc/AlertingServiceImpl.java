@@ -67,6 +67,7 @@ import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -378,6 +379,48 @@ public class AlertingServiceImpl implements AlertingService {
          logCalculationMessage(dataset, PersistentLog.DEBUG, "Fingerprint %s was filtered out.", fingerprint);
       }
       return testResult;
+   }
+
+   JsonNode exportTest(int testId) {
+      ObjectNode config = JsonNodeFactory.instance.objectNode();
+      config.set("variables", Util.OBJECT_MAPPER.valueToTree(Variable.list("testid", testId)));
+      config.set("missingDataRules", Util.OBJECT_MAPPER.valueToTree(MissingDataRule.list("test_id", testId)));
+      return config;
+   }
+
+   void importTest(int testId, JsonNode config) {
+      JsonNode variablesNode = config.path("variables");
+      if (variablesNode.isMissingNode() || variablesNode.isNull()) {
+         log.infof("Importing test %d: no change detection variables", testId);
+      } else if (variablesNode.isArray()) {
+         log.infof("Importing %d change detection variables for test %d", variablesNode.size(), testId);
+         for (var node : variablesNode) {
+            try {
+               Variable variable = Util.OBJECT_MAPPER.treeToValue(node, Variable.class);
+               variable.ensureLinked();
+               em.merge(variable);
+            } catch (JsonProcessingException e) {
+               throw ServiceException.badRequest("Cannot deserialize change detection variable with id '" + node.path("id").asText() + "': " + e.getMessage());
+            }
+         }
+      } else {
+         throw ServiceException.badRequest("Change detection variables are invalid: " + variablesNode.getNodeType());
+      }
+      JsonNode rulesNode = config.path("missingDataRules");
+      if (rulesNode.isMissingNode() || rulesNode.isNull()) {
+         log.infof("Importing test %d: no missing data rules", testId);
+      } else if (rulesNode.isArray()) {
+         log.infof("Importing %d missing data rules for test %d", rulesNode.size(), testId);
+         for (var node : rulesNode) {
+            try {
+               em.merge(Util.OBJECT_MAPPER.treeToValue(node, MissingDataRule.class));
+            } catch (JsonProcessingException e) {
+               throw ServiceException.badRequest("Cannot deserialize missing data rule with id '" + node.path("id").asText() + "': " + e.getMessage());
+            }
+         }
+      } else {
+         throw ServiceException.badRequest("Missing data rules are invalid: " + rulesNode.getNodeType());
+      }
    }
 
    public static class VariableData {
@@ -1264,11 +1307,13 @@ public class AlertingServiceImpl implements AlertingService {
    @Transactional
    void onTestDeleted(Test test) {
       // We need to delete in a loop to cascade this to ChangeDetection
-      List<Variable> variables = Variable.find("testid", test.id).list();
+      List<Variable> variables = Variable.list("testid", test.id);
       log.infof("Deleting %d variables for test %s (%d)", variables.size(), test.name, test.id);
       for (var variable: variables) {
          variable.delete();
       }
+      MissingDataRule.delete("test_id", test.id);
+      em.flush();
    }
 
    @Transactional

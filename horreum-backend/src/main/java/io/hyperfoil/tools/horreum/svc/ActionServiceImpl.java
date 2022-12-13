@@ -12,7 +12,9 @@ import io.hyperfoil.tools.horreum.entity.json.Action;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.action.ActionPlugin;
+import io.hyperfoil.tools.horreum.server.EncryptionManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -32,12 +34,15 @@ import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 import javax.validation.constraints.NotNull;
 
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -59,10 +64,14 @@ public class ActionServiceImpl implements ActionService {
    @Inject
    MessageBus messageBus;
 
+   @Inject
+   EncryptionManager encryptionManager;
+
    @PostConstruct()
    public void postConstruct(){
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
       messageBus.subscribe(Test.EVENT_NEW, "ActionService", Test.class, this::onNewTest);
+      messageBus.subscribe(Test.EVENT_DELETED, "ActionService", Test.class, this::onTestDelete);
       messageBus.subscribe(Run.EVENT_NEW, "ActionService", Run.class, this::onNewRun);
       messageBus.subscribe(Change.EVENT_NEW, "ActionService", Change.Event.class, this::onNewChange);
       messageBus.subscribe(ExperimentService.ExperimentResult.NEW_RESULT, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
@@ -121,6 +130,12 @@ public class ActionServiceImpl implements ActionService {
    @Transactional
    public void onNewTest(Test test) {
       executeActions(Test.EVENT_NEW, -1, test, true);
+   }
+
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
+   @Transactional
+   public void onTestDelete(Test test) {
+      Action.delete("test_id", test.id);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -263,5 +278,53 @@ public class ActionServiceImpl implements ActionService {
    @Transactional
    public void onNewExperimentResult(ExperimentService.ExperimentResult result) {
       executeActions(ExperimentService.ExperimentResult.NEW_RESULT, result.profile.test.id, result, result.notify);
+   }
+
+   JsonNode exportTest(int testId) {
+      ArrayNode actions = JsonNodeFactory.instance.arrayNode();
+      for (Action action : Action.<Action>list("test_id", testId)) {
+         ObjectNode node = Util.OBJECT_MAPPER.valueToTree(action);
+         if (!action.secrets.isEmpty()) {
+            try {
+               node.put("secrets", encryptionManager.encrypt(action.secrets.toString()));
+            } catch (GeneralSecurityException e) {
+               throw ServiceException.serverError("Cannot encrypt secrets for action " + action.id);
+            }
+         }
+         actions.add(node);
+      }
+      return actions;
+   }
+
+   void importTest(int testId, JsonNode actions) {
+      if (actions.isMissingNode() || actions.isNull()) {
+         log.infof("Import test %d: no actions");
+      } else if (actions.isArray()) {
+         log.infof("Importing %d actions for test %d", actions.size(), testId);
+         for (JsonNode node : actions) {
+            if (!node.isObject()) {
+               throw ServiceException.badRequest("Test actions must be an array of objects");
+            }
+            String secretsEncrypted = ((ObjectNode) node).remove("secrets").textValue();
+            try {
+               Action action = Util.OBJECT_MAPPER.treeToValue(node, Action.class);
+               if (action.testId == null) {
+                  action.testId = testId;
+               } else if (action.testId != testId) {
+                  throw ServiceException.badRequest("Action id '" + node.path("id") + "' belongs to a different test: " + action.testId);
+               }
+               if (secretsEncrypted != null) {
+                  action.secrets = Util.OBJECT_MAPPER.readTree(encryptionManager.decrypt(secretsEncrypted));
+               }
+               em.merge(action);
+            } catch (JsonProcessingException e) {
+               throw ServiceException.badRequest("Cannot deserialize action id '" + node.path("id").asText() + "': " + e.getMessage());
+            } catch (GeneralSecurityException e) {
+               throw ServiceException.badRequest("Cannot decrypt secrets for action id '" + node.path("id").asText() + "': " + e.getMessage());
+            }
+         }
+      } else {
+         throw ServiceException.badRequest("Actions are invalid: " + actions.getNodeType());
+      }
    }
 }

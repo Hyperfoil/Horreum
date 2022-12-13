@@ -15,10 +15,11 @@ import io.smallrye.mutiny.Uni;
 
 @ApplicationScoped
 public class GitHubIssueCommentAction extends GitHubPluginBase implements ActionPlugin {
+   public static final String TYPE_GITHUB_ISSUE_COMMENT = "github-issue-comment";
 
    @Override
    public String type() {
-      return "github-issue-comment";
+      return TYPE_GITHUB_ISSUE_COMMENT;
    }
 
    @Override

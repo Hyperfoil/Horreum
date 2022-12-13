@@ -4,6 +4,7 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.TestService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.json.*;
+import io.hyperfoil.tools.horreum.server.EncryptionManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
@@ -21,6 +22,7 @@ import javax.transaction.Transactional;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
+import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,7 +42,11 @@ import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 public class TestServiceImpl implements TestService {
@@ -74,6 +80,18 @@ public class TestServiceImpl implements TestService {
 
    @Inject
    ActionServiceImpl actionService;
+
+   @Inject
+   AlertingServiceImpl alertingService;
+
+   @Inject
+   ExperimentServiceImpl experimentService;
+
+   @Inject
+   SubscriptionServiceImpl subscriptionService;
+
+   @Inject
+   EncryptionManager encryptionManager;
 
    private final ConcurrentHashMap<Integer, RecalculationStatus> recalculations = new ConcurrentHashMap<>();
 
@@ -564,6 +582,93 @@ public class TestServiceImpl implements TestService {
          status.datasets = DataSet.count("testid", testId);
       }
       return status;
+   }
+
+   @RolesAllowed({Roles.ADMIN, Roles.TESTER})
+   @WithRoles
+   @Transactional
+   @Override
+   public JsonNode export(int testId) {
+      Test test = Test.findById(testId);
+      if (test == null) {
+         throw ServiceException.notFound("Test " + testId + " was not found");
+      }
+      ObjectNode export = Util.OBJECT_MAPPER.valueToTree(test);
+      // do not export full transformers, just references - these belong to the schema
+      if (!export.path("transformers").isEmpty()) {
+         ArrayNode transformers = JsonNodeFactory.instance.arrayNode();
+         export.get("transformers").forEach(t -> {
+            ObjectNode ref = JsonNodeFactory.instance.objectNode();
+            ref.set("id", t.path("id"));
+            // only for informative purposes
+            ref.set("name", t.path("name"));
+            ref.set("schemaName", t.path("schemaName"));
+            transformers.add(ref);
+         });
+         export.set("transformers", transformers);
+      }
+      if (!test.tokens.isEmpty()) {
+         ArrayNode tokens = (ArrayNode) export.get("tokens");
+         for (var token : test.tokens) {
+            for (int i = 0; i < tokens.size(); ++i) {
+               ObjectNode node = (ObjectNode) tokens.get(i);
+               if (node.path("id").intValue() == token.id) {
+                  node.put("value", token.getEncryptedValue(plaintext -> {
+                     try {
+                        return encryptionManager.encrypt(plaintext);
+                     } catch (GeneralSecurityException e) {
+                        throw new RuntimeException("Cannot encrypt token value: " + e.getMessage());
+                     }
+                  }));
+               }
+            }
+         }
+      }
+      export.set("alerting", alertingService.exportTest(testId));
+      export.set("actions", actionService.exportTest(testId));
+      export.set("experiments", experimentService.exportTest(testId));
+      export.set("subscriptions", subscriptionService.exportSubscriptions(testId));
+      return export;
+   }
+
+   @RolesAllowed({Roles.ADMIN, Roles.TESTER})
+   @WithRoles
+   @Transactional
+   @Override
+   public void importTest(JsonNode testConfig) {
+      if (!testConfig.isObject()) {
+         throw ServiceException.badRequest("Expected Test object as request body, got " + testConfig.getNodeType());
+      } else if (!testConfig.path("id").isIntegralNumber()) {
+         throw ServiceException.badRequest("Test object has invalid id: " + testConfig.path("id").asText());
+      }
+      // We need to perform a deep copy before mutating because if this
+      // transaction needs a retry we would not have the subnodes we're about to remove.
+      ObjectNode config = testConfig.deepCopy();
+      int testId = config.path("id").intValue();
+      JsonNode alerting = config.remove("alerting");
+      JsonNode actions = config.remove("actions");
+      JsonNode experiments = config.remove("experiments");
+      JsonNode subscriptions = config.remove("subscriptions");
+      try {
+         Test test = Util.OBJECT_MAPPER.treeToValue(config, Test.class);
+         test.ensureLinked();
+         if (test.tokens != null && !test.tokens.isEmpty()) {
+            test.tokens.forEach(token -> token.decryptValue(ciphertext -> {
+               try {
+                  return encryptionManager.decrypt(ciphertext);
+               } catch (GeneralSecurityException e) {
+                  throw new RuntimeException("Cannot decrypt token value: " + e.getMessage());
+               }
+            }));
+         }
+         em.merge(test);
+      } catch (JsonProcessingException e) {
+         throw ServiceException.badRequest("Failed to deserialize test: " + e.getMessage());
+      }
+      alertingService.importTest(testId, alerting);
+      actionService.importTest(testId, actions);
+      experimentService.importTest(testId, experiments);
+      subscriptionService.importSubscriptions(testId, subscriptions);
    }
 
    Test getTestForUpdate(int testId) {

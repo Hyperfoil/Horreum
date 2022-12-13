@@ -4,7 +4,6 @@ import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.nio.charset.StandardCharsets;
@@ -28,7 +27,6 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.transaction.Status;
 import javax.transaction.TransactionManager;
-import javax.validation.constraints.NotNull;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
@@ -42,11 +40,18 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.hyperfoil.tools.horreum.action.GitHubIssueCommentAction;
 import io.hyperfoil.tools.horreum.action.HttpAction;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
+import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
+import io.hyperfoil.tools.horreum.entity.ExperimentComparison;
+import io.hyperfoil.tools.horreum.entity.ExperimentProfile;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
+import io.hyperfoil.tools.horreum.entity.alerting.Variable;
+import io.hyperfoil.tools.horreum.entity.alerting.Watch;
 import io.hyperfoil.tools.horreum.entity.json.Access;
 import io.hyperfoil.tools.horreum.entity.json.AllowedSite;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
@@ -59,6 +64,7 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
+import io.hyperfoil.tools.horreum.experiment.RelativeDifferenceExperimentModel;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.test.TestUtil;
@@ -141,6 +147,8 @@ public class BaseServiceTest {
             Test.deleteAll();
             Change.deleteAll();
             DataPoint.deleteAll();
+            ChangeDetection.deleteAll();
+            Variable.deleteAll();
 
             DataSet.deleteAll();
             Run.deleteAll();
@@ -151,6 +159,10 @@ public class BaseServiceTest {
 
             Action.deleteAll();
             AllowedSite.deleteAll();
+
+            for (var subscription : Watch.listAll()) {
+               subscription.delete();
+            }
          }
          return null;
       });
@@ -528,6 +540,20 @@ public class BaseServiceTest {
       return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
    }
 
+   protected Response addTestGithubIssueCommentAction(Test test, String event, String formatter, String owner, String repo, String issue, String secretToken) {
+      Action action = new Action();
+      action.event = event;
+      action.type = GitHubIssueCommentAction.TYPE_GITHUB_ISSUE_COMMENT;
+      action.active = true;
+      action.config = JsonNodeFactory.instance.objectNode()
+            .put("formatter", formatter)
+            .put("owner", owner)
+            .put("repo", repo)
+            .put("issue", issue);
+      action.secrets = JsonNodeFactory.instance.objectNode().put("token", secretToken);
+      return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
+   }
+
    protected Response addGlobalAction(String event, String url) {
       Action action = new Action();
       action.event = event;
@@ -536,5 +562,46 @@ public class BaseServiceTest {
       action.config = JsonNodeFactory.instance.objectNode().put("url", url);
       return given().auth().oauth2(ADMIN_TOKEN)
             .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
+   }
+
+   protected ChangeDetection addChangeDetectionVariable(Test test) {
+      return addChangeDetectionVariable(test, 0.1, 2);
+   }
+
+   protected ChangeDetection addChangeDetectionVariable(Test test, double threshold, int window) {
+      ChangeDetection cd = new ChangeDetection();
+      cd.model = RelativeDifferenceChangeDetectionModel.NAME;
+      cd.config = JsonNodeFactory.instance.objectNode().put("threshold", threshold).put("minPrevious", window).put("window", window).put("filter", "mean");
+      setTestVariables(test, "Value", "value", cd);
+      return cd;
+   }
+
+   protected int addMissingDataRule(Test test, String ruleName, ArrayNode labels, String condition, int maxStaleness) {
+      MissingDataRule rule = new MissingDataRule();
+      rule.test = test;
+      rule.name = ruleName;
+      rule.condition = condition;
+      rule.labels = labels;
+      rule.maxStaleness = maxStaleness;
+      String ruleIdString = jsonRequest().body(rule).post("/api/alerting/missingdatarule?testId=" + test.id).then().statusCode(200).extract().body().asString();
+      return Integer.parseInt(ruleIdString);
+   }
+
+   protected void addExperimentProfile(Test test, String name, Variable... variables) {
+      ExperimentProfile profile = new ExperimentProfile();
+      profile.name = name;
+      profile.test = test;
+      profile.selectorLabels = JsonNodeFactory.instance.arrayNode().add("isSnapshot");
+      profile.baselineLabels = JsonNodeFactory.instance.arrayNode().add("isSnapshot");
+      profile.baselineFilter = "snapshot => !snapshot";
+      profile.comparisons = Stream.of(variables).map(v -> {
+         ExperimentComparison comp = new ExperimentComparison();
+         comp.variable = v;
+         comp.model = RelativeDifferenceExperimentModel.NAME;
+         comp.config = JsonNodeFactory.instance.objectNode().setAll(new RelativeDifferenceExperimentModel().config().defaults);
+         return comp;
+      }).collect(Collectors.toList());
+
+      jsonRequest().body(profile).post("/api/experiments/" + test.id + "/profiles");
    }
 }

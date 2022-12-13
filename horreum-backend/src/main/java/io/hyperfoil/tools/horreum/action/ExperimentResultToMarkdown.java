@@ -12,6 +12,8 @@ import io.quarkus.qute.Template;
 
 @ApplicationScoped
 public class ExperimentResultToMarkdown implements BodyFormatter {
+   public static final String NAME = "experimentResultToMarkdown";
+
    @ConfigProperty(name = "horreum.url")
    String publicUrl;
 
@@ -20,7 +22,7 @@ public class ExperimentResultToMarkdown implements BodyFormatter {
 
    @Override
    public String name() {
-      return "experimentResultToMarkdown";
+      return NAME;
    }
 
    @Override

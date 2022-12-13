@@ -1,13 +1,20 @@
 package io.hyperfoil.tools.horreum.entity.json;
 
+import java.util.function.Function;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
+
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
+import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -22,8 +29,16 @@ public class TestToken {
    public static final int UPLOAD = 4;
 
    @Id
-   @GeneratedValue
    @NotNull
+   @GenericGenerator(
+         name = "tokenIdGenerator",
+         strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
+         parameters = {
+               @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = SequenceStyleGenerator.DEF_SEQUENCE_NAME),
+               @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
+         }
+   )
+   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "tokenIdGenerator")
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)
@@ -67,5 +82,13 @@ public class TestToken {
 
    public boolean valueEquals(String value) {
       return this.value.equals(value);
+   }
+
+   public String getEncryptedValue(Function<String, String> encrypt) {
+      return encrypt.apply(value);
+   }
+
+   public void decryptValue(Function<String, String> decrypt) {
+      this.value = decrypt.apply(value);
    }
 }

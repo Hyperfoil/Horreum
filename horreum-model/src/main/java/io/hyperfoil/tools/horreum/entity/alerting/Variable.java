@@ -7,12 +7,16 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.validation.constraints.NotNull;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
+import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -31,7 +35,15 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 public class Variable extends PanacheEntityBase {
    @JsonProperty(required = true)
    @Id
-   @GeneratedValue
+   @GenericGenerator(
+         name = "variableIdGenerator",
+         strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
+         parameters = {
+               @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = SequenceStyleGenerator.DEF_SEQUENCE_NAME),
+               @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
+         }
+   )
+   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "variableIdGenerator")
    public Integer id;
 
    @NotNull
@@ -57,4 +69,24 @@ public class Variable extends PanacheEntityBase {
    @Schema(required = true, implementation = ChangeDetection[].class)
    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "variable")
    public Set<ChangeDetection> changeDetection;
+
+   @Override
+   public String toString() {
+      return "Variable{" +
+            "id=" + id +
+            ", testId=" + testId +
+            ", name='" + name + '\'' +
+            ", group='" + group + '\'' +
+            ", order=" + order +
+            ", labels=" + labels +
+            ", calculation='" + calculation + '\'' +
+            ", changeDetection=" + changeDetection +
+            '}';
+   }
+
+   public void ensureLinked() {
+      changeDetection.forEach(cd -> {
+         cd.variable = this;
+      });
+   }
 }
