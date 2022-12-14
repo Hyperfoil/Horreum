@@ -11,15 +11,19 @@ assignees: ''
 
 A clear and concise description of what the bug is.
 
+Feel free to attach screenshots as well.
+
 **To Reproduce**
 
 Steps to reproduce the behavior.
+
+Any sample data would help greatly.
 
 **Version**
 
 What is the version of Horreum ?
 
-if you are using a development branch; what is the commit id ?
+If you are using a development branch; what is the commit id ?
 
 ```
 git rev-parse HEAD
