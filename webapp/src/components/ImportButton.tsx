@@ -7,7 +7,7 @@ import { Bullseye, Button, FileUpload, Modal, Spinner } from "@patternfly/react-
 
 type ImportProps = {
     label?: string
-    onLoad(config: Record<string, unknown>): any
+    onLoad(config: Record<string, unknown>): Promise<any> | any
     onImport(config: Record<string, unknown>): Promise<unknown>
     onImported(): void
 }
@@ -16,6 +16,7 @@ export default function ImportButton(props: ImportProps) {
     const [open, setOpen] = useState(false)
     const [filename, setFilename] = useState<string>()
     const [loading, setLoading] = useState(false)
+    const [checking, setChecking] = useState(false)
     const [config, setConfig] = useState<Record<string, unknown>>()
     const [uploading, setUploading] = useState(false)
     const [parseError, setParseError] = useState<any>()
@@ -26,6 +27,7 @@ export default function ImportButton(props: ImportProps) {
         setConfig(undefined)
         setUploading(false)
         setParseError(undefined)
+        setOverridden(undefined)
     }
     const close = () => {
         setOpen(false)
@@ -84,12 +86,16 @@ export default function ImportButton(props: ImportProps) {
                             setFilename(file.name)
                             setLoading(true)
                             setParseError(undefined)
+                            setOverridden(undefined)
                             file.text()
                                 .then(cfg => {
                                     try {
                                         const parsed = JSON.parse(cfg || "")
                                         setConfig(parsed)
-                                        setOverridden(props.onLoad(parsed))
+                                        setChecking(true)
+                                        Promise.resolve(props.onLoad(parsed))
+                                            .then(value => setOverridden(value))
+                                            .finally(() => setChecking(false))
                                     } catch (e) {
                                         setParseError(e)
                                     }
@@ -99,7 +105,12 @@ export default function ImportButton(props: ImportProps) {
                     />
                 )}
                 {parseError !== undefined ? parseError.toString() : null}
-                {overridden}
+                {overridden ||
+                    (checking && (
+                        <Bullseye>
+                            <Spinner size="xl" />
+                        </Bullseye>
+                    ))}
             </Modal>
         </>
     )

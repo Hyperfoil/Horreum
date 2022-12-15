@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux"
 import { Button, FileUpload, Flex, FlexItem, Form, FormGroup, Spinner } from "@patternfly/react-core"
 
 import { dispatchError, dispatchInfo } from "../alerts"
+import ExportButton from "./ExportButton"
 
 type ExportImportProps = {
     name: string
@@ -13,7 +14,6 @@ type ExportImportProps = {
 }
 
 export default function ExportImport(props: ExportImportProps) {
-    const [downloading, setDownloading] = useState(false)
     const [uploadName, setUploadName] = useState<string>()
     const [loading, setLoading] = useState(false)
     const [uploadContent, setUploadContent] = useState<Record<string, unknown>>()
@@ -23,38 +23,7 @@ export default function ExportImport(props: ExportImportProps) {
     return (
         <Form isHorizontal>
             <FormGroup label="Export" fieldId="export">
-                <Button
-                    id="export"
-                    isDisabled={downloading}
-                    onClick={() => {
-                        setDownloading(true)
-                        props
-                            .export()
-                            .then(
-                                cfg => {
-                                    const url = window.URL.createObjectURL(new Blob([cfg]))
-                                    const link = document.createElement("a")
-                                    link.href = url
-                                    link.setAttribute("download", `${props.name}.json`)
-                                    document.body.appendChild(link)
-                                    link.click()
-                                    if (link.parentNode) {
-                                        link.parentNode.removeChild(link)
-                                    }
-                                },
-                                error => dispatchError(dispatch, error, "EXPORT", "Cannot export configuration")
-                            )
-                            .finally(() => setDownloading(false))
-                    }}
-                >
-                    Export
-                    {downloading && (
-                        <>
-                            {" "}
-                            <Spinner size="md" />
-                        </>
-                    )}
-                </Button>
+                <ExportButton name={props.name} export={props.export} />
             </FormGroup>
             <FormGroup
                 label="Import"

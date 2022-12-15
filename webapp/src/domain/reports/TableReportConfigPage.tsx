@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { useDispatch } from "react-redux"
-import { useParams } from "react-router"
-import { useHistory } from "react-router"
+import { useHistory, useParams } from "react-router"
 
 import {
     ActionGroup,
@@ -35,6 +34,7 @@ import ReportLogModal from "./ReportLogModal"
 
 import Labels from "../../components/Labels"
 import HelpButton from "../../components/HelpButton"
+import ExportButton from "../../components/ExportButton"
 import OptionalFunction from "../../components/OptionalFunction"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
 
@@ -218,14 +218,24 @@ export default function TableReportConfigPage() {
         <PageSection>
             <Card>
                 <CardHeader>
-                    <Breadcrumb>
-                        <BreadcrumbItem>
-                            <Link to="/reports">Reports</Link>
-                        </BreadcrumbItem>
-                        <BreadcrumbItem isActive>
-                            {config.id >= 0 ? config.title : "New report configuration"}
-                        </BreadcrumbItem>
-                    </Breadcrumb>
+                    <Flex style={{ width: "100%" }} justifyContent={{ default: "justifyContentSpaceBetween" }}>
+                        <FlexItem>
+                            <Breadcrumb>
+                                <BreadcrumbItem>
+                                    <Link to="/reports">Reports</Link>
+                                </BreadcrumbItem>
+                                <BreadcrumbItem isActive>
+                                    {config.id >= 0 ? config.title : "New report configuration"}
+                                </BreadcrumbItem>
+                            </Breadcrumb>
+                        </FlexItem>
+                        <FlexItem>
+                            <ExportButton
+                                name={config?.title || "tablereport"}
+                                export={() => Api.reportServiceExportTableReportConfig(id)}
+                            />
+                        </FlexItem>
+                    </Flex>
                 </CardHeader>
                 <CardBody>
                     <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>

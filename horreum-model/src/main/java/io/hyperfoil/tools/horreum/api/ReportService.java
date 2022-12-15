@@ -18,6 +18,7 @@ import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.report.ReportComment;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
@@ -62,6 +63,14 @@ public interface ReportService {
    @Path("comment/{reportId}")
    ReportComment updateComment(@PathParam("reportId") int reportId, ReportComment comment);
 
+   @GET
+   @Path("table/config/{id}/export")
+   JsonNode exportTableReportConfig(@PathParam("id") int id);
+
+   @POST
+   @Path("table/config/import")
+   void importTableReportConfig(JsonNode config);
+   
    class AllTableReports {
       @NotNull
       public List<TableReportSummary> reports;
@@ -70,6 +79,8 @@ public interface ReportService {
    }
 
    class TableReportSummary {
+      @JsonProperty(required = true)
+      public int configId;
       @JsonProperty(required = true)
       public int testId;
       @NotNull

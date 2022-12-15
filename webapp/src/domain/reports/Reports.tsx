@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 
 import { NavLink } from "react-router-dom"
 import { CellProps, Column } from "react-table"
@@ -16,6 +16,7 @@ import {
 } from "@patternfly/react-core"
 import { ArrowRightIcon, FolderOpenIcon, EditIcon } from "@patternfly/react-icons"
 
+import ImportButton from "../../components/ImportButton"
 import Table from "../../components/Table"
 import TeamSelect, { Team, SHOW_ALL } from "../../components/TeamSelect"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
@@ -24,7 +25,7 @@ import { formatDateTime } from "../../utils"
 
 import Api, { AllTableReports, SortDirection, TableReportSummary } from "../../api"
 import ButtonLink from "../../components/ButtonLink"
-import { useTester } from "../../auth"
+import { useTester, teamsSelector } from "../../auth"
 
 import ListReportsModal from "./ListReportsModal"
 
@@ -53,6 +54,7 @@ export default function Reports() {
     const [loading, setLoading] = useState(false)
 
     const [tableReportGroup, setTableReportGroup] = useState<ReportGroup>()
+    const teams = useSelector(teamsSelector)
 
     useEffect(() => {
         setLoading(true)
@@ -68,7 +70,7 @@ export default function Reports() {
             .then(setTableReports)
             .catch(error => dispatch(alertAction("FETCH_REPORTS", "Failed to fetch reports", error)))
             .finally(() => setLoading(false))
-    }, [pagination, roles, test, folder, dispatch, tableReportsReloadCounter])
+    }, [pagination, roles, test, folder, dispatch, teams, tableReportsReloadCounter])
 
     const columns: Column<TableReportSummary>[] = useMemo(
         () => [
@@ -78,8 +80,7 @@ export default function Reports() {
                 accessor: r => r.title.toLowerCase(), // for case-insensitive sorting
                 Cell: (arg: C) => {
                     const title = arg.row.original.title
-                    const reports = arg.row.original.reports || []
-                    const configId = reports.length > 0 ? reports[0].configId : undefined
+                    const configId = arg.row.original.configId
 
                     return configId === undefined ? (
                         title
@@ -131,9 +132,13 @@ export default function Reports() {
                 accessor: "reports",
                 disableSortBy: true, // TODO: fix client-side sorting
                 Cell: (arg: C) => {
+                    if (arg.cell.value.length === 0) {
+                        return <span style={{ paddingLeft: "16px" }}>0</span>
+                    }
                     return (
                         <Button
                             variant="link"
+                            style={{ paddingTop: 0, paddingBottom: 0 }}
                             onClick={() =>
                                 setTableReportGroup({ testId: arg.row.original.testId, title: arg.row.original.title })
                             }
@@ -164,6 +169,32 @@ export default function Reports() {
                         {isTester && (
                             <FlexItem>
                                 <ButtonLink to="/reports/table/config/__new">New report configuration</ButtonLink>
+                                <ImportButton
+                                    label="Import configuration"
+                                    onLoad={config => {
+                                        if (!config.id) {
+                                            return null
+                                        }
+                                        return Api.reportServiceGetTableReportConfig(config.id as number).then(
+                                            existing => (
+                                                <>
+                                                    This configuration is going to override table report configuration{" "}
+                                                    {existing.title} for test {existing.test?.name || "<unknown test>"})
+                                                    ({existing.id})
+                                                    {config?.title !== existing.title &&
+                                                        ` using new title ${config?.title}`}
+                                                    .
+                                                    <br />
+                                                    <br />
+                                                    Do you really want to proceed?
+                                                </>
+                                            ),
+                                            _ => null /* errors because the config does not exist => OK */
+                                        )
+                                    }}
+                                    onImport={config => Api.reportServiceImportTableReportConfig(config)}
+                                    onImported={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
+                                />
                             </FlexItem>
                         )}
                         <FlexItem>

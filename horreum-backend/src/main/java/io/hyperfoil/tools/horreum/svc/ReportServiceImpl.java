@@ -32,6 +32,7 @@ import org.hibernate.type.IntegerType;
 import org.hibernate.type.TextType;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -48,6 +49,7 @@ import io.hyperfoil.tools.horreum.entity.report.ReportLog;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
 import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
@@ -83,8 +85,8 @@ public class ReportServiceImpl implements ReportService {
    public AllTableReports getTableReports(String folder, Integer testId, String roles, Integer limit, Integer page, String sort, SortDirection direction) {
       StringBuilder queryBuilder = new StringBuilder()
             .append("WITH selected AS (")
-            .append("SELECT tr.id AS report_id, config_id, trc.title, test.name AS testname, test.id as testid, tr.created FROM tablereport tr ")
-            .append("JOIN tablereportconfig trc ON trc.id = tr.config_id ")
+            .append("SELECT tr.id AS report_id, trc.id AS config_id, trc.title, test.name AS testname, test.id as testid, tr.created FROM tablereportconfig trc ")
+            .append("LEFT JOIN tablereport tr ON trc.id = tr.config_id ")
             .append("LEFT JOIN test ON test.id = trc.testid WHERE 1 = 1 ");
       Map<String, Object> params = new HashMap<>();
       if (testId != null) {
@@ -101,14 +103,15 @@ public class ReportServiceImpl implements ReportService {
       }
       queryBuilder
             .append("ORDER BY created DESC), grouped AS (")
-            .append("SELECT title, testname, testid, ")
-            .append("jsonb_agg(jsonb_build_object('report_id', report_id, 'config_id', config_id, 'created', EXTRACT (EPOCH FROM created))) AS reports ")
-            .append("FROM selected GROUP BY title, testname, testid")
-            .append(") SELECT title, testname, testid, reports, ")
+            .append("SELECT MAX(config_id) AS config_id, title, testname, testid, ")
+            .append("COALESCE(jsonb_agg(jsonb_build_object('report_id', report_id, 'config_id', config_id, 'created', EXTRACT (EPOCH FROM created))) FILTER (WHERE report_id IS NOT NULL), '[]') AS reports ")
+            .append("FROM selected GROUP BY title, testname, testid ")
+            .append(") SELECT config_id, title, testname, testid, reports, ")
             .append("(SELECT COUNT(*) FROM grouped) AS total FROM grouped");
       Util.addPaging(queryBuilder, limit, page, sort, direction.name());
 
       Query query = em.createNativeQuery(queryBuilder.toString()).unwrap(NativeQuery.class)
+            .addScalar("config_id", IntegerType.INSTANCE)
             .addScalar("title", TextType.INSTANCE)
             .addScalar("testname", TextType.INSTANCE)
             .addScalar("testid", IntegerType.INSTANCE)
@@ -120,16 +123,17 @@ public class ReportServiceImpl implements ReportService {
       @SuppressWarnings("unchecked") List<Object[]> rows = query.getResultList();
 
       AllTableReports result = new AllTableReports();
-      result.count = rows.size() > 0 ? (int) rows.get(0)[4] : 0;
+      result.count = rows.size() > 0 ? (int) rows.get(0)[5] : 0;
       result.reports = new ArrayList<>();
 
       for (Object[] row : rows) {
          TableReportSummary summary = new TableReportSummary();
-         summary.title = (String) row[0];
-         summary.testName = (String) row[1];
-         summary.testId = row[2] == null ? -1 : (int) row[2];
+         summary.configId = (int) row[0];
+         summary.title = (String) row[1];
+         summary.testName = (String) row[2];
+         summary.testId = row[3] == null ? -1 : (int) row[3];
          summary.reports = new ArrayList<>();
-         ArrayNode reports = (ArrayNode) row[3];
+         ArrayNode reports = (ArrayNode) row[4];
          reports.forEach(report -> {
             TableReportSummaryItem item = new TableReportSummaryItem();
             item.id = report.get("report_id").asInt();
@@ -146,7 +150,11 @@ public class ReportServiceImpl implements ReportService {
    @WithRoles
    @Override
    public TableReportConfig getTableReportConfig(int id) {
-      return TableReportConfig.findById(id);
+      TableReportConfig config = TableReportConfig.findById(id);
+      if (config == null) {
+         throw ServiceException.notFound("Table report config does not exist or insufficient permissions.");
+      }
+      return config;
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -260,6 +268,29 @@ public class ReportServiceImpl implements ReportService {
          em.merge(comment);
       }
       return comment;
+   }
+
+   @Override
+   public JsonNode exportTableReportConfig(int id) {
+      // In case of TableReports we don't need to accumulate
+      // data from other sources not remap data so this is the same
+      return Util.OBJECT_MAPPER.valueToTree(getTableReportConfig(id));
+   }
+
+   @RolesAllowed({Roles.ADMIN, Roles.TESTER})
+   @WithRoles
+   @Transactional
+   @Override
+   public void importTableReportConfig(JsonNode json) {
+      TableReportConfig config;
+      try {
+         config = Util.OBJECT_MAPPER.treeToValue(json, TableReportConfig.class);
+      } catch (JsonProcessingException e) {
+         throw ServiceException.badRequest("Cannot deserialize table report configuration: " + e.getMessage());
+      }
+      validateTableConfig(config);
+      config.ensureLinked();
+      em.merge(config);
    }
 
    @PermitAll
