@@ -289,7 +289,9 @@ public class ExperimentServiceImpl implements ExperimentService {
             } catch (JsonProcessingException e) {
                throw ServiceException.badRequest("Cannot deserialize experiment profile id '" + node.path("id").asText() + "': " + e.getMessage());
             }
-            if (profile.test.id != testId) {
+            if (profile.test == null) {
+               profile.test = em.getReference(Test.class, testId);
+            } else if (profile.test.id != testId) {
                throw ServiceException.badRequest("Wrong test id in experiment profile id '" + node.path("id").asText() + "'");
             }
             em.merge(profile);

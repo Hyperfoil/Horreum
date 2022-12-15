@@ -38,6 +38,7 @@ import FolderSelect from "../../components/FolderSelect"
 import FoldersTree from "./FoldersTree"
 import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
 import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
+import TestImportButton from "./TestImportButton"
 
 import { Access, isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
 import { CellProps, Column, UseSortByColumnOptions } from "react-table"
@@ -269,6 +270,7 @@ export default function AllTests() {
     const history = useHistory()
     const params = new URLSearchParams(history.location.search)
     const [folder, setFolder] = useState(params.get("folder"))
+    const [reloadCounter, setReloadCounter] = useState(0)
 
     document.title = "Tests | Horreum"
     const dispatch = useDispatch<TestDispatch>()
@@ -385,12 +387,12 @@ export default function AllTests() {
     const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
     useEffect(() => {
         dispatch(fetchSummary(rolesFilter.key, folder || undefined)).catch(noop)
-    }, [dispatch, teams, rolesFilter, folder])
+    }, [dispatch, teams, rolesFilter, folder, reloadCounter])
     useEffect(() => {
         if (isAuthenticated) {
             dispatch(allSubscriptions(folder || undefined)).catch(noop)
         }
-    }, [dispatch, isAuthenticated, rolesFilter, folder])
+    }, [dispatch, isAuthenticated, rolesFilter, folder, reloadCounter])
     if (isAuthenticated) {
         columns = [watchingColumn, ...columns]
     }
@@ -401,7 +403,15 @@ export default function AllTests() {
         <PageSection>
             <Card>
                 <CardHeader>
-                    {isTester && <ButtonLink to="/test/_new">New Test</ButtonLink>}
+                    {isTester && (
+                        <>
+                            <ButtonLink to="/test/_new">New Test</ButtonLink>
+                            <TestImportButton
+                                tests={allTests || []}
+                                onImported={() => setReloadCounter(reloadCounter + 1)}
+                            />
+                        </>
+                    )}
                     {isAuthenticated && (
                         <div style={{ width: "200px", marginLeft: "16px" }}>
                             <TeamSelect

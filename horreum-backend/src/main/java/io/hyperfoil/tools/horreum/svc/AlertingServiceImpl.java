@@ -397,6 +397,7 @@ public class AlertingServiceImpl implements AlertingService {
          for (var node : variablesNode) {
             try {
                Variable variable = Util.OBJECT_MAPPER.treeToValue(node, Variable.class);
+               variable.testId = testId;
                variable.ensureLinked();
                em.merge(variable);
             } catch (JsonProcessingException e) {

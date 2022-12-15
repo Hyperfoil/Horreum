@@ -29,12 +29,15 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
         props.onClose()
     }, [])
     useEffect(() => {
+        if (!props.isOpen) {
+            return
+        }
         if (test?.runs === undefined) {
             Api.testServiceGetRecalculationStatus(props.testId).then(status => {
                 dispatch(updateRunsAndDatasetsAction(props.testId, status.totalRuns, status.datasets))
             })
         }
-    }, [test])
+    }, [test, props.isOpen])
     return (
         <Modal
             title={`Re-transform datasets for test ${test?.name || "<unknown test>"}`}

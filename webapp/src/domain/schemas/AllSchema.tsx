@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react"
+import { useMemo, useEffect, useState } from "react"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
 import { Card, CardHeader, CardBody, PageSection } from "@patternfly/react-core"
@@ -15,6 +15,7 @@ import ButtonLink from "../../components/ButtonLink"
 import { CellProps, Column } from "react-table"
 import { SchemaDispatch } from "./reducers"
 import { Access, Schema } from "../../api"
+import SchemaImportButton from "./SchemaImportButton"
 
 type C = CellProps<Schema>
 
@@ -80,11 +81,12 @@ export default function AllSchema() {
         ],
         [dispatch]
     )
+    const [reloadCounter, setReloadCounter] = useState(0)
     const list = useSelector(selectors.all)
     const teams = useSelector(teamsSelector)
     useEffect(() => {
         dispatch(actions.all()).catch(noop)
-    }, [dispatch, teams])
+    }, [dispatch, teams, reloadCounter])
     const isTester = useTester()
     return (
         <PageSection>
@@ -92,6 +94,10 @@ export default function AllSchema() {
                 {isTester && (
                     <CardHeader>
                         <ButtonLink to="/schema/_new">New Schema</ButtonLink>
+                        <SchemaImportButton
+                            schemas={list || []}
+                            onImported={() => setReloadCounter(reloadCounter + 1)}
+                        />
                     </CardHeader>
                 )}
                 <CardBody style={{ overflowX: "auto" }}>

@@ -720,6 +720,9 @@ public class SchemaServiceImpl implements SchemaService {
    @Transactional
    @Override
    public void importSchema(JsonNode config) {
+      if (!config.isObject()) {
+         throw ServiceException.badRequest("Bad format of schema; expecting an object");
+      }
       // deep copy if we need to retry
       ObjectNode cfg = config.deepCopy();
       JsonNode labels = cfg.remove("labels");

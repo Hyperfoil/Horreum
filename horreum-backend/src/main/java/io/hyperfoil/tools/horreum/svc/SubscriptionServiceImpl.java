@@ -251,7 +251,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       var subscriptions = Watch.list("testid = ?1", test.id);
       log.infof("Deleting %d subscriptions for test %s (%d)", subscriptions.size(), test.name, test.id);
       for (var subscription : subscriptions) {
-         log.infof("Deletgin watch %s", subscription);
          subscription.delete();
       }
    }

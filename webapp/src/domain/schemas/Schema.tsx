@@ -39,6 +39,7 @@ import { SchemaDispatch } from "./reducers"
 import Transformers from "./Transformers"
 import Labels from "./Labels"
 import { Access, Schema as SchemaDef } from "../../api"
+import SchemaExportImport from "./SchemaExportImport"
 
 type SchemaParams = {
     schemaId: string
@@ -378,6 +379,16 @@ export default function Schema() {
                                 isModified={modifiedFunc(labelsFuncsRef)}
                             >
                                 <Labels schemaId={schemaId} schemaUri={schema?.uri || ""} funcsRef={labelsFuncsRef} />
+                            </SavedTab>
+                            <SavedTab
+                                title="Export"
+                                fragment="export"
+                                onSave={() => Promise.resolve()}
+                                onReset={noop}
+                                isHidden={!isTester}
+                                isModified={() => false}
+                            >
+                                <SchemaExportImport id={schemaId} name={schema?.name || "schema"} />
                             </SavedTab>
                         </SavedTabs>
                     </CardBody>

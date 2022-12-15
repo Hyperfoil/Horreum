@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -638,19 +639,21 @@ public class TestServiceImpl implements TestService {
    public void importTest(JsonNode testConfig) {
       if (!testConfig.isObject()) {
          throw ServiceException.badRequest("Expected Test object as request body, got " + testConfig.getNodeType());
-      } else if (!testConfig.path("id").isIntegralNumber()) {
-         throw ServiceException.badRequest("Test object has invalid id: " + testConfig.path("id").asText());
+      }
+      JsonNode idNode = testConfig.path("id");
+      if (!idNode.isMissingNode() && !idNode.isIntegralNumber()) {
+         throw ServiceException.badRequest("Test object has invalid id: " + idNode.asText());
       }
       // We need to perform a deep copy before mutating because if this
       // transaction needs a retry we would not have the subnodes we're about to remove.
       ObjectNode config = testConfig.deepCopy();
-      int testId = config.path("id").intValue();
       JsonNode alerting = config.remove("alerting");
       JsonNode actions = config.remove("actions");
       JsonNode experiments = config.remove("experiments");
       JsonNode subscriptions = config.remove("subscriptions");
+      Test test;
       try {
-         Test test = Util.OBJECT_MAPPER.treeToValue(config, Test.class);
+         test = Util.OBJECT_MAPPER.treeToValue(config, Test.class);
          test.ensureLinked();
          if (test.tokens != null && !test.tokens.isEmpty()) {
             test.tokens.forEach(token -> token.decryptValue(ciphertext -> {
@@ -661,14 +664,19 @@ public class TestServiceImpl implements TestService {
                }
             }));
          }
-         em.merge(test);
+         if (test.transformers != null) {
+            test.transformers.stream().filter(t -> t.id == null || t.id <= 0).findFirst().ifPresent(transformer -> {
+               throw ServiceException.badRequest("Transformer " + transformer.name + " does not have ID set; Transformers must be imported via Schema.");
+            });
+         }
+         test = em.merge(test);
       } catch (JsonProcessingException e) {
          throw ServiceException.badRequest("Failed to deserialize test: " + e.getMessage());
       }
-      alertingService.importTest(testId, alerting);
-      actionService.importTest(testId, actions);
-      experimentService.importTest(testId, experiments);
-      subscriptionService.importSubscriptions(testId, subscriptions);
+      alertingService.importTest(test.id, alerting);
+      actionService.importTest(test.id, actions);
+      experimentService.importTest(test.id, experiments);
+      subscriptionService.importSubscriptions(test.id, subscriptions);
    }
 
    Test getTestForUpdate(int testId) {

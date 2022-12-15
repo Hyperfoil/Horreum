@@ -315,6 +315,8 @@ public class ActionServiceImpl implements ActionService {
                }
                if (secretsEncrypted != null) {
                   action.secrets = Util.OBJECT_MAPPER.readTree(encryptionManager.decrypt(secretsEncrypted));
+               } else {
+                  action.secrets = JsonNodeFactory.instance.objectNode();
                }
                em.merge(action);
             } catch (JsonProcessingException e) {

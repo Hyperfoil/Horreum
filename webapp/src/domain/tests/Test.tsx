@@ -30,6 +30,7 @@ import General from "./General"
 import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
 import Experiments from "./Experiments"
+import TestExportImport from "./TestExportImport"
 import Actions from "./Actions"
 import Access from "./Access"
 import Subscriptions from "./Subscriptions"
@@ -249,6 +250,16 @@ export default function Test() {
                                     }}
                                     funcsRef={transformersFuncsRef}
                                 />
+                            </SavedTab>
+                            <SavedTab
+                                title="Export"
+                                fragment="export"
+                                isHidden={testId <= 0 || !isTester}
+                                onSave={() => Promise.resolve()}
+                                onReset={noop}
+                                isModified={() => false}
+                            >
+                                <TestExportImport name={test?.name || "test"} id={testId} />
                             </SavedTab>
                         </SavedTabs>
                     </CardBody>
