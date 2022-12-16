@@ -250,7 +250,10 @@ export default function PanelChart(props: PanelProps) {
                                     dataKey="timestamp"
                                     tick={{ fontSize: 12 }}
                                     tickFormatter={tsToDate}
-                                    domain={[startTime, props.endTime]}
+                                    domain={([min, _]) => [
+                                        props.timespan > 366 * 86400 ? min : startTime,
+                                        props.endTime,
+                                    ]}
                                 />
                                 <YAxis
                                     width={80}

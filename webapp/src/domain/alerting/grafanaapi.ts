@@ -6,6 +6,7 @@ function range(from: number, to: number) {
     return {
         from: new Date(DateTime.fromMillis(from).setZone("utc").toISO()),
         to: new Date(DateTime.fromMillis(to).setZone("utc").toISO()),
+        oneBeforeAndAfter: true,
     }
 }
 

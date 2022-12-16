@@ -101,13 +101,15 @@ public class GrafanaServiceImpl implements GrafanaService {
          tt.variableId = variableId;
          result.add(tt);
 
-         StringBuilder sql = new StringBuilder("SELECT datapoint.* FROM datapoint ");
-         if (fingerprint != null) {
-            sql.append("LEFT JOIN fingerprint fp ON fp.dataset_id = datapoint.dataset_id ");
+         StringBuilder sql = new StringBuilder("WITH dp AS (")
+               .append("(SELECT * FROM datapoint WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3)");
+         if (query.range.oneBeforeAndAfter) {
+               sql.append("UNION (SELECT * FROM datapoint WHERE variable_id = ?1 AND timestamp < ?2 ORDER BY timestamp DESC LIMIT 1) ")
+                  .append("UNION (SELECT * FROM datapoint WHERE variable_id = ?1 AND timestamp > ?3 ORDER BY timestamp LIMIT 1)");
          }
-         sql.append(" WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3 ");
+         sql.append(") SELECT dp.* FROM dp ");
          if (fingerprint != null) {
-            sql.append("AND json_equals(fp.fingerprint, (?4)::::jsonb) ");
+            sql.append("LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id AND json_equals(fp.fingerprint, (?4)::::jsonb) ");
          }
          sql.append("ORDER BY timestamp ASC");
          javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), DataPoint.class)

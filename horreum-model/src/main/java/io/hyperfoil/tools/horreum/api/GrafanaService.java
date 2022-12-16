@@ -62,6 +62,8 @@ public interface GrafanaService {
       public Instant from;
       @NotNull
       public Instant to;
+      // custom field used by UI to display lines coming into view and out of that
+      public boolean oneBeforeAndAfter;
    }
 
    class TimeseriesTarget {
