@@ -14,7 +14,7 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 /**
- * This generator does not generate the ID when it is already provided and > 0
+ * This generator does not generate the ID when it is already provided and &gt; 0
  */
 public class SeqIdGenerator extends SequenceStyleGenerator {
    private static final ClassValue<Function<Object, Serializable>> accessors = new ClassValue<Function<Object, Serializable>>() {
