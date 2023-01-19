@@ -59,7 +59,7 @@ function General(props: GeneralProps) {
     const [importFailed, setImportFailed] = useState(false)
 
     const schema: SchemaDef = props.schema || {
-        id: 0,
+        id: -1,
         name: "",
         description: "",
         uri: "",
