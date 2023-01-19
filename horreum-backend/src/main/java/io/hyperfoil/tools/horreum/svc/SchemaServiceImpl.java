@@ -170,14 +170,18 @@ public class SchemaServiceImpl implements SchemaService {
       if (schema.schema != null && schema.schema.isEmpty()) {
          schema.schema = null;
       }
+      Schema returnSchema = null;
       if (schema.id != null) {
-         em.merge(schema);
+         //this is a hack as Horreum is currently passing managed `Entities` over rest API, and .merge() is being called for unmanaged entities
+         //TODO:: revert when https://github.com/Hyperfoil/Horreum/issues/343 is fixed
+         returnSchema = em.merge(schema);
       } else {
          schema.persist();
+         returnSchema = schema;
       }
-      log.infof("Added schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
+      log.infof("Added schema %s (%d), URI %s", returnSchema.name, returnSchema.id, returnSchema.uri);
       em.flush(); //manually flush to validate constraints
-      return schema.id;
+      return returnSchema.id;
    }
 
    @PermitAll
