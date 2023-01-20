@@ -88,7 +88,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(42d, event1.dataPoint.value);
       assertTrue(event1.notify);
 
-      RestAssured.given().auth().oauth2(TESTER_TOKEN)
+      RestAssured.given().auth().oauth2(getTesterToken())
             .post("/api/test/" + test.id + "/notifications?enabled=false")
             .then().statusCode(204);
 

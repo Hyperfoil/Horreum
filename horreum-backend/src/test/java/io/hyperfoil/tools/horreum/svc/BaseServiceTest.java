@@ -81,9 +81,9 @@ public class BaseServiceTest {
    static final String[] UPLOADER_ROLES = { "foo-team", "foo-uploader", "uploader" };
    public static final String[] TESTER_ROLES = { "foo-team", "foo-tester", "tester", "viewer" };
    static final List<String> SYSTEM_ROLES = Collections.singletonList(Roles.HORREUM_SYSTEM);
-   static final String UPLOADER_TOKEN = BaseServiceTest.getAccessToken("alice", UPLOADER_ROLES);
-   static final String TESTER_TOKEN = BaseServiceTest.getAccessToken("alice", TESTER_ROLES);
-   static final String ADMIN_TOKEN = BaseServiceTest.getAccessToken("admin", "admin");
+   private static String UPLOADER_TOKEN;
+   private static String TESTER_TOKEN;
+   private static String ADMIN_TOKEN;
 
    protected final Logger log = Logger.getLogger(getClass());
 
@@ -101,6 +101,32 @@ public class BaseServiceTest {
 
    List<Runnable> afterMethodCleanup = new ArrayList<>();
 
+   protected String getUploaderToken(){
+      synchronized (BaseServiceTest.class){
+         if(UPLOADER_TOKEN == null){
+            UPLOADER_TOKEN = BaseServiceTest.getAccessToken("alice", UPLOADER_ROLES);
+         }
+         return UPLOADER_TOKEN;
+      }
+   }
+
+   protected String getTesterToken(){
+      synchronized (BaseServiceTest.class){
+         if(TESTER_TOKEN == null){
+            TESTER_TOKEN = BaseServiceTest.getAccessToken("alice", TESTER_ROLES);
+         }
+         return TESTER_TOKEN;
+      }
+   }
+
+   protected String getAdminToken(){
+      synchronized (BaseServiceTest.class){
+         if(ADMIN_TOKEN == null){
+            ADMIN_TOKEN = BaseServiceTest.getAccessToken("admin", "admin");
+         }
+         return ADMIN_TOKEN;
+      }
+   }
    protected static ObjectNode runWithValue(double value, Schema schema) {
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
       runJson.put("$schema", schema.uri);
@@ -216,7 +242,7 @@ public class BaseServiceTest {
    }
 
    protected int uploadRun(long start, long stop, Object runJson, String test, String owner, Access access) {
-      String runIdString = RestAssured.given().auth().oauth2(UPLOADER_TOKEN)
+      String runIdString = RestAssured.given().auth().oauth2(getUploaderToken())
             .header(HttpHeaders.CONTENT_TYPE, "application/json")
             .body(runJson)
             .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=" + owner + "&access=" + access)
@@ -231,7 +257,7 @@ public class BaseServiceTest {
    }
 
    protected int uploadRun(long start, long stop, JsonNode data, JsonNode metadata, String testName, String owner, Access access) {
-      String runIdString = given().auth().oauth2(UPLOADER_TOKEN)
+      String runIdString = given().auth().oauth2(getUploaderToken())
             .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA)
             // the .toString().getBytes(...) is required because RestAssured otherwise won't send the filename
             // and Quarkus in turn will use null FileUpload: https://github.com/quarkusio/quarkus/issues/20938
@@ -255,19 +281,19 @@ public class BaseServiceTest {
    }
 
    protected void deleteTest(Test test) {
-      RestAssured.given().auth().oauth2(TESTER_TOKEN)
+      RestAssured.given().auth().oauth2(getTesterToken())
             .delete("/api/test/" + test.id)
             .then()
             .statusCode(204);
    }
 
    protected RequestSpecification jsonRequest() {
-      return RestAssured.given().auth().oauth2(TESTER_TOKEN)
+      return RestAssured.given().auth().oauth2(getTesterToken())
             .header(HttpHeaders.CONTENT_TYPE, "application/json");
    }
 
    protected RequestSpecification jsonUploaderRequest() {
-      return RestAssured.given().auth().oauth2(UPLOADER_TOKEN)
+      return RestAssured.given().auth().oauth2(getUploaderToken())
             .header(HttpHeaders.CONTENT_TYPE, "application/json");
    }
 
@@ -477,7 +503,7 @@ public class BaseServiceTest {
    }
 
    protected RequestSpecification bareRequest() {
-      return RestAssured.given().auth().oauth2(TESTER_TOKEN);
+      return RestAssured.given().auth().oauth2(getTesterToken());
    }
 
    protected void addTransformer(Test test, Transformer... transformers){
@@ -534,7 +560,7 @@ public class BaseServiceTest {
    }
 
    protected void addAllowedSite(String prefix) {
-      given().auth().oauth2(ADMIN_TOKEN).header(HttpHeaders.CONTENT_TYPE, "text/plain")
+      given().auth().oauth2(getAdminToken()).header(HttpHeaders.CONTENT_TYPE, "text/plain")
             .body(prefix).post("/api/action/allowedSites").then().statusCode(200);
    }
 
@@ -567,7 +593,7 @@ public class BaseServiceTest {
       action.type = "http";
       action.active = true;
       action.config = JsonNodeFactory.instance.objectNode().put("url", url);
-      return given().auth().oauth2(ADMIN_TOKEN)
+      return given().auth().oauth2(getAdminToken())
             .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
    }
 
