@@ -58,6 +58,6 @@ public class ActionServiceTest extends BaseServiceTest {
       Action action = addGlobalAction(Test.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
-      given().auth().oauth2(ADMIN_TOKEN).delete("/api/action/" + action.id);
+      given().auth().oauth2(getAdminToken()).delete("/api/action/" + action.id);
    }
 }
