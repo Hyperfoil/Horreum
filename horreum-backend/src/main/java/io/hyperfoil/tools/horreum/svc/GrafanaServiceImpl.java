@@ -109,7 +109,7 @@ public class GrafanaServiceImpl implements GrafanaService {
          }
          sql.append(") SELECT dp.* FROM dp ");
          if (fingerprint != null) {
-            sql.append("LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id AND json_equals(fp.fingerprint, (?4)::::jsonb) ");
+            sql.append("LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id WHERE json_equals(fp.fingerprint, (?4)::::jsonb) ");
          }
          sql.append("ORDER BY timestamp ASC");
          javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), DataPoint.class)
