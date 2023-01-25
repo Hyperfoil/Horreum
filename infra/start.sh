@@ -47,8 +47,8 @@ done
 WORKDIR=$(mktemp -t -d horreum.XXXX)
 echo "Downloading files to $WORKDIR..."
 mkdir -p $WORKDIR/infra
-VERSION=${VERSION:-0.6}
-IMGTAG=${IMGTAG:-0.6}
+VERSION=${VERSION:-0.7}
+IMGTAG=${IMGTAG:-0.7}
 BASE_URL=https://raw.githubusercontent.com/Hyperfoil/Horreum/${VERSION}
 for FILE in \
   app-init.sh \
