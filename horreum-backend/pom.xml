@@ -179,29 +179,6 @@
 
         <plugins>
             <plugin>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <groupId>org.apache.maven.plugins</groupId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <id>write-build-info</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <mkdir dir="${project.build.outputDirectory}" />
-                                <propertyfile file="${project.build.outputDirectory}/buildinfo.properties">
-                                    <entry key="horreum.build.commit" value="${buildNumber}" />
-                                    <entry key="horreum.build.timestamp" value="${timestamp}" />
-                                </propertyfile>
-                            </target>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
                 <version>1.12.0</version>

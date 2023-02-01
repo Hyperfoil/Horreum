@@ -8,15 +8,11 @@ import { formatDateTime } from "./utils"
 
 type VersionInfo = {
     version: string
-    commit: string
-    buildTimestamp: number
     startTimestamp: number
 }
 
 const VERSION_ERROR = {
     version: "<unknown:error>",
-    commit: "<unknown:error>",
-    buildTimestamp: 0,
     startTimestamp: 0,
 }
 
@@ -84,8 +80,6 @@ export default function About() {
                         cells={["Category", "Value"]}
                         rows={[
                             ["Version", versionInfo.version],
-                            ["Git commit ID", versionInfo.commit],
-                            ["Build timestamp", formatDateTime(versionInfo.buildTimestamp)],
                             ["Start timestamp", formatDateTime(versionInfo.startTimestamp)],
                         ]}
                     >
