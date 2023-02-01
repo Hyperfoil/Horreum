@@ -37,7 +37,7 @@ Install:
 dnf install -y podman podman-plugins podman-compose podman-docker
 ```
 
-In order to run the test suite please enable socket environment:
+Please, enable the socket environment in order to run the test suite:
 
 ``` bash
 systemctl --user enable --now podman.socket
@@ -56,8 +56,10 @@ podman-compose -p horreum -f infra/docker-compose.yml down
 You can preload Horreum with some example data with
 
 ```bash
-infra/example-configuration.sh
+./infra/example-configuration.sh
 ```
+
+once Horreum is running.
 
 ### OpenSSL
 
