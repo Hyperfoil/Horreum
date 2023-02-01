@@ -142,18 +142,6 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
             String QUARKUS_DATASOURCE_PASSWORD = getProperty("quarkus.datasource.password");
             String HORREUM_GRAFANA_ADMIN_PASSWORD = getProperty("horreum.grafana.admin.password");
 
-            String horreumCommitId = System.getProperty("horreum.commit.id");
-            if (horreumCommitId == null || horreumCommitId.trim().isEmpty()) {
-                try (InputStream stream = HorreumTestExtension.class.getClassLoader().getResourceAsStream("buildinfo.properties")) {
-                    if (stream == null) {
-                        throw new IllegalStateException("Cannot determine Horreum commit ID this test should run against.");
-                    }
-                    Properties buildInfo = new Properties();
-                    buildInfo.load(stream);
-                    horreumCommitId = buildInfo.getProperty("horreum.build.commit");
-                }
-            }
-            envVariables.put("HORREUM_COMMIT_ID", horreumCommitId);
             envVariables.put("PORT_OFFSET", PORT_OFFSET);
             envVariables.put("QUARKUS_DATASOURCE_PASSWORD", QUARKUS_DATASOURCE_PASSWORD);
             envVariables.put("HORREUM_HTTPS_PORT", getOffsetPort(HORREUM_HTTPS_PORT));

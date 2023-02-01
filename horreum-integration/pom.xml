@@ -98,22 +98,6 @@
             <version>3.0.0</version>
             <executions>
                 <execution>
-                    <id>write-build-info</id>
-                    <phase>generate-resources</phase>
-                    <goals>
-                        <goal>run</goal>
-                    </goals>
-                    <configuration>
-                        <target>
-                            <mkdir dir="${project.build.outputDirectory}" />
-                            <propertyfile file="${project.build.outputDirectory}/buildinfo.properties">
-                                <entry key="horreum.build.commit" value="${buildNumber}" />
-                                <entry key="horreum.build.timestamp" value="${timestamp}" />
-                            </propertyfile>
-                        </target>
-                    </configuration>
-                </execution>
-                <execution>
                     <id>copy-application-properties</id>
                     <phase>generate-test-resources</phase>
                     <goals>

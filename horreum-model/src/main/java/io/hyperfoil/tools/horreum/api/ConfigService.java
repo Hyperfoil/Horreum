@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.api;
 
+import io.hyperfoil.tools.horreum.Version;
+
 import javax.annotation.security.PermitAll;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.GET;
@@ -32,9 +34,7 @@ public class ConfigService {
    @Path("version")
    public VersionInfo version() {
       VersionInfo info = new VersionInfo();
-      info.version = getString("quarkus.application.version");
-      info.commit = getString("horreum.build.commit");
-      info.buildTimestamp = Long.parseLong(getString("horreum.build.timestamp"));
+      info.version = Version.VERSION;
       info.startTimestamp = startTimestamp;
       return info;
    }
@@ -46,10 +46,6 @@ public class ConfigService {
    public static class VersionInfo {
       @NotNull
       public String version;
-      @NotNull
-      public String commit;
-      @JsonProperty(required = true)
-      public long buildTimestamp;
       @JsonProperty(required = true)
       public long startTimestamp;
    }
