@@ -950,12 +950,19 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles
    @RolesAllowed(Roles.TESTER)
    @Transactional
-   public void updateChange(int id, Change change) {
+   public void updateChange(int id, Change apiChange) {
       try {
-         if (id != change.id) {
+         if (id != apiChange.id) {
             throw ServiceException.badRequest("Path ID and entity don't match");
          }
-         em.merge(change);
+         Change jpaChange = em.find(Change.class, id);
+         if ( jpaChange != null ) {
+            jpaChange.confirmed = apiChange.confirmed;
+            em.merge(jpaChange);
+         } else {
+            throw new WebApplicationException(String.format("Could not find change with ID: %s", id));
+         }
+
       } catch (PersistenceException e) {
          throw new WebApplicationException(e, Response.serverError().build());
       }
