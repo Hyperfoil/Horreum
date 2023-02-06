@@ -22,7 +22,7 @@ export default function FoldersTree(props: FoldersTreeProps) {
     useEffect(() => {
         dispatch(fetchFolders()).catch(noop)
     }, [teams])
-    const root: TreeViewDataItem = { name: "(root)", children: [] }
+    const root: TreeViewDataItem = { name: "Horreum", children: [] }
     for (const folder of folders) {
         if (!folder) continue
         const parts = folder.split("/")
