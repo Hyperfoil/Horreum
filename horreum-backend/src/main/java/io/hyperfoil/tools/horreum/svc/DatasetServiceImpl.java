@@ -117,7 +117,7 @@ public class DatasetServiceImpl implements DatasetService {
          "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas, '[]'::::jsonb AS validationErrors " +
          "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
          "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
-         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = defaultview_id WHERE ds.id IN (SELECT id FROM ids)";
+         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id WHERE ds.id IN (SELECT id FROM ids)";
    private static final String ALL_LABELS_SELECT = "SELECT dataset.id as dataset_id, " +
          "COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values FROM dataset " +
          "LEFT JOIN label_values lv ON dataset.id = lv.dataset_id " +
