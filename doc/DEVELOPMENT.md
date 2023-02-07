@@ -1,5 +1,66 @@
 # Development
 
+## Using existing data
+
+You can use a backup - f.ex a [pgmoneta](https://pgmoneta.github.io/) one - from an existing setup, like
+
+```bash
+cd /tmp
+scp <username>@<hostname>:/path/to/backup/horreum-timestamp.tar.zstd .
+mkdir data
+cd data
+tar -axf ../horreum-timestamp.tar.zstd
+cd ..
+chown -R <username>:<groupname> data/
+```
+
+and then starting the container with
+
+```bash
+podman run --name postgres --rm -d --network=host -v "/tmp/data/:/var/lib/postgresql/data:rw,z" docker.io/postgres:13
+```
+
+You have to choose the PostgreSQL container image that aligns with your backup files.
+
+
+You can start the rest of the stack using the
+
+```bash
+./infra/podman-compose.sh
+```
+
+script. But, you need to comment out the
+
+* `postgres`
+* `db-init`
+
+steps in `infra/docker-compose.yml` first.
+
+Depending on your setup you may have to change user names and passwords in the following files:
+
+In `horreum-backend/src/main/resources/application.properties`
+
+* `quarkus.datasource.jdbc.url`
+* `quarkus.datasource.username`
+* `quarkus.datasource.password`
+* `quarkus.datasource.migration.jdbc.url`
+* `quarkus.datasource.migration.username`
+* `quarkus.datasource.migration.password`
+* `quarkus.liquibase.migration.migrate-at-start=false`
+* `horreum.db.secret`
+
+, in `infra/Dockerfile.keycloak `
+
+* `ENV KC_DB_USERNAME`
+* `ENV KC_DB_PASSWORD`
+
+and in `infra/app-init.sh`
+
+* `POSTGRES_PORT`
+* `KEYCLOAK_ADMIN_TOKEN`
+
+Make sure that the `hostname` and `port` against the database are defined. Like `DB_PORT` in `infra/docker-compose.yml`.
+
 ## Build tooling set-up
 
 ```bash
