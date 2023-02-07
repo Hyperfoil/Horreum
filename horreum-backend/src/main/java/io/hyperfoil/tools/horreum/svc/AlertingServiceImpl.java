@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -188,6 +189,9 @@ public class AlertingServiceImpl implements AlertingService {
    @ConfigProperty(name = "horreum.internal.url")
    String internalUrl;
 
+   @ConfigProperty(name = "horreum.alerting.updateLabel.retries", defaultValue = "5")
+   Integer labelCalcRetries;
+
    @Inject
    TransactionManager tm;
 
@@ -201,6 +205,7 @@ public class AlertingServiceImpl implements AlertingService {
    TimeService timeService;
 
    long grafanaDatasourceTimerId;
+   static ConcurrentHashMap<Integer, AtomicInteger> retryCounterSet = new ConcurrentHashMap<>();
 
    // entries can be removed from timer thread while normally this is updated from one of blocking threads
    private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
@@ -221,13 +226,23 @@ public class AlertingServiceImpl implements AlertingService {
       DataSet dataset = DataSet.findById(event.datasetId);
       if (dataset == null) {
          // The run is not committed yet?
-         vertx.setTimer(1000, timerId -> messageBus.executeForTest(event.datasetId,
-               () -> Util.withTx(tm, () -> {
-                  onLabelsUpdated(event);
-                  return null;
-               })
-         ));
-         return;
+         // Retry `horreum.alerting.updateLabel.retries` times before logging a warning
+         retryCounterSet.putIfAbsent(event.datasetId, new AtomicInteger(0));
+         int retryCounter = retryCounterSet.get(event.datasetId).getAndIncrement();
+         if ( retryCounter < labelCalcRetries ) {
+            log.infof("Retrying labels update for dataset %d, attempt %d/%d", event.datasetId, retryCounter, this.labelCalcRetries);
+            vertx.setTimer(1000, timerId -> messageBus.executeForTest(event.datasetId, () -> Util.withTx(tm, () -> {
+                       onLabelsUpdated(event);
+                       return null;
+                    })
+            ));
+            return;
+         } else {
+            //we have retried `horreum.alerting.updateLabel.retries` number of times, log a warning and stop retrying
+            log.warnf("Unsuccessfully retried updating labels %d times for dataset %d. Stopping", this.labelCalcRetries, event.datasetId);
+            retryCounterSet.remove(event.datasetId);
+            return;
+         }
       }
       if (event.isRecalculation) {
          sendNotifications = false;
