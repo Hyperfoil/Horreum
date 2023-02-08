@@ -1017,7 +1017,7 @@ public class AlertingServiceImpl implements AlertingService {
          for (int datasetId : recalculation.datasets) {
             // Since the evaluation might take few moments and we're dealing potentially with thousands
             // of runs we'll process each run in a separate transaction
-            recalulateForDataset(datasetId, notify, debug, recalculation);
+            recalculateForDataset(datasetId, notify, debug, recalculation);
             recalculation.progress = 100 * ++completed / numRuns;
          }
 
@@ -1052,9 +1052,13 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
-   void recalulateForDataset(Integer datasetId, boolean notify, boolean debug, Recalculation recalculation) {
+   void recalculateForDataset(Integer datasetId, boolean notify, boolean debug, Recalculation recalculation) {
       DataSet dataset = DataSet.findById(datasetId);
-      recalculateDatapointsForDataset(dataset, notify, debug, recalculation);
+      if ( dataset != null ) {
+         recalculateDatapointsForDataset(dataset, notify, debug, recalculation);
+      } else {
+         log.debugf("Could not find dataset with id: %d", datasetId);
+      }
    }
 
    @Override
