@@ -42,11 +42,11 @@ export default function FolderSelect(props: FolderSelectProps) {
                 dispatch({ type: UPDATE_FOLDERS, folders: [...all, newFolder].sort() })
                 props.onChange(newFolder)
             }}
-            placeholderText="(root folder)"
+            placeholderText="Horreum"
         >
             {all.map((folder, i) => (
                 <SelectOption key={i} value={folder || ""}>
-                    {folder || "(root folder)"}
+                    {folder || "Horreum"}
                 </SelectOption>
             ))}
         </Select>

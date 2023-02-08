@@ -226,7 +226,7 @@ function MoveToFolderProvider(props: ActionMenuProps, isOwner: boolean, close: (
         modal: (
             <Modal
                 key="moveToFolder"
-                title={`Move test ${config.name} from ${config.folder || "root folder"} to another folder`}
+                title={`Move test ${config.name} from ${config.folder || "Horreum"} to another folder`}
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
                 actions={[
