@@ -13,13 +13,20 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 
 public class PostgresResource implements QuarkusTestResourceLifecycleManager {
-   public PostgreSQLContainer<?> postgresContainer;
+   private PostgreSQLContainer<?> postgresContainer;
+
+   public static final String POSTGRES_VERSION = "postgres:13";
+
+   private Boolean inContainer = false;
 
    @Override
    public void init(Map<String, String> initArgs) {
       if (ConfigProvider.getConfig().getOptionalValue("horreum.test.postgres.enabled", boolean.class).orElse(true)) {
-         postgresContainer = new PostgreSQLContainer<>("postgres:12")
+         postgresContainer = new PostgreSQLContainer<>(POSTGRES_VERSION)
                .withDatabaseName("horreum").withUsername("dbadmin").withPassword("secret");
+      }
+      if (initArgs.containsKey("inContainer") ) {
+         inContainer = Boolean.parseBoolean(initArgs.get("inContainer"));
       }
    }
 
@@ -36,9 +43,13 @@ public class PostgresResource implements QuarkusTestResourceLifecycleManager {
       } catch (SQLException t) {
          throw new RuntimeException(t);
       }
+
+      String jdbcUrl = inContainer ? postgresContainer.getJdbcUrl().replaceAll("localhost", "172.17.0.1") :  postgresContainer.getJdbcUrl();
+
       return Map.of(
-         "quarkus.datasource.jdbc.url", postgresContainer.getJdbcUrl(),
-         "quarkus.datasource.migration.jdbc.url", postgresContainer.getJdbcUrl()
+              "postgres.container.name", postgresContainer.getContainerName(),
+         "quarkus.datasource.jdbc.url", jdbcUrl,
+         "quarkus.datasource.migration.jdbc.url", jdbcUrl
       );
    }
 
@@ -48,4 +59,5 @@ public class PostgresResource implements QuarkusTestResourceLifecycleManager {
          postgresContainer.stop();
       }
    }
+
 }

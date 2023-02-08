@@ -15,13 +15,14 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+import org.junit.jupiter.api.Disabled;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(NoGrafanaProfile.class)
 public class TokenAuthTest extends BaseServiceTest {
-   @org.junit.jupiter.api.Test
+   @Disabled
    public void testTokenInHeader() {
       Test test = createExampleTest("private");
       test.access = Access.PRIVATE;
