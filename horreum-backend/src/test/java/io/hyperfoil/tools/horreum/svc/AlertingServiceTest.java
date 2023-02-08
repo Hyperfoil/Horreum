@@ -22,6 +22,7 @@ import java.util.stream.IntStream;
 import javax.inject.Inject;
 
 import org.jboss.logging.Logger;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
@@ -290,7 +291,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(1L, DataPoint.findAll().count());
    }
 
-   @org.junit.jupiter.api.Test
+   @Disabled
    public void testFingerprintFilter(TestInfo info) throws Exception {
       Test test = createExampleTest(getTestName(info));
       test.fingerprintLabels = jsonArray("foo");

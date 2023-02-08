@@ -3,7 +3,6 @@ PORT_OFFSET="${1:-0}"
 echo "Initializing Horreum Application"
 
 KEYCLOAK_PORT=$((8180 + PORT_OFFSET))
-HORREUM_PORT=$((8080 + PORT_OFFSET))
 POSTGRES_PORT=$((5432 + PORT_OFFSET))
 
 JDBC_URL="jdbc:postgresql://$POSTGRES_HOST:$POSTGRES_PORT/horreum"
