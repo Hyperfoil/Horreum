@@ -1,4 +1,4 @@
-package io.hyperfoil.tools;
+package io.hyperfoil.tools.horreum.it;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -8,16 +8,13 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.ContainerState;
 import org.testcontainers.containers.DockerComposeContainer;
-import org.testcontainers.containers.output.OutputFrame;
 import org.testcontainers.containers.output.WaitingConsumer;
 import org.testcontainers.utility.LogUtils;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -35,7 +32,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -111,7 +107,7 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
     private static boolean started = false;
 
     public static TestContainer infrastructureContainer = null;
-    public static TestContainer horreumContainer = null;
+//    public static TestContainer horreumContainer = null;
 
     protected static String getProperty(String propertyName) {
         String override = System.getProperty(propertyName);
@@ -170,7 +166,7 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
 
             infrastructureContainer = new TestContainer("target/docker-compose/infra/docker-compose.yml", envVariables)
                   .withRemoveImages(DockerComposeContainer.RemoveImages.LOCAL);
-            horreumContainer = new TestContainer("target/docker-compose/horreum-compose.yml", envVariables);
+//            horreumContainer = new TestContainer("target/docker-compose/horreum-compose.yml", envVariables);
 
             log.info("Waiting for Horreum infrastructure to start");
 
@@ -179,9 +175,9 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
             waitForContainerReady(infrastructureContainer, "keycloak_1", "started in");
             waitForContainerReady(infrastructureContainer, "app-init_1", "Horreum initialization complete");
 
-            writeOutputToFile(horreumContainer, "horreum_1");
-            horreumContainer.start();
-            waitForContainerReady(horreumContainer, "horreum_1", "started in");
+//            writeOutputToFile(horreumContainer, "horreum_1");
+//            horreumContainer.start();
+//            waitForContainerReady(horreumContainer, "horreum_1", "started in");
         }
     }
 
@@ -296,6 +292,7 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
     }
 
     public static void stopContainers() throws Exception {
+/*
         if (START_HORREUM_INFRA && HORREUM_DUMP_LOGS) {
             Optional<ContainerState> containerState = horreumContainer.getContainerByServiceName("horreum_1"); //TODO: dynamic resolve
             if (containerState.isPresent()) {
@@ -307,9 +304,10 @@ public class HorreumTestExtension implements BeforeAllCallback, ExtensionContext
                 log.info("Logs written to: " + tmpFile.getAbsolutePath());
             }
         }
+*/
         if (STOP_HORREUM_INFRA) {
             stopContainerEnv(infrastructureContainer);
-            stopContainerEnv(horreumContainer);
+//            stopContainerEnv(horreumContainer);
         }
         File grafanaEnv = new File("target/docker-compose/.grafana");
         if (grafanaEnv.exists()) {

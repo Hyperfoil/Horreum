@@ -1,9 +1,10 @@
-package io.hyperfoil.tools;
+package io.hyperfoil.tools.horreum.it;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import io.hyperfoil.tools.HorreumClient;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;

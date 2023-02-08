@@ -1,8 +1,8 @@
-package io.hyperfoil.tools;
+package io.hyperfoil.tools.horreum.it;
 
-import static io.hyperfoil.tools.HorreumTestClientExtension.dummyTest;
-import static io.hyperfoil.tools.HorreumTestClientExtension.horreumClient;
-import static io.hyperfoil.tools.HorreumTestExtension.resourceToString;
+import static io.hyperfoil.tools.horreum.it.HorreumTestClientExtension.dummyTest;
+import static io.hyperfoil.tools.horreum.it.HorreumTestClientExtension.horreumClient;
+import static io.hyperfoil.tools.horreum.it.HorreumTestExtension.resourceToString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -12,6 +12,7 @@ import java.util.Collections;
 
 import javax.ws.rs.BadRequestException;
 
+import io.quarkus.test.junit.QuarkusIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -28,7 +29,8 @@ import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
 
 @ExtendWith({HorreumTestClientExtension.class})
-public class HorreumClientTest {
+@QuarkusIntegrationTest
+public class HorreumClientIT {
     @Test
     public void testAddRunFromData() throws JsonProcessingException {
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));

@@ -29,6 +29,11 @@
             <artifactId>horreum-model</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.hyperfoil.tools</groupId>
+            <artifactId>horreum-client</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.graalvm.sdk</groupId>
             <artifactId>graal-sdk</artifactId>
             <version>${graalvm.version}</version>
