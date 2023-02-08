@@ -170,6 +170,7 @@ public class BaseServiceTest {
             for (var subscription : Watch.listAll()) {
                subscription.delete();
             }
+
          }
          return null;
       });

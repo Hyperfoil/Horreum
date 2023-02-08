@@ -19,6 +19,8 @@ import io.hyperfoil.tools.horreum.svc.Util;
 public final class TestUtil {
    private static final Logger log = Logger.getLogger(TestUtil.class);
 
+   private static final int TIMEOUT_DUR = 100;
+
    private TestUtil() {}
 
    public static void assertEmptyArray(JsonNode node) {
@@ -29,7 +31,7 @@ public final class TestUtil {
 
    @SuppressWarnings("BusyWait")
    public static void eventually(Runnable test) {
-      long now = System.currentTimeMillis();
+      long timeout = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(TIMEOUT_DUR);
       do {
          try {
             test.run();
@@ -42,12 +44,12 @@ public final class TestUtil {
          } catch (InterruptedException e) {
             fail("Interrupted while polling condition.");
          }
-      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(10));
+      } while (System.currentTimeMillis() < timeout);
       test.run();
    }
 
    public static void eventually(BooleanSupplier test) {
-      long now = System.currentTimeMillis();
+      long timeout = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(TIMEOUT_DUR);
       do {
          if (test.getAsBoolean()) {
             return;
@@ -58,7 +60,7 @@ public final class TestUtil {
          } catch (InterruptedException e) {
             fail("Interrupted while polling condition.");
          }
-      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(10));
+      } while (System.currentTimeMillis() < timeout);
       fail("Failed waiting for test to become true");
    }
 
