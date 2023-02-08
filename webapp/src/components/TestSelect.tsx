@@ -77,7 +77,7 @@ type FewTestsSelectProps = {
     tests: Test[] | undefined
 } & TestSelectProps
 
-const ROOT_FOLDER = "(root folder)"
+const ROOT_FOLDER = "Horreum"
 
 function FewTestsSelect(props: FewTestsSelectProps) {
     const [open, setOpen] = useState(false)
