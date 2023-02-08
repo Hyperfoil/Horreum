@@ -32,7 +32,6 @@
         <module>horreum-api-generator</module>
         <module>horreum-api</module>
         <module>horreum-client</module>
-        <module>horreum-integration</module>
     </modules>
     <name>Horreum</name>
     <description>Performance results repository</description>
