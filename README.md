@@ -6,7 +6,7 @@ Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io)
 
 ## Prerequisites
 
-* Java 11
+* [Java 11](https://adoptium.net/temurin/releases/?version=11)
 * [Apache Maven 3.8](https://maven.apache.org/)
 * [Keycloak](https://www.keycloak.org/)
 * [Grafana](https://grafana.com/)
