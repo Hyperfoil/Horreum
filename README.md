@@ -106,7 +106,9 @@ Keycloak is running on [localhost:8180](http://localhost:8180)
 | Admin | `admin` | `secret` | |
 | User | `user` | `secret` | `horreum` |
 
-## Getting Started
+## Getting Started with development server
+
+To run with test cases do
 
 ```bash
 mvn package
