@@ -165,3 +165,7 @@ Consider giving the project a [star](https://github.com/Hyperfoil/Horreum/starga
 ## License
 
 [Apache-2.0 license](https://opensource.org/licenses/Apache-2.0)
+
+## Thanks to all the Contributors ❤️
+
+<img src="https://contrib.rocks/image?repo=Hyperfoil/Horreum" />
