@@ -122,10 +122,10 @@ mvn -DskipTests=true package
 mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev
 ```
 
-Access
+## Get Access
 
-* [localhost:3000](http://localhost:3000) for the create-react-app live code server
-* [localhost:8080](http://localhost:8080) for the Quarkus development server
+* For the create-react-app live code server [localhost:3000](http://localhost:3000)
+* For the Quarkus development code server   [localhost:8080](http://localhost:8080)
 
 ### Troubleshooting development infrastructure
 
