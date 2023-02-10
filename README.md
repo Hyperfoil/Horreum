@@ -12,7 +12,7 @@ Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io)
 * [Grafana](https://grafana.com/)
 * [PostgreSQL 12+](https://www.postgresql.org/)
 
-### Docker
+### Local development with Docker Compose
 
 We have prepared a `docker-compose` script to setup Keycloak, PostgreSQL and Grafana using
 
@@ -21,7 +21,7 @@ docker-compose -p horreum -f infra/docker-compose.yml up -d
 ```
 and after a few moments everything should be up and ready. The script will create some example users.
 
-### podman
+### Local development with Podman
 
 We have prepared a `podman-compose` script to setup Keycloak, PostgreSQL and Grafana using
 
