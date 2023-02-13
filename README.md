@@ -1,7 +1,10 @@
 # Horreum
 
-Horreum is a service for storing performance data and regression analysis. For more information please visit our 
-Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io)
+Horreum is a service for storing performance data and regression analysis.
+
+Please, visit our Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io)
+
+For more information 
 
 ## Prerequisites
 
@@ -153,9 +156,9 @@ Contributions to `Horreum` are managed on [GitHub.com](https://github.com/Hyperf
 * [Feature request](https://github.com/Hyperfoil/Horreum/issues)
 * [Code submission](https://github.com/Hyperfoil/Horreum/pulls)
 
-Contributions are the way to support and get involved in community !
+Contribution is the best way to support and get involved in community !
 
-Please, once check our [Code of Conduct](./CODE_OF_CONDUCT.md) policies for interacting in our
+Please, consult our [Code of Conduct](./CODE_OF_CONDUCT.md) policies for interacting in our
 community.
 
 Consider giving the project a [star](https://github.com/Hyperfoil/Horreum/stargazers) on
