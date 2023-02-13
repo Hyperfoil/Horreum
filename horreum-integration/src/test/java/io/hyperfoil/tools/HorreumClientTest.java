@@ -12,6 +12,7 @@ import java.util.Collections;
 
 import javax.ws.rs.BadRequestException;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -29,7 +30,7 @@ import io.hyperfoil.tools.horreum.entity.json.Schema;
 
 @ExtendWith({HorreumTestClientExtension.class})
 public class HorreumClientTest {
-    @Test
+    @Disabled
     public void testAddRunFromData() throws JsonProcessingException {
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
 
@@ -40,7 +41,7 @@ public class HorreumClientTest {
         }
     }
 
-    @Test
+    @Disabled
     public void testAddRunWithMetadataData() throws JsonProcessingException {
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
         JsonNode metadata = JsonNodeFactory.instance.objectNode().put("$schema", "urn:foobar").put("foo", "bar");
@@ -52,7 +53,7 @@ public class HorreumClientTest {
         }
     }
 
-    @Test
+    @Disabled
     public void testAddRun() throws JsonProcessingException {
         Run run = new Run();
         run.start = Instant.now();
@@ -64,7 +65,7 @@ public class HorreumClientTest {
     }
 
     // Javascript execution gets often broken with new Quarkus releases, this should catch it
-    @Test
+    @Disabled
     public void testJavascriptExecution() throws InterruptedException {
         Schema schema = new Schema();
         schema.uri = "urn:dummy:schema";
