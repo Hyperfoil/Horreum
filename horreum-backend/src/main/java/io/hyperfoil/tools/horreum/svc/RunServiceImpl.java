@@ -835,7 +835,7 @@ public class RunServiceImpl implements RunService {
    public Run updateRun(int id, Consumer<Run> consumer) {
       Run run = Run.findById(id);
       if (run == null) {
-         throw ServiceException.notFound("Run not found");
+         throw ServiceException.notFound("Run not found: " + id);
       }
       consumer.accept(run);
       run.persistAndFlush();
@@ -850,7 +850,7 @@ public class RunServiceImpl implements RunService {
       // FIXME: fetchival stringifies the body into JSON string :-/
       Run run = Run.findById(id);
       if (run == null) {
-         throw ServiceException.notFound("Run not found.");
+         throw ServiceException.notFound("Run not found: " + id);
       }
       String uri = Util.destringify(schemaUri);
       // Triggering dirty property on Run
