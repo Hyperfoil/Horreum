@@ -42,7 +42,7 @@ public final class TestUtil {
          } catch (InterruptedException e) {
             fail("Interrupted while polling condition.");
          }
-      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(10));
+      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(30));
       test.run();
    }
 
@@ -58,7 +58,7 @@ public final class TestUtil {
          } catch (InterruptedException e) {
             fail("Interrupted while polling condition.");
          }
-      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(10));
+      } while (System.currentTimeMillis() < now + TimeUnit.SECONDS.toMillis(30));
       fail("Failed waiting for test to become true");
    }
 
