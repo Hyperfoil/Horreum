@@ -2,7 +2,9 @@
 
 Horreum is a service for storing performance data and regression analysis.
 
-Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io)
+Project,visit our project website: website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io)
+
+for more information.
 
 ## Prerequisites
 
@@ -14,7 +16,7 @@ Project website: [https://horreum.hyperfoil.io](https://horreum.hyperfoil.io)
 
 ### Local development with Docker Compose
 
-We have prepared a `docker-compose` script to setup Keycloak, PostgreSQL and Grafana using
+We have prepared a `docker-compose` script to setup Keycloak, PostgreSQL and Grafana using following command.
 
 ```bash
 docker-compose -p horreum -f infra/docker-compose.yml up -d
@@ -23,7 +25,7 @@ and after a few moments everything should be up and ready. The script will creat
 
 ### Local development with Podman
 
-We have prepared a `podman-compose` script to setup Keycloak, PostgreSQL and Grafana using
+We have prepared a `podman-compose` script to setup Keycloak, PostgreSQL and Grafana using following command.
 
 ```bash
 ./infra/podman-compose.sh
@@ -154,7 +156,7 @@ Contributions to `Horreum` are managed on [GitHub.com](https://github.com/Hyperf
 * [Feature request](https://github.com/Hyperfoil/Horreum/issues)
 * [Code submission](https://github.com/Hyperfoil/Horreum/pulls)
 
-Contributions are most welcome !
+Contribution is the best way to support and get involved in community !
 
 Please, consult our [Code of Conduct](./CODE_OF_CONDUCT.md) policies for interacting in our
 community.
