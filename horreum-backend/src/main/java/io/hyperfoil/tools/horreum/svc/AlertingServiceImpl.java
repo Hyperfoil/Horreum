@@ -309,7 +309,7 @@ public class AlertingServiceImpl implements AlertingService {
          for (GrafanaClient.Datasource ds : grafana.listDatasources()) {
             if (ds.name.equals("Horreum")) {
                if (!url.equals(ds.url) && ds.id != null) {
-                  log.infof("Deleting Grafana datasource %d: has URL %s, expected %s", ds.id, ds.url, url);
+                  log.debugf("Deleting Grafana datasource %d: has URL %s, expected %s", ds.id, ds.url, url);
                   grafana.deleteDatasource(ds.id);
                } else {
                   create = false;
@@ -317,7 +317,7 @@ public class AlertingServiceImpl implements AlertingService {
             }
          }
          if (create) {
-            log.info("Creating new Horreum datasource in Grafana");
+            log.debug("Creating new Horreum datasource in Grafana");
             GrafanaClient.Datasource newDatasource = new GrafanaClient.Datasource();
             newDatasource.url = url;
             grafana.addDatasource(newDatasource);
@@ -337,7 +337,7 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void recalculateDatapointsForDataset(DataSet dataset, boolean notify, boolean debug, Recalculation recalculation) {
-      log.infof("Analyzing dataset %d (%d/%d)", dataset.id, dataset.run.id, dataset.ordinal);
+      log.debugf("Analyzing dataset %d (%d/%d)", (long)dataset.id, (long)dataset.run.id, dataset.ordinal);
       Test test = Test.findById(dataset.testid);
       if (test == null) {
          log.errorf("Cannot load test ID %d", dataset.testid);
@@ -391,9 +391,9 @@ public class AlertingServiceImpl implements AlertingService {
    void importTest(int testId, JsonNode config) {
       JsonNode variablesNode = config.path("variables");
       if (variablesNode.isMissingNode() || variablesNode.isNull()) {
-         log.infof("Importing test %d: no change detection variables", testId);
+         log.debugf("Importing test %d: no change detection variables", testId);
       } else if (variablesNode.isArray()) {
-         log.infof("Importing %d change detection variables for test %d", variablesNode.size(), testId);
+         log.debugf("Importing %d change detection variables for test %d", variablesNode.size(), testId);
          for (var node : variablesNode) {
             try {
                Variable variable = Util.OBJECT_MAPPER.treeToValue(node, Variable.class);
@@ -409,9 +409,9 @@ public class AlertingServiceImpl implements AlertingService {
       }
       JsonNode rulesNode = config.path("missingDataRules");
       if (rulesNode.isMissingNode() || rulesNode.isNull()) {
-         log.infof("Importing test %d: no missing data rules", testId);
+         log.debugf("Importing test %d: no missing data rules", testId);
       } else if (rulesNode.isArray()) {
-         log.infof("Importing %d missing data rules for test %d", rulesNode.size(), testId);
+         log.debugf("Importing %d missing data rules for test %d", rulesNode.size(), testId);
          for (var node : rulesNode) {
             try {
                em.merge(Util.OBJECT_MAPPER.treeToValue(node, MissingDataRule.class));
@@ -666,7 +666,7 @@ public class AlertingServiceImpl implements AlertingService {
       // Last datapoint is already in the list
       if (dataPoints.isEmpty()) {
          if (expectExists) {
-            log.error("The published datapoint should be already in the list");
+            log.warn("The published datapoint should be already in the list");
          }
       } else {
          int datasetId = dataPoints.get(0).getDatasetId();
@@ -999,7 +999,7 @@ public class AlertingServiceImpl implements AlertingService {
       Recalculation previous = recalcProgress.putIfAbsent(testId, recalculation);
       while (previous != null) {
          if (!previous.done) {
-            log.infof("Already started recalculation on test %d, ignoring.", testId);
+            log.debugf("Already started recalculation on test %d, ignoring.", testId);
             return;
          }
          if (recalcProgress.replace(testId, previous, recalculation)) {
@@ -1008,10 +1008,10 @@ public class AlertingServiceImpl implements AlertingService {
          previous = recalcProgress.putIfAbsent(testId, recalculation);
       }
       try {
-         log.infof("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
+         log.debugf("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
          recalculation.datasets = getDatasetsForRecalculation(testId, from, to);
          int numRuns = recalculation.datasets.size();
-         log.infof("Starting recalculation of test %d, %d runs", testId, numRuns);
+         log.debugf("Starting recalculation of test %d, %d runs", testId, numRuns);
          int completed = 0;
          recalcProgress.put(testId, recalculation);
          for (int datasetId : recalculation.datasets) {
@@ -1298,14 +1298,14 @@ public class AlertingServiceImpl implements AlertingService {
       query.setParameter(1, run.id);
       int updated = query.executeUpdate();
       if (updated > 0) {
-         log.infof("Removed %d run expectations as run %d was added.", updated, run.id);
+         log.debugf("Removed %d run expectations as run %d was added.", updated, run.id);
       }
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void onDatasetDeleted(DataSet.Info info) {
-      log.infof("Removing datasets and changes for dataset %d (%d/%d, test %d)", info.id, info.runId, info.ordinal, info.testId);
+      log.debugf("Removing datasets and changes for dataset %d (%d/%d, test %d)", info.id, info.runId, info.ordinal, info.testId);
       for (DataPoint dp : DataPoint.<DataPoint>list("dataset_id", info.id)) {
          messageBus.publish(DataPoint.EVENT_DELETED, info.testId, new DataPoint.Event(dp, info.testId, false));
          dp.delete();
@@ -1320,7 +1320,7 @@ public class AlertingServiceImpl implements AlertingService {
    void onTestDeleted(Test test) {
       // We need to delete in a loop to cascade this to ChangeDetection
       List<Variable> variables = Variable.list("testid", test.id);
-      log.infof("Deleting %d variables for test %s (%d)", variables.size(), test.name, test.id);
+      log.debugf("Deleting %d variables for test %s (%d)", variables.size(), test.name, test.id);
       for (var variable: variables) {
          variable.delete();
       }

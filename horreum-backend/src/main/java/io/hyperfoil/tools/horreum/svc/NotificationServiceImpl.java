@@ -79,7 +79,7 @@ public class NotificationServiceImpl implements NotificationService {
          log.debug("Notification skipped");
          return;
       }
-      log.infof("Received new changes in test %d (%s), dataset %d/%d (fingerprint: %s)",
+      log.debugf("Received new changes in test %d (%s), dataset %d/%d (fingerprint: %s)",
             event.dataset.testId, event.testName, event.dataset.runId, event.dataset.ordinal, event.fingerprint);
       notifyAll(event.dataset.testId, n -> n.notifyChanges(event));
    }
@@ -94,7 +94,7 @@ public class NotificationServiceImpl implements NotificationService {
       // TODO: breaks storage/alerting separation!
       Test test = Test.findById(event.dataset.testId);
       String testName = test == null ? "unknown" : test.name;
-      log.infof("Received missing values event in test %d (%s), run %d, variables %s", event.dataset.testId, testName, event.dataset.id, event.variables);
+      log.debugf("Received missing values event in test %d (%s), run %d, variables %s", event.dataset.testId, testName, event.dataset.id, event.variables);
 
       String fingerprint = em.getReference(DataSet.class, event.dataset.id).getFingerprint();
       notifyAll(event.dataset.testId, n -> n.notifyMissingValues(testName, fingerprint, event));

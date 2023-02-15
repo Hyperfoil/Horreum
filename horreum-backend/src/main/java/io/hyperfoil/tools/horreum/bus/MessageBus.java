@@ -137,7 +137,7 @@ public class MessageBus {
          }
       });
       int index = registerIndex(channel, component);
-      log.infof("Channel %s, component %s has index %d", channel, component, index);
+      log.debugf("Channel %s, component %s has index %d", channel, component, index);
       MessageConsumer<Object> consumer = eventBus.consumer(channel, event -> {
          if (!(event.body() instanceof Message)) {
             log.errorf("Not a message on %s: %s", channel, event.body());
@@ -253,7 +253,7 @@ public class MessageBus {
             // and components are not registered yet
             if (type != null) {
                JsonNode json = (JsonNode) row[4];
-               log.infof("Retrying message %d (#%d) in channel %s (%s)", id, results.getRowNumber(), channel, type.getName());
+               log.debugf("Retrying message %d (#%d) in channel %s (%s)", id, results.getRowNumber(), channel, type.getName());
                try {
                   Object payload = Util.OBJECT_MAPPER.treeToValue(json, type);
                   eventBus.publish(channel, new Message(id, testId, flags, payload));

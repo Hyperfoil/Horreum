@@ -154,16 +154,16 @@ public class BaseServiceTest {
 
    @BeforeEach
    public void beforeMethod(TestInfo info) {
-      log.infof("Starting test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"), info.getDisplayName());
+      log.debugf("Starting test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"), info.getDisplayName());
    }
 
    @AfterEach
    public void afterMethod(TestInfo info) {
-      log.infof("Completed test %s.%s", info.getTestClass().map(Class::getName).orElse("<unknown>"), info.getDisplayName());
+      log.debugf("Completed test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"), info.getDisplayName());
       dropAllViewsAndTests();
       afterMethodCleanup.forEach(Runnable::run);
       afterMethodCleanup.clear();
-      log.infof("Finished cleanup of test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"), info.getDisplayName());
+      log.debugf("Finished cleanup of test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"), info.getDisplayName());
    }
 
    protected void dropAllViewsAndTests() {

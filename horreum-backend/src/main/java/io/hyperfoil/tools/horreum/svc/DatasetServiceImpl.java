@@ -396,7 +396,7 @@ public class DatasetServiceImpl implements DatasetService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void calculateLabels(int testId, int datasetId, int queryLabelId, boolean isRecalculation) {
-      log.infof("Calculating labels for dataset %d, label %d", datasetId, queryLabelId);
+      log.debugf("Calculating labels for dataset %d, label %d", datasetId, queryLabelId);
       List<Object[]> extracted;
       try {
          // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible

@@ -42,7 +42,7 @@ public class BaseTransactionRetryInterceptor {
             // give the other transaction a bit more chance to complete
             //noinspection BusyWait
             Thread.sleep(ThreadLocalRandom.current().nextInt(i*i) * 10L);
-            log.infof("Retrying failed transaction, attempt %d/%d", i, Util.MAX_TRANSACTION_RETRIES);
+            log.debugf("Retrying failed transaction, attempt %d/%d", i, Util.MAX_TRANSACTION_RETRIES);
             log.trace("This is the exception that caused retry: ", t);
          }
       }
