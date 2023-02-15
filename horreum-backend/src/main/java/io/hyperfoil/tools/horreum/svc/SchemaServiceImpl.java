@@ -179,7 +179,7 @@ public class SchemaServiceImpl implements SchemaService {
          schema.persist();
          returnSchema = schema;
       }
-      log.infof("Added schema %s (%d), URI %s", returnSchema.name, returnSchema.id, returnSchema.uri);
+      log.debugf("Added schema %s (%d), URI %s", returnSchema.name, returnSchema.id, returnSchema.uri);
       em.flush(); //manually flush to validate constraints
       return returnSchema.id;
    }
@@ -270,7 +270,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void validateRunData(int runId, Predicate<String> schemaFilter) {
-      log.infof("About to validate data for run %d", runId);
+      log.debugf("About to validate data for run %d", runId);
       Run run = Run.findById(runId);
       if (run == null) {
          log.errorf("Cannot load run %d for schema validation", runId);
@@ -293,7 +293,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void validateDatasetData(int datasetId, Predicate<String> schemaFilter) {
-      log.infof("About to validate data for dataset %d", datasetId);
+      log.debugf("About to validate data for dataset %d", datasetId);
       DataSet dataset = DataSet.findById(datasetId);
       if (dataset == null) {
          // Don't log error when the dataset is not present and we're revalidating all datasets - it might be
@@ -394,7 +394,7 @@ public class SchemaServiceImpl implements SchemaService {
             error.error = JsonNodeFactory.instance.objectNode().put("type", "Execution error").put("message", e.getMessage());
             consumer.accept(error);
          }
-         log.info("Validation completed");
+         log.debug("Validation completed");
       }
    }
 
@@ -414,7 +414,7 @@ public class SchemaServiceImpl implements SchemaService {
       if (schema == null) {
          throw ServiceException.notFound("Schema not found");
       } else {
-         log.infof("Deleting schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
+         log.debugf("Deleting schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
          em.createNativeQuery("DELETE FROM label_extractors WHERE label_id IN (SELECT id FROM label WHERE schema_id = ?1)")
                .setParameter(1, id).executeUpdate();
          Label.delete("schema_id", id);
@@ -739,7 +739,7 @@ public class SchemaServiceImpl implements SchemaService {
       }
       em.merge(schema);
       if (labels == null || labels.isNull() || labels.isMissingNode()) {
-         log.infof("Import schema %d: no labels", schema.id);
+         log.debugf("Import schema %d: no labels", schema.id);
       } else if (labels.isArray()) {
          for (JsonNode node : labels) {
             try {
@@ -754,7 +754,7 @@ public class SchemaServiceImpl implements SchemaService {
          throw ServiceException.badRequest("Wrong node type for labels: " + labels.getNodeType());
       }
       if (transformers == null || transformers.isNull() || transformers.isMissingNode()) {
-         log.infof("Import schema %d: no transformers", schema.id);
+         log.debugf("Import schema %d: no transformers", schema.id);
       } else if (transformers.isArray()) {
          for (JsonNode node : transformers) {
             try {

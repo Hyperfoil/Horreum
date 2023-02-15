@@ -56,7 +56,7 @@ public class GrafanaUserFilter {
    public Uni<Void> filter(ContainerRequestContext containerRequestContext, SecurityIdentity identity) {
       if (!(identity.getPrincipal() instanceof JWTCallerPrincipal)) {
          // ignore anonymous access
-         log.debug("Anonymouse access, ignoring.");
+         log.trace("Anonymouse access, ignoring.");
          return Uni.createFrom().nullItem();
       }
       JWTCallerPrincipal principal = (JWTCallerPrincipal) identity.getPrincipal();
@@ -78,7 +78,7 @@ public class GrafanaUserFilter {
       }
       String userEmail = email;
       return grafana.get().lookupUser(email)
-            .onItem().invoke(() -> log.debugf("User %s exists!", userEmail))
+            .onItem().invoke(() -> log.tracef("User %s exists!", userEmail))
             .onFailure().recoverWithUni((Throwable t) -> {
          if (t instanceof WebApplicationException) {
             WebApplicationException e = (WebApplicationException) t;
@@ -93,7 +93,7 @@ public class GrafanaUserFilter {
                      })
                      .onFailure().recoverWithItem(t2 -> {
                   if (t2 instanceof WebApplicationException && ((WebApplicationException) t2).getResponse().getStatus() == 412) {
-                     log.infof("This request did not create user %s due to a mid-air collision.", userInfo.login);
+                     log.warnf("This request did not create user %s due to a mid-air collision.", userInfo.login);
                   } else {
                      log.errorf(t, "Failed to create user %s", userEmail);
                   }

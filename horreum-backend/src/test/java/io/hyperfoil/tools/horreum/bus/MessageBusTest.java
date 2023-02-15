@@ -85,7 +85,7 @@ public class MessageBusTest {
       messageBus.subscribe(CHANNEL, "testMany", String.class, str -> {
          if (ThreadLocalRandom.current().nextBoolean()) {
             int value = alive.decrementAndGet();
-            log.infof("Decreased to %d", value);
+            log.debugf("Decreased to %d", value);
             phaser.arriveAndDeregister();
          } else {
             phaser.arrive();
@@ -118,13 +118,13 @@ public class MessageBusTest {
          }
       }
       TestUtil.eventually(() -> TestUtil.isMessageBusEmpty(tm, em));
-      log.info("Test completed");
+      log.debug("Test completed");
    }
 
    private void awaitMessageBus(int expectedMessages) {
       TestUtil.eventually(() -> expectedMessages == Util.withTx(tm, () -> {
          long count = ((BigInteger) em.createNativeQuery("SELECT COUNT(*) FROM messagebus").getSingleResult()).longValue();
-         log.infof("Message bus has %d messages, expected %d", count, expectedMessages);
+         log.debugf("Message bus has %d messages, expected %d", count, expectedMessages);
          try {
             Thread.sleep(10);
          } catch (InterruptedException e) {

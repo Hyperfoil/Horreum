@@ -107,7 +107,7 @@ public class TestServiceImpl implements TestService {
       } else if (!identity.getRoles().contains(test.owner)) {
          throw ServiceException.forbidden("You are not an owner of test " + id);
       }
-      log.infof("Deleting test %s (%d)", test.name, test.id);
+      log.debugf("Deleting test %s (%d)", test.name, test.id);
       test.delete();
       messageBus.publish(Test.EVENT_DELETED, test.id, test);
    }
@@ -545,7 +545,7 @@ public class TestServiceImpl implements TestService {
       long deleted = em.createNativeQuery("DELETE FROM dataset USING run WHERE run.id = dataset.runid AND run.trashed AND dataset.testid = ?1")
             .setParameter(1, testId).executeUpdate();
       if (deleted > 0) {
-         log.infof("Deleted %d datasets for trashed runs in test %s (%d)", deleted, test.name, testId);
+         log.debugf("Deleted %d datasets for trashed runs in test %s (%d)", (long)deleted, (Object)test.name, (Object)testId);
       }
 
       ScrollableResults results = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND NOT trashed ORDER BY start")
@@ -554,7 +554,7 @@ public class TestServiceImpl implements TestService {
             .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
          int runId = (int) results.get(0);
-         log.infof("Recalculate DataSets for run %d - forcing recalculation for test %d (%s)", runId, testId, test.name);
+         log.debugf("Recalculate DataSets for run %d - forcing recalculation for test %d (%s)", runId, testId, test.name);
          // transform will add proper roles anyway
          messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> {
             int newDatasets = 0;

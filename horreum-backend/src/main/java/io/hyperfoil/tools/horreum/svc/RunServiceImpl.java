@@ -139,7 +139,7 @@ public class RunServiceImpl implements RunService {
    @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    void onTestDeleted(Test test) {
-      log.infof("Trashing runs for test %s (%d)", test.name, test.id);
+      log.debugf("Trashing runs for test %s (%d)", test.name, test.id);
       ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, test.id));
       while (results.next()) {
          int id = (int) results.get(0);
@@ -178,7 +178,7 @@ public class RunServiceImpl implements RunService {
       }
       // we don't have to care about races with new runs
       findRunsWithUri(schema.uri, (runId, testId) -> {
-         log.infof("Recalculate DataSets for run %d - schema %d (%s) changed", runId, schema.id, schema.uri);
+         log.debugf("Recalculate DataSets for run %d - schema %d (%s) changed", runId, schema.id, schema.uri);
          messageBus.executeForTest(testId, () -> onNewOrUpdatedSchemaForRun(runId));
       });
    }
@@ -814,7 +814,7 @@ public class RunServiceImpl implements RunService {
       Run run = updateRun(id, r -> r.trashed = trashed);
       if (trashed) {
          List<DataSet> datasets = DataSet.list("run.id", id);
-         log.infof("Trashing run %d (test %d, %d datasets)", run.id, run.testid, datasets.size());
+         log.debugf("Trashing run %d (test %d, %d datasets)", (long)run.id, (long)run.testid, (long)datasets.size());
          for (var dataset : datasets) {
             messageBus.publish(DataSet.EVENT_DELETED, run.testid, dataset.getInfo());
             dataset.delete();
@@ -913,7 +913,7 @@ public class RunServiceImpl implements RunService {
       long deleted = em.createNativeQuery("DELETE FROM dataset USING run WHERE run.id = dataset.runid AND run.trashed AND run.start BETWEEN ?1 AND ?2")
             .setParameter(1, from).setParameter(2, to).executeUpdate();
       if (deleted > 0) {
-         log.infof("Deleted %d datasets for trashed runs between %s and %s", deleted, from, to);
+         log.debugf("Deleted %d datasets for trashed runs between %s and %s", deleted, from, to);
       }
 
       ScrollableResults results = em.createNativeQuery("SELECT id, testid FROM run WHERE start BETWEEN ?1 AND ?2 AND NOT trashed ORDER BY start")
@@ -923,7 +923,7 @@ public class RunServiceImpl implements RunService {
       while (results.next()) {
          int runId = (int) results.get(0);
          int testId = (int) results.get(1);
-         log.infof("Recalculate DataSets for run %d - forcing recalculation of all between %s and %s", runId, from, to);
+         log.debugf("Recalculate DataSets for run %d - forcing recalculation of all between %s and %s", runId, from, to);
          // transform will add proper roles anyway
          messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> transform(runId, true)));
       }
@@ -949,7 +949,7 @@ public class RunServiceImpl implements RunService {
          log.errorf("Transformation parameters error: run %s", runId);
          return 0;
       }
-      log.infof("Transforming run ID %d, recalculation? %s", runId, isRecalculation);
+      log.debugf("Transforming run ID %d, recalculation? %s", runId, Boolean.toString(isRecalculation));
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
       for (DataSet old : DataSet.<DataSet>list("runid", runId)) {

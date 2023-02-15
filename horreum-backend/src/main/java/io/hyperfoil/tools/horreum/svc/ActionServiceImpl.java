@@ -80,7 +80,7 @@ public class ActionServiceImpl implements ActionService {
    private void executeActions(String event, int testId, Object payload, boolean notify){
       List<Action> actions = getActions(event, testId);
       if (actions.isEmpty()) {
-         new ActionLog(PersistentLog.INFO, testId, event, null, "No actions found.").persist();
+         new ActionLog(PersistentLog.DEBUG, testId, event, null, "No actions found.").persist();
          return;
       }
       for (Action action : actions) {
@@ -298,9 +298,9 @@ public class ActionServiceImpl implements ActionService {
 
    void importTest(int testId, JsonNode actions) {
       if (actions.isMissingNode() || actions.isNull()) {
-         log.infof("Import test %d: no actions");
+         log.debugf("Import test %d: no actions");
       } else if (actions.isArray()) {
-         log.infof("Importing %d actions for test %d", actions.size(), testId);
+         log.debugf("Importing %d actions for test %d", actions.size(), testId);
          for (JsonNode node : actions) {
             if (!node.isObject()) {
                throw ServiceException.badRequest("Test actions must be an array of objects");
