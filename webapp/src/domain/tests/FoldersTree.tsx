@@ -43,7 +43,7 @@ export default function FoldersTree(props: FoldersTreeProps) {
         }
     }
     let activeItem: TreeViewDataItem | undefined = root
-    root.defaultExpanded = true
+    root.defaultExpanded = false
     if (props.folder) {
         for (const part of props.folder.split("/")) {
             activeItem = activeItem?.children?.find(i => i.name === part)
@@ -51,9 +51,6 @@ export default function FoldersTree(props: FoldersTreeProps) {
                 activeItem.defaultExpanded = true
             }
         }
-    }
-    if (root.children?.length === 0) {
-        return null
     }
     return (
         <TreeView
