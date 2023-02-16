@@ -179,39 +179,6 @@
 
         <plugins>
             <plugin>
-                <groupId>com.github.eirslett</groupId>
-                <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.12.0</version>
-                <executions>
-                    <execution>
-                        <id>install npm</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>install-node-and-npm</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>npm install</id>
-                        <goals>
-                            <goal>npm</goal>
-                        </goals>
-                        <configuration>
-                            <arguments>install</arguments>
-                            <!-- npm has problems resulting in EHOSTUNREACH on some IPv6 networks -->
-                            <environmentVariables>
-                                <NODE_OPTIONS>--dns-result-order=ipv4first</NODE_OPTIONS>
-                            </environmentVariables>
-                        </configuration>
-                    </execution>
-                </executions>
-                <configuration>
-                    <nodeVersion>v18.1.0</nodeVersion>
-                    <yarnVersion>v1.22.17</yarnVersion>
-                    <installDirectory>../webapp</installDirectory>
-                    <workingDirectory>../webapp</workingDirectory>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
                 <executions>
