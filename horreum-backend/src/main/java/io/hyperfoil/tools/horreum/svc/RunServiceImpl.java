@@ -790,6 +790,8 @@ public class RunServiceImpl implements RunService {
       Util.addPaging(sql, limit, page, sort, direction);
       Query query = em.createNativeQuery(sql.toString());
       query.setParameter(1, uri);
+      initTypes(query);
+
       @SuppressWarnings("unchecked")
       List<Object[]> runs = query.getResultList();
 
