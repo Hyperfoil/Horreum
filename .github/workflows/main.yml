@@ -29,8 +29,6 @@ jobs:
         restore-keys: ${{ runner.os }}-m2
     - name: Maven Version
       run: mvn --version
-    - name: Export NODE_OPTIONS
-      run: export NODE_OPTIONS=--openssl-legacy-provider
     - name: Build with Maven
       run: mvn clean package -B --file pom.xml -DskipTests
     - name: Test with Maven
