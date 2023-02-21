@@ -80,7 +80,7 @@ export default function About() {
                         cells={["Category", "Value"]}
                         rows={[
                             ["Version", versionInfo.version],
-                            ["Start timestamp", formatDateTime(versionInfo.startTimestamp)],
+                            ["Up since", formatDateTime(versionInfo.startTimestamp)],
                         ]}
                     >
                         <TableBody />
