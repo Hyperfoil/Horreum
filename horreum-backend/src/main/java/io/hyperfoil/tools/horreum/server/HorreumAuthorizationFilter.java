@@ -49,10 +49,10 @@ public class HorreumAuthorizationFilter {
                if (issuer.get().equals("any")) {
                   // any issuer matches
                } else if (!issuer.get().equals(iss)) {
-                  return replyWrongIss(iss);
+                  return replyWrongIss(iss, issuer.get());
                }
             } else if (!authServerUrl.equals(iss)) {
-               return replyWrongIss(iss);
+               return replyWrongIss(iss, authServerUrl);
             }
             return null;
          }
@@ -63,7 +63,7 @@ public class HorreumAuthorizationFilter {
       return null;
    }
 
-   private Response replyWrongIss(String iss) {
-      return Response.status(Response.Status.FORBIDDEN).entity("Authorization token has issuer '" + iss + "' but this is not the expected issuer; you have probably received the token from a wrong URL. Please login into Horreum Web UI and check the login URL used.").build();
+   private Response replyWrongIss(String iss, String expected) {
+      return Response.status(Response.Status.FORBIDDEN).entity("Authorization token has issuer '" + iss + "' but this is not the expected issuer '" + expected + "'; you have probably received the token from a wrong URL. Please login into Horreum Web UI and check the login URL used.").build();
    }
 }
