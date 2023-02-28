@@ -26,16 +26,6 @@ export default function AllSchema() {
     const columns: Column<Schema>[] = useMemo(
         () => [
             {
-                Header: "Access",
-                accessor: "access",
-                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
-            },
-            {
-                Header: "Owner",
-                accessor: "owner",
-                Cell: (arg: C) => teamToName(arg.cell.value),
-            },
-            {
                 Header: "Name",
                 accessor: "name",
                 Cell: (arg: C) => {
@@ -49,6 +39,16 @@ export default function AllSchema() {
             {
                 Header: "Description",
                 accessor: "description",
+            },
+            {
+                Header: "Owner",
+                accessor: "owner",
+                Cell: (arg: C) => teamToName(arg.cell.value),
+            },
+            {
+                Header: "Access",
+                accessor: "access",
+                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
             },
             {
                 Header: "Actions",
