@@ -285,22 +285,6 @@ export default function AllTests() {
     let columns: Col[] = useMemo(
         () => [
             {
-                Header: "Id",
-                accessor: "id",
-                Cell: (arg: C) => {
-                    const {
-                        cell: { value },
-                    } = arg
-                    return <NavLink to={`/test/${value}`}>{value}</NavLink>
-                },
-            },
-            {
-                Header: "Access",
-                accessor: "access",
-                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
-            },
-            { Header: "Owner", accessor: "owner", Cell: (arg: C) => teamToName(arg.cell.value) },
-            {
                 Header: "Name",
                 accessor: "name",
                 Cell: (arg: C) => <NavLink to={`/test/${arg.row.original.id}`}>{arg.cell.value}</NavLink>,
@@ -343,6 +327,12 @@ export default function AllTests() {
                         </NavLink>
                     )
                 },
+            },
+            { Header: "Owner", accessor: "owner", Cell: (arg: C) => teamToName(arg.cell.value) },
+            {
+                Header: "Access",
+                accessor: "access",
+                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
             },
             {
                 Header: "Actions",
