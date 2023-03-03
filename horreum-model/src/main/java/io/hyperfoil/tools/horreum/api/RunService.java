@@ -26,9 +26,11 @@ import io.hyperfoil.tools.horreum.entity.json.Run;
 
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
@@ -102,6 +104,10 @@ public interface RunService {
    @Path("data")
    @Consumes(MediaType.MULTIPART_FORM_DATA)
    @Produces(MediaType.TEXT_PLAIN) // run ID as string
+   @APIResponses(value = { 
+     @APIResponse(responseCode = "200", 
+       content = { @Content(mediaType = MediaType.TEXT_PLAIN, 
+       schema = @Schema(type = SchemaType.STRING)) })})
    @ApiIgnore
    Response addRunFromData(@Parameter(required = true) @QueryParam("start") String start,
                            @Parameter(required = true) @QueryParam("stop") String stop,
