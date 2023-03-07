@@ -65,31 +65,6 @@ You can preload Horreum with some example data with
 
 once Horreum is running.
 
-### OpenSSL
-
-Horreum currently depends on the OpenSSL 1.1.x API so you will need to enable legacy mode if you are
-using an OpenSSL 3 platform.
-
-To do this edit the configuration file `/etc/ssl/openssl.cnf` to uncomment this section
-
-``` openssl.conf
-[provider_sect]
-default = default_sect
-legacy = legacy_sect
-
-[default_sect]
-activate = 1
-
-[legacy_sect]
-activate = 1
-```
-
-and set the following environment variable
-
-``` bash
-export NODE_OPTIONS=--openssl-legacy-provider
-```
-
 ## Credentials
 
 ### Horreum

@@ -36,7 +36,7 @@ export default function UserSearch(props: UserSearchProps) {
                             fireSearch(value)
                         }
                     }}
-                    onChange={value => {
+                    onChange={(event, value) => {
                         setUserSearch(value)
                         window.clearTimeout(userSearchTimer)
                         setUserSearchTimer(window.setTimeout(() => fireSearch(value), 1000))
