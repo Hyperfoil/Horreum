@@ -1,4 +1,4 @@
-import { Dispatch } from "redux"
+import { AnyAction, Dispatch } from "redux"
 import { useDispatch, useSelector } from "react-redux"
 
 import { Alert as PatternflyAlert, AlertActionCloseButton, AlertVariant } from "@patternfly/react-core"
@@ -26,7 +26,7 @@ export interface ConstraintViolation {
     message: string
 }
 
-export interface AddAlertAction {
+export interface AddAlertAction extends AnyAction {
     type: typeof ADD_ALERT
     alert: Alert
 }

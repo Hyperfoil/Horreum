@@ -323,7 +323,7 @@ export default function Changes() {
                             <div style={{ display: "flex" }}>
                                 <DatePicker
                                     value={date}
-                                    onChange={value => {
+                                    onChange={(event, value) => {
                                         setDate(value)
                                         const dateTime = DateTime.fromFormat(value, "yyyy-MM-dd")
                                         if (dateTime.isValid) {

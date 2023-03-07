@@ -23,7 +23,7 @@ export default function Editor(props: EditorProps) {
         editor.addAction({
             id: "my-unique-id",
             label: "my label",
-            keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S],
+            keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
             precondition: undefined,
             keybindingContext: undefined,
             contextMenuGroupId: "navigation",

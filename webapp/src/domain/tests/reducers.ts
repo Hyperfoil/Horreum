@@ -3,6 +3,7 @@ import { Map } from "immutable"
 import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction } from "../../alerts"
 import { Access, Action, Run, Test, TestToken, Transformer, View } from "../../api"
+import { AnyAction } from "redux"
 
 export type CompareFunction = (runs: Run[]) => string
 
@@ -101,7 +102,7 @@ export interface UpdateTransformersAction {
     transformers: Transformer[]
 }
 
-export interface UpdateChangeDetectionAction {
+export interface UpdateChangeDetectionAction extends AnyAction {
     type: typeof actionTypes.UPDATE_CHANGE_DETECTION
     testId: number
     timelineLabels?: string[]
