@@ -40,16 +40,21 @@ export default function AllSchema() {
                 Header: "Description",
                 accessor: "description",
             },
+
             {
                 Header: "Owner",
-                accessor: "owner",
-                Cell: (arg: C) => teamToName(arg.cell.value),
-            },
-            {
-                Header: "Access",
-                accessor: "access",
-                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
-            },
+                accessor: ({ owner, access }: Schema) => {
+                    return (
+                      <div>
+                        <span>{teamToName(owner)}</span>{" "}
+                        <span title={access} style={{ color: "black" }}>
+                          <AccessIcon access={access} />
+                        </span>
+                      </div>
+                    );
+                },
+              },
+              
             {
                 Header: "Actions",
                 accessor: "id",
