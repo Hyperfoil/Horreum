@@ -28,9 +28,13 @@ export default function AllSchema() {
             {
                 Header: "Name",
                 accessor: "name",
+                sortDescFirst: false,
+                sortType: "alphanumeric",
                 Cell: (arg: C) => {
                     return <NavLink to={"/schema/" + arg.row.original.id}>{arg.cell.value}</NavLink>
                 },
+
+                
             },
             {
                 Header: "URI",
