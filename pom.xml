@@ -126,6 +126,10 @@
             <organization>Red Hat</organization>
             <organizationUrl>http://www.redhat.com</organizationUrl>
         </developer>
+        <developer>
+            <name>Shivam Sharma</name>
+            <email>meshivam81@gmail.com</email>
+        </developer>
     </developers>
 
     <dependencyManagement>
