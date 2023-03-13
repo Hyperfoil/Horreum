@@ -193,8 +193,6 @@ public class ReportServiceImpl implements ReportService {
          em.merge(report);
       }
       em.flush();
-      em.detach(report);
-      report.config.test = null;
       return report;
    }
 
@@ -300,7 +298,6 @@ public class ReportServiceImpl implements ReportService {
       validateTableConfig(config);
       TableReport report = createTableReport(config, reportId);
       em.detach(report);
-      report.config.test = null;
       return report;
    }
 

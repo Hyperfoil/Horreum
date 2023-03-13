@@ -27,6 +27,9 @@ public class ReportLog extends PersistentLog {
 
    @JsonProperty(required = true, value = "reportId")
    public int getReportId() {
+      if (report == null || report.id == null) {
+         return -1;
+      }
       return report.id;
    }
 
