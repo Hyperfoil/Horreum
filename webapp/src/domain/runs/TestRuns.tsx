@@ -87,27 +87,6 @@ const tableColumns: RunColumn[] = [
         },
     },
     {
-        Header: "Access",
-        accessor: "access",
-        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
-    },
-    {
-        Header: "Owner",
-        accessor: "owner",
-        Cell: (arg: C) => teamToName(arg.cell.value),
-    },
-    {
-        Header: "Executed",
-        accessor: "start",
-        Cell: (arg: C) => ExecutionTime(arg.row.original),
-    },
-    {
-        Header: "Duration",
-        id: "(stop - start)",
-        accessor: (run: RunSummary) =>
-            Duration.fromMillis(toEpochMillis(run.stop) - toEpochMillis(run.start)).toFormat("hh:mm:ss.SSS"),
-    },
-    {
         Header: "Schema(s)",
         accessor: "schemas",
         disableSortBy: true,
@@ -129,9 +108,30 @@ const tableColumns: RunColumn[] = [
         Cell: (arg: C) => Description(arg.cell.value),
     },
     {
+        Header: "Executed",
+        accessor: "start",
+        Cell: (arg: C) => ExecutionTime(arg.row.original),
+    },
+    {
+        Header: "Duration",
+        id: "(stop - start)",
+        accessor: (run: RunSummary) =>
+            Duration.fromMillis(toEpochMillis(run.stop) - toEpochMillis(run.start)).toFormat("hh:mm:ss.SSS"),
+    },
+    {
         Header: "Datasets",
         accessor: "datasets",
         Cell: (arg: C) => arg.cell.value.length,
+    },
+    {
+        Header: "Owner",
+        accessor: "owner",
+        Cell: (arg: C) => teamToName(arg.cell.value),
+    },
+    {
+        Header: "Access",
+        accessor: "access",
+        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
     },
     {
         Header: "Actions",
