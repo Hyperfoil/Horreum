@@ -77,27 +77,6 @@ const staticColumns: DatasetColumn[] = [
         },
     },
     {
-        Header: "Access",
-        accessor: "access",
-        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
-    },
-    {
-        Header: "Owner",
-        accessor: "owner",
-        Cell: (arg: C) => teamToName(arg.cell.value),
-    },
-    {
-        Header: "Executed",
-        accessor: "start",
-        Cell: (arg: C) => ExecutionTime(arg.row.original),
-    },
-    {
-        Header: "Duration",
-        id: "(stop - start)",
-        accessor: dataset =>
-            Duration.fromMillis(toEpochMillis(dataset.stop) - toEpochMillis(dataset.start)).toFormat("hh:mm:ss.SSS"),
-    },
-    {
         Header: "Schema(s)",
         accessor: "schemas",
         disableSortBy: true,
@@ -117,6 +96,27 @@ const staticColumns: DatasetColumn[] = [
         Header: "Description",
         accessor: "description",
         Cell: (arg: C) => Description(arg.cell.value),
+    },
+    {
+        Header: "Executed",
+        accessor: "start",
+        Cell: (arg: C) => ExecutionTime(arg.row.original),
+    },
+    {
+        Header: "Duration",
+        id: "(stop - start)",
+        accessor: dataset =>
+            Duration.fromMillis(toEpochMillis(dataset.stop) - toEpochMillis(dataset.start)).toFormat("hh:mm:ss.SSS"),
+    },
+    {
+        Header: "Owner",
+        accessor: "owner",
+        Cell: (arg: C) => teamToName(arg.cell.value),
+    },
+    {
+        Header: "Access",
+        accessor: "access",
+        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
     },
 ]
 
