@@ -429,5 +429,35 @@
                 </plugins>
             </build>
         </profile>
+
+         <!--remove-node-cache -->
+         <profile>
+            <id>remove-node-cache</id>
+            <build>
+              <plugins>
+                <plugin>
+                  <groupId>org.codehaus.mojo</groupId>
+                  <artifactId>exec-maven-plugin</artifactId>
+                  <version>3.0.0</version>
+                  <executions>
+                    <execution>
+                      <id>remove-node-cache</id>
+                      <phase>clean</phase>
+                      <goals>
+                        <goal>exec</goal>
+                      </goals>
+                      <configuration>
+                        <executable>sh</executable>
+                        <arguments>
+                          <argument>-c</argument>
+                          <argument>rm -rf webapp/node webapp/node_modules webapp/package-lock.json</argument>
+                        </arguments>
+                      </configuration>
+                    </execution>
+                  </executions>
+                </plugin>
+              </plugins>
+            </build>
+          </profile>
     </profiles>
 </project>
