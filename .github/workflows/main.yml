@@ -10,9 +10,20 @@ on:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        os:
+          -  {
+            name: "windows-latest",
+            build-options: "\"-Dquarkus.container-image.build=false\" -pl '!horreum-client, !horreum-integration' -DskipITs -DskipTests"
+          }
+          - {
+            name: "ubuntu-latest",
+            build-options: ""
+          }
     env:
       ENVIRONMENT: CI
-    runs-on: ubuntu-latest
+    runs-on:  ${{ matrix.os.name }}
 
     steps:
     - uses: actions/checkout@v3
@@ -30,9 +41,9 @@ jobs:
     - name: Maven Version
       run: mvn --version
     - name: Build with Maven
-      run: mvn clean package -B --file pom.xml -DskipTests
+      run: mvn clean package -B --file pom.xml -DskipTests ${{ matrix.os.build-options }}
     - name: Test with Maven
-      run: mvn -B verify --file pom.xml
+      run: mvn -B verify --file pom.xml ${{ matrix.os.build-options }}
     - name: Upload artifact for failed workflow
       if: failure()
       uses: actions/upload-artifact@v3

@@ -32,7 +32,7 @@ type ActionsProps = {
     onModified(modified: boolean): void
 }
 
-export default function Actions({ testId, testOwner, funcsRef, onModified }: ActionsProps) {
+export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: ActionsProps) {
     const [actions, setActions] = useState<Action[]>([])
     const [logModalOpen, setLogModalOpen] = useState(false)
     const isTester = useTester(testOwner)

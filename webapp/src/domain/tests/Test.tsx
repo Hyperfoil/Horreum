@@ -31,7 +31,7 @@ import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
 import Experiments from "./Experiments"
 import TestExportImport from "./TestExportImport"
-import Actions from "./Actions"
+import ActionsUI from "./ActionsUI"
 import Access from "./Access"
 import Subscriptions from "./Subscriptions"
 import Transformers from "./Transformers"
@@ -211,7 +211,7 @@ export default function Test() {
                                 onReset={resetFunc(actionsFuncsRef)}
                                 isModified={() => modified}
                             >
-                                <Actions
+                                <ActionsUI
                                     testId={testId}
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
