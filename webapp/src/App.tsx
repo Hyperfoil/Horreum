@@ -3,10 +3,10 @@ import "@patternfly/patternfly/patternfly.css" //have to use this import to cust
 
 import { Nav, NavItem, NavList, Page, PageHeader, PageHeaderTools } from "@patternfly/react-core"
 import { ConnectedRouter } from "connected-react-router"
-import { NavLink } from "react-router-dom"
+import { NavLink, Routes, Route } from "react-router-dom"
 
 import { Provider, useSelector } from "react-redux"
-import { Route, Switch } from "react-router"
+// import { Route } from "react-router"
 
 import store, { history } from "./store"
 import { isAdminSelector, LoginLogout } from "./auth"
@@ -124,28 +124,30 @@ function Main() {
                 }
             >
                 <Alerts />
-                <Switch>
-                    <Route exact path="/" component={AllTests} />
-                    <Route exact path="/test" component={AllTests} />
-                    <Route exact path="/test/:testId" component={Test} />
+                <Routes>
 
-                    <Route exact path="/run/list/:testId" component={TestRuns} />
-                    <Route exact path="/run/dataset/list/:testId" component={TestDatasets} />
-                    <Route exact path="/run/:id" component={Run} />
-                    <Route exact path="/dataset/comparison" component={DatasetComparison} />
+                    <Route path="/" element={<AllTests />} />
+                    <Route path="/test" element={<AllTests />} />
+                    <Route path="/test/:testId" element={<Test />} />
 
-                    <Route exact path="/schema" component={AllSchema} />
-                    <Route path="/schema/:schemaId" component={Schema} />
+                    <Route path="/run/list/:testId" element={<TestRuns />} />
+                    <Route path="/run/dataset/list/:testId" element={<TestDatasets />} />
+                    <Route path="/run/:id" element={<Run />} />
+                    <Route path="/dataset/comparison" element={<DatasetComparison />} />
 
-                    <Route exact path="/changes" component={Changes} />
+                    <Route path="/schema" element={<AllSchema />} />
+                    <Route path="/schema/:schemaId" element={<Schema />} />
 
-                    <Route exact path="/reports" component={Reports} />
-                    <Route exact path="/reports/table/config/:configId" component={TableReportConfigPage} />
-                    <Route exact path="/reports/table/:id" component={TableReportPage} />
+                    <Route path="/changes" element={<Changes />} />
 
-                    <Route exact path="/admin" component={Admin} />
-                    <Route exact path="/usersettings" component={UserSettings} />
-                </Switch>
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/reports/table/config/:configId" element={<TableReportConfigPage />} />
+                    <Route path="/reports/table/:id" element={<TableReportPage />} />
+
+                    <Route path="/admin" element={<Admin />} />
+                    <Route path="/usersettings" element={<UserSettings />} />
+                    
+                </Routes>
             </Page>
             <ContextHelp />
         </ConnectedRouter>

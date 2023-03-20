@@ -32,7 +32,7 @@ import {
     Spinner,
     Title,
 } from "@patternfly/react-core"
-import { NavLink, useHistory } from "react-router-dom"
+import { NavLink, useNavigate} from "react-router-dom"
 
 type TimespanSelectProps = {
     onChange(span: number): void
@@ -135,8 +135,8 @@ function toNumber(value: any) {
 }
 
 export default function Changes() {
-    const history = useHistory()
-    const params = new URLSearchParams(history.location.search)
+    const navigate = useNavigate()
+    const params = new URLSearchParams(location.search)
     // eslint-disable-next-line
     const paramTest = useMemo(() => params.get("test") || undefined, [])
     const paramFingerprint = params.get("fingerprint")
@@ -196,7 +196,7 @@ export default function Changes() {
             return
         }
         document.title = `${selectedTest} | Horreum`
-        history.replace(history.location.pathname + createQuery(false))
+        navigate(location.pathname + createQuery(false), { replace: true })
     }, [selectedTest, selectedFingerprint, endTime, timespan, lineType, firstNow, history])
     useEffect(() => {
         setPanels([])

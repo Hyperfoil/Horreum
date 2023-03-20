@@ -23,7 +23,7 @@ import { updateActions } from "./actions"
 import { testEventTypes } from "../actions/reducers"
 import ActionComponentForm from "../actions/ActionComponentForm"
 import ActionLogModal from "./ActionLogModal"
-import { Redirect } from "react-router-dom"
+import { Navigate  } from "react-router-dom"
 
 type ActionsProps = {
     testId: number
@@ -58,7 +58,7 @@ export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: A
     }
 
     if (!isTester) {
-        return <Redirect to="/" />
+        return <Navigate to="/" />
     }
     return (
         <>

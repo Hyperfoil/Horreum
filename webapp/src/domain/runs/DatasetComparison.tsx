@@ -11,7 +11,7 @@ import {
     Spinner,
 } from "@patternfly/react-core"
 import { expandable, ICell, IRow, Table, TableHeader, TableBody } from "@patternfly/react-table"
-import { useHistory, NavLink } from "react-router-dom"
+import { useNavigate, NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 
 import Api, { Test, View } from "../../api"
@@ -32,8 +32,8 @@ type Ds = {
 
 export default function DatasetComparison() {
     window.document.title = "Dataset comparison: Horreum"
-    const history = useHistory()
-    const params = new URLSearchParams(history.location.search)
+    const navigate = useNavigate()
+    const params = new URLSearchParams(location.search)
     const testId = parseInt(params.get("testId") || "-1")
     const dispatch = useDispatch()
     const [test, setTest] = useState<Test>()
@@ -41,7 +41,7 @@ export default function DatasetComparison() {
         Api.testServiceGet(testId).then(setTest, e =>
             dispatchError(dispatch, e, "FETCH_TEST", "Failed to fetch test " + testId)
         )
-    }, [testId])
+    }, [testId, navigate])
     const datasets = useMemo(
         () =>
             params

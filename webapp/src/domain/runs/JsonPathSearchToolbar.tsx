@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useDispatch } from "react-redux"
-import { useHistory } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import jsonpath from "jsonpath"
 
 import { RunsDispatch } from "./reducers"
@@ -64,7 +64,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
         }
     }, [props.originalData])
 
-    const history = useHistory()
+    const navigate = useNavigate()
     function onQueryUpdate(type: string, query: string) {
         const loc = window.location
         const urlParams = new URLSearchParams(window.location.search)
@@ -74,7 +74,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
         } else {
             urlParams.delete("query")
         }
-        history.replace(`${loc.pathname}?${urlParams.toString()}${loc.hash}`)
+        navigate(`${loc.pathname}?${urlParams.toString()}${loc.hash}`, {replace: true})
     }
 
     const inputProps: InputProps<string> = {
