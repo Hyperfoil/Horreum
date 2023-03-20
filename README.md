@@ -124,9 +124,11 @@ rm horreum-backend/.env .grafana
 
 The [Horreum operator](https://github.com/Hyperfoil/horreum-operator) can help to setup a production environment.
 
-## Contributing
+## 🧑‍💻 Contributing
 
-Contributions to `Horreum` are managed on [GitHub.com](https://github.com/Hyperfoil/Horreum/)
+Contributions to `Horreum` Please check our [CONTRIBUTING.md](./CONTRIBUTING.md)
+
+### If you have any idea or doubt 👇
 
 * [Ask a question](https://github.com/Hyperfoil/Horreum/discussions)
 * [Raise an issue](https://github.com/Hyperfoil/Horreum/issues)
