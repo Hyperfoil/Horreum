@@ -28,3 +28,23 @@ git push origin <your branch_name>
 ```
 
 And then you can check your change in your fork version and then create a ` pull_request` and wait for the review. The project maintainer will review your PR and then they will merged it. If you want to support, please give a ⭐
+
+## Things to remember before making changes
+---
+- Before making any contribution please make sure your local `master` keep up-to-date with upstream `master`. To do that type the following commands.
+
+- **first add upstream**
+```
+git remote add upstream https://github.com/Hyperfoil/Horreum.git
+```
+- **Pull all changes from upstream**
+
+```
+git pull upstream master
+```
+
+- **Keep your fork up-to-date**
+
+```
+git push origin master
+```
