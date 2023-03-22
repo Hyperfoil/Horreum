@@ -45,12 +45,11 @@
     "uuid": "9.0.0"
   },
   "scripts": {
-    "start": "BROWSER=none react-scripts start",
+    "start": "react-scripts start",
     "build": "react-scripts build --output-hashing=all --prod --aot --configuration=production",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "lint": "eslint \"**/*.{ts,tsx}\"",
-    "prepare": "cd .. && husky install",
     "prettier-format": "prettier --config .prettierrc \"**/*.{ts,tsx}\" --write"
   },
   "eslintConfig": {

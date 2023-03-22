@@ -16,6 +16,8 @@ for more information.
 * [Grafana](https://grafana.com/)
 * [PostgreSQL 12+](https://www.postgresql.org/)
 
+> **_NOTE:_**  On Windows 10, currently it is only possible to develop Horreum using a WSL environment
+
 ### Local development with Docker Compose
 
 We have prepared a `docker-compose` script to setup Keycloak, PostgreSQL and Grafana using following command.
@@ -24,6 +26,8 @@ We have prepared a `docker-compose` script to setup Keycloak, PostgreSQL and Gra
 docker-compose -p horreum -f infra/docker-compose.yml up -d
 ```
 and after a few moments everything should be up and ready. The script will create some example users.
+
+> **_NOTE:_**  On Windows 10, please ensure you are running [Docker Desktop](https://www.docker.com/products/docker-desktop/) with "Use WSL 2 based engine" enabled
 
 ### Local development with Podman
 
@@ -99,6 +103,12 @@ To run without test cases do
 ```bash
 mvn -DskipTests=true package
 mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev
+```
+
+> **_NOTE:_**  On Windows 10 the first build is very slow. running in dev mode may require the quinoa timeout increasing
+
+```bash
+mvn quarkus:dev -Dquarkus.quinoa.dev-server.check-timeout=120000
 ```
 
 ## Get Access
