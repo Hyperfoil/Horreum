@@ -141,6 +141,11 @@ If you are having problems with Grafana login after restarting the infrastructur
 rm horreum-backend/.env .grafana
 ```
 
+## Tested platforms
+
+* Linux (Fedora, RHEL)
+* Windows/WSL2 (Windows 10)
+
 ## Operator
 
 The [Horreum operator](https://github.com/Hyperfoil/horreum-operator) can help to setup a production environment.
