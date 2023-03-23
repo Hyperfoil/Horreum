@@ -54,7 +54,8 @@ services:
     - "${PORT_OFFSET:-0}"
     environment:
     - POSTGRES_HOST=localhost
-    - KEYCLOAK_HOST=localhost
+    - KEYCLOAK_INTERNAL_HOST=172.17.0.1
+    - KEYCLOAK_UI_HOST=localhost
     volumes:
     - "${WORKING_PATH:-../}:/cwd:rw,z"
   grafana:
