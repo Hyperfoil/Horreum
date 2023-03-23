@@ -1,6 +1,6 @@
 <div align="center">
 
-![hyperfoil-logo](./webapp/public/hyperfoil-logo.png)
+# Horreum
 
 <a href="https://github.com/Hyperfoil/Horreum/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/Hyperfoil/Horreum"></a>
 <a href="https://github.com/Hyperfoil/Horreum/fork"><img alt="GitHub forks" src="https://img.shields.io/github/forks/Hyperfoil/Horreum"></a>
