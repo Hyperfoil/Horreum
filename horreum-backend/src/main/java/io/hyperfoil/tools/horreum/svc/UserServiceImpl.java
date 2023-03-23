@@ -128,6 +128,7 @@ public class UserServiceImpl implements UserService {
 
    @Override
    @Blocking
+   @RolesAllowed({Roles.MANAGER, Roles.ADMIN})
    public void createUser(NewUser user) {
       if (user == null) {
          throw ServiceException.badRequest("Missing user as the request body");
