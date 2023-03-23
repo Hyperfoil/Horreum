@@ -27,4 +27,25 @@ After creating new branch start making your changes and once the changes done th
 git push origin <your branch_name>
 ```
 
-And then you can check your change in your fork version and then create a ` pull_request` and wait for the review. The project maintainer will review your PR and then they will merged it. If you want to support, please give a ⭐
+Now you can check your change in your fork version and then create a ` pull_request` and wait for the review. The project maintainer will review your PR and then they will merged it. If you want to support, please give a ⭐
+
+### Things to remember before making changes
+
+Before making any contribution make sure your local master keep up-to-date with upstream master. To do that type the following commands.
+
+- First add upstream
+```
+git remote add upstream https://github.com/Hyperfoil/Horreum.git
+```
+- Pull all changes from upstream
+```
+ git fetch upstream
+```
+- Keep your fork up-to-date
+```
+  git rebase -i upstream/master
+```
+- Creating a branch
+```
+git checkout -b myfeature master
+```
