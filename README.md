@@ -38,7 +38,7 @@ docker-compose -p horreum -f infra/docker-compose.yml up -d
 ```
 and after a few moments everything should be up and ready. The script will create some example users.
 
-> **_NOTE:_**  On Windows 10, please ensure you are running [Docker Desktop](https://www.docker.com/products/docker-desktop/) with "Use WSL 2 based engine" enabled
+> **_NOTE:_**  On Windows 10 and Windows 11, please ensure you are running [Docker Desktop](https://www.docker.com/products/docker-desktop/) with "Use WSL 2 based engine" enabled
 
 ### Local development with Podman
 
