@@ -12,7 +12,7 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.hyperfoil.tools.horreum.entity.json.AllowedSite;
+import io.hyperfoil.tools.horreum.entity.data.AllowedSiteDAO;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.hyperfoil.tools.horreum.svc.Util;
 import io.smallrye.mutiny.Uni;
@@ -64,7 +64,7 @@ public class HttpAction implements ActionPlugin {
    @Override
    public void validate(JsonNode config, JsonNode secrets) {
       String url = config.path("url").asText();
-      if (AllowedSite.find("?1 LIKE CONCAT(prefix, '%')", url).count() == 0) {
+      if (AllowedSiteDAO.find("?1 LIKE CONCAT(prefix, '%')", url).count() == 0) {
          throw ServiceException.badRequest("The requested URL is not on the list of allowed URL prefixes; " +
                "visit /api/hook/prefixes to see this list. Only the administrator is allowed to add prefixes.");
       }

@@ -16,14 +16,14 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.Extractor;
-import io.hyperfoil.tools.horreum.entity.json.Schema;
-import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.entity.report.ReportComment;
-import io.hyperfoil.tools.horreum.entity.report.ReportComponent;
-import io.hyperfoil.tools.horreum.entity.report.TableReport;
-import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
+import io.hyperfoil.tools.horreum.api.report.ReportComment;
+import io.hyperfoil.tools.horreum.api.report.ReportComponent;
+import io.hyperfoil.tools.horreum.api.report.TableReport;
+import io.hyperfoil.tools.horreum.api.data.Extractor;
+import io.hyperfoil.tools.horreum.api.data.Schema;
+import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
+import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -53,7 +53,7 @@ public class ReportServiceTest extends BaseServiceTest {
       assertCount(report, 4, d -> d.category, "native");
       assertCount(report, 4, d -> d.series, "windows");
       assertCount(report, 4, d -> d.series, "linux");
-      TableReport.Data duplicated = report.data.stream()
+      TableReport.DataDTO duplicated = report.data.stream()
             .filter(d -> "windows".equals(d.series) && "jvm".equals(d.category) && Integer.parseInt(d.scale) == 2)
             .findFirst().orElseThrow();
       assertEquals(0.4, duplicated.values.get(0).asDouble());
@@ -80,7 +80,7 @@ public class ReportServiceTest extends BaseServiceTest {
       assertCount(report, 3, d -> d.category, "native");
       assertCount(report, 4, d -> d.series, "windows");
       assertCount(report, 2, d -> d.series, "linux");
-      TableReport.Data duplicated = report.data.stream()
+      TableReport.DataDTO duplicated = report.data.stream()
             .filter(d -> "windows".equals(d.series) && "jvm".equals(d.category) && Integer.parseInt(d.scale) == 2)
             .findFirst().orElseThrow();
       assertEquals(0.8, duplicated.values.get(0).asDouble());
@@ -144,7 +144,7 @@ public class ReportServiceTest extends BaseServiceTest {
    }
 
    private void uploadExampleRuns(Test test) throws InterruptedException {
-      BlockingQueue<DataSet.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<DataSetDAO.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSetDAO.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
 
       long ts = System.currentTimeMillis();
       uploadRun(ts - 1, createRunData("production", "windows", "jvm", 1, 0.5, 150_000_000, 123) , test.name);
@@ -163,7 +163,7 @@ public class ReportServiceTest extends BaseServiceTest {
       }
    }
 
-   private void assertCount(TableReport report, int expected, Function<TableReport.Data, String> selector, String value) {
+   private void assertCount(TableReport report, int expected, Function<TableReport.DataDTO, String> selector, String value) {
       assertEquals(expected, report.data.stream().map(selector).filter(value::equals).count());
    }
 
@@ -211,7 +211,7 @@ public class ReportServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest("missing"));
       createComparisonSchema();
 
-      BlockingQueue<DataSet.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<DataSetDAO.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSetDAO.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
       int runId = uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(queue.poll(10, TimeUnit.SECONDS));
 
@@ -220,7 +220,7 @@ public class ReportServiceTest extends BaseServiceTest {
             .then().statusCode(200).extract().body().as(TableReport.class);
 
       assertEquals(1, report.data.size());
-      TableReport.Data data = report.data.iterator().next();
+      TableReport.DataDTO data = report.data.iterator().next();
       assertEquals(runId, data.runId);
       assertEquals("", data.series);
       assertEquals("", data.category);

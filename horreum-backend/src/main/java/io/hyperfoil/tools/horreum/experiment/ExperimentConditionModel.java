@@ -5,11 +5,11 @@ import java.util.List;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
-import io.hyperfoil.tools.horreum.api.ExperimentService;
-import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
+import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 
 public interface ExperimentConditionModel {
    ConditionConfig config();
 
-   ExperimentService.ComparisonResult compare(JsonNode config, List<DataPoint> baseline, DataPoint newDatapoint);
+   ExperimentService.ComparisonResult compare(JsonNode config, List<DataPointDAO> baseline, DataPointDAO newDatapoint);
 }

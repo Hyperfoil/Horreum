@@ -19,6 +19,14 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
 
+import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
+import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
+import io.hyperfoil.tools.horreum.entity.*;
+import io.hyperfoil.tools.horreum.entity.data.*;
+import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
+import io.hyperfoil.tools.horreum.mapper.DatasetLogMapper;
+import io.hyperfoil.tools.horreum.mapper.ExperimentProfileMapper;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.Transformers;
@@ -31,15 +39,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
-import io.hyperfoil.tools.horreum.api.ExperimentService;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.entity.ExperimentComparison;
-import io.hyperfoil.tools.horreum.entity.ExperimentProfile;
-import io.hyperfoil.tools.horreum.entity.PersistentLog;
-import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
-import io.hyperfoil.tools.horreum.entity.alerting.DatasetLog;
-import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.DatasetLogDAO;
 import io.hyperfoil.tools.horreum.experiment.ExperimentConditionModel;
 import io.hyperfoil.tools.horreum.experiment.RelativeDifferenceExperimentModel;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -61,28 +64,30 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(DataPoint.EVENT_DATASET_PROCESSED, "ExperimentService", DataPoint.DatasetProcessedEvent.class, this::onDatapointsCreated);
-      messageBus.subscribe(Test.EVENT_DELETED, "ExperimentService", Test.class, this::onTestDeleted);
+      messageBus.subscribe(DataPointDAO.EVENT_DATASET_PROCESSED, "ExperimentService", DataPointDAO.DatasetProcessedEvent.class, this::onDatapointsCreated);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "ExperimentService", TestDAO.class, this::onTestDeleted);
    }
 
    @WithRoles
    @PermitAll
    @Override
    public Collection<ExperimentProfile> profiles(int testId) {
-      return ExperimentProfile.list("test_id", testId);
+      List<ExperimentProfileDAO> profiles = ExperimentProfileDAO.list("test_id", testId);
+      return profiles.stream().map(ExperimentProfileMapper::from).collect(Collectors.toList());
    }
 
    @WithRoles
    @RolesAllowed(Roles.TESTER)
    @Transactional
    @Override
-   public int addOrUpdateProfile(int testId, ExperimentProfile profile) {
-      if (profile.selectorLabels == null || profile.selectorLabels.isEmpty()) {
+   public int addOrUpdateProfile(int testId, ExperimentProfile dto) {
+      if (dto.selectorLabels == null || dto.selectorLabels.isEmpty()) {
          throw ServiceException.badRequest("Experiment profile must have selector labels defined.");
-      } else if (profile.baselineLabels == null || profile.baselineLabels.isEmpty()) {
+      } else if (dto.baselineLabels == null || dto.baselineLabels.isEmpty()) {
          throw ServiceException.badRequest("Experiment profile must have baseline labels defined.");
       }
-      profile.test = em.getReference(Test.class, testId);
+      ExperimentProfileDAO profile = ExperimentProfileMapper.to(dto);
+      profile.test = em.getReference(TestDAO.class, testId);
       if (profile.id < 0) {
          profile.id = null;
          profile.persist();
@@ -100,7 +105,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @Transactional
    @Override
    public void deleteProfile(int testId, int profileId) {
-      if (!ExperimentProfile.deleteById(profileId)) {
+      if (!ExperimentProfileDAO.deleteById(profileId)) {
          throw ServiceException.notFound("No experiment profile " + profileId);
       }
    }
@@ -114,19 +119,21 @@ public class ExperimentServiceImpl implements ExperimentService {
    @WithRoles
    @Transactional
    public List<ExperimentResult> runExperiments(int datasetId) {
-      DataSet dataset = DataSet.findById(datasetId);
+      DataSetDAO dataset = DataSetDAO.findById(datasetId);
       if (dataset == null) {
          throw ServiceException.notFound("No dataset " + datasetId);
       }
       List<ExperimentService.ExperimentResult> results = new ArrayList<>();
-      DataSet.Info info = dataset.getInfo();
-      runExperiments(info, results::add, logs -> results.add(new ExperimentResult(null, logs, info, Collections.emptyList(), Collections.emptyMap(), null, false)), false);
+      DataSetDAO.Info info = dataset.getInfo();
+      runExperiments(info, results::add, logs -> results.add(
+              new ExperimentResult(null, logs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
+                      DataSetMapper.fromInfo(info), Collections.emptyList(), Collections.emptyMap(), null, false)), false);
       return results;
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {
+   public void onDatapointsCreated(DataPointDAO.DatasetProcessedEvent event) {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
       runExperiments(event.dataset, result -> messageBus.publish(ExperimentResult.NEW_RESULT, event.dataset.testId, result),
             logs -> logs.forEach(log -> log.persist()), event.notify);
@@ -134,22 +141,22 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDeleted(Test test) {
+   public void onTestDeleted(TestDAO test) {
       // we need to iterate in order to cascade the operation
-      for (var profile : ExperimentProfile.list("test_id", test.id)) {
+      for (var profile : ExperimentProfileDAO.list("test_id", test.id)) {
          profile.delete();
       }
    }
 
-   private void addLog(List<DatasetLog> logs, int testId, int datasetId, int level, String format, Object... args) {
+   private void addLog(List<DatasetLogDAO> logs, int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
       log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
-      logs.add(new DatasetLog(em.getReference(Test.class, testId), em.getReference(DataSet.class, datasetId),
+      logs.add(new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId),
             level, "experiment", msg));
    }
 
-   private void runExperiments(DataSet.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLog>> noProfileConsumer, boolean notify) {
-      List<DatasetLog> logs = new ArrayList<>();
+   private void runExperiments(DataSetDAO.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLogDAO>> noProfileConsumer, boolean notify) {
+      List<DatasetLogDAO> logs = new ArrayList<>();
 
       Query selectorQuery = em.createNativeQuery("WITH lvalues AS (" +
             "SELECT ep.id AS profile_id, selector_filter, jsonb_array_length(selector_labels) as count, label.name, lv.value " +
@@ -208,7 +215,7 @@ public class ExperimentServiceImpl implements ExperimentService {
             .getResultList();
 
       Map<Integer, List<Integer>> baselines = new HashMap<>();
-      Map<Integer, List<DatasetLog>> perProfileLogs = matchingProfile.stream().collect(Collectors.toMap(Function.identity(), id -> new ArrayList<>(logs)));
+      Map<Integer, List<DatasetLogDAO>> perProfileLogs = matchingProfile.stream().collect(Collectors.toMap(Function.identity(), id -> new ArrayList<>(logs)));
       Util.evaluateMany(baselineRows, r -> Util.makeFilter((String) r[1]), r -> (JsonNode) r[2], (r, v) -> {
          if (v.asBoolean()) {
             baselines.computeIfAbsent((Integer) r[0], profileId -> new ArrayList<>()).add((Integer) r[3]);
@@ -222,7 +229,7 @@ public class ExperimentServiceImpl implements ExperimentService {
          output -> perProfileLogs.forEach((profileId, pls)-> addLog(pls, info.testId, info.id,
                PersistentLog.DEBUG, "Baseline filter output: %s", output)));
 
-      Map<Integer, DataPoint> datapoints = DataPoint.<DataPoint>find("dataset_id = ?1", info.id)
+      Map<Integer, DataPointDAO> datapoints = DataPointDAO.<DataPointDAO>find("dataset_id = ?1", info.id)
             .stream().collect(Collectors.toMap(dp -> dp.variable.id, Function.identity(),
                   // defensive merge: although we should not be able to load any old datapoints
                   // (with identical dataset_id+variable_id combo) these may temporarily appear
@@ -230,11 +237,11 @@ public class ExperimentServiceImpl implements ExperimentService {
                   (dp1, dp2) -> dp1.id > dp2.id ? dp1 : dp2));
 
       for (var entry : baselines.entrySet()) {
-         List<DatasetLog> profileLogs = perProfileLogs.get(entry.getKey());
-         ExperimentProfile profile = ExperimentProfile.findById(entry.getKey());
-         Map<Integer, List<DataPoint>> byVar = new HashMap<>();
-         List<Integer> variableIds = profile.comparisons.stream().map(ExperimentComparison::getVariableId).collect(Collectors.toList());
-         DataPoint.<DataPoint>find("dataset_id IN ?1 AND variable_id IN ?2", Sort.descending("timestamp", "dataset_id"), entry.getValue(), variableIds)
+         List<DatasetLogDAO> profileLogs = perProfileLogs.get(entry.getKey());
+         ExperimentProfileDAO profile = ExperimentProfileDAO.findById(entry.getKey());
+         Map<Integer, List<DataPointDAO>> byVar = new HashMap<>();
+         List<Integer> variableIds = profile.comparisons.stream().map(io.hyperfoil.tools.horreum.entity.ExperimentComparison::getVariableId).collect(Collectors.toList());
+         DataPointDAO.<DataPointDAO>find("dataset_id IN ?1 AND variable_id IN ?2", Sort.descending("timestamp", "dataset_id"), entry.getValue(), variableIds)
                .stream().forEach(dp -> byVar.computeIfAbsent(dp.variable.id, v -> new ArrayList<>()).add(dp));
          Map<ExperimentComparison, ComparisonResult> results = new HashMap<>();
          for (var comparison : profile.comparisons) {
@@ -244,17 +251,18 @@ public class ExperimentServiceImpl implements ExperimentService {
                addLog(profileLogs, info.testId, info.id, PersistentLog.ERROR, "Unknown experiment comparison model '%s' for variable %s in profile %s", comparison.model, comparison.variable.name, profile.name);
                continue;
             }
-            List<DataPoint> baseline = byVar.get(comparison.getVariableId());
+            List<DataPointDAO> baseline = byVar.get(comparison.getVariableId());
             if (baseline == null) {
                addLog(profileLogs, info.testId, info.id, PersistentLog.INFO, "Baseline for comparison of variable %s in profile %s is empty (datapoints are not present)", comparison.variable.name, profile.name);
                continue;
             }
-            DataPoint datapoint = datapoints.get(comparison.getVariableId());
+            DataPointDAO datapoint = datapoints.get(comparison.getVariableId());
             if (datapoint == null) {
                addLog(profileLogs, info.testId, info.id, PersistentLog.ERROR, "No datapoint for comparison of variable %s in profile %s", comparison.variable.name, profile.name);
                continue;
             }
-            results.put(comparison, model.compare(comparison.config, baseline, datapoint));
+            results.put(ExperimentProfileMapper.fromExperimentComparison(comparison),
+                    model.compare(comparison.config, baseline, datapoint));
          }
 
          Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id IN ?1 ORDER BY start DESC");
@@ -270,28 +278,33 @@ public class ExperimentServiceImpl implements ExperimentService {
                .addScalar("value", JsonNodeBinaryType.INSTANCE)
                .getSingleResult();
          Hibernate.initialize(profile.test.name);
-         resultConsumer.accept(new ExperimentResult(profile, profileLogs, info, baseline, results, extraLabels, notify));
+         resultConsumer.accept(new ExperimentResult(ExperimentProfileMapper.from(profile),
+                 profileLogs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
+                 DataSetMapper.fromInfo(info), baseline, results,
+                 extraLabels, notify));
       }
    }
 
    JsonNode exportTest(int testId) {
-      return Util.OBJECT_MAPPER.valueToTree(ExperimentProfile.list("test_id", testId));
+      List<ExperimentProfileDAO> experimentProfiles = ExperimentProfileDAO.list("test_id", testId);
+      return Util.OBJECT_MAPPER.valueToTree(experimentProfiles.stream().map(ExperimentProfileMapper::from).collect(Collectors.toList()));
    }
 
-   void importTest(int testId, JsonNode experiments) {
+   void importTest(int testId, JsonNode experiments, boolean forceUseTestId) {
       if (experiments.isMissingNode() || experiments.isNull()) {
          log.infof("Import test %d: no experiment profiles", testId);
       } else if (experiments.isArray()) {
          for (JsonNode node : experiments) {
-            ExperimentProfile profile;
+            ExperimentProfileDAO profile;
             try {
-               profile = Util.OBJECT_MAPPER.treeToValue(node, ExperimentProfile.class);
+               profile = ExperimentProfileMapper.to(Util.OBJECT_MAPPER.treeToValue(node, ExperimentProfile.class));
             } catch (JsonProcessingException e) {
                throw ServiceException.badRequest("Cannot deserialize experiment profile id '" + node.path("id").asText() + "': " + e.getMessage());
             }
-            if (profile.test == null) {
-               profile.test = em.getReference(Test.class, testId);
-            } else if (profile.test.id != testId) {
+            if(forceUseTestId || profile.test == null) {
+               profile.test = em.getReference(TestDAO.class, testId);
+            }
+            else if (profile.test.id != testId) {
                throw ServiceException.badRequest("Wrong test id in experiment profile id '" + node.path("id").asText() + "'");
             }
             em.merge(profile);

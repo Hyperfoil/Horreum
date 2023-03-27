@@ -1,6 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import io.hyperfoil.tools.horreum.api.SqlService;
+import io.hyperfoil.tools.horreum.api.services.SqlService;
 import io.hyperfoil.tools.horreum.server.ErrorReporter;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.quarkus.security.identity.SecurityIdentity;

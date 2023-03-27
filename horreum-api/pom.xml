@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>horreum</artifactId>
         <groupId>io.hyperfoil.tools</groupId>
+        <artifactId>horreum</artifactId>
         <version>0.8-SNAPSHOT</version>
     </parent>
-    <modelVersion>4.0.0</modelVersion>
 
     <artifactId>horreum-api</artifactId>
-    <name>Horreum REST API</name>
 
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -31,18 +37,6 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.hyperfoil.tools</groupId>
-            <artifactId>horreum-model</artifactId>
-            <optional>true</optional>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.hyperfoil.tools</groupId>
-            <artifactId>horreum-api-generator</artifactId>
-            <optional>true</optional>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
             <version>2.0.1.Final</version>
@@ -54,104 +48,63 @@
             <artifactId>quarkus-junit5</artifactId>
             <scope>test</scope>
         </dependency>
-    </dependencies>
 
+    </dependencies>
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <skipMain>true</skipMain>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>io.hyperfoil.tools</groupId>
-                <artifactId>horreum-api-generator</artifactId>
-                <version>${project.version}</version>
+                <artifactId>smallrye-open-api-maven-plugin</artifactId>
+                <groupId>io.smallrye</groupId>
+                <version>2.1.22</version>
                 <executions>
                     <execution>
                         <phase>process-classes</phase>
                         <goals>
-                            <goal>apigen</goal>
+                            <goal>generate-schema</goal>
                         </goals>
                         <configuration>
-                            <sources>${project.basedir}/../horreum-model/target/classes</sources>
-                            <transformedPackages>
-                                <package>io.hyperfoil.tools.horreum.api</package>
-                                <package>io.hyperfoil.tools.horreum.entity</package>
-                                <package>io.hyperfoil.tools.horreum.changes</package>
-                            </transformedPackages>
-                            <erasedPackages>
-                                <package>javax.persistence</package>
-                                <package>org.hibernate.annotations</package>
-                                <package>io.quarkus.hibernate</package>
-                            </erasedPackages>
-                            <ignoreAnnotation>
-                                io.hyperfoil.tools.horreum.entity.ApiIgnore
-                            </ignoreAnnotation>
+                            <scanPackages>
+                                io.hyperfoil.tools.horreum.api,
+                                io.hyperfoil.tools.horreum.api.alerting,
+                                io.hyperfoil.tools.horreum.api.data,
+                                io.hyperfoil.tools.horreum.api.grafana,
+                                io.hyperfoil.tools.horreum.api.report
+                            </scanPackages>
+                            <scanClasses>.*</scanClasses>
+                            <operationIdStrategy>CLASS_METHOD</operationIdStrategy>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>6.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
+                            <output>${project.basedir}/../webapp/src/generated</output>
+                            <generatorName>typescript-fetch</generatorName>
+                            <skipValidateSpec>true</skipValidateSpec>
+                            <typeMappings>Array=any</typeMappings>
+                            <globalProperties>
+                                <skipFormModel>false</skipFormModel>
+                            </globalProperties>
+                            <configOptions>
+                                <supportsES6>true</supportsES6>
+                                <useSingleRequestParameter>false</useSingleRequestParameter>
+                                <typescriptThreePlus>true</typescriptThreePlus>
+                            </configOptions>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>release</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <!-- Source and JavaDoc artifacts are mandatory in Sonatype -->
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <version>3.0.0</version>
-                        <executions>
-                            <execution>
-                                <phase>package</phase>
-                                <configuration>
-                                    <target>
-                                        <copy file="${project.basedir}/../horreum-model/target/horreum-model-${project.version}-javadoc.jar" tofile="${project.build.directory}/horreum-api-${project.version}-javadoc.jar" />
-                                        <copy file="${project.basedir}/../horreum-model/target/horreum-model-${project.version}-sources.jar" tofile="${project.build.directory}/horreum-api-${project.version}-sources.jar" />
-                                    </target>
-                                </configuration>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>build-helper-maven-plugin</artifactId>
-                        <version>3.0.0</version>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>attach-artifact</goal>
-                                </goals>
-                                <phase>package</phase>
-                                <configuration>
-                                    <artifacts>
-                                        <artifact>
-                                            <file>${project.build.directory}/horreum-api-${project.version}-javadoc.jar</file>
-                                            <classifier>javadoc</classifier>
-                                        </artifact>
-                                        <artifact>
-                                            <file>${project.build.directory}/horreum-api-${project.version}-sources.jar</file>
-                                            <classifier>sources</classifier>
-                                        </artifact>
-                                    </artifacts>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>

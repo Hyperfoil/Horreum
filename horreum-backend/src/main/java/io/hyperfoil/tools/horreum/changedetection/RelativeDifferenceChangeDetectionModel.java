@@ -1,8 +1,8 @@
 package io.hyperfoil.tools.horreum.changedetection;
 
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
-import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.jboss.logging.Logger;
@@ -42,8 +42,8 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
     }
 
     @Override
-    public void analyze(List<DataPoint> dataPoints, JsonNode configuration, Consumer<Change> changeConsumer) {
-        DataPoint dataPoint = dataPoints.get(0);
+    public void analyze(List<DataPointDAO> dataPoints, JsonNode configuration, Consumer<ChangeDAO> changeConsumer) {
+        DataPointDAO dataPoint = dataPoints.get(0);
 
         double threshold = Math.max(0, configuration.get("threshold").asDouble());
         int window = Math.max(1, configuration.get("window").asInt());
@@ -80,7 +80,7 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
         double ratio = filteredValue / previousStats.getMean();
         log.tracef("Previous mean %f, filtered value %f, ratio %f", previousStats.getMean(), filteredValue, ratio);
         if (ratio < 1 - threshold || ratio > 1 + threshold) {
-            DataPoint dp = null;
+            DataPointDAO dp = null;
             // We cannot know which datapoint is first with the regression; as a heuristic approach
             // we'll select first datapoint with value lower than mean (if this is a drop, e.g. throughput)
             // or above the mean (if this is an increase, e.g. memory usage).
@@ -93,9 +93,9 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
                 }
             }
             assert dp != null;
-            Change change = Change.fromDatapoint(dp);
-            DataPoint prevDataPoint = dataPoints.get(window - 1);
-            DataPoint lastDataPoint = dataPoints.get(0);
+            ChangeDAO change = ChangeDAO.fromDatapoint(dp);
+            DataPointDAO prevDataPoint = dataPoints.get(window - 1);
+            DataPointDAO lastDataPoint = dataPoints.get(0);
             change.description = String.format("Datasets %d/%d (%s) - %d/%d (%s): %s %f, previous mean %f (stddev %f), relative change %.2f%%",
                     prevDataPoint.dataset.run.id, prevDataPoint.dataset.ordinal, prevDataPoint.timestamp,
                     lastDataPoint.dataset.run.id, lastDataPoint.dataset.ordinal, lastDataPoint.timestamp,

@@ -5,12 +5,12 @@ import java.nio.charset.StandardCharsets;
 
 import javax.enterprise.context.ApplicationScoped;
 
+import io.hyperfoil.tools.horreum.api.alerting.Change;
+import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
 
@@ -34,10 +34,11 @@ public class ChangeToMarkdown implements BodyFormatter {
       }
       Change.Event event = (Change.Event) payload;
       Change change = event.change;
+      String fingerprint = DataSetDAO.getEntityManager().getReference(DataSetDAO.class, change.dataset.id).getFingerprint();
       return template
             .data("testName", event.testName)
             .data("testNameEncoded", URLEncoder.encode(event.testName, StandardCharsets.UTF_8))
-            .data("fingerprint", URLEncoder.encode(change.dataset.getFingerprint(), StandardCharsets.UTF_8))
+            .data("fingerprint", URLEncoder.encode(fingerprint, StandardCharsets.UTF_8))
             .data("publicUrl", publicUrl)
             .data("testId", String.valueOf(change.variable.testId))
             .data("variable", change.variable.name)

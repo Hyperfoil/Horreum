@@ -7,8 +7,8 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
-import io.hyperfoil.tools.horreum.api.ExperimentService;
-import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
+import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 
 public class RelativeDifferenceExperimentModel implements ExperimentConditionModel {
    public static final String NAME = "relativeDifference";
@@ -22,9 +22,9 @@ public class RelativeDifferenceExperimentModel implements ExperimentConditionMod
    }
 
    @Override
-   public ExperimentService.ComparisonResult compare(JsonNode config, List<DataPoint> baseline, DataPoint newDatapoint) {
+   public ExperimentService.ComparisonResult compare(JsonNode config, List<DataPointDAO> baseline, DataPointDAO newDatapoint) {
       int maxBaselineDatasets = config.get("maxBaselineDatasets").asInt(0);
-      Stream<DataPoint> stream = baseline.stream();
+      Stream<DataPointDAO> stream = baseline.stream();
       if (maxBaselineDatasets > 0) {
          stream = stream.limit(maxBaselineDatasets);
       }

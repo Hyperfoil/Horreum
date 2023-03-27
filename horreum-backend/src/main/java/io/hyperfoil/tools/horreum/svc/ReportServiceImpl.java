@@ -23,6 +23,12 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
 
+import io.hyperfoil.tools.horreum.api.report.ReportComment;
+import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
+import io.hyperfoil.tools.horreum.api.report.TableReport;
+import io.hyperfoil.tools.horreum.entity.report.*;
+import io.hyperfoil.tools.horreum.mapper.ReportCommentMapper;
+import io.hyperfoil.tools.horreum.mapper.TableReportMapper;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
@@ -38,18 +44,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
-import io.hyperfoil.tools.horreum.api.ReportService;
+import io.hyperfoil.tools.horreum.api.services.ReportService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
-import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.entity.report.ReportComment;
-import io.hyperfoil.tools.horreum.entity.report.ReportComponent;
-import io.hyperfoil.tools.horreum.entity.report.ReportLog;
-import io.hyperfoil.tools.horreum.entity.report.TableReport;
-import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
@@ -76,7 +76,7 @@ public class ReportServiceImpl implements ReportService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(Test.EVENT_DELETED, "ReportService", Test.class, this::onTestDelete);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "ReportService", TestDAO.class, this::onTestDelete);
    }
 
    @PermitAll
@@ -150,38 +150,39 @@ public class ReportServiceImpl implements ReportService {
    @WithRoles
    @Override
    public TableReportConfig getTableReportConfig(int id) {
-      TableReportConfig config = TableReportConfig.findById(id);
+      TableReportConfigDAO config = TableReportConfigDAO.findById(id);
       if (config == null) {
          throw ServiceException.notFound("Table report config does not exist or insufficient permissions.");
       }
-      return config;
+      return TableReportMapper.fromTableReportConfig(config);
    }
 
    @RolesAllowed(Roles.TESTER)
    @WithRoles
    @Override
    @Transactional
-   public TableReport updateTableReportConfig(TableReportConfig config, Integer reportId) {
-      if (config.id != null && config.id < 0) {
-         config.id = null;
+   public TableReport updateTableReportConfig(TableReportConfig dto, Integer reportId) {
+      if (dto.id != null && dto.id < 0) {
+         dto.id = null;
       }
       boolean createNewConfig = reportId == null || reportId < 0;
       if (createNewConfig) {
          // We are going to create a new report, therefore we'll use a new config
-         config.id = null;
+         dto.id = null;
       }
-      for (var component : config.components) {
+      for (var component : dto.components) {
          if (component.id != null && component.id < 0 || createNewConfig) {
             component.id = null;
          }
       }
-      validateTableConfig(config);
+      validateTableConfig(dto);
+      TableReportConfigDAO config = TableReportMapper.toTableReportConfig(dto);
       config.ensureLinked();
-      TableReport report = createTableReport(config, reportId);
+      TableReportDAO report = createTableReport(config, reportId);
       if (config.id == null) {
          config.persist();
       } else {
-         TableReportConfig original = TableReportConfig.findById(config.id);
+         TableReportConfigDAO original = TableReportConfigDAO.findById(config.id);
          original.components.clear();
          original.components.addAll(config.components);
          config.components = original.components;
@@ -193,7 +194,7 @@ public class ReportServiceImpl implements ReportService {
          em.merge(report);
       }
       em.flush();
-      return report;
+      return TableReportMapper.from(report);
    }
 
    private void validateTableConfig(TableReportConfig config) {
@@ -229,9 +230,9 @@ public class ReportServiceImpl implements ReportService {
    @WithRoles
    @Override
    public TableReport getTableReport(int id) {
-      TableReport report = TableReport.findById(id);
+      TableReportDAO report = TableReportDAO.findById(id);
       Hibernate.initialize(report.config);
-      return report;
+      return TableReportMapper.from(report);
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -239,7 +240,7 @@ public class ReportServiceImpl implements ReportService {
    @Transactional
    @Override
    public void deleteTableReport(int id) {
-      TableReport report = TableReport.findById(id);
+      TableReportDAO report = TableReportDAO.findById(id);
       if (report == null) {
          throw ServiceException.notFound("Report " + id + " does not exist.");
       }
@@ -251,21 +252,22 @@ public class ReportServiceImpl implements ReportService {
    @WithRoles
    @Override
    @Transactional
-   public ReportComment updateComment(int reportId, ReportComment comment) {
+   public ReportComment updateComment(int reportId, ReportComment dto) {
+      ReportCommentDAO comment = ReportCommentMapper.to(dto);
       if (comment.id == null || comment.id < 0) {
          comment.id = null;
-         comment.report = TableReport.findById(reportId);
+         comment.report = TableReportDAO.findById(reportId);
          if (comment.comment != null && !comment.comment.isEmpty()) {
             comment.persistAndFlush();
          }
       } else if (nullOrEmpty(comment.comment)){
-         ReportComment.deleteById(comment.id);
+         ReportCommentDAO.deleteById(comment.id);
          return null;
       } else {
-         comment.report = TableReport.findById(reportId);
+         comment.report = TableReportDAO.findById(reportId);
          em.merge(comment);
       }
-      return comment;
+      return ReportCommentMapper.from(comment);
    }
 
    @Override
@@ -294,29 +296,30 @@ public class ReportServiceImpl implements ReportService {
    @PermitAll
    @WithRoles
    @Override
-   public TableReport previewTableReport(TableReportConfig config, Integer reportId) {
-      validateTableConfig(config);
-      TableReport report = createTableReport(config, reportId);
+   public TableReport previewTableReport(TableReportConfig dto, Integer reportId) {
+      validateTableConfig(dto);
+      TableReportConfigDAO config = TableReportMapper.toTableReportConfig(dto);
+      TableReportDAO report = createTableReport(config, reportId);
       em.detach(report);
-      return report;
+      return TableReportMapper.from(report);
    }
 
-   private TableReport createTableReport(TableReportConfig config, Integer reportId) {
+   private TableReportDAO createTableReport(TableReportConfigDAO config, Integer reportId) {
       Integer testId = config.test.id;
-      Test test = Test.findById(testId);
+      TestDAO test = TestDAO.findById(testId);
       if (test == null) {
          throw ServiceException.badRequest("Cannot find test with ID " + testId);
       } else {
          // We don't assign the full test because then we'd serialize the complete object...
          config.test.name = test.name;
       }
-      TableReport report;
+      TableReportDAO report;
       if (reportId == null) {
-         report = new TableReport();
+         report = new TableReportDAO();
          report.comments = Collections.emptyList();
          report.created = timeService.now();
       } else {
-         report = TableReport.findById(reportId);
+         report = TableReportDAO.findById(reportId);
          if (report == null) {
             throw ServiceException.badRequest("Cannot find report ID " + reportId);
          }
@@ -365,7 +368,7 @@ public class ReportServiceImpl implements ReportService {
          assert config.scaleFormatter == null;
          scales = series.stream().map(row -> new Object[] { row[0], row[1], row[2], JsonNodeFactory.instance.textNode("") }).collect(Collectors.toList());
       }
-      Map<Integer, TableReport.Data> datasetData = series.isEmpty() ? Collections.emptyMap() :
+      Map<Integer, TableReportDAO.Data> datasetData = series.isEmpty() ? Collections.emptyMap() :
             getData(config, report, categories, series, scales);
       log.debugf("Data per dataset: %s", datasetData);
 
@@ -380,11 +383,11 @@ public class ReportServiceImpl implements ReportService {
       executeInContext(config, context -> {
          for (int i = 0; i < values.size(); i++) {
             List<Object[]> valuesForComponent = values.get(i);
-            ReportComponent component = config.components.get(i);
+            ReportComponentDAO component = config.components.get(i);
             for (Object[] row : valuesForComponent) {
                Integer datasetId = (Integer) row[0];
                JsonNode value = (JsonNode) row[3];
-               TableReport.Data data = datasetData.get(datasetId);
+               TableReportDAO.Data data = datasetData.get(datasetId);
                if (nullOrEmpty(component.function)) {
                   if (value == null || value.isNull()) {
                      data.values.addNull();
@@ -433,16 +436,16 @@ public class ReportServiceImpl implements ReportService {
       return node == null || node.isNull() || node.isEmpty();
    }
 
-   private Map<Integer, TableReport.Data> getData(TableReportConfig config, TableReport report,
-                                                  List<Object[]> categories, List<Object[]> series, List<Object[]> scales) {
+   private Map<Integer, TableReportDAO.Data> getData(TableReportConfigDAO config, TableReportDAO report,
+                                                     List<Object[]> categories, List<Object[]> series, List<Object[]> scales) {
       assert !categories.isEmpty();
       assert !series.isEmpty();
       assert !scales.isEmpty();
 
-      Map<Integer, TableReport.Data> datasetData = new HashMap<>();
+      Map<Integer, TableReportDAO.Data> datasetData = new HashMap<>();
       executeInContext(config, context -> {
          for (Object[] row : categories) {
-            TableReport.Data data = new TableReport.Data();
+            TableReportDAO.Data data = new TableReportDAO.Data();
             data.datasetId = (Integer) row[0];
             data.runId = (int) row[1];
             data.ordinal = (int) row[2];
@@ -468,7 +471,7 @@ public class ReportServiceImpl implements ReportService {
             int runId = (int) row[1];
             int ordinal = (int) row[2];
             JsonNode value = (JsonNode) row[3];
-            TableReport.Data data = datasetData.get(datasetId);
+            TableReportDAO.Data data = datasetData.get(datasetId);
             if (data == null) {
                log(report, PersistentLog.ERROR, "Missing values for dataset %d!", datasetId);
                continue;
@@ -490,7 +493,7 @@ public class ReportServiceImpl implements ReportService {
             int runId = (int) row[1];
             int ordinal = (int) row[2];
             JsonNode value = (JsonNode) row[3];
-            TableReport.Data data = datasetData.get(datasetId);
+            TableReportDAO.Data data = datasetData.get(datasetId);
             if (data == null) {
                log(report, PersistentLog.ERROR, "Missing values for dataset %d!", datasetId);
                continue;
@@ -516,16 +519,16 @@ public class ReportServiceImpl implements ReportService {
       return value == null ? "" : value.isTextual() ? value.asText() : value.toString();
    }
 
-   private List<Integer> getFinalDatasetIds(Map<Integer, Timestamp> timestamps, Map<Integer, TableReport.Data> datasetData) {
-      Map<Coords, TableReport.Data> dataByCoords = new HashMap<>();
-      for (TableReport.Data data : datasetData.values()) {
+   private List<Integer> getFinalDatasetIds(Map<Integer, Timestamp> timestamps, Map<Integer, TableReportDAO.Data> datasetData) {
+      Map<Coords, TableReportDAO.Data> dataByCoords = new HashMap<>();
+      for (TableReportDAO.Data data : datasetData.values()) {
          Timestamp dataTimestamp = timestamps.get(data.datasetId);
          if (dataTimestamp == null) {
             log.errorf("No timestamp for dataset %d", data.datasetId);
             continue;
          }
          Coords coords = new Coords(data.category, data.series, data.scale);
-         TableReport.Data prev = dataByCoords.get(coords);
+         TableReportDAO.Data prev = dataByCoords.get(coords);
          if (prev == null) {
             dataByCoords.put(coords, data);
             continue;
@@ -621,7 +624,7 @@ public class ReportServiceImpl implements ReportService {
       }
    }
 
-   private List<Integer> filterDatasetIds(TableReportConfig config, TableReport report) {
+   private List<Integer> filterDatasetIds(TableReportConfigDAO config, TableReportDAO report) {
       List<Object[]> list = selectByTest(config.test.id, config.filterLabels);
       if (list.isEmpty()) {
          log(report, PersistentLog.WARN, "There are no matching datasets for test %s (%d)", config.test.name, config.test.id);
@@ -685,9 +688,9 @@ public class ReportServiceImpl implements ReportService {
       return datasetIds;
    }
 
-   private void log(TableReport report, int level, String msg, Object... args) {
+   private void log(TableReportDAO report, int level, String msg, Object... args) {
       String message = args.length == 0 ? msg : String.format(msg, args);
-      report.logs.add(new ReportLog(report, level, message));
+      report.logs.add(new ReportLogDAO(report, level, message));
    }
 
    private String buildCode(String function, String param) {
@@ -698,7 +701,7 @@ public class ReportServiceImpl implements ReportService {
       return jsCode.toString();
    }
 
-   private void executeInContext(TableReportConfig config, Consumer<Context> consumer) {
+   private void executeInContext(TableReportConfigDAO config, Consumer<Context> consumer) {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       try (Context context = Context.newBuilder("js").out(out).err(out).build()) {
          context.enter();
@@ -716,7 +719,7 @@ public class ReportServiceImpl implements ReportService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(Test test) {
+   public void onTestDelete(TestDAO test) {
       int changedRows = em.createNativeQuery("UPDATE tablereportconfig SET testid = NULL WHERE testid = ?")
             .setParameter(1, test.id).executeUpdate();
       log.infof("Disowned %d report configs as test %s(%d) was deleted.", changedRows, test.name, test.id);

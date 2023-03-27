@@ -27,9 +27,9 @@
     <dependencies>
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
-            <artifactId>horreum-model</artifactId>
+            <artifactId>horreum-api</artifactId>
         </dependency>
-        <dependency>
+         <dependency>
             <groupId>org.graalvm.sdk</groupId>
             <artifactId>graal-sdk</artifactId>
             <version>${graalvm.version}</version>
@@ -44,6 +44,16 @@
                     <artifactId>graal-sdk</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.vladmihalcea</groupId>
+            <artifactId>hibernate-types-52</artifactId>
+            <version>2.20.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.0.74</version>
         </dependency>
         <dependency>
             <groupId>com.jayway.jsonpath</groupId>

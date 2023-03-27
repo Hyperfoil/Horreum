@@ -23,28 +23,10 @@
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
             <artifactId>horreum-client</artifactId>
-            <!--  TODO: remove this exclusion once we have resolved conflicts with Model/API-->
-            <exclusions>
-                <exclusion>
-                    <groupId>io.hyperfoil.tools</groupId>
-                    <artifactId>horreum-api</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
             <artifactId>horreum-backend</artifactId>
-<!--            TODO: remove this exclusion once we have resolved conflicts with Model/API-->
-            <exclusions>
-                <exclusion>
-                    <groupId>io.hyperfoil.tools</groupId>
-                    <artifactId>horreum-api</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>io.hyperfoil.tools</groupId>
-            <artifactId>horreum-model</artifactId>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>

@@ -9,16 +9,16 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.api.services.QueryResult;
+import io.hyperfoil.tools.horreum.api.services.RunService;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataOutput;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
-import io.hyperfoil.tools.horreum.api.QueryResult;
-import io.hyperfoil.tools.horreum.api.RunService;
-import io.hyperfoil.tools.horreum.entity.json.Access;
-import io.hyperfoil.tools.horreum.entity.json.Run;
+import io.hyperfoil.tools.horreum.api.data.Access;
 
 // Note: IDE may show errors because variant of RunService.addRunFromData is not implemented
 // but that method is not present in the class files (removed through @ApiIgnore).
@@ -79,6 +79,11 @@ public class RunServiceExtension implements RunService {
    @Override
    public Response addRunFromData(String start, String stop, String test, String owner, Access access, String token, String schemaUri, String description, JsonNode data) {
       return delegate.addRunFromData(start, stop, test, owner, access, token, schemaUri, description, data);
+   }
+
+   @Override
+   public Response addRunFromData(String start, String stop, String test, String owner, Access access, String token, String schemaUri, String description, org.jboss.resteasy.reactive.multipart.FileUpload data, org.jboss.resteasy.reactive.multipart.FileUpload metadata) {
+      return delegate.addRunFromData(start, stop, test, owner, access, token, schemaUri, description, data, metadata);
    }
 
    public Response addRunFromData(String start, String stop, String test, String owner, Access access, String token, String schemaUri, String description, JsonNode data, JsonNode... metadata) {
