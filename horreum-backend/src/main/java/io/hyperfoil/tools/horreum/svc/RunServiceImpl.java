@@ -45,19 +45,17 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 import com.vladmihalcea.hibernate.type.util.MapResultTransformer;
-import io.hyperfoil.tools.horreum.api.QueryResult;
-import io.hyperfoil.tools.horreum.api.RunService;
-import io.hyperfoil.tools.horreum.api.SchemaService;
-import io.hyperfoil.tools.horreum.api.SqlService;
+import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.entity.data.*;
+import io.hyperfoil.tools.horreum.mapper.RunMapper;
+import io.hyperfoil.tools.horreum.api.services.QueryResult;
+import io.hyperfoil.tools.horreum.api.services.RunService;
+import io.hyperfoil.tools.horreum.api.services.SchemaService;
+import io.hyperfoil.tools.horreum.api.services.SqlService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
-import io.hyperfoil.tools.horreum.entity.alerting.TransformationLog;
-import io.hyperfoil.tools.horreum.entity.json.Access;
-import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.Run;
-import io.hyperfoil.tools.horreum.entity.json.Schema;
-import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.entity.json.Transformer;
+import io.hyperfoil.tools.horreum.entity.alerting.TransformationLogDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
@@ -76,9 +74,9 @@ import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
-import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
-import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
-import static io.hyperfoil.tools.horreum.entity.json.Schema.QUERY_TRANSFORMER_TARGETS;
+import static io.hyperfoil.tools.horreum.entity.data.SchemaDAO.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
+import static io.hyperfoil.tools.horreum.entity.data.SchemaDAO.QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
+import static io.hyperfoil.tools.horreum.entity.data.SchemaDAO.QUERY_TRANSFORMER_TARGETS;
 
 @ApplicationScoped
 @Startup
@@ -133,12 +131,12 @@ public class RunServiceImpl implements RunService {
    void init() {
       sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
       sqlService.registerListener("new_or_updated_schema", this::onNewOrUpdatedSchema);
-      messageBus.subscribe(Test.EVENT_DELETED, "RunService", Test.class, this::onTestDeleted);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "RunService", TestDAO.class, this::onTestDeleted);
    }
 
    @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   void onTestDeleted(Test test) {
+   void onTestDeleted(TestDAO test) {
       log.debugf("Trashing runs for test %s (%d)", test.name, test.id);
       ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, test.id));
       while (results.next()) {
@@ -171,7 +169,7 @@ public class RunServiceImpl implements RunService {
    @TransactionConfiguration(timeout = 3600) // 1 hour, this may run a long time
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    void onNewOrUpdatedSchema(int schemaId) {
-      Schema schema = Schema.findById(schemaId);
+      SchemaDAO schema = SchemaDAO.findById(schemaId);
       if (schema == null) {
          log.errorf("Cannot process schema add/update: cannot load schema %d", schemaId);
          return;
@@ -335,9 +333,9 @@ public class RunServiceImpl implements RunService {
          run.access = access;
       }
       log.debugf("About to add new run to test %s using owner", testNameOrId, owner);
-      Test test = testService.ensureTestExists(testNameOrId, token);
+      TestDAO test = testService.ensureTestExists(testNameOrId, token);
       run.testid = test.id;
-      Integer runId = addAuthenticated(run, test);
+      Integer runId = addAuthenticated(RunMapper.to(run), test);
       return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId).build();
    }
 
@@ -439,11 +437,11 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.badRequest("Cannot parse stop time from " + foundStop + " (" + stop + ")");
       }
 
-      Test testEntity = testService.ensureTestExists(testNameOrId, token);
+      TestDAO testEntity = testService.ensureTestExists(testNameOrId, token);
 
       log.debugf("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id, foundDescription);
 
-      Run run = new Run();
+      RunDAO run = new RunDAO();
       run.testid = testEntity.id;
       run.start = startInstant;
       run.stop = stopInstant;
@@ -494,7 +492,7 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   private Integer addAuthenticated(Run run, Test test) {
+   private Integer addAuthenticated(RunDAO run, TestDAO test) {
       // Id will be always generated anew
       run.id = null;
 
@@ -527,7 +525,7 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.serverError("Failed to persist run");
       }
       log.debugf("Upload flushed, run ID %d", run.id);
-      messageBus.publish(Run.EVENT_NEW, test.id, run);
+      messageBus.publish(RunDAO.EVENT_NEW, test.id, run);
 
       return run.id;
    }
@@ -657,7 +655,7 @@ public class RunServiceImpl implements RunService {
 
          RunsSummary summary = new RunsSummary();
          // TODO: total does not consider the query but evaluating all the expressions would be expensive
-         summary.total = trashed ? Run.count() : Run.count("trashed = false");
+         summary.total = trashed ? RunDAO.count() : RunDAO.count("trashed = false");
          summary.runs = runs.stream().map(this::createSummary).collect(Collectors.toList());
          return summary;
       } catch (PersistenceException pe) {
@@ -724,8 +722,8 @@ public class RunServiceImpl implements RunService {
    @Override
    public RunCount runCount(int testId) {
       RunCount counts = new RunCount();
-      counts.total = Run.count("testid = ?1", testId);
-      counts.active = Run.count("testid = ?1 AND trashed = false", testId);
+      counts.total = RunDAO.count("testid = ?1", testId);
+      counts.active = RunDAO.count("testid = ?1 AND trashed = false", testId);
       counts.trashed = counts.total - counts.active;
       return counts;
    }
@@ -758,7 +756,7 @@ public class RunServiceImpl implements RunService {
       }
       Util.addOrderBy(sql, sort, direction);
       Util.addLimitOffset(sql, limit, page);
-      Test test = Test.find("id", testId).firstResult();
+      TestDAO test = TestDAO.find("id", testId).firstResult();
       if (test == null) {
          throw ServiceException.notFound("Cannot find test ID " + testId);
       }
@@ -768,7 +766,7 @@ public class RunServiceImpl implements RunService {
       @SuppressWarnings("unchecked")
       List<Object[]> resultList = query.getResultList();
       RunsSummary summary = new RunsSummary();
-      summary.total = trashed ? Run.count("testid = ?1", testId) : Run.count("testid = ?1 AND trashed = false", testId);
+      summary.total = trashed ? RunDAO.count("testid = ?1", testId) : RunDAO.count("testid = ?1 AND trashed = false", testId);
       summary.runs = resultList.stream().map(this::createSummary).collect(Collectors.toList());
       return summary;
    }
@@ -811,15 +809,15 @@ public class RunServiceImpl implements RunService {
    }
 
    private void trashInternal(int id, boolean trashed) {
-      Run run = updateRun(id, r -> r.trashed = trashed);
+      RunDAO run = updateRun(id, r -> r.trashed = trashed);
       if (trashed) {
-         List<DataSet> datasets = DataSet.list("run.id", id);
+         List<DataSetDAO> datasets = DataSetDAO.list("run.id", id);
          log.debugf("Trashing run %d (test %d, %d datasets)", (long)run.id, (long)run.testid, (long)datasets.size());
          for (var dataset : datasets) {
-            messageBus.publish(DataSet.EVENT_DELETED, run.testid, dataset.getInfo());
+            messageBus.publish(DataSetDAO.EVENT_DELETED, run.testid, dataset.getInfo());
             dataset.delete();
          }
-         messageBus.publish(Run.EVENT_TRASHED, run.testid, id);
+         messageBus.publish(RunDAO.EVENT_TRASHED, run.testid, id);
       } else {
          transform(id, true);
       }
@@ -834,8 +832,8 @@ public class RunServiceImpl implements RunService {
       updateRun(id, run -> run.description = Util.destringify(description));
    }
 
-   public Run updateRun(int id, Consumer<Run> consumer) {
-      Run run = Run.findById(id);
+   public RunDAO updateRun(int id, Consumer<RunDAO> consumer) {
+      RunDAO run = RunDAO.findById(id);
       if (run == null) {
          throw ServiceException.notFound("Run not found: " + id);
       }
@@ -850,7 +848,7 @@ public class RunServiceImpl implements RunService {
    @Override
    public Map<Integer, String> updateSchema(int id, String path, String schemaUri) {
       // FIXME: fetchival stringifies the body into JSON string :-/
-      Run run = Run.findById(id);
+      RunDAO run = RunDAO.findById(id);
       if (run == null) {
          throw ServiceException.notFound("Run not found: " + id);
       }
@@ -952,12 +950,12 @@ public class RunServiceImpl implements RunService {
       log.debugf("Transforming run ID %d, recalculation? %s", runId, Boolean.toString(isRecalculation));
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
-      for (DataSet old : DataSet.<DataSet>list("runid", runId)) {
-         messageBus.publish(DataSet.EVENT_DELETED, old.testid, old.getInfo());
+      for (DataSetDAO old : DataSetDAO.<DataSetDAO>list("runid", runId)) {
+         messageBus.publish(DataSetDAO.EVENT_DELETED, old.testid, old.getInfo());
          old.delete();
       }
 
-      Run run = Run.findById(runId);
+      RunDAO run = RunDAO.findById(runId);
       if (run == null) {
          log.errorf("Cannot load run ID %d for transformation", runId);
          return 0;
@@ -985,9 +983,9 @@ public class RunServiceImpl implements RunService {
          String uri = (String) relevantSchema[3];
          Integer source = (Integer) relevantSchema[4];
 
-         Transformer t;
+         TransformerDAO t;
          if (transformerId != null) {
-            t = Transformer.findById(transformerId);
+            t = TransformerDAO.findById(transformerId);
             if (t == null) {
                log.errorf("Missing transformer with ID %d", transformerId);
             }
@@ -1000,7 +998,7 @@ public class RunServiceImpl implements RunService {
             if (t.extractors != null && !t.extractors.isEmpty()) {
                List<Object[]> extractedData;
                try {
-                  if (type == Schema.TYPE_1ST_LEVEL) {
+                  if (type == SchemaDAO.TYPE_1ST_LEVEL) {
                      // note: metadata always follow the 2nd level format
                      extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
                            .setParameter(1, run.id).setParameter(2, transformerId)
@@ -1011,7 +1009,7 @@ public class RunServiceImpl implements RunService {
                   } else {
                      extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
                            .setParameter(1, run.id).setParameter(2, transformerId)
-                           .setParameter(3, type == Schema.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
+                           .setParameter(3, type == SchemaDAO.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
                            .setParameter(4, source)
                            .unwrap(NativeQuery.class)
                            .addScalar("name", TextType.INSTANCE)
@@ -1088,13 +1086,13 @@ public class RunServiceImpl implements RunService {
             JsonNode node;
             JsonNode sourceNode = source == 0 ? run.data : run.metadata;
             switch (type) {
-               case Schema.TYPE_1ST_LEVEL:
+               case SchemaDAO.TYPE_1ST_LEVEL:
                   node = sourceNode;
                   break;
-               case Schema.TYPE_2ND_LEVEL:
+               case SchemaDAO.TYPE_2ND_LEVEL:
                   node = sourceNode.path(key);
                   break;
-               case Schema.TYPE_ARRAY_ELEMENT:
+               case SchemaDAO.TYPE_ARRAY_ELEMENT:
                   node = sourceNode.path(Integer.parseInt(key));
                   break;
                default:
@@ -1129,13 +1127,13 @@ public class RunServiceImpl implements RunService {
                }
             }
             nakedNodes.forEach(all::add);
-            createDataset(new DataSet(run, ordinal++, run.description,
+            createDataset(new DataSetDAO(run, ordinal++, run.description,
                   all), isRecalculation);
          }
          return ordinal;
       } else {
          logMessage(run, PersistentLog.INFO, "No applicable schema, dataset will be empty.");
-         createDataset(new DataSet(
+         createDataset(new DataSetDAO(
                run, 0, "Empty DataSet for run data without any schema.",
                instance.arrayNode()), isRecalculation);
          return 1;
@@ -1146,10 +1144,10 @@ public class RunServiceImpl implements RunService {
       return str.length() > 1024 ? str.substring(0, 1024) + "...(truncated)" : str;
    }
 
-   private void createDataset(DataSet ds, boolean isRecalculation) {
+   private void createDataset(DataSetDAO ds, boolean isRecalculation) {
       try {
          ds.persist();
-         messageBus.publish(DataSet.EVENT_NEW, ds.testid, new DataSet.EventNew(ds, isRecalculation));
+         messageBus.publish(DataSetDAO.EVENT_NEW, ds.testid, new DataSetDAO.EventNew(ds, isRecalculation));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.", tre);
       }
@@ -1157,9 +1155,9 @@ public class RunServiceImpl implements RunService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
-   protected void logMessage(Run run, int level, String format, Object... args) {
+   protected void logMessage(RunDAO run, int level, String format, Object... args) {
       String msg = args.length > 0 ? String.format(format, args) : format;
-      new TransformationLog(em.getReference(Test.class, run.testid), run, level, msg).persist();
+      new TransformationLogDAO(em.getReference(TestDAO.class, run.testid), run, level, msg).persist();
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -1174,22 +1172,22 @@ public class RunServiceImpl implements RunService {
          try {
             int type = (int) row[1];
             // actual result of query is ignored
-            if (type == Schema.TYPE_1ST_LEVEL) {
+            if (type == SchemaDAO.TYPE_1ST_LEVEL) {
                em.createNativeQuery("SELECT jsonb_path_query_first(data, (?1)::::jsonpath)#>>'{}' FROM dataset WHERE id = ?2")
                      .setParameter(1, row[5]).setParameter(2, runId).getSingleResult();
             } else {
                em.createNativeQuery("SELECT jsonb_path_query_first(data -> (?1), (?2)::::jsonpath)#>>'{}' FROM dataset WHERE id = ?3")
-                     .setParameter(1, type == Schema.TYPE_2ND_LEVEL ? row[2] : Integer.parseInt((String) row[2]))
+                     .setParameter(1, type == SchemaDAO.TYPE_2ND_LEVEL ? row[2] : Integer.parseInt((String) row[2]))
                      .setParameter(2, row[5])
                      .setParameter(3, runId).getSingleResult();
             }
          } catch (PersistenceException e) {
-            logMessage(em.getReference(Run.class, runId), PersistentLog.ERROR, "There seems to be an error in schema <code>%s</code> transformer <code>%s</code>, extractor <code>%s</code>, JSONPath expression <code>%s</code>: %s",
+            logMessage(em.getReference(RunDAO.class, runId), PersistentLog.ERROR, "There seems to be an error in schema <code>%s</code> transformer <code>%s</code>, extractor <code>%s</code>, JSONPath expression <code>%s</code>: %s",
                   row[0], row[3], row[4], row[5], Util.explainCauses(e));
             return;
          }
       }
-      logMessage(em.getReference(Run.class, runId), PersistentLog.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
+      logMessage(em.getReference(RunDAO.class, runId), PersistentLog.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
    }
 
 
@@ -1206,7 +1204,7 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   private void putIfAbsent(Run run, String uri, ObjectNode node) {
+   private void putIfAbsent(RunDAO run, String uri, ObjectNode node) {
       if (uri != null && !uri.isBlank() && node != null) {
          if (node.path("$schema").isMissingNode()) {
             node.put("$schema", uri);

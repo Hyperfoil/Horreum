@@ -200,15 +200,15 @@ function Access(props: AccessProps) {
             )}
             <DataList aria-label="List of tokens">
                 <DataListItem aria-labelledby="simple-item1">
-                    {(props.test?.tokens || []).map((t, i) => (
+                    {(props.test?.tokens || []).map((token, i) => (
                         <DataListItemRow key={i}>
                             <DataListItemCells
                                 dataListCells={[
-                                    <DataListCell key="description">{t.description}</DataListCell>,
+                                    <DataListCell key="description">{token.description}</DataListCell>,
                                     <DataListCell key="permissions">
-                                        <Checkbox id="read" label="Read" isChecked={(t.permissions & 1) !== 0} />
-                                        <Checkbox id="modify" label="Modify" isChecked={(t.permissions & 2) !== 0} />
-                                        <Checkbox id="upload" label="Upload" isChecked={(t.permissions & 4) !== 0} />
+                                        <Checkbox id="read" label="Read" isChecked={(token.permissions & 1) !== 0} />
+                                        <Checkbox id="modify" label="Modify" isChecked={(token.permissions & 2) !== 0} />
+                                        <Checkbox id="upload" label="Upload" isChecked={(token.permissions & 4) !== 0} />
                                     </DataListCell>,
                                 ]}
                             />
@@ -221,7 +221,7 @@ function Access(props: AccessProps) {
                                 <Button
                                     onClick={() => {
                                         if (props.test?.id) {
-                                            dispatch(revokeToken(props.test?.id, t.id)).catch(noop)
+                                            dispatch(revokeToken(props.test?.id, token.id)).catch(noop)
                                         }
                                     }}
                                 >

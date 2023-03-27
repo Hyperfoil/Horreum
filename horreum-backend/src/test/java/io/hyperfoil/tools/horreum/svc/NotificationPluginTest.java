@@ -12,9 +12,9 @@ import javax.inject.Inject;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import org.junit.jupiter.api.Test;
 
-import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.entity.alerting.Variable;
-import io.hyperfoil.tools.horreum.entity.json.DataSet;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
+import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
@@ -32,20 +32,20 @@ public class NotificationPluginTest {
 
    @Test
    public void testDatasetChanges() {
-      DatasetChanges dc1 = new DatasetChanges(new DataSet.Info(1, 1, 0, 1), null, "Dummy Test", true);
-      Change c1 = new Change();
+      DatasetChanges dc1 = new DatasetChanges(new DataSetDAO.Info(1, 1, 0, 1), null, "Dummy Test", true);
+      ChangeDAO c1 = new ChangeDAO();
       c1.timestamp = Instant.now();
       c1.description = "foobar";
-      c1.variable = new Variable();
+      c1.variable = new VariableDAO();
       c1.variable.name = "some var";
-      Change c2 = new Change();
+      ChangeDAO c2 = new ChangeDAO();
       c2.timestamp = Instant.now();
-      c2.variable = new Variable();
+      c2.variable = new VariableDAO();
       c2.variable.group = "some group";
       c2.variable.name = "another var";
 
-      dc1.addChange(new Change.Event(c1, dc1.testName, dc1.dataset, true));
-      dc1.addChange(new Change.Event(c2, dc1.testName, dc1.dataset, true));
+      dc1.addChange(new ChangeDAO.Event(c1, dc1.testName, dc1.dataset, true));
+      dc1.addChange(new ChangeDAO.Event(c2, dc1.testName, dc1.dataset, true));
       withAllPlugins(notification -> notification.notifyChanges(dc1));
    }
 
@@ -61,7 +61,7 @@ public class NotificationPluginTest {
 
    @Test
    public void test() {
-      var event = new MissingValuesEvent(new DataSet.Info(1, 1, 0, 1), new HashSet<>(Arrays.asList("foo", "bar")), true);
+      var event = new MissingValuesEvent(new DataSetDAO.Info(1, 1, 0, 1), new HashSet<>(Arrays.asList("foo", "bar")), true);
       withAllPlugins(notification -> notification.notifyMissingValues("Dummy Test", null, event));
    }
 

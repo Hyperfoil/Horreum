@@ -4,14 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.hyperfoil.tools.horreum.api.DatasetService;
-import io.hyperfoil.tools.horreum.entity.json.*;
+import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.it.profile.InContainerProfile;
+import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.quarkus.test.junit.QuarkusIntegrationTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.junit.callback.*;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 
 import io.hyperfoil.tools.HorreumClient;
 
@@ -30,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @TestProfile(InContainerProfile.class)
 public class HorreumClientIT implements  QuarkusTestBeforeTestExecutionCallback, QuarkusTestBeforeClassCallback, QuarkusTestBeforeEachCallback, QuarkusTestAfterEachCallback, QuarkusTestAfterAllCallback {
 
-    @Test
+    @org.junit.jupiter.api.Test
     public void testAddRunFromData() throws JsonProcessingException {
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
 
@@ -41,7 +40,7 @@ public class HorreumClientIT implements  QuarkusTestBeforeTestExecutionCallback,
         }
     }
 
-    @Test
+    @org.junit.jupiter.api.Test
     public void testAddRunWithMetadataData() throws JsonProcessingException {
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
         JsonNode metadata = JsonNodeFactory.instance.objectNode().put("$schema", "urn:foobar").put("foo", "bar");
@@ -53,7 +52,7 @@ public class HorreumClientIT implements  QuarkusTestBeforeTestExecutionCallback,
         }
     }
 
-    @Test
+    @org.junit.jupiter.api.Test
     public void testAddRun() throws JsonProcessingException {
         Run run = new Run();
         run.start = Instant.now();
@@ -65,7 +64,7 @@ public class HorreumClientIT implements  QuarkusTestBeforeTestExecutionCallback,
     }
 
     // Javascript execution gets often broken with new Quarkus releases, this should catch it
-    @Test
+    @org.junit.jupiter.api.Test
     public void testJavascriptExecution() throws InterruptedException {
         Schema schema = new Schema();
         schema.uri = "urn:dummy:schema";
@@ -96,7 +95,7 @@ public class HorreumClientIT implements  QuarkusTestBeforeTestExecutionCallback,
 
         Label label = new Label();
         label.name = "foo";
-        label.schema = schema;
+        label.schemaId= schema.id;
         label.function = "value => value";
         label.extractors = Collections.singletonList(new Extractor("value", "$.value", false));
         DatasetService.LabelPreview preview = horreumClient.datasetService.previewLabel(datasetId, label);
@@ -116,7 +115,7 @@ public class HorreumClientIT implements  QuarkusTestBeforeTestExecutionCallback,
 
     public static HorreumClient horreumClient;
 
-    public static io.hyperfoil.tools.horreum.entity.json.Test dummyTest;
+    public static Test dummyTest;
 
 
     @Override
@@ -129,7 +128,7 @@ public class HorreumClientIT implements  QuarkusTestBeforeTestExecutionCallback,
             dummyTest = null;
         }
         Assertions.assertNull(dummyTest);
-        io.hyperfoil.tools.horreum.entity.json.Test test = new io.hyperfoil.tools.horreum.entity.json.Test();
+        Test test = new Test();
         test.name = "test" ;
         test.owner = "dev-team";
         test.description = "This is a dummy test";

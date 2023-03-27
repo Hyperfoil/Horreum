@@ -16,6 +16,12 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
+import io.hyperfoil.tools.horreum.api.alerting.Watch;
+import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.Extractor;
+import io.hyperfoil.tools.horreum.api.data.ViewComponent;
+import io.hyperfoil.tools.horreum.entity.alerting.*;
+import io.hyperfoil.tools.horreum.entity.data.*;
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
 
@@ -24,22 +30,9 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.action.ExperimentResultToMarkdown;
-import io.hyperfoil.tools.horreum.api.ExperimentService;
-import io.hyperfoil.tools.horreum.api.TestService;
-import io.hyperfoil.tools.horreum.entity.ExperimentProfile;
-import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
-import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
-import io.hyperfoil.tools.horreum.entity.alerting.Variable;
-import io.hyperfoil.tools.horreum.entity.alerting.Watch;
-import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.Action;
-import io.hyperfoil.tools.horreum.entity.json.Extractor;
-import io.hyperfoil.tools.horreum.entity.json.Run;
-import io.hyperfoil.tools.horreum.entity.json.Schema;
-import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.entity.json.Transformer;
-import io.hyperfoil.tools.horreum.entity.json.View;
-import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
+import io.hyperfoil.tools.horreum.api.services.TestService;
+import io.hyperfoil.tools.horreum.entity.ExperimentProfileDAO;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
@@ -59,24 +52,24 @@ public class TestServiceTest extends BaseServiceTest {
 
       Test test = createTest(createExampleTest(getTestName(info)));
       try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-         assertNotNull(Test.findById(test.id));
+         assertNotNull(TestDAO.findById(test.id));
       }
 
       int runId = uploadRun("{ \"foo\" : \"bar\" }", test.name);
 
       deleteTest(test);
-      BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, Run.EVENT_TRASHED, id -> id == runId);
+      BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, RunDAO.EVENT_TRASHED, id -> id == runId);
       assertNotNull(events.poll(10, TimeUnit.SECONDS));
 
       em.clear();
       try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-         assertNull(Test.findById(test.id));
+         assertNull(TestDAO.findById(test.id));
          // There's no constraint between runs and tests; therefore the run is not deleted
-         Run run = Run.findById(runId);
+         RunDAO run = RunDAO.findById(runId);
          assertNotNull(run);
          assertTrue(run.trashed);
 
-         assertEquals(0, DataSet.count("testid", test.id));
+         assertEquals(0, DataSetDAO.count("testid", test.id));
       }
    }
 
@@ -85,15 +78,15 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSetDAO.EventNew> newDatasetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       final int NUM_DATASETS = 5;
       for (int i = 0; i < NUM_DATASETS; ++i) {
          uploadRun(runWithValue(i, schema), test.name);
-         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         DataSetDAO.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertFalse(event.isRecalculation);
       }
-      List<DataSet> datasets = DataSet.list("testid", test.id);
+      List<DataSetDAO> datasets = DataSetDAO.list("testid", test.id);
       assertEquals(NUM_DATASETS, datasets.size());
       int maxId = datasets.stream().mapToInt(ds -> ds.id).max().orElse(0);
 
@@ -105,12 +98,12 @@ public class TestServiceTest extends BaseServiceTest {
          return status.finished == status.totalRuns;
       });
       for (int i = 0; i < NUM_DATASETS; ++i) {
-         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         DataSetDAO.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertTrue(event.dataset.id > maxId);
          assertTrue(event.isRecalculation);
       }
-      datasets = DataSet.list("testid", test.id);
+      datasets = DataSetDAO.list("testid", test.id);
       assertEquals(NUM_DATASETS, datasets.size());
       datasets.forEach(ds -> {
          assertTrue(ds.id > maxId);
@@ -122,11 +115,11 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testAddTestAction(TestInfo info) {
       Test test = createTest(createExampleTest(getTestName(info)));
-      addTestHttpAction(test, Run.EVENT_NEW, "https://attacker.com").then().statusCode(400);
+      addTestHttpAction(test, RunDAO.EVENT_NEW, "https://attacker.com").then().statusCode(400);
 
       addAllowedSite("https://example.com");
 
-      Action action = addTestHttpAction(test, Run.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
+      ActionDAO action = addTestHttpAction(test, RunDAO.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(ActionDAO.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       action.active = false;
@@ -138,9 +131,9 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSetDAO.EventNew> newDatasetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       uploadRun(runWithValue(42, schema), test.name);
-      DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      DataSetDAO.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
 
       ViewComponent vc = new ViewComponent();
@@ -174,7 +167,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSet.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<DataSetDAO.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSetDAO.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
       uploadRun(runWithValue(42, schema), test.name);
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
@@ -215,7 +208,7 @@ public class TestServiceTest extends BaseServiceTest {
       view.components = Collections.singletonList(vc);
       updateView(test.id, view);
 
-      addTestHttpAction(test, Run.EVENT_NEW, "http://example.com");
+      addTestHttpAction(test, RunDAO.EVENT_NEW, "http://example.com");
       addTestGithubIssueCommentAction(test, ExperimentService.ExperimentResult.NEW_RESULT,
             ExperimentResultToMarkdown.NAME, "hyperfoil", "horreum", "123", "super-secret-github-token");
 
@@ -223,7 +216,7 @@ public class TestServiceTest extends BaseServiceTest {
       addMissingDataRule(test, "Let me know", JsonNodeFactory.instance.arrayNode().add("foo"), null,
             (int) TimeUnit.DAYS.toMillis(1));
 
-      addExperimentProfile(test, "Some profile", Variable.<Variable>listAll().get(0));
+      addExperimentProfile(test, "Some profile", VariableDAO.<VariableDAO>listAll().get(0));
       addSubscription(test);
 
       HashMap<String, List<JsonNode>> db = dumpDatabaseContents();
@@ -237,25 +230,27 @@ public class TestServiceTest extends BaseServiceTest {
          TestUtil.eventually(() -> {
             em.clear();
             try (var h = roleManager.withRoles(Collections.singleton(Roles.HORREUM_SYSTEM))) {
-               assertEquals(0, Test.count());
-               assertEquals(0, Action.count());
-               assertEquals(0, Variable.count());
-               assertEquals(0, ChangeDetection.count());
-               assertEquals(0, MissingDataRule.count());
-               assertEquals(0, ExperimentProfile.count());
-               assertEquals(0, Watch.count());
+               assertEquals(0, TestDAO.count());
+               assertEquals(0, ActionDAO.count());
+               assertEquals(0, VariableDAO.count());
+               assertEquals(0, ChangeDetectionDAO.count());
+               assertEquals(0, MissingDataRuleDAO.count());
+               assertEquals(0, ExperimentProfileDAO.count());
+               assertEquals(0, WatchDAO.count());
             }
          });
       }
 
       jsonRequest().body(testJson).post("/api/test/import").then().statusCode(204);
 
-      validateDatabaseContents(db);
+      //if we wipe, we actually import a new test and there is no use validating the db
+      if(!wipe)
+         validateDatabaseContents(db);
    }
 
    private void addSubscription(Test test) {
       Watch watch = new Watch();
-      watch.test = test;
+      watch.testId = test.id;
       watch.users = Arrays.asList("john", "bill");
       watch.teams = Collections.singletonList("dev-team");
       watch.optout = Collections.singletonList("ignore-me");

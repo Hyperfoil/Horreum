@@ -8,8 +8,8 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
-import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 
 public class FixedThresholdModel implements ChangeDetectionModel {
    private static final Logger log = Logger.getLogger(FixedThresholdModel.class);
@@ -23,8 +23,8 @@ public class FixedThresholdModel implements ChangeDetectionModel {
    }
 
    @Override
-   public void analyze(List<DataPoint> dataPoints, JsonNode configuration, Consumer<Change> changeConsumer) {
-      DataPoint dp = dataPoints.get(0);
+   public void analyze(List<DataPointDAO> dataPoints, JsonNode configuration, Consumer<ChangeDAO> changeConsumer) {
+      DataPointDAO dp = dataPoints.get(0);
 
       JsonNode min = configuration.path("min");
       boolean minEnabled = min.path("enabled").asBoolean();
@@ -37,7 +37,7 @@ public class FixedThresholdModel implements ChangeDetectionModel {
 
       if (minEnabled) {
          if ((!minInclusive && dp.value <= minValue) || dp.value < minValue) {
-            Change c = Change.fromDatapoint(dp);
+            ChangeDAO c = ChangeDAO.fromDatapoint(dp);
             c.description = String.format("%f is below lower bound %f (%s)", dp.value, minValue, minInclusive ? "inclusive" : "exclusive");
             log.debug(c.description);
             changeConsumer.accept(c);
@@ -46,7 +46,7 @@ public class FixedThresholdModel implements ChangeDetectionModel {
       }
       if (maxEnabled) {
          if ((!maxInclusive && dp.value >= maxValue) || dp.value > maxValue) {
-            Change c = Change.fromDatapoint(dp);
+            ChangeDAO c = ChangeDAO.fromDatapoint(dp);
             c.description = String.format("%f is above upper bound %f (%s)", dp.value, maxValue, maxInclusive ? "inclusive" : "exclusive");
             log.debug(c.description);
             changeConsumer.accept(c);

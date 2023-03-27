@@ -9,8 +9,8 @@ import javax.inject.Inject;
 import javax.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.entity.json.DataSet;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
+import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.runtime.Startup;
@@ -31,14 +31,14 @@ public class EventAggregator {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(Change.EVENT_NEW, "EventAggregator", Change.Event.class, this::onNewChange);
+      messageBus.subscribe(ChangeDAO.EVENT_NEW, "EventAggregator", ChangeDAO.Event.class, this::onNewChange);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public synchronized void onNewChange(Change.Event event) {
+   public synchronized void onNewChange(ChangeDAO.Event event) {
       datasetChanges.computeIfAbsent(event.dataset.id, id -> {
-         String fingerprint = DataSet.getEntityManager().getReference(DataSet.class, event.dataset.id).getFingerprint();
+         String fingerprint = DataSetDAO.getEntityManager().getReference(DataSetDAO.class, event.dataset.id).getFingerprint();
          return new DatasetChanges(event.dataset, fingerprint, event.testName, event.notify);
       }).addChange(event);
       handleDatasetChanges();

@@ -32,6 +32,12 @@ import javax.transaction.TransactionManager;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
+import io.hyperfoil.tools.horreum.api.alerting.MissingDataRule;
+import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.Extractor;
+import io.hyperfoil.tools.horreum.entity.alerting.*;
+import io.hyperfoil.tools.horreum.entity.data.*;
+import io.hyperfoil.tools.horreum.entity.data.ViewComponent;
 import org.hibernate.query.NativeQuery;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
@@ -48,26 +54,6 @@ import io.hyperfoil.tools.horreum.action.GitHubIssueCommentAction;
 import io.hyperfoil.tools.horreum.action.HttpAction;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
-import io.hyperfoil.tools.horreum.entity.ExperimentComparison;
-import io.hyperfoil.tools.horreum.entity.ExperimentProfile;
-import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetection;
-import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
-import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRule;
-import io.hyperfoil.tools.horreum.entity.alerting.Variable;
-import io.hyperfoil.tools.horreum.entity.alerting.Watch;
-import io.hyperfoil.tools.horreum.entity.json.Access;
-import io.hyperfoil.tools.horreum.entity.json.AllowedSite;
-import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.Action;
-import io.hyperfoil.tools.horreum.entity.json.Label;
-import io.hyperfoil.tools.horreum.entity.json.Extractor;
-import io.hyperfoil.tools.horreum.entity.json.Run;
-import io.hyperfoil.tools.horreum.entity.json.Schema;
-import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.entity.json.Transformer;
-import io.hyperfoil.tools.horreum.entity.json.View;
-import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.experiment.RelativeDifferenceExperimentModel;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
@@ -171,29 +157,29 @@ public class BaseServiceTest {
          try (CloseMe ignored = roleManager.withRoles(Stream.concat(Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
                .collect(Collectors.toList()))) {
             ViewComponent.deleteAll();
-            View.deleteAll();
+            ViewDAO.deleteAll();
 
             em.createNativeQuery("DELETE FROM test_transformers").executeUpdate();
             em.createNativeQuery("DELETE FROM transformer_extractors").executeUpdate();
-            Transformer.deleteAll();
+            TransformerDAO.deleteAll();
             em.createNativeQuery("DELETE FROM test_token").executeUpdate();
-            Test.deleteAll();
-            Change.deleteAll();
-            DataPoint.deleteAll();
-            ChangeDetection.deleteAll();
-            Variable.deleteAll();
+            TestDAO.deleteAll();
+            ChangeDAO.deleteAll();
+            DataPointDAO.deleteAll();
+            ChangeDetectionDAO.deleteAll();
+            VariableDAO.deleteAll();
 
-            DataSet.deleteAll();
-            Run.deleteAll();
+            DataSetDAO.deleteAll();
+            RunDAO.deleteAll();
 
             em.createNativeQuery("DELETE FROM label_extractors").executeUpdate();
-            Label.deleteAll();
-            Schema.deleteAll();
+            LabelDAO.deleteAll();
+            SchemaDAO.deleteAll();
 
-            Action.deleteAll();
-            AllowedSite.deleteAll();
+            ActionDAO.deleteAll();
+            AllowedSiteDAO.deleteAll();
 
-            for (var subscription : Watch.listAll()) {
+            for (var subscription : WatchDAO.listAll()) {
                subscription.delete();
             }
          }
@@ -210,7 +196,7 @@ public class BaseServiceTest {
       View defaultView = new View();
       defaultView.name = "Default";
       defaultView.components = new ArrayList<>();
-      defaultView.components.add(new ViewComponent("Some column", null, "foo"));
+      defaultView.components.add(new io.hyperfoil.tools.horreum.api.data.ViewComponent("Some column", null, "foo"));
       test.views = Collections.singleton(defaultView);
       test.transformers = new ArrayList<>();
       return test;
@@ -365,7 +351,7 @@ public class BaseServiceTest {
       Label l = new Label();
       l.name = name;
       l.function = function;
-      l.schema = schema;
+      l.schemaId = schema.id;
       l.owner = TESTER_ROLES[0];
       l.access = Access.PUBLIC;
       l.extractors = Arrays.asList(extractors);
@@ -381,11 +367,11 @@ public class BaseServiceTest {
       jsonRequest().delete("/api/schema/" + schema.id + "/labels/" + labelId).then().statusCode(204);
    }
 
-   protected void setTestVariables(Test test, String name, String label, ChangeDetection... rds) {
+   protected void setTestVariables(Test test, String name, String label, ChangeDetectionDAO... rds) {
       setTestVariables(test, name, Collections.singletonList(label), rds);
    }
 
-   protected void setTestVariables(Test test, String name, List<String> labels, ChangeDetection... rds) {
+   protected void setTestVariables(Test test, String name, List<String> labels, ChangeDetectionDAO... rds) {
       ArrayNode variables = JsonNodeFactory.instance.arrayNode();
       ObjectNode variable = JsonNodeFactory.instance.objectNode();
       variable.put("testid", test.id);
@@ -393,7 +379,7 @@ public class BaseServiceTest {
       variable.set("labels", labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll));
       if (rds.length > 0) {
          ArrayNode rdsArray = JsonNodeFactory.instance.arrayNode();
-         for (ChangeDetection rd : rds) {
+         for (ChangeDetectionDAO rd : rds) {
             rdsArray.add(JsonNodeFactory.instance.objectNode().put("model", rd.model).set("config", rd.config));
          }
          variable.set("changeDetection", rdsArray);
@@ -435,16 +421,16 @@ public class BaseServiceTest {
    }
 
    protected BlockingQueue<Integer> trashRun(int runId) throws InterruptedException {
-      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, Run.EVENT_TRASHED, r -> true);
+      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, RunDAO.EVENT_TRASHED, r -> true);
       jsonRequest().post("/api/run/" + runId + "/trash").then().statusCode(204);
       assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
       return trashedQueue;
    }
 
-   protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSet.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+   protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSetDAO, T> testLogic) {
+      BlockingQueue<DataSetDAO.EventNew> dataSetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       try {
-         Run run = new Run();
+         RunDAO run = new RunDAO();
          tm.begin();
          try (CloseMe ignored = roleManager.withRoles(Arrays.asList(UPLOADER_ROLES))) {
             run.data = data;
@@ -460,7 +446,7 @@ public class BaseServiceTest {
                fail();
             }
          }
-         DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
+         DataSetDAO.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertNotNull(event.dataset);
          // only to cover the summary call in API
@@ -469,12 +455,12 @@ public class BaseServiceTest {
          tm.begin();
          Throwable error = null;
          try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
-            DataSet oldDs = DataSet.findById(event.dataset.id);
+            DataSetDAO oldDs = DataSetDAO.findById(event.dataset.id);
             if (oldDs != null) {
                oldDs.delete();
             }
-            DataSet.delete("runid", run.id);
-            Run.findById(run.id).delete();
+            DataSetDAO.delete("runid", run.id);
+            RunDAO.findById(run.id).delete();
          } catch (Throwable t) {
             error = t;
          } finally {
@@ -526,7 +512,9 @@ public class BaseServiceTest {
       }
       transformer.owner = TESTER_ROLES[0];
       transformer.access = Access.PUBLIC;
-      transformer.schema = schema;
+      transformer.schemaId = schema.id;
+      transformer.schemaUri = schema.uri;
+      transformer.schemaName = schema.name;
       transformer.function = function;
       transformer.targetSchemaUri = postFunctionSchemaUri(schema);
       Integer id = jsonRequest().body(transformer).post("/api/schema/"+schema.id+"/transformers")
@@ -565,7 +553,7 @@ public class BaseServiceTest {
    }
 
    protected Response addTestHttpAction(Test test, String event, String url) {
-      Action action = new Action();
+      ActionDAO action = new ActionDAO();
       action.event = event;
       action.type = HttpAction.TYPE_HTTP;
       action.active = true;
@@ -574,7 +562,7 @@ public class BaseServiceTest {
    }
 
    protected Response addTestGithubIssueCommentAction(Test test, String event, String formatter, String owner, String repo, String issue, String secretToken) {
-      Action action = new Action();
+      ActionDAO action = new ActionDAO();
       action.event = event;
       action.type = GitHubIssueCommentAction.TYPE_GITHUB_ISSUE_COMMENT;
       action.active = true;
@@ -588,7 +576,7 @@ public class BaseServiceTest {
    }
 
    protected Response addGlobalAction(String event, String url) {
-      Action action = new Action();
+      ActionDAO action = new ActionDAO();
       action.event = event;
       action.type = "http";
       action.active = true;
@@ -597,12 +585,12 @@ public class BaseServiceTest {
             .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
    }
 
-   protected ChangeDetection addChangeDetectionVariable(Test test) {
+   protected ChangeDetectionDAO addChangeDetectionVariable(Test test) {
       return addChangeDetectionVariable(test, 0.1, 2);
    }
 
-   protected ChangeDetection addChangeDetectionVariable(Test test, double threshold, int window) {
-      ChangeDetection cd = new ChangeDetection();
+   protected ChangeDetectionDAO addChangeDetectionVariable(Test test, double threshold, int window) {
+      ChangeDetectionDAO cd = new ChangeDetectionDAO();
       cd.model = RelativeDifferenceChangeDetectionModel.NAME;
       cd.config = JsonNodeFactory.instance.objectNode().put("threshold", threshold).put("minPrevious", window).put("window", window).put("filter", "mean");
       setTestVariables(test, "Value", "value", cd);
@@ -611,7 +599,7 @@ public class BaseServiceTest {
 
    protected int addMissingDataRule(Test test, String ruleName, ArrayNode labels, String condition, int maxStaleness) {
       MissingDataRule rule = new MissingDataRule();
-      rule.test = test;
+      rule.testId = test.id;
       rule.name = ruleName;
       rule.condition = condition;
       rule.labels = labels;
@@ -620,16 +608,17 @@ public class BaseServiceTest {
       return Integer.parseInt(ruleIdString);
    }
 
-   protected void addExperimentProfile(Test test, String name, Variable... variables) {
+   protected void addExperimentProfile(Test test, String name, VariableDAO... variables) {
       ExperimentProfile profile = new ExperimentProfile();
       profile.name = name;
-      profile.test = test;
+      profile.testId = test.id;
       profile.selectorLabels = JsonNodeFactory.instance.arrayNode().add("isSnapshot");
       profile.baselineLabels = JsonNodeFactory.instance.arrayNode().add("isSnapshot");
       profile.baselineFilter = "snapshot => !snapshot";
       profile.comparisons = Stream.of(variables).map(v -> {
          ExperimentComparison comp = new ExperimentComparison();
-         comp.variable = v;
+         comp.variableName = v.name;
+         comp.variableId = v.id;
          comp.model = RelativeDifferenceExperimentModel.NAME;
          comp.config = JsonNodeFactory.instance.objectNode().setAll(new RelativeDifferenceExperimentModel().config().defaults);
          return comp;

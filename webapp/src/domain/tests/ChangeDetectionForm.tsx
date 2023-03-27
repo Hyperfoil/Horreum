@@ -341,7 +341,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
     const [recalculateOpen, setRecalculateOpen] = useState(false)
     const [copyOpen, setCopyOpen] = useState(false)
     const addVariable = () => {
-        const newVar = {
+        const newVar : Variable = {
             id: Math.min(-1, ...variables.map(v => v.id - 1)),
             testId: test?.id || -1,
             name: "",

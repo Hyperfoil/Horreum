@@ -1,7 +1,19 @@
 package io.hyperfoil.tools;
 
 import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
-import io.hyperfoil.tools.horreum.api.*;
+import io.hyperfoil.tools.horreum.api.services.ActionService;
+import io.hyperfoil.tools.horreum.api.services.AlertingService;
+import io.hyperfoil.tools.horreum.api.services.BannerService;
+import io.hyperfoil.tools.horreum.api.services.ChangesService;
+import io.hyperfoil.tools.horreum.api.services.DatasetService;
+import io.hyperfoil.tools.horreum.api.services.NotificationService;
+import io.hyperfoil.tools.horreum.api.services.ReportService;
+import io.hyperfoil.tools.horreum.api.services.RunService;
+import io.hyperfoil.tools.horreum.api.services.SchemaService;
+import io.hyperfoil.tools.horreum.api.services.SqlService;
+import io.hyperfoil.tools.horreum.api.services.SubscriptionService;
+import io.hyperfoil.tools.horreum.api.services.TestService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;

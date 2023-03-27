@@ -6,7 +6,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.hyperfoil.tools.horreum.api.ExperimentService;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
 

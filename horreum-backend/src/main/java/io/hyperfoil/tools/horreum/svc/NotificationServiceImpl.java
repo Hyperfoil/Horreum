@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
@@ -19,13 +20,15 @@ import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
+import io.hyperfoil.tools.horreum.api.alerting.NotificationSettings;
+import io.hyperfoil.tools.horreum.mapper.NotificationSettingsMapper;
 import org.jboss.logging.Logger;
 
-import io.hyperfoil.tools.horreum.api.NotificationService;
+import io.hyperfoil.tools.horreum.api.services.NotificationService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettings;
-import io.hyperfoil.tools.horreum.entity.json.DataSet;
-import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettingsDAO;
+import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
@@ -69,7 +72,7 @@ public class NotificationServiceImpl implements NotificationService {
    public void init() {
       notificationPlugins.forEach(plugin -> plugins.put(plugin.method(), plugin));
       messageBus.subscribe(DatasetChanges.EVENT_NEW, "NotificationService", DatasetChanges.class, this::onNewChanges);
-      messageBus.subscribe(DataSet.EVENT_MISSING_VALUES, "NotificationService", MissingValuesEvent.class, this::onMissingValues);
+      messageBus.subscribe(DataSetDAO.EVENT_MISSING_VALUES, "NotificationService", MissingValuesEvent.class, this::onMissingValues);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -92,11 +95,11 @@ public class NotificationServiceImpl implements NotificationService {
          return;
       }
       // TODO: breaks storage/alerting separation!
-      Test test = Test.findById(event.dataset.testId);
+      TestDAO test = TestDAO.findById(event.dataset.testId);
       String testName = test == null ? "unknown" : test.name;
       log.debugf("Received missing values event in test %d (%s), run %d, variables %s", event.dataset.testId, testName, event.dataset.id, event.variables);
 
-      String fingerprint = em.getReference(DataSet.class, event.dataset.id).getFingerprint();
+      String fingerprint = em.getReference(DataSetDAO.class, event.dataset.id).getFingerprint();
       notifyAll(event.dataset.testId, n -> n.notifyMissingValues(testName, fingerprint, event));
    }
 
@@ -133,7 +136,8 @@ public class NotificationServiceImpl implements NotificationService {
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Override
    public List<NotificationSettings> settings(String name, boolean team) {
-      return NotificationSettings.list("name = ?1 AND isTeam = ?2", name, team);
+      List<NotificationSettingsDAO> notifications = NotificationSettingsDAO.list("name = ?1 AND isTeam = ?2", name, team);
+      return notifications.stream().map(NotificationSettingsMapper::from).collect(Collectors.toList());
    }
 
    @WithRoles(addUsername = true)
@@ -141,7 +145,7 @@ public class NotificationServiceImpl implements NotificationService {
    @Transactional
    @Override
    public void updateSettings(String name, boolean team, NotificationSettings[] settings) {
-      NotificationSettings.delete("name = ?1 AND isTeam = ?2", name, team);
+      NotificationSettingsDAO.delete("name = ?1 AND isTeam = ?2", name, team);
       for (NotificationSettings s : settings) {
          if (!plugins.containsKey(s.method)) {
             try {
@@ -174,13 +178,13 @@ public class NotificationServiceImpl implements NotificationService {
    }
 
    public void notifyMissingDataset(int testId, String ruleName, long maxStaleness, Instant lastTimestamp) {
-      Test test = Test.findById(testId);
+      TestDAO test = TestDAO.findById(testId);
       String testName = test != null ? test.name : "<unknown test>";
       notifyAll(testId, n -> n.notifyMissingDataset(testName, testId, ruleName, maxStaleness, lastTimestamp));
    }
 
    public void notifyExpectedRun(int testId, long expectedBefore, String expectedBy, String backlink) {
-      Test test = Test.findById(testId);
+      TestDAO test = TestDAO.findById(testId);
       String name = test != null ? test.name : "<unknown test>";
       notifyAll(testId, n -> n.notifyExpectedRun(name, testId, expectedBefore, expectedBy, backlink));
    }

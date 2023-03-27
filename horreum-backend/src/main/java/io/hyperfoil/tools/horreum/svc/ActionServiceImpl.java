@@ -1,20 +1,22 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import io.hyperfoil.tools.horreum.api.ExperimentService;
-import io.hyperfoil.tools.horreum.api.ActionService;
+import io.hyperfoil.tools.horreum.api.data.Action;
+import io.hyperfoil.tools.horreum.api.data.AllowedSite;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
+import io.hyperfoil.tools.horreum.api.alerting.Change;
+import io.hyperfoil.tools.horreum.entity.data.*;
+import io.hyperfoil.tools.horreum.mapper.ActionMapper;
+import io.hyperfoil.tools.horreum.mapper.AllowedSiteMapper;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
+import io.hyperfoil.tools.horreum.api.services.ActionService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.entity.ActionLog;
+import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLog;
-import io.hyperfoil.tools.horreum.entity.alerting.Change;
-import io.hyperfoil.tools.horreum.entity.json.AllowedSite;
-import io.hyperfoil.tools.horreum.entity.json.Action;
-import io.hyperfoil.tools.horreum.entity.json.Run;
-import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.action.ActionPlugin;
 import io.hyperfoil.tools.horreum.server.EncryptionManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -70,20 +72,20 @@ public class ActionServiceImpl implements ActionService {
    @PostConstruct()
    public void postConstruct(){
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
-      messageBus.subscribe(Test.EVENT_NEW, "ActionService", Test.class, this::onNewTest);
-      messageBus.subscribe(Test.EVENT_DELETED, "ActionService", Test.class, this::onTestDelete);
-      messageBus.subscribe(Run.EVENT_NEW, "ActionService", Run.class, this::onNewRun);
-      messageBus.subscribe(Change.EVENT_NEW, "ActionService", Change.Event.class, this::onNewChange);
+      messageBus.subscribe(TestDAO.EVENT_NEW, "ActionService", TestDAO.class, this::onNewTest);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "ActionService", TestDAO.class, this::onTestDelete);
+      messageBus.subscribe(RunDAO.EVENT_NEW, "ActionService", RunDAO.class, this::onNewRun);
+      messageBus.subscribe(Change.EVENT_NEW, "ActionService", ChangeDAO.Event.class, this::onNewChange);
       messageBus.subscribe(ExperimentService.ExperimentResult.NEW_RESULT, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
    }
 
    private void executeActions(String event, int testId, Object payload, boolean notify){
-      List<Action> actions = getActions(event, testId);
+      List<ActionDAO> actions = getActions(event, testId);
       if (actions.isEmpty()) {
-         new ActionLog(PersistentLog.DEBUG, testId, event, null, "No actions found.").persist();
+         new ActionLogDAO(PersistentLog.DEBUG, testId, event, null, "No actions found.").persist();
          return;
       }
-      for (Action action : actions) {
+      for (ActionDAO action : actions) {
          if (!notify && !action.runAlways) {
             log.debugf("Ignoring action for event %s in test %d, type %s as this event should not notfiy", event, testId, action.type);
             continue;
@@ -92,15 +94,15 @@ public class ActionServiceImpl implements ActionService {
             ActionPlugin plugin = plugins.get(action.type);
             if (plugin == null) {
                log.errorf("No plugin for action type %s", action.type);
-               new ActionLog(PersistentLog.ERROR, testId, event, action.type, "No plugin for action type " + action.type).persist();
+               new ActionLogDAO(PersistentLog.ERROR, testId, event, action.type, "No plugin for action type " + action.type).persist();
                continue;
             }
             plugin.execute(action.config, action.secrets, payload).subscribe()
                   .with(item -> {}, throwable -> logActionError(testId, event, action.type, throwable));
          } catch (Exception e) {
             log.errorf(e, "Failed to invoke action %d", action.id);
-            new ActionLog(PersistentLog.ERROR, testId, event, action.type, "Failed to invoke: " + e.getMessage()).persist();
-            new ActionLog(PersistentLog.DEBUG, testId, event, action.type,
+            new ActionLogDAO(PersistentLog.ERROR, testId, event, action.type, "Failed to invoke: " + e.getMessage()).persist();
+            new ActionLogDAO(PersistentLog.DEBUG, testId, event, action.type,
                   "Configuration: <pre>\n<code>" + action.config.toPrettyString() +
                   "\n<code></pre>Payload: <pre>\n<code>" + Util.OBJECT_MAPPER.valueToTree(payload).toPrettyString() +
                   "</code>\n</pre>").persist();
@@ -123,34 +125,34 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    void doLogActionError(int testId, String event, String type, Throwable throwable) {
-      new ActionLog(PersistentLog.ERROR, testId, event, type, throwable.getMessage()).persist();
+      new ActionLogDAO(PersistentLog.ERROR, testId, event, type, throwable.getMessage()).persist();
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onNewTest(Test test) {
-      executeActions(Test.EVENT_NEW, -1, test, true);
+   public void onNewTest(TestDAO test) {
+      executeActions(TestDAO.EVENT_NEW, -1, test, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(Test test) {
-      Action.delete("test_id", test.id);
+   public void onTestDelete(TestDAO test) {
+      ActionDAO.delete("test_id", test.id);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onNewRun(Run run) {
+   public void onNewRun(RunDAO run) {
       Integer testId = run.testid;
-      executeActions(Run.EVENT_NEW, testId, run, true);
+      executeActions(RunDAO.EVENT_NEW, testId, run, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onNewChange(Change.Event changeEvent) {
+   public void onNewChange(ChangeDAO.Event changeEvent) {
       int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
             .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
-      executeActions(Change.EVENT_NEW, testId, changeEvent, changeEvent.notify);
+      executeActions(ChangeDAO.EVENT_NEW, testId, changeEvent, changeEvent.notify);
    }
 
    void validate(Action action) {
@@ -179,9 +181,12 @@ public class ActionServiceImpl implements ActionService {
       action.secrets = ensureNotNull(action.secrets);
       validate(action);
       if (action.id == null) {
-         action.persist();
+         ActionDAO actionEntity = ActionMapper.to(action);
+         actionEntity.persist();
+         action.id = actionEntity.id;
       } else {
-         merge(action);
+         ActionDAO actionEntity = ActionMapper.to(action);
+         merge(actionEntity);
       }
       em.flush();
       return action;
@@ -191,12 +196,12 @@ public class ActionServiceImpl implements ActionService {
       return node == null || node.isNull() || node.isMissingNode() ? JsonNodeFactory.instance.objectNode() : node;
    }
 
-   void merge(Action action) {
+   void merge(ActionDAO action) {
       if (action.secrets == null || !action.secrets.isObject()) {
          action.secrets = JsonNodeFactory.instance.objectNode();
       }
       if (!action.secrets.path("modified").asBoolean(false)) {
-         Action old = Action.findById(action.id);
+         ActionDAO old = ActionDAO.findById(action.id);
          action.secrets = old == null ? JsonNodeFactory.instance.objectNode() : old.secrets;
       } else {
          ((ObjectNode) action.secrets).remove("modified");
@@ -208,7 +213,8 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles
    @Override
    public Action get(int id){
-      return Action.find("id", id).firstResult();
+      ActionDAO action =  ActionDAO.find("id", id).firstResult();
+      return ActionMapper.from(action);
    }
 
 
@@ -217,14 +223,14 @@ public class ActionServiceImpl implements ActionService {
    @Transactional
    @Override
    public void delete(int id){
-      Action.delete("id", id);
+      ActionDAO.delete("id", id);
    }
 
-   public List<Action> getActions(String event, int testId) {
+   public List<ActionDAO> getActions(String event, int testId) {
       if (testId < 0) {
-         return Action.find("event = ?1", event).list();
+         return ActionDAO.find("event = ?1", event).list();
       } else {
-         return Action.find("event = ?1 and (test_id = ?2 or test_id < 0)", event, testId).list();
+         return ActionDAO.find("event = ?1 and (test_id = ?2 or test_id < 0)", event, testId).list();
       }
    }
 
@@ -233,11 +239,11 @@ public class ActionServiceImpl implements ActionService {
    @Override
    public List<Action> list(Integer limit, Integer page, String sort, SortDirection direction){
       Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
-      PanacheQuery<Action> query = Action.find("test_id < 0", Sort.by(sort).direction(sortDirection));
+      PanacheQuery<ActionDAO> query = ActionDAO.find("test_id < 0", Sort.by(sort).direction(sortDirection));
       if (limit != null && page != null) {
          query = query.page(Page.of(page, limit));
       }
-      return query.list();
+      return query.list().stream().map(ActionMapper::from).collect(Collectors.toList());
    }
 
 
@@ -245,13 +251,15 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles
    @Override
    public List<Action> getTestActions(int testId) {
-      return Action.list("testId", testId);
+      List<ActionDAO> testActions = ActionDAO.list("testId", testId);
+      return testActions.stream().map(ActionMapper::from).collect(Collectors.toList());
    }
 
    @PermitAll
    @Override
    public List<AllowedSite> allowedSites() {
-      return AllowedSite.listAll();
+      List<AllowedSiteDAO> sites = AllowedSiteDAO.listAll();
+      return  sites.stream().map(AllowedSiteMapper::from).collect(Collectors.toList());
    }
 
    @RolesAllowed(Roles.ADMIN)
@@ -259,11 +267,11 @@ public class ActionServiceImpl implements ActionService {
    @Transactional
    @Override
    public AllowedSite addSite(String prefix) {
-      AllowedSite p = new AllowedSite();
+      AllowedSiteDAO p = new AllowedSiteDAO();
       // FIXME: fetchival stringifies the body into JSON string :-/
       p.prefix = Util.destringify(prefix);
       em.persist(p);
-      return p;
+      return AllowedSiteMapper.from(p);
    }
 
    @RolesAllowed(Roles.ADMIN)
@@ -271,19 +279,19 @@ public class ActionServiceImpl implements ActionService {
    @Transactional
    @Override
    public void deleteSite(long id) {
-      AllowedSite.delete("id", id);
+      AllowedSiteDAO.delete("id", id);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onNewExperimentResult(ExperimentService.ExperimentResult result) {
-      executeActions(ExperimentService.ExperimentResult.NEW_RESULT, result.profile.test.id, result, result.notify);
+      executeActions(ExperimentService.ExperimentResult.NEW_RESULT, result.profile.testId, result, result.notify);
    }
 
    JsonNode exportTest(int testId) {
       ArrayNode actions = JsonNodeFactory.instance.arrayNode();
-      for (Action action : Action.<Action>list("test_id", testId)) {
-         ObjectNode node = Util.OBJECT_MAPPER.valueToTree(action);
+      for (ActionDAO action : ActionDAO.<ActionDAO>list("test_id", testId)) {
+         ObjectNode node = Util.OBJECT_MAPPER.valueToTree(ActionMapper.from(action));
          if (!action.secrets.isEmpty()) {
             try {
                node.put("secrets", encryptionManager.encrypt(action.secrets.toString()));
@@ -296,7 +304,7 @@ public class ActionServiceImpl implements ActionService {
       return actions;
    }
 
-   void importTest(int testId, JsonNode actions) {
+   void importTest(int testId, JsonNode actions, boolean forceUseTestId) {
       if (actions.isMissingNode() || actions.isNull()) {
          log.debugf("Import test %d: no actions");
       } else if (actions.isArray()) {
@@ -307,11 +315,15 @@ public class ActionServiceImpl implements ActionService {
             }
             String secretsEncrypted = ((ObjectNode) node).remove("secrets").textValue();
             try {
-               Action action = Util.OBJECT_MAPPER.treeToValue(node, Action.class);
-               if (action.testId == null) {
+               ActionDAO action = ActionMapper.to(Util.OBJECT_MAPPER.treeToValue(node, Action.class));
+               if(forceUseTestId)
                   action.testId = testId;
-               } else if (action.testId != testId) {
-                  throw ServiceException.badRequest("Action id '" + node.path("id") + "' belongs to a different test: " + action.testId);
+               else {
+                  if (action.testId == null) {
+                     action.testId = testId;
+                  } else if (action.testId != testId) {
+                     throw ServiceException.badRequest("Action id '" + node.path("id") + "' belongs to a different test: " + action.testId);
+                  }
                }
                if (secretsEncrypted != null) {
                   action.secrets = Util.OBJECT_MAPPER.readTree(encryptionManager.decrypt(secretsEncrypted));

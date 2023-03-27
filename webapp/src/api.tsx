@@ -1,4 +1,5 @@
-import { Configuration, Middleware, DefaultApi } from "./generated"
+import { DefaultApi } from "./generated/apis"
+import { Configuration, Middleware } from "./generated"
 import store from "./store"
 import { ADD_ALERT } from "./alerts"
 import { TryLoginAgain } from "./auth"

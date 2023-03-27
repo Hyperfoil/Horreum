@@ -42,7 +42,7 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 
-import io.hyperfoil.tools.horreum.api.UserService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.entity.UserInfo;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.security.identity.SecurityIdentity;

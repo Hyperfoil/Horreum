@@ -17,18 +17,18 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
+import io.hyperfoil.tools.horreum.api.alerting.Watch;
+import io.hyperfoil.tools.horreum.mapper.WatchMapper;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.hyperfoil.tools.horreum.api.SubscriptionService;
+import io.hyperfoil.tools.horreum.api.services.SubscriptionService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.entity.ExperimentProfile;
-import io.hyperfoil.tools.horreum.entity.alerting.Watch;
-import io.hyperfoil.tools.horreum.entity.json.Test;
+import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
@@ -48,7 +48,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(Test.EVENT_DELETED, "SubscriptionService", Test.class, this::onTestDelete);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "SubscriptionService", TestDAO.class, this::onTestDelete);
    }
 
    private static Set<String> merge(Set<String> set, String item) {
@@ -65,10 +65,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    public Map<Integer, Set<String>> all(String folder) {
       // TODO: do all of this in single obscure PSQL query
       String username = identity.getPrincipal().getName();
-      List<Watch> personal = Watch.list("?1 IN elements(users)", username);
-      List<Watch> optout = Watch.list("?1 IN elements(optout)", username);
+      List<WatchDAO> personal = WatchDAO.list("?1 IN elements(users)", username);
+      List<WatchDAO> optout = WatchDAO.list("?1 IN elements(optout)", username);
       Set<String> teams = identity.getRoles().stream().filter(role -> role.endsWith("-team")).collect(Collectors.toSet());
-      List<Watch> team = Watch.list("FROM watch w LEFT JOIN w.teams teams WHERE teams IN ?1", teams);
+      List<WatchDAO> team = WatchDAO.list("FROM watch w LEFT JOIN w.teams teams WHERE teams IN ?1", teams);
       Map<Integer, Set<String>> result = new HashMap<>();
       personal.forEach(w -> result.compute(w.test.id, (i, set) -> merge(set, username)));
       optout.forEach(w -> result.compute(w.test.id, (i, set) -> merge(set, "!" + username)));
@@ -91,15 +91,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @WithRoles
    @Override
    public Watch get(int testId) {
-      Watch watch = Watch.find("test.id = ?1", testId).firstResult();
+      WatchDAO watch = WatchDAO.find("test.id = ?1", testId).firstResult();
       if (watch == null) {
-         watch = new Watch();
-         watch.test = em.getReference(Test.class, testId);
+         watch = new WatchDAO();
+         watch.test = em.getReference(TestDAO.class, testId);
          watch.teams = Collections.emptyList();
          watch.users = Collections.emptyList();
          watch.optout = Collections.emptyList();
       }
-      return watch;
+      return WatchMapper.from(watch);
    }
 
    private static List<String> add(List<String> list, String item) {
@@ -136,10 +136,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       if (isTeam && isOptout) {
          throw ServiceException.badRequest("Cannot opt-out team: use remove");
       }
-      Watch watch = Watch.find("testid", testId).firstResult();
+      WatchDAO watch = WatchDAO.find("testid", testId).firstResult();
       if (watch == null) {
-         watch = new Watch();
-         watch.test = em.getReference(Test.class, testId);
+         watch = new WatchDAO();
+         watch.test = em.getReference(TestDAO.class, testId);
       }
       if (isOptout) {
          watch.optout = add(watch.optout, userOrTeam);
@@ -168,7 +168,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       } else if (userOrTeam.startsWith("\"") && userOrTeam.endsWith("\"") && userOrTeam.length() > 2) {
          userOrTeam = userOrTeam.substring(1, userOrTeam.length() - 1);
       }
-      Watch watch = Watch.find("testid", testId).firstResult();
+      WatchDAO watch = WatchDAO.find("testid", testId).firstResult();
       if (watch == null) {
          return Collections.emptyList();
       }
@@ -204,11 +204,12 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @WithRoles
    @Transactional
    @Override
-   public void update(int testId, Watch watch) {
-      Watch existing = Watch.find("testid", testId).firstResult();
+   public void update(int testId, Watch dto) {
+      WatchDAO watch = WatchMapper.to(dto);
+      WatchDAO existing = WatchDAO.find("testid", testId).firstResult();
       if (existing == null) {
          watch.id = null;
-         watch.test = em.getReference(Test.class, testId);
+         watch.test = em.getReference(TestDAO.class, testId);
          if (watch.users == null) {
             watch.users = Collections.emptyList();
          }
@@ -227,7 +228,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       }
    }
 
-   private List<String> currentWatches(Watch watch) {
+   private List<String> currentWatches(WatchDAO watch) {
       ArrayList<String> own = new ArrayList<>(identity.getRoles());
       String username = identity.getPrincipal().getName();
       own.add(username);
@@ -247,8 +248,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(Test test) {
-      var subscriptions = Watch.list("testid = ?1", test.id);
+   public void onTestDelete(TestDAO test) {
+      var subscriptions = WatchDAO.list("testid = ?1", test.id);
       log.infof("Deleting %d subscriptions for test %s (%d)", subscriptions.size(), test.name, test.id);
       for (var subscription : subscriptions) {
          subscription.delete();
@@ -264,8 +265,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
          log.infof("Import test %d: no subscriptions", testId);
       } else {
          try {
-            Watch watch = Util.OBJECT_MAPPER.treeToValue(subscriptions, Watch.class);
-            watch.test = em.getReference(Test.class, testId);
+            WatchDAO watch = WatchMapper.to(Util.OBJECT_MAPPER.treeToValue(subscriptions, Watch.class));
+            watch.test = em.getReference(TestDAO.class, testId);
             em.merge(watch);
          } catch (JsonProcessingException e) {
             throw ServiceException.badRequest("Cannot deserialize subscription id '" + subscriptions.path("id").asText() + "': " + e.getMessage());
