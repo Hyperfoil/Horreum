@@ -7,11 +7,11 @@ assignees: ''
 
 ---
 
-**Describe the bug**
+<!-- Describe the bug you find-->
 
-A clear and concise description of what the bug is.
+ 
 
-Feel free to attach screenshots as well.
+<!--Feel free to attach screenshots as well-->
 
 **To Reproduce**
 
@@ -19,9 +19,8 @@ Steps to reproduce the behavior.
 
 Any sample data would help greatly.
 
-**Version**
 
-What is the version of Horreum ?
+<!-- What is the version of Horreum ? -->
 
 If you are using a development branch; what is the commit id ?
 
@@ -29,29 +28,27 @@ If you are using a development branch; what is the commit id ?
 git rev-parse HEAD
 ```
 
-**Java**
 
-What is the version of Java ?
+
+<!--What is the version of Java ? -->
 
 ```
 java -version
 ```
 
-**PostgreSQL**
+<!--What is the version of PostgreSQL ? -->
 
-What is the version of PostgreSQL ?
 
 ```
 psql --version
 ```
 
-**OS**
 
-Which Operating System (OS) is used ?
+<!-- Which Operating System (OS) is used ? -->
 
-**Browser**
+ 
 
-Which is the version of your browser ?
+<!-- Which is the version of your browser ? -->
 
 **Tip**
 
