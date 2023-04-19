@@ -160,8 +160,8 @@ function ComponentTable(props: ComponentTableProps) {
         />,
     ]
     return (
-        <Level>
-            <LevelItem style={{ width: "50%" }}>
+        <Level style={{ padding: "50px"}}>
+            <LevelItem style={{ width: "100%" }}>
                 <TableComposable variant="compact">
                     <Thead>
                         <Tr>
@@ -204,7 +204,7 @@ function ComponentTable(props: ComponentTableProps) {
                     </Tbody>
                 </TableComposable>
             </LevelItem>
-            <LevelItem style={{ width: "50%", height: "300px", position: "relative" }}>
+            <LevelItem style={{ width: "100%", height: "400px", position: "relative", padding: "50px 0px" }}>
                 <div className="chartSwitch nonPrintable">
                     <Switch
                         label="Min-max Y axis"
