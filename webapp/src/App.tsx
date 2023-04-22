@@ -71,15 +71,15 @@ function Main() {
                                     <NavItem itemId={0}>
                                         <NavLink
                                             to="/test"
-                                            style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
-                                        >
+                                            style={{fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" } }
+                                         >
                                             Tests
                                         </NavLink>
                                     </NavItem>
                                     <NavItem itemId={1}>
                                         <NavLink
                                             to="/schema"
-                                            style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                         >
                                             Schema
                                         </NavLink>
@@ -87,7 +87,7 @@ function Main() {
                                     <NavItem itemId={2}>
                                         <NavLink
                                             to="/changes"
-                                            style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                         >
                                             Changes
                                         </NavLink>
@@ -95,7 +95,7 @@ function Main() {
                                     <NavItem itemId={3}>
                                         <NavLink
                                             to="/reports"
-                                            style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                         >
                                             Reports
                                         </NavLink>
