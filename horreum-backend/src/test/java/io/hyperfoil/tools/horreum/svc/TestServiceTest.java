@@ -122,7 +122,7 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testAddTestAction(TestInfo info) {
       Test test = createTest(createExampleTest(getTestName(info)));
-      addTestHttpAction(test, Run.EVENT_NEW, "https://attacker.ru").then().statusCode(400);
+      addTestHttpAction(test, Run.EVENT_NEW, "https://attacker.com").then().statusCode(400);
 
       addAllowedSite("https://example.com");
 
