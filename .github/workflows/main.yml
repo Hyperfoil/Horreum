@@ -52,3 +52,5 @@ jobs:
         path: |
           */target/surefire-reports/*
           test-suite/target/hyperfoil/*.log
+    - name: Install npm
+      run: npm install
