@@ -55,8 +55,6 @@ for FILE in \
   create-db.sh \
   docker-compose.yml \
   Dockerfile.keycloak \
-  grafana.env \
-  grafana.sh \
   keycloak.sh \
   keycloak-horreum.json \
   podman-compose.sh \

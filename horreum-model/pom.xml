@@ -75,7 +75,7 @@
                                 io.hyperfoil.tools.horreum.entity,
                                 io.hyperfoil.tools.horreum.entity.json,
                                 io.hyperfoil.tools.horreum.entity.report,
-                                io.hyperfoil.tools.horreum.grafana
+                                io.hyperfoil.tools.horreum.changes
                             </scanPackages>
                             <scanClasses>.*</scanClasses>
                             <operationIdStrategy>CLASS_METHOD</operationIdStrategy>

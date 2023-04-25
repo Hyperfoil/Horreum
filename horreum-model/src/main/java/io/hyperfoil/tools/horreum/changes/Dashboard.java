@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.grafana;
+package io.hyperfoil.tools.horreum.changes;
 
 import java.util.ArrayList;
 import java.util.List;

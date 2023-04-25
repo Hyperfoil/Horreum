@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.it;
 
-import io.hyperfoil.tools.horreum.it.resources.GrafanaResource;
 import io.hyperfoil.tools.horreum.it.resources.KeycloakResource;
 import io.hyperfoil.tools.horreum.it.resources.PostgresResource;
 import io.hyperfoil.tools.horreum.it.utils.RoleBuilder;
@@ -118,8 +117,6 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
 
     public static PostgresResource postgreSQLResource = new PostgresResource();
     public static KeycloakResource keycloakResource = new KeycloakResource();
-    public static GrafanaResource grafanaResource = new GrafanaResource();
-
     protected static String getProperty(String propertyName) {
         String override = System.getProperty(propertyName);
         if (override != null) {
@@ -143,12 +140,9 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
 
 
         String QUARKUS_DATASOURCE_PASSWORD = getProperty("quarkus.datasource.password");
-        String HORREUM_GRAFANA_ADMIN_PASSWORD = getProperty("horreum.grafana.admin.password");
 
         envVariables.put("QUARKUS_DATASOURCE_PASSWORD", QUARKUS_DATASOURCE_PASSWORD);
         envVariables.put("QUARKUS_DATASOURCE_MIGRATION_PASSWORD", QUARKUS_DATASOURCE_PASSWORD);
-
-        envVariables.put("HORREUM_GRAFANA_ADMIN_PASSWORD", HORREUM_GRAFANA_ADMIN_PASSWORD);
 
         envVariables.put("STOP_SIGNAL", "SIGKILL");
 
@@ -176,9 +170,8 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
         envVariables.put("keycloak.host", keycloakEnv.get("keycloak.host"));
         envVariables.put("horreum.keycloak.url", keycloakEnv.get("keycloak.host"));
         envVariables.put("quarkus.oidc.auth.server.url", keycloakEnv.get("keycloak.host").concat("/realms/").concat(HORREUM_REALM));
-        // Obtain client secrets for both Horreum and Grafana
+        // Obtain client secrets for Horreum
         envVariables.put("quarkus.oidc.credentials.secret", generateClientSecret.apply("horreum"));
-        envVariables.put("gf.auth.generic.oauth.client.secret", generateClientSecret.apply("grafana"));
 
         // Create roles and example user in Keycloak
         RoleRepresentation uploaderRole = getRoleID.apply("uploader");
@@ -211,10 +204,6 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
 
         keycloak.realm(HORREUM_REALM).users().get(dummyUser.getId()).roles().clientLevel(accountClient.getId()).add(Arrays.asList(viewProfileRole));
 
-        grafanaResource.init(postgresEnv);
-        Map<String, String> grafanaEnv = grafanaResource.start();
-
-        envVariables.putAll(grafanaEnv);
         log.info("Waiting for test infrastructure to start");
 
         return envVariables;
@@ -245,7 +234,6 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
     public static void stopContainers() {
         postgreSQLResource.stop();
         keycloakResource.stop();
-        grafanaResource.stop();
     }
 
 }

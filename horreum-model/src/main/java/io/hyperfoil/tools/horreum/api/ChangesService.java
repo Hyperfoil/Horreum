@@ -6,7 +6,6 @@ import java.util.List;
 
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
@@ -20,18 +19,12 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.hyperfoil.tools.horreum.grafana.Target;
+import io.hyperfoil.tools.horreum.changes.Target;
 
-@Path("/api/grafana")
+@Path("/api/changes")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-public interface GrafanaService {
-
-   @GET
-   @Path("/")
-   default Response healthcheck() {
-      return Response.ok().build();
-   }
+public interface ChangesService {
 
    @POST
    @Path("/search")
@@ -71,7 +64,6 @@ public interface GrafanaService {
       public String target;
       @NotNull
       public List<Number[]> datapoints = new ArrayList<>();
-      // custom fields Grafana does not understand
       @JsonProperty(required = true)
       public int variableId;
    }
@@ -96,7 +88,6 @@ public interface GrafanaService {
       public long time;
       public long timeEnd;
       public String[] tags;
-      // custom fields Grafana does not understand
       public int changeId;
       public int variableId;
       public int runId;

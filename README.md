@@ -24,16 +24,15 @@ for more information.
 * [Java 11](https://adoptium.net/temurin/releases/?version=11)
 * [Apache Maven 3.8](https://maven.apache.org/)
 * [Keycloak](https://www.keycloak.org/)
-* [Grafana](https://grafana.com/)
 * [PostgreSQL 12+](https://www.postgresql.org/)
 
 ### Local development in Windows
-We have prepared a seperate `docker-compose` script to setup Keycloak, PostgreSQL and Grafana in the Windows platform, check the guide 👉 [Local development in Windows](./doc/Windows.md)
+We have prepared a seperate `docker-compose` script to setup Keycloak and PostgreSQL in the Windows platform, check the guide 👉 [Local development in Windows](./doc/Windows.md)
 
 
 ### Local development with Docker Compose
 
-We have prepared a `docker-compose` script to setup Keycloak, PostgreSQL and Grafana using following command.
+We have prepared a `docker-compose` script to setup Keycloak and PostgreSQL using following command.
 
 ```bash
 docker-compose -p horreum -f infra/docker-compose.yml up -d
@@ -42,7 +41,7 @@ and after a few moments everything should be up and ready. The script will creat
 
 ### Local development with Podman
 
-We have prepared a `podman-compose` script to setup Keycloak, PostgreSQL and Grafana using following command.
+We have prepared a `podman-compose` script to setup Keycloak and PostgreSQL using following command.
 
 ```bash
 ./infra/podman-compose.sh
@@ -127,12 +126,6 @@ If PostgreSQL container fails to start try removing the volume using:
 
 ```bash
 podman volume rm horreum_horreum_pg12
-```
-
-If you are having problems with Grafana login after restarting the infrastructure wipe out old environment files using:
-
-```bash
-rm horreum-backend/.env .grafana
 ```
 
 ## Tested platforms

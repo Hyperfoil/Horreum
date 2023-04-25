@@ -112,10 +112,6 @@ public interface AlertingService {
    @Path("/missingdatarule/{id}")
    void deleteMissingDataRule(@PathParam("id") int id);
 
-   @GET
-   @Path("/grafanaStatus")
-   String grafanaStatus();
-
    class DashboardInfo {
       @JsonProperty(required = true)
       public int testId;
