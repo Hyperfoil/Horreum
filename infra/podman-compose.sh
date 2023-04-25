@@ -16,7 +16,7 @@ ORIGINAL_DIR=$(pwd)
 cd $(dirname $0)
 
 # Delete leftovers from Docker runs: files owned by root
-rm -rf ../horreum-backend/.env ../.grafana ../horreum-integration/target > /dev/null 2>&1
+rm -rf ../horreum-backend/.env ../horreum-integration/target > /dev/null 2>&1
 
 # Force rebuild but keeping the cache
 podman untag horreum_keycloak:latest > /dev/null 2>&1

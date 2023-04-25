@@ -34,7 +34,7 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.View;
 import io.hyperfoil.tools.horreum.entity.json.ViewComponent;
 import io.hyperfoil.tools.horreum.server.CloseMe;
-import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
+import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -45,7 +45,7 @@ import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(NoGrafanaProfile.class)
+@TestProfile(HorreumTestProfile.class)
 public class DatasetServiceTest extends BaseServiceTest {
    @Inject
    DatasetService datasetService;

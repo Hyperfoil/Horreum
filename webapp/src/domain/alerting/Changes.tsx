@@ -6,9 +6,9 @@ import TestSelect, { SelectedTest } from "../../components/TestSelect"
 import LabelsSelect, { convertLabels, SelectedLabels } from "../../components/LabelsSelect"
 import PanelChart from "./PanelChart"
 import { fingerprintToString, formatDate } from "../../utils"
-import { DateTime } from "luxon"
 import { teamsSelector } from "../../auth"
-import Api, { PanelInfo } from "../../api"
+import { DateTime } from "luxon"
+import Api, { PanelInfo, AnnotationDefinition, TimeseriesTarget } from "../../api"
 
 import {
     Button,
@@ -134,6 +134,58 @@ function toNumber(value: any) {
     return isNaN(n) ? undefined : n
 }
 
+function range(from: number, to: number) {
+    return {
+        from: new Date(DateTime.fromMillis(from).setZone("utc").toISO()),
+        to: new Date(DateTime.fromMillis(to).setZone("utc").toISO()),
+        oneBeforeAndAfter: true,
+    }
+}
+
+export const fetchDatapoints = (
+    variableIds: number[],
+    fingerprint: unknown,
+    from: number,
+    to: number
+): Promise<TimeseriesTarget[]> => {
+    const query = {
+        range: range(from, to),
+        targets: variableIds.map(id => ({
+            target: `${id};${fingerprintToString(fingerprint)}`,
+            type: "timeseries",
+            refId: "ignored",
+        })),
+    }
+    return Api.changesServiceQuery(query)
+}
+
+export const fetchAnnotations = (
+    variableId: number,
+    fingerprint: unknown,
+    from: number,
+    to: number
+): Promise<AnnotationDefinition[]> => {
+    const query = {
+        range: range(from, to),
+        annotation: {
+            query: variableId + ";" + fingerprintToString(fingerprint),
+        },
+    }
+    return Api.changesServiceAnnotations(query)
+}
+
+export const fetchAllAnnotations = (
+    variableIds: number[],
+    fingerprint: unknown,
+    from: number,
+    to: number
+): Promise<AnnotationDefinition[]> => {
+    // TODO: let's create a bulk operation for these
+    return Promise.all(variableIds.map(id => fetchAnnotations(id, fingerprint, from, to))).then(results =>
+        results.flat()
+    )
+}
+
 export default function Changes() {
     const history = useHistory()
     const params = new URLSearchParams(history.location.search)
@@ -162,7 +214,6 @@ export default function Changes() {
             return undefined
         }
     })
-    const [dashboardUrl, setDashboardUrl] = useState("")
     const [panels, setPanels] = useState<PanelInfo[]>([])
     const [loadingPanels, setLoadingPanels] = useState(false)
     const [loadingFingerprints, setLoadingFingerprints] = useState(false)
@@ -200,14 +251,12 @@ export default function Changes() {
     }, [selectedTest, selectedFingerprint, endTime, timespan, lineType, firstNow, history])
     useEffect(() => {
         setPanels([])
-        setDashboardUrl("")
         // We need to prevent fetching dashboard until we are sure if we need the fingerprint
         if (selectedTest && !loadingFingerprints) {
             setLoadingPanels(true)
             Api.alertingServiceDashboard(selectedTest.id, fingerprintToString(selectedFingerprint))
                 .then(
                     response => {
-                        setDashboardUrl(response.url)
                         setPanels(response.panels)
                     },
                     error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
@@ -286,9 +335,6 @@ export default function Changes() {
                                         >
                                             Variable definitions
                                         </NavLink>
-                                        <Button variant="secondary" onClick={() => window.open(dashboardUrl, "_blank")}>
-                                            Open Grafana
-                                        </Button>
                                         <Button
                                             variant="secondary"
                                             isDisabled={
@@ -373,40 +419,38 @@ export default function Changes() {
                         panels.map((p, i) => (
                             <DataList key={i} aria-label="test variables">
                                 <DataListItem aria-labelledby="variable-name">
-                                    {dashboardUrl && (
-                                        <DataListItemRow>
-                                            <DataListItemCells
-                                                dataListCells={[
-                                                    <DataListCell key="chart">
-                                                        <PanelChart
-                                                            title={p.name}
-                                                            variables={p.variables.map(v => v.id)}
-                                                            fingerprint={selectedFingerprint}
-                                                            endTime={endTime}
-                                                            setEndTime={setEndTime}
-                                                            timespan={timespan}
-                                                            lineType={lineType}
-                                                            onChangeSelected={(changeId, variableId) => {
-                                                                setSelectedChange(changeId)
-                                                                setSelectedVariable(variableId)
-                                                                // we cannot scroll to an element that's not visible yet
-                                                                window.setTimeout(() => {
-                                                                    const element = document.getElementById(
-                                                                        "change_" + changeId
-                                                                    )
-                                                                    if (element && element !== null) {
-                                                                        element.scrollIntoView()
-                                                                    }
-                                                                    // this is hacky way to reopen tabs on subsequent click
-                                                                    setSelectedVariable(undefined)
-                                                                }, 100)
-                                                            }}
-                                                        />
-                                                    </DataListCell>,
-                                                ]}
-                                            />
-                                        </DataListItemRow>
-                                    )}
+                                    <DataListItemRow>
+                                        <DataListItemCells
+                                            dataListCells={[
+                                                <DataListCell key="chart">
+                                                    <PanelChart
+                                                        title={p.name}
+                                                        variables={p.variables.map(v => v.id)}
+                                                        fingerprint={selectedFingerprint}
+                                                        endTime={endTime}
+                                                        setEndTime={setEndTime}
+                                                        timespan={timespan}
+                                                        lineType={lineType}
+                                                        onChangeSelected={(changeId, variableId) => {
+                                                            setSelectedChange(changeId)
+                                                            setSelectedVariable(variableId)
+                                                            // we cannot scroll to an element that's not visible yet
+                                                            window.setTimeout(() => {
+                                                                const element = document.getElementById(
+                                                                    "change_" + changeId
+                                                                )
+                                                                if (element && element !== null) {
+                                                                    element.scrollIntoView()
+                                                                }
+                                                                // this is hacky way to reopen tabs on subsequent click
+                                                                setSelectedVariable(undefined)
+                                                            }, 100)
+                                                        }}
+                                                    />
+                                                </DataListCell>,
+                                            ]}
+                                        />
+                                    </DataListItemRow>
                                     <DataListItemRow>
                                         <DataListItemCells
                                             dataListCells={[

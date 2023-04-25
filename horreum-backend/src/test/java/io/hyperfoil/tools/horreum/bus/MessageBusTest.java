@@ -14,22 +14,21 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.transaction.TransactionManager;
 
+import io.quarkus.test.junit.TestProfile;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
 
 import io.hyperfoil.tools.horreum.svc.Util;
-import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(NoGrafanaProfile.class)
+@TestProfile(MessageBusTestProfile.class)
 public class MessageBusTest {
    protected static final Logger log = Logger.getLogger(MessageBusTest.class);
    protected static final String CHANNEL = "foobar";

@@ -24,7 +24,7 @@ import io.hyperfoil.tools.horreum.entity.report.ReportComment;
 import io.hyperfoil.tools.horreum.entity.report.ReportComponent;
 import io.hyperfoil.tools.horreum.entity.report.TableReport;
 import io.hyperfoil.tools.horreum.entity.report.TableReportConfig;
-import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
+import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -34,7 +34,7 @@ import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(NoGrafanaProfile.class)
+@TestProfile(HorreumTestProfile.class)
 public class ReportServiceTest extends BaseServiceTest {
    private static final String SCHEMA = "urn:comparison";
 

@@ -36,7 +36,6 @@ release.properties
 
 # Quarkus .env
 .env
-.grafana
 
 # dependencies
 /webapp/node_modules

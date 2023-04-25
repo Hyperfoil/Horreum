@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 
+import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -16,7 +17,6 @@ import io.hyperfoil.tools.horreum.entity.json.Action;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.server.CloseMe;
-import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -26,7 +26,7 @@ import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(NoGrafanaProfile.class)
+@TestProfile(HorreumTestProfile.class)
 public class ActionServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test

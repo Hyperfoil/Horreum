@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
@@ -35,10 +34,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
-import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
-import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
@@ -57,7 +54,6 @@ import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModel;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
@@ -81,9 +77,8 @@ import io.hyperfoil.tools.horreum.entity.alerting.Variable;
 import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.entity.json.Run;
 import io.hyperfoil.tools.horreum.entity.json.Test;
-import io.hyperfoil.tools.horreum.grafana.Dashboard;
-import io.hyperfoil.tools.horreum.grafana.GrafanaClient;
-import io.hyperfoil.tools.horreum.grafana.Target;
+import io.hyperfoil.tools.horreum.changes.Dashboard;
+import io.hyperfoil.tools.horreum.changes.Target;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.runtime.Startup;
@@ -173,15 +168,6 @@ public class AlertingServiceImpl implements AlertingService {
    @Inject
    SecurityIdentity identity;
 
-   @Inject @RestClient
-   GrafanaClient grafana;
-
-   @ConfigProperty(name = "horreum.grafana.url")
-   Optional<String> grafanaBaseUrl;
-
-   @ConfigProperty(name = "horreum.grafana.update.datasource")
-   Optional<Boolean> updateGrafanaDatasource;
-
    @ConfigProperty(name = "horreum.test")
    Optional<Boolean> isTest;
 
@@ -200,7 +186,6 @@ public class AlertingServiceImpl implements AlertingService {
    @Inject
    TimeService timeService;
 
-   long grafanaDatasourceTimerId;
 
    // entries can be removed from timer thread while normally this is updated from one of blocking threads
    private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
@@ -281,59 +266,6 @@ public class AlertingServiceImpl implements AlertingService {
       messageBus.subscribe(DataPoint.EVENT_NEW, "AlertingService", DataPoint.Event.class, this::onNewDataPoint);
       messageBus.subscribe(Run.EVENT_NEW, "AlertingService", Run.class, this::removeExpected);
       messageBus.subscribe(Test.EVENT_DELETED, "AlertingService", Test.class, this::onTestDeleted);
-      if (grafanaBaseUrl.isPresent() && updateGrafanaDatasource.orElse(true)) {
-         setupGrafanaDatasource(0);
-      }
-   }
-
-   @PreDestroy
-   void destroy() {
-      synchronized (this) {
-         // The timer is not cancelled automatically during live reload:
-         // https://github.com/quarkusio/quarkus/issues/25254
-         vertx.cancelTimer(grafanaDatasourceTimerId);
-      }
-   }
-
-   private void setupGrafanaDatasource(@SuppressWarnings("unused") long timerId) {
-      vertx.executeBlocking(promise -> {
-         setupGrafanaDatasource();
-         promise.complete();
-      }, false, null);
-   }
-
-   private void setupGrafanaDatasource() {
-      String url = internalUrl + "/api/grafana";
-      try {
-         boolean create = true;
-         for (GrafanaClient.Datasource ds : grafana.listDatasources()) {
-            if (ds.name.equals("Horreum")) {
-               if (!url.equals(ds.url) && ds.id != null) {
-                  log.debugf("Deleting Grafana datasource %d: has URL %s, expected %s", ds.id, ds.url, url);
-                  grafana.deleteDatasource(ds.id);
-               } else {
-                  create = false;
-               }
-            }
-         }
-         if (create) {
-            log.debug("Creating new Horreum datasource in Grafana");
-            GrafanaClient.Datasource newDatasource = new GrafanaClient.Datasource();
-            newDatasource.url = url;
-            grafana.addDatasource(newDatasource);
-         }
-         scheduleNextSetup(10000);
-      } catch (ProcessingException | WebApplicationException e) {
-         log.warn("Cannot set up Horreum datasource in Grafana , retrying in 5 seconds.", e);
-         scheduleNextSetup(5000);
-      }
-   }
-
-   private void scheduleNextSetup(int delay) {
-      synchronized (this) {
-         vertx.cancelTimer(grafanaDatasourceTimerId);
-         grafanaDatasourceTimerId = vertx.setTimer(delay, this::setupGrafanaDatasource);
-      }
    }
 
    private void recalculateDatapointsForDataset(DataSet dataset, boolean notify, boolean debug, Recalculation recalculation) {
@@ -579,22 +511,27 @@ public class AlertingServiceImpl implements AlertingService {
    @Transactional
    void onNewDataPoint(DataPoint.Event event) {
       DataPoint dataPoint = event.dataPoint;
-      dataPoint.variable = Variable.findById(dataPoint.variable.id);
-      log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
-            dataPoint.dataset.id, dataPoint.timestamp,
-            dataPoint.variable.id, dataPoint.variable.name, dataPoint.value);
-      JsonNode fingerprint = Fingerprint.<Fingerprint>findByIdOptional(dataPoint.dataset.id).map(fp -> fp.fingerprint).orElse(null);
+      Variable variable = Variable.findById(dataPoint.variable.id);
+      if ( variable != null ) {
+         log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
+                 dataPoint.dataset.id, dataPoint.timestamp,
+                 variable.id, variable.name, dataPoint.value);
+         JsonNode fingerprint = Fingerprint.<Fingerprint>findByIdOptional(dataPoint.dataset.id).map(fp -> fp.fingerprint).orElse(null);
 
-      VarAndFingerprint key = new VarAndFingerprint(dataPoint.variable.id, fingerprint);
-      log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", dataPoint.variable.id, fingerprint, dataPoint.timestamp, validUpTo.get(key));
-      validUpTo.compute(key, (ignored, current) -> {
-         if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
-            return new UpTo(dataPoint.timestamp, false);
-         } else {
-            return current;
-         }
-      });
-      runChangeDetection(Variable.findById(dataPoint.variable.id), fingerprint, event.notify, true);
+         VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
+         log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint, dataPoint.timestamp, validUpTo.get(key));
+         validUpTo.compute(key, (ignored, current) -> {
+            if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
+               return new UpTo(dataPoint.timestamp, false);
+            } else {
+               return current;
+            }
+         });
+         runChangeDetection(Variable.findById(variable.id), fingerprint, event.notify, true);
+      } else {
+         log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
+                 dataPoint.dataset.id, dataPoint.timestamp, dataPoint.variable == null ? -1 : dataPoint.variable.id);
+      }
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -781,16 +718,6 @@ public class AlertingServiceImpl implements AlertingService {
             current.delete();
          });
 
-         if (grafanaBaseUrl.isPresent()) {
-            try {
-               for (var dashboard : grafana.searchDashboard("", "testId=" + testId)) {
-                  grafana.deleteDashboard(dashboard.uid);
-               }
-            } catch (ProcessingException | WebApplicationException e) {
-               log.warnf(e, "Failed to delete dasboards for test %d", testId);
-            }
-         }
-
          em.flush();
       } catch (PersistenceException e) {
          log.error("Failed to update variables", e);
@@ -837,21 +764,7 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   private GrafanaClient.GetDashboardResponse findDashboard(int testId, String fingerprint) {
-      try {
-         List<GrafanaClient.DashboardSummary> list = grafana.searchDashboard("", testId + ":" + fingerprint);
-         if (list.isEmpty()) {
-            return null;
-         } else {
-            return grafana.getDashboard(list.get(0).uid);
-         }
-      } catch (ProcessingException | WebApplicationException e) {
-         log.debugf(e, "Error looking up dashboard for test %d, fingerprint %s", testId, fingerprint);
-         return null;
-      }
-   }
-
-   private DashboardInfo createDashboard(int testId, String fingerprint, List<Variable> variables) {
+   private DashboardInfo createChangesDashboard(int testId, String fingerprint, List<Variable> variables) {
       DashboardInfo info = new DashboardInfo();
       info.testId = testId;
       Dashboard dashboard = new Dashboard();
@@ -874,20 +787,7 @@ public class AlertingServiceImpl implements AlertingService {
          dashboard.panels.add(panel);
          ++i;
       }
-      try {
-         GrafanaClient.DashboardSummary response = grafana.createOrUpdateDashboard(new GrafanaClient.PostDashboardRequest(dashboard, true));
-         info.uid = response.uid;
-         info.url = grafanaBaseUrl.get() + response.url;
-         return info;
-      } catch (WebApplicationException e) {
-         log.errorf(e, "Failed to create/update dashboard %s", dashboard.uid);
-         try {
-            tm.setRollbackOnly();
-         } catch (SystemException systemException) {
-            throw ServiceException.serverError("Failure in transaction");
-         }
-         return null;
-      }
+      return info;
    }
 
    private Map<String, List<Variable>> groupedVariables(List<Variable> variables) {
@@ -906,24 +806,8 @@ public class AlertingServiceImpl implements AlertingService {
       if (fingerprint == null) {
          fingerprint = "";
       }
-      GrafanaClient.GetDashboardResponse response = findDashboard(testId, fingerprint);
       List<Variable> variables = Variable.list("testid", testId);
-      DashboardInfo dashboard;
-      if (response == null) {
-         dashboard = createDashboard(testId, fingerprint, variables);
-         if (dashboard == null) {
-            throw new ServiceException(Response.Status.SERVICE_UNAVAILABLE, "Cannot update Grafana dashboard.");
-         }
-      } else {
-         dashboard = new DashboardInfo();
-         dashboard.testId = testId;
-         dashboard.uid = response.dashboard.uid;
-         dashboard.url = response.meta.url;
-         for (var entry : groupedVariables(variables).entrySet()) {
-            dashboard.panels.add(new PanelInfo(entry.getKey(), entry.getValue()));
-         }
-      }
-      return dashboard;
+      return createChangesDashboard(testId, fingerprint, variables);
    }
 
    @Override
@@ -1278,16 +1162,6 @@ public class AlertingServiceImpl implements AlertingService {
    @Override
    public void deleteMissingDataRule(int id) {
       MissingDataRule.deleteById(id);
-   }
-
-   @Override
-   public String grafanaStatus() {
-      try {
-         grafana.listDatasources();
-         return "OK";
-      } catch (WebApplicationException e) {
-         return "KO";
-      }
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
