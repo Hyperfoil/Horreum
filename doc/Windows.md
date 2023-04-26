@@ -28,14 +28,11 @@ mvn quarkus:dev -Dquarkus.quinoa=false
 * This is the port for the application [localhost:8080](http://localhost:8080)
 
 ### Access the frontend development server
-
-To access the frontend development server, you need to:
-
-1. Install the dependencies by running the following command:
-
+1. To access the frontend development server, you need to install the dependencies by running the following command
 ```
 npm install
 ```
+
 2. Once the installation is complete, start the frontend server with the following command:
 
 ```
