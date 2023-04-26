@@ -36,13 +36,9 @@ To access the frontend development server, you need to:
 ```
 npm install
 ```
-
-
 2. Once the installation is complete, start the frontend server with the following command:
 
 ```
 npm start
 ```
-
-
 This should start the frontend development server, and you can access it at [http://localhost:3000](http://localhost:3000).
