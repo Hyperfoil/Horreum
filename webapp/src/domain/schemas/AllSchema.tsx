@@ -28,6 +28,7 @@ export default function AllSchema() {
             {
                 Header: "Name",
                 accessor: "name",
+                disableSortBy: false,
                 Cell: (arg: C) => {
                     return <NavLink to={"/schema/" + arg.row.original.id}>{arg.cell.value}</NavLink>
                 },
@@ -101,7 +102,11 @@ export default function AllSchema() {
                     </CardHeader>
                 )}
                 <CardBody style={{ overflowX: "auto" }}>
-                    <Table columns={columns} data={list || []} />
+                    <Table columns={columns}
+                    data={list || []}
+                    sortBy={[{ id: "name", desc: false }]}
+                     
+                    />
                 </CardBody>
             </Card>
         </PageSection>

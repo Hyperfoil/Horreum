@@ -21,6 +21,7 @@ import java.util.stream.IntStream;
 
 import javax.inject.Inject;
 
+import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.TestInfo;
@@ -51,7 +52,6 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
-import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
@@ -65,7 +65,7 @@ import io.restassured.RestAssured;
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(NoGrafanaProfile.class)
+@TestProfile(HorreumTestProfile.class)
 public class AlertingServiceTest extends BaseServiceTest {
    private static final Logger log = Logger.getLogger(AlertingServiceTest.class);
 

@@ -11,6 +11,7 @@ import java.util.stream.StreamSupport;
 
 import javax.ws.rs.core.HttpHeaders;
 
+import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,7 +28,6 @@ import io.hyperfoil.tools.horreum.entity.json.Test;
 import io.hyperfoil.tools.horreum.entity.json.TestToken;
 import io.hyperfoil.tools.horreum.entity.json.Transformer;
 import io.hyperfoil.tools.horreum.server.CloseMe;
-import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -40,7 +40,7 @@ import io.restassured.specification.RequestSpecification;
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(NoGrafanaProfile.class)
+@TestProfile(HorreumTestProfile.class)
 public class RunServiceTest extends BaseServiceTest {
    private static final int POLL_DURATION_SECONDS = 10;
 

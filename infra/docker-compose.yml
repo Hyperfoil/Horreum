@@ -58,18 +58,3 @@ services:
     - KEYCLOAK_UI_HOST=localhost
     volumes:
     - "${WORKING_PATH:-../}:/cwd:rw,z"
-  grafana:
-    depends_on:
-    - keycloak
-    - app-init
-    image: docker.io/grafana/grafana
-    entrypoint: /cwd/infra/grafana.sh
-    env_file: grafana.env
-    environment:
-      GF_SERVER_HTTP_PORT: "${GRAFANA_HTTP_PORT:-4040}"
-    stop_signal: "${STOP_SIGNAL:-SIGTERM}"
-    user: "0:0"
-    volumes:
-    - "${WORKING_PATH:-../}:/cwd:ro,z"
-    ports:
-    - "4040:3000"

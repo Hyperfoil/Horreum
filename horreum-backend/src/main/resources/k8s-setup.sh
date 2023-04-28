@@ -27,7 +27,6 @@ update_urls() {
 }
 
 update_urls horreum-ui $APP_URL
-update_urls grafana $GRAFANA_URL
 
 # Create admin user in Keycloak
 REALM_URL=$KC_URL/admin/realms/horreum

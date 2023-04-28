@@ -24,17 +24,12 @@ KEYCLOAK_ADMIN_TOKEN=$(curl -s $KEYCLOAK_INTERNAL_BASE/realms/master/protocol/op
 AUTH='Authorization: Bearer '$KEYCLOAK_ADMIN_TOKEN
 REALM_URL=$KEYCLOAK_INTERNAL_BASE/admin/realms/horreum
 
-# Obtain client secrets for both Horreum and Grafana
+# Obtain client secrets for Horreum
 HORREUM_CLIENTID=$(curl -s $REALM_URL/clients -H "$AUTH" | jq -r '.[] | select(.clientId=="horreum") | .id')
 HORREUM_CLIENTSECRET=$(curl -s $REALM_URL/clients/$HORREUM_CLIENTID/client-secret -X POST -H "$AUTH" | jq -r '.value')
 [ -n "$HORREUM_CLIENTSECRET" -a "$HORREUM_CLIENTSECRET" != "null" ] || exit 1
 echo QUARKUS_OIDC_CREDENTIALS_SECRET=$HORREUM_CLIENTSECRET >> /cwd/horreum-backend/.env
 chmod a+w /cwd/horreum-backend/.env
-GRAFANA_CLIENTID=$(curl -s $REALM_URL/clients -H "$AUTH" | jq -r '.[] | select(.clientId=="grafana") | .id')
-GRAFANA_CLIENTSECRET=$(curl -s $REALM_URL/clients/$GRAFANA_CLIENTID/client-secret -X POST -H "$AUTH" | jq -r '.value')
-[ -n "$GRAFANA_CLIENTSECRET" -a "$GRAFANA_CLIENTSECRET" != "null" ] || exit 1
-echo GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=$GRAFANA_CLIENTSECRET > /cwd/.grafana
-chmod a+w /cwd/.grafana
 
 # Create roles and example user in Keycloak
 UPLOADER_ID=$(curl -s $REALM_URL/roles/uploader -H "$AUTH"  | jq -r '.id')

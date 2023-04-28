@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
+import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import org.junit.jupiter.api.Test;
 
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
@@ -17,7 +18,6 @@ import io.hyperfoil.tools.horreum.entity.json.DataSet;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
-import io.hyperfoil.tools.horreum.test.NoGrafanaProfile;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -25,7 +25,7 @@ import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 
 @QuarkusTest
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(NoGrafanaProfile.class)
+@TestProfile(HorreumTestProfile.class)
 public class NotificationPluginTest {
    @Inject
    Instance<NotificationPlugin> plugins;

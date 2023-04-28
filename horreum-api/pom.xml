@@ -80,7 +80,7 @@
                             <transformedPackages>
                                 <package>io.hyperfoil.tools.horreum.api</package>
                                 <package>io.hyperfoil.tools.horreum.entity</package>
-                                <package>io.hyperfoil.tools.horreum.grafana</package>
+                                <package>io.hyperfoil.tools.horreum.changes</package>
                             </transformedPackages>
                             <erasedPackages>
                                 <package>javax.persistence</package>

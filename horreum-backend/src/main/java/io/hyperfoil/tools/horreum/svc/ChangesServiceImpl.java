@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.security.PermitAll;
@@ -10,30 +9,26 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.ws.rs.HeaderParam;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.hyperfoil.tools.horreum.api.GrafanaService;
+import io.hyperfoil.tools.horreum.api.ChangesService;
 import io.hyperfoil.tools.horreum.entity.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.entity.alerting.Variable;
-import io.hyperfoil.tools.horreum.grafana.Target;
+import io.hyperfoil.tools.horreum.changes.Target;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 
 /**
- * This service works as a backend for calls from Grafana (using
- * <a href="https://grafana.com/grafana/plugins/simpod-json-datasource">simpod-json-datasource</a>)
- * since Horreum exposes charts as embedded Grafana panels.
+ * This service is a backend for the Changes report panels
  */
 @PermitAll
 @ApplicationScoped
-public class GrafanaServiceImpl implements GrafanaService {
+public class ChangesServiceImpl implements ChangesService {
    @Inject
    EntityManager em;
 
@@ -53,7 +48,6 @@ public class GrafanaServiceImpl implements GrafanaService {
          }
       }
       config.getOptionalValue("horreum.internal.url", String.class).ifPresent(url -> allowedOrigins.add(getOrigin(url)));
-      config.getOptionalValue("horreum.grafana.url", String.class).ifPresent(url -> allowedOrigins.add(getOrigin(url)));
    }
 
    private String getOrigin(String baseUrl) {
@@ -161,8 +155,6 @@ public class GrafanaServiceImpl implements GrafanaService {
       } else if (query.range == null || query.range.from == null || query.range.to == null) {
          throw ServiceException.badRequest("Invalid time range");
       }
-      // Note that annotations are per-dashboard, not per-panel:
-      // https://github.com/grafana/grafana/issues/717
       List<AnnotationDefinition> annotations = new ArrayList<>();
       String tq = query.annotation.query;
       JsonNode fingerprint = null;

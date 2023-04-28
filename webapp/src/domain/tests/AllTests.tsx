@@ -287,6 +287,7 @@ export default function AllTests() {
             {
                 Header: "Name",
                 accessor: "name",
+                disableSortBy: false,
                 Cell: (arg: C) => <NavLink to={`/test/${arg.row.original.id}`}>{arg.cell.value}</NavLink>,
             },
             { Header: "Description", accessor: "description" },
@@ -422,7 +423,12 @@ export default function AllTests() {
                             history.replace(f ? `/test?folder=${f}` : "/test")
                         }}
                     />
-                    <Table columns={columns} data={allTests || []} isLoading={isLoading} />
+                    <Table columns={columns}
+                     data={allTests || []} 
+                     isLoading={isLoading} 
+                     sortBy={[{ id: "name", desc: false }]}
+                     
+                     />
                 </CardBody>
             </Card>
         </PageSection>

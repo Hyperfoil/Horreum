@@ -16,7 +16,7 @@ import { Bullseye, Button, EmptyState, Spinner, Title } from "@patternfly/react-
 import { DateTime } from "luxon"
 import Api, { AnnotationDefinition, TimeseriesTarget } from "../../api"
 import { fingerprintToString } from "../../utils"
-import { fetchDatapoints, fetchAllAnnotations } from "./grafanaapi"
+import { fetchDatapoints, fetchAllAnnotations } from "./Changes"
 import { alertAction, dispatchInfo } from "../../alerts"
 
 function tsToDate(timestamp: number) {

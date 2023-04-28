@@ -1,12 +1,5 @@
 #!/bin/bash
 
-delete_grafana() {
-    rm /cwd/.grafana
-}
-trap delete_grafana SIGTERM SIGINT SIGQUIT
-
-delete_grafana
-
 echo "#####################"
 echo "# STARTING KEYCLOAK #"
 echo "#####################"

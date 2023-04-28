@@ -171,13 +171,6 @@ public class HorreumClientIT implements  QuarkusTestBeforeTestExecutionCallback,
     @Override
     public void beforeClass(Class<?> testClass) {
         instantiateClient();
-        //TODO: Fix grafana service test
-/*
-        if (!"OK".equals(horreumClient.alertingService.grafanaStatus())) {
-            fail("Grafana is not healthy");
-        }
-*/
-
     }
 
     @Override
