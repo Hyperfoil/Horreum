@@ -20,7 +20,7 @@ Please, visit our project website:
 for more information.
 
 Horreum is a [Quarkus](https://quarkus.io/) based application which uses
-[Quinoa](https://github.com/quarkiverse/quarkus-quinoa) as its [nodejs](https://nodejs.org/en) engine.
+[Quinoa](https://quarkiverse.github.io/quarkiverse-docs/quarkus-quinoa/dev/) as its [nodejs](https://nodejs.org/en) engine.
 
 ## Prerequisites
 
