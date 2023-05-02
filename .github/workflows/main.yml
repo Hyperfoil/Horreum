@@ -3,21 +3,32 @@ name: Java CI with Maven
 on:
   push:
     branches: [ master ]
+    paths-ignore:
+      - '.gitignore'
+      - 'doc/**'
+      - '*.md'
+      - '*.txt'
     tags: [ "*" ]
   pull_request:
     branches: [ master ]
-  workflow_dispatch:
+    paths-ignore:
+      - '.gitignore'
+      - 'doc/**'
+      - '*.md'
+      - '*.txt'
+
+    workflow_dispatch:
 
 jobs:
   build:
     strategy:
       matrix:
         os:
-          -  {
+        -  {
             name: "windows-latest",
             build-options: "\"-Dquarkus.container-image.build=false\" -pl '!horreum-client, !horreum-integration' -DskipITs -DskipTests"
           }
-          - {
+        - {
             name: "ubuntu-latest",
             build-options: ""
           }
