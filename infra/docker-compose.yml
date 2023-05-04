@@ -1,4 +1,4 @@
-version: '3.1'
+version: '3.8'
 volumes:
   horreum_pg13: {}
 services:
@@ -10,15 +10,22 @@ services:
       PGPORT: ${POSTGRES_PORT:-5432}
     volumes:
     - horreum_pg13:/var/lib/postgresql/data
-  db-init:
-    depends_on:
-    - postgres
+    ports:
+    - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  dbinit:
     image: docker.io/postgres:13
     restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
     env_file: postgres.env
     environment:
-    # DB-init resolves localhost to ::1 rather than 127.0.0.1
-    - PGHOST=127.0.0.1
+    - PGHOST=horreum_postgres_1
     - PGPORT=${POSTGRES_PORT:-5432}
     volumes:
     - "${WORKING_PATH:-../}:/cwd:ro,z"
@@ -32,11 +39,12 @@ services:
       context: .
       dockerfile: Dockerfile.keycloak
     depends_on:
-    - postgres
+      postgres:
+        condition: service_healthy
     environment:
       KC_HTTP_HOST: localhost
       KC_HTTP_PORT: "${KEYCLOAK_HTTP_PORT:-8180}"
-      DB_ADDR: 127.0.0.1
+      DB_ADDR: horreum_postgres_1
       DB_PORT: "${POSTGRES_PORT:-5432}"
     network_mode: host
     stop_signal: "${STOP_SIGNAL:-SIGTERM}"
@@ -53,9 +61,9 @@ services:
     - /cwd/infra/app-init.sh
     - "${PORT_OFFSET:-0}"
     environment:
-    - POSTGRES_HOST=127.0.0.1
-    - KEYCLOAK_HOST=localhost
-    network_mode: host
+    - POSTGRES_HOST=[::1]
+    - KEYCLOAK_INTERNAL_HOST=horreum_keycloak_1
+    - KEYCLOAK_UI_HOST=[::1]
     volumes:
     - "${WORKING_PATH:-../}:/cwd:rw,z"
   grafana:
