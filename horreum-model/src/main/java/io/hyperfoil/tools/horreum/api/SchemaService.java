@@ -21,7 +21,6 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.networknt.schema.ValidationMessage;
 
 import io.hyperfoil.tools.horreum.entity.json.Label;
 import io.hyperfoil.tools.horreum.entity.json.Schema;
@@ -44,10 +43,10 @@ public interface SchemaService {
    Integer add(Schema schema);
 
    @GET
-   List<Schema> list(@QueryParam("limit") Integer limit,
-                     @QueryParam("page") Integer page,
-                     @QueryParam("sort") String sort,
-                     @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
+   SchemaQueryResult list(@QueryParam("limit") Integer limit,
+                          @QueryParam("page") Integer page,
+                          @QueryParam("sort") String sort,
+                          @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
 
 
    @GET
@@ -131,6 +130,18 @@ public interface SchemaService {
    @Path("import")
    @Consumes(MediaType.APPLICATION_JSON)
    void importSchema(JsonNode config);
+
+   class SchemaQueryResult {
+      @NotNull
+      public List<Schema> schemas;
+      @JsonProperty(required = true)
+      public long count;
+
+      public SchemaQueryResult(List<Schema> schemas, long count) {
+         this.schemas = schemas;
+         this.count = count;
+      }
+   }
 
    @org.eclipse.microprofile.openapi.annotations.media.Schema(anyOf = {
          LabelInFingerprint.class, LabelInRule.class, LabelInReport.class, LabelInVariable.class, LabelInView.class

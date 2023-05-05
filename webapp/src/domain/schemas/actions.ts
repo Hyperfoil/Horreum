@@ -14,7 +14,7 @@ const loaded = (schema: Schema | Schema[]): LoadedAction => ({
 export function getById(id: number) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
         Api.schemaServiceGetSchema(id).then(
-            response => dispatch(loaded(response)),
+            response => dispatch(loaded(response.schema)),
             error => {
                 dispatch(loaded([]))
                 return dispatchError(dispatch, error, "GET_SCHEMA", "Failed to fetch schema")
@@ -36,7 +36,7 @@ export function add(payload: Schema) {
 export function all() {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
         Api.schemaServiceList().then(
-            response => dispatch(loaded(response)),
+            response => dispatch(loaded(response.schemas)),
             error => {
                 dispatch(loaded([]))
                 return dispatchError(dispatch, error, "LIST_SCHEMAS", "Failed to list schemas")

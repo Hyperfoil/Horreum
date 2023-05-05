@@ -1,11 +1,11 @@
 import { useMemo, useEffect, useState } from "react"
 import { useSelector } from "react-redux"
 import { useDispatch } from "react-redux"
-import { Card, CardHeader, CardBody, PageSection } from "@patternfly/react-core"
+import { Card, CardHeader, CardFooter, CardBody, PageSection, Pagination } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
 
 import * as actions from "./actions"
-import * as selectors from "./selectors"
+import { alertAction } from "../../alerts"
 import { useTester, teamsSelector, teamToName } from "../../auth"
 import { noop } from "../../utils"
 import Table from "../../components/Table"
@@ -14,7 +14,7 @@ import ActionMenu, { useShareLink, useChangeAccess, useDelete } from "../../comp
 import ButtonLink from "../../components/ButtonLink"
 import { CellProps, Column } from "react-table"
 import { SchemaDispatch } from "./reducers"
-import { Access, Schema } from "../../api"
+import Api, { Access, SortDirection, SchemaQueryResult, Schema } from "../../api"
 import SchemaImportButton from "./SchemaImportButton"
 
 type C = CellProps<Schema>
@@ -22,6 +22,25 @@ type C = CellProps<Schema>
 export default function AllSchema() {
     document.title = "Schemas | Horreum"
     const dispatch = useDispatch<SchemaDispatch>()
+
+    const [page, setPage] = useState(1)
+    const [perPage, setPerPage] = useState(20)
+    const [direction] = useState<SortDirection>("Ascending")
+    const pagination = useMemo(() => ({ page, perPage, direction }), [page, perPage, direction])
+    const [schemas, setSchemas] = useState<SchemaQueryResult>()
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        setLoading(true)
+        Api.schemaServiceList(
+             SortDirection.Ascending,
+             pagination.perPage,
+              pagination.page
+             )
+            .then(setSchemas)
+            .catch(error => dispatch(alertAction("FETCH_REPORTS", "Failed to fetch reports", error)))
+            .finally(() => setLoading(false))
+    }, [pagination,  dispatch])
 
     const columns: Column<Schema>[] = useMemo(
         () => [
@@ -83,7 +102,6 @@ export default function AllSchema() {
         [dispatch]
     )
     const [reloadCounter, setReloadCounter] = useState(0)
-    const list = useSelector(selectors.all)
     const teams = useSelector(teamsSelector)
     useEffect(() => {
         dispatch(actions.all()).catch(noop)
@@ -96,18 +114,27 @@ export default function AllSchema() {
                     <CardHeader>
                         <ButtonLink to="/schema/_new">New Schema</ButtonLink>
                         <SchemaImportButton
-                            schemas={list || []}
+                            schemas={schemas?.schemas || []}
                             onImported={() => setReloadCounter(reloadCounter + 1)}
                         />
                     </CardHeader>
                 )}
                 <CardBody style={{ overflowX: "auto" }}>
                     <Table columns={columns}
-                    data={list || []}
+                    data={schemas?.schemas || []}
                     sortBy={[{ id: "name", desc: false }]}
-                     
+                    isLoading={loading}
                     />
                 </CardBody>
+                <CardFooter style={{ textAlign: "right" }}>
+                    <Pagination
+                        itemCount={schemas?.count || 0}
+                        perPage={perPage}
+                        page={page}
+                        onSetPage={(e, p) => setPage(p)}
+                        onPerPageSelect={(e, pp) => setPerPage(pp)}
+                    />
+                </CardFooter>
             </Card>
         </PageSection>
     )

@@ -187,15 +187,15 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @WithRoles
    @Override
-   public List<Schema> list(Integer limit, Integer page, String sort, SortDirection direction) {
+   public SchemaQueryResult list(Integer limit, Integer page, String sort, SortDirection direction) {
       if (sort == null || sort.isEmpty()) {
          sort = "name";
       }
       Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
       if (limit != null && page != null) {
-         return Schema.findAll(Sort.by(sort).direction(sortDirection)).page(Page.of(page, limit)).list();
+         return new SchemaQueryResult(Schema.findAll(Sort.by(sort).direction(sortDirection)).page(Page.of(page, limit)).list(), Schema.count());
       } else {
-         return Schema.listAll(Sort.by(sort).direction(sortDirection));
+         return new SchemaQueryResult(Schema.listAll(Sort.by(sort).direction(sortDirection)), Schema.count());
       }
    }
 
