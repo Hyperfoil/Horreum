@@ -108,16 +108,19 @@ const staticColumns: DatasetColumn[] = [
         accessor: dataset =>
             Duration.fromMillis(toEpochMillis(dataset.stop) - toEpochMillis(dataset.start)).toFormat("hh:mm:ss.SSS"),
     },
-    {
-        Header: "Owner",
-        accessor: "owner",
-        Cell: (arg: C) => teamToName(arg.cell.value),
-    },
-    {
-        Header: "Access",
-        accessor: "access",
-        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
-    },
+     {
+        Header: "Owner / Access",
+        id: "ownerAccess",
+        accessor: (row: DatasetSummary) => ({
+          owner: row.owner,
+          access: row.access,
+        }),
+        Cell: (arg: C) => (
+          <>
+            {teamToName(arg.cell.value.owner)} / <AccessIcon access={arg.cell.value.access} />
+          </>
+        ),
+      },
 ]
 
 export default function TestDatasets() {

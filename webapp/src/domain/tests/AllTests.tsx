@@ -329,12 +329,19 @@ export default function AllTests() {
                     )
                 },
             },
-            { Header: "Owner", accessor: "owner", Cell: (arg: C) => teamToName(arg.cell.value) },
             {
-                Header: "Access",
-                accessor: "access",
-                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
-            },
+                Header: "Owner / Access",
+                id: "ownerAccess",
+                accessor: (row: TestStorage) => ({
+                  owner: row.owner,
+                  access: row.access,
+                }),
+                Cell: (arg: C) => (
+                  <>
+                    {teamToName(arg.cell.value.owner)} / <AccessIcon access={arg.cell.value.access} />
+                  </>
+                ),
+              },
             {
                 Header: "Actions",
                 id: "actions",
