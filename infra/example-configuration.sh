@@ -8,7 +8,7 @@
 set -o pipefail
 
 EX=$(dirname $0)/example-data
-KEYCLOAK_URL=http://localhost:8180
+KEYCLOAK_URL=http://[::1]:8180
 TOKEN=$(curl -s -X POST $KEYCLOAK_URL/realms/horreum/protocol/openid-connect/token \
     -H 'content-type: application/x-www-form-urlencoded' \
     -d 'username=user&password=secret&grant_type=password&client_id=horreum-ui' \
