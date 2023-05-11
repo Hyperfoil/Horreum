@@ -128,7 +128,7 @@ mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev
 If PostgreSQL container fails to start try removing the volume using:
 
 ```bash
-podman volume rm horreum_horreum_pg12
+podman volume rm horreum_horreum_pg13
 ```
 
 ## Tested platforms
