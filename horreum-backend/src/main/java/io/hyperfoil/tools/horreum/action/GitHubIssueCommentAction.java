@@ -5,7 +5,7 @@ import static io.hyperfoil.tools.horreum.action.ActionUtil.replaceExpressions;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;

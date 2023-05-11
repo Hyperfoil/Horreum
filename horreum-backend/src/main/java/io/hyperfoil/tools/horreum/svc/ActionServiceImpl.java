@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
+import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.data.*;
@@ -26,15 +27,15 @@ import io.vertx.mutiny.core.Vertx;
 
 import org.jboss.logging.Logger;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
-import javax.validation.constraints.NotNull;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotNull;
 
 import java.security.GeneralSecurityException;
 import java.util.List;
@@ -74,7 +75,7 @@ public class ActionServiceImpl implements ActionService {
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
       messageBus.subscribe(TestDAO.EVENT_NEW, "ActionService", TestDAO.class, this::onNewTest);
       messageBus.subscribe(TestDAO.EVENT_DELETED, "ActionService", TestDAO.class, this::onTestDelete);
-      messageBus.subscribe(RunDAO.EVENT_NEW, "ActionService", RunDAO.class, this::onNewRun);
+      messageBus.subscribe(RunDAO.EVENT_NEW, "ActionService", Run.class, this::onNewRun);
       messageBus.subscribe(Change.EVENT_NEW, "ActionService", Change.Event.class, this::onNewChange);
       messageBus.subscribe(ExperimentService.ExperimentResult.NEW_RESULT, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
    }
@@ -137,12 +138,12 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onTestDelete(TestDAO test) {
-      ActionDAO.delete("test_id", test.id);
+      ActionDAO.delete("testId", test.id);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onNewRun(RunDAO run) {
+   public void onNewRun(Run run) {
       Integer testId = run.testid;
       executeActions(RunDAO.EVENT_NEW, testId, run, true);
    }
@@ -192,7 +193,7 @@ public class ActionServiceImpl implements ActionService {
       return action;
    }
 
-   private JsonNode ensureNotNull(@NotNull JsonNode node) {
+   public JsonNode ensureNotNull(@NotNull JsonNode node) {
       return node == null || node.isNull() || node.isMissingNode() ? JsonNodeFactory.instance.objectNode() : node;
    }
 
@@ -230,7 +231,7 @@ public class ActionServiceImpl implements ActionService {
       if (testId < 0) {
          return ActionDAO.find("event = ?1", event).list();
       } else {
-         return ActionDAO.find("event = ?1 and (test_id = ?2 or test_id < 0)", event, testId).list();
+         return ActionDAO.find("event = ?1 and (testId = ?2 or testId < 0)", event, testId).list();
       }
    }
 
@@ -239,7 +240,7 @@ public class ActionServiceImpl implements ActionService {
    @Override
    public List<Action> list(Integer limit, Integer page, String sort, SortDirection direction){
       Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
-      PanacheQuery<ActionDAO> query = ActionDAO.find("test_id < 0", Sort.by(sort).direction(sortDirection));
+      PanacheQuery<ActionDAO> query = ActionDAO.find("testId < 0", Sort.by(sort).direction(sortDirection));
       if (limit != null && page != null) {
          query = query.page(Page.of(page, limit));
       }
@@ -290,7 +291,7 @@ public class ActionServiceImpl implements ActionService {
 
    JsonNode exportTest(int testId) {
       ArrayNode actions = JsonNodeFactory.instance.arrayNode();
-      for (ActionDAO action : ActionDAO.<ActionDAO>list("test_id", testId)) {
+      for (ActionDAO action : ActionDAO.<ActionDAO>list("testId", testId)) {
          ObjectNode node = Util.OBJECT_MAPPER.valueToTree(ActionMapper.from(action));
          if (!action.secrets.isEmpty()) {
             try {

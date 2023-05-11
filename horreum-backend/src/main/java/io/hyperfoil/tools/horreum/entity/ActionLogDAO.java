@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.entity;
 
-import javax.persistence.Entity;
-import javax.validation.constraints.NotNull;
+import jakarta.persistence.Entity;
+import jakarta.validation.constraints.NotNull;
 
 @Entity(name = "ActionLog")
 public class ActionLogDAO extends PersistentLog {

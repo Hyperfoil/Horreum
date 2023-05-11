@@ -25,7 +25,7 @@ import org.jboss.resteasy.plugins.providers.StringTextStar;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
-import javax.ws.rs.core.UriBuilder;
+import jakarta.ws.rs.core.UriBuilder;
 
 import java.io.Closeable;
 import java.io.FileInputStream;

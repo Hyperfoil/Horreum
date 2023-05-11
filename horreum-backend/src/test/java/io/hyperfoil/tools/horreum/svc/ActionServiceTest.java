@@ -9,8 +9,8 @@ import java.util.Arrays;
 
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
+import jakarta.ws.rs.core.HttpHeaders;
 import org.junit.jupiter.api.TestInfo;
-
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
@@ -39,7 +39,7 @@ public class ActionServiceTest extends BaseServiceTest {
 
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
 
-      eventually(() -> Util.withTx(tm, () -> {
+      eventually((Runnable) () -> Util.withTx(tm, () -> {
          em.clear();
          try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
             return ActionLogDAO.find("testId", test.id).count() == 1;
@@ -50,7 +50,7 @@ public class ActionServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testAddGlobalAction() {
       String responseType = addGlobalAction(TestDAO.EVENT_NEW, "https://attacker.com")
-            .then().statusCode(400).extract().header(javax.ws.rs.core.HttpHeaders.CONTENT_TYPE);
+            .then().statusCode(400).extract().header(HttpHeaders.CONTENT_TYPE);
       // constraint violations are mapped to 400 + JSON response, we want explicit error
       assertTrue(responseType.startsWith("text/plain")); // text/plain;charset=UTF-8
 

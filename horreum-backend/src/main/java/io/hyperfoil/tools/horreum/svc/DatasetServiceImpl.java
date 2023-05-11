@@ -6,15 +6,16 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.security.PermitAll;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-import javax.persistence.PersistenceException;
-import javax.persistence.Query;
-import javax.transaction.Transactional;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.PermitAll;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.Query;
+import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
@@ -24,16 +25,15 @@ import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
-import org.hibernate.type.IntegerType;
-import org.hibernate.type.LongType;
-import org.hibernate.type.TextType;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.QueryResult;
@@ -158,7 +158,7 @@ public class DatasetServiceImpl implements DatasetService {
    @PostConstruct
    void init() {
       sqlService.registerListener("calculate_labels", this::onLabelChanged);
-      messageBus.subscribe(DataSetDAO.EVENT_NEW, "DatasetService", DataSetDAO.EventNew.class, this::onNewDataset);
+      messageBus.subscribe(DataSetDAO.EVENT_NEW, "DatasetService", DataSet.EventNew.class, this::onNewDataset);
    }
 
    @PermitAll
@@ -166,30 +166,35 @@ public class DatasetServiceImpl implements DatasetService {
    @Override
    public DatasetService.DatasetList listByTest(int testId, String filter, Integer limit, Integer page, String sort, SortDirection direction, Integer viewId) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
-            .append(SCHEMAS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id")
+            .append(SCHEMAS_SELECT).append(" WHERE testid = :testId GROUP BY dataset_id")
             .append("), ").append(VALIDATION_SELECT);
       JsonNode jsonFilter = null;
       if (filter != null && !filter.isBlank()) {
-         sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset.id)");
+         sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = :testId GROUP BY dataset.id)");
          sql.append(DATASET_SUMMARY_SELECT);
          addViewIdCondition(sql, viewId);
-         sql.append(" JOIN all_labels ON all_labels.dataset_id = ds.id WHERE testid = ?1 AND all_labels.values @> ?2");
+         sql.append(" JOIN all_labels ON all_labels.dataset_id = ds.id WHERE testid = :testId AND all_labels.values @> :jsonFilter");
          jsonFilter = Util.parseFingerprint(filter);
       } else {
          sql.append(DATASET_SUMMARY_SELECT);
          addViewIdCondition(sql, viewId);
-         sql.append(" WHERE testid = ?1 AND ?2 IS NULL");
+         // The line below worked for Hib5, but it causes Hib6 to complain about the param type (which is null)
+         // sql.append(" WHERE testid = ?1 AND ?2 IS NULL");
+         // This works for Hib6
+         sql.append(" WHERE testid = :testId");
       }
       addOrderAndPaging(limit, page, sort, direction, sql);
       Query query = em.createNativeQuery(sql.toString())
-            .setParameter(1, testId);
+            .setParameter("testId", testId);
       if (jsonFilter != null) {
-         query.unwrap(NativeQuery.class).setParameter(2, jsonFilter, JsonNodeBinaryType.INSTANCE);
-      } else {
-         query.setParameter(2, null);
+         query.unwrap(NativeQuery.class).setParameter("jsonFilter", jsonFilter, JsonBinaryType.INSTANCE);
       }
+      // It seems like setting a null value on a query param fails in Hib6
+      /*else {
+         query.setParameter("jsonFilter", null);
+      } */
       if (viewId != null) {
-         query.setParameter(3, viewId);
+         query.setParameter("viewId", viewId);
       }
       initTypes(query);
       DatasetService.DatasetList list = new DatasetService.DatasetList();
@@ -201,28 +206,28 @@ public class DatasetServiceImpl implements DatasetService {
 
    private void addViewIdCondition(StringBuilder sql, Integer viewId) {
       if (viewId == null) {
-         sql.append("(SELECT id FROM view WHERE test_id = ?1 AND name = 'Default')");
+         sql.append("(SELECT id FROM view WHERE test_id = :testId AND name = 'Default')");
       } else {
-         sql.append("?3");
+         sql.append(":viewId");
       }
    }
 
    private void initTypes(Query query) {
       //noinspection deprecation
       query.unwrap(NativeQuery.class)
-            .addScalar("id", IntegerType.INSTANCE)
-            .addScalar("runId", IntegerType.INSTANCE)
-            .addScalar("ordinal", IntegerType.INSTANCE)
-            .addScalar("testId", IntegerType.INSTANCE)
-            .addScalar("testname", TextType.INSTANCE)
-            .addScalar("description", TextType.INSTANCE)
-            .addScalar("start", LongType.INSTANCE)
-            .addScalar("stop", LongType.INSTANCE)
-            .addScalar("owner", TextType.INSTANCE)
-            .addScalar("access", IntegerType.INSTANCE)
-            .addScalar("view", JsonNodeBinaryType.INSTANCE)
-            .addScalar("schemas", JsonNodeBinaryType.INSTANCE)
-            .addScalar("validationErrors", JsonNodeBinaryType.INSTANCE)
+            .addScalar("id", StandardBasicTypes.INTEGER)
+            .addScalar("runId", StandardBasicTypes.INTEGER)
+            .addScalar("ordinal", StandardBasicTypes.INTEGER)
+            .addScalar("testId", StandardBasicTypes.INTEGER)
+            .addScalar("testname", StandardBasicTypes.TEXT)
+            .addScalar("description", StandardBasicTypes.TEXT)
+            .addScalar("start", StandardBasicTypes.LONG)
+            .addScalar("stop", StandardBasicTypes.LONG)
+            .addScalar("owner", StandardBasicTypes.TEXT)
+            .addScalar("access", StandardBasicTypes.INTEGER)
+            .addScalar("view", JsonBinaryType.INSTANCE)
+            .addScalar("schemas", JsonBinaryType.INSTANCE)
+            .addScalar("validationErrors", JsonBinaryType.INSTANCE)
             .setResultTransformer(DATASET_SUMMARY_TRANSFORMER);
    }
 
@@ -296,12 +301,12 @@ public class DatasetServiceImpl implements DatasetService {
       Stream<Object[]> stream = em.createNativeQuery("SELECT label_id, label.name AS label_name, schema.id AS schema_id, schema.name AS schema_name, schema.uri, value FROM label_values " +
             "JOIN label ON label.id = label_id JOIN schema ON label.schema_id = schema.id WHERE dataset_id = ?1")
             .setParameter(1, datasetId).unwrap(NativeQuery.class)
-            .addScalar("label_id", IntegerType.INSTANCE)
-            .addScalar("label_name", TextType.INSTANCE)
-            .addScalar("schema_id", IntegerType.INSTANCE)
-            .addScalar("schema_name", TextType.INSTANCE)
-            .addScalar("uri", TextType.INSTANCE)
-            .addScalar("value", JsonNodeBinaryType.INSTANCE)
+            .addScalar("label_id", StandardBasicTypes.INTEGER)
+            .addScalar("label_name", StandardBasicTypes.TEXT)
+            .addScalar("schema_id", StandardBasicTypes.INTEGER)
+            .addScalar("schema_name", StandardBasicTypes.TEXT)
+            .addScalar("uri", StandardBasicTypes.TEXT)
+            .addScalar("value", JsonBinaryType.INSTANCE)
             .getResultStream();
       return stream.map(row -> {
                LabelValue value = new LabelValue();
@@ -337,7 +342,7 @@ public class DatasetServiceImpl implements DatasetService {
                .setParameter(1, extractors)
                .setParameter(2, datasetId)
                .setParameter(3, label.schemaId)
-               .addScalar("value", JsonNodeBinaryType.INSTANCE).getSingleResult();
+               .addScalar("value", JsonBinaryType.INSTANCE).getSingleResult();
       } catch (PersistenceException e) {
          preview.output = Util.explainCauses(e);
          return preview;
@@ -408,10 +413,10 @@ public class DatasetServiceImpl implements DatasetService {
                      .setParameter(1, datasetId)
                      .setParameter(2, queryLabelId)
                      .unwrap(NativeQuery.class)
-                     .addScalar("label_id", IntegerType.INSTANCE)
-                     .addScalar("name", TextType.INSTANCE)
-                     .addScalar("function", TextType.INSTANCE)
-                     .addScalar("value", JsonNodeBinaryType.INSTANCE)
+                     .addScalar("label_id", StandardBasicTypes.INTEGER)
+                     .addScalar("name", StandardBasicTypes.TEXT)
+                     .addScalar("function", StandardBasicTypes.TEXT)
+                     .addScalar("value", JsonBinaryType.INSTANCE)
                      .getResultList();
       } catch (PersistenceException e) {
          logMessageInNewTx(datasetId, PersistentLog.ERROR, "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
@@ -435,7 +440,7 @@ public class DatasetServiceImpl implements DatasetService {
             (row, e, jsCode) -> logMessage(datasetId, PersistentLog.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
             out -> logMessage(datasetId, PersistentLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
-      messageBus.publish(DataSetDAO.EVENT_LABELS_UPDATED, testId, new DataSetDAO.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+      messageBus.publish(DataSetDAO.EVENT_LABELS_UPDATED, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -477,7 +482,7 @@ public class DatasetServiceImpl implements DatasetService {
       }
    }
 
-   public void onNewDataset(DataSetDAO.EventNew event) {
+   public void onNewDataset(DataSet.EventNew event) {
       withRecalculationLock(() -> calculateLabels(event.dataset.testid, event.dataset.id, -1, event.isRecalculation));
    }
 
@@ -489,8 +494,10 @@ public class DatasetServiceImpl implements DatasetService {
 
    private void logMessage(int datasetId, int level, String message, Object... params) {
       String msg = String.format(message, params);
-      int testId = (int) em.createNativeQuery("SELECT testid FROM dataset WHERE id = ?1").setParameter(1, datasetId).getSingleResult();
-      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
-      new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId), level, "labels", msg).persist();
+      DataSetDAO dataset = DataSetDAO.findById(datasetId);
+      if(dataset != null) {
+         log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), dataset.testid, datasetId, msg);
+         new DatasetLogDAO(em.getReference(TestDAO.class, dataset.testid), em.getReference(DataSetDAO.class, datasetId), level, "labels", msg).persist();
+      }
    }
 }

@@ -1,8 +1,8 @@
 package io.hyperfoil.tools.horreum.action;
 
-import javax.annotation.PostConstruct;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import io.quarkus.runtime.Startup;
 import io.vertx.core.http.HttpVersion;

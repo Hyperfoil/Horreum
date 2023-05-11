@@ -3,17 +3,18 @@ package io.hyperfoil.tools.horreum.entity.alerting;
 import java.time.Instant;
 import java.util.Objects;
 
-import javax.persistence.Column;
-import javax.persistence.ConstraintMode;
-import javax.persistence.Entity;
-import javax.persistence.ForeignKey;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-import javax.validation.constraints.NotNull;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.persistence.Column;
+import jakarta.persistence.ConstraintMode;
+import jakarta.persistence.Entity;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
@@ -36,7 +37,6 @@ public class MissingDataRuleDAO extends PanacheEntityBase {
          name = "mdrIdGenerator",
          strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
          parameters = {
-               @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = SequenceStyleGenerator.DEF_SEQUENCE_NAME),
                @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
          }
    )
@@ -49,7 +49,8 @@ public class MissingDataRuleDAO extends PanacheEntityBase {
    @JoinColumn(name = "test_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
    public TestDAO test;
 
-   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   @Type(JsonBinaryType.class)
+   @Column(columnDefinition = "jsonb")
    public ArrayNode labels;
 
    public String condition;

@@ -2,14 +2,14 @@ package io.hyperfoil.tools.horreum.entity.alerting;
 
 import java.time.Instant;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.validation.constraints.NotNull;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.validation.constraints.NotNull;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity(name = "run_expectation")
 public class RunExpectationDAO extends PanacheEntityBase {
@@ -21,7 +21,7 @@ public class RunExpectationDAO extends PanacheEntityBase {
    public int testId;
 
    @NotNull
-   @Column(columnDefinition = "timestamptz")
+   @JdbcTypeCode(SqlTypes.TIMESTAMP)
    public Instant expectedBefore;
 
    public String expectedBy;

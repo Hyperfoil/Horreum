@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
-import javax.persistence.EntityManager;
-import javax.transaction.TransactionManager;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.TransactionManager;
 
 import org.jboss.logging.Logger;
 

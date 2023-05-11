@@ -10,16 +10,17 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import javax.transaction.Transactional;
+import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import jakarta.transaction.Transactional;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
@@ -33,13 +34,13 @@ import io.hyperfoil.tools.horreum.mapper.ExperimentProfileMapper;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.Transformers;
-import org.hibernate.type.IntegerType;
-import org.hibernate.type.TextType;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
@@ -67,7 +68,7 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(DataPointDAO.EVENT_DATASET_PROCESSED, "ExperimentService", DataPointDAO.DatasetProcessedEvent.class, this::onDatapointsCreated);
+      messageBus.subscribe(DataPointDAO.EVENT_DATASET_PROCESSED, "ExperimentService", DataPoint.DatasetProcessedEvent.class, this::onDatapointsCreated);
       messageBus.subscribe(TestDAO.EVENT_DELETED, "ExperimentService", TestDAO.class, this::onTestDeleted);
    }
 
@@ -75,7 +76,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @PermitAll
    @Override
    public Collection<ExperimentProfile> profiles(int testId) {
-      List<ExperimentProfileDAO> profiles = ExperimentProfileDAO.list("test_id", testId);
+      List<ExperimentProfileDAO> profiles = ExperimentProfileDAO.list("test.id", testId);
       return profiles.stream().map(ExperimentProfileMapper::from).collect(Collectors.toList());
    }
 
@@ -91,13 +92,11 @@ public class ExperimentServiceImpl implements ExperimentService {
       }
       ExperimentProfileDAO profile = ExperimentProfileMapper.to(dto);
       profile.test = em.getReference(TestDAO.class, testId);
-      if ( profile == null || profile.id == null ){
-         throw ServiceException.badRequest("Profile ID can not be null");
-      }
-      if (profile.id < 0) {
+      if (profile.id == null || profile.id < 1) {
          profile.id = null;
          profile.persist();
-      } else {
+      }
+      else {
          if (profile.test.id != testId) {
             throw ServiceException.badRequest("Test ID does not match");
          }
@@ -130,10 +129,10 @@ public class ExperimentServiceImpl implements ExperimentService {
          throw ServiceException.notFound("No dataset " + datasetId);
       }
       List<ExperimentService.ExperimentResult> results = new ArrayList<>();
-      DataSetDAO.Info info = dataset.getInfo();
+      DataSet.Info info = DataSetMapper.fromInfo(dataset.getInfo());
       runExperiments(info, results::add, logs -> results.add(
               new ExperimentResult(null, logs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
-                      DataSetMapper.fromInfo(info), Collections.emptyList(),
+                      info, Collections.emptyList(),
                       Collections.emptyMap(),
                       null, false)), false);
       return results;
@@ -141,7 +140,7 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onDatapointsCreated(DataPointDAO.DatasetProcessedEvent event) {
+   public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
       runExperiments(event.dataset, result -> messageBus.publish(ExperimentResult.NEW_RESULT, event.dataset.testId, result),
             logs -> logs.forEach(log -> log.persist()), event.notify);
@@ -151,7 +150,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @Transactional
    public void onTestDeleted(TestDAO test) {
       // we need to iterate in order to cascade the operation
-      for (var profile : ExperimentProfileDAO.list("test_id", test.id)) {
+      for (var profile : ExperimentProfileDAO.list("test.id", test.id)) {
          profile.delete();
       }
    }
@@ -163,7 +162,7 @@ public class ExperimentServiceImpl implements ExperimentService {
             level, "experiment", msg));
    }
 
-   private void runExperiments(DataSetDAO.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLogDAO>> noProfileConsumer, boolean notify) {
+   private void runExperiments(DataSet.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLogDAO>> noProfileConsumer, boolean notify) {
       List<DatasetLogDAO> logs = new ArrayList<>();
 
       Query selectorQuery = em.createNativeQuery("WITH lvalues AS (" +
@@ -178,9 +177,9 @@ public class ExperimentServiceImpl implements ExperimentService {
       @SuppressWarnings("unchecked")
       List<Object[]> selectorRows = selectorQuery.setParameter(1, info.testId).setParameter(2, info.id)
             .unwrap(NativeQuery.class)
-            .addScalar("profile_id", IntegerType.INSTANCE)
-            .addScalar("selector_filter", TextType.INSTANCE)
-            .addScalar("value", JsonNodeBinaryType.INSTANCE)
+            .addScalar("profile_id", StandardBasicTypes.INTEGER)
+            .addScalar("selector_filter", StandardBasicTypes.TEXT)
+            .addScalar("value", JsonBinaryType.INSTANCE)
             .getResultList();
 
       List<Integer> matchingProfile = new ArrayList<>();
@@ -216,10 +215,11 @@ public class ExperimentServiceImpl implements ExperimentService {
       @SuppressWarnings("unchecked")
       List<Object[]> baselineRows = baselineQuery.setParameter(1, matchingProfile).setParameter(2, info.testId)
             .unwrap(NativeQuery.class)
-            .addScalar("profile_id", IntegerType.INSTANCE)
-            .addScalar("baseline_filter", TextType.INSTANCE)
-            .addScalar("value", JsonNodeBinaryType.INSTANCE)
-            .addScalar("dataset_id", IntegerType.INSTANCE)
+            .addScalar("profile_id", StandardBasicTypes.INTEGER)
+            .addScalar("baseline_filter", StandardBasicTypes.TEXT)
+            .addScalar("value", StandardBasicTypes.TEXT)
+              //.addScalar("value", JsonNodeBinaryType.INSTANCE)
+            .addScalar("dataset_id", StandardBasicTypes.INTEGER)
             .getResultList();
 
       Map<Integer, List<Integer>> baselines = new HashMap<>();
@@ -283,18 +283,18 @@ public class ExperimentServiceImpl implements ExperimentService {
                "LEFT JOIN label_values lv ON label.id = lv.label_id WHERE ep.id = ?1 AND lv.dataset_id = ?2")
                .setParameter(1, profile.id).setParameter(2, info.id)
                .unwrap(NativeQuery.class)
-               .addScalar("value", JsonNodeBinaryType.INSTANCE)
+               .addScalar("value", StandardBasicTypes.TEXT)
+                 //.addScalar("value", JsonNodeBinaryType.INSTANCE)
                .getSingleResult();
          Hibernate.initialize(profile.test.name);
          resultConsumer.accept(new ExperimentResult(ExperimentProfileMapper.from(profile),
                  profileLogs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
-                 DataSetMapper.fromInfo(info), baseline, results,
-                 extraLabels, notify));
+                 info, baseline, results, extraLabels, notify));
       }
    }
 
    JsonNode exportTest(int testId) {
-      List<ExperimentProfileDAO> experimentProfiles = ExperimentProfileDAO.list("test_id", testId);
+      List<ExperimentProfileDAO> experimentProfiles = ExperimentProfileDAO.list("test.id", testId);
       return Util.OBJECT_MAPPER.valueToTree(experimentProfiles.stream().map(ExperimentProfileMapper::from).collect(Collectors.toList()));
    }
 
@@ -305,17 +305,16 @@ public class ExperimentServiceImpl implements ExperimentService {
          for (JsonNode node : experiments) {
             ExperimentProfileDAO profile;
             try {
-
                if (node.has("comparisons") ){
                   node.get("comparisons").forEach( (compNode) ->{
-                     VariableDAO variableDAO = VariableDAO.<VariableDAO>find("testId = ?1 and name = ?2", testId, compNode.get("variable").asText() ).firstResult();
+                     VariableDAO variableDAO = VariableDAO.<VariableDAO>find("id = ?1 and testId = ?2", compNode.get("variableId").asText() , testId).firstResult();
                      if ( variableDAO != null ) {
                         Integer variableID = variableDAO.id;
                         ((ObjectNode) compNode).put("variableId", variableID);
                      } else {
-                        log.warnf("Could not import comparison for variable: %s", compNode.get("variable").asText());
+                        log.warnf("Could not import comparison for variable: %s", compNode.get("variableId").asText());
+                        ((ObjectNode) compNode).remove("variableId");
                      }
-                     ((ObjectNode) compNode).remove("variable");
 
                   });
 

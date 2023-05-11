@@ -19,7 +19,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import javax.inject.Inject;
+import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
+import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.api.alerting.RunExpectation;
+import io.hyperfoil.tools.horreum.api.data.DataSet;
+import jakarta.inject.Inject;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
@@ -74,13 +78,12 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testNotifications(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      log.error("TestDTO:"+test.toString()+", schema: "+schema.toString());
       setTestVariables(test, "Value", "value");
 
-      BlockingQueue<DataPointDAO.Event> dpe = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> dpe = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
       uploadRun(runWithValue(42, schema).toString(), test.name);
 
-      DataPointDAO.Event event1 = dpe.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event event1 = dpe.poll(10, TimeUnit.SECONDS);
       assertNotNull(event1);
       assertEquals(42d, event1.dataPoint.value);
       assertTrue(event1.notify);
@@ -91,7 +94,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       uploadRun(runWithValue(0, schema).toString(), test.name);
 
-      DataPointDAO.Event event2 = dpe.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event event2 = dpe.poll(10, TimeUnit.SECONDS);
       assertNotNull(event2);
       assertEquals(0, event2.dataPoint.value, prettyPrint(event2));
       assertFalse(event2.notify);
@@ -142,9 +145,9 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testChangeDetection(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      ChangeDetectionDAO cd = addChangeDetectionVariable(test);
+      ChangeDetection cd = addChangeDetectionVariable(test);
 
-      BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == test.id);
 
       long ts = System.currentTimeMillis();
@@ -174,7 +177,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       jsonRequest().post("/api/alerting/recalculate?test=" + test.id).then().statusCode(204);
 
       for (int i = 0; i < 5; ++i) {
-         DataPointDAO.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
+         DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(dpe);
       }
 
@@ -219,7 +222,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       addChangeDetectionVariable(test);
 
-      BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == testId);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == testId);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == testId);
 
       long ts = System.currentTimeMillis();
@@ -246,11 +249,11 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(run14, changeEvent2.dataset.runId);
    }
 
-   private DataPointDAO assertValue(BlockingQueue<DataPointDAO.Event> datapointQueue, double value) throws InterruptedException {
-      DataPointDAO.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
+   private DataPoint assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
+      DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(dpe);
       assertEquals(value, dpe.dataPoint.value);
-      testSerialization(dpe, DataPointDAO.Event.class);
+      testSerialization(dpe, DataPoint.Event.class);
       return dpe.dataPoint;
    }
 
@@ -266,7 +269,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
       uploadRun(runWithValue(42, schema).put("foo", "aaa").put("bar", "bbb"), test.name);
-      BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == testId);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == testId);
       assertValue(datapointQueue, 42);
 
       List<FingerprintDAO> fingerprintsBefore = FingerprintDAO.listAll();
@@ -299,7 +302,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
       addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
-      BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == testId);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == testId);
 
       uploadRun(runWithValue(1, schema).put("foo", "aaa").put("bar", "bbb"), test.name);
       assertValue(datapointQueue, 1);
@@ -361,13 +364,13 @@ public class AlertingServiceTest extends BaseServiceTest {
       int firstRuleId = addMissingDataRule(test, "my rule", jsonArray("value"), "value => value > 2", 10000);
       assertTrue(firstRuleId > 0);
 
-      BlockingQueue<DataSetDAO.EventNew> newDatasetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       long now = System.currentTimeMillis();
       uploadRun(now - 20000, runWithValue(3, schema), test.name);
-      DataSetDAO.EventNew firstEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      DataSet.EventNew firstEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(firstEvent);
       uploadRun(now - 5000, runWithValue(1, schema), test.name);
-      DataSetDAO.EventNew secondEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      DataSet.EventNew secondEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(secondEvent);
       // only the matching dataset will be present
       pollMissingDataRuleResultsByRule(firstRuleId, firstEvent.dataset.id);
@@ -394,7 +397,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       em.clear();
 
       int thirdRunId = uploadRun(now - 5000, runWithValue(3, schema), test.name);
-      DataSetDAO.EventNew thirdEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      DataSet.EventNew thirdEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(thirdEvent);
       pollMissingDataRuleResultsByRule(firstRuleId, firstEvent.dataset.id, thirdEvent.dataset.id);
       alertingService.checkMissingDataset();
@@ -443,14 +446,14 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       jsonRequest().delete("/api/alerting/missingdatarule/" + otherRuleId).then().statusCode(204);
       em.clear();
-      assertEquals(0, MissingDataRuleResultDAO.find("rule_id", otherRuleId).count());
+      assertEquals(0, MissingDataRuleResultDAO.find("pk.ruleId", otherRuleId).count());
    }
 
    private void pollMissingDataRuleResultsByRule(int ruleId, int... datasetIds) throws InterruptedException {
       try (CloseMe h = roleManager.withRoles(SYSTEM_ROLES)) {
          for (int i = 0; i < 1000; ++i) {
             em.clear();
-            List<MissingDataRuleResultDAO> results = MissingDataRuleResultDAO.list("rule_id", ruleId);
+            List<MissingDataRuleResultDAO> results = MissingDataRuleResultDAO.list("pk.ruleId", ruleId);
             if (results.size() == datasetIds.length && results.stream().mapToInt(MissingDataRuleResultDAO::datasetId)
                   .allMatch(res -> IntStream.of(datasetIds).anyMatch(id -> id == res))) {
                return;
@@ -467,7 +470,7 @@ public class AlertingServiceTest extends BaseServiceTest {
          // there's no event when the results are updated, we need to poll
          for (int i = 0; i < 1000; ++i) {
             em.clear();
-            List<MissingDataRuleResultDAO> results = MissingDataRuleResultDAO.list("dataset_id", datasetId);
+            List<MissingDataRuleResultDAO> results = MissingDataRuleResultDAO.list("pk.datasetId", datasetId);
             if (expectedResults == results.size()) {
                return;
             } else {
@@ -505,8 +508,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       List<String> notifications = mockNotifyExpectedRun();
 
       jsonUploaderRequest().post("/api/alerting/expectRun?test=" + test.name + "&timeout=10&expectedby=foo&backlink=bar").then().statusCode(204);
-      List<RunExpectationDAO> expectations = jsonRequest().get("/api/alerting/expectations")
-            .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectationDAO.class));
+      List<RunExpectation> expectations = jsonRequest().get("/api/alerting/expectations")
+            .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectation.class));
       assertEquals(1, expectations.size());
       alertingService.checkExpectedRuns();
       assertEquals(0, notifications.size());
@@ -524,8 +527,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       List<String> notifications = mockNotifyExpectedRun();
 
       jsonUploaderRequest().post("/api/alerting/expectRun?test=" + test.name + "&timeout=10").then().statusCode(204);
-      List<RunExpectationDAO> expectations = jsonRequest().get("/api/alerting/expectations")
-            .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectationDAO.class));
+      List<RunExpectation> expectations = jsonRequest().get("/api/alerting/expectations")
+            .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, RunExpectation.class));
       assertEquals(1, expectations.size());
       alertingService.checkExpectedRuns();
       assertEquals(0, notifications.size());
@@ -546,23 +549,23 @@ public class AlertingServiceTest extends BaseServiceTest {
       Schema schema = createExampleSchema(info);
       addChangeDetectionVariable(test);
 
-      BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
-      BlockingQueue<DataPointDAO.Event> datapointDeletedQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_DELETED, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointDeletedQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_DELETED, e -> e.testId == test.id);
 
       uploadRun(runWithValue(42, schema), test.name);
-      DataPointDAO first = assertValue(datapointQueue, 42);
+      DataPoint first = assertValue(datapointQueue, 42);
 
       assertNotNull(DataPointDAO.findById(first.id));
       assertEquals(1, DataPointDAO.count());
 
       recalculateDatasets(test.id, false);
-      DataPointDAO second = assertValue(datapointQueue, 42);
+      DataPoint second = assertValue(datapointQueue, 42);
       assertNotEquals(first.id, second.id);
 
       // Prevent flakiness if the new datapoint is created before the old one is deleted
       // Ideally we would add a delay into AlertingServiceImpl.onDatasetDeleted() to test this synchronization
       // but we cannot mock the service - Quarkus mocking disables interceptors for the whole class.
-      DataPointDAO.Event deleted = datapointDeletedQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event deleted = datapointDeletedQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(deleted.dataPoint.id, first.id);
 
       em.clear();
@@ -595,7 +598,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testFixedThresholds(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      ChangeDetectionDAO rd = new ChangeDetectionDAO();
+      ChangeDetection rd = new ChangeDetection();
       rd.model = FixedThresholdModel.NAME;
       ObjectNode config = JsonNodeFactory.instance.objectNode();
       config.putObject("min").put("value", 3).put("enabled", true).put("inclusive", true);
@@ -603,7 +606,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       rd.config = config;
       setTestVariables(test, "Value", "value", rd);
 
-      BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == test.id);
 
       long ts = System.currentTimeMillis();
@@ -635,38 +638,38 @@ public class AlertingServiceTest extends BaseServiceTest {
       addChangeDetectionVariable(test);
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 
-      BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(1, schema).put("timestamp", 1662023776000L), test.name);
-      DataPointDAO.Event dp11 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dp11 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(Instant.ofEpochSecond(1662023776), dp11.dataPoint.timestamp);
 
       uploadRun(ts - 1, ts - 1, runWithValue(2, schema).put("timestamp", "1662023777000"), test.name);
-      DataPointDAO.Event dp12 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dp12 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(Instant.ofEpochSecond(1662023777), dp12.dataPoint.timestamp);
 
       uploadRun(ts + 1, ts + 1, runWithValue(3, schema).put("timestamp", "2022-09-01T11:16:18+02:00"), test.name);
-      DataPointDAO.Event dp13 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dp13 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(Instant.ofEpochSecond(1662023778), dp13.dataPoint.timestamp);
 
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), "timestamp => timestamp");
       // The DataSets will be recalculated based on DataSet.start, not DataPoint.timestamp
       recalculateDatapoints(test.id);
-      DataPointDAO.Event dp22 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dp22 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(Instant.ofEpochSecond(1662023777), dp22.dataPoint.timestamp);
-      DataPointDAO.Event dp21 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dp21 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(Instant.ofEpochSecond(1662023776), dp21.dataPoint.timestamp);
-      DataPointDAO.Event dp23 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dp23 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(Instant.ofEpochSecond(1662023778), dp23.dataPoint.timestamp);
 
       setChangeDetectionTimeline(test, Arrays.asList("timestamp", "value"), "({ timestamp, value }) => timestamp");
       recalculateDatapoints(test.id);
-      DataPointDAO.Event dp32 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dp32 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(Instant.ofEpochSecond(1662023777), dp32.dataPoint.timestamp);
-      DataPointDAO.Event dp31 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dp31 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(Instant.ofEpochSecond(1662023776), dp31.dataPoint.timestamp);
-      DataPointDAO.Event dp33 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dp33 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertEquals(Instant.ofEpochSecond(1662023778), dp33.dataPoint.timestamp);
    }
 
@@ -685,16 +688,16 @@ public class AlertingServiceTest extends BaseServiceTest {
       LabelDAO l = LabelDAO.find("name", "value").firstResult();
       Label label = LabelMapper.from(l);
 
-      BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(1, schema), test.name);
-      DataPointDAO.Event dpe1 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dpe1 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(dpe1);
 
       // The datapoint will have to be recalculated due to label function update
       updateLabel(schema, label.id, label.name, "val => val", label.extractors.toArray(Extractor[]::new));
-      DataPointDAO.Event dpe2 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      DataPoint.Event dpe2 = datapointQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(dpe2);
 
       em.clear();
@@ -710,7 +713,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       addLabel(schema, "timestamp", null, new Extractor("ts", "$.timestamp", false));
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 
-      BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == test.id);
 
       int[] order = new int[] { 5, 0, 1, 7, 4, 8, 2, 3, 9, 6 };
@@ -746,9 +749,9 @@ public class AlertingServiceTest extends BaseServiceTest {
             list.stream().map(c -> c.timestamp.toEpochMilli()).sorted().collect(Collectors.toList()));
    }
 
-   private void drainQueue(BlockingQueue<DataPointDAO.Event> datapointQueue, int expectedItems) throws InterruptedException {
+   private void drainQueue(BlockingQueue<DataPoint.Event> datapointQueue, int expectedItems) throws InterruptedException {
       for (int i = 0; i < expectedItems; ++i) {
-         DataPointDAO.Event event = datapointQueue.poll(10, TimeUnit.SECONDS);
+         DataPoint.Event event = datapointQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
       }
    }

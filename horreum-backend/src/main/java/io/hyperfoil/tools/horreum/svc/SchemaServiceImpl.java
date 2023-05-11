@@ -1,15 +1,19 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import com.networknt.schema.JsonMetaSchema;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.entity.data.*;
+import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
+import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.mapper.SchemaMapper;
 import io.hyperfoil.tools.horreum.mapper.TransformerMapper;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
+import io.hyperfoil.tools.horreum.mapper.ValidationErrorMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
@@ -19,14 +23,14 @@ import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.Vertx;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-import javax.persistence.Query;
-import javax.transaction.Transactional;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.Query;
+import jakarta.transaction.Transactional;
 
 import java.io.ByteArrayInputStream;
 import java.net.URI;
@@ -47,11 +51,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
-import org.hibernate.type.IntegerType;
-import org.hibernate.type.TextType;
+import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -59,12 +63,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.networknt.schema.JsonMetaSchema;
+
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.uri.URIFactory;
 import com.networknt.schema.uri.URIFetcher;
 import com.networknt.schema.uri.URLFactory;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
+//import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 @Startup
 public class SchemaServiceImpl implements SchemaService {
@@ -284,7 +288,8 @@ public class SchemaServiceImpl implements SchemaService {
          validateData(run.metadata, schemaFilter, run.validationErrors::add);
       }
       run.persist();
-      messageBus.publish(RunDAO.EVENT_VALIDATED, run.testid, new SchemaDAO.ValidationEvent(run.id, run.validationErrors));
+      messageBus.publish(RunDAO.EVENT_VALIDATED, run.testid,
+              new Schema.ValidationEvent(run.id, run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()) ));
    }
 
    private void validateDatasetData(String params) {
@@ -316,7 +321,7 @@ public class SchemaServiceImpl implements SchemaService {
          }
       }
       dataset.persist();
-      messageBus.publish(DataSetDAO.EVENT_VALIDATED, dataset.testid, new SchemaDAO.ValidationEvent(dataset.id, dataset.validationErrors));
+      messageBus.publish(DataSetDAO.EVENT_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DataSetMapper.from(dataset).validationErrors ));
    }
 
    private void revalidateAll(String params) {
@@ -340,11 +345,20 @@ public class SchemaServiceImpl implements SchemaService {
          messageBus.executeForTest(testId, () -> validateRunData(runId, schemaFilter))
       );
       // Datasets might be re-created if URI is changing, so we might work on old, non-existent ones
-      ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id, testid FROM dataset WHERE ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')").setParameter(1, schema.uri));
+      ScrollableResults<RecreateDataset> results =
+              em.createNativeQuery("SELECT id, testid FROM dataset WHERE ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')").setParameter(1, schema.uri)
+                      .unwrap(NativeQuery.class)
+                      .setTupleTransformer((tuple, aliases) -> {
+                         RecreateDataset r = new RecreateDataset();
+                         r.datasetId = (int) tuple[0];
+                         r.testId = (int) tuple[1];
+                         return r;
+                      })
+                      .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
+                      .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
-         int datasetId = (int) results.get(0);
-         int testId = (int) results.get(1);
-         messageBus.executeForTest(testId, () -> validateDatasetData(datasetId, schemaFilter));
+         RecreateDataset r = results.get();
+         messageBus.executeForTest(r.testId, () -> validateDatasetData(r.datasetId, schemaFilter));
       }
    }
 
@@ -419,12 +433,12 @@ public class SchemaServiceImpl implements SchemaService {
          log.debugf("Deleting schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
          em.createNativeQuery("DELETE FROM label_extractors WHERE label_id IN (SELECT id FROM label WHERE schema_id = ?1)")
                .setParameter(1, id).executeUpdate();
-         LabelDAO.delete("schema_id", id);
+         LabelDAO.delete("schema.id", id);
          em.createNativeQuery("DELETE FROM transformer_extractors WHERE transformer_id IN (SELECT id FROM transformer WHERE schema_id = ?1)")
                .setParameter(1, id).executeUpdate();
          em.createNativeQuery("DELETE FROM test_transformers WHERE transformer_id IN (SELECT id FROM transformer WHERE schema_id = ?1)")
                .setParameter(1, id).executeUpdate();
-         TransformerDAO.delete("schema_id", id);
+         TransformerDAO.delete("schema.id", id);
          schema.delete();
       }
    }
@@ -464,14 +478,14 @@ public class SchemaServiceImpl implements SchemaService {
             "filterlabels, categorylabels, serieslabels, scalelabels FROM tablereportconfig trc JOIN test ON test.id = trc.testid " +
             "WHERE json_contains(filterlabels, ?1) OR json_contains(categorylabels, ?1) OR json_contains(serieslabels, ?1) OR json_contains(scalelabels, ?1);")
             .setParameter(1, label).unwrap(NativeQuery.class)
-            .addScalar("testid", IntegerType.INSTANCE)
-            .addScalar("testname", TextType.INSTANCE)
-            .addScalar("configid", IntegerType.INSTANCE)
-            .addScalar("title", TextType.INSTANCE)
-            .addScalar("filterlabels", JsonNodeBinaryType.INSTANCE)
-            .addScalar("categorylabels", JsonNodeBinaryType.INSTANCE)
-            .addScalar("serieslabels", JsonNodeBinaryType.INSTANCE)
-            .addScalar("scalelabels", JsonNodeBinaryType.INSTANCE)
+            .addScalar("testid", StandardBasicTypes.INTEGER )
+            .addScalar("testname", StandardBasicTypes.TEXT )
+            .addScalar("configid", StandardBasicTypes.INTEGER)
+            .addScalar("title", StandardBasicTypes.TEXT)
+            .addScalar("filterlabels", StandardBasicTypes.TEXT)
+            .addScalar("categorylabels", StandardBasicTypes.TEXT)
+            .addScalar("serieslabels", StandardBasicTypes.TEXT)
+            .addScalar("scalelabels", StandardBasicTypes.TEXT)
             .getResultList()) {
          Object[] columns = (Object[]) row;
          StringBuilder where = new StringBuilder();
@@ -495,7 +509,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Override
    public List<Transformer> listTransformers(int schemaId) {
-      List<TransformerDAO> transformers = TransformerDAO.find("schema_id", Sort.by("name"), schemaId).list();
+      List<TransformerDAO> transformers = TransformerDAO.find("schema.id", Sort.by("name"), schemaId).list();
       return transformers.stream().map(TransformerMapper::from).collect(Collectors.toList());
    }
 
@@ -585,7 +599,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Override
    public List<Label> labels(int schemaId) {
-      List<LabelDAO> labels = LabelDAO.find("schema_id", schemaId).list();
+      List<LabelDAO> labels = LabelDAO.find("schema.id", schemaId).list();
       return labels.stream().map(LabelMapper::from).collect(Collectors.toList());
    }
 
@@ -668,7 +682,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Override
    public Collection<LabelInfo> allLabels(String filterName) {
-      String sqlQuery = "SELECT label.name, label.metrics, label.filtering, schema_id, schema.name as schemaName, schema.uri FROM label JOIN schema ON schema.id = label.schema_id";
+      String sqlQuery = "SELECT label.name, label.metrics, label.filtering, schema.id, schema.name as schemaName, schema.uri FROM label JOIN schema ON schema.id = label.schema_id";
       if (filterName != null && !filterName.isBlank()) {
          sqlQuery += " WHERE label.name = ?1";
       }
@@ -791,5 +805,10 @@ public class SchemaServiceImpl implements SchemaService {
          }
          where.append(type);
       }
+   }
+
+   class RecreateDataset {
+      private int datasetId;
+      private int testId;
    }
 }

@@ -1,0 +1,11 @@
+{
+  "start": "2021-07-12T04:17:48Z",
+  "stop": "2021-07-12T04:25:59Z",
+  "job": "Dummy",
+  "build-id": 1,
+  "build-timestamp": "2021-07-10T14:47:10Z",
+  "data": {
+    "cpu": 68.6,
+    "throughput": 10001
+  }
+}

@@ -6,11 +6,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
+import io.quarkus.panache.common.Sort;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.data.Banner;
 import io.hyperfoil.tools.horreum.mapper.BannerMapper;
@@ -76,7 +77,7 @@ public class BannerServiceImpl implements BannerService {
 
    private BannerDAO getBanner() {
       @SuppressWarnings("unchecked")
-      List<BannerDAO> banners = em.createQuery("SELECT b FROM Banner b WHERE active IS TRUE ORDER BY created DESC").setMaxResults(1).getResultList();
+      List<BannerDAO> banners = BannerDAO.list("active=?1 ORDER BY created DESC",true);
       return banners != null && !banners.isEmpty() ? banners.get(0) : null;
    }
 }

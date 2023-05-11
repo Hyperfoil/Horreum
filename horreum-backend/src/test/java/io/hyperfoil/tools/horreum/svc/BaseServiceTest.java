@@ -1,20 +1,18 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import static io.restassured.RestAssured.given;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadLocalRandom;
@@ -25,19 +23,29 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.transaction.Status;
-import javax.transaction.TransactionManager;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
+import io.hyperfoil.tools.horreum.api.alerting.Variable;
+import io.hyperfoil.tools.horreum.api.services.AlertingService;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
+import io.hyperfoil.tools.horreum.api.services.RunService;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.arc.impl.ParameterizedTypeImpl;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.transaction.Status;
+import jakarta.transaction.TransactionManager;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.MediaType;
 
 import io.hyperfoil.tools.horreum.api.alerting.MissingDataRule;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
-import io.hyperfoil.tools.horreum.entity.data.ViewComponentDAO;
 import org.hibernate.query.NativeQuery;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
@@ -48,7 +56,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.action.GitHubIssueCommentAction;
 import io.hyperfoil.tools.horreum.action.HttpAction;
@@ -84,6 +91,9 @@ public class BaseServiceTest {
 
    @Inject
    MessageBus messageBus;
+
+   @Inject
+   ObjectMapper mapper;
 
    List<Runnable> afterMethodCleanup = new ArrayList<>();
 
@@ -238,6 +248,19 @@ public class BaseServiceTest {
       return Integer.parseInt(runIdString);
    }
 
+   protected int uploadRun(String start, String stop, String test, String owner, Access access, String token,
+                           String schemaUri, String description,  Object runJson) {
+      String runIdString = RestAssured.given().auth().oauth2(getUploaderToken())
+              .header(HttpHeaders.CONTENT_TYPE, "application/json")
+              .body(runJson)
+              .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=" + owner
+                      + "&access=" + access + "&token=" + token + "&schema=" + schemaUri + "&description=" + description)
+              .then()
+              .statusCode(200)
+              .extract().asString();
+      return Integer.parseInt(runIdString);
+   }
+
    protected int uploadRun(long timestamp, JsonNode data, JsonNode metadata, String testName) {
       return uploadRun(timestamp, timestamp, data, metadata, testName, UPLOADER_ROLES[0], Access.PUBLIC);
    }
@@ -255,6 +278,69 @@ public class BaseServiceTest {
             .extract().asString();
       int runId = Integer.parseInt(runIdString);
       return runId;
+   }
+   protected int uploadRun(String start, String stop, JsonNode data, JsonNode metadata, String testName, String owner, Access access) {
+      String runIdString = given().auth().oauth2(getUploaderToken())
+              .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA)
+              // the .toString().getBytes(...) is required because RestAssured otherwise won't send the filename
+              // and Quarkus in turn will use null FileUpload: https://github.com/quarkusio/quarkus/issues/20938
+              .multiPart("data", "data.json", data.toString().getBytes(StandardCharsets.UTF_8), MediaType.APPLICATION_JSON)
+              .multiPart("metadata", "metadata.json", metadata.toString().getBytes(StandardCharsets.UTF_8), MediaType.APPLICATION_JSON)
+              .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + testName + "&owner=" + owner + "&access=" + access)
+              .then()
+              .statusCode(200)
+              .extract().asString();
+      int runId = Integer.parseInt(runIdString);
+      return runId;
+   }
+
+   protected Integer addOrUpdateLabel(Integer schemaId, Label label) {
+      String labelId = jsonRequest()
+              .body(label)
+              .post("/api/schema/"+schemaId+"/labels")
+              .then()
+              .statusCode(200)
+              .extract().asString();
+      return Integer.parseInt(labelId);
+   }
+
+   protected RunService.RunsSummary listTestRuns(int testId, boolean trashed,
+                                                Integer limit, Integer page, String sort, SortDirection direction) {
+      StringBuilder url = new StringBuilder("/api/run/list/"+testId+"?trashed="+trashed);
+      if(limit != null)
+         url.append("&limit="+limit);
+      if(page != null)
+         url.append("&page="+page);
+      if(sort != null)
+         url.append("&sort="+sort);
+      if(direction != null)
+         url.append("&direction="+direction);
+      return jsonRequest()
+              .get(url.toString())
+              .then()
+              .statusCode(200)
+              .extract()
+              .as(RunService.RunsSummary.class);
+   }
+
+   protected RunService.RunExtended getRun(int id, String token) {
+      return jsonRequest().auth().oauth2(getTesterToken())
+              .header(HttpHeaders.CONTENT_TYPE, "application/json")
+              //.body(org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode())
+              .get("/api/run/" + id+"?token="+token)
+              .then()
+              .statusCode(200)
+              .extract().as(RunService.RunExtended.class);
+   }
+
+   protected void waitForDatasets(int datasetId) {
+      jsonRequest().get("/api/run/"+datasetId+"/waitforDatasets").then().statusCode(204);
+   }
+
+   protected List<ExperimentService.ExperimentResult> runExperiments(int datasetId) {
+      return jsonRequest().get("/api/experiment/run?datasetId=" + datasetId)
+              .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, ExperimentService.ExperimentResult.class));
+
    }
 
    protected Test createTest(Test test) {
@@ -367,11 +453,11 @@ public class BaseServiceTest {
       jsonRequest().delete("/api/schema/" + schema.id + "/labels/" + labelId).then().statusCode(204);
    }
 
-   protected void setTestVariables(Test test, String name, String label, ChangeDetectionDAO... rds) {
+   protected void setTestVariables(Test test, String name, String label, ChangeDetection... rds) {
       setTestVariables(test, name, Collections.singletonList(label), rds);
    }
 
-   protected void setTestVariables(Test test, String name, List<String> labels, ChangeDetectionDAO... rds) {
+   protected void setTestVariables(Test test, String name, List<String> labels, ChangeDetection... rds) {
       ArrayNode variables = JsonNodeFactory.instance.arrayNode();
       ObjectNode variable = JsonNodeFactory.instance.objectNode();
       variable.put("testid", test.id);
@@ -379,13 +465,30 @@ public class BaseServiceTest {
       variable.set("labels", labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll));
       if (rds.length > 0) {
          ArrayNode rdsArray = JsonNodeFactory.instance.arrayNode();
-         for (ChangeDetectionDAO rd : rds) {
+         for (ChangeDetection rd : rds) {
             rdsArray.add(JsonNodeFactory.instance.objectNode().put("model", rd.model).set("config", rd.config));
          }
          variable.set("changeDetection", rdsArray);
       }
       variables.add(variable);
       jsonRequest().body(variables.toString()).post("/api/alerting/variables?test=" + test.id).then().statusCode(204);
+   }
+
+   protected void updateVariables(Integer testId, List<Variable> variables) {
+      jsonRequest().body(variables).post("/api/alerting/variables?test=" + testId).then().statusCode(204);
+   }
+
+   protected void addOrUpdateProfile(Integer testId, ExperimentProfile profile) {
+      jsonRequest().body(profile).post("/api/experiment/"+testId+"/profiles").then().statusCode(200);
+   }
+
+   protected void updateChangeDetection(Integer testId, AlertingService.ChangeDetectionUpdate update) {
+      jsonRequest().body(update).post("/api/alerting/variables?test=" + testId); //.then().statusCode(204);
+   }
+
+   protected List<Variable> variables(Integer testId) {
+      return jsonRequest().get("/api/alerting/variables?test=" + testId)
+              .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, Variable.class));
    }
 
    protected <E> BlockingQueue<E> eventConsumerQueue(Class<? extends E> eventClass, String eventType, Predicate<E> filter) {
@@ -427,8 +530,8 @@ public class BaseServiceTest {
       return trashedQueue;
    }
 
-   protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSetDAO, T> testLogic) {
-      BlockingQueue<DataSetDAO.EventNew> dataSetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+   protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       try {
          RunDAO run = new RunDAO();
          tm.begin();
@@ -446,7 +549,7 @@ public class BaseServiceTest {
                fail();
             }
          }
-         DataSetDAO.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
+         DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertNotNull(event.dataset);
          // only to cover the summary call in API
@@ -459,7 +562,7 @@ public class BaseServiceTest {
             if (oldDs != null) {
                oldDs.delete();
             }
-            DataSetDAO.delete("runid", run.id);
+            DataSetDAO.delete("run.id", run.id);
             RunDAO.findById(run.id).delete();
          } catch (Throwable t) {
             error = t;
@@ -553,7 +656,7 @@ public class BaseServiceTest {
    }
 
    protected Response addTestHttpAction(Test test, String event, String url) {
-      ActionDAO action = new ActionDAO();
+      Action action = new Action();
       action.event = event;
       action.type = HttpAction.TYPE_HTTP;
       action.active = true;
@@ -562,7 +665,7 @@ public class BaseServiceTest {
    }
 
    protected Response addTestGithubIssueCommentAction(Test test, String event, String formatter, String owner, String repo, String issue, String secretToken) {
-      ActionDAO action = new ActionDAO();
+      Action action = new Action();
       action.event = event;
       action.type = GitHubIssueCommentAction.TYPE_GITHUB_ISSUE_COMMENT;
       action.active = true;
@@ -576,7 +679,7 @@ public class BaseServiceTest {
    }
 
    protected Response addGlobalAction(String event, String url) {
-      ActionDAO action = new ActionDAO();
+      Action action = new Action();
       action.event = event;
       action.type = "http";
       action.active = true;
@@ -585,12 +688,12 @@ public class BaseServiceTest {
             .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
    }
 
-   protected ChangeDetectionDAO addChangeDetectionVariable(Test test) {
+   protected ChangeDetection addChangeDetectionVariable(Test test) {
       return addChangeDetectionVariable(test, 0.1, 2);
    }
 
-   protected ChangeDetectionDAO addChangeDetectionVariable(Test test, double threshold, int window) {
-      ChangeDetectionDAO cd = new ChangeDetectionDAO();
+   protected ChangeDetection addChangeDetectionVariable(Test test, double threshold, int window) {
+      ChangeDetection cd = new ChangeDetection();
       cd.model = RelativeDifferenceChangeDetectionModel.NAME;
       cd.config = JsonNodeFactory.instance.objectNode().put("threshold", threshold).put("minPrevious", window).put("window", window).put("filter", "mean");
       setTestVariables(test, "Value", "value", cd);
@@ -624,7 +727,19 @@ public class BaseServiceTest {
          return comp;
       }).collect(Collectors.toList());
 
-      jsonRequest().body(profile).post("/api/experiments/" + test.id + "/profiles");
+      // add new experimentProfile
+      int profileId = jsonRequest().body(profile)
+              .post("/api/experiment/" + test.id + "/profiles")
+              .then().statusCode(200).extract().as(Integer.class);
+      assertTrue( profileId > 0);
+
+      //make sure the profile has been correctly stored
+      Collection<ExperimentProfile> profiles = jsonRequest().get("/api/experiment/" + test.id + "/profiles")
+              .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(Collection.class, ExperimentProfile.class));
+
+      assertEquals(1, profiles.size());
+      assertEquals(profileId, profiles.stream().findFirst().get().id);
+      assertEquals(test.id, profiles.stream().findFirst().get().testId);
    }
 
    protected void validateDatabaseContents(HashMap<String, List<JsonNode>> tableContents) {
@@ -634,7 +749,7 @@ public class BaseServiceTest {
             for (String table : tableContents.keySet()) {
                //noinspection unchecked
                List<JsonNode> rows = em.createNativeQuery("SELECT to_jsonb(t) AS json FROM \"" + table + "\" t;")
-                     .unwrap(NativeQuery.class).addScalar("json", JsonNodeBinaryType.INSTANCE).getResultList();
+                     .unwrap(NativeQuery.class).addScalar("json", JsonBinaryType.INSTANCE).getResultList();
                List<JsonNode> expected = tableContents.get(table);
 
                assertEquals(expected.size(), rows.size());
@@ -669,11 +784,81 @@ public class BaseServiceTest {
             for (String table : tables) {
                //noinspection unchecked
                tableContents.put(table, em.createNativeQuery("SELECT to_jsonb(t) AS json FROM \"" + table + "\" t;")
-                     .unwrap(NativeQuery.class).addScalar("json", JsonNodeBinaryType.INSTANCE).getResultList());
+                     .unwrap(NativeQuery.class).addScalar("json", JsonBinaryType.INSTANCE).getResultList());
             }
          }
          return null;
       });
       return tableContents;
+   }
+
+   protected void populateDataFromFiles() throws IOException {
+      Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
+      p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+
+      Test t = new ObjectMapper().readValue(
+              readFile(p.resolve("roadrunner_test.json").toFile()), Test.class);
+      assertEquals("dev-team", t.owner);
+      t.owner = "foo-team";
+      t = createTest(t);
+
+      Schema s = new ObjectMapper().readValue(
+              readFile(p.resolve("acme_benchmark_schema.json").toFile()), Schema.class);
+      assertEquals("dev-team", s.owner);
+      s.owner = "foo-team";
+      s = addOrUpdateSchema(s);
+
+      Label l = new ObjectMapper().readValue(
+              readFile(p.resolve("throughput_label.json").toFile()), Label.class);
+      assertEquals("dev-team", l.owner);
+      l.owner = "foo-team";
+      Response response = jsonRequest().body(l)
+              .post("/api/schema/" + s.id + "/labels");
+      assertEquals(200, response.statusCode());
+      l.id = Integer.parseInt(response.body().asString());
+
+      Transformer transformer = new ObjectMapper().readValue(
+              readFile(p.resolve("acme_transformer.json").toFile()), Transformer.class);
+      assertEquals("dev-team", transformer.owner);
+      transformer.owner = "foo-team";
+      addTransformer(t, transformer);
+
+      List<Variable> variables = new ObjectMapper().readValue(
+              readFile(p.resolve("roadrunner_variables.json").toFile()), new TypeReference<>() { });
+      assertEquals(1, variables.size());
+      jsonRequest().body(variables).post("/api/alerting/variables?test=" + t.id).then().statusCode(204);
+
+      Run r = mapper.readValue(
+              readFile(p.resolve("roadrunner_run.json").toFile()), Run.class);
+      assertEquals("dev-team", r.owner);
+      r.owner = "foo-team";
+      r.testid = t.id;
+      response = jsonRequest()
+              .auth()
+              .oauth2(getUploaderToken())
+              .body(r)
+              .post("/api/run/test/");
+      assertEquals(200, response.statusCode());
+
+   }
+
+   private String readFile(File file) {
+      if(file.isFile()) {
+         try {
+            return new String(Files.readAllBytes(file.toPath()));
+         } catch (IOException e) {
+            throw new RuntimeException(e);
+         }
+      }
+      return null;
+   }
+   protected static String resourceToString(String resourcePath) {
+      try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
+         return new BufferedReader(new InputStreamReader(inputStream))
+                 .lines().collect(Collectors.joining(" "));
+      } catch (IOException e) {
+         fail("Failed to read `" + resourcePath + "`", e);
+         return null;
+      }
    }
 }

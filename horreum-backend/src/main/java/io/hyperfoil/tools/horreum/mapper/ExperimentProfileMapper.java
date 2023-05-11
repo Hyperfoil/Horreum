@@ -53,7 +53,8 @@ public class ExperimentProfileMapper {
         io.hyperfoil.tools.horreum.entity.ExperimentComparison ec = new io.hyperfoil.tools.horreum.entity.ExperimentComparison();
         ec.config = dto.config;
         ec.model = dto.model;
-        ec.setVariableId(dto.variableId);
+        if(dto.variableId != null && dto.variableId > 0)
+            ec.setVariableId(dto.variableId);
 
         return ec;
     }

@@ -40,9 +40,9 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.vladmihalcea</groupId>
-            <artifactId>hibernate-types-52</artifactId>
-            <version>2.20.0</version>
+            <groupId>io.hypersistence</groupId>
+            <artifactId>hypersistence-utils-hibernate-62</artifactId>
+            <version>3.5.1</version>
         </dependency>
         <dependency>
             <groupId>com.networknt</groupId>
@@ -137,7 +137,7 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-rest-client-reactive-jackson</artifactId>
+            <artifactId>quarkus-rest-client-jackson</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkiverse.quinoa</groupId>
@@ -150,9 +150,8 @@
             <version>${commons.math3.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.quarkus</groupId>
-            <!-- TODO: revert to reactive client-->
-            <artifactId>quarkus-keycloak-admin-client</artifactId>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-admin-client</artifactId>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>

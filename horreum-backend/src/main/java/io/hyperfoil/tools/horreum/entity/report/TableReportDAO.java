@@ -4,28 +4,31 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import javax.persistence.CascadeType;
-import javax.persistence.CollectionTable;
-import javax.persistence.Column;
-import javax.persistence.ElementCollection;
-import javax.persistence.Embeddable;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
-import javax.validation.constraints.NotNull;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Type;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import org.hibernate.type.SqlTypes;
 
 @Entity(name = "TableReport")
 @Table(name = "tablereport")
@@ -76,8 +79,9 @@ public class TableReportDAO extends PanacheEntityBase {
       @NotNull
       public String scale;
 
-      @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
       @NotNull
+      @Type(JsonBinaryType.class)
+      @Column(columnDefinition = "jsonb")
       public ArrayNode values;
 
       @Override

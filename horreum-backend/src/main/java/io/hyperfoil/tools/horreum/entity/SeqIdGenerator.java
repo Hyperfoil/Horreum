@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import javax.persistence.Id;
+import jakarta.persistence.Id;
 
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -37,7 +37,7 @@ public class SeqIdGenerator extends SequenceStyleGenerator {
    };
 
    @Override
-   public Serializable generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
+   public Object generate(SharedSessionContractImplementor session, Object object) throws HibernateException {
       Function<Object, Serializable> accessor = accessors.get(object.getClass());
       if (accessor != null) {
          Serializable id = accessor.apply(object);

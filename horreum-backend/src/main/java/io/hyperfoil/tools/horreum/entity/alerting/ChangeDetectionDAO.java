@@ -1,14 +1,15 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
-
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.validation.constraints.NotNull;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import org.hibernate.annotations.GenericGenerator;
@@ -25,21 +26,21 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 public class ChangeDetectionDAO extends PanacheEntityBase {
    @Id
    @GenericGenerator(
-         name = "cdIdGenerator",
+         name = "changeDetectionIdGenerator",
          strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
          parameters = {
-               @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = SequenceStyleGenerator.DEF_SEQUENCE_NAME),
                @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
          }
    )
-   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "cdIdGenerator")
+   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "changeDetectionIdGenerator")
    public Integer id;
 
    @NotNull
    public String model;
 
    @NotNull
-   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   @Type(JsonBinaryType.class)
+   @Column(columnDefinition = "jsonb")
    public JsonNode config;
 
    @ManyToOne(fetch = FetchType.LAZY)

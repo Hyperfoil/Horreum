@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.api.data.*;
@@ -23,11 +24,13 @@ import io.hyperfoil.tools.horreum.api.data.ViewComponent;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.action.ExperimentResultToMarkdown;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
@@ -78,11 +81,11 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSetDAO.EventNew> newDatasetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       final int NUM_DATASETS = 5;
       for (int i = 0; i < NUM_DATASETS; ++i) {
          uploadRun(runWithValue(i, schema), test.name);
-         DataSetDAO.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertFalse(event.isRecalculation);
       }
@@ -98,7 +101,7 @@ public class TestServiceTest extends BaseServiceTest {
          return status.finished == status.totalRuns;
       });
       for (int i = 0; i < NUM_DATASETS; ++i) {
-         DataSetDAO.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertTrue(event.dataset.id > maxId);
          assertTrue(event.isRecalculation);
@@ -119,11 +122,13 @@ public class TestServiceTest extends BaseServiceTest {
 
       addAllowedSite("https://example.com");
 
-      ActionDAO action = addTestHttpAction(test, RunDAO.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(ActionDAO.class);
+      Action action = addTestHttpAction(test, RunDAO.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       action.active = false;
       jsonRequest().body(action).post("/api/test/" + test.id + "/action").then().statusCode(204);
+
+      deleteTest(test);
    }
 
    @org.junit.jupiter.api.Test
@@ -131,9 +136,9 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSetDAO.EventNew> newDatasetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       uploadRun(runWithValue(42, schema), test.name);
-      DataSetDAO.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
 
       ViewComponent vc = new ViewComponent();
@@ -148,7 +153,7 @@ public class TestServiceTest extends BaseServiceTest {
          @SuppressWarnings("unchecked") List<JsonNode> list = em.createNativeQuery(
                "SELECT value FROM dataset_view WHERE dataset_id = ?1 AND view_id = ?2")
                .setParameter(1, event.dataset.id).setParameter(2, defaultView.id)
-               .unwrap(NativeQuery.class).addScalar("value", JsonNodeBinaryType.INSTANCE)
+               .unwrap(NativeQuery.class).addScalar("value", JsonBinaryType.INSTANCE)
                .getResultList();
          return !list.isEmpty() && !list.get(0).isEmpty();
       });
@@ -167,7 +172,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSetDAO.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSetDAO.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<DataSet.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
       uploadRun(runWithValue(42, schema), test.name);
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
@@ -241,11 +246,14 @@ public class TestServiceTest extends BaseServiceTest {
          });
       }
 
-      jsonRequest().body(testJson).post("/api/test/import").then().statusCode(204);
-
-      //if we wipe, we actually import a new test and there is no use validating the db
-      if(!wipe)
+      //wipeing and inserting with the same ids just results in too much foobar
+      if(!wipe) {
+         jsonRequest().body(testJson).post("/api/test/import").then().statusCode(204);
+         //if we wipe, we actually import a new test and there is no use validating the db
          validateDatabaseContents(db);
+         //clean up after us
+         deleteTest(test);
+      }
    }
 
    private void addSubscription(Test test) {

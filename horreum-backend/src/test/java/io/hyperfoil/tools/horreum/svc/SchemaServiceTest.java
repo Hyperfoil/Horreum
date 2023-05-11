@@ -1,11 +1,13 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -16,6 +18,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.hyperfoil.tools.horreum.api.data.Label;
+import io.hyperfoil.tools.horreum.api.data.Transformer;
+import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Schema;
@@ -27,6 +32,8 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+import io.restassured.common.mapper.TypeRef;
+import org.junit.jupiter.api.Assertions;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -41,8 +48,8 @@ public class SchemaServiceTest extends BaseServiceTest {
       Schema allowNoneSchema = createSchema("none", allowNone.path("$id").asText(), allowNone);
 
       Test test = createTest(createExampleTest("schemaTest"));
-      BlockingQueue<SchemaDAO.ValidationEvent> runValidations = eventConsumerQueue(SchemaDAO.ValidationEvent.class, RunDAO.EVENT_VALIDATED, e -> checkRunTestId(e.id, test.id));
-      BlockingQueue<SchemaDAO.ValidationEvent> datasetValidations = eventConsumerQueue(SchemaDAO.ValidationEvent.class, DataSetDAO.EVENT_VALIDATED, e -> checkTestId(e.id, test.id));
+      BlockingQueue<Schema.ValidationEvent> runValidations = eventConsumerQueue(Schema.ValidationEvent.class, RunDAO.EVENT_VALIDATED, e -> checkRunTestId(e.id, test.id));
+      BlockingQueue<Schema.ValidationEvent> datasetValidations = eventConsumerQueue(Schema.ValidationEvent.class, DataSetDAO.EVENT_VALIDATED, e -> checkTestId(e.id, test.id));
 
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
       data.addObject().put("$schema", allowAnySchema.uri).put("foo", "bar");
@@ -50,21 +57,21 @@ public class SchemaServiceTest extends BaseServiceTest {
       data.addObject().put("$schema", "urn:unknown:schema").put("foo", "bar");
       int runId = uploadRun(data.toString(), test.name);
 
-      SchemaDAO.ValidationEvent runValidation = runValidations.poll(10, TimeUnit.SECONDS);
+      Schema.ValidationEvent runValidation = runValidations.poll(10, TimeUnit.SECONDS);
       assertNotNull(runValidation);
       assertEquals(runId, runValidation.id);
       // one error for extra "foo" and one for "$schema"
       assertEquals(2, runValidation.errors.size());
       runValidation.errors.forEach(e -> {
-         assertEquals(allowNoneSchema.id, e.schema.id);
+         assertEquals(allowNoneSchema.id, e.getSchemaId());
          assertNotNull(e.error);
       });
 
-      SchemaDAO.ValidationEvent dsValidation = datasetValidations.poll(10, TimeUnit.SECONDS);
+      Schema.ValidationEvent dsValidation = datasetValidations.poll(10, TimeUnit.SECONDS);
       assertNotNull(dsValidation);
       assertEquals(2, dsValidation.errors.size());
       dsValidation.errors.forEach(e -> {
-         assertEquals(allowNoneSchema.id, e.schema.id);
+         assertEquals(allowNoneSchema.id, e.getSchemaId());
          assertNotNull(e.error);
       });
       assertEquals(0, runValidations.drainTo(new ArrayList<>()));
@@ -74,13 +81,13 @@ public class SchemaServiceTest extends BaseServiceTest {
       ((ObjectNode) allowAnySchema.schema).set("$id", allowAny.path("$id").deepCopy());
       addOrUpdateSchema(allowAnySchema);
 
-      SchemaDAO.ValidationEvent runValidation2 = runValidations.poll(10, TimeUnit.SECONDS);
+      Schema.ValidationEvent runValidation2 = runValidations.poll(10, TimeUnit.SECONDS);
       assertNotNull(runValidation2);
       assertEquals(runId, runValidation2.id);
       // This time we get errors for both schemas
       assertEquals(4, runValidation2.errors.size());
 
-      SchemaDAO.ValidationEvent datasetValidation2 = datasetValidations.poll(10, TimeUnit.SECONDS);
+      Schema.ValidationEvent datasetValidation2 = datasetValidations.poll(10, TimeUnit.SECONDS);
       assertNotNull(datasetValidation2);
       assertEquals(4, datasetValidation2.errors.size());
 
@@ -90,14 +97,36 @@ public class SchemaServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testEditSchema() {
-      Schema schema = createSchema("My schema", "urn:my:schema");
+      Schema schema = createSchema("My Schema", "urn:my:schema");
+      assertEquals("My Schema", schema.name);
+      Assertions.assertTrue(schema.id != null && schema.id > 0);
       int labelId = addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
-      int transformerId = createTransformer("my-transformer", schema, "value => value", new Extractor("all", "$.", false)).id;
+      List<Label> labels = jsonRequest().get("/api/schema/" + schema.id + "/labels")
+              .then().statusCode(200).extract().body().jsonPath().getList(".", Label.class);
+      assertEquals(1, labels.size());
+      assertEquals("foo", labels.get(0).name);
+      //schema = jsonRequest().get("/api/schema/" + schema.id).then().statusCode(200).extract().body().as(Schema.class);
+      int transformerId = createTransformer("my-transformer", schema, "value => value",
+              new Extractor("all", "$.", false)).id;
+
+      List<Transformer> transformers = jsonRequest().get("/api/schema/" + schema.id + "/transformers")
+              .then().statusCode(200).extract().body().jsonPath().getList(".", Transformer.class);
+      assertEquals(1, transformers.size());
+      assertEquals("my-transformer", transformers.get(0).name);
 
       schema.name = "Different name";
       schema.description = "Bla bla";
-      addOrUpdateSchema(schema);
+      schema = addOrUpdateSchema(schema);
       checkEntities(labelId, transformerId);
+      //check labels and transformers using the rest interface as well
+      labels = jsonRequest().get("/api/schema/" + schema.id + "/labels")
+              .then().statusCode(200).extract().body().jsonPath().getList(".", Label.class);
+      assertEquals(1, labels.size());
+      assertEquals("foo", labels.get(0).name);
+      transformers = jsonRequest().get("/api/schema/" + schema.id + "/transformers")
+              .then().statusCode(200).extract().body().jsonPath().getList(".", Transformer.class);
+      assertEquals(1, transformers.size());
+      assertEquals("my-transformer", transformers.get(0).name);
 
       schema.uri = "http://example.com/otherschema";
       schema.description = null;
@@ -107,8 +136,46 @@ public class SchemaServiceTest extends BaseServiceTest {
       // back to original
       schema.name = "My schema";
       schema.uri = "urn:my:schema";
-      addOrUpdateSchema(schema);
+      schema = addOrUpdateSchema(schema);
+      assertEquals("urn:my:schema", schema.uri);
       checkEntities(labelId, transformerId);
+
+      //lets add another tranformer
+      int newTransformerId = createTransformer("my-transformer2", schema, "value => value + 10",
+              new Extractor("all", "$.", false)).id;
+      transformers = jsonRequest().get("/api/schema/" + schema.id + "/transformers")
+              .then().statusCode(200).extract().body().jsonPath().getList(".", Transformer.class);
+      assertEquals(2, transformers.size());
+      assertEquals(newTransformerId, transformers.get(1).id);
+      //lets also get the transformer from the allTransformers endpoint
+      List<SchemaService.TransformerInfo> infos = jsonRequest().get("/api/schema/allTransformers")
+              .then().statusCode(200).extract().body().jsonPath().getList(".", SchemaService.TransformerInfo.class);
+      assertEquals(2, infos.size());
+      assertEquals(newTransformerId, infos.get(1).transformerId);
+
+      labels = jsonRequest().get("/api/schema/" + schema.id + "/labels")
+              .then().statusCode(200).extract().body().jsonPath().getList(".", Label.class);
+      assertEquals(1, labels.size());
+      assertEquals("foo", labels.get(0).name);
+      //lets also get the labels from the allLabels endpoint
+      List<SchemaService.LabelInfo> labelInfos = jsonRequest().get("/api/schema/allLabels")
+              .then().statusCode(200).extract().body().as(new TypeRef<>() {});
+      assertEquals(1, labelInfos.size());
+      assertEquals("foo", labelInfos.get(0).name);
+      assertEquals(schema.id, labelInfos.get(0).schemas.get(0).id);
+
+      //then we delete one transformer
+      jsonRequest().delete("/api/schema/" + schema.id + "/transformers/" + transformerId)
+              .then().statusCode(204);
+      transformers = jsonRequest().get("/api/schema/" + schema.id + "/transformers")
+              .then().statusCode(200).extract().body().jsonPath().getList(".", Transformer.class);
+      assertEquals(1, transformers.size());
+      assertEquals(newTransformerId, transformers.get(0).id);
+      //make sure it did not affect the lables
+      labels = jsonRequest().get("/api/schema/" + schema.id + "/labels")
+              .then().statusCode(200).extract().body().jsonPath().getList(".", Label.class);
+      assertEquals(1, labels.size());
+      assertEquals("foo", labels.get(0).name);
    }
 
    private void checkEntities(int labelId, int transformerId) {

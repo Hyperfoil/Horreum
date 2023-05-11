@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.svc;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.ActionMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
 import io.hyperfoil.tools.horreum.mapper.TestTokenMapper;
@@ -17,15 +18,15 @@ import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceException;
-import javax.persistence.Query;
-import javax.transaction.Transactional;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.Query;
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 
 import java.security.GeneralSecurityException;
 import java.time.Instant;
@@ -46,6 +47,8 @@ import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.Transformers;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -53,7 +56,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
@@ -170,7 +172,7 @@ public class TestServiceImpl implements TestService {
          log.debugf("Failed to retrieve test %s - could not find it in the database", input);
       }
       // we need to be vague about the test existence
-      throw ServiceException.notFound("Cannot upload to test " + input);
+      throw ServiceException.badRequest("Cannot upload to test " + input);
    }
 
    @Override
@@ -500,7 +502,7 @@ public class TestServiceImpl implements TestService {
             "SELECT DISTINCT fingerprint FROM fingerprint fp " +
             "JOIN dataset ON dataset.id = dataset_id WHERE dataset.testid = ?1")
             .setParameter(1, testId)
-            .unwrap(NativeQuery.class).addScalar("fingerprint", JsonNodeBinaryType.INSTANCE)
+            .unwrap(NativeQuery.class).addScalar("fingerprint", JsonBinaryType.INSTANCE)
             .getResultList();
    }
 
@@ -511,7 +513,7 @@ public class TestServiceImpl implements TestService {
       return em.createNativeQuery(LABEL_VALUES_QUERY)
             .setParameter(1, testId).setParameter(2, filtering).setParameter(3, metrics)
             .unwrap(NativeQuery.class)
-            .addScalar("values", JsonNodeBinaryType.INSTANCE)
+            .addScalar("values", JsonBinaryType.INSTANCE)
             .getResultList();
    }
 
@@ -562,7 +564,7 @@ public class TestServiceImpl implements TestService {
             .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
             .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
-         int runId = (int) results.get(0);
+         int runId = (int) results.get();
          log.debugf("Recalculate DataSets for run %d - forcing recalculation for test %d (%s)", runId, testId, test.name);
          // transform will add proper roles anyway
          messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> {

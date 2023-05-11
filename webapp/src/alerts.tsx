@@ -55,7 +55,7 @@ export const reducer = (state: Alert[] = [], action: AlertActions) => {
 }
 
 export const constraintValidationFormatter = (object: any) => (e: any) => {
-    if (e && e.error && e.error === "javax.validation.ConstraintViolationException") {
+    if (e && e.error && e.error === "jakarta.validation.ConstraintViolationException") {
         return (
             <>
                 <span>Some constraints on {object} have failed:</span>

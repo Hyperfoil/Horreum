@@ -7,9 +7,6 @@ import java.util.Collection;
 
 public class Schema {
 
-    public static final int TYPE_1ST_LEVEL = 0;
-    public static final int TYPE_2ND_LEVEL = 1;
-    public static final int TYPE_ARRAY_ELEMENT = 2;
     @JsonProperty(required = true)
     public Integer id;
     @JsonProperty(required = true)

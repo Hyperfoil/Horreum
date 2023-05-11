@@ -32,7 +32,7 @@ import io.quarkus.test.junit.callback.QuarkusTestContext;
 import io.quarkus.test.junit.callback.QuarkusTestMethodContext;
 import org.junit.jupiter.api.Assertions;
 
-import javax.ws.rs.BadRequestException;
+import jakarta.ws.rs.BadRequestException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -103,7 +103,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         JsonNode data = JsonNodeFactory.instance.objectNode()
                 .put("$schema", schema.uri)
                 .put("value", "foobar");
-        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, null, null, data);
+        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null, data);
 
         int datasetId = -1;
         while (System.currentTimeMillis() < now + 10000) {

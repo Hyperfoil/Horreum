@@ -4,15 +4,15 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import javax.persistence.EmbeddedId;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-import javax.validation.constraints.NotNull;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Immutable;
 
@@ -73,11 +73,11 @@ public class MissingDataRuleResultDAO extends PanacheEntityBase {
    }
 
    public static void deleteForDataset(int id) {
-      MissingDataRuleResultDAO.delete("dataset_id", id);
+      MissingDataRuleResultDAO.delete("pk.datasetId", id);
    }
 
    public static void deleteOlder(int ruleId, Instant timestamp) {
-      MissingDataRuleResultDAO.delete("rule_id = ?1 AND timestamp < ?2", ruleId, timestamp);
+      MissingDataRuleResultDAO.delete("pk.ruleId = ?1 AND timestamp < ?2", ruleId, timestamp);
    }
 
    @Override

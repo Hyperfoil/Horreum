@@ -10,12 +10,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.security.RolesAllowed;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.mapper.WatchMapper;
@@ -206,7 +206,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @Override
    public void update(int testId, Watch dto) {
       WatchDAO watch = WatchMapper.to(dto);
-      WatchDAO existing = WatchDAO.find("testid", testId).firstResult();
+      WatchDAO existing = WatchDAO.find("test.id", testId).firstResult();
       if (existing == null) {
          watch.id = null;
          watch.test = em.getReference(TestDAO.class, testId);
@@ -249,7 +249,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onTestDelete(TestDAO test) {
-      var subscriptions = WatchDAO.list("testid = ?1", test.id);
+      var subscriptions = WatchDAO.list("test.id = ?1", test.id);
       log.infof("Deleting %d subscriptions for test %s (%d)", subscriptions.size(), test.name, test.id);
       for (var subscription : subscriptions) {
          subscription.delete();

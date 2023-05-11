@@ -21,35 +21,37 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceException;
-import javax.persistence.Query;
-import javax.persistence.TransactionRequiredException;
-import javax.transaction.InvalidTransactionException;
-import javax.transaction.SystemException;
-import javax.transaction.Transaction;
-import javax.transaction.TransactionManager;
-import javax.transaction.Transactional;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
+import io.hypersistence.utils.hibernate.query.MapResultTransformer;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.Query;
+import jakarta.persistence.TransactionRequiredException;
+import jakarta.transaction.InvalidTransactionException;
+import jakarta.transaction.SystemException;
+import jakarta.transaction.Transaction;
+import jakarta.transaction.TransactionManager;
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
-import com.vladmihalcea.hibernate.type.util.MapResultTransformer;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Run;
@@ -73,10 +75,9 @@ import io.vertx.core.Vertx;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
-import org.hibernate.type.BooleanType;
-import org.hibernate.type.IntegerType;
-import org.hibernate.type.TextType;
-import org.hibernate.type.TimestampType;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
@@ -132,6 +133,8 @@ public class RunServiceImpl implements RunService {
    @Inject
    DatasetServiceImpl datasetService;
 
+   @Inject
+   ObjectMapper mapper;
 
    @PostConstruct
    void init() {
@@ -146,7 +149,7 @@ public class RunServiceImpl implements RunService {
       log.debugf("Trashing runs for test %s (%d)", test.name, test.id);
       ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, test.id));
       while (results.next()) {
-         int id = (int) results.get(0);
+         int id = (int) results.get();
          messageBus.executeForTest(test.id, () -> trashDueToTestDeleted(id));
       }
    }
@@ -188,9 +191,20 @@ public class RunServiceImpl implements RunService {
    }
 
    void findRunsWithUri(String uri, BiConsumer<Integer, Integer> consumer) {
-      ScrollableResults results = Util.scroll(em.createNativeQuery(FIND_RUNS_WITH_URI).setParameter(1, uri));
+      ScrollableResults<RunFromUri> results =
+             em.createNativeQuery(FIND_RUNS_WITH_URI).setParameter(1, uri)
+                     .unwrap(NativeQuery.class)
+                     .setTupleTransformer((tuple, aliases) -> {
+                        RunFromUri r = new RunFromUri();
+                        r.id = (int) tuple[0];
+                        r.testId = (int) tuple[1];
+                        return r;
+                     })
+                     .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
+                     .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
-         consumer.accept((Integer) results.get(0), (Integer) results.get(1));
+         RunFromUri r = results.get();
+         consumer.accept( r.id, r.testId);
       }
    }
 
@@ -216,7 +230,7 @@ public class RunServiceImpl implements RunService {
               "'validationErrors', (SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) FROM run_validationerrors WHERE run_id = ?1)" +
               "))::::text FROM run WHERE id = ?1", id);
       try {
-         runExtended = Util.OBJECT_MAPPER.readValue(extendedData, RunExtended.class);
+         runExtended = mapper.readValue(extendedData, RunExtended.class);
       } catch (JsonProcessingException e) {
          throw ServiceException.serverError("Could not retrieve extended run");
       }
@@ -355,6 +369,14 @@ public class RunServiceImpl implements RunService {
          run.access = access;
       }
       log.debugf("About to add new run to test %s using owner", testNameOrId, owner);
+      if(testNameOrId == null || testNameOrId.isEmpty()) {
+         if (run.testid == null || run.testid == 0) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("No test name or id provided").build();
+         }
+         else
+            testNameOrId = run.testid.toString();
+      }
+
       TestDAO test = testService.ensureTestExists(testNameOrId, token);
       run.testid = test.id;
       Integer runId = addAuthenticated(RunMapper.to(run), test);
@@ -420,8 +442,8 @@ public class RunServiceImpl implements RunService {
       // wait for at least one (1) dataset. we do not know how many datasets will be produced
       CountDownLatch dsAvailableLatch = new CountDownLatch(1);
       // create new dataset listener
-      messageBus.subscribe(DataSetDAO.EVENT_NEW,"DatasetService", DataSetDAO.EventNew.class, (event) -> {
-         if (event.dataset.run.id == runId) {
+      messageBus.subscribe(DataSetDAO.EVENT_NEW,"DatasetService", DataSet.EventNew.class, (event) -> {
+         if (event.dataset.runId == runId) {
             dsAvailableLatch.countDown();
          }
       });
@@ -540,6 +562,9 @@ public class RunServiceImpl implements RunService {
    private Integer addAuthenticated(RunDAO run, TestDAO test) {
       // Id will be always generated anew
       run.id = null;
+      //if run.metadata is null on the client, it will be converted to a NullNode, not null...
+      if(run.metadata != null && run.metadata.isNull())
+         run.metadata = null;
 
       if (run.owner == null) {
          List<String> uploaders = identity.getRoles().stream().filter(role -> role.endsWith("-uploader")).collect(Collectors.toList());
@@ -570,7 +595,7 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.serverError("Failed to persist run");
       }
       log.debugf("Upload flushed, run ID %d", run.id);
-      messageBus.publish(RunDAO.EVENT_NEW, test.id, run);
+      messageBus.publish(RunDAO.EVENT_NEW, test.id, RunMapper.from(run));
 
       return run.id;
    }
@@ -726,28 +751,30 @@ public class RunServiceImpl implements RunService {
 
    private void initTypes(Query query) {
       query.unwrap(NativeQuery.class)
-            .addScalar("id", IntegerType.INSTANCE)
-            .addScalar("start", TimestampType.INSTANCE)
-            .addScalar("stop", TimestampType.INSTANCE)
-            .addScalar("testid", IntegerType.INSTANCE)
-            .addScalar("owner", TextType.INSTANCE)
-            .addScalar("access", IntegerType.INSTANCE)
-            .addScalar("token", TextType.INSTANCE)
-            .addScalar("trashed", BooleanType.INSTANCE)
-            .addScalar("description", TextType.INSTANCE)
-            .addScalar("has_metadata", BooleanType.INSTANCE)
-            .addScalar("testname", TextType.INSTANCE)
-            .addScalar("schemas", JsonNodeBinaryType.INSTANCE)
-            .addScalar("datasets", JsonNodeBinaryType.INSTANCE)
-            .addScalar("validationErrors", JsonNodeBinaryType.INSTANCE);
+            .addScalar("id", StandardBasicTypes.INTEGER)
+            .addScalar("start", StandardBasicTypes.INSTANT)
+            .addScalar("stop", StandardBasicTypes.INSTANT)
+            .addScalar("testid", StandardBasicTypes.INTEGER)
+            .addScalar("owner", StandardBasicTypes.TEXT)
+            .addScalar("access", StandardBasicTypes.INTEGER)
+            .addScalar("token", StandardBasicTypes.TEXT)
+            .addScalar("trashed", StandardBasicTypes.BOOLEAN)
+            .addScalar("description", StandardBasicTypes.TEXT)
+            .addScalar("has_metadata", StandardBasicTypes.BOOLEAN)
+            .addScalar("testname", StandardBasicTypes.TEXT)
+            .addScalar("schemas", JsonBinaryType.INSTANCE)
+            .addScalar("datasets", JsonBinaryType.INSTANCE)
+            .addScalar("validationErrors", JsonBinaryType.INSTANCE);
    }
 
    private RunSummary createSummary(Object[] row) {
 
       RunSummary run = new RunSummary();
       run.id = (int) row[0];
-      run.start = ((Timestamp) row[1]).getTime();
-      run.stop = ((Timestamp) row[2]).getTime();
+      if(row[1] != null)
+         run.start = ((Instant) row[1]).toEpochMilli();
+      if(row[2] != null)
+         run.stop = ((Instant) row[2]).toEpochMilli();
       run.testid = (int) row[3];
       run.owner = (String) row[4];
       run.access = (int) row[5];
@@ -756,16 +783,27 @@ public class RunServiceImpl implements RunService {
       run.description = (String) row[8];
       run.hasMetadata = (boolean) row[9];
       run.testname = (String) row[10];
-      run.schemas = Util.OBJECT_MAPPER.convertValue(row[11], new TypeReference<List<SchemaService.SchemaUsage>>() {});
-      try {
-         run.datasets = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[12]), Integer[].class);
-      } catch (JsonProcessingException e) {
-         log.warnf("Could not map datasets to array");
+
+      //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
+      if(row[11] != null && !(row[11] instanceof String)) {
+         run.schemas = Util.OBJECT_MAPPER.convertValue(row[11], new TypeReference<List<SchemaService.SchemaUsage>>() {
+         });
       }
-      try {
-         run.validationErrors = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[13]), ValidationError[].class);
-      } catch (JsonProcessingException e) {
-         log.warnf("Could not map validation errors to array");
+      //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
+      if(row[12] != null && !(row[12] instanceof String)) {
+         try {
+            run.datasets = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[12]), Integer[].class);
+         } catch (JsonProcessingException e) {
+            log.warnf("Could not map datasets to array");
+         }
+      }
+      //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
+      if(row[13] != null && !(row[13] instanceof String)) {
+         try {
+            run.validationErrors = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[13]), ValidationError[].class);
+         } catch (JsonProcessingException e) {
+            log.warnf("Could not map validation errors to array");
+         }
       }
       return run;
    }
@@ -868,7 +906,7 @@ public class RunServiceImpl implements RunService {
          List<DataSetDAO> datasets = DataSetDAO.list("run.id", id);
          log.debugf("Trashing run %d (test %d, %d datasets)", (long)run.id, (long)run.testid, datasets.size());
          for (var dataset : datasets) {
-            messageBus.publish(DataSetDAO.EVENT_DELETED, run.testid, dataset.getInfo());
+            messageBus.publish(DataSetDAO.EVENT_DELETED, run.testid, DataSetMapper.fromInfo( dataset.getInfo()));
             dataset.delete();
          }
          messageBus.publish(RunDAO.EVENT_TRASHED, run.testid, id);
@@ -968,16 +1006,22 @@ public class RunServiceImpl implements RunService {
          log.debugf("Deleted %d datasets for trashed runs between %s and %s", deleted, from, to);
       }
 
-      ScrollableResults results = em.createNativeQuery("SELECT id, testid FROM run WHERE start BETWEEN ?1 AND ?2 AND NOT trashed ORDER BY start")
+      ScrollableResults<Recalculate> results = em.createNativeQuery("SELECT id, testid FROM run WHERE start BETWEEN ?1 AND ?2 AND NOT trashed ORDER BY start")
             .setParameter(1, from).setParameter(2, to)
-            .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
+            .unwrap(NativeQuery.class)
+              .setTupleTransformer((tuples, aliases) -> {
+                 Recalculate r = new Recalculate();
+                 r.runId = (int) tuples[0];
+                 r.testId = (int) tuples[1];
+                 return r;
+              })
+              .setReadOnly(true).setFetchSize(100)
             .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
-         int runId = (int) results.get(0);
-         int testId = (int) results.get(1);
-         log.debugf("Recalculate DataSets for run %d - forcing recalculation of all between %s and %s", runId, from, to);
+         Recalculate r = results.get();
+         log.debugf("Recalculate DataSets for run %d - forcing recalculation of all between %s and %s", r.runId, from, to);
          // transform will add proper roles anyway
-         messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> transform(runId, true)));
+         messageBus.executeForTest(r.testId, () -> datasetService.withRecalculationLock(() -> transform(r.runId, true)));
       }
    }
 
@@ -1004,8 +1048,8 @@ public class RunServiceImpl implements RunService {
       log.debugf("Transforming run ID %d, recalculation? %s", runId, Boolean.toString(isRecalculation));
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
-      for (DataSetDAO old : DataSetDAO.<DataSetDAO>list("runid", runId)) {
-         messageBus.publish(DataSetDAO.EVENT_DELETED, old.testid, old.getInfo());
+      for (DataSetDAO old : DataSetDAO.<DataSetDAO>list("run.id", runId)) {
+         messageBus.publish(DataSetDAO.EVENT_DELETED, old.testid, DataSetMapper.fromInfo( old.getInfo()));
          old.delete();
       }
 
@@ -1022,11 +1066,11 @@ public class RunServiceImpl implements RunService {
       List<Object[]> relevantSchemas = unchecked(em.createNamedQuery(QUERY_TRANSFORMER_TARGETS)
             .setParameter(1, run.id)
             .unwrap(NativeQuery.class)
-            .addScalar("type", IntegerType.INSTANCE)
-            .addScalar("key", TextType.INSTANCE)
-            .addScalar("transformer_id", IntegerType.INSTANCE)
-            .addScalar("uri", TextType.INSTANCE)
-            .addScalar("source", IntegerType.INSTANCE)
+            .addScalar("type", StandardBasicTypes.INTEGER)
+            .addScalar("key", StandardBasicTypes.TEXT)
+            .addScalar("transformer_id", StandardBasicTypes.INTEGER)
+            .addScalar("uri", StandardBasicTypes.TEXT)
+            .addScalar("source", StandardBasicTypes.INTEGER)
             .getResultList() );
 
       int schemasAndTransformers = relevantSchemas.size();
@@ -1057,8 +1101,8 @@ public class RunServiceImpl implements RunService {
                      extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
                            .setParameter(1, run.id).setParameter(2, transformerId)
                            .unwrap(NativeQuery.class)
-                           .addScalar("name", TextType.INSTANCE)
-                           .addScalar("value", JsonNodeBinaryType.INSTANCE)
+                           .addScalar("name", StandardBasicTypes.TEXT)
+                           .addScalar("value", JsonBinaryType.INSTANCE)
                            .getResultList());
                   } else {
                      extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
@@ -1066,8 +1110,8 @@ public class RunServiceImpl implements RunService {
                            .setParameter(3, type == SchemaDAO.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
                            .setParameter(4, source)
                            .unwrap(NativeQuery.class)
-                           .addScalar("name", TextType.INSTANCE)
-                           .addScalar("value", JsonNodeBinaryType.INSTANCE)
+                           .addScalar("name", StandardBasicTypes.TEXT)
+                           .addScalar("value", JsonBinaryType.INSTANCE)
                            .getResultList());
                   }
                } catch (PersistenceException e) {
@@ -1201,7 +1245,7 @@ public class RunServiceImpl implements RunService {
    private void createDataset(DataSetDAO ds, boolean isRecalculation) {
       try {
          ds.persist();
-         messageBus.publish(DataSetDAO.EVENT_NEW, ds.testid, new DataSetDAO.EventNew(ds, isRecalculation));
+         messageBus.publish(DataSetDAO.EVENT_NEW, ds.testid, new DataSet.EventNew(DataSetMapper.from(ds), isRecalculation));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.", tre);
       }
@@ -1266,5 +1310,15 @@ public class RunServiceImpl implements RunService {
             logMessage(run, PersistentLog.DEBUG, "<code>$schema</code> present (%s), not overriding with %s", node.path("$schema").asText(), uri);
          }
       }
+   }
+
+   class Recalculate {
+      private int runId;
+      private int testId;
+   }
+
+   class RunFromUri {
+      private int id;
+      private int testId;
    }
 }
