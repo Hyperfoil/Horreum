@@ -3,7 +3,7 @@ package io.hyperfoil.tools.horreum.action;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;

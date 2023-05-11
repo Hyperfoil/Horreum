@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -183,7 +183,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          BlockingQueue<DataSetDAO.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSetDAO.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
          withExampleDataset(test, createABData(), ds -> {
             waitForUpdate(updateQueue, ds);
-            List<LabelDAO.Value> values = LabelDAO.Value.<LabelDAO.Value>find("dataset_id", ds.id).list();
+            List<LabelDAO.Value> values = LabelDAO.Value.<LabelDAO.Value>find("datasetId", ds.id).list();
             assertEquals(3, values.size());
             assertEquals(24, values.stream().filter(v -> v.labelId == labelA).map(v -> v.value.numberValue()).findFirst().orElse(null));
             assertEquals(43, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
@@ -197,7 +197,7 @@ public class DatasetServiceTest extends BaseServiceTest {
             waitForUpdate(updateQueue, ds);
             // delete does not cause any update
 
-            values = LabelDAO.Value.<LabelDAO.Value>find("dataset_id", ds.id).list();
+            values = LabelDAO.Value.<LabelDAO.Value>find("datasetId", ds.id).list();
             assertEquals(2, values.size());
             assertEquals(JsonNodeFactory.instance.arrayNode().add(24), values.stream().filter(v -> v.labelId == labelA).map(v -> v.value).findFirst().orElse(null));
             assertEquals(84, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
@@ -213,7 +213,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       BlockingQueue<DataSetDAO.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(DataSetDAO.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
       return withExampleDataset(test, data, ds -> {
          waitForUpdate(updateQueue, ds);
-         return LabelDAO.Value.<LabelDAO.Value>find("dataset_id", ds.id).list().stream().map(LabelMapper::fromValue).collect(Collectors.toList());
+         return LabelDAO.Value.<LabelDAO.Value>find("datasetId", ds.id).list().stream().map(LabelMapper::fromValue).collect(Collectors.toList());
       });
    }
 
@@ -395,7 +395,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       assertNotNull(event);
 
       try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-         List<LabelDAO.Value> labels = LabelDAO.Value.<LabelDAO.Value>find("dataset_id", event.datasetId).list();
+         List<LabelDAO.Value> labels = LabelDAO.Value.<LabelDAO.Value>find("datasetId", event.datasetId).list();
          assertEquals(1, labels.size());
       }
    }

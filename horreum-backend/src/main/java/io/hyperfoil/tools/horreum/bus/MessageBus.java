@@ -8,17 +8,17 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import javax.transaction.RollbackException;
-import javax.transaction.Status;
-import javax.transaction.SystemException;
-import javax.transaction.TransactionManager;
-import javax.transaction.Transactional;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.RollbackException;
+import jakarta.transaction.Status;
+import jakarta.transaction.SystemException;
+import jakarta.transaction.TransactionManager;
+import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
@@ -26,16 +26,14 @@ import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
-import org.hibernate.type.IntegerType;
-import org.hibernate.type.LongType;
-import org.hibernate.type.TextType;
+import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.ErrorReporter;
@@ -105,11 +103,11 @@ public class MessageBus {
       BigInteger id;
       if (componentFlag != null && componentFlag != 0) {
          try (CloseMe ignored = roleManager.withRoles(Collections.singleton(Roles.HORREUM_MESSAGEBUS))) {
-            id = (BigInteger) em.createNativeQuery("INSERT INTO messagebus (id, \"timestamp\", channel, testid, message, flags) VALUES (nextval('messagebus_seq'), NOW(), ?1, ?2, ?3, ?4) RETURNING id")
+            id = (BigInteger) em.createNativeQuery("INSERT INTO messagebus (id, \"timestamp\", channel, testid, message, flags) VALUES (nextval('messagebus_seq'), NOW(), ?1, ?2, ?3, ?4) RETURNING id", BigInteger.class)
                   .unwrap(NativeQuery.class)
                   .setParameter(1, channel)
                   .setParameter(2, testId)
-                  .setParameter(3, json, JsonNodeBinaryType.INSTANCE)
+                  .setParameter(3, json, JsonBinaryType.INSTANCE)
                   .setParameter(4, componentFlag)
                   .getSingleResult();
          }
@@ -248,36 +246,39 @@ public class MessageBus {
          delayed = "{horreum.messagebus.retry.delay:30s}",
          concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
    public void retryFailedMessages() {
-      Query query = em.createNativeQuery("SELECT channel, id, testid, flags, message FROM messagebus WHERE \"timestamp\" + make_interval(secs => ?1) <= now()")
+
+      try(ScrollableResults<ChannelMessage> results = (ScrollableResults<ChannelMessage>) em.createNativeQuery("SELECT channel, id, testid, flags, message FROM messagebus WHERE \"timestamp\" + make_interval(secs => ?1) <= now()")
             .setParameter(1, retryAfter.toSeconds())
             .unwrap(NativeQuery.class)
-            .addScalar("channel", TextType.INSTANCE)
-            .addScalar("id", LongType.INSTANCE)
-            .addScalar("testid", IntegerType.INSTANCE)
-            .addScalar("flags", IntegerType.INSTANCE)
-            .addScalar("message", JsonNodeBinaryType.INSTANCE);
-      try (ScrollableResults results = Util.scroll(query)) {
+            .addScalar("channel", StandardBasicTypes.TEXT)
+            .addScalar("id", StandardBasicTypes.LONG)
+            .addScalar("testid", StandardBasicTypes.INTEGER)
+            .addScalar("flags", StandardBasicTypes.INTEGER)
+            .addScalar("message", JsonBinaryType.INSTANCE)
+              .setTupleTransformer((tuples, aliases) -> {
+                 ChannelMessage sm = new ChannelMessage((String) tuples[0], (Long) tuples[1], (Integer) tuples[2],
+                         (Integer) tuples[3], (JsonNode) tuples[4]);
+                 return sm;
+              })
+              .setReadOnly(true)
+              .setFetchSize(100)
+              .scroll(ScrollMode.FORWARD_ONLY)) {
          while (results.next()) {
-            Object[] row = results.get();
-            String channel = (String) row[0];
-            long id = (long) row[1];
-            int testId = (int) row[2];
-            int flags = (int) row[3];
-            Class<?> type = payloadClasses.get(channel);
+            ChannelMessage row = results.get();
+            Class<?> type = payloadClasses.get(row.getChannel());
             // theoretically the type might not be set if the initial delay is too short
             // and components are not registered yet
             if (type != null) {
-               JsonNode json = (JsonNode) row[4];
-               log.debugf("Retrying message %d (#%d) in channel %s (%s)", id, results.getRowNumber(), channel, type.getName());
+               log.debugf("Retrying message %d (#%d) in channel %s (%s)", row.getId(), results.getRowNumber(), row.getChannel(), type.getName());
                try {
-                  Object payload = Util.OBJECT_MAPPER.treeToValue(json, type);
-                  eventBus.publish(channel, new Message(id, testId, flags, payload));
+                  Object payload = Util.OBJECT_MAPPER.treeToValue(row.getMessage(), type);
+                  eventBus.publish(row.getChannel(), new Message(row.getId(), row.getTestId(), row.getFlags(), payload));
                } catch (JsonProcessingException e) {
-                  String jsonStr = String.valueOf(json);
+                  String jsonStr = String.valueOf(row.message);
                   if (jsonStr.length() > 200) {
                      jsonStr = jsonStr.substring(0, 200) + "...";
                   }
-                  errorReporter.reportException(e, ERROR_SUBJECT, "Exception loading message to retry in bus channel %s, message %s%n%n", channel, jsonStr);
+                  errorReporter.reportException(e, ERROR_SUBJECT, "Exception loading message to retry in bus channel %s, message %s%n%n", row.getChannel(), jsonStr);
                }
             }
          }
@@ -338,6 +339,42 @@ public class MessageBus {
       @Override
       public byte systemCodecID() {
          return -1;
+      }
+   }
+
+   class ChannelMessage {
+      private final String channel;
+      private final Long id;
+      private final Integer testId;
+      private final Integer flags;
+      private final JsonNode message;
+
+      public ChannelMessage(String channel, Long id, Integer testId, Integer flags, JsonNode message) {
+         this.channel = channel;
+         this.id = id;
+         this.testId = testId;
+         this.flags = flags;
+         this.message = message;
+      }
+
+      public String getChannel() {
+         return channel;
+      }
+
+      public Long getId() {
+         return id;
+      }
+
+      public Integer getTestId() {
+         return testId;
+      }
+
+      public Integer getFlags() {
+         return flags;
+      }
+
+      public JsonNode getMessage() {
+         return message;
       }
    }
 }

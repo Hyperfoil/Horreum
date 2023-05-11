@@ -4074,7 +4074,6 @@
             );
         </sql>
     </changeSet>
-
     <changeSet id="106" author="jwhiting">
         <createProcedure>
             CREATE OR REPLACE FUNCTION before_variable_delete_func() RETURNS TRIGGER AS $$
@@ -4088,6 +4087,34 @@
         </createProcedure>
         <sql>
             CREATE TRIGGER before_variable_delete BEFORE DELETE ON variable FOR EACH ROW EXECUTE FUNCTION before_variable_delete_func();
+        </sql>
+    </changeSet>
+    <changeSet id="107" author="stalep">
+        <createSequence sequenceName="actionlog_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="allowedsite_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="banner_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="change_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="datapoint_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="datasetlog_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="notificationsettings_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="reportcomment_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="reportcomponent_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="reportlog_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="run_expectation_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="tablereport_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="tablereportconfig_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="transformationlog_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="changedetectionidgenerator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="experimentprofileidgenerator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="mdridgenerator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="subscriptionidgenerator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="tokenidgenerator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="transformeridgenerator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="variableidgenerator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="viewcomponentidgenerator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="viewidgenerator" startValue="1" incrementBy="1" cacheSize="1" />
+        <sql>
+            GRANT ALL ON SEQUENCE ActionLog_SEQ, AllowedSite_SEQ, Banner_SEQ, Change_SEQ, DataPoint_SEQ, DatasetLog_SEQ, NotificationSettings_SEQ, ReportComment_SEQ, ReportComponent_SEQ, ReportLog_SEQ, Run_Expectation_SEQ, TableReport_SEQ, TableReportConfig_SEQ, TransformationLog_SEQ, changeDetectionIdGenerator, experimentProfileIdGenerator, mdrIdGenerator, subscriptionIdGenerator, tokenIdGenerator, transformerIdGenerator, variableIdGenerator, viewComponentIdGenerator, viewIdGenerator TO "${quarkus.datasource.username}";
         </sql>
     </changeSet>
 </databaseChangeLog>

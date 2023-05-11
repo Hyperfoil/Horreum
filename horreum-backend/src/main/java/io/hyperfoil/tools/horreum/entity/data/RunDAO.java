@@ -3,24 +3,25 @@ package io.hyperfoil.tools.horreum.entity.data;
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import org.hibernate.annotations.DynamicUpdate;
-import org.hibernate.annotations.Type;
 
-import javax.persistence.CascadeType;
-import javax.persistence.CollectionTable;
-import javax.persistence.Column;
-import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.SequenceGenerator;
-import javax.validation.constraints.NotNull;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.Collection;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.Type;
 
 @Entity(name = "run")
 @DynamicUpdate // We don't want to trigger schema analysis when trashing the run
@@ -52,10 +53,12 @@ public class RunDAO extends ProtectedBaseEntity {
    public Integer testid;
 
    @NotNull
-   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   @Type(JsonBinaryType.class)
+   @Column(columnDefinition = "jsonb")
    public JsonNode data;
 
-   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   @Type(JsonBinaryType.class)
+   @Column(columnDefinition = "jsonb")
    public JsonNode metadata;
 
    @NotNull

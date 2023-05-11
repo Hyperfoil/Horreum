@@ -2,16 +2,18 @@ package io.hyperfoil.tools.horreum.entity.data;
 
 import java.util.Objects;
 
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
-import javax.validation.constraints.NotNull;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import org.hibernate.annotations.GenericGenerator;
@@ -38,7 +40,6 @@ public class ViewComponentDAO extends PanacheEntityBase {
          name = "viewComponentIdGenerator",
          strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
          parameters = {
-               @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = SequenceStyleGenerator.DEF_SEQUENCE_NAME),
                @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
 
          }
@@ -60,7 +61,8 @@ public class ViewComponentDAO extends PanacheEntityBase {
    public String headerName;
 
    @NotNull
-   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   @Type(JsonBinaryType.class)
+   @Column(columnDefinition = "jsonb")
    public JsonNode labels;
 
    /**

@@ -9,7 +9,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
-import javax.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.HttpHeaders;
 
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.data.*;
@@ -423,14 +423,14 @@ public class RunServiceTest extends BaseServiceTest {
          List<Integer> dsIds1 = recalculateDataset(ds.run.id);
          assertEquals(1, dsIds1.size());
          try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
-            List<DataSetDAO> dataSets = DataSetDAO.find("runid", ds.run.id).list();
+            List<DataSetDAO> dataSets = DataSetDAO.find("run.id", ds.run.id).list();
             assertEquals(1, dataSets.size());
             assertEquals(dsIds1.get(0), dataSets.get(0).id);
             em.clear();
          }
          List<Integer> dsIds2 = recalculateDataset(ds.run.id);
          try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
-            List<DataSetDAO> dataSets = DataSetDAO.find("runid", ds.run.id).list();
+            List<DataSetDAO> dataSets = DataSetDAO.find("run.id", ds.run.id).list();
             assertEquals(1, dataSets.size());
             assertEquals(dsIds2.get(0), dataSets.get(0).id);
          }

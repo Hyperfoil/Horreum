@@ -1,15 +1,16 @@
 package io.hyperfoil.tools.horreum.entity;
 
-import javax.persistence.Embeddable;
-import javax.persistence.FetchType;
-import javax.persistence.ManyToOne;
-import javax.validation.constraints.NotNull;
-
-import org.hibernate.annotations.Type;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
+import jakarta.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
+import org.hibernate.annotations.Type;
 
 @Embeddable
 public class ValidationErrorDAO {
@@ -17,7 +18,8 @@ public class ValidationErrorDAO {
    public SchemaDAO schema;
 
    @NotNull
-   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
+   @Type(JsonBinaryType.class)
+   @Column(columnDefinition = "jsonb")
    public JsonNode error;
 
    public void setSchema(int id) {

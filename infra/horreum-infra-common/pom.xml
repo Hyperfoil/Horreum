@@ -14,7 +14,7 @@
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -37,9 +37,8 @@
 
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-keycloak-admin-client</artifactId>
+            <artifactId>quarkus-keycloak-admin-client-reactive</artifactId>
         </dependency>
 
     </dependencies>
-
 </project>

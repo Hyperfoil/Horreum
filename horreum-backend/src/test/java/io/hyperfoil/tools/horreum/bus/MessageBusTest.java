@@ -10,9 +10,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.transaction.TransactionManager;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.TransactionManager;
 
 import io.quarkus.test.junit.TestProfile;
 import org.jboss.logging.Logger;
@@ -122,7 +122,7 @@ public class MessageBusTest {
 
    private void awaitMessageBus(int expectedMessages) {
       TestUtil.eventually(() -> expectedMessages == Util.withTx(tm, () -> {
-         long count = ((BigInteger) em.createNativeQuery("SELECT COUNT(*) FROM messagebus").getSingleResult()).longValue();
+         long count = (long) em.createNativeQuery("SELECT COUNT(*) FROM messagebus").getSingleResult();
          log.debugf("Message bus has %d messages, expected %d", count, expectedMessages);
          try {
             Thread.sleep(10);

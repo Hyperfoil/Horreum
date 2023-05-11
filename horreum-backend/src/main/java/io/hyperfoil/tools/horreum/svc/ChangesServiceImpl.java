@@ -3,13 +3,13 @@ package io.hyperfoil.tools.horreum.svc;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.security.PermitAll;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.ws.rs.HeaderParam;
-import javax.ws.rs.core.Response;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.PermitAll;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.core.Response;
 
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -106,7 +106,7 @@ public class ChangesServiceImpl implements ChangesService {
             sql.append("LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id WHERE json_equals(fp.fingerprint, (?4)::::jsonb) ");
          }
          sql.append("ORDER BY timestamp ASC");
-         javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), DataPointDAO.class)
+         jakarta.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), DataPointDAO.class)
                .setParameter(1, variableId)
                .setParameter(2, query.range.from)
                .setParameter(3, query.range.to);
@@ -175,7 +175,7 @@ public class ChangesServiceImpl implements ChangesService {
       if (fingerprint != null) {
          sql.append("AND json_equals(fp.fingerprint, (?4)::::jsonb)");
       }
-      javax.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), ChangeDAO.class)
+      jakarta.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), ChangeDAO.class)
             .setParameter(1, variableId)
             .setParameter(2, query.range.from)
             .setParameter(3, query.range.to);

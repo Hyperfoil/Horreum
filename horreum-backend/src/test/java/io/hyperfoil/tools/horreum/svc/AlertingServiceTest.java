@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
@@ -74,7 +74,6 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testNotifications(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      log.error("TestDTO:"+test.toString()+", schema: "+schema.toString());
       setTestVariables(test, "Value", "value");
 
       BlockingQueue<DataPointDAO.Event> dpe = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
@@ -443,14 +442,14 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       jsonRequest().delete("/api/alerting/missingdatarule/" + otherRuleId).then().statusCode(204);
       em.clear();
-      assertEquals(0, MissingDataRuleResultDAO.find("rule_id", otherRuleId).count());
+      assertEquals(0, MissingDataRuleResultDAO.find("pk.ruleId", otherRuleId).count());
    }
 
    private void pollMissingDataRuleResultsByRule(int ruleId, int... datasetIds) throws InterruptedException {
       try (CloseMe h = roleManager.withRoles(SYSTEM_ROLES)) {
          for (int i = 0; i < 1000; ++i) {
             em.clear();
-            List<MissingDataRuleResultDAO> results = MissingDataRuleResultDAO.list("rule_id", ruleId);
+            List<MissingDataRuleResultDAO> results = MissingDataRuleResultDAO.list("pk.ruleId", ruleId);
             if (results.size() == datasetIds.length && results.stream().mapToInt(MissingDataRuleResultDAO::datasetId)
                   .allMatch(res -> IntStream.of(datasetIds).anyMatch(id -> id == res))) {
                return;
@@ -467,7 +466,7 @@ public class AlertingServiceTest extends BaseServiceTest {
          // there's no event when the results are updated, we need to poll
          for (int i = 0; i < 1000; ++i) {
             em.clear();
-            List<MissingDataRuleResultDAO> results = MissingDataRuleResultDAO.list("dataset_id", datasetId);
+            List<MissingDataRuleResultDAO> results = MissingDataRuleResultDAO.list("pk.datasetId", datasetId);
             if (expectedResults == results.size()) {
                return;
             } else {

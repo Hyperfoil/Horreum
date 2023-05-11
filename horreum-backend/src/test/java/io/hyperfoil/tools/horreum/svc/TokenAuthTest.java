@@ -3,7 +3,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static io.restassured.RestAssured.given;
 
-import javax.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.HttpHeaders;
 
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Test;

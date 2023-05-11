@@ -25,12 +25,13 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.transaction.Status;
-import javax.transaction.TransactionManager;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Status;
+import jakarta.transaction.TransactionManager;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.MediaType;
 
 import io.hyperfoil.tools.horreum.api.alerting.MissingDataRule;
 import io.hyperfoil.tools.horreum.api.data.*;
@@ -39,6 +40,8 @@ import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.entity.data.ViewComponentDAO;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +51,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.action.GitHubIssueCommentAction;
 import io.hyperfoil.tools.horreum.action.HttpAction;
@@ -459,7 +461,7 @@ public class BaseServiceTest {
             if (oldDs != null) {
                oldDs.delete();
             }
-            DataSetDAO.delete("runid", run.id);
+            DataSetDAO.delete("run.id", run.id);
             RunDAO.findById(run.id).delete();
          } catch (Throwable t) {
             error = t;
@@ -634,7 +636,7 @@ public class BaseServiceTest {
             for (String table : tableContents.keySet()) {
                //noinspection unchecked
                List<JsonNode> rows = em.createNativeQuery("SELECT to_jsonb(t) AS json FROM \"" + table + "\" t;")
-                     .unwrap(NativeQuery.class).addScalar("json", JsonNodeBinaryType.INSTANCE).getResultList();
+                     .unwrap(NativeQuery.class).addScalar("json", JsonBinaryType.INSTANCE).getResultList();
                List<JsonNode> expected = tableContents.get(table);
 
                assertEquals(expected.size(), rows.size());
@@ -669,7 +671,7 @@ public class BaseServiceTest {
             for (String table : tables) {
                //noinspection unchecked
                tableContents.put(table, em.createNativeQuery("SELECT to_jsonb(t) AS json FROM \"" + table + "\" t;")
-                     .unwrap(NativeQuery.class).addScalar("json", JsonNodeBinaryType.INSTANCE).getResultList());
+                     .unwrap(NativeQuery.class).addScalar("json", JsonBinaryType.INSTANCE).getResultList());
             }
          }
          return null;

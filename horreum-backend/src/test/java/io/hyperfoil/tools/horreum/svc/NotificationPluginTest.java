@@ -6,8 +6,8 @@ import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Inject;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;

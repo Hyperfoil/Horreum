@@ -14,14 +14,15 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import javax.transaction.Transactional;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.report.ReportComment;
 import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
@@ -34,15 +35,15 @@ import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
-import org.hibernate.type.IntegerType;
-import org.hibernate.type.TextType;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.api.services.ReportService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
@@ -111,12 +112,12 @@ public class ReportServiceImpl implements ReportService {
       Util.addPaging(queryBuilder, limit, page, sort, direction);
 
       Query query = em.createNativeQuery(queryBuilder.toString()).unwrap(NativeQuery.class)
-            .addScalar("config_id", IntegerType.INSTANCE)
-            .addScalar("title", TextType.INSTANCE)
-            .addScalar("testname", TextType.INSTANCE)
-            .addScalar("testid", IntegerType.INSTANCE)
-            .addScalar("reports", JsonNodeBinaryType.INSTANCE)
-            .addScalar("total", IntegerType.INSTANCE);
+            .addScalar("config_id", StandardBasicTypes.INTEGER)
+            .addScalar("title", StandardBasicTypes.TEXT)
+            .addScalar("testname", StandardBasicTypes.TEXT)
+            .addScalar("testid", StandardBasicTypes.INTEGER)
+            .addScalar("reports", JsonBinaryType.INSTANCE)
+            .addScalar("total", StandardBasicTypes.INTEGER);
       for (var entry : params.entrySet()) {
          query.setParameter(entry.getKey(), entry.getValue());
       }
@@ -373,8 +374,8 @@ public class ReportServiceImpl implements ReportService {
       log.debugf("Data per dataset: %s", datasetData);
 
       @SuppressWarnings("unchecked")
-      Map<Integer, Timestamp> timestamps = ((Stream<Object[]>) timestampQuery.getResultStream())
-            .collect(Collectors.toMap(row -> (Integer) row[0], row -> (Timestamp) row[1]));
+      Map<Integer, Instant> timestamps = ((Stream<Object[]>) timestampQuery.getResultStream())
+            .collect(Collectors.toMap(row -> (Integer) row[0], row -> (Instant) row[1]));
       // TODO: customizable time range
       List<Integer> datasetIds = getFinalDatasetIds(timestamps, datasetData);
       List<List<Object[]>> values = config.components.stream()
@@ -519,10 +520,10 @@ public class ReportServiceImpl implements ReportService {
       return value == null ? "" : value.isTextual() ? value.asText() : value.toString();
    }
 
-   private List<Integer> getFinalDatasetIds(Map<Integer, Timestamp> timestamps, Map<Integer, TableReportDAO.Data> datasetData) {
+   private List<Integer> getFinalDatasetIds(Map<Integer, Instant> timestamps, Map<Integer, TableReportDAO.Data> datasetData) {
       Map<Coords, TableReportDAO.Data> dataByCoords = new HashMap<>();
       for (TableReportDAO.Data data : datasetData.values()) {
-         Timestamp dataTimestamp = timestamps.get(data.datasetId);
+         Instant dataTimestamp = timestamps.get(data.datasetId);
          if (dataTimestamp == null) {
             log.errorf("No timestamp for dataset %d", data.datasetId);
             continue;
@@ -533,11 +534,11 @@ public class ReportServiceImpl implements ReportService {
             dataByCoords.put(coords, data);
             continue;
          }
-         Timestamp prevTimestamp = timestamps.get(prev.datasetId);
+         Instant prevTimestamp = timestamps.get(prev.datasetId);
          if (prevTimestamp == null) {
             log.errorf("No timestamp for prev dataset %d", prev.datasetId);
             dataByCoords.put(coords, data);
-         } else if (prevTimestamp.before(dataTimestamp)) {
+         } else if (prevTimestamp.isBefore(dataTimestamp)) {
             dataByCoords.put(coords, data);
          }
       }
@@ -564,11 +565,11 @@ public class ReportServiceImpl implements ReportService {
       Query query = em.createNativeQuery(sql.toString())
             .setParameter("testid", testId)
             .unwrap(NativeQuery.class)
-            .setParameter("labels", labels, JsonNodeBinaryType.INSTANCE)
-            .addScalar("id", IntegerType.INSTANCE)
-            .addScalar("runid", IntegerType.INSTANCE)
-            .addScalar("ordinal", IntegerType.INSTANCE)
-            .addScalar("value", JsonNodeBinaryType.INSTANCE);
+            .setParameter("labels", labels, JsonBinaryType.INSTANCE)
+            .addScalar("id", StandardBasicTypes.INTEGER)
+            .addScalar("runid", StandardBasicTypes.INTEGER)
+            .addScalar("ordinal", StandardBasicTypes.INTEGER)
+            .addScalar("value", JsonBinaryType.INSTANCE);
       //noinspection unchecked
       return query.getResultList();
    }
@@ -590,11 +591,11 @@ public class ReportServiceImpl implements ReportService {
       Query query = em.createNativeQuery(sql.toString())
             .setParameter("datasets", datasets)
             .unwrap(NativeQuery.class)
-            .setParameter("labels", labels, JsonNodeBinaryType.INSTANCE)
-            .addScalar("id", IntegerType.INSTANCE)
-            .addScalar("runid", IntegerType.INSTANCE)
-            .addScalar("ordinal", IntegerType.INSTANCE)
-            .addScalar("value", JsonNodeBinaryType.INSTANCE);
+            .setParameter("labels", labels, JsonBinaryType.INSTANCE)
+            .addScalar("id", StandardBasicTypes.INTEGER)
+            .addScalar("runid", StandardBasicTypes.INTEGER)
+            .addScalar("ordinal", StandardBasicTypes.INTEGER)
+            .addScalar("value", JsonBinaryType.INSTANCE);
       //noinspection unchecked
       return (List<Object[]>) query.getResultList();
    }

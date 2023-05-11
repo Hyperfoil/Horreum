@@ -1,6 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
-import javax.persistence.MappedSuperclass;
+import jakarta.persistence.MappedSuperclass;
 
 @MappedSuperclass
 public abstract class ProtectedBaseEntity extends OwnedEntityBase {

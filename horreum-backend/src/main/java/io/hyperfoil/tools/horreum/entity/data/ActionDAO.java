@@ -1,9 +1,10 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
-import javax.persistence.*;
-import javax.validation.constraints.NotNull;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
@@ -37,13 +38,13 @@ public class ActionDAO extends PanacheEntityBase {
    public String type;
 
    @NotNull
-   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
-   @Column(name = "config")
+   @Column(name = "config", columnDefinition = "jsonb")
+   @Type(JsonBinaryType.class)
    public JsonNode config;
 
    @NotNull
-   @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
-   @Column(name = "secrets")
+   @Column(name = "secrets", columnDefinition = "jsonb")
+   @Type(JsonBinaryType.class)
    public JsonNode secrets;
 
    @NotNull

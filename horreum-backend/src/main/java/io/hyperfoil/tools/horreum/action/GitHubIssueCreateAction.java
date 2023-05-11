@@ -2,9 +2,9 @@ package io.hyperfoil.tools.horreum.action;
 
 import static io.hyperfoil.tools.horreum.action.ActionUtil.replaceExpressions;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Instance;
-import javax.inject.Inject;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Inject;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;

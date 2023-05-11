@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.api.data.*;
@@ -23,11 +24,13 @@ import io.hyperfoil.tools.horreum.api.data.ViewComponent;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 import io.hyperfoil.tools.horreum.action.ExperimentResultToMarkdown;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
@@ -148,7 +151,7 @@ public class TestServiceTest extends BaseServiceTest {
          @SuppressWarnings("unchecked") List<JsonNode> list = em.createNativeQuery(
                "SELECT value FROM dataset_view WHERE dataset_id = ?1 AND view_id = ?2")
                .setParameter(1, event.dataset.id).setParameter(2, defaultView.id)
-               .unwrap(NativeQuery.class).addScalar("value", JsonNodeBinaryType.INSTANCE)
+               .unwrap(NativeQuery.class).addScalar("value", JsonBinaryType.INSTANCE)
                .getResultList();
          return !list.isEmpty() && !list.get(0).isEmpty();
       });
