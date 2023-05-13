@@ -3,8 +3,8 @@ First you have to make sure, you are running Docker desktop in windows. See [Doc
 
  
 ### 1. Build with the docker-compose command
-```
-docker-compose -p horreum -f infra/docker-compose.yml up -d
+```bash
+ docker compose -p horreum -f infra/docker-compose.yml up -d
 ```
 
  It will take some time to pull all images so after running above command you can see that you have pulled all images from docker hub.

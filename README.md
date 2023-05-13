@@ -39,7 +39,7 @@ We have prepared a seperate `docker-compose` script to setup Keycloak and Postgr
 We have prepared a `docker-compose` script to setup Keycloak and PostgreSQL using following command.
 
 ```bash
-docker-compose -p horreum -f infra/docker-compose.yml up -d
+ docker compose -p horreum -f infra/docker-compose.yml up -d
 ```
 and after a few moments everything should be up and ready. The script will create some example users.
 
