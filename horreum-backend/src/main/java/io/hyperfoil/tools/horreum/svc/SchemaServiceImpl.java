@@ -194,10 +194,10 @@ public class SchemaServiceImpl implements SchemaService {
       Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
       if (limit != null && page != null) {
          List<SchemaDAO> schemas = SchemaDAO.findAll(Sort.by(sort).direction(sortDirection)).page(Page.of(page, limit)).list();
-         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).collect(Collectors.toList()), schemas.size());
+         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).collect(Collectors.toList()), SchemaDAO.count());
       } else {
          List<SchemaDAO> schemas = SchemaDAO.listAll(Sort.by(sort).direction(sortDirection));
-         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).collect(Collectors.toList()), schemas.size());
+         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).collect(Collectors.toList()), SchemaDAO.count());
       }
    }
 

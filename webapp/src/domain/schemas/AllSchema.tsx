@@ -25,7 +25,7 @@ export default function AllSchema() {
 
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
-    const [direction] = useState<SortDirection>("Ascending")
+    const [direction] = useState<SortDirection>('Ascending')
     const pagination = useMemo(() => ({ page, perPage, direction }), [page, perPage, direction])
     const [schemas, setSchemas] = useState<SchemaQueryResult>()
     const [loading, setLoading] = useState(false)
@@ -33,9 +33,9 @@ export default function AllSchema() {
     useEffect(() => {
         setLoading(true)
         Api.schemaServiceList(
-             SortDirection.Ascending,
+             'Ascending',
              pagination.perPage,
-              pagination.page
+             pagination.page - 1
              )
             .then(setSchemas)
             .catch(error => dispatch(alertAction("FETCH_REPORTS", "Failed to fetch reports", error)))
