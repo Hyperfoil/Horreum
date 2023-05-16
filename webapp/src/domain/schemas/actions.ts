@@ -14,7 +14,7 @@ const loaded = (schema: Schema | Schema[]): LoadedAction => ({
 export function getById(id: number) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
         Api.schemaServiceGetSchema(id).then(
-            response => dispatch(loaded(response.schema)),
+            response => dispatch(loaded(response)),
             error => {
                 dispatch(loaded([]))
                 return dispatchError(dispatch, error, "GET_SCHEMA", "Failed to fetch schema")
