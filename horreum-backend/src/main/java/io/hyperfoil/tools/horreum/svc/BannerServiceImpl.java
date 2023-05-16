@@ -70,7 +70,8 @@ public class BannerServiceImpl implements BannerService {
    @PermitAll
    @Override
    public Banner get() {
-     return BannerMapper.from(getBanner());
+      BannerDAO bannerDAO = getBanner();
+      return bannerDAO == null ? null : BannerMapper.from(bannerDAO);
    }
 
    private BannerDAO getBanner() {
