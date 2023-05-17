@@ -38,7 +38,7 @@ export default function AllSchema() {
              pagination.page - 1
              )
             .then(setSchemas)
-            .catch(error => dispatch(alertAction("FETCH_REPORTS", "Failed to fetch reports", error)))
+            .catch(error => dispatch(alertAction("FETCH_SCHEMA", "Failed to fetch schemas", error)))
             .finally(() => setLoading(false))
     }, [pagination,  dispatch])
 
