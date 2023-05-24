@@ -9,8 +9,8 @@ import BannerConfig from "./BannerConfig"
 import Notifications from "./Notifications"
 import Teams from "./Teams"
 import Administrators from "./Administrators"
-import {useSelector} from "react-redux";
-import {isAdminSelector} from "../../auth";
+import { useSelector } from "react-redux"
+import { isAdminSelector } from "../../auth"
 
 export default function Admin() {
     const adminFuncsRef = useRef<TabFunctions>()
@@ -29,7 +29,7 @@ export default function Admin() {
                                 onReset={resetFunc(adminFuncsRef)}
                                 isModified={modifiedFunc(adminFuncsRef)}
                             >
-                                <Administrators funcsRef={adminFuncsRef}/>
+                                <Administrators funcsRef={adminFuncsRef} />
                             </SavedTab>
                             <SavedTab
                                 title="Teams"
@@ -38,18 +38,18 @@ export default function Admin() {
                                 onReset={resetFunc(teamsFuncsRef)}
                                 isModified={modifiedFunc(teamsFuncsRef)}
                             >
-                                <Teams funcs={teamsFuncsRef}/>
+                                <Teams funcs={teamsFuncsRef} />
                             </SavedTab>
                             <FragmentTab title="Global Actions" fragment="actions">
-                                <AllowedSiteList/>
-                                <br/>
-                                <ActionList/>
+                                <AllowedSiteList />
+                                <br />
+                                <ActionList />
                             </FragmentTab>
                             <FragmentTab title="Banner" fragment="banner">
-                                <BannerConfig/>
+                                <BannerConfig />
                             </FragmentTab>
                             <FragmentTab title="Notification Tests" fragment="notifications">
-                                <Notifications/>
+                                <Notifications />
                             </FragmentTab>
                         </SavedTabs>
                     </CardBody>
@@ -57,13 +57,12 @@ export default function Admin() {
             </PageSection>
         )
     } else {
-        return             <PageSection>
-            <Card>
-                <CardBody>
-                    You are not authorized to view this page
-                </CardBody>
-            </Card>
-        </PageSection>
-
+        return (
+            <PageSection>
+                <Card>
+                    <CardBody>You are not authorized to view this page</CardBody>
+                </Card>
+            </PageSection>
+        )
     }
 }

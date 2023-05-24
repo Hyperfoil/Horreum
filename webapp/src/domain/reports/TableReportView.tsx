@@ -160,7 +160,7 @@ function ComponentTable(props: ComponentTableProps) {
         />,
     ]
     return (
-        <Level style={{ padding: "50px"}}>
+        <Level style={{ padding: "50px" }}>
             <LevelItem style={{ width: "100%" }}>
                 <TableComposable variant="compact">
                     <Thead>

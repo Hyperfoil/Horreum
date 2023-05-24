@@ -102,11 +102,7 @@ export default function AllSchema() {
                     </CardHeader>
                 )}
                 <CardBody style={{ overflowX: "auto" }}>
-                    <Table columns={columns}
-                    data={list || []}
-                    sortBy={[{ id: "name", desc: false }]}
-                     
-                    />
+                    <Table columns={columns} data={list || []} sortBy={[{ id: "name", desc: false }]} />
                 </CardBody>
             </Card>
         </PageSection>

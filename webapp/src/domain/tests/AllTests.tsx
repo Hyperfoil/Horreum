@@ -423,12 +423,12 @@ export default function AllTests() {
                             history.replace(f ? `/test?folder=${f}` : "/test")
                         }}
                     />
-                    <Table columns={columns}
-                     data={allTests || []} 
-                     isLoading={isLoading} 
-                     sortBy={[{ id: "name", desc: false }]}
-                     
-                     />
+                    <Table
+                        columns={columns}
+                        data={allTests || []}
+                        isLoading={isLoading}
+                        sortBy={[{ id: "name", desc: false }]}
+                    />
                 </CardBody>
             </Card>
         </PageSection>
