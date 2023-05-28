@@ -24,11 +24,13 @@ Horreum is a [Quarkus](https://quarkus.io/) based application which uses
 [Quinoa](https://quarkiverse.github.io/quarkiverse-docs/quarkus-quinoa/dev/) as its [nodejs](https://nodejs.org/en) engine.
 
 ## Prerequisites
-
-* [Java 11](https://adoptium.net/temurin/releases/?version=11)
-* [Apache Maven 3.8](https://maven.apache.org/)
-* [Keycloak](https://www.keycloak.org/)
-* [PostgreSQL 12+](https://www.postgresql.org/)
+ 
+ <div>
+ <img src="https://img.shields.io/badge/Java11-E34F26.svg?style=for-the-badge&logo=Java11&logoColor=white">
+ <img src="https://img.shields.io/badge/Apache Maven 3.8-1572B6.svg?style=for-the-badge&logo=Apache Maven 3.8&logoColor=white">
+ <img src="https://img.shields.io/badge/Keycloak-7952B3.svg?style=for-the-badge&logo=Bootstrap&logoColor=white">
+ <img src="https://img.shields.io/badge/PostgreSQL 12+-F7DF1E.svg?style=for-the-badge&logo=PostgreSQL 12+&logoColor=white">
+</div>
 
 ### Local development in Windows
 We have prepared a seperate `docker-compose` script to setup Keycloak and PostgreSQL in the Windows platform, check the guide 👉 [Local development in Windows](./doc/Windows.md)
