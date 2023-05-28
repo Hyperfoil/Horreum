@@ -28,7 +28,7 @@ Horreum is a [Quarkus](https://quarkus.io/) based application which uses
  <div>
  <img src="https://img.shields.io/badge/Java11-E34F26.svg?style=for-the-badge&logo=Java11&logoColor=white">
  <img src="https://img.shields.io/badge/Apache Maven 3.8-1572B6.svg?style=for-the-badge&logo=Apache Maven 3.8&logoColor=white">
- <img src="https://img.shields.io/badge/Keycloak-7952B3.svg?style=for-the-badge&logo=Bootstrap&logoColor=white">
+ <img src="https://img.shields.io/badge/Keycloak-7952B3.svg?style=for-the-badge&logo=Keycloak&logoColor=white">
  <img src="https://img.shields.io/badge/PostgreSQL 12+-F7DF1E.svg?style=for-the-badge&logo=PostgreSQL 12+&logoColor=white">
 </div>
 
