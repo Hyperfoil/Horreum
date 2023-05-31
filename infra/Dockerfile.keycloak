@@ -17,5 +17,7 @@ ENV KC_HOSTNAME_STRICT=false
 ENV DB_PORT=5432
 ENV DB_DATABASE=keycloak
 ENV KC_DB_URL=jdbc:postgresql://$DB_ADDR:$DB_PORT/$DB_DATABASE
+USER root
 RUN /opt/keycloak/bin/kc.sh build
+#USER keycloak
 ENTRYPOINT /opt/keycloak/bin/keycloak.sh
