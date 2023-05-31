@@ -2,7 +2,7 @@
 First you have to make sure, you are running Docker desktop in windows. See [Docker Desktop](https://www.docker.com/products/docker-desktop/) for more information.
 
  
-### 1. Build with the docker-compose command
+### 1. Build with the docker compose command
 ```bash
  docker compose -p horreum -f infra/docker-compose.yml up -d
 ```

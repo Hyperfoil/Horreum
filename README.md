@@ -31,12 +31,12 @@ Horreum is a [Quarkus](https://quarkus.io/) based application which uses
 * [PostgreSQL 12+](https://www.postgresql.org/)
 
 ### Local development in Windows
-We have prepared a seperate `docker-compose` script to setup Keycloak and PostgreSQL in the Windows platform, check the guide 👉 [Local development in Windows](./doc/Windows.md)
+We have prepared a seperate `docker compose` script to setup Keycloak and PostgreSQL in the Windows platform, check the guide 👉 [Local development in Windows](./doc/Windows.md)
 
 
 ### Local development with Docker Compose
 
-We have prepared a `docker-compose` script to setup Keycloak and PostgreSQL using following command.
+We have prepared a `docker compose` script to setup Keycloak and PostgreSQL using following command.
 
 ```bash
  docker compose -p horreum -f infra/docker-compose.yml up -d
