@@ -234,8 +234,13 @@ public class TestServiceImpl implements TestService {
    @Override
    @PermitAll
    @WithRoles
-   public List<Test> list(String roles, Integer limit, Integer page, String sort, SortDirection direction){
+   public TestQueryResult list(String roles, Integer limit, Integer page, String sort, SortDirection direction){
       PanacheQuery<TestDAO> query;
+
+      public static long count() {
+         return find("deleted = false").count();
+     }
+     
       Set<String> actualRoles = null;
       if (Roles.hasRolesParam(roles)) {
          if (roles.equals("__my")) {
@@ -257,7 +262,7 @@ public class TestServiceImpl implements TestService {
       if (limit != null && page != null) {
          query.page(Page.of(page, limit));
       }
-      return query.list().stream().map(TestMapper::from).collect(Collectors.toList());
+      return new TestQueryResult( query.list().stream().map(TestMapper::from).collect(Collectors.toList()), Test.count() ) ;
    }
 
    @Override
