@@ -53,7 +53,10 @@ public interface SchemaService {
    @GET
    @Path("descriptors")
    @Produces(MediaType.APPLICATION_JSON)
-   List<SchemaDescriptor> descriptors(@QueryParam("id") List<Integer> ids);
+   List<SchemaDescriptor> descriptors(@QueryParam("id"),
+                                     @QueryParam("sort") String sort,
+                                     @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction,
+                                     List<Integer> ids);
 
    @POST
    @Produces(MediaType.TEXT_PLAIN)
