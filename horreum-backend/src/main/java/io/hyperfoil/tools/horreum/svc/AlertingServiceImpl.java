@@ -536,26 +536,31 @@ public class AlertingServiceImpl implements AlertingService {
    @Transactional
    void onNewDataPoint(DataPointDAO.Event event) {
       DataPointDAO dataPoint = event.dataPoint;
-      VariableDAO variable = VariableDAO.findById(dataPoint.variable.id);
-      if (variable != null) {
-         log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
-                 dataPoint.dataset.id, dataPoint.timestamp,
-                 variable.id, variable.name, dataPoint.value);
-         JsonNode fingerprint = FingerprintDAO.<FingerprintDAO>findByIdOptional(dataPoint.dataset.id).map(fp -> fp.fingerprint).orElse(null);
+      if (dataPoint.variable != null && dataPoint.variable.id != null) {
+         VariableDAO variable = VariableDAO.findById(dataPoint.variable.id);
+         if (variable != null) {
+            log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
+                dataPoint.dataset.id, dataPoint.timestamp,
+                variable.id, variable.name, dataPoint.value);
+            JsonNode fingerprint = FingerprintDAO.<FingerprintDAO>findByIdOptional(dataPoint.dataset.id).map(fp -> fp.fingerprint).orElse(null);
 
-         VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
-         log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint, dataPoint.timestamp, validUpTo.get(key));
-         validUpTo.compute(key, (ignored, current) -> {
-            if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
-               return new UpTo(dataPoint.timestamp, false);
-            } else {
-               return current;
-            }
-         });
-         runChangeDetection(VariableDAO.findById(variable.id), fingerprint, event.notify, true);
+            VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
+            log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint, dataPoint.timestamp, validUpTo.get(key));
+            validUpTo.compute(key, (ignored, current) -> {
+               if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
+                  return new UpTo(dataPoint.timestamp, false);
+               } else {
+                  return current;
+               }
+            });
+            runChangeDetection(VariableDAO.findById(variable.id), fingerprint, event.notify, true);
+         } else {
+            log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
+                dataPoint.dataset.id, dataPoint.timestamp, dataPoint.variable == null ? -1 : dataPoint.variable.id);
+         }
       } else {
-         log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
-                 dataPoint.dataset.id, dataPoint.timestamp, dataPoint.variable == null ? -1 : dataPoint.variable.id);
+         log.warnf( "Could not process new datapoint for dataset %d when the supplied variable or id reference is null ",
+             dataPoint.dataset.id);
       }
    }
 
