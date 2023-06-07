@@ -4074,4 +4074,20 @@
             );
         </sql>
     </changeSet>
+
+    <changeSet id="106" author="jwhiting">
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION before_variable_delete_func() RETURNS TRIGGER AS $$
+            BEGIN
+            DELETE FROM change WHERE variable_id = OLD.id;
+            DELETE FROM datapoint WHERE variable_id = OLD.id;
+            DELETE FROM experiment_comparisons WHERE variable_id = OLD.id;
+            RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <sql>
+            CREATE TRIGGER before_variable_delete BEFORE DELETE ON variable FOR EACH ROW EXECUTE FUNCTION before_variable_delete_func();
+        </sql>
+    </changeSet>
 </databaseChangeLog>
