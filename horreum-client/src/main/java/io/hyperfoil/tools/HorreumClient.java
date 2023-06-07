@@ -5,6 +5,7 @@ import io.hyperfoil.tools.horreum.api.services.ActionService;
 import io.hyperfoil.tools.horreum.api.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.services.BannerService;
 import io.hyperfoil.tools.horreum.api.services.ChangesService;
+import io.hyperfoil.tools.horreum.api.services.ConfigService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.NotificationService;
 import io.hyperfoil.tools.horreum.api.services.ReportService;
@@ -43,6 +44,7 @@ public class HorreumClient implements Closeable {
     public final BannerService bannerService;
     public final DatasetService datasetService;
     public final ChangesService changesService;
+    public final ConfigService configService;
     public final NotificationService notificationService;
     public final ReportService reportService;
     public final RunServiceExtension runService;
@@ -53,14 +55,15 @@ public class HorreumClient implements Closeable {
     public final UserService userService;
 
     private HorreumClient(ResteasyClient client,
-                          ActionService actionService, AlertingService alertingService, BannerService bannerService, DatasetService datasetService, ChangesService changesService,
-                          NotificationService notificationService, ReportService reportService, RunServiceExtension runServiceExtension, SchemaService schemaService, SqlService sqlService,
-                          SubscriptionService subscriptionService, TestService horreumTestService, UserService userService) {
+                          ActionService actionService, AlertingService alertingService, BannerService bannerService, ChangesService changesService, ConfigService configService,
+                          DatasetService datasetService, NotificationService notificationService, ReportService reportService, RunServiceExtension runServiceExtension, SchemaService schemaService,
+                          SqlService sqlService, SubscriptionService subscriptionService, TestService horreumTestService, UserService userService) {
         this.client = client;
         this.alertingService = alertingService;
         this.bannerService = bannerService;
         this.datasetService = datasetService;
         this.changesService = changesService;
+        this.configService = configService;
         this.actionService = actionService;
         this.notificationService = notificationService;
         this.reportService = reportService;
@@ -188,8 +191,9 @@ public class HorreumClient implements Closeable {
                   target.proxyBuilder(ActionService.class).build(),
                   target.proxyBuilder(AlertingService.class).build(),
                   target.proxyBuilder(BannerService.class).build(),
-                  target.proxyBuilder(DatasetService.class).build(),
                   target.proxyBuilder(ChangesService.class).build(),
+                  target.proxyBuilder(ConfigService.class).build(),
+                  target.proxyBuilder(DatasetService.class).build(),
                   target.proxyBuilder(NotificationService.class).build(),
                   target.proxyBuilder(ReportService.class).build(),
                   new RunServiceExtension(target, target.proxyBuilder(RunService.class).build()),
