@@ -26,7 +26,7 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 			String username,
 			String password,
 			String clientId,
-			String clientSecret,
+			//String clientSecret,
 			SSLContext sslContext) {
 
 		ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl().connectionPoolSize(20);
@@ -44,7 +44,7 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 				.username(username)
 				.password(password)
 				.clientId(clientId)
-				.clientSecret(clientSecret)
+				.clientSecret(null)
 				.resteasyClient(clientBuilder.build())
 				.build();
 	}

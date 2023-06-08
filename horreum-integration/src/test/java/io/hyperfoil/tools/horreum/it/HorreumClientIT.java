@@ -157,7 +157,6 @@ public class HorreumClientIT implements  QuarkusTestBeforeTestExecutionCallback,
             String horreumBaseUrl = "http://localhost:".concat(System.getProperty("quarkus.http.test-port"));
             horreumClient = new HorreumClient.Builder()
                     .horreumUrl(horreumBaseUrl + "/")
-                    .keycloakUrl(System.getProperty("keycloak.host"))
                     .horreumUser("user")
                     .horreumPassword("secret")
                     .build();

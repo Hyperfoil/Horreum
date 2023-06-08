@@ -16,6 +16,7 @@ import javax.ws.rs.core.MediaType;
 @Produces(MediaType.APPLICATION_JSON)
 public interface ConfigService {
    long startTimestamp = System.currentTimeMillis();
+   String KEYCLOAK_BOOTSTRAP_URL = "/api/config/keycloak";
 
    @GET
    @Path("keycloak")
