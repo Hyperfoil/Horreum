@@ -70,10 +70,11 @@
         <version.maven.javadoc>3.4.1</version.maven.javadoc>
         <version.maven.gpg>3.0.1</version.maven.gpg>
 
-        <commons.math3.version>3.6.1</commons.math3.version>
-        <graalvm.version>22.3.0</graalvm.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <commons.math3.version>3.6.1</commons.math3.version>
+        <graalvm.version>22.3.0</graalvm.version>
         <quarkus.version>2.16.7.Final</quarkus.version>
         <quinoa.version>1.2.9</quinoa.version>
         <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
@@ -82,7 +83,6 @@
         <validator.version>1.0.69</validator.version>
         <jayway.jsonpath.version>2.8.0</jayway.jsonpath.version>
         <jackson.version>2.15.1</jackson.version>
-        <netty.version>4.1.93.Final</netty.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
     </properties>
