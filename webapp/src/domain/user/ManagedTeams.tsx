@@ -46,13 +46,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
                         includeGeneral={false}
                         selection={team}
                         teamsSelector={managedTeamsSelector}
-                        onSelect={anotherTeam => {
-                            if (modified) {
-                                setNextTeam(anotherTeam)
-                            } else {
-                                setTeam(anotherTeam)
-                            }
-                        }}
+                        onSelect={anotherTeam => (modified && setNextTeam(anotherTeam)) || setTeam(anotherTeam)}
                     />
                 </FormGroup>
                 <FormGroup label="Members" fieldId="members" onClick={e => e.preventDefault()}>
@@ -97,9 +91,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
                 isOpen={createNewUser}
                 onClose={() => setCreateNewUser(false)}
                 onCreate={(user, roles) => {
-                    if (teamMembersFuncs.current) {
-                        teamMembersFuncs.current.addMember(user, roles)
-                    }
+                    teamMembersFuncs.current && teamMembersFuncs.current.addMember(user, roles)
                 }}
             />
         </>
