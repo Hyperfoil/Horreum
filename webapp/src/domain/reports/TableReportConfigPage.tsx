@@ -48,33 +48,33 @@ type ReportConfigComponentProps = {
     readOnly: boolean
 }
 
-function ReportConfigComponent(props: ReportConfigComponentProps) {
+function ReportConfigComponent({component, onChange, onDelete, readOnly}: ReportConfigComponentProps) {
     return (
-        <Flex style={{ marginBottom: "10px" }} key={props.component.id}>
+        <Flex style={{ marginBottom: "10px" }} key={component.id}>
             <FlexItem grow={{ default: "grow" }}>
                 <FormGroup label="Name" fieldId="name">
                     <TextInput
                         id="name"
-                        value={props.component.name}
-                        onChange={name => props.onChange({ ...props.component, name })}
+                        value={component.name}
+                        onChange={name => onChange({ ...component, name })}
                         isRequired
-                        isReadOnly={props.readOnly}
+                        isReadOnly={readOnly}
                     />
                 </FormGroup>
                 <FormGroup label="Unit" fieldId="unit">
                     <TextInput
                         id="unit"
-                        value={props.component.unit}
-                        onChange={unit => props.onChange({ ...props.component, unit })}
+                        value={component.unit}
+                        onChange={unit => onChange({ ...component, unit })}
                         placeholder="E.g. milliseconds, requests/sec..."
-                        isReadOnly={props.readOnly}
+                        isReadOnly={readOnly}
                     />
                 </FormGroup>
                 <FormGroup label="Labels" fieldId="labels">
                     <Labels
-                        isReadOnly={props.readOnly}
-                        labels={props.component.labels}
-                        onChange={labels => props.onChange({ ...props.component, labels })}
+                        isReadOnly={readOnly}
+                        labels={component.labels}
+                        onChange={labels => onChange({ ...component, labels })}
                         defaultFiltering={false}
                         defaultMetrics={true}
                     />
@@ -100,18 +100,18 @@ function ReportConfigComponent(props: ReportConfigComponentProps) {
                     fieldId="function"
                 >
                     <OptionalFunction
-                        func={props.component._function}
-                        onChange={f => props.onChange({ ...props.component, _function: f })}
-                        readOnly={props.readOnly}
+                        func={component._function}
+                        onChange={f => onChange({ ...component, _function: f })}
+                        readOnly={readOnly}
                         undefinedText="No function defined."
                         addText="Add component function..."
                         defaultFunc="value => value"
                     />
                 </FormGroup>
             </FlexItem>
-            {!props.readOnly && (
+            {!readOnly && (
                 <FlexItem alignSelf={{ default: "alignSelfCenter" }}>
-                    <Button onClick={() => props.onDelete()}>Delete</Button>
+                    <Button onClick={() => onDelete()}>Delete</Button>
                 </FlexItem>
             )}
         </Flex>
