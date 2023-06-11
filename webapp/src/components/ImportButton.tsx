@@ -12,7 +12,7 @@ type ImportProps = {
     onImported(): void
 }
 
-export default function ImportButton(props: ImportProps) {
+export default function ImportButton({label, onLoad, onImport, onImported}: ImportProps) {
     const [open, setOpen] = useState(false)
     const [filename, setFilename] = useState<string>()
     const [loading, setLoading] = useState(false)
@@ -36,7 +36,7 @@ export default function ImportButton(props: ImportProps) {
     return (
         <>
             <Button variant="secondary" onClick={() => setOpen(true)}>
-                {props.label || "Import"}
+                {label || "Import"}
             </Button>
             <Modal
                 title="Import test"
@@ -53,12 +53,11 @@ export default function ImportButton(props: ImportProps) {
                             if (!config) {
                                 return
                             }
-                            props
-                                .onImport(config)
+                                onImport(config)
                                 .then(
                                     () => {
                                         dispatchInfo(dispatch, "IMPORT", "Import succeeded", "", 3000)
-                                        props.onImported()
+                                        onImported()
                                     },
                                     error => dispatchError(dispatch, error, "IMPORT_FAILED", "Import failed")
                                 )
@@ -93,7 +92,7 @@ export default function ImportButton(props: ImportProps) {
                                         const parsed = JSON.parse(cfg || "")
                                         setConfig(parsed)
                                         setChecking(true)
-                                        Promise.resolve(props.onLoad(parsed))
+                                        Promise.resolve(onLoad(parsed))
                                             .then(value => setOverridden(value))
                                             .finally(() => setChecking(false))
                                     } catch (e) {

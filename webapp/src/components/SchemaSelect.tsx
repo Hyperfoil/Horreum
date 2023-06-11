@@ -19,10 +19,10 @@ interface Schema extends SelectOptionObject {
 }
 
 /* This is going to be a complex component with modal for Extractor definition */
-export default function SchemaSelect(props: SchemaSelectProps) {
+export default function SchemaSelect({value, onChange, disabled, noSchemaOption, isCreatable}: SchemaSelectProps) {
     const [isExpanded, setExpanded] = useState(false)
     const [options, setOptions] = useState<Schema[]>([])
-    const noSchemaAllowed = props.noSchemaOption || false
+    const noSchemaAllowed = noSchemaOption || false
     useEffect(() => {
         if (options.length > 0) {
             return
@@ -32,11 +32,11 @@ export default function SchemaSelect(props: SchemaSelectProps) {
                 return { ...s, toString: () => `${s.name} (${s.uri})` }
             })
             setOptions(schemas)
-            if (!noSchemaAllowed && !props.value && schemas.length > 0) {
-                props.onChange(schemas[0].uri, schemas[0].id)
+            if (!noSchemaAllowed && !value && schemas.length > 0) {
+                onChange(schemas[0].uri, schemas[0].id)
             }
         })
-    }, [props.onChange, props.value, noSchemaAllowed])
+    }, [onChange, value, noSchemaAllowed])
     const extraOptions: Schema[] = []
     if (noSchemaAllowed) {
         extraOptions.push({ name: "", id: 0, uri: "", toString: () => "-- no schema --" })
@@ -49,21 +49,21 @@ export default function SchemaSelect(props: SchemaSelectProps) {
             isOpen={isExpanded}
             placeholderText="-- no schema --"
             variant="typeahead"
-            isCreatable={props.isCreatable}
+            isCreatable={isCreatable}
             createText="Use new schema URI: "
             onToggle={setExpanded}
-            selections={options.find(o => o.uri === props.value) || []}
+            selections={options.find(o => o.uri === value) || []}
             onClear={() => {
                 setExpanded(false)
-                props.onChange(undefined, undefined)
+                onChange(undefined, undefined)
             }}
             onSelect={(e, newValue) => {
                 setExpanded(false)
                 if (typeof newValue === "string") {
-                    props.onChange(newValue as string, 0)
+                    onChange(newValue as string, 0)
                 } else {
                     const schema = newValue as Schema
-                    props.onChange(schema.uri, schema.id)
+                    onChange(schema.uri, schema.id)
                 }
             }}
             onCreateOption={value => {
@@ -72,7 +72,7 @@ export default function SchemaSelect(props: SchemaSelectProps) {
             }}
         >
             {[...extraOptions, ...options].map((option, index) => (
-                <SelectOption key={index} value={option} isDisabled={props.disabled?.includes(option.uri)}>
+                <SelectOption key={index} value={option} isDisabled={disabled?.includes(option.uri)}>
                     {option.name ? (
                         option.name === option.uri ? (
                             <code>{option.uri}</code>
