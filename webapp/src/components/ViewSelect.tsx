@@ -9,20 +9,20 @@ type ViewSelectProps = {
     onChange(viewId: number): void
 }
 
-export default function ViewSelect(props: ViewSelectProps) {
+export default function ViewSelect({views, viewId, onChange}: ViewSelectProps) {
     const [isOpen, setOpen] = useState(false)
-    const selected = props.views.find(v => v.id === props.viewId)
+    const selected = views.find(v => v.id === viewId)
     return (
         <Select
             isOpen={isOpen}
             onToggle={setOpen}
             selections={selected !== undefined ? { ...selected, toString: () => selected.name } : undefined}
             onSelect={(_, item) => {
-                props.onChange((item as View).id)
+                onChange((item as View).id)
                 setOpen(false)
             }}
         >
-            {props.views.map(view => (
+            {views.map(view => (
                 <SelectOption key={view.id} value={view}>
                     {view.name}
                 </SelectOption>

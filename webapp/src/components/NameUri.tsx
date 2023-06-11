@@ -7,13 +7,13 @@ type NameUriProps = {
     descriptor: SchemaDescriptor
 }
 
-export default function NameUri(props: NameUriProps) {
-    const id = props.descriptor.id
-    const name = props.descriptor.name
+export default function NameUri({isLink, onNavigate, descriptor}: NameUriProps) {
+    const id = descriptor.id
+    const name = descriptor.name
     return (
         <>
-            {id && props.isLink ? (
-                <NavLink to={`/schema/${id}#labels`} onClick={() => props.onNavigate && props.onNavigate()}>
+            {id && isLink ? (
+                <NavLink to={`/schema/${id}#labels`} onClick={() => onNavigate && onNavigate()}>
                     {name}
                 </NavLink>
             ) : (
@@ -29,7 +29,7 @@ export default function NameUri(props: NameUriProps) {
                     fontSize: "smaller",
                 }}
             >
-                <code>{props.descriptor.uri}</code>
+                <code>{descriptor.uri}</code>
             </span>
         </>
     )
