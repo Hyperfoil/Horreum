@@ -36,6 +36,7 @@ import javax.transaction.Synchronization;
 import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import org.eclipse.microprofile.context.ThreadContext;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
@@ -150,21 +151,21 @@ public class Util {
       }
    }
 
-   static void addPaging(StringBuilder sql, Integer limit, Integer page, String sort, String direction) {
+   static void addPaging(StringBuilder sql, Integer limit, Integer page, String sort, SortDirection direction) {
       addOrderBy(sql, sort, direction);
       addLimitOffset(sql, limit, page);
    }
 
-   static void addOrderBy(StringBuilder sql, String sort, String direction) {
+   static void addOrderBy(StringBuilder sql, String sort, SortDirection direction) {
       sort = sort == null || sort.trim().isEmpty() ? "start" : sort;
-      direction = direction == null || direction.trim().isEmpty() ? "Ascending" : direction;
+      direction = direction == null ? SortDirection.Ascending : direction;
       sql.append(" ORDER BY ").append(sort);
       addDirection(sql, direction);
    }
 
-   static void addDirection(StringBuilder sql, String direction) {
+   static void addDirection(StringBuilder sql, SortDirection direction) {
       if (direction != null) {
-         sql.append("Ascending".equalsIgnoreCase(direction) ? " ASC" : " DESC");
+         sql.append("Ascending".equalsIgnoreCase(direction.toString()) ? " ASC" : " DESC");
       }
       sql.append(" NULLS LAST");
    }
@@ -609,12 +610,17 @@ public class Util {
    }
 
    static Object runQuery(EntityManager em, String query, Object... params) {
-      Query q = em.createNativeQuery(query);
+      return runQuery(em, Object.class, query, params);
+   }
+
+   static <T> T runQuery(EntityManager em, Class<T> klass, String query, Object... params) {
+      Query q;
+      q = klass.equals(Object.class) ? em.createNativeQuery(query) : em.createNativeQuery(query, klass);;
       for (int i = 0; i < params.length; ++i) {
          q.setParameter(i + 1, params[i]);
       }
       try {
-         return q.getSingleResult();
+         return (T) q.getSingleResult();
       } catch (NoResultException e) {
          log.errorf("No results in %s with params: %s", query, Arrays.asList(params));
          throw ServiceException.notFound("No result");

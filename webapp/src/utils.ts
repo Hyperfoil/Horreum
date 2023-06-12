@@ -121,7 +121,7 @@ export type PaginationInfo = {
     page: number
     perPage: number
     sort: string
-    direction: string
+    direction: string //TODO:: This should be an enum
 }
 
 export function paginationParams(pagination: PaginationInfo) {

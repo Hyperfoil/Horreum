@@ -15,11 +15,13 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import io.hyperfoil.tools.horreum.api.ApiIgnore;
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Run;
@@ -41,7 +43,7 @@ public interface RunService {
    @APIResponse(content = @Content(schema = @Schema(implementation = RunExtended.class)), description = "Returns an instance of RunExtended")
    @GET
    @Path("{id}")
-   Object getRun(@PathParam("id") int id,
+   RunExtended getRun(@PathParam("id") int id,
                  @QueryParam("token") String token);
 
    @GET
@@ -119,6 +121,9 @@ public interface RunService {
                            @QueryParam("description") String description,
                            @RestForm("data") FileUpload data,
                            @RestForm("metadata") FileUpload metadata);
+   @GET
+   @Path("{id}/waitforDatasets")
+   void waitForDatasets(@PathParam("id") int id);
 
    @GET
    @Path("autocomplete")
@@ -133,7 +138,7 @@ public interface RunService {
                            @QueryParam("limit") Integer limit,
                            @QueryParam("page") Integer page,
                            @QueryParam("sort") String sort,
-                           @QueryParam("direction") String direction);
+                           @QueryParam("direction") SortDirection direction);
 
    @GET
    @Path("count")
@@ -146,7 +151,7 @@ public interface RunService {
                             @QueryParam("limit") Integer limit,
                             @QueryParam("page") Integer page,
                             @QueryParam("sort") String sort,
-                            @QueryParam("direction") String direction);
+                            @QueryParam("direction") SortDirection direction);
 
    @GET
    @Path("bySchema")
@@ -154,7 +159,7 @@ public interface RunService {
                             @QueryParam("limit") Integer limit,
                             @QueryParam("page") Integer page,
                             @QueryParam("sort") String sort,
-                            @QueryParam("direction") String direction);
+                            @QueryParam("direction") SortDirection direction);
 
    @POST
    @Path("{id}/trash")
@@ -201,18 +206,19 @@ public interface RunService {
       public String description;
       public List<SchemaService.SchemaUsage> schemas;
       @Schema(required = true, implementation = int[].class)
-      public ArrayNode datasets;
+      public Integer[] datasets;
       @Schema(implementation = ValidationError[].class)
-      public ArrayNode validationErrors;
+      public ValidationError[] validationErrors;
    }
 
+   @JsonIgnoreProperties({ "token", "old_start" }) //ignore properties that have not been mapped
    class RunExtended extends Run {
       @NotNull
       public List<SchemaService.SchemaUsage> schemas;
       @NotNull
       public String testname;
       @Schema(required = true, implementation = int[].class)
-      public int[] datasets;
+      public Integer[] datasets;
    }
 
    class RunsSummary {

@@ -9,6 +9,7 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.client.RunService;
 import io.hyperfoil.tools.horreum.api.services.RunService.RunsSummary;
 import io.hyperfoil.tools.horreum.api.services.RunService.RunSummary;
@@ -36,7 +37,7 @@ public class RunServiceExtension implements RunService {
    }
 
    @Override
-   public Object getRun(int id, String token) {
+   public io.hyperfoil.tools.horreum.api.services.RunService.RunExtended getRun(int id, String token) {
       return delegate.getRun(id, token);
    }
 
@@ -118,8 +119,13 @@ public class RunServiceExtension implements RunService {
    }
 
    @Override
-   public RunsSummary listAllRuns(String query, boolean matchAll, String roles, boolean trashed, Integer limit, Integer page, String sort, String direction) {
+   public RunsSummary listAllRuns(String query, boolean matchAll, String roles, boolean trashed, Integer limit, Integer page, String sort, SortDirection direction) {
       return delegate.listAllRuns(query, matchAll, roles, trashed, limit, page, sort, direction);
+   }
+
+   @Override
+   public void waitForDatasets(int runId) {
+      delegate.waitForDatasets(runId);
    }
 
    @Override
@@ -128,7 +134,7 @@ public class RunServiceExtension implements RunService {
    }
 
    @Override
-   public RunsSummary listTestRuns(int testId, boolean trashed, Integer limit, Integer page, String sort, String direction) {
+   public RunsSummary listTestRuns(int testId, boolean trashed, Integer limit, Integer page, String sort, SortDirection direction) {
       return delegate.listTestRuns(testId, trashed, limit, page, sort, direction);
    }
 

@@ -16,6 +16,7 @@ import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
 
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.entity.data.*;
@@ -163,7 +164,7 @@ public class DatasetServiceImpl implements DatasetService {
    @PermitAll
    @WithRoles
    @Override
-   public DatasetService.DatasetList listByTest(int testId, String filter, Integer limit, Integer page, String sort, String direction, Integer viewId) {
+   public DatasetService.DatasetList listByTest(int testId, String filter, Integer limit, Integer page, String sort, SortDirection direction, Integer viewId) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
             .append(SCHEMAS_SELECT).append(" WHERE testid = ?1 GROUP BY dataset_id")
             .append("), ").append(VALIDATION_SELECT);
@@ -225,7 +226,7 @@ public class DatasetServiceImpl implements DatasetService {
             .setResultTransformer(DATASET_SUMMARY_TRANSFORMER);
    }
 
-   private void addOrderAndPaging(Integer limit, Integer page, String sort, String direction, StringBuilder sql) {
+   private void addOrderAndPaging(Integer limit, Integer page, String sort, SortDirection direction, StringBuilder sql) {
       if (sort != null && sort.startsWith("view_data:")) {
          String[] parts = sort.split(":", 3);
          String vcid = parts[1];
@@ -275,7 +276,7 @@ public class DatasetServiceImpl implements DatasetService {
 
    @WithRoles
    @Override
-   public DatasetService.DatasetList listBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
+   public DatasetService.DatasetList listBySchema(String uri, Integer limit, Integer page, String sort, SortDirection direction) {
       StringBuilder sql = new StringBuilder(LIST_SCHEMA_DATASETS);
       // TODO: filtering by fingerprint
       addOrderAndPaging(limit, page, sort, direction, sql);

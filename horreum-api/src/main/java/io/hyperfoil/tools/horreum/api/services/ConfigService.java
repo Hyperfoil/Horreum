@@ -27,16 +27,16 @@ public interface ConfigService {
    VersionInfo version();
 
 
-   public static class VersionInfo {
+   class VersionInfo {
       @NotNull
       public String version;
       @JsonProperty(required = true)
       public long startTimestamp;
    }
 
-   public static class KeycloakConfig {
-      public String realm = "horreum";
+   class KeycloakConfig {
+      public String realm;
       public String url;
-      public String clientId = "horreum-ui";
+      public String clientId;
    }
 }

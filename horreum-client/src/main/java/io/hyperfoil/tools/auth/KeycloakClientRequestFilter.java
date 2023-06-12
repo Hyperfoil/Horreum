@@ -44,7 +44,7 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 				.username(username)
 				.password(password)
 				.clientId(clientId)
-				.clientSecret(null)
+//				.clientSecret(clientSecret)
 				.resteasyClient(clientBuilder.build())
 				.build();
 	}

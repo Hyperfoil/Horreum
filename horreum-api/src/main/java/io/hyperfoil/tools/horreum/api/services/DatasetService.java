@@ -13,6 +13,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.api.data.Label;
@@ -42,7 +43,7 @@ public interface DatasetService {
                           @QueryParam("limit") Integer limit,
                           @QueryParam("page") Integer page,
                           @QueryParam("sort") String sort,
-                          @QueryParam("direction") String direction,
+                          @QueryParam("direction") SortDirection direction,
                           @QueryParam("viewId") Integer viewId);
 
    @Path("{id}/query")
@@ -58,7 +59,7 @@ public interface DatasetService {
                             @QueryParam("limit") Integer limit,
                             @QueryParam("page") Integer page,
                             @QueryParam("sort") @DefaultValue("start") String sort,
-                            @QueryParam("direction") @DefaultValue("Descending") String direction);
+                            @QueryParam("direction") @DefaultValue("Descending") SortDirection direction);
 
    @GET
    @Path("{datasetId}/labelValues")

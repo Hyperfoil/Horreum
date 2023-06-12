@@ -464,7 +464,16 @@ public class RunServiceTest extends BaseServiceTest {
       test = createTest(test);
 
       long now = System.currentTimeMillis();
-      uploadRun(now, now, JsonNodeFactory.instance.objectNode(), test.name, test.owner, Access.PRIVATE);
+      int runID = uploadRun(now, now, JsonNodeFactory.instance.objectNode(), test.name, test.owner, Access.PRIVATE);
+
+      String response = RestAssured.given().auth().oauth2(getTesterToken())
+              .header(HttpHeaders.CONTENT_TYPE, "application/json")
+              .body(org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode())
+              .get("/api/run/" + runID)
+              .then()
+              .statusCode(200)
+              .extract().asString();
+      assertNotNull(response);
    }
 
    @org.junit.jupiter.api.Test

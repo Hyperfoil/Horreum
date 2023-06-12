@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.api.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.services.QueryResult;
@@ -22,6 +23,8 @@ import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
 
+import static io.hyperfoil.tools.horreum.api.services.RunService.RunExtended;
+
 /**
  * THIS IS A DUPLICATE CLASS specifically for the client.
  * This class is missing the `addRunFromData` that leaks resteasy reactive types in the API
@@ -34,8 +37,8 @@ import java.util.Map;
 public interface RunService {
    @GET
    @Path("{id}")
-   Object getRun(@PathParam("id") int id,
-                 @QueryParam("token") String token);
+   RunExtended getRun(@PathParam("id") int id,
+                                                                         @QueryParam("token") String token);
 
    @GET
    @Path("{id}/summary")
@@ -106,7 +109,11 @@ public interface RunService {
                            @QueryParam("limit") Integer limit,
                            @QueryParam("page") Integer page,
                            @QueryParam("sort") String sort,
-                           @QueryParam("direction") String direction);
+                           @QueryParam("direction") SortDirection direction);
+
+   @GET
+   @Path("{id}/waitforDatasets")
+   void waitForDatasets(@PathParam("id") int runId);
 
    @GET
    @Path("count")
@@ -119,7 +126,7 @@ public interface RunService {
                                                                                @QueryParam("limit") Integer limit,
                                                                                @QueryParam("page") Integer page,
                                                                                @QueryParam("sort") String sort,
-                                                                               @QueryParam("direction") String direction);
+                                                                               @QueryParam("direction") SortDirection direction);
 
    @GET
    @Path("bySchema")
