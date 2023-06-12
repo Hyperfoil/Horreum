@@ -16,7 +16,7 @@ import {
     UpdateDatasetsAction,
 } from "../runs/reducers"
 import * as actionTypes from "./actionTypes"
-import Api, { RunExtended, RunSummary } from "../../api"
+import Api, {RunExtended, RunSummary, SortDirection} from "../../api"
 import { isFetchingSuggestions, suggestQuery } from "./selectors"
 import store from "../../store"
 import { PaginationInfo } from "../../utils"
@@ -72,7 +72,7 @@ export function byTest(id: number, pagination: PaginationInfo, trashed: boolean)
         dispatch({ type: actionTypes.LOADING })
         return Api.runServiceListTestRuns(
             id,
-            pagination.direction,
+            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             pagination.perPage,
             pagination.page,
             pagination.sort,

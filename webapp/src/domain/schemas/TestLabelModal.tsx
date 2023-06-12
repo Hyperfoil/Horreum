@@ -7,7 +7,7 @@ import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 
 import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"
-import Api, { DatasetSummary, Label } from "../../api"
+import Api, {DatasetSummary, Label, SortDirection} from "../../api"
 import { alertAction } from "../../alerts"
 
 type TestLabelModalProps = {
@@ -35,7 +35,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
         setLoading(true)
         Api.datasetServiceListBySchema(
             props.uri,
-            pagination.direction,
+            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             pagination.perPage,
             pagination.page,
             pagination.sort

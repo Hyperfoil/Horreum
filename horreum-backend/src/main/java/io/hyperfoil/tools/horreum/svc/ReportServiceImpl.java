@@ -108,7 +108,7 @@ public class ReportServiceImpl implements ReportService {
             .append("FROM selected GROUP BY title, testname, testid ")
             .append(") SELECT config_id, title, testname, testid, reports, ")
             .append("(SELECT COUNT(*) FROM grouped) AS total FROM grouped");
-      Util.addPaging(queryBuilder, limit, page, sort, direction.name());
+      Util.addPaging(queryBuilder, limit, page, sort, direction);
 
       Query query = em.createNativeQuery(queryBuilder.toString()).unwrap(NativeQuery.class)
             .addScalar("config_id", IntegerType.INSTANCE)

@@ -4,12 +4,13 @@ import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.api.data.Run;
 
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class RunMapper {
 
-    public static Run from(RunDAO run) {
-        Run dto = new Run();
+    public static <T extends Run> T from(RunDAO run, Supplier<T> factory) {
+        T dto = factory.get();
         dto.id = run.id;
         dto.start = run.start;
         dto.stop = run.stop;

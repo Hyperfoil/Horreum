@@ -6,11 +6,15 @@ import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 public class ChangeDetectionMapper {
 
     public static ChangeDetection from(ChangeDetectionDAO cd) {
-        ChangeDetection dto = new ChangeDetection();
-        dto.id = cd.id;
-        dto.config = cd.config;
-        dto.model = cd.model;
-
-        return dto;
+        return new ChangeDetection(cd.id, cd.model, cd.config);
     }
+
+    public static ChangeDetectionDAO to(ChangeDetection dto) {
+        ChangeDetectionDAO cd = new ChangeDetectionDAO();
+        cd.id = dto.id;
+        cd.model = dto.model;
+        cd.config = dto.config;
+        return cd;
+    }
+
 }

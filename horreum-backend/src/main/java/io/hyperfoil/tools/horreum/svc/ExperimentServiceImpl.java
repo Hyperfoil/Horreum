@@ -88,6 +88,9 @@ public class ExperimentServiceImpl implements ExperimentService {
       }
       ExperimentProfileDAO profile = ExperimentProfileMapper.to(dto);
       profile.test = em.getReference(TestDAO.class, testId);
+      if ( profile == null || profile.id == null ){
+         throw ServiceException.badRequest("Profile ID can not be null");
+      }
       if (profile.id < 0) {
          profile.id = null;
          profile.persist();
@@ -127,7 +130,9 @@ public class ExperimentServiceImpl implements ExperimentService {
       DataSetDAO.Info info = dataset.getInfo();
       runExperiments(info, results::add, logs -> results.add(
               new ExperimentResult(null, logs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
-                      DataSetMapper.fromInfo(info), Collections.emptyList(), Collections.emptyMap(), null, false)), false);
+                      DataSetMapper.fromInfo(info), Collections.emptyList(),
+                      Collections.emptyMap(),
+                      null, false)), false);
       return results;
    }
 

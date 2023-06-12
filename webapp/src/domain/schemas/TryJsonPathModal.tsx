@@ -8,7 +8,7 @@ import { NavLink } from "react-router-dom"
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
 import Editor from "../../components/Editor/monaco/Editor"
 import { alertAction } from "../../alerts"
-import Api, { DatasetSummary, QueryResult, RunSummary } from "../../api"
+import Api, {DatasetSummary, QueryResult, RunSummary, SortDirection} from "../../api"
 
 export type JsonPathTarget = "run" | "dataset"
 
@@ -39,7 +39,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
         if (props.target === "run") {
             Api.runServiceListBySchema(
                 props.uri,
-                pagination.direction,
+                pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
                 pagination.perPage,
                 pagination.page,
                 pagination.sort
@@ -57,7 +57,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
             // target === dataset
             Api.datasetServiceListBySchema(
                 props.uri,
-                pagination.direction,
+                pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
                 pagination.perPage,
                 pagination.page,
                 pagination.sort

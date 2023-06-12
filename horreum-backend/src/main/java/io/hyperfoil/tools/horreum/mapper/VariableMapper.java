@@ -12,7 +12,7 @@ public class VariableMapper {
     public static Variable from(VariableDAO variable) {
         return new Variable(variable.id, variable.testId, variable.name, variable.group,
                 variable.order, variable.labels,
-                variable.changeDetection.stream().map(VariableMapper::fromChangeDetection).collect(Collectors.toSet())
+                variable.changeDetection.stream().map(ChangeDetectionMapper::from).collect(Collectors.toSet())
         );
     }
 
@@ -25,21 +25,9 @@ public class VariableMapper {
         v.order = dto.order;
         v.labels = dto.labels;
         if(dto.changeDetection != null)
-            v.changeDetection = dto.changeDetection.stream().map(VariableMapper::toChangeDetection).collect(Collectors.toSet());
+            v.changeDetection = dto.changeDetection.stream().map(ChangeDetectionMapper::to).collect(Collectors.toSet());
 
         return v;
-    }
-
-    public static ChangeDetection fromChangeDetection(ChangeDetectionDAO cd) {
-        return new ChangeDetection(cd.id, cd.model, cd.config);
-    }
-
-    public static ChangeDetectionDAO toChangeDetection(ChangeDetection dto) {
-       ChangeDetectionDAO cd = new ChangeDetectionDAO();
-       cd.id = dto.id;
-       cd.model = dto.model;
-       cd.config = dto.config;
-       return cd;
     }
 }
 

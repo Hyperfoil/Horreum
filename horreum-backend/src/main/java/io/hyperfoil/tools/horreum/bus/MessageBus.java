@@ -20,6 +20,7 @@ import javax.transaction.SystemException;
 import javax.transaction.TransactionManager;
 import javax.transaction.Transactional;
 
+import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
@@ -193,7 +194,7 @@ public class MessageBus {
 
    private Object mapToDTO(Object entity) {
       if (entity instanceof RunDAO)
-         return RunMapper.from((RunDAO) entity);
+         return RunMapper.from((RunDAO) entity, () -> new Run());
       else if (entity instanceof TestDAO)
          return TestMapper.from((TestDAO) entity);
       // lets just return for now

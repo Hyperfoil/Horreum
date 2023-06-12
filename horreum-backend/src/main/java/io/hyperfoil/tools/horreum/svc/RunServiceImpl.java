@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -37,16 +40,20 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 import com.vladmihalcea.hibernate.type.util.MapResultTransformer;
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.api.services.QueryResult;
@@ -82,7 +89,6 @@ import static io.hyperfoil.tools.horreum.entity.data.SchemaDAO.QUERY_TRANSFORMER
 @Startup
 public class RunServiceImpl implements RunService {
    private static final Logger log = Logger.getLogger(RunServiceImpl.class);
-
    //@formatter:off
    private static final String FIND_AUTOCOMPLETE =
          "SELECT * FROM (" +
@@ -199,13 +205,23 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public Object getRun(int id, String token) {
-      return Util.runQuery(em, "SELECT (to_jsonb(run) || jsonb_build_object(" +
-            "'schemas', (SELECT " + SCHEMA_USAGE + " FROM run_schemas rs JOIN schema ON rs.schemaid = schema.id WHERE runid = run.id), " +
-            "'testname', (SELECT name FROM test WHERE test.id = run.testid), " +
-            "'datasets', (SELECT jsonb_agg(id ORDER BY id) FROM dataset WHERE runid = run.id), " +
-            "'validationErrors', (SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) FROM run_validationerrors WHERE run_id = ?1)" +
-            "))::::text FROM run WHERE id = ?1", id);
+   public RunExtended getRun(int id, String token) {
+
+      RunExtended runExtended = null;
+
+      String extendedData = (String) Util.runQuery(em, "SELECT (to_jsonb(run) || jsonb_build_object(" +
+              "'schemas', (SELECT " + SCHEMA_USAGE + " FROM run_schemas rs JOIN schema ON rs.schemaid = schema.id WHERE runid = run.id), " +
+              "'testname', (SELECT name FROM test WHERE test.id = run.testid), " +
+              "'datasets', (SELECT jsonb_agg(id ORDER BY id) FROM dataset WHERE runid = run.id), " +
+              "'validationErrors', (SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) FROM run_validationerrors WHERE run_id = ?1)" +
+              "))::::text FROM run WHERE id = ?1", id);
+      try {
+         runExtended = Util.OBJECT_MAPPER.readValue(extendedData, RunExtended.class);
+      } catch (JsonProcessingException e) {
+         throw ServiceException.serverError("Could not retrieve extended run");
+      }
+
+      return runExtended;
    }
 
    @WithRoles
@@ -243,13 +259,19 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public Object getMetadata(int id, String token, String schemaUri) {
+   public JsonNode getMetadata(int id, String token, String schemaUri) {
+      String result;
       if (schemaUri == null || schemaUri.isEmpty()) {
-         return Util.runQuery(em, "SELECT metadata#>>'{}' from run where id = ?", id);
+         result = (String) Util.runQuery(em,  "SELECT metadata#>>'{}' from run where id = ?", id);
       } else {
          String sqlQuery = "SELECT run.metadata->(rs.key::::integer)#>>'{}' FROM run " +
                "JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?1 AND rs.source = 1 AND rs.uri = ?2";
-         return Util.runQuery(em, sqlQuery, id, schemaUri);
+         result = (String) Util.runQuery(em, sqlQuery, id, schemaUri);
+      }
+      try {
+         return Util.OBJECT_MAPPER.readTree(result);
+      } catch (JsonProcessingException e) {
+         throw ServiceException.serverError(e.getMessage());
       }
    }
 
@@ -390,6 +412,29 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.badRequest("Provided data/metadata can't be read (JSON encoding problem?)");
       }
       return addRunFromData(start, stop, test, owner, access, token, schemaUri, description, dataNode, metadataNode);
+   }
+
+   @Override
+   public void waitForDatasets(int runId) {
+
+      // wait for at least one (1) dataset. we do not know how many datasets will be produced
+      CountDownLatch dsAvailableLatch = new CountDownLatch(1);
+      // create new dataset listener
+      messageBus.subscribe(DataSetDAO.EVENT_NEW,"DatasetService", DataSetDAO.EventNew.class, (event) -> {
+         if (event.dataset.run.id == runId) {
+            dsAvailableLatch.countDown();
+         }
+      });
+
+      try {
+         // if there is not already a dataset in the db, wait for msg back from db that at least one dataset is available
+         if (DataSetDAO.find("run.id", runId).count() == 0) {
+            dsAvailableLatch.await(10l, TimeUnit.SECONDS);
+         }
+      } catch (InterruptedException e) {
+         //TODO :: make timeout configurable
+         ServiceException.serverError("Dataset was not produced within 10 seconds");
+      }
    }
 
    @PermitAll // all because of possible token-based upload
@@ -598,7 +643,7 @@ public class RunServiceImpl implements RunService {
    @WithToken
    @Override
    public RunsSummary listAllRuns(String query, boolean matchAll, String roles, boolean trashed,
-                                  Integer limit, Integer page, String sort, String direction) {
+                                  Integer limit, Integer page, String sort, SortDirection direction) {
       StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
          .append("run.owner, run.access, run.token, run.trashed, run.description, ")
          .append("run.metadata IS NOT NULL AS has_metadata, test.name AS testname, ")
@@ -698,6 +743,7 @@ public class RunServiceImpl implements RunService {
    }
 
    private RunSummary createSummary(Object[] row) {
+
       RunSummary run = new RunSummary();
       run.id = (int) row[0];
       run.start = ((Timestamp) row[1]).getTime();
@@ -711,8 +757,16 @@ public class RunServiceImpl implements RunService {
       run.hasMetadata = (boolean) row[9];
       run.testname = (String) row[10];
       run.schemas = Util.OBJECT_MAPPER.convertValue(row[11], new TypeReference<List<SchemaService.SchemaUsage>>() {});
-      run.datasets = (ArrayNode) row[12];
-      run.validationErrors = (ArrayNode) row[13];
+      try {
+         run.datasets = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[12]), Integer[].class);
+      } catch (JsonProcessingException e) {
+         log.warnf("Could not map datasets to array");
+      }
+      try {
+         run.validationErrors = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[13]), ValidationError[].class);
+      } catch (JsonProcessingException e) {
+         log.warnf("Could not map validation errors to array");
+      }
       return run;
    }
 
@@ -733,7 +787,7 @@ public class RunServiceImpl implements RunService {
    @WithToken
    @Override
    public RunsSummary listTestRuns(int testId, boolean trashed,
-                                   Integer limit, Integer page, String sort, String direction) {
+                                   Integer limit, Integer page, String sort, SortDirection direction) {
       StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
             .append("    SELECT " + SCHEMA_USAGE + " AS schemas, rs.runid ")
             .append("        FROM run_schemas rs JOIN schema ON schema.id = rs.schemaid WHERE rs.testid = ?1 GROUP BY rs.runid")
@@ -775,7 +829,7 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @WithToken
    @Override
-   public RunsSummary listBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
+   public RunsSummary listBySchema(String uri, Integer limit, Integer page, String sort, SortDirection direction) {
       if (uri == null || uri.isEmpty()) {
          throw ServiceException.badRequest("No `uri` query parameter given.");
       }

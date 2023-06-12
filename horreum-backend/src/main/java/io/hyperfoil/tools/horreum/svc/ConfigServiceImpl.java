@@ -9,6 +9,8 @@ public class ConfigServiceImpl implements ConfigService {
     public KeycloakConfig keycloak() {
         KeycloakConfig config = new KeycloakConfig();
         config.url = getString("horreum.keycloak.url");
+        config.realm = getString("horreum.keycloak.realm");
+        config.clientId = getString("horreum.keycloak.clientId");
         return config;
     }
 

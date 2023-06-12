@@ -43,7 +43,7 @@ import {
     Column,
     UseSortByColumnOptions,
 } from "react-table"
-import Api, { DatasetSummary, DatasetList } from "../../api"
+import Api, {DatasetSummary, DatasetList, SortDirection} from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
 import { TestDispatch } from "../tests/reducers"
 import SchemaList from "./SchemaList"
@@ -148,7 +148,7 @@ export default function TestDatasets() {
         setLoading(true)
         Api.datasetServiceListByTest(
             testId,
-            pagination.direction,
+            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             fingerprintToString(filter),
             pagination.perPage,
             pagination.page,
