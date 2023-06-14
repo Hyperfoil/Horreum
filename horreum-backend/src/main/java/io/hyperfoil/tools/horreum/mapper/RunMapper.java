@@ -39,9 +39,12 @@ public class RunMapper {
        run.data = dto.data;
        run.metadata = dto.metadata;
        run.trashed = dto.trashed;
-       run.validationErrors = dto.validationErrors.stream().map(ValidationErrorMapper::toValidationError).collect(Collectors.toList());
-       if(dto.datasets != null)
-           run.datasets = dto.datasets.stream().map( dsDTO -> DataSetMapper.to(dsDTO, run)).collect(Collectors.toList());
+       if ( dto.validationErrors != null ) {
+           run.validationErrors = dto.validationErrors.stream().map(ValidationErrorMapper::toValidationError).collect(Collectors.toList());
+       }
+       if(dto.datasets != null) {
+           run.datasets = dto.datasets.stream().map(dsDTO -> DataSetMapper.to(dsDTO, run)).collect(Collectors.toList());
+       }
 
        return run;
     }

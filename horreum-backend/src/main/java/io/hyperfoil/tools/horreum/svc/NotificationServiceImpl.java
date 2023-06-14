@@ -146,19 +146,19 @@ public class NotificationServiceImpl implements NotificationService {
    @Override
    public void updateSettings(String name, boolean team, NotificationSettings[] settings) {
       NotificationSettingsDAO.delete("name = ?1 AND isTeam = ?2", name, team);
-      for (NotificationSettings s : settings) {
-         if (!plugins.containsKey(s.method)) {
+      Arrays.stream(settings).map(NotificationSettingsMapper::to).forEach( ns -> {
+         if (!plugins.containsKey(ns.method)) {
             try {
                tm.setRollbackOnly();
             } catch (SystemException e) {
                log.error("Cannot rollback", e);
             }
-            throw ServiceException.badRequest("Invalid method " + s.method);
+            throw ServiceException.badRequest("Invalid method " + ns.method);
          }
-         s.name = name;
-         s.isTeam = team;
-         em.merge(s);
-      }
+         ns.name = name;
+         ns.isTeam = team;
+         em.merge(ns);
+      });
    }
 
    @RolesAllowed(Roles.ADMIN)
