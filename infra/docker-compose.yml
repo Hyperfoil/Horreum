@@ -5,6 +5,7 @@ services:
   postgres:
     image: docker.io/postgres:13
     env_file: postgres.env
+    container_name: dev-horreum-postgres
     environment:
       PGPORT: ${POSTGRES_PORT:-5432}
     volumes:
@@ -23,8 +24,9 @@ services:
       postgres:
         condition: service_healthy
     env_file: postgres.env
+    container_name: dev-horreum-dbinit
     environment:
-    - PGHOST=horreum_postgres_1
+    - PGHOST=dev-horreum-postgres
     - PGPORT=${POSTGRES_PORT:-5432}
     volumes:
     - "${WORKING_PATH:-../}:/cwd:ro,z"
@@ -37,12 +39,13 @@ services:
       context: .
       dockerfile: Dockerfile.keycloak
     depends_on:
-      postgres:
-        condition: service_healthy
+      dbinit :
+        condition: service_completed_successfully
+    container_name: dev-horreum-keycloak
     environment:
       KC_HTTP_HOST: 0.0.0.0
       KC_HTTP_PORT: "${KEYCLOAK_HTTP_PORT:-8180}"
-      DB_ADDR: horreum_postgres_1
+      DB_ADDR: dev-horreum-postgres
       DB_PORT: "${POSTGRES_PORT:-5432}"
     stop_signal: "${STOP_SIGNAL:-SIGTERM}"
     volumes:
@@ -53,6 +56,7 @@ services:
     depends_on:
     - keycloak
     image: docker.io/dwdraju/alpine-curl-jq
+    container_name: dev-horreum-app-init
     restart: on-failure
     command:
     - bash
@@ -61,7 +65,7 @@ services:
     - "${PORT_OFFSET:-0}"
     environment:
     - POSTGRES_HOST=[::1]
-    - KEYCLOAK_INTERNAL_HOST=horreum_keycloak_1
+    - KEYCLOAK_INTERNAL_HOST=dev-horreum-keycloak
     - KEYCLOAK_UI_HOST=[::1]
     volumes:
     - "${WORKING_PATH:-../}:/cwd:rw,z"
