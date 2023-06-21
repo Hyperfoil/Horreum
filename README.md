@@ -53,18 +53,23 @@ We have prepared a `podman-compose` script to setup Keycloak and PostgreSQL usin
 
 and after a few moments everything should be up and ready. The script will create some example users.
 
-Install:
+Install of the podman packages:
 
 ``` bash
 dnf install -y podman podman-plugins podman-compose podman-docker
 ```
 
-Please, enable the socket environment in order to run the test suite:
+In one terminal do
+``` bash
+podman system service -t 0
+```
+
+And then run the test suite with a soocket environment as
 
 ``` bash
-systemctl --user enable --now podman.socket
 export DOCKER_HOST=unix:///run/user/${UID}/podman/podman.sock
 export TESTCONTAINERS_RYUK_DISABLED=true
+mvn clean package
 ```
 
 Shutdown:
