@@ -4,6 +4,7 @@ volumes:
 services:
   postgres:
     image: docker.io/postgres:13
+    command: postgres -c 'shared_buffers=256MB' -c 'max_prepared_transactions=100' -c 'max_pred_locks_per_transaction=128'
     env_file: postgres.env
     container_name: dev-horreum-postgres
     environment:
