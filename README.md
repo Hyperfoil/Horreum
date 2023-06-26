@@ -64,7 +64,7 @@ In one terminal do
 podman system service -t 0
 ```
 
-And then run the test suite with a soocket environment as
+And then run the test suite with a socket environment as
 
 ``` bash
 export DOCKER_HOST=unix:///run/user/${UID}/podman/podman.sock
