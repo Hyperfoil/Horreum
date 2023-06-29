@@ -87,16 +87,16 @@ type PanelProps = {
 
 const colors = ["#4caf50", "#FF0000", "#CC0066", "#0066FF", "#42a5f5", "#f1c40f"]
 
-export default function PanelChart(props: PanelProps) {
+export default function PanelChart({title, variables, fingerprint, timespan, endTime, setEndTime, lineType, onChangeSelected: propOnChangeSelected}: PanelProps) {
     const [legend, setLegend] = useState<any[]>() // Payload is not exported
     const [lines, setLines] = useState<any[]>()
     const [datapoints, setDatapoints] = useState<TimeseriesTarget[]>()
     const [annotations, setAnnotations] = useState<AnnotationDefinition[]>()
     const [gettingLast, setGettingLast] = useState(false)
-    const startTime = props.endTime - props.timespan * 1000
+    const startTime = endTime - timespan * 1000
     useEffect(() => {
         setDatapoints(undefined)
-        fetchDatapoints(props.variables, props.fingerprint, startTime, props.endTime).then(response => {
+        fetchDatapoints(variables, fingerprint, startTime, endTime).then(response => {
             setLegend(
                 response.map((tt, i) => ({
                     id: tt.target,
@@ -108,7 +108,7 @@ export default function PanelChart(props: PanelProps) {
             setLines(
                 response.map((tt, i) => (
                     <Line
-                        type={props.lineType as any} // should be CurveType but can't import that
+                        type={lineType as any} // should be CurveType but can't import that
                         dot={false}
                         key={tt.target}
                         dataKey={tt.target}
@@ -119,10 +119,10 @@ export default function PanelChart(props: PanelProps) {
             )
             setDatapoints(response)
         })
-    }, [startTime, props.endTime, props.variables, props.fingerprint, props.lineType])
+    }, [startTime, endTime, variables, fingerprint, lineType])
     useEffect(() => {
-        fetchAllAnnotations(props.variables, props.fingerprint, startTime, props.endTime).then(setAnnotations)
-    }, [startTime, props.endTime, props.variables, props.fingerprint])
+        fetchAllAnnotations(variables, fingerprint, startTime, endTime).then(setAnnotations)
+    }, [startTime, endTime, variables, fingerprint])
 
     const chartData = useMemo(() => {
         if (!datapoints) {
@@ -141,7 +141,7 @@ export default function PanelChart(props: PanelProps) {
         })
         return [...series.values()].sort((a, b) => a.timestamp - b.timestamp)
     }, [datapoints])
-    const onChangeSelected = props.onChangeSelected
+    const onChangeSelected = propOnChangeSelected
     const changes = useMemo(
         () =>
             annotations?.map(a => {
@@ -176,13 +176,13 @@ export default function PanelChart(props: PanelProps) {
     const dispatch = useDispatch()
     return (
         <>
-            <h2 style={{ width: "100%", textAlign: "center" }}>{props.title}</h2>
+            <h2 style={{ width: "100%", textAlign: "center" }}>{title}</h2>
             <div style={{ display: "flex", width: "100%" }}>
                 <Button
                     variant="control"
                     style={{ height: 372 }}
                     onClick={() => {
-                        props.setEndTime(props.endTime - props.timespan * 250)
+                        setEndTime(endTime - timespan * 250)
                     }}
                 >
                     &#8810;
@@ -201,13 +201,13 @@ export default function PanelChart(props: PanelProps) {
                                 onClick={() => {
                                     setGettingLast(true)
                                     Api.alertingServiceFindLastDatapoints({
-                                        variables: props.variables,
-                                        fingerprint: fingerprintToString(props.fingerprint),
+                                        variables: variables,
+                                        fingerprint: fingerprintToString(fingerprint),
                                     })
                                         .then(
                                             response => {
                                                 if (Array.isArray(response) && response.length > 0) {
-                                                    props.setEndTime(
+                                                    setEndTime(
                                                         Math.max(...response.map(({ timestamp }) => timestamp)) + 1
                                                     )
                                                 } else {
@@ -251,8 +251,8 @@ export default function PanelChart(props: PanelProps) {
                                     tick={{ fontSize: 12 }}
                                     tickFormatter={tsToDate}
                                     domain={([min, _]) => [
-                                        props.timespan > 366 * 86400 ? min : startTime,
-                                        props.endTime,
+                                        timespan > 366 * 86400 ? min : startTime,
+                                        endTime,
                                     ]}
                                 />
                                 <YAxis
@@ -339,7 +339,7 @@ export default function PanelChart(props: PanelProps) {
                     variant="control"
                     style={{ height: 372 }}
                     onClick={() => {
-                        props.setEndTime(props.endTime + props.timespan * 250)
+                        setEndTime(endTime + timespan * 250)
                     }}
                 >
                     &#8811;

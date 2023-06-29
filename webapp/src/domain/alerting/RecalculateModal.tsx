@@ -48,7 +48,7 @@ function datasetsToLinks(datasets: DatasetInfo[] | undefined | null) {
     )
 }
 
-export default function RecalculateModal(props: RecalculateModalProps) {
+export default function RecalculateModal({ title, recalculate, cancel, message, isOpen, onClose, testId, showLog } : RecalculateModalProps) {
     const [progress, setProgress] = useState(-1)
     const dispatch = useDispatch()
     const [debug, setDebug] = useState(false)
@@ -60,10 +60,10 @@ export default function RecalculateModal(props: RecalculateModalProps) {
         if (timer.current) {
             window.clearInterval(timer.current)
         }
-        props.onClose()
+        onClose()
     }
     const fetchProgress = () => {
-        Api.alertingServiceGetRecalculationStatus(props.testId).then(
+        Api.alertingServiceGetRecalculationStatus(testId).then(
             response => {
                 if (response.done) {
                     close()
@@ -93,8 +93,8 @@ export default function RecalculateModal(props: RecalculateModalProps) {
         <>
             <Modal
                 variant="small"
-                title={props.title}
-                isOpen={props.isOpen}
+                title={title}
+                isOpen={isOpen}
                 onClose={close}
                 actions={
                     progress < 0
@@ -105,7 +105,7 @@ export default function RecalculateModal(props: RecalculateModalProps) {
                                   onClick={() => {
                                       setProgress(0)
                                       Api.alertingServiceRecalculateDatapoints(
-                                          props.testId,
+                                          testId,
                                           debug,
                                           timeRange?.from,
                                           false,
@@ -116,7 +116,7 @@ export default function RecalculateModal(props: RecalculateModalProps) {
                                           },
                                           error => {
                                               setProgress(-1)
-                                              props.onClose()
+                                              onClose()
                                               dispatch(
                                                   alertAction("RECALCULATION", "Failed to start recalculation", error)
                                               )
@@ -124,10 +124,10 @@ export default function RecalculateModal(props: RecalculateModalProps) {
                                       )
                                   }}
                               >
-                                  {props.recalculate}
+                                  {recalculate}
                               </Button>,
-                              <Button key={2} variant="secondary" onClick={props.onClose}>
-                                  {props.cancel}
+                              <Button key={2} variant="secondary" onClick={onClose}>
+                                  {cancel}
                               </Button>,
                           ]
                         : [
@@ -139,7 +139,7 @@ export default function RecalculateModal(props: RecalculateModalProps) {
             >
                 {progress < 0 && (
                     <Form isHorizontal>
-                        {props.message}
+                        {message}
                         <FormGroup label="Runs from:" fieldId="timeRange">
                             <TimeRangeSelect selection={timeRange} onSelect={setTimeRange} options={timeRangeOptions} />
                         </FormGroup>
@@ -163,11 +163,11 @@ export default function RecalculateModal(props: RecalculateModalProps) {
                         <Button
                             key={1}
                             variant="secondary"
-                            isDisabled={!props.showLog}
+                            isDisabled={!showLog}
                             onClick={() => {
                                 setResult(undefined)
-                                if (props.showLog) {
-                                    props.showLog()
+                                if (showLog) {
+                                    showLog()
                                 }
                             }}
                         >
