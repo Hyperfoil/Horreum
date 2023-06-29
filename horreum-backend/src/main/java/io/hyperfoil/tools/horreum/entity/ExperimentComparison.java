@@ -30,7 +30,7 @@ public class ExperimentComparison {
    public JsonNode config;
 
    @JsonProperty("variableId")
-   public void setVariableId(int id) {
+   public void setVariableId(Integer id) {
       variable = VariableDAO.getEntityManager().getReference(VariableDAO.class, id);
    }
 

@@ -19,10 +19,13 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 import io.hyperfoil.tools.horreum.entity.*;
+import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import io.hyperfoil.tools.horreum.mapper.DatasetLogMapper;
@@ -302,6 +305,22 @@ public class ExperimentServiceImpl implements ExperimentService {
          for (JsonNode node : experiments) {
             ExperimentProfileDAO profile;
             try {
+
+               if (node.has("comparisons") ){
+                  node.get("comparisons").forEach( (compNode) ->{
+                     VariableDAO variableDAO = VariableDAO.<VariableDAO>find("testId = ?1 and name = ?2", testId, compNode.get("variable").asText() ).firstResult();
+                     if ( variableDAO != null ) {
+                        Integer variableID = variableDAO.id;
+                        ((ObjectNode) compNode).put("variableId", variableID);
+                     } else {
+                        log.warnf("Could not import comparison for variable: %s", compNode.get("variable").asText());
+                     }
+                     ((ObjectNode) compNode).remove("variable");
+
+                  });
+
+               }
+
                profile = ExperimentProfileMapper.to(Util.OBJECT_MAPPER.treeToValue(node, ExperimentProfile.class));
             } catch (JsonProcessingException e) {
                throw ServiceException.badRequest("Cannot deserialize experiment profile id '" + node.path("id").asText() + "': " + e.getMessage());

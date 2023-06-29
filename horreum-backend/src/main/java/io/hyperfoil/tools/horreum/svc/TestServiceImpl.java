@@ -682,7 +682,7 @@ public class TestServiceImpl implements TestService {
                throw ServiceException.badRequest("Transformer " + transformer.name + " does not have ID set; Transformers must be imported via Schema.");
             });
          }
-         TestDAO existingTest = TestDAO.findById(dto.id);
+         TestDAO existingTest = dto.id == null ? null : TestDAO.findById(dto.id);
          if(existingTest != null) {
             TestDAO test = em.merge(TestMapper.to(dto));
             test.persistAndFlush();
