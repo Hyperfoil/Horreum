@@ -737,7 +737,11 @@ public class SchemaServiceImpl implements SchemaService {
       } catch (JsonProcessingException e) {
          throw ServiceException.badRequest("Cannot deserialize schema: " + e.getMessage());
       }
-      em.merge(schema);
+      if ( schema.id != null ) {
+         em.merge(schema);
+      } else {
+         em.persist(schema);
+      }
       if (labels == null || labels.isNull() || labels.isMissingNode()) {
          log.debugf("Import schema %d: no labels", schema.id);
       } else if (labels.isArray()) {
@@ -745,7 +749,11 @@ public class SchemaServiceImpl implements SchemaService {
             try {
                Label label = Util.OBJECT_MAPPER.treeToValue(node, Label.class);
                label.schema = schema;
-               em.merge(label);
+               if ( label.id != null ){
+                  em.merge(label);
+               } else {
+                  em.persist(label);
+               }
             } catch (JsonProcessingException e) {
                throw ServiceException.badRequest("Cannot deserialize label: " + e.getMessage());
             }
