@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -91,7 +90,7 @@ public class UserServiceImpl implements UserService {
    @Blocking
    public List<UserData> searchUsers(String query) {
       if (identity.isAnonymous()) {
-         throw new WebApplicationException(Response.Status.FORBIDDEN);
+         throw ServiceException.forbidden("Please log in and try again");
       }
       return keycloak.realm(REALM).users().search(query, null, null).stream()
             .map(UserServiceImpl::toUserInfo).collect(Collectors.toList());
@@ -100,30 +99,26 @@ public class UserServiceImpl implements UserService {
    @RolesAllowed({Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @Blocking // TODO: identity.isAnonymous() is a blocking call
    @Override
-   public CompletionStage<List<UserData>> info(List<String> usernames) {
+   public List<UserData> info(List<String> usernames) {
       if (identity.isAnonymous()) {
-         throw new WebApplicationException(Response.Status.FORBIDDEN);
+         throw ServiceException.forbidden("Please log in and try again");
       }
       List<UserData> users = new ArrayList<>();
-      CountDownFuture<List<UserData>> future = new CountDownFuture<>(users, usernames.size());
       for (String username: usernames) {
-         vertx.executeBlocking(promise -> {
-            List<UserRepresentation> res = keycloak.realm(REALM).users().search(username);
-            synchronized (users) {
+            try {
+               List<UserRepresentation> res = keycloak.realm(REALM).users().search(username);
                for (var u : res) {
                   if (username.equals(u.getUsername())) {
                      users.add(toUserInfo(u));
                   }
                }
+            } catch (Exception e) {
+               log.errorf(e, "Failed to fetch info for user %s", username);
+               throw ServiceException.serverError(String.format("Failed to fetch info for user %s", username));
             }
-            promise.complete();
-         }).onSuccess(future).onFailure(t -> {
-            log.errorf(t, "Failed to fetch info for user %s", username);
-            future.completeExceptionally(new WebApplicationException());
-         });
-      }
-      return future;
 
+      }
+      return users;
    }
 
    @Override
@@ -188,7 +183,7 @@ public class UserServiceImpl implements UserService {
    @Blocking
    public List<String> getTeams() {
       if (identity.isAnonymous()) {
-         throw new WebApplicationException(Response.Status.FORBIDDEN);
+         throw ServiceException.forbidden("Please log in and try again");
       }
       return keycloak.realm(REALM).roles().list().stream().map(RoleRepresentation::getName)
             .filter(n -> n.endsWith("-team")).collect(Collectors.toList());
@@ -248,41 +243,34 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
-   @Blocking //TODO: identity.getRoles() could block
-   public CompletionStage<Map<String, List<String>>> teamMembers(String team) {
+   @Blocking
+   public Map<String, List<String>> teamMembers(String team) {
       String prefix = getTeamPrefix(team);
       if (!identity.getRoles().contains(prefix + Roles.MANAGER) && !identity.getRoles().contains(Roles.ADMIN)) {
          throw ServiceException.badRequest("This user is not a manager for team " + team);
       }
       Map<String, List<String>> userMap = new HashMap<>();
-      CountDownFuture<Map<String, List<String>>> future = new CountDownFuture<>(userMap, ROLE_TYPES.length);
       for (String role : ROLE_TYPES) {
-         vertx.executeBlocking(promise -> {
-            try {
-               // The call below does not consider transitivity with composite roles
-               Set<UserRepresentation> users = keycloak.realm(REALM).roles().get(prefix + role).getRoleUserMembers();
-               synchronized (userMap) {
-                  for (UserRepresentation user : users) {
-                     List<String> userRoles = userMap.computeIfAbsent(user.getUsername(), u -> new ArrayList<>());
-                     userRoles.add(role);
-                  }
-               }
-            } catch (NotFoundException e) {
-               // Was there a failure when creating the team?
-               log.warnf("Cannot find role %s%s in Keycloak", prefix, role);
+         try {
+            // The call below does not consider transitivity with composite roles
+            Set<UserRepresentation> users = keycloak.realm(REALM).roles().get(prefix + role).getRoleUserMembers();
+            for (UserRepresentation user : users) {
+               List<String> userRoles = userMap.computeIfAbsent(user.getUsername(), u -> new ArrayList<>());
+               userRoles.add(role);
             }
-            promise.complete();
-         }).onSuccess(future).onFailure(t -> {
-            log.errorf(t, "Failed to retrieve users for role %s", prefix + role);
-            future.completeExceptionally(ServiceException.serverError("Failed to retrieve role users from Keycloak."));
-         });
+         } catch (NotFoundException e) {
+            // Was there a failure when creating the team?
+            log.warnf("Cannot find role %s%s in Keycloak", prefix, role);
+         } catch (Exception e) {
+            ServiceException.serverError("Failed to retrieve role users from Keycloak.");
+         }
       }
-      return future;
+      return userMap;
    }
 
    @Override
-   @Blocking //TODO: identity.getRoles() could block
-   public CompletionStage<Void> updateTeamMembers(String team, Map<String, List<String>> roles) {
+   @Blocking
+   public void updateTeamMembers(String team, Map<String, List<String>> roles) {
       String prefix = getTeamPrefix(team);
       if (!identity.getRoles().contains(prefix + Roles.MANAGER) && !identity.getRoles().contains(Roles.ADMIN)) {
          throw ServiceException.forbidden("This user is does not have the manager role for team " + team);
@@ -290,7 +278,7 @@ public class UserServiceImpl implements UserService {
       CountDownFuture<Void> future = new CountDownFuture<>(null, roles.size() + ROLE_TYPES.length);
       ConcurrentMap<String, RoleRepresentation> roleMap = new ConcurrentHashMap<>();
       for (var entry : roles.entrySet()) {
-         vertx.executeBlocking(promise -> {
+         vertx.executeBlocking(promise -> { //leave call to vertx.executeBlocking as this will make calls to keycloack in parrallel
             String userId = findMatchingUserId(entry.getKey());
             RoleMappingResource rolesMappingResource = keycloak.realm(REALM).users().get(userId).roles();
             List<RoleRepresentation> userRoles = rolesMappingResource.getAll().getRealmMappings();
@@ -357,7 +345,11 @@ public class UserServiceImpl implements UserService {
             promise.complete();
          }).onSuccess(future).onFailure(t -> future.completeExceptionally(ServiceException.serverError("Cannot remove user roles")));
       }
-      return future;
+      try {
+         future.join();
+      } catch (Exception e){
+         throw new WebApplicationException(e);
+      }
    }
 
    private RoleRepresentation ensureRole(String roleName) {
@@ -369,30 +361,30 @@ public class UserServiceImpl implements UserService {
       }
    }
 
-   private <T> T wrapException(Throwable t) {
-      throw new WebApplicationException(t);
+   @RolesAllowed(Roles.ADMIN)
+   @Override
+   @Blocking
+   public List<String> getAllTeams() {
+      List<String> teams;
+      try {
+         teams = keycloak.realm(REALM).roles().list().stream()
+                 .map(RoleRepresentation::getName).filter(role -> role.endsWith("-team")).collect(Collectors.toList());
+      } catch (Exception e) {
+         throw ServiceException.serverError("Please check with the System Administrators that you have the correct permissions.");
+      }
+      return teams;
    }
 
    @RolesAllowed(Roles.ADMIN)
    @Override
-   public CompletionStage<List<String>> getAllTeams() {
-      return vertx.<List<String>>executeBlocking(promise ->
-            promise.complete(keycloak.realm(REALM).roles().list().stream()
-               .map(RoleRepresentation::getName).filter(role -> role.endsWith("-team")).collect(Collectors.toList()))).toCompletionStage().exceptionally(this::wrapException);
-   }
-
-   @RolesAllowed(Roles.ADMIN)
-   @Override
-   public CompletionStage<Void> addTeam(String team) {
+   @Blocking
+   public void addTeam(String team) {
       String prefix = getTeamPrefix(team);
-      return vertx.<Void>executeBlocking(promise -> {
-            createRole(team, null);
-            createRole(prefix + Roles.MANAGER, Set.of(team));
-            for (String type : Arrays.asList(Roles.TESTER, Roles.VIEWER, Roles.UPLOADER)) {
-               createRole(prefix + type, Set.of(type, team));
-            }
-            promise.complete();
-      }).toCompletionStage().exceptionally(this::wrapException);
+         createRole(team, null);
+         createRole(prefix + Roles.MANAGER, Set.of(team));
+         for (String type : Arrays.asList(Roles.TESTER, Roles.VIEWER, Roles.UPLOADER)) {
+            createRole(prefix + type, Set.of(type, team));
+         }
    }
 
    private void createRole(String roleName, Set<String> compositeRoles) {
@@ -427,35 +419,39 @@ public class UserServiceImpl implements UserService {
 
    @RolesAllowed(Roles.ADMIN)
    @Override
-   public CompletionStage<Void> deleteTeam(String team) {
+   @Blocking
+   public void deleteTeam(String team) {
       String prefix = getTeamPrefix(team);
-      return vertx.<Void>executeBlocking(promise -> {
-         for (String type : ROLE_TYPES) {
-            try {
-               keycloak.realm(REALM).roles().deleteRole(prefix + type);
-            } catch (NotFoundException e) {
-               log.warnf("Role %s%s was not found when we tried to delete it", prefix, type);
-            }
+      for (String type : ROLE_TYPES) {
+         try {
+            keycloak.realm(REALM).roles().deleteRole(prefix + type);
+         } catch (NotFoundException e) {
+            log.warnf("Role %s%s was not found when we tried to delete it", prefix, type);
+         } catch (Exception e) {
+            throw ServiceException.serverError(String.format("unable to delete team: %s", team));
          }
-         promise.complete();
-      }).toCompletionStage().exceptionally(this::wrapException);
+      }
    }
 
    @RolesAllowed(Roles.ADMIN)
    @Override
-   public CompletionStage<List<UserData>> administrators() {
-      return vertx.<List<UserData>>executeBlocking(promise -> {
+   @Blocking
+   public List<UserData> administrators() {
          List<UserData> admins = new ArrayList<>();
-         for (var user : keycloak.realm(REALM).roles().get(Roles.ADMIN).getRoleUserMembers()) {
-            admins.add(new UserData(user.getId(), user.getUsername(), user.getFirstName(), user.getLastName(), user.getEmail()));
+         try {
+            for (var user : keycloak.realm(REALM).roles().get(Roles.ADMIN).getRoleUserMembers()) {
+               admins.add(new UserData(user.getId(), user.getUsername(), user.getFirstName(), user.getLastName(), user.getEmail()));
+            }
+            return admins;
+         } catch (Exception e){
+            throw ServiceException.serverError("Please verify with the System Administrators that you have the correct permissions");
          }
-         promise.complete(admins);
-      }).toCompletionStage().exceptionally(this::wrapException);
    }
 
    @RolesAllowed(Roles.ADMIN)
    @Override
-   public CompletionStage<Void> updateAdministrators(List<String> newAdmins) {
+   @Blocking
+   public void updateAdministrators(List<String> newAdmins) {
       if (!newAdmins.contains(identity.getPrincipal().getName())) {
          throw ServiceException.badRequest("Cannot remove yourselves from administrator list");
       }
@@ -498,6 +494,10 @@ public class UserServiceImpl implements UserService {
          log.error("Cannot fetch representation for admin role", t);
          future.completeExceptionally(ServiceException.serverError("Cannot find admin role"));
       });
-      return future;
+      try {
+         future.join();
+      } catch (Exception e){
+         throw ServiceException.serverError(e.getMessage());
+      }
    }
 }
