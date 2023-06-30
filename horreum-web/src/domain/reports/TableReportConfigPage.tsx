@@ -202,7 +202,7 @@ export default function TableReportConfigPage() {
                     reportApi
                         .updateTableReportConfig(reportId, config)
                         .then(
-                            report => history("/reports/table/" + report.id),
+                            report => history(`/test/${test?.id}/reports/table/` + report.id),
                             error => alerting.dispatchError(error,"SAVE_CONFIG", "Failed to save report configuration.")
                         )
                         .finally(() => setSaving(false))
@@ -229,7 +229,7 @@ export default function TableReportConfigPage() {
                         <FlexItem>
                             <Breadcrumb>
                                 <BreadcrumbItem>
-                                    <Link to="/reports">Reports</Link>
+                                    <Link to={`/test/${test?.id}/#reports-tab`}>Reports</Link>
                                 </BreadcrumbItem>
                                 <BreadcrumbItem isActive>
                                     {config.id >= 0 ? config.title : "New report configuration"}

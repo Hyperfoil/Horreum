@@ -4,7 +4,7 @@
 <ul>{#each changes}
     <li>{#if it.variable.group != null}{it.variable.group}/{/if}{it.variable.name}{#if it.description}{it.description}{/if}</li>
 {/each}</ul>
-<p>Please <a href="{baseUrl}/changes?test={testNameEncoded}&fingerprint={fingerprint}">check it out</a> and provide an explanatory description.</p>
+<p>Please <a href="{baseUrl}/test/{testId}?fingerprint={fingerprint}#changes">check it out</a> and provide an explanatory description.</p>
 
 change detection variable
 

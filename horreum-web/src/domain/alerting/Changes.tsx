@@ -1,7 +1,6 @@
 import {useState, useEffect, useMemo, useCallback, useContext} from "react"
-import { useSelector } from "react-redux"
 import { ChangesTabs } from "./ChangeTable"
-import TestSelect, { SelectedTest } from "../../components/TestSelect"
+import { SelectedTest } from "../../components/TestSelect"
 import LabelsSelect, { convertLabels } from "../../components/LabelsSelect"
 import PanelChart from "./PanelChart"
 import { fingerprintToString, formatDate } from "../../utils"
@@ -18,11 +17,9 @@ import {
 } from "../../api"
 
 import {
-	Button,
 	Card,
 	CardBody,
 	CardHeader,
-	ClipboardCopy,
 	DataList,
 	DataListItem,
 	DataListItemRow,
@@ -31,20 +28,20 @@ import {
 	DatePicker,
 	EmptyState,
 	EmptyStateBody,
-	Modal,
-	PageSection,
-	Spinner, EmptyStateHeader, EmptyStateFooter,	
+	Spinner, EmptyStateHeader, EmptyStateFooter,
 } from '@patternfly/react-core';
 import {
 	Select,
 	SelectOption,
 	SelectOptionObject
 } from '@patternfly/react-core/deprecated';
-import { NavLink, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {useSelector} from "react-redux";
 
 type TimespanSelectProps = {
+    value?: number
     onChange(span: number): void
 }
 
@@ -71,7 +68,8 @@ const TimespanSelect = (props: TimespanSelectProps) => {
         ],
         []
     )
-    const [selected, setSelected] = useState(options[4])
+    const defaultOption = options.find((t, _) => { return t.seconds === props.value })
+    const [selected, setSelected] = useState(defaultOption ?? options[4])
     return (
         <Select
             isOpen={isExpanded}
@@ -94,6 +92,7 @@ const TimespanSelect = (props: TimespanSelectProps) => {
 }
 
 type LineTypeSelectProps = {
+    value?: string
     onChange(type: string): void
 }
 
@@ -115,7 +114,8 @@ const LineTypeSelect = (props: LineTypeSelectProps) => {
         ],
         []
     )
-    const [selected, setSelected] = useState(options[1])
+    const defaultOption = options.find((l, _) => { return l.type === props.value })
+    const [selected, setSelected] = useState(defaultOption ?? options[1])
     return (
         <Select
             isOpen={isExpanded}
@@ -204,16 +204,21 @@ export const flattenNode = (arr : Array<any> | undefined) => {
     return nodeObj;
 }
 
+type ChangesProps = {
+    testID: number
+}
 
-export default function Changes() {
+
+export default function Changes(props: ChangesProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
     const navigate = useNavigate()
     const params = new URLSearchParams(location.search)
-    // eslint-disable-next-line
-    const paramTest = useMemo(() => params.get("test") || undefined, [])
-    const paramFingerprint = params.get("fingerprint")
     const teams = useSelector(teamsSelector)
-    const [selectedTest, setSelectedTest] = useState<SelectedTest>()
+    const newTest = { id: props.testID } as SelectedTest;
+    // This could be removed in future as the test id is provided by props therefore it should not change
+    const [selectedTest, setSelectedTest] = useState<SelectedTest>(newTest)
+
+    const paramFingerprint = params.get("fingerprint")
     const [selectedFingerprint, setSelectedFingerprint] = useState<FingerprintValue | undefined>(() => {
         if (!paramFingerprint) {
             return undefined
@@ -224,15 +229,11 @@ export default function Changes() {
             return { ...fingerprint, toString: () => str }
         } catch (e) {
             alerting.dispatchError("Failed to parse fingerprint <code>" + paramFingerprint + "</code>",
-                    "PARSE_FINGERPRINT",
-                    "Fingerprint parsing failed")
+                "PARSE_FINGERPRINT",
+                "Fingerprint parsing failed")
             return undefined
         }
     })
-    const [selectedChange, setSelectedChange] = useState<number>()
-    const [selectedVariable, setSelectedVariable] = useState<number>()
-
-
     const [panels, setPanels] = useState<PanelInfo[]>([])
     const [loadingPanels, setLoadingPanels] = useState(false)
     const [loadingFingerprints, setLoadingFingerprints] = useState(false)
@@ -245,7 +246,7 @@ export default function Changes() {
     const [lineType, setLineType] = useState(params.get("line") || "linear")
 
     const createQuery = (alwaysEndTime: boolean) => {
-        let query = "?test=" + selectedTest
+        let query = ""
         if (selectedFingerprint) {
             query += "&fingerprint=" + encodeURIComponent(JSON.stringify(selectedFingerprint))
         }
@@ -258,14 +259,14 @@ export default function Changes() {
         if (lineType !== "linear") {
             query += "&line=" + lineType
         }
-        return query
+        return "?" + query.replace(/^&/, '');
     }
     useEffect(() => {
         if (!selectedTest) {
             document.title = "Changes | Horreum"
             return
         }
-        document.title = `${selectedTest} | Horreum`
+        document.title = `${selectedTest.id} | Horreum`
         navigate(location.pathname + createQuery(false))
     }, [selectedTest, selectedFingerprint, endTime, timespan, lineType, firstNow, history])
     useEffect(() => {
@@ -290,18 +291,9 @@ export default function Changes() {
             setDate(newDate)
         }
     }, [endTime /* date omitted intentionally */])
-    const onSelectTest = useCallback((selection, _, isInitial) => {
-        if (selection === undefined) {
-            setSelectedTest(undefined)
-        } else if (selectedTest !== selection) {
-            setSelectedTest(selection as SelectedTest)
-        }
-        if (!isInitial) {
-            setSelectedFingerprint(undefined)
-        }
-    }, [])
+    const [selectedChange, setSelectedChange] = useState<number>()
+    const [selectedVariable, setSelectedVariable] = useState<number>()
 
-    const [linkCopyOpen, setLinkCopyOpen] = useState(false)
     const fingerprintSource = useCallback(() => {
         if (!selectedTest) {
             return Promise.resolve([])
@@ -328,18 +320,11 @@ export default function Changes() {
             })
     }, [selectedTest])
     return (
-        <PageSection>
             <Card>
                 <CardHeader>
                     {
                         <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
                             <div style={{ display: "flex", flexWrap: "wrap", width: "100%" }}>
-                                <TestSelect
-                                    style={{ width: "fit-content" }}
-                                    initialTestName={paramTest}
-                                    onSelect={onSelectTest}
-                                    selection={selectedTest}
-                                />
                                 {selectedTest && (
                                     <LabelsSelect
                                         style={{ width: "fit-content" }}
@@ -348,45 +333,6 @@ export default function Changes() {
                                         source={fingerprintSource}
                                         forceSplit={true}
                                     />
-                                )}
-                                {selectedTest && (
-                                    <>
-                                        <NavLink
-                                            className="pf-v5-c-button pf-m-primary"
-                                            to={"/test/" + selectedTest.id + "#vars"}
-                                        >
-                                            Variable definitions
-                                        </NavLink>
-                                        <Button
-                                            variant="secondary"
-                                            isDisabled={
-                                                !selectedTest ||
-                                                loadingFingerprints ||
-                                                (requiresFingerprint && !selectedFingerprint)
-                                            }
-                                            onClick={() => setLinkCopyOpen(true)}
-                                        >
-                                            Copy link
-                                        </Button>
-                                        <Modal
-                                            variant="small"
-                                            title="Copy link to this chart"
-                                            isOpen={linkCopyOpen}
-                                            onClose={() => setLinkCopyOpen(false)}
-                                            actions={[
-                                                <Button key="cancel" onClick={() => setLinkCopyOpen(false)}>
-                                                    Close
-                                                </Button>,
-                                            ]}
-                                        >
-                                            <ClipboardCopy
-                                                isReadOnly={true}
-                                                onCopy={() => setTimeout(() => setLinkCopyOpen(false), 1000)}
-                                            >
-                                                {window.location.origin + window.location.pathname + createQuery(true)}
-                                            </ClipboardCopy>
-                                        </Modal>
-                                    </>
                                 )}
                             </div>
                             <div style={{ display: "flex" }}>
@@ -400,8 +346,8 @@ export default function Changes() {
                                         }
                                     }}
                                 />
-                                <TimespanSelect onChange={setTimespan} />
-                                <LineTypeSelect onChange={setLineType} />
+                                <TimespanSelect value={timespan} onChange={setTimespan} />
+                                <LineTypeSelect value={lineType} onChange={setLineType} />
                             </div>
                         </div>
                     }
@@ -427,10 +373,7 @@ export default function Changes() {
                     )}
                     {selectedTest && !loadingPanels && !requiresFingerprint && panels.length === 0 && (
                         <EmptyState>
-                            <EmptyStateHeader titleText={<>Test{selectedTest.toString()}does not define any change detection variables</>} headingLevel="h2" /><EmptyStateFooter>
-                            <NavLink className="pf-v5-c-button pf-m-primary" to={"/test/" + selectedTest.id + "#vars"}>
-                                Define change detection variables
-                            </NavLink>
+                            <EmptyStateHeader titleText={<>No change detection variables defined</>} headingLevel="h2" /><EmptyStateFooter>
                         </EmptyStateFooter></EmptyState>
                     )}
                     {!loadingFingerprints &&
@@ -491,6 +434,5 @@ export default function Changes() {
                         ))}
                 </CardBody>
             </Card>
-        </PageSection>
     )
 }

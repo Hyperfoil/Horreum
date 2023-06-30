@@ -5,7 +5,7 @@ import {Bullseye, Button, Modal, Spinner, Split, SplitItem} from "@patternfly/re
 type SaveChangesModalProps = {
     isOpen: boolean
     onClose(): void
-    onSave?(): Promise<any>
+    onSave(): Promise<any>
     onReset(): void
 }
 

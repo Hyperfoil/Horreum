@@ -13,6 +13,7 @@ export type FragmentTabProps = {
 export const FragmentTab: React.FunctionComponent<FragmentTabProps> = (_props: FragmentTabProps) => null
 
 type FragmentTabsProps = {
+    isVerticle?: boolean
     children: ReactElement<FragmentTabProps> | ReactElement<FragmentTabProps>[]
     tabIndexRef?: MutableRefObject<number>
     navigate?(current: number, next: number): Promise<void>
@@ -55,6 +56,7 @@ export default function FragmentTabs(props: FragmentTabsProps) {
         <Tabs
             activeKey={activeKey}
             mountOnEnter={true}
+            isVertical={props.isVerticle}
             onSelect={(_, key) => {
                 const nKey = key as number
                 if (props.navigate) {

@@ -73,8 +73,8 @@ export default function DatasetData(props: DatasetDataProps) {
                         onDataUpdate={setEditorData}
                     />
                 </FlexItem>
-                <FlexItem>
-                    <Button variant="primary" onClick={() => setLabelValuesOpen(true)}>
+                <FlexItem style={{ marginLeft: "auto", marginRight: "0px" }}>
+                    <Button variant="primary" style={{ marginRight: "16px" }} onClick={() => setLabelValuesOpen(true)}>
                         Show label values
                     </Button>
                     <LabelValuesModal
@@ -82,7 +82,7 @@ export default function DatasetData(props: DatasetDataProps) {
                         isOpen={labelValuesOpen}
                         onClose={() => setLabelValuesOpen(false)}
                     />
-                    <Button variant="secondary" onClick={() => setLabelsLogOpen(true)}>
+                    <Button variant="secondary" style={{ marginRight: "16px" }} onClick={() => setLabelsLogOpen(true)}>
                         Labels log
                     </Button>
                     <DatasetLogModal
@@ -94,16 +94,18 @@ export default function DatasetData(props: DatasetDataProps) {
                         isOpen={labelsLogOpen}
                         onClose={() => setLabelsLogOpen(false)}
                     />
-                    <>
-                        <Button variant="primary" onClick={() => setExperimentsOpen(true)} isDisabled={!hasExperiments}>
-                            Evaluate experiment
-                        </Button>
-                        <ExperimentModal
-                            datasetId={props.datasetId}
-                            isOpen={experimentsOpen}
-                            onClose={() => setExperimentsOpen(false)}
-                        />
-                    </>
+                    {hasExperiments && (
+                        <>
+                            <Button variant="primary" style={{ marginRight: "16px" }} onClick={() => setExperimentsOpen(true)}>
+                                Evaluate experiment
+                            </Button>
+                            <ExperimentModal
+                                datasetId={props.datasetId}
+                                isOpen={experimentsOpen}
+                                onClose={() => setExperimentsOpen(false)}
+                            />
+                        </>
+                    )}
                 </FlexItem>
             </Flex>
                 <Editor

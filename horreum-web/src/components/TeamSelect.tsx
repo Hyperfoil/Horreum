@@ -17,6 +17,16 @@ export interface Team extends SelectOptionObject {
 }
 
 export function createTeam(role?: string) {
+    const key = role || ""
+
+    if (key === SHOW_ALL.key) {
+        return SHOW_ALL
+    }
+
+    if (key === ONLY_MY_OWN.key) {
+        return ONLY_MY_OWN
+    }
+
     return {
         key: role || "",
         toString: () => teamToName(role) || "No team",

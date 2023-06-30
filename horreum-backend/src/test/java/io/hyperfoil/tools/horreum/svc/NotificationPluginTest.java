@@ -33,7 +33,7 @@ public class NotificationPluginTest {
 
    @Test
    public void testDatasetChanges() {
-      DatasetChanges dc1 = new DatasetChanges(new Dataset.Info(1, 1, 0, 1), null, "Dummy Test", true);
+      DatasetChanges dc1 = new DatasetChanges(new Dataset.Info(1, 1, 0, 1), "{\"runtime\": \"native\"}", "Dummy Test", true);
       Change c1 = new Change();
       c1.timestamp = Instant.now();
       c1.description = "foobar";

@@ -1,11 +1,11 @@
 import {useContext, useEffect, useState} from "react"
-import { useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 
 import { formatDateTime } from "../../utils"
 import { teamsSelector, useTester } from "../../auth"
 
-import { Bullseye, Button, Card, CardHeader, CardBody, PageSection, Spinner } from "@patternfly/react-core"
+import { Bullseye, Button, Card, CardHeader, CardBody, PageSection, Spinner, Toolbar, ToolbarContent, Breadcrumb, BreadcrumbItem } from "@patternfly/react-core"
 import { Table /* data-codemods */, Thead, Tr, Th, Tbody, Td } from "@patternfly/react-table"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
 import OwnerAccess from "../../components/OwnerAccess"
@@ -71,6 +71,21 @@ export default function Run() {
             )}
             {run && (
                 <>
+                    <Toolbar>
+                        <ToolbarContent>
+                            <Breadcrumb>
+                                <BreadcrumbItem>
+                                    <Link to="/test">Tests</Link>
+                                </BreadcrumbItem>
+                                <BreadcrumbItem>
+                                    <Link to={`/test/${run.testid}#run`}>{run.testname}</Link>
+                                </BreadcrumbItem>
+                                <BreadcrumbItem>
+                                    {run.id}
+                                </BreadcrumbItem>
+                            </Breadcrumb>
+                        </ToolbarContent>
+                    </Toolbar>
                     <Card>
                         <CardHeader>
                             <Table variant="compact">
@@ -78,7 +93,6 @@ export default function Run() {
                                     <Tr>
                                         <Th>Id</Th>
                                         <Th>Test</Th>
-                                        <Th>Owner</Th>
                                         <Th>Start</Th>
                                         <Th>Stop</Th>
                                         <Th>Description</Th>
@@ -113,6 +127,7 @@ export default function Run() {
                                                     </Button>
                                                     <Button
                                                         variant="secondary"
+                                                        style={{ marginRight: "16px" }}
                                                         onClick={() => setTransformationLogOpen(true)}
                                                     >
                                                         Transformation log
