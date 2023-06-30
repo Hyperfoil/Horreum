@@ -77,7 +77,6 @@ public class EmailPlugin implements NotificationPlugin {
          String content = changeNotificationEmail
                .data("username", username)
                .data("testName", event.testName)
-               .data("testNameEncoded", URLEncoder.encode(event.testName, StandardCharsets.UTF_8))
                .data("fingerprint", URLEncoder.encode(event.fingerprint != null ? event.fingerprint : "", StandardCharsets.UTF_8))
                .data("baseUrl", baseUrl)
                .data("testId", String.valueOf(event.dataset.testId))

@@ -236,22 +236,10 @@ export default function RunList() {
     };
 
     return (
-        <PageSection>
             <Card>
                 <CardHeader>
                     <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
                         <ToolbarGroup>
-                            <ToolbarItem style={{ flexGrow: 100 }}>
-                                <Breadcrumb>
-                                    <BreadcrumbItem>
-                                        <Link to="/test">Tests</Link>
-                                    </BreadcrumbItem>
-                                    <BreadcrumbItem>
-                                        {test ? <Link to={"/test/" + test.id}>{test.name}</Link> : "unknown"}
-                                    </BreadcrumbItem>
-                                    <BreadcrumbItem isActive>Runs</BreadcrumbItem>
-                                </Breadcrumb>
-                            </ToolbarItem>
                             <ToolbarItem>
                                 <Checkbox
                                     id="showTrashed"
@@ -271,16 +259,6 @@ export default function RunList() {
                                         >
                                             Import Data
                                         </Button></SplitItem>
-                                    <SplitItem>
-                                        <NavLink className="pf-v5-c-button pf-m-primary" to={`/test/${testIdInt}`}>
-                                            Edit test
-                                        </NavLink>
-                                    </SplitItem>
-                                    <SplitItem>
-                                        <NavLink className="pf-v5-c-button pf-m-secondary" to={`/run/dataset/list/${testIdInt}`}>
-                                            View datasets
-                                        </NavLink>
-                                    </SplitItem>
                                 </Split>
                             </ToolbarItem>
                             {test && test.compareUrl && (
@@ -333,8 +311,7 @@ export default function RunList() {
                         onPerPageSelect={(e, pp) => setPerPage(pp)}
                     />
                 </CardFooter>
+                <RunImportModal isOpen={showNewRunModal} onClose={toggleNewRunModal} test={test} owner={test?.owner || ""}/>
             </Card>
-            <RunImportModal isOpen={showNewRunModal} onClose={toggleNewRunModal} test={test} owner={test?.owner || ""}/>
-        </PageSection>
     )
 }

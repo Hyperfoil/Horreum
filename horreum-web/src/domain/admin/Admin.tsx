@@ -12,10 +12,6 @@ import Administrators from "./Administrators"
 import {useSelector} from "react-redux";
 import {isAdminSelector, isManagerSelector} from "../../auth";
 import Datastores from "./Datastores";
-import {NavLink} from "react-router-dom";
-import DatasetData from "../runs/DatasetData";
-import RunData from "../runs/RunData";
-import MetaData from "../runs/MetaData";
 
 export default function Admin() {
     const adminFuncsRef = useRef<TabFunctions>()

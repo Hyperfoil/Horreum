@@ -1,16 +1,18 @@
 import React, {useState, useEffect, useContext } from "react"
 import { useSelector } from "react-redux"
 
-import { Form, 
-    FormGroup, 
+import {
+    Form,
+    FormGroup,
     HelperText,
     HelperTextItem,
     FormHelperText,
     FormSelect,
     FormSelectOption,
-    Switch, 
-    TextArea, 
-    TextInput } from "@patternfly/react-core"
+    Switch,
+    TextArea,
+    TextInput, FlexItem
+} from "@patternfly/react-core"
 import FolderSelect from "../../components/FolderSelect"
 import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -19,6 +21,7 @@ import {Test, Access, sendTest, configApi, Datastore, apiCall} from "../../api"
 import { useTester, defaultTeamSelector } from "../../auth"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import TestImportButton from "./TestImportButton";
 
 type GeneralProps = {
     test?: Test
@@ -42,7 +45,7 @@ const isUrlOrBlank = (input:string|undefined):boolean=>{
     return true;
 }
 
-export default function General({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) {
+export default function TestSettings({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
     const defaultRole = useSelector(defaultTeamSelector)
     const [name, setName] = useState("")
@@ -101,11 +104,28 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
         reset: () => updateState(test),
     }
 
+    const loadTests = () => {
+        alerting.dispatchError("Not implemented", "Test import is not implemented yet", "IMPORT")
+    }
+
     const isTester = useTester(test?.owner)
     const isUrlValid = isUrlOrBlank(compareUrl)
     return (
         <>
             <Form isHorizontal={true}>
+                <FormGroup
+                    label="Import"
+                    isRequired={false}
+                    fieldId="import"
+                >
+                    {/*TODO implement the import action for real*/}
+                    <TestImportButton
+                        // tests={allTests || []}
+                        tests={[]}
+                        onImported={() => loadTests()}
+                    />
+
+                </FormGroup>
                 <FormGroup
                     label="Name"
                     isRequired={true}

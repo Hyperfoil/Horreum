@@ -25,6 +25,7 @@ import PrintButton from "../../components/PrintButton"
 import ReportLogModal from "./ReportLogModal"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import { SelectedTest } from "../../components/TestSelect"
 
 export default function TableReportPage() {
     const { alerting } = useContext(AppContext) as AppContextType;
@@ -53,6 +54,7 @@ export default function TableReportPage() {
     }, [idVal])
     const componentRef = useRef<HTMLDivElement>(null)
     const isTester = useTester(report?.config?.test?.owner)
+    const selectedTest = {id: report?.config?.test?.id} as SelectedTest
     if (loading) {
         return (
             <Bullseye>
@@ -73,7 +75,7 @@ export default function TableReportPage() {
                 <CardHeader>
                     <Breadcrumb style={{ flexGrow: 100 }}>
                         <BreadcrumbItem>
-                            <Link to="/reports">Reports</Link>
+                            <Link to={`/test/${selectedTest.id}/#reports-tab`}>Reports</Link>
                         </BreadcrumbItem>
                         <BreadcrumbItem>{report.config.title}</BreadcrumbItem>
                         <BreadcrumbItem isActive>{report.id}</BreadcrumbItem>
@@ -84,7 +86,7 @@ export default function TableReportPage() {
                             <>
                                 <ButtonLink
                                     variant="secondary"
-                                    to={"/reports/table/config/" + report.config.id + "?edit=" + idVal}
+                                    to={`/test/${selectedTest.id}/reports/table/config/` + report.config.id + "?edit=" + idVal}
                                 >
                                     Edit
                                 </ButtonLink>

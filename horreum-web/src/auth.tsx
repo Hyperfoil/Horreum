@@ -63,31 +63,32 @@ type AuthAction = InitAction | UpdateDefaultTeamAction | UpdateRolesAction | Sto
 
 export type AuthDispatch = ThunkDispatch<any, unknown, AuthAction >
 
-export function reducer(state = new AuthState(), action: AuthAction) {
+export function reducer(state : AuthState = { authenticated : false, roles : [], teams : []}, action: AuthAction) {
+// export function reducer(state = new AuthState(), action: AuthAction) {
     // TODO: is this necessary? It seems that without that the state is not updated at times.
     state = { ...state }
     switch (action.type) {
-        case INIT:
+        case "auth/INIT":
             state.keycloak = action.keycloak
             if (action.initPromise) {
                 state.initPromise = action.initPromise
             }
             break
-        case UPDATE_DEFAULT_TEAM:
+        case "auth/UPDATE_DEFAULT_TEAM":
             state.defaultTeam = action.team
             break
-        case UPDATE_ROLES:
+        case "auth/UPDATE_ROLES":
             state.authenticated = action.authenticated
             state.roles = [...action.roles]
             state.teams = action.roles.filter(role => role.endsWith("-team")).sort()
             break
-        case STORE_PROFILE:
+        case "auth/STORE_PROFILE":
             state.userProfile = action.profile
             break
-        case BASIC_AUTH:
+        case "auth/BASIC_AUTH":
             state.basicAuthToken = window.btoa(action.username + ':' + action.password)
             break
-        case AFTER_LOGOUT:
+        case "auth/AFTER_LOGOUT":
             state.basicAuthToken = undefined
             state.userProfile = undefined
             state.initPromise = undefined

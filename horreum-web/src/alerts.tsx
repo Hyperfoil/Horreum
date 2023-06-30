@@ -59,7 +59,7 @@ function Alerts() {
         return <></>
     }
     return (
-        <div style={{ position: "absolute", zIndex: 1000, width: "100%" }}>
+        <div style={{ position: "relative", zIndex: 1000, width: "100%" }}>
             {alerting.alerts.map((alert, i) => (
                 <PatternflyAlert
                     key={i}
