@@ -28,7 +28,7 @@ public interface UserService {
 
    @POST
    @Path("info")
-   CompletionStage<List<UserData>> info(@RequestBody(required = true) List<String> usernames);
+   List<UserData> info(@RequestBody(required = true) List<String> usernames);
 
    @POST
    @Path("createUser")
@@ -50,32 +50,32 @@ public interface UserService {
 
    @GET
    @Path("team/{team}/members")
-   CompletionStage<Map<String, List<String>>> teamMembers(@PathParam("team") String team);
+   Map<String, List<String>> teamMembers(@PathParam("team") String team);
 
    @POST
    @Path("team/{team}/members")
-   CompletionStage<Void> updateTeamMembers(@PathParam("team") String team,
+   void updateTeamMembers(@PathParam("team") String team,
                                            @RequestBody(required = true) Map<String, List<String>> roles);
 
    @GET
    @Path("allTeams")
-   CompletionStage<List<String>> getAllTeams();
+   List<String> getAllTeams();
 
    @Path("team/{team}")
    @POST
-   CompletionStage<Void> addTeam(@PathParam("team") String team);
+   void addTeam(@PathParam("team") String team);
 
    @Path("team/{team}")
    @DELETE
-   CompletionStage<Void> deleteTeam(@PathParam("team") String team);
+   void deleteTeam(@PathParam("team") String team);
 
    @GET
    @Path("administrators")
-   CompletionStage<List<UserData>> administrators();
+   List<UserData> administrators();
 
    @POST
    @Path("administrators")
-   CompletionStage<Void> updateAdministrators(@RequestBody(required = true) List<String> administrators);
+   void updateAdministrators(@RequestBody(required = true) List<String> administrators);
 
    // this is a simplified copy of org.keycloak.representations.idm.UserRepresentation
    class UserData {
