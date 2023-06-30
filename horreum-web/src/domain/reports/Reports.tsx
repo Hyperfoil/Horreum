@@ -18,8 +18,8 @@ import { ArrowRightIcon, FolderOpenIcon, EditIcon } from "@patternfly/react-icon
 
 import ImportButton from "../../components/ImportButton"
 import Table from "../../components/Table"
-import TeamSelect, { Team, SHOW_ALL } from "../../components/TeamSelect"
-import TestSelect, { SelectedTest } from "../../components/TestSelect"
+import { Team } from "../../components/TeamSelect"
+import { SelectedTest } from "../../components/TestSelect"
 import { formatDateTime } from "../../utils"
 
 import {AllTableReports, reportApi, SortDirection, TableReportSummary} from "../../api"
@@ -34,10 +34,11 @@ type C = CellProps<TableReportSummary>
 
 type ReportGroup = {
     testId: number
-    title: string
+    title?: string
 }
 
-export default function Reports() {
+
+export default function Reports(props: ReportGroup) {
     document.title = "Reports | Horreum"
 
     const { alerting } = useContext(AppContext) as AppContextType;
@@ -47,8 +48,8 @@ export default function Reports() {
     const [direction, setDirection] = useState<SortDirection>("Descending")
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
     const [roles, setRoles] = useState<Team>()
-    const [test, setTest] = useState<SelectedTest>()
-    const [folder, setFolder] = useState<string>()
+    const test = {} as SelectedTest
+    test.id = props.testId
 
     const [tableReports, setTableReports] = useState<AllTableReports>()
     const [tableReportsReloadCounter, setTableReportsReloadCounter] = useState(0)
@@ -61,7 +62,7 @@ export default function Reports() {
         setLoading(true)
         reportApi.getTableReports(
             pagination.direction,
-            folder,
+            undefined,
             pagination.perPage,
             pagination.page,
             roles?.key,
@@ -71,7 +72,7 @@ export default function Reports() {
             .then(setTableReports)
             .catch(error => alerting.dispatchError(error, "FETCH_REPORTS", "Failed to fetch reports"))
             .finally(() => setLoading(false))
-    }, [pagination, roles, test, folder,  teams, tableReportsReloadCounter])
+    }, [pagination, roles, teams, tableReportsReloadCounter])
 
     const columns: Column<TableReportSummary>[] = useMemo(
         () => [
@@ -89,20 +90,6 @@ export default function Reports() {
                         <NavLink to={`/reports/table/config/${configId}`}>
                             {title} <EditIcon />
                         </NavLink>
-                    )
-                },
-            },
-            {
-                Header: "Test",
-                id: "testname",
-                accessor: r => r.testName && r.testName.toLowerCase(), // for case-insensitive sorting
-                Cell: (arg: C) => {
-                    const testName = arg.row.original.testName
-                    const testId = arg.row.original.testId
-                    return testId !== undefined && testId >= 0 ? (
-                        <NavLink to={`/test/${testId}`}>{testName}</NavLink>
-                    ) : (
-                        "<deleted test>"
                     )
                 },
             },
@@ -163,7 +150,6 @@ export default function Reports() {
             )) ||
         undefined
     return (
-        <PageSection>
             <Card>
                 <CardHeader>
                     <Flex style={{ width: "100%" }}>
@@ -198,19 +184,6 @@ export default function Reports() {
                                 />
                             </FlexItem>
                         )}
-                        <FlexItem>
-                            <TeamSelect includeGeneral={true} selection={roles || SHOW_ALL} onSelect={setRoles} />
-                        </FlexItem>
-                        <FlexItem>
-                            <TestSelect
-                                selection={test}
-                                onSelect={(test, folder) => {
-                                    setTest(test)
-                                    setFolder(folder)
-                                }}
-                                extraOptions={[{ id: 0, toString: () => "All tests" }]}
-                            />
-                        </FlexItem>
                         <FlexItem grow={{ default: "grow" }}>{"\u00A0"}</FlexItem>
                         <FlexItem>
                             <Pagination
@@ -245,13 +218,12 @@ export default function Reports() {
                         onPerPageSelect={(e, pp) => setPerPage(pp)}
                     />
                 </CardFooter>
+                <ListReportsModal
+                    isOpen={tableReportSummary !== undefined}
+                    onClose={() => setTableReportGroup(undefined)}
+                    summary={tableReportSummary}
+                    onReload={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
+                />
             </Card>
-            <ListReportsModal
-                isOpen={tableReportSummary !== undefined}
-                onClose={() => setTableReportGroup(undefined)}
-                summary={tableReportSummary}
-                onReload={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
-            />
-        </PageSection>
     )
 }

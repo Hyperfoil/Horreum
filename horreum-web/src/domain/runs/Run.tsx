@@ -78,7 +78,6 @@ export default function Run() {
                                     <Tr>
                                         <Th>Id</Th>
                                         <Th>Test</Th>
-                                        <Th>Owner</Th>
                                         <Th>Start</Th>
                                         <Th>Stop</Th>
                                         <Th>Description</Th>
@@ -113,6 +112,7 @@ export default function Run() {
                                                     </Button>
                                                     <Button
                                                         variant="secondary"
+                                                        style={{ marginRight: "16px" }}
                                                         onClick={() => setTransformationLogOpen(true)}
                                                     >
                                                         Transformation log

@@ -1,30 +1,32 @@
-import {useMemo, useEffect, useState, useContext} from "react"
-import { Card, CardHeader, CardFooter, CardBody, PageSection, Pagination } from "@patternfly/react-core"
-import { NavLink } from "react-router-dom"
+import React, {useMemo, useEffect, useState, useContext} from "react"
+import {Card, CardHeader, CardFooter, CardBody, PageSection, Pagination, Flex, FlexItem} from "@patternfly/react-core"
+import {NavLink} from "react-router-dom"
 
-import { useTester, teamToName } from "../../auth"
-import { noop } from "../../utils"
+import {useTester, teamsSelector, teamToName, isAuthenticatedSelector} from "../../auth"
+import {noop} from "../../utils"
 import Table from "../../components/Table"
- 
-import ActionMenu, { useChangeAccess, useDelete } from "../../components/ActionMenu"
+
+import ActionMenu, {useChangeAccess, useDelete} from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
-import { CellProps, Column } from "react-table"
+import {CellProps, Column} from "react-table"
 import {Access, SortDirection, Schema, schemaApi} from "../../api"
 import SchemaImportButton from "./SchemaImportButton"
+import TeamSelect, {ONLY_MY_OWN, Team} from "../../components/TeamSelect";
 import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {useSelector} from "react-redux";
 
 type C = CellProps<Schema>
 
 export default function SchemaList() {
     document.title = "Schemas | Horreum"
-    const { alerting } = useContext(AppContext) as AppContextType;
+    const {alerting} = useContext(AppContext) as AppContextType;
 
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [direction] = useState<SortDirection>('Ascending')
-    const pagination = useMemo(() => ({ page, perPage, direction }), [page, perPage, direction])
+    const pagination = useMemo(() => ({page, perPage, direction}), [page, perPage, direction])
     const [schemas, setSchemas] = useState<Schema[]>([])
     const [schemaCount, setSchemaCount] = useState(0)
     const [loading, setLoading] = useState(false)
@@ -33,7 +35,7 @@ export default function SchemaList() {
     const isTester = useTester()
 
     const removeSchema = (id: number) => {
-        if ( schemaCount > 0 ){
+        if (schemaCount > 0) {
             setSchemas(schemas?.filter(schema => schema.id !== id) || [])
             const newCount = (schemaCount == 0) ? 0 : schemaCount - 1
             setSchemaCount(newCount)
@@ -48,7 +50,7 @@ export default function SchemaList() {
                 setSchemas(result.schemas)
                 setSchemaCount(result.count)
             })
-            .catch(error => alerting.dispatchError(error,"FETCH_SCHEMA", "Failed to fetch schemas"))
+            .catch(error => alerting.dispatchError(error, "FETCH_SCHEMA", "Failed to fetch schemas"))
             .finally(() => setLoading(false))
     }
 
@@ -103,11 +105,12 @@ export default function SchemaList() {
                         },
                     })
                     const del = useDelete({
-                        onDelete: id => { return schemaApi._delete(id)
-                            .then(() => id,
-                                error => alerting.dispatchError(error, "SCHEMA_DELETE", "Failed to delete schema " + id)
-                            ).then(id => removeSchema(id))
-                            .catch(noop)
+                        onDelete: id => {
+                            return schemaApi._delete(id)
+                                .then(() => id,
+                                    error => alerting.dispatchError(error, "SCHEMA_DELETE", "Failed to delete schema " + id)
+                                ).then(id => removeSchema(id))
+                                .catch(noop)
                         },
                     })
                     return (
@@ -122,29 +125,44 @@ export default function SchemaList() {
                 },
             },
         ],
-        [ schemas]
+        [schemas]
     )
-
+    const teams = useSelector(teamsSelector)
+    const isAuthenticated = useSelector(isAuthenticatedSelector)
+    const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
     return (
         <PageSection>
             <Card>
                 {isTester && (
                     <CardHeader>
-                        <ButtonLink to="/schema/_new">New Schema</ButtonLink>
-                        <SchemaImportButton
-                            schemas={schemas || []}
-                            onImported={() => setReloadCounter(reloadCounter + 1)}
-                        />
+                        <Flex>
+                            <FlexItem>
+                                <TeamSelect
+                                    includeGeneral={true}
+                                    selection={rolesFilter}
+                                    onSelect={selection => {
+                                        setRolesFilter(selection)
+                                    }}
+                                />
+                            </FlexItem>
+
+                            <FlexItem align={{ default: 'alignRight' }}>
+                                <ButtonLink style={{marginRight: "16px", width: "100pt"}} to="/schema/_new">New
+                                    Schema</ButtonLink>
+                            </FlexItem>
+                        </Flex>
+
+
                     </CardHeader>
                 )}
-                <CardBody style={{ overflowX: "auto" }}>
+                <CardBody style={{overflowX: "auto"}}>
                     <Table<Schema> columns={columns}
-                    data={schemas || []}
-                    sortBy={[{ id: "name", desc: false }]}
-                    isLoading={loading}
+                                   data={schemas || []}
+                                   sortBy={[{id: "name", desc: false}]}
+                                   isLoading={loading}
                     />
                 </CardBody>
-                <CardFooter style={{ textAlign: "right" }}>
+                <CardFooter style={{textAlign: "right"}}>
                     <Pagination
                         itemCount={schemaCount || 0}
                         perPage={perPage}

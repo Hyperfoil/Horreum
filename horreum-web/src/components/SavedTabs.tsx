@@ -101,7 +101,7 @@ export default function SavedTabs(props: SavedTabsProps) {
                             const childProps = children[activeKey.current].props
                             if ("onSave" in childProps) {
                                 childProps
-                                    .onSave()
+                                    .onSave?.()
                                     .then(() => {
                                         if (props.afterSave) {
                                             return props.afterSave()
