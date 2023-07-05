@@ -26,3 +26,9 @@ mvn quarkus:dev -Dquarkus.quinoa=false
 
 ### 4. Access the development server
 * This is the port for the application [localhost:8080](http://localhost:8080)
+
+### Example configuration
+Once Horreum is running, you can preload Horreum with some example data
+```
+./infra/example-configuration.sh
+```
