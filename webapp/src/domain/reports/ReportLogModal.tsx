@@ -8,10 +8,10 @@ type ReportLogModalProps = {
     logs: ReportLog[]
 } & Omit<CommonLogModalProps, "title" | "emptyMessage">
 
-export default function ReportLogModal(props: ReportLogModalProps) {
+export default function ReportLogModal({ logs, ...props }: ReportLogModalProps) {
     const rows = useMemo(
         () =>
-            props.logs.map(log => ({
+            logs.map(log => ({
                 cells: [
                     { title: <LogLevelIcon level={log.level} /> },
                     { title: formatDateTime(log.timestamp) },
@@ -19,7 +19,7 @@ export default function ReportLogModal(props: ReportLogModalProps) {
                 ],
             })),
 
-        [props.logs]
+        [logs]
     )
     return (
         <LogModal
@@ -27,7 +27,7 @@ export default function ReportLogModal(props: ReportLogModalProps) {
             emptyMessage="There are no logs"
             {...props}
             columns={["Level", "Timestamp", "Message"]}
-            fetchCount={level => Promise.resolve(props.logs.filter(l => l.level >= level).length)}
+            fetchCount={level => Promise.resolve(logs.filter(l => l.level >= level).length)}
             fetchLogs={(level, page, limit) =>
                 Promise.resolve(
                     rows
