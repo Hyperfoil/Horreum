@@ -16,22 +16,22 @@ type ListReportsModalProps = {
     onReload(): void
 }
 
-export default function ListReportsModal(props: ListReportsModalProps) {
+export default function ListReportsModal({ isOpen, onClose, summary, onReload }: ListReportsModalProps) {
     const [deleteId, setDeleteId] = useState<number>()
     return (
         <Modal
-            title={"Reports for " + props?.summary?.title}
+            title={"Reports for " + summary?.title}
             variant="small"
-            isOpen={props.isOpen}
-            onClose={props.onClose}
+            isOpen={isOpen}
+            onClose={onClose}
         >
             <div style={{ overflowY: "auto", minHeight: "40vh", maxHeight: "60vh" }}>
-                {!props.summary && (
+                {!summary && (
                     <Bullseye>
                         <Spinner size="xl" />
                     </Bullseye>
                 )}
-                {props.summary && (
+                {summary && (
                     <TableComposable variant="compact">
                         <Thead>
                             <Tr>
@@ -41,7 +41,7 @@ export default function ListReportsModal(props: ListReportsModalProps) {
                             </Tr>
                         </Thead>
                         <Tbody>
-                            {props.summary.reports.map(({ id, created }) => (
+                            {summary.reports.map(({ id, created }) => (
                                 <Tr key={id}>
                                     <Td>
                                         <NavLink to={`/reports/table/${id}`}>
@@ -70,7 +70,7 @@ export default function ListReportsModal(props: ListReportsModalProps) {
                     if (!deleteId) {
                         return Promise.resolve()
                     }
-                    return Api.reportServiceDeleteTableReport(deleteId).then(() => props.onReload())
+                    return Api.reportServiceDeleteTableReport(deleteId).then(() => onReload())
                 }}
             />
         </Modal>
