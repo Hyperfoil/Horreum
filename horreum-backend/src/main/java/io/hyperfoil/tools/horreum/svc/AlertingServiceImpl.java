@@ -89,7 +89,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    //@formatter:off
    private static final String LOOKUP_TIMESTAMP =
-         "SELECT timeline_function, (CASE " + "" +
+         "SELECT timeline_function, (CASE " +
             "WHEN jsonb_array_length(timeline_labels) = 1 THEN jsonb_agg(lv.value)->0 " +
             "ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) " +
          "END) as value FROM test " +

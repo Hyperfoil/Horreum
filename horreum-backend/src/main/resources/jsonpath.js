@@ -4333,7 +4333,7 @@ next:function () {
                         return token;
                     } else if (this._backtrack) {
                         match = false;
-                        continue; // rule action called reject() implying a rule MISmatch.
+                         // rule action called reject() implying a rule MISmatch.
                     } else {
                         // else: this is a lexer rule which consumes input without producing a token (e.g. whitespace)
                         return false;

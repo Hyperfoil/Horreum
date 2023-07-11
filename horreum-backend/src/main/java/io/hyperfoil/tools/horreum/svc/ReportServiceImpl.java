@@ -694,11 +694,10 @@ public class ReportServiceImpl implements ReportService {
    }
 
    private String buildCode(String function, String param) {
-      StringBuilder jsCode = new StringBuilder();
-      jsCode.append("var __obj = ").append(param).append(";\n");
-      jsCode.append("var __func = ").append(function).append(";\n");
-      jsCode.append("__func(__obj)");
-      return jsCode.toString();
+       String jsCode = "var __obj = " + param + ";\n" +
+               "var __func = " + function + ";\n" +
+               "__func(__obj)";
+      return jsCode;
    }
 
    private void executeInContext(TableReportConfigDAO config, Consumer<Context> consumer) {

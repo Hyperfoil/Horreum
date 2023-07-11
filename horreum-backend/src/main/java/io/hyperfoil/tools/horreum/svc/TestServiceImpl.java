@@ -554,7 +554,7 @@ public class TestServiceImpl implements TestService {
       long deleted = em.createNativeQuery("DELETE FROM dataset USING run WHERE run.id = dataset.runid AND run.trashed AND dataset.testid = ?1")
             .setParameter(1, testId).executeUpdate();
       if (deleted > 0) {
-         log.debugf("Deleted %d datasets for trashed runs in test %s (%d)", (long)deleted, (Object)test.name, (Object)testId);
+         log.debugf("Deleted %d datasets for trashed runs in test %s (%d)", deleted, test.name, (Object)testId);
       }
 
       ScrollableResults results = em.createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND NOT trashed ORDER BY start")

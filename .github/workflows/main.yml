@@ -26,7 +26,7 @@ jobs:
         os:
         -  {
             name: "windows-latest",
-            build-options: "\"-Dquarkus.container-image.build=false\" -pl '!horreum-client, !horreum-integration' -DskipITs -DskipTests"
+            build-options: "\"-Dquarkus.container-image.build=false\" -pl '!horreum-client, !horreum-integration-tests' -DskipITs -DskipTests"
           }
         - {
             name: "ubuntu-latest",
@@ -52,7 +52,7 @@ jobs:
     - name: Maven Version
       run: mvn --version
     - name: Build with Maven
-      run: mvn clean package -B --file pom.xml -DskipTests ${{ matrix.os.build-options }}
+      run: mvn clean install -B --file pom.xml -DskipTests -DskipITs ${{ matrix.os.build-options }}
     - name: Test with Maven
       run: mvn -B verify --file pom.xml ${{ matrix.os.build-options }}
     - name: Upload artifact for failed workflow

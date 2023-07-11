@@ -1,0 +1,10 @@
+{
+  "id": -1,
+  "event": "run/new",
+  "type": "http",
+  "active": true,
+  "runAlways": true,
+  "config": {
+    "url": "http://example.com/stuff-handling-runs"
+  }
+}

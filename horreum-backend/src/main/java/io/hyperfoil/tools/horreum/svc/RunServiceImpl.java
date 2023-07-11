@@ -429,7 +429,7 @@ public class RunServiceImpl implements RunService {
       try {
          // if there is not already a dataset in the db, wait for msg back from db that at least one dataset is available
          if (DataSetDAO.find("run.id", runId).count() == 0) {
-            dsAvailableLatch.await(10l, TimeUnit.SECONDS);
+            dsAvailableLatch.await(10L, TimeUnit.SECONDS);
          }
       } catch (InterruptedException e) {
          //TODO :: make timeout configurable
@@ -866,7 +866,7 @@ public class RunServiceImpl implements RunService {
       RunDAO run = updateRun(id, r -> r.trashed = trashed);
       if (trashed) {
          List<DataSetDAO> datasets = DataSetDAO.list("run.id", id);
-         log.debugf("Trashing run %d (test %d, %d datasets)", (long)run.id, (long)run.testid, (long)datasets.size());
+         log.debugf("Trashing run %d (test %d, %d datasets)", (long)run.id, (long)run.testid, datasets.size());
          for (var dataset : datasets) {
             messageBus.publish(DataSetDAO.EVENT_DELETED, run.testid, dataset.getInfo());
             dataset.delete();

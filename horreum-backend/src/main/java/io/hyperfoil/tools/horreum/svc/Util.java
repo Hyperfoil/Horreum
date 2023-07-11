@@ -615,8 +615,8 @@ public class Util {
 
    static <T> T runQuery(EntityManager em, Class<T> klass, String query, Object... params) {
       Query q;
-      q = klass.equals(Object.class) ? em.createNativeQuery(query) : em.createNativeQuery(query, klass);;
-      for (int i = 0; i < params.length; ++i) {
+      q = klass.equals(Object.class) ? em.createNativeQuery(query) : em.createNativeQuery(query, klass);
+       for (int i = 0; i < params.length; ++i) {
          q.setParameter(i + 1, params[i]);
       }
       try {

@@ -16,6 +16,13 @@
             <groupId>io.hyperfoil.tools</groupId>
             <artifactId>horreum-api</artifactId>
         </dependency>
+        <!-- We need this dep for build ordering, but is provided scope so is not included in the output application -->
+        <dependency>
+            <groupId>io.hyperfoil.tools</groupId>
+            <artifactId>horreum-dev-services</artifactId>
+            <scope>provided</scope>
+            <version>${project.version}</version>
+        </dependency>
          <dependency>
             <groupId>org.graalvm.sdk</groupId>
             <artifactId>graal-sdk</artifactId>
@@ -144,7 +151,8 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-keycloak-admin-client-reactive</artifactId>
+            <!-- TODO: revert to reactive client-->
+            <artifactId>quarkus-keycloak-admin-client</artifactId>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>

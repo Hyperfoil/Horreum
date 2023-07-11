@@ -27,56 +27,49 @@ Horreum is a [Quarkus](https://quarkus.io/) based application which uses
 
 * [Java 11](https://adoptium.net/temurin/releases/?version=11)
 * [Apache Maven 3.8](https://maven.apache.org/)
-* [Keycloak](https://www.keycloak.org/)
-* [PostgreSQL 12+](https://www.postgresql.org/)
-
-### Local development in Windows
-We have prepared a seperate `docker compose` script to setup Keycloak and PostgreSQL in the Windows platform, check the guide 👉 [Local development in Windows](./doc/Windows.md)
-
-
-### Local development with Docker Compose
-
-We have prepared a `docker compose` script to setup Keycloak and PostgreSQL using following command.
-
-```bash
- docker compose -p horreum -f infra/docker-compose.yml up -d
-```
-and after a few moments everything should be up and ready. The script will create some example users.
+* [Docker ](https://www.docker.com/)
+  * or
+* [Podman 4.5.1](https://podman.io/)
 
 ### Local development with Podman
-
-We have prepared a `podman-compose` script to setup Keycloak and PostgreSQL using following command.
-
-```bash
-./infra/podman-compose.sh
-```
-
-and after a few moments everything should be up and ready. The script will create some example users.
 
 Install of the podman packages:
 
 ``` bash
-dnf install -y podman podman-plugins podman-compose podman-docker
+dnf install -y podman podman-plugins podman-docker
 ```
 
 In one terminal do
 ``` bash
 podman system service -t 0
 ```
-
-And then run the test suite with a socket environment as
+And then configure `DOCKER_HOST` environment variable to resolve to the podman socket
 
 ``` bash
 export DOCKER_HOST=unix:///run/user/${UID}/podman/podman.sock
-export TESTCONTAINERS_RYUK_DISABLED=true
-mvn clean package
 ```
 
-Shutdown:
+## Getting Started with development server
 
-``` bash
-podman-compose -p horreum -f infra/docker-compose.yml down
+To run with test cases do
+
+```bash
+mvn install
+mvn quarkus:dev -pl '!horreum-integration-tests'
 ```
+
+To run without test cases do
+
+```bash
+mvn -DskipTests=true -DskipITs install
+mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev  -pl '!horreum-integration-tests'
+```
+
+## Get Access
+
+* For the create-react-app live code server [localhost:3000](http://localhost:3000)
+* For the Quarkus development code server   [localhost:8080](http://localhost:8080)
+
 
 ### Example configuration
 
@@ -108,39 +101,21 @@ Keycloak is running on [localhost:8180](http://localhost:8180)
 | Admin | `admin` | `secret` | |
 | User | `user` | `secret` | `horreum` |
 
-## Getting Started with development server
-
-To run with test cases do
-
-```bash
-mvn package
-mvn quarkus:dev
-```
-
-To run without test cases do
-
-```bash
-mvn -DskipTests=true package
-mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev
-```
-
-## Get Access
-
-* For the create-react-app live code server [localhost:3000](http://localhost:3000)
-* For the Quarkus development code server   [localhost:8080](http://localhost:8080)
-
 ### Troubleshooting development infrastructure
 
-If PostgreSQL container fails to start try removing the volume using:
+1. Clean cached files and rebuild
 
-```bash
-podman volume rm horreum_horreum_pg13
+```shell
+$ mvn clean -p remove-node-cache
+$ mvn clean install -DskipTests -DskipITs
 ```
+TODO:: troubleshooting with dev services
 
 ## Tested platforms
 
 * Linux (Fedora, RHEL)
 * Windows/WSL2 (Windows 10 and Windows 11)
+* MacOS (13.3) on M2 hardware 
 
 ## Operator
 

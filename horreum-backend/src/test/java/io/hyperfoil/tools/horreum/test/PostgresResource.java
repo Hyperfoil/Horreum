@@ -1,16 +1,14 @@
 package io.hyperfoil.tools.horreum.test;
 
+import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.testcontainers.containers.PostgreSQLContainer;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Map;
-
-import org.eclipse.microprofile.config.ConfigProvider;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.testcontainers.containers.PostgreSQLContainer;
-
-import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 
 public class PostgresResource implements QuarkusTestResourceLifecycleManager {
    private PostgreSQLContainer<?> postgresContainer;
@@ -23,7 +21,9 @@ public class PostgresResource implements QuarkusTestResourceLifecycleManager {
    public void init(Map<String, String> initArgs) {
       if (ConfigProvider.getConfig().getOptionalValue("horreum.test.postgres.enabled", boolean.class).orElse(true)) {
          postgresContainer = new PostgreSQLContainer<>(POSTGRES_VERSION)
-               .withDatabaseName("horreum").withUsername("dbadmin").withPassword("secret");
+               .withDatabaseName("horreum")
+               .withUsername("dbadmin")
+               .withPassword("secret");
       }
       if (initArgs.containsKey("inContainer") ) {
          inContainer = Boolean.parseBoolean(initArgs.get("inContainer"));
