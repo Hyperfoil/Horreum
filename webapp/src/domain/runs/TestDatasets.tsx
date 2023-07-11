@@ -43,7 +43,7 @@ import {
     Column,
     UseSortByColumnOptions,
 } from "react-table"
-import Api, {DatasetSummary, DatasetList, SortDirection} from "../../api"
+import Api, { DatasetSummary, DatasetList, SortDirection } from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
 import { TestDispatch } from "../tests/reducers"
 import SchemaList from "./SchemaList"
@@ -110,13 +110,19 @@ const staticColumns: DatasetColumn[] = [
     },
     {
         Header: "Owner",
-        accessor: "owner",
-        Cell: (arg: C) => teamToName(arg.cell.value),
-    },
-    {
-        Header: "Access",
-        accessor: "access",
-        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
+        id: "owner",
+        accessor: (row: DatasetSummary) => ({
+            owner: row.owner,
+            access: row.access,
+        }),
+        Cell: (arg: C) => (
+            <>
+                {teamToName(arg.cell.value.owner)}
+                <span style={{ marginLeft: '8px' }}>
+                <AccessIcon access={arg.cell.value.access} />
+                </span>
+            </>
+        ),
     },
 ]
 

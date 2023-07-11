@@ -125,13 +125,19 @@ const tableColumns: RunColumn[] = [
     },
     {
         Header: "Owner",
-        accessor: "owner",
-        Cell: (arg: C) => teamToName(arg.cell.value),
-    },
-    {
-        Header: "Access",
-        accessor: "access",
-        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
+        id: "owner",
+        accessor: (row: RunSummary) => ({
+            owner: row.owner,
+            access: row.access,
+        }),
+        Cell: (arg: C) => (
+            <>
+                {teamToName(arg.cell.value.owner)}
+                <span style={{ marginLeft: '8px' }}>
+                <AccessIcon access={arg.cell.value.access} />
+                </span>
+            </>
+        ),
     },
     {
         Header: "Actions",

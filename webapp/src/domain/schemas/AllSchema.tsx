@@ -33,14 +33,14 @@ export default function AllSchema() {
     useEffect(() => {
         setLoading(true)
         Api.schemaServiceList(
-             'Ascending',
-             pagination.perPage,
-             pagination.page - 1
-             )
+            'Ascending',
+            pagination.perPage,
+            pagination.page - 1
+        )
             .then(setSchemas)
             .catch(error => dispatch(alertAction("FETCH_SCHEMA", "Failed to fetch schemas", error)))
             .finally(() => setLoading(false))
-    }, [pagination,  dispatch])
+    }, [pagination, dispatch])
 
     const columns: Column<Schema>[] = useMemo(
         () => [
@@ -62,13 +62,19 @@ export default function AllSchema() {
             },
             {
                 Header: "Owner",
-                accessor: "owner",
-                Cell: (arg: C) => teamToName(arg.cell.value),
-            },
-            {
-                Header: "Access",
-                accessor: "access",
-                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
+                id: "owner",
+                accessor: (row: Schema) => ({
+                    owner: row.owner,
+                    access: row.access,
+                }),
+                Cell: (arg: C) => (
+                    <>
+                        {teamToName(arg.cell.value.owner)}
+                        <span style={{ marginLeft: '8px' }}>
+                        <AccessIcon access={arg.cell.value.access} />
+                        </span>
+                    </>
+                ),
             },
             {
                 Header: "Actions",
@@ -121,9 +127,9 @@ export default function AllSchema() {
                 )}
                 <CardBody style={{ overflowX: "auto" }}>
                     <Table columns={columns}
-                    data={schemas?.schemas || []}
-                    sortBy={[{ id: "name", desc: false }]}
-                    isLoading={loading}
+                        data={schemas?.schemas || []}
+                        sortBy={[{ id: "name", desc: false }]}
+                        isLoading={loading}
                     />
                 </CardBody>
                 <CardFooter style={{ textAlign: "right" }}>

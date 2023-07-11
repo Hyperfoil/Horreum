@@ -329,11 +329,21 @@ export default function AllTests() {
                     )
                 },
             },
-            { Header: "Owner", accessor: "owner", Cell: (arg: C) => teamToName(arg.cell.value) },
             {
-                Header: "Access",
-                accessor: "access",
-                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
+                Header: "Owner",
+                id: "owner",
+                accessor: (row: TestStorage) => ({
+                    owner: row.owner,
+                    access: row.access,
+                }),
+                Cell: (arg: C) => (
+                    <>
+                        {teamToName(arg.cell.value.owner)}
+                        <span style={{ marginLeft: '8px' }}>
+                        <AccessIcon access={arg.cell.value.access} />
+                        </span>
+                    </>
+                ),
             },
             {
                 Header: "Actions",
@@ -424,11 +434,11 @@ export default function AllTests() {
                         }}
                     />
                     <Table columns={columns}
-                     data={allTests || []} 
-                     isLoading={isLoading} 
-                     sortBy={[{ id: "name", desc: false }]}
-                     
-                     />
+                        data={allTests || []}
+                        isLoading={isLoading}
+                        sortBy={[{ id: "name", desc: false }]}
+
+                    />
                 </CardBody>
             </Card>
         </PageSection>

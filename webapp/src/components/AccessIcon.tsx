@@ -2,7 +2,7 @@ import { Tooltip } from "@patternfly/react-core"
 import { LockedIcon } from "@patternfly/react-icons"
 import { Access } from "../api"
 
-export default function AccessIcon({ access }: { access: Access }) {
+export default function AccessIcon({ access, notext = false }: { access: Access, notext?: boolean }) {
     let color
     let text
     let explanation
@@ -32,13 +32,16 @@ export default function AccessIcon({ access }: { access: Access }) {
             break
         }
     }
-    return (
+
+    return notext ? (
+        <LockedIcon style={{ fill: "var(" + color + ")" }} />
+      ) : (
         <>
-            <LockedIcon style={{ fill: "var(" + color + ")" }} />
-            {"\u00A0"}
-            <Tooltip content={explanation}>
-                <span>{text}</span>
-            </Tooltip>
+          <LockedIcon style={{ fill: "var(" + color + ")" }} />
+          {"\u00A0"}
+          <Tooltip content={explanation}>
+            <span style={{ marginLeft: '8px' }}>{text}</span>
+          </Tooltip>
         </>
-    )
+      );   
 }
