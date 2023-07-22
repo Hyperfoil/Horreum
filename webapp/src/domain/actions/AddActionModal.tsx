@@ -21,23 +21,23 @@ const DEFAULT_ACTION = {
     runAlways: false,
 }
 
-function AddActionModal(props: AddActionModalProps) {
+function AddActionModal({isOpen, onClose, onSubmit}: AddActionModalProps) {
     const [action, setAction] = useState<Action>(DEFAULT_ACTION)
     const [isSaving, setSaving] = useState(false)
     const [isValid, setValid] = useState(true)
 
-    const onClose = () => {
+    const handleClose = () => {
         setAction(DEFAULT_ACTION)
         setSaving(false)
         setValid(true)
-        props.onClose()
+        onClose()
     }
 
     return (
         <Modal
             title="New Action"
-            isOpen={props.isOpen}
-            onClose={onClose}
+            isOpen={isOpen}
+            onClose={handleClose}
             actions={[
                 <Button
                     key="save"
@@ -45,12 +45,12 @@ function AddActionModal(props: AddActionModalProps) {
                     isDisabled={isSaving || !isValid}
                     onClick={() => {
                         setSaving(true)
-                        props.onSubmit(action).finally(onClose)
+                        onSubmit(action).finally(handleClose)
                     }}
                 >
                     Save
                 </Button>,
-                <Button key="cancel" variant={ButtonVariant.link} isDisabled={isSaving} onClick={onClose}>
+                <Button key="cancel" variant={ButtonVariant.link} isDisabled={isSaving} onClick={handleClose}>
                     Cancel
                 </Button>,
             ]}
