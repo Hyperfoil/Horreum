@@ -76,7 +76,7 @@ mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev  -pl '!horreum-integr
 You can preload Horreum with some example data with
 
 ```bash
-./infra/example-configuration.sh
+./infra-legacy/example-configuration.sh
 ```
 
 once Horreum is running.
