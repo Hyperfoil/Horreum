@@ -17,7 +17,7 @@ type FolderSelectProps = {
     readOnly: boolean
 }
 
-export default function FolderSelect(props: FolderSelectProps) {
+export default function FolderSelect({folder, onChange, canCreate, readOnly}: FolderSelectProps) {
     const [open, setOpen] = useState(false)
     const all = useSelector(allFolders())
     const dispatch = useDispatch<TestDispatch>()
@@ -27,20 +27,20 @@ export default function FolderSelect(props: FolderSelectProps) {
     }, [dispatch, teams])
     return (
         <Select
-            readOnly={props.readOnly}
+            readOnly={readOnly}
             isOpen={open}
-            isCreatable={props.canCreate}
-            variant={props.canCreate ? "typeahead" : "single"}
+            isCreatable={canCreate}
+            variant={canCreate ? "typeahead" : "single"}
             onToggle={setOpen}
-            selections={props.folder}
+            selections={folder}
             menuAppendTo="parent"
             onSelect={(_, item) => {
-                props.onChange(item as string)
+                onChange(item as string)
                 setOpen(false)
             }}
             onCreateOption={newFolder => {
                 dispatch({ type: UPDATE_FOLDERS, folders: [...all, newFolder].sort() })
-                props.onChange(newFolder)
+                onChange(newFolder)
             }}
             placeholderText="Horreum"
         >

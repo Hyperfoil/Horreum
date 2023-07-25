@@ -8,9 +8,9 @@ type HelpPopoverProps = {
     text: ReactNode
 }
 
-export default function HelpPopover(props: HelpPopoverProps) {
+export default function HelpPopover({header, text}: HelpPopoverProps) {
     return (
-        <Popover headerContent={props.header} bodyContent={props.text}>
+        <Popover headerContent={header} bodyContent={text}>
             <HelpButton />
         </Popover>
     )

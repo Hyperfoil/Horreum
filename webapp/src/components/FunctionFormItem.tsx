@@ -12,13 +12,13 @@ type JsFunctionProps = {
     readOnly: boolean
 }
 
-export default function FunctionFormItem(props: JsFunctionProps) {
+export default function FunctionFormItem({label, helpText, value, onChange, readOnly}: JsFunctionProps) {
     return (
         <FormGroup
             style={{ display: "inline", marginTop: 0 }}
-            label={props.label}
+            label={label}
             labelIcon={
-                <Popover minWidth="50vw" maxWidth="50vw" bodyContent={props.helpText}>
+                <Popover minWidth="50vw" maxWidth="50vw" bodyContent={helpText}>
                     <Button variant="plain" onClick={e => e.preventDefault()}>
                         <HelpIcon />
                     </Button>
@@ -36,18 +36,18 @@ export default function FunctionFormItem(props: JsFunctionProps) {
             >
                 <Editor
                     value={
-                        !props.value
+                        !value
                             ? ""
-                            : typeof props.value === "string"
-                            ? props.value
-                            : (props.value as any).toString()
+                            : typeof value === "string"
+                            ? value
+                            : (value as any).toString()
                     }
-                    onChange={props.onChange}
+                    onChange={onChange}
                     language="typescript"
                     options={{
                         wordWrap: "on",
                         wrappingIndent: "DeepIndent",
-                        readOnly: props.readOnly,
+                        readOnly: readOnly,
                     }}
                 />
             </div>

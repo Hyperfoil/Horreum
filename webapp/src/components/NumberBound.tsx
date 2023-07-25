@@ -10,7 +10,7 @@ type NumberBoundProps = {
     onChange(enabled: boolean, inclusive: boolean, value: number): void
 }
 
-export default function NumberBound(props: NumberBoundProps) {
+export default function NumberBound({enabled, inclusive, value, isDisabled, onChange}: NumberBoundProps) {
     // without unique prefix the switch would emit wrong event
     const prefix = useMemo(() => uuidv4(), [])
     return (
@@ -18,10 +18,10 @@ export default function NumberBound(props: NumberBoundProps) {
             <FlexItem>
                 <Switch
                     id={prefix + "_enabled"}
-                    isChecked={props.enabled}
-                    isDisabled={props.isDisabled}
+                    isChecked={enabled}
+                    isDisabled={isDisabled}
                     onChange={enabled => {
-                        props.onChange(enabled, props.inclusive, props.value)
+                    onChange(enabled, inclusive, value)
                     }}
                     label="Enabled"
                     labelOff="Disabled"
@@ -31,9 +31,9 @@ export default function NumberBound(props: NumberBoundProps) {
                 <TextInput
                     id={prefix + "_value"}
                     type="number"
-                    isDisabled={!props.enabled || props.isDisabled}
-                    onChange={value => props.onChange(props.enabled, props.inclusive, Number.parseFloat(value))}
-                    value={props.value}
+                    isDisabled={!enabled || isDisabled}
+                    onChange={value => onChange(enabled, inclusive, Number.parseFloat(value))}
+                    value={value}
                     onKeyDown={e => {
                         if (e.key === "Enter") e.preventDefault()
                     }}
@@ -42,9 +42,9 @@ export default function NumberBound(props: NumberBoundProps) {
             <FlexItem>
                 <Checkbox
                     id={prefix + "_inclusive"}
-                    isDisabled={!props.enabled || props.isDisabled}
-                    isChecked={props.inclusive}
-                    onChange={inclusive => props.onChange(props.enabled, inclusive, props.value)}
+                    isDisabled={!enabled || isDisabled}
+                    isChecked={inclusive}
+                    onChange={inclusive => onChange(enabled, inclusive, value)}
                     label="Inclusive"
                 />
             </FlexItem>

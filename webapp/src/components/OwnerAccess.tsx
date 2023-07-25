@@ -14,22 +14,22 @@ type OwnerAccessProps = {
     onUpdate(owner: string, access: Access): void
 }
 
-export default function OwnerAccess(props: OwnerAccessProps) {
+export default function OwnerAccess({owner, access, readOnly, onUpdate}: OwnerAccessProps) {
     const [modalOpen, setModalOpen] = useState(false)
-    const [newOwner, setNewOwner] = useState<string>(props.owner)
-    const [newAccess, setNewAccess] = useState<Access>(props.access)
+    const [newOwner, setNewOwner] = useState<string>(owner)
+    const [newAccess, setNewAccess] = useState<Access>(access)
     return (
         <>
-            <AccessIcon access={props.access} />
+            <AccessIcon access={access} />
             {"\u00A0\u2014\u00A0"}
-            {teamToName(props.owner)}
+            {teamToName(owner)}
             {"\u00A0\u00A0"}
-            {!props.readOnly && (
+            {!readOnly && (
                 <Button
                     variant="link"
                     onClick={() => {
-                        setNewAccess(props.access)
-                        setNewOwner(props.owner)
+                        setNewAccess(access)
+                        setNewOwner(owner)
                         setModalOpen(true)
                     }}
                 >
@@ -44,8 +44,8 @@ export default function OwnerAccess(props: OwnerAccessProps) {
                 onOwnerChange={owner => setNewOwner(owner)}
                 onAccessChange={access => setNewAccess(access)}
                 onUpdate={() => {
-                    props.onUpdate(newOwner, newAccess)
-                    setModalOpen(false)
+                onUpdate(newOwner, newAccess)
+                setModalOpen(false)
                 }}
             />
         </>

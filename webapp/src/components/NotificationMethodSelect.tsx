@@ -9,7 +9,7 @@ type NotificationMethodSelectProps = {
     onChange(method: string): void
 }
 
-export default function NotificationMethodSelect(props: NotificationMethodSelectProps) {
+export default function NotificationMethodSelect({isDisabled, method, onChange}: NotificationMethodSelectProps) {
     const [methodOpen, setMethodOpen] = useState(false)
     const [methods, setMethods] = useState<string[]>([])
     useEffect(() => {
@@ -17,13 +17,13 @@ export default function NotificationMethodSelect(props: NotificationMethodSelect
     }, [])
     return (
         <Select
-            isDisabled={props.isDisabled}
+            isDisabled={isDisabled}
             isOpen={methodOpen}
             onToggle={open => setMethodOpen(open)}
-            selections={props.method}
+            selections={method}
             onSelect={(event, selection) => {
-                props.onChange(selection.toString())
-                setMethodOpen(false)
+            onChange(selection.toString())
+            setMethodOpen(false)
             }}
             placeholderText="Please select..."
         >

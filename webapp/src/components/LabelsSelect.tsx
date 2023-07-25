@@ -36,9 +36,8 @@ function convertPartial(value: any) {
         const copy = Array.isArray(value) ? [...value] : { ...value }
         copy.toString = () => convertLabelValue(value)
         return copy
-    } else {
+      } 
         return value
-    }
 }
 
 export type SelectedLabels = SelectOptionObject | null
@@ -173,10 +172,10 @@ export default function LabelsSelect(props: LabelsSelectProps) {
                                 const fo = getFilteredOptions(partial)
                                 if (fo.length === 1) {
                                     props.onSelect(fo[0])
-                                } else {
+                                 } 
                                     props.onSelect(partial)
-                                }
-                            }
+                                
+                             }
                         }}
                         onOpen={() => {
                             const partial = { ...partialSelect }
