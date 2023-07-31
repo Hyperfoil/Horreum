@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import { Button, ButtonVariant, Form, FormGroup, Modal, TextInput } from "@patternfly/react-core"
 
 type AddAllowedSiteModalProps = {

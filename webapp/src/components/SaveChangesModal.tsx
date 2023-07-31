@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 
 import { Bullseye, Button, Modal, Spinner } from "@patternfly/react-core"
 

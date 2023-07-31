@@ -1,5 +1,3 @@
-import React from "react"
-
 import { Button, ClipboardCopy, Modal, Text } from "@patternfly/react-core"
 
 type ShareLinkModalProps = {

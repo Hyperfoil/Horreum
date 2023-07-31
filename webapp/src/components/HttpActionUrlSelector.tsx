@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useDispatch } from "react-redux"
 
 import { Dropdown, DropdownItem, DropdownToggle, FormGroup, InputGroup, TextInput } from "@patternfly/react-core"
@@ -43,7 +43,7 @@ export default function HttpActionUrlSelector(props: HttpActionUrlSelectorProps)
 
     const [dropdownOpen, setDropdownOpen] = useState(false)
 
-    const ref = React.useRef<any>()
+    const ref = useRef<any>()
 
     return (
         <FormGroup
