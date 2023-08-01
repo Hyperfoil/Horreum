@@ -77,7 +77,7 @@
 
         <commons.math3.version>3.6.1</commons.math3.version>
         <graalvm.version>22.3.0</graalvm.version>
-        <quarkus.version>2.16.8.Final</quarkus.version>
+        <quarkus.version>2.16.9.Final</quarkus.version>
         <quinoa.version>1.2.9</quinoa.version>
         <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
         <failsafe-plugin.version>3.3.0</failsafe-plugin.version>
