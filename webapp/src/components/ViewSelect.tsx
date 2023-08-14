@@ -18,8 +18,8 @@ export default function ViewSelect({views, viewId, onChange}: ViewSelectProps) {
             onToggle={setOpen}
             selections={selected !== undefined ? { ...selected, toString: () => selected.name } : undefined}
             onSelect={(_, item) => {
-                onChange((item as View).id)
-                setOpen(false)
+            onChange((item as View).id)
+            setOpen(false)
             }}
         >
             {views.map(view => (

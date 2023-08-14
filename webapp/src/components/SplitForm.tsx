@@ -83,7 +83,7 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
             const newItems = props.items.filter(t => t.id !== props.selected?.id)
             props.onDelete(item)
             props.onChange(newItems)
-            props.onSelected(newItems.length > 0 ? newItems[0] : undefined)
+            props.onSelected(newItems.length > 0 && newItems[0] || undefined)
         }
     }
     return (

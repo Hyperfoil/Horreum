@@ -41,7 +41,7 @@ type LabelsProps = {
     funcsRef: TabFunctionsRef
 }
 
-export default function Labels(props: LabelsProps) {
+export default function Labels({schemaId, schemaUri, funcsRef}: LabelsProps) {
     const [loading, setLoading] = useState(false)
     const [labels, setLabels] = useState<LabelEx[]>([])
     const [selected, setSelected] = useState<LabelEx>()
@@ -53,7 +53,7 @@ export default function Labels(props: LabelsProps) {
     const isTesterForLabel = useTester(selected?.owner || "__no_owner__")
     const defaultTeam = useSelector(defaultTeamSelector)
     const dispatch = useDispatch()
-    props.funcsRef.current = {
+    funcsRef.current = {
         save: () =>
             Promise.all([
                 ...labels
@@ -96,7 +96,7 @@ export default function Labels(props: LabelsProps) {
     const history = useHistory()
     useEffect(() => {
         setLoading(true)
-        Api.schemaServiceLabels(props.schemaId)
+        Api.schemaServiceLabels(schemaId)
             .then(
                 labels => {
                     setLabels(labels)
@@ -118,11 +118,11 @@ export default function Labels(props: LabelsProps) {
                         dispatch,
                         error,
                         "LIST_LABELS",
-                        "Failed to fetch labels for schema " + props.schemaUri
+                        "Failed to fetch labels for schema " + schemaUri
                     ).catch(noop)
             )
             .finally(() => setLoading(false))
-    }, [props.schemaId, resetCounter])
+    }, [schemaId, resetCounter])
 
     return (
         <>
@@ -143,7 +143,7 @@ export default function Labels(props: LabelsProps) {
                     extractors: [],
                     owner: defaultTeam || "",
                     access: 0 as Access,
-                    schemaId: props.schemaId,
+                    schemaId: schemaId,
                     filtering: true,
                     metrics: true,
                     modified: true,
@@ -217,7 +217,7 @@ export default function Labels(props: LabelsProps) {
                             {selected.extractors.map((extractor, i) => {
                                 return (
                                     <JsonExtractor
-                                        schemaUri={props.schemaUri}
+                                        schemaUri={schemaUri}
                                         key={i}
                                         jsonpathTarget="dataset"
                                         extractor={extractor}
@@ -250,7 +250,7 @@ export default function Labels(props: LabelsProps) {
                                         Test label calculation
                                     </Button>
                                     <TestLabelModal
-                                        uri={props.schemaUri}
+                                        uri={schemaUri}
                                         label={selected}
                                         isOpen={testLabelModalOpen}
                                         onClose={() => setTestLabelModalOpen(false)}

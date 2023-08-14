@@ -9,21 +9,21 @@ type EnumSelectProps = {
     isDisabled?: boolean
 }
 
-export default function EnumSelect(props: EnumSelectProps) {
+export default function EnumSelect({options, selected, onSelect, isDisabled}: EnumSelectProps) {
     const [isOpen, setOpen] = useState(false)
     return (
         <Select
             isOpen={isOpen}
             onToggle={setOpen}
             placeholderText="Please select..."
-            selections={props.selected}
+            selections={selected}
             onSelect={(_, value) => {
-                props.onSelect(value as string)
-                setOpen(false)
+            onSelect(value as string)
+            setOpen(false)
             }}
-            isDisabled={props.isDisabled}
+            isDisabled={isDisabled}
         >
-            {Object.entries(props.options).map(([name, title]) => (
+            {Object.entries(options).map(([name, title]) => (
                 <SelectOption key={name} value={name}>
                     {title}
                 </SelectOption>

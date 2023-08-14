@@ -142,10 +142,10 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                 </Title>
                 {schemas ? (
                     <List>
-                        {schemas.map((s, i) => (
+                        {schemas.map((shema, i) => (
                             <ListItem key={i}>
                                 {/* TODO: looks like this is not navigating anywhere but IDK why */}
-                                <NameUri isLink={true} onNavigate={() => props.onClose()} descriptor={s} />
+                                <NameUri isLink={true} onNavigate={() => props.onClose()} descriptor={shema} />
                             </ListItem>
                         ))}
                     </List>

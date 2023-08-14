@@ -127,7 +127,7 @@ function Table<D extends object>({
                                         <th
                                             className={clsx(
                                                 "pf-c-table__sort",
-                                                columnProps.isSorted ? "pf-m-selected" : ""
+                                                columnProps.isSorted && "pf-m-selected" || ""
                                             )}
                                             {...column.getHeaderProps(columnProps.getSortByToggleProps())}
                                         >

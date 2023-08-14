@@ -46,7 +46,7 @@ export default function ImportButton({label, onLoad, onImport, onImported}: Impo
                 actions={[
                     <Button
                         key="import"
-                        variant={overridden ? "danger" : "primary"}
+                        variant={overridden && "danger" || "primary"}
                         isDisabled={!config || uploading}
                         onClick={() => {
                             setUploading(true)
@@ -103,7 +103,7 @@ export default function ImportButton({label, onLoad, onImport, onImported}: Impo
                         }}
                     />
                 )}
-                {parseError !== undefined ? parseError.toString() : null}
+                {parseError !== undefined && parseError.toString() || null}
                 {overridden ||
                     (checking && (
                         <Bullseye>

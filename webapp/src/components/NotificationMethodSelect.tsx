@@ -27,8 +27,8 @@ export default function NotificationMethodSelect({isDisabled, method, onChange}:
             }}
             placeholderText="Please select..."
         >
-            {methods.map((m, i) => (
-                <SelectOption key={i} value={m} />
+            {methods.map((method, i) => (
+                <SelectOption key={i} value={method} />
             ))}
         </Select>
     )

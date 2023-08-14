@@ -56,10 +56,10 @@ type LabelsSelectProps = {
     style?: CSSProperties
 }
 
-export default function LabelsSelect(props: LabelsSelectProps) {
+export default function LabelsSelect({disabled, selection, onSelect, source, emptyPlaceholder, optionForAll, forceSplit, fireOnPartial, showKeyHelper, addResetButton, style}: LabelsSelectProps) {
     const [availableLabels, setAvailableLabels] = useState<any[]>([])
-    const initialSelect = props.selection
-        ? Object.entries(props.selection).reduce((acc, [key, value]) => {
+    const initialSelect = selection
+        ? Object.entries(selection).reduce((acc, [key, value]) => {
               if (key !== "toString") {
                   acc[key] = convertPartial(value)
               }
@@ -71,22 +71,22 @@ export default function LabelsSelect(props: LabelsSelectProps) {
     const dispatch = useDispatch()
     const teams = useSelector(teamsSelector)
     useEffect(() => {
-        props.source().then((response: any[]) => {
+        source().then((response: any[]) => {
             setAvailableLabels(response)
-            if (!props.optionForAll && response && response.length === 1) {
-                props.onSelect({ ...response[0], toString: () => convertLabels(response[0]) })
+            if (!optionForAll && response && response.length === 1) {
+                onSelect({ ...response[0], toString: () => convertLabels(response[0]) })
             }
         }, noop)
-    }, [props.source, props.onSelect, dispatch, teams, props.optionForAll])
+    }, [source, onSelect, dispatch, teams, optionForAll])
     const all: SelectOptionObject = useMemo(
         () => ({
-            toString: () => props.optionForAll || "",
+            toString: () => optionForAll || "",
         }),
-        [props.optionForAll]
+        [optionForAll]
     )
     const options = useMemo(() => {
         const opts = []
-        if (props.optionForAll) {
+        if (optionForAll) {
             opts.push(all)
         }
         availableLabels.map(t => ({ ...t, toString: () => convertLabels(t) })).forEach(o => opts.push(o))
@@ -115,25 +115,25 @@ export default function LabelsSelect(props: LabelsSelectProps) {
     }
     const filteredOptions = useMemo(() => getFilteredOptions(partialSelect), [availableLabels, partialSelect])
     useEffect(() => {
-        if (!props.fireOnPartial && filteredOptions.length === 1) {
+        if (!fireOnPartial && filteredOptions.length === 1) {
             const str = convertLabels(filteredOptions[0])
-            props.onSelect({ ...filteredOptions[0], toString: () => str })
+            onSelect({ ...filteredOptions[0], toString: () => str })
         }
     }, [filteredOptions])
 
     const empty = !options || options.length === 0
     if (empty) {
-        return props.emptyPlaceholder || null
-    } else if (!props.forceSplit && availableLabels.length < 16) {
+        return emptyPlaceholder || null
+    } else if (!forceSplit && availableLabels.length < 16) {
         return (
             <InnerSelect
-                disabled={props.disabled || empty}
+                disabled={disabled || empty}
                 all={all}
-                selection={props.selection === null ? all : props.selection}
+                selection={selection === null && all || selection}
                 options={options}
-                onSelect={props.onSelect}
+                onSelect={onSelect}
                 placeholderText="Choose labels..."
-                style={props.style}
+                style={style}
             />
         )
     } else {
@@ -153,12 +153,12 @@ export default function LabelsSelect(props: LabelsSelectProps) {
                 .sort()
             return (
                 <SplitItem key={key}>
-                    {props.showKeyHelper && <HelperText>{key}:</HelperText>}
+                    {showKeyHelper && <HelperText>{key}:</HelperText>}
                     <InnerSelect
-                        disabled={!!props.disabled}
+                        disabled={!!disabled}
                         isTypeahead
                         hasOnlyOneOption={opts.length === 1 && partialSelect[key] === undefined}
-                        selection={opts.length === 1 ? opts[0] : partialSelect[key]}
+                        selection={opts.length === 1 && opts[0] || partialSelect[key]}
                         options={opts}
                         onSelect={value => {
                             const partial = { ...partialSelect }
@@ -168,12 +168,12 @@ export default function LabelsSelect(props: LabelsSelectProps) {
                                 delete partial[key]
                             }
                             setPartialSelect(partial)
-                            if (props.fireOnPartial) {
+                            if (fireOnPartial) {
                                 const fo = getFilteredOptions(partial)
                                 if (fo.length === 1) {
-                                    props.onSelect(fo[0])
+                                    onSelect(fo[0])
                                  } 
-                                    props.onSelect(partial)
+                                    onSelect(partial)
                                 
                              }
                         }}
@@ -187,13 +187,13 @@ export default function LabelsSelect(props: LabelsSelectProps) {
                 </SplitItem>
             )
         })
-        if (props.addResetButton) {
+        if (addResetButton) {
             items.push(
                 <SplitItem style={{ alignSelf: "end" }} key="__reset_button">
                     <Button
                         onClick={() => {
-                            setPartialSelect({})
-                            props.onSelect({})
+                        setPartialSelect({})
+                        onSelect({})
                         }}
                     >
                         Reset
@@ -201,7 +201,7 @@ export default function LabelsSelect(props: LabelsSelectProps) {
                 </SplitItem>
             )
         }
-        return <Split style={props.style}>{items}</Split>
+        return <Split style={style}>{items}</Split>
     }
 }
 
@@ -218,31 +218,31 @@ type InnerSelectProps = {
     style?: CSSProperties
 }
 
-function InnerSelect(props: InnerSelectProps) {
+function InnerSelect({disabled, isTypeahead, hasOnlyOneOption, selection, options, all, onSelect, onOpen, placeholderText, style}: InnerSelectProps) {
     const [open, setOpen] = useState(false)
     return (
         <Select
-            isDisabled={props.disabled || props.hasOnlyOneOption}
-            variant={props.isTypeahead ? "typeahead" : "single"}
+            isDisabled={disabled || hasOnlyOneOption}
+            variant={isTypeahead ? "typeahead" : "single"}
             isOpen={open}
             onToggle={expanded => {
-                if (expanded && props.onOpen) {
-                    props.onOpen()
+                if (expanded && onOpen) {
+                    onOpen()
                 }
                 setOpen(expanded)
             }}
-            selections={[props.selection === null ? props.all : props.selection]}
+            selections={[selection === null && all || selection]}
             onSelect={(_, item) => {
-                props.onSelect(item === props.all ? null : item)
+                onSelect(item === all && null || item)
                 setOpen(false)
             }}
-            onClear={props.hasOnlyOneOption ? undefined : () => props.onSelect(undefined)}
+            onClear={hasOnlyOneOption ? undefined : () => onSelect(undefined)}
             menuAppendTo="parent"
-            placeholderText={props.placeholderText}
-            style={props.style}
-            width={props.style?.width || "auto"}
+            placeholderText={placeholderText}
+            style={style}
+            width={style?.width || "auto"}
         >
-            {props.options.map((labels: SelectOptionObject | string, i: number) => (
+            {options.map((labels: SelectOptionObject | string, i: number) => (
                 <SelectOption key={i} value={labels} />
             ))}
         </Select>
