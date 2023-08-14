@@ -9,8 +9,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity(name = "ReportComment")
@@ -19,7 +17,6 @@ public class ReportCommentDAO extends PanacheEntityBase {
    @GeneratedValue
    public Integer id;
 
-   @JsonIgnore
    @ManyToOne(fetch = FetchType.LAZY)
    @JoinColumn(name = "report_id", nullable = false)
    public TableReportDAO report;

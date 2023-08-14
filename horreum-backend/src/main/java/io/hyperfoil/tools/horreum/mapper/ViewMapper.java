@@ -18,7 +18,7 @@ public class ViewMapper {
         return dto;
     }
 
-    public static io.hyperfoil.tools.horreum.api.data.ViewComponent fromViewComponent(ViewComponent vc) {
+    public static io.hyperfoil.tools.horreum.api.data.ViewComponent fromViewComponent(ViewComponentDAO vc) {
         io.hyperfoil.tools.horreum.api.data.ViewComponent dto = new io.hyperfoil.tools.horreum.api.data.ViewComponent();
         dto.id = vc.id;
         dto.headerName = vc.headerName;
@@ -43,8 +43,8 @@ public class ViewMapper {
         return v;
     }
 
-    private static ViewComponent toViewComponent(io.hyperfoil.tools.horreum.api.data.ViewComponent dto, ViewDAO view) {
-        ViewComponent vc = new ViewComponent();
+    private static ViewComponentDAO toViewComponent(io.hyperfoil.tools.horreum.api.data.ViewComponent dto, ViewDAO view) {
+        ViewComponentDAO vc = new ViewComponentDAO();
         vc.id = dto.id;
         vc.headerName = dto.headerName;
         vc.headerOrder = dto.headerOrder;

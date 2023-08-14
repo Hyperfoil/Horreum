@@ -10,8 +10,6 @@ import javax.validation.constraints.NotNull;
 
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @MappedSuperclass
@@ -21,7 +19,6 @@ public abstract class PersistentLog extends PanacheEntityBase {
    public static final int WARN = 2;
    public static final int ERROR = 3;
 
-   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Long id;
@@ -29,7 +26,6 @@ public abstract class PersistentLog extends PanacheEntityBase {
    @NotNull
    public int level;
 
-   @JsonProperty(required = true)
    @NotNull
    @Column(columnDefinition = "timestamp")
    public Instant timestamp;

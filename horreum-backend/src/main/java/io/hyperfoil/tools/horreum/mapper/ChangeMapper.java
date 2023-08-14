@@ -17,4 +17,16 @@ public class ChangeMapper {
         return dto;
     }
 
+    public static ChangeDAO to(Change c) {
+        ChangeDAO dao = new ChangeDAO();
+        dao.id = c.id;
+        dao.variable = VariableMapper.to(c.variable);
+        dao.dataset = DataSetMapper.to(c.dataset, null);
+
+        dao.timestamp = c.timestamp;
+        dao.confirmed = c.confirmed;
+        dao.description = c.description;
+
+        return dao;
+    }
 }

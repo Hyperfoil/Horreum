@@ -2,8 +2,8 @@ package io.hyperfoil.tools.horreum.entity.data;
 
 import java.util.Collection;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
@@ -21,7 +21,6 @@ import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @NamedNativeQueries({
@@ -52,11 +51,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 })
 
 @Entity(name = "Schema")
-@RegisterForReflection
 @Table(
       name = "schema",
       uniqueConstraints = @UniqueConstraint(columnNames = {"owner", "uri"})
 )
+@JsonIgnoreType
 public class SchemaDAO extends ProtectedBaseEntity {
 
    public static final String QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID = "Schema.getFirstLevelExtractorsByRunIDTransIDSchemaID";
@@ -66,7 +65,6 @@ public class SchemaDAO extends ProtectedBaseEntity {
    public static final int TYPE_2ND_LEVEL = 1;
    public static final int TYPE_ARRAY_ELEMENT = 2;
 
-   @JsonProperty(required = true)
    @Id
    @GenericGenerator(
          name = "schemaIdGenerator",

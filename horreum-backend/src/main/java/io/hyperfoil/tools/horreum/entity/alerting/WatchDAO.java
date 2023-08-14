@@ -22,9 +22,6 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -51,7 +48,6 @@ public class WatchDAO extends PanacheEntityBase {
    // We are not using foreign-key constraint as we propagate the test-deletion event (which should remove watches)
    // over eventbus and delete the watch in an independent transaction.
    @JoinColumn(name = "testid", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT), updatable = false)
-   @JsonIgnore
    public TestDAO test;
 
    @NotNull
@@ -69,12 +65,10 @@ public class WatchDAO extends PanacheEntityBase {
    @Fetch(FetchMode.SELECT)
    public List<String> teams;
 
-   @JsonProperty(value = "testId", required = true)
    private Integer getTestId() {
       return test.id;
    }
 
-   @JsonProperty(value = "testId")
    private void setTestId(int id) {
       this.test = TestDAO.getEntityManager().getReference(TestDAO.class, id);
    }

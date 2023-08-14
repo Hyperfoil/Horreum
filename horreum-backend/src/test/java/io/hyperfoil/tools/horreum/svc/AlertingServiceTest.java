@@ -21,6 +21,7 @@ import java.util.stream.IntStream;
 
 import javax.inject.Inject;
 
+import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
@@ -144,7 +145,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       ChangeDetectionDAO cd = addChangeDetectionVariable(test);
 
       BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
-      BlockingQueue<ChangeDAO.Event> changeQueue = eventConsumerQueue(ChangeDAO.Event.class, ChangeDAO.EVENT_NEW, e -> e.dataset.testId == test.id);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(1, schema), test.name);
@@ -161,11 +162,11 @@ public class AlertingServiceTest extends BaseServiceTest {
       uploadRun(ts + 4, ts + 4, runWithValue(3, schema), test.name);
       assertValue(datapointQueue, 3);
 
-      ChangeDAO.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
+      Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent1);
-      testSerialization(changeEvent1, ChangeDAO.Event.class);
+      testSerialization(changeEvent1, Change.Event.class);
       // The change is detected already at run 4 because it's > than the previous mean
-      assertEquals(run4, changeEvent1.change.dataset.run.id);
+      assertEquals(run4, changeEvent1.change.dataset.runId);
 
       ((ObjectNode) cd.config).put("filter", "min");
       setTestVariables(test, "Value", "value", cd);
@@ -178,9 +179,9 @@ public class AlertingServiceTest extends BaseServiceTest {
       }
 
       // now we'll find a change already at run3
-      ChangeDAO.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
+      Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent2);
-      assertEquals(run3, changeEvent2.change.dataset.run.id);
+      assertEquals(run3, changeEvent2.change.dataset.runId);
 
       int run6 = uploadRun(ts + 5, ts + 5, runWithValue(1.5, schema), test.name);
       assertValue(datapointQueue, 1.5);
@@ -192,9 +193,9 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertValue(datapointQueue, 2);
 
       // mean of previous is 2, the last value doesn't matter (1.5 is lower than 2 - 10%)
-      ChangeDAO.Event changeEvent3 = changeQueue.poll(10, TimeUnit.SECONDS);
+      Change.Event changeEvent3 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent3);
-      assertEquals(run6, changeEvent3.change.dataset.run.id);
+      assertEquals(run6, changeEvent3.change.dataset.runId);
    }
 
    private <T> void testSerialization(T event, Class<T> eventClass) {
@@ -219,7 +220,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       addChangeDetectionVariable(test);
 
       BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == testId);
-      BlockingQueue<ChangeDAO.Event> changeQueue = eventConsumerQueue(ChangeDAO.Event.class, ChangeDAO.EVENT_NEW, e -> e.dataset.testId == testId);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == testId);
 
       long ts = System.currentTimeMillis();
       for (int i = 0; i < 12; i += 3) {
@@ -233,15 +234,15 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertNull(changeQueue.poll(50, TimeUnit.MILLISECONDS));
 
       int run13 = uploadRun(ts + 12, ts + 12, runWithValue(2, schema).put("config", "foo"), test.name);
-      ChangeDAO.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
+      Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent1);
-      assertEquals(run13, changeEvent1.change.dataset.run.id);
+      assertEquals(run13, changeEvent1.change.dataset.runId);
       assertEquals(run13, changeEvent1.dataset.runId);
 
       int run14 = uploadRun(ts + 13, ts + 13, runWithValue(2, schema), test.name);
-      ChangeDAO.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
+      Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent2);
-      assertEquals(run14, changeEvent2.change.dataset.run.id);
+      assertEquals(run14, changeEvent2.change.dataset.runId);
       assertEquals(run14, changeEvent2.dataset.runId);
    }
 
@@ -603,7 +604,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       setTestVariables(test, "Value", "value", rd);
 
       BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
-      BlockingQueue<ChangeDAO.Event> changeQueue = eventConsumerQueue(ChangeDAO.Event.class, ChangeDAO.EVENT_NEW, e -> e.dataset.testId == test.id);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(4, schema), test.name);
@@ -615,15 +616,15 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       int run3 = uploadRun(ts + 2, ts + 2, runWithValue(2, schema), test.name);
       assertValue(datapointQueue, 2);
-      ChangeDAO.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
+      Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent1);
-      assertEquals(run3, changeEvent1.change.dataset.run.id);
+      assertEquals(run3, changeEvent1.change.dataset.runId);
 
       int run4 = uploadRun(ts + 3, ts + 3, runWithValue(6, schema), test.name);
       assertValue(datapointQueue, 6);
-      ChangeDAO.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
+      Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(changeEvent2);
-      assertEquals(run4, changeEvent2.change.dataset.run.id);
+      assertEquals(run4, changeEvent2.change.dataset.runId);
    }
 
    @org.junit.jupiter.api.Test
@@ -710,7 +711,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 
       BlockingQueue<DataPointDAO.Event> datapointQueue = eventConsumerQueue(DataPointDAO.Event.class, DataPointDAO.EVENT_NEW, e -> e.testId == test.id);
-      BlockingQueue<ChangeDAO.Event> changeQueue = eventConsumerQueue(ChangeDAO.Event.class, ChangeDAO.EVENT_NEW, e -> e.dataset.testId == test.id);
+      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, Change.EVENT_NEW, e -> e.dataset.testId == test.id);
 
       int[] order = new int[] { 5, 0, 1, 7, 4, 8, 2, 3, 9, 6 };
       double[] values = new double[] { 1, 2, 2, 2, 1, 1, 2, 1, 1, 2};
@@ -752,10 +753,10 @@ public class AlertingServiceTest extends BaseServiceTest {
       }
    }
 
-   private void drainQueue(BlockingQueue<ChangeDAO.Event> changeQueue) throws InterruptedException {
+   private void drainQueue(BlockingQueue<Change.Event> changeQueue) throws InterruptedException {
       // we don't know exactly how many changes are going to be created and deleted
       for (;;) {
-         ChangeDAO.Event changeEvent = changeQueue.poll(100, TimeUnit.MILLISECONDS);
+         Change.Event changeEvent = changeQueue.poll(100, TimeUnit.MILLISECONDS);
          if (changeEvent == null && TestUtil.isMessageBusEmpty(tm, em)) {
             return;
          }

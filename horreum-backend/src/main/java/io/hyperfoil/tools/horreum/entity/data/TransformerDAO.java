@@ -16,16 +16,14 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 @Entity(name = "Transformer")
+@JsonIgnoreType
 public class TransformerDAO extends OwnedEntityBase implements Comparable<TransformerDAO> {
-   @JsonProperty(required = true)
    @Id
    @GenericGenerator(
          name = "transformerIdGenerator",
@@ -46,7 +44,6 @@ public class TransformerDAO extends OwnedEntityBase implements Comparable<Transf
    @Column(name = "targetschemauri")
    public String targetSchemaUri;
 
-   @JsonIgnore
    @ManyToOne(optional = false)
    @JoinColumn(name = "schema_id")
    public SchemaDAO schema;
@@ -58,33 +55,27 @@ public class TransformerDAO extends OwnedEntityBase implements Comparable<Transf
 
    public String function;
 
-   @JsonProperty(value = "schemaId", required = true)
    public int getSchemaId() {
       return schema.id;
    }
 
-   @JsonProperty(value = "schemaUri", required = true)
    public String getSchemaUri() {
       return schema.uri;
    }
 
-   @JsonProperty(value = "schemaName", required = true)
    public String getSchemaName() {
       return schema.name;
    }
 
-   @JsonProperty(value = "schemaId")
    public void setSchemaId(int schemaId) {
       schema = SchemaDAO.getEntityManager().getReference(SchemaDAO.class, schemaId);
    }
 
    // This gets invoked during deserialization on message bus
-   @JsonProperty(value = "schemaUri")
    public void ignoreSchemaUri(String uri) {
    }
 
    // This gets invoked during deserialization on message bus
-   @JsonProperty(value = "schemaName")
    public void ignoreSchemaName(String name) {
    }
 

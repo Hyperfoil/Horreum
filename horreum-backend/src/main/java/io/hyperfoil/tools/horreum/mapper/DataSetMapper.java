@@ -29,7 +29,13 @@ public class DataSetMapper {
     }
 
     public static DataSetDAO to(DataSet dto, RunDAO run) {
-        DataSetDAO ds = new DataSetDAO(run, dto.ordinal, dto.description, dto.data);
+        DataSetDAO ds;
+        if(run != null) {
+            ds = new DataSetDAO(run, dto.ordinal, dto.description, dto.data);
+        }
+        else {
+            ds = new DataSetDAO();
+        }
         ds.id = dto.id;
         return ds;
     }

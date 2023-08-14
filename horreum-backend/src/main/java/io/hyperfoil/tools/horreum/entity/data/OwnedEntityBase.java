@@ -5,9 +5,7 @@ import javax.validation.constraints.NotNull;
 
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 
-@RegisterForReflection
 @MappedSuperclass
 public class OwnedEntityBase extends PanacheEntityBase {
 

@@ -13,9 +13,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -36,7 +33,6 @@ public class DataPointDAO extends PanacheEntityBase {
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
    @JoinColumn(name = "dataset_id")
-   @JsonIgnore
    public DataSetDAO dataset;
 
    @NotNull
@@ -60,12 +56,10 @@ public class DataPointDAO extends PanacheEntityBase {
    @ManyToOne(fetch = FetchType.LAZY)
    public VariableDAO variable;
 
-   @JsonProperty("datasetId")
    public void setDatasetId(int datasetId) {
       dataset = DataSetDAO.getEntityManager().getReference(DataSetDAO.class, datasetId);
    }
 
-   @JsonProperty("datasetId")
    public int getDatasetId() {
       return dataset.id;
    }

@@ -8,23 +8,21 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity(name = "ChangeDetection")
+@JsonIgnoreType
 public class ChangeDetectionDAO extends PanacheEntityBase {
-   @JsonProperty(required = true)
    @Id
    @GenericGenerator(
          name = "cdIdGenerator",
@@ -46,7 +44,6 @@ public class ChangeDetectionDAO extends PanacheEntityBase {
 
    @ManyToOne(fetch = FetchType.LAZY)
    @JoinColumn(name = "variable_id")
-   @JsonIgnore
    public VariableDAO variable;
 
    @Override

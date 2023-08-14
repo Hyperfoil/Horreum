@@ -12,7 +12,6 @@ import javax.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Type;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 @Entity(name = "ReportComponent")
@@ -23,7 +22,6 @@ public class ReportComponentDAO {
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)
-   @JsonIgnore
    @JoinColumn(name = "reportconfig_id")
    public TableReportConfigDAO report;
 

@@ -12,17 +12,14 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
-import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -34,8 +31,8 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  *
  */
 @Entity(name = "variable")
+@JsonIgnoreType
 public class VariableDAO extends PanacheEntityBase {
-   @JsonProperty(required = true)
    @Id
    @GenericGenerator(
          name = "variableIdGenerator",
@@ -65,10 +62,8 @@ public class VariableDAO extends PanacheEntityBase {
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public JsonNode labels;
 
-   @JsonInclude(Include.NON_NULL)
    public String calculation;
 
-   @Schema(required = true, implementation = ChangeDetectionDAO[].class)
    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "variable")
    public Set<ChangeDetectionDAO> changeDetection;
 
