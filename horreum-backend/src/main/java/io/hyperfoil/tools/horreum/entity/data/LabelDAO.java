@@ -22,17 +22,12 @@ import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @Entity(name="label")
-@RegisterForReflection
 public class LabelDAO extends OwnedEntityBase {
-   @JsonProperty(required = true)
    @Id
    @GenericGenerator(
          name = "labelIdGenerator",
@@ -50,7 +45,6 @@ public class LabelDAO extends OwnedEntityBase {
 
    @ManyToOne(optional = false)
    @JoinColumn(name = "schema_id")
-   @JsonIgnore
    public SchemaDAO schema;
 
    @NotNull
@@ -66,12 +60,10 @@ public class LabelDAO extends OwnedEntityBase {
    @NotNull
    public boolean metrics = true;
 
-   @JsonProperty(value = "schemaId", required = true)
    public int getSchemaId() {
       return schema.id;
    }
 
-   @JsonProperty("schemaId")
    public void setSchema(int schemaId) {
       schema = getEntityManager().getReference(SchemaDAO.class, schemaId);
    }

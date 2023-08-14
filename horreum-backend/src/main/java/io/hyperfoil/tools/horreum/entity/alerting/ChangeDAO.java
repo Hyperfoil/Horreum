@@ -12,9 +12,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -29,7 +26,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 public class ChangeDAO extends PanacheEntityBase {
    public static final String EVENT_NEW = "change/new";
 
-   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public int id;
@@ -40,7 +36,6 @@ public class ChangeDAO extends PanacheEntityBase {
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
    @JoinColumn(name = "dataset_id")
-   @JsonIgnore
    public DataSetDAO dataset;
 
    @NotNull
@@ -52,7 +47,6 @@ public class ChangeDAO extends PanacheEntityBase {
 
    public String description;
 
-   @JsonProperty("dataset")
    public DataSetDAO.Info getDatasetId() {
       if (dataset != null) {
          return dataset.getInfo();

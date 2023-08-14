@@ -75,7 +75,7 @@ public class ActionServiceImpl implements ActionService {
       messageBus.subscribe(TestDAO.EVENT_NEW, "ActionService", TestDAO.class, this::onNewTest);
       messageBus.subscribe(TestDAO.EVENT_DELETED, "ActionService", TestDAO.class, this::onTestDelete);
       messageBus.subscribe(RunDAO.EVENT_NEW, "ActionService", RunDAO.class, this::onNewRun);
-      messageBus.subscribe(Change.EVENT_NEW, "ActionService", ChangeDAO.Event.class, this::onNewChange);
+      messageBus.subscribe(Change.EVENT_NEW, "ActionService", Change.Event.class, this::onNewChange);
       messageBus.subscribe(ExperimentService.ExperimentResult.NEW_RESULT, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
    }
 
@@ -149,10 +149,10 @@ public class ActionServiceImpl implements ActionService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onNewChange(ChangeDAO.Event changeEvent) {
+   public void onNewChange(Change.Event changeEvent) {
       int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
             .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
-      executeActions(ChangeDAO.EVENT_NEW, testId, changeEvent, changeEvent.notify);
+      executeActions(Change.EVENT_NEW, testId, changeEvent, changeEvent.notify);
    }
 
    void validate(Action action) {

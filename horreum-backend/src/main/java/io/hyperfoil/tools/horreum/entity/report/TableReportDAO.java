@@ -19,13 +19,10 @@ import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
-import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
-import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.Type;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -33,17 +30,14 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "TableReport")
 @Table(name = "tablereport")
 public class TableReportDAO extends PanacheEntityBase {
-   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Integer id;
 
-   @JsonProperty(required = true)
    @OneToOne(fetch = FetchType.EAGER)
    @JoinColumn(name = "config_id")
    public TableReportConfigDAO config;
 
-   @Schema(required = true, type = SchemaType.NUMBER)
    @NotNull
    public Instant created;
 
@@ -63,7 +57,6 @@ public class TableReportDAO extends PanacheEntityBase {
    @Fetch(FetchMode.SELECT)
    public Collection<ReportLogDAO> logs = new ArrayList<>();
 
-   @Schema(name = "TableReportData")
    @Embeddable
    public static class Data {
       @NotNull

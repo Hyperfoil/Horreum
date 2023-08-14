@@ -13,14 +13,12 @@ import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -33,8 +31,8 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity(name = "viewcomponent")
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = { "view_id", "headerName"}))
-public class ViewComponent extends PanacheEntityBase {
-   @JsonProperty(required = true)
+@JsonIgnoreType
+public class ViewComponentDAO extends PanacheEntityBase {
    @Id
    @GenericGenerator(
          name = "viewComponentIdGenerator",
@@ -49,7 +47,6 @@ public class ViewComponent extends PanacheEntityBase {
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)
-   @JsonIgnore
    @JoinColumn(name = "view_id")
    public ViewDAO view;
 
@@ -69,13 +66,12 @@ public class ViewComponent extends PanacheEntityBase {
    /**
     * When this is <code>null</code> defaults to rendering as plain text.
     */
-   @JsonInclude(JsonInclude.Include.NON_NULL)
    public String render;
 
-   public ViewComponent() {
+   public ViewComponentDAO() {
    }
 
-   public ViewComponent(String headerName, String render, String... labels) {
+   public ViewComponentDAO(String headerName, String render, String... labels) {
       this.headerName = headerName;
       ArrayNode labelsNode = JsonNodeFactory.instance.arrayNode();
       for (String l : labels) {
@@ -89,7 +85,7 @@ public class ViewComponent extends PanacheEntityBase {
    public boolean equals(Object o) {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
-      ViewComponent that = (ViewComponent) o;
+      ViewComponentDAO that = (ViewComponentDAO) o;
       return headerOrder == that.headerOrder &&
             Objects.equals(id, that.id) &&
             Objects.equals(headerName, that.headerName) &&

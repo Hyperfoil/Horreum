@@ -652,8 +652,8 @@ public class AlertingServiceImpl implements AlertingService {
                em.persist(change);
                Hibernate.initialize(change.dataset.run.id);
                String testName = TestDAO.<TestDAO>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
-               messageBus.publish(ChangeDAO.EVENT_NEW, change.dataset.testid,
-                       new ChangeDAO.Event(change, testName, info, notify));
+               messageBus.publish(Change.EVENT_NEW, change.dataset.testid,
+                       new Change.Event(ChangeMapper.from(change), testName, DataSetMapper.fromInfo(info), notify));
             });
          }
       }

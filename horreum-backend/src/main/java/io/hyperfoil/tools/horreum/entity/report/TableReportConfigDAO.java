@@ -29,7 +29,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "TableReportConfig")
 @Table(name = "tablereportconfig")
 public class TableReportConfigDAO extends PanacheEntityBase {
-   @JsonProperty(required = true)
    @Id
    @GeneratedValue
    public Integer id;

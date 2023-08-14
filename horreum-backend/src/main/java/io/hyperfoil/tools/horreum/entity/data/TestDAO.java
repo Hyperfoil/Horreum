@@ -2,9 +2,9 @@ package io.hyperfoil.tools.horreum.entity.data;
 
 import java.util.Collection;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -18,7 +18,6 @@ import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.validation.constraints.NotNull;
 
-import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.GenericGenerator;
@@ -26,16 +25,14 @@ import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity(name="test")
-@RegisterForReflection
+@JsonIgnoreType
 public class TestDAO extends PanacheEntityBase {
    public static final String EVENT_NEW = "test/new";
    public static final String EVENT_DELETED = "test/deleted";
 
-   @JsonProperty(required = true)
    @Id
    @GenericGenerator(
          name = "testIdGenerator",
@@ -67,7 +64,6 @@ public class TestDAO extends PanacheEntityBase {
    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
    public Collection<TestTokenDAO> tokens;
 
-   @Schema(implementation = String[].class)
    @Column(name = "timeline_labels")
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public JsonNode timelineLabels;
@@ -75,7 +71,6 @@ public class TestDAO extends PanacheEntityBase {
    @Column(name = "timeline_function")
    public String timelineFunction;
 
-   @Schema(implementation = String[].class)
    @Column(name = "fingerprint_labels")
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    public JsonNode fingerprintLabels;

@@ -19,26 +19,21 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 
-import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import org.hibernate.annotations.Type;
 import org.hibernate.query.NativeQuery;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
-import io.hyperfoil.tools.horreum.api.ApiIgnore;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.smallrye.common.constraint.NotNull;
 
-@Schema(name = "Dataset")
-@Entity(name="dataset")
-@RegisterForReflection
 /**
  * Purpose of this object is to represent derived run data.
  */
+@Entity(name="dataset")
+@JsonIgnoreType
 public class DataSetDAO extends OwnedEntityBase {
    public static final String EVENT_NEW = "dataset/new";
    public static final String EVENT_LABELS_UPDATED = "dataset/updatedlabels";
@@ -75,7 +70,6 @@ public class DataSetDAO extends OwnedEntityBase {
 
    @ManyToOne(cascade = CascadeType.DETACH, fetch = FetchType.LAZY)
    @JoinColumn(name = "runid")
-   @JsonIgnore
    public RunDAO run;
 
    @NotNull
@@ -85,18 +79,14 @@ public class DataSetDAO extends OwnedEntityBase {
    @ElementCollection
    public Collection<ValidationErrorDAO> validationErrors;
 
-   @JsonProperty("runId")
    public int getRunId() {
       return run.id;
    }
 
-   @JsonProperty("runId")
    public void setRunId(int runId) {
       run = getEntityManager().getReference(RunDAO.class, runId);
    }
 
-   @JsonIgnore
-   @ApiIgnore
    public String getFingerprint() {
       @SuppressWarnings("unchecked")
       List<JsonNode> fingerprintList = getEntityManager()
@@ -111,7 +101,6 @@ public class DataSetDAO extends OwnedEntityBase {
       }
    }
 
-   @JsonIgnore
    public DataSetDAO.Info getInfo() {
       return new DataSetDAO.Info(id, run.id, ordinal, testid);
    }

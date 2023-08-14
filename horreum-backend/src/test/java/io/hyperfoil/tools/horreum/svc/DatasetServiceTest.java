@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.entity.data.*;
-import io.hyperfoil.tools.horreum.entity.data.ViewComponent;
+import io.hyperfoil.tools.horreum.entity.data.ViewComponentDAO;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.QueryResult;
@@ -271,12 +271,12 @@ public class DatasetServiceTest extends BaseServiceTest {
          try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
             ViewDAO view = ViewDAO.findById(test.views.iterator().next().id);
             view.components.clear();
-            ViewComponent vc1 = new ViewComponent();
+            ViewComponentDAO vc1 = new ViewComponentDAO();
             vc1.view = view;
             vc1.headerName = "X";
             vc1.labels = jsonArray("a");
             view.components.add(vc1);
-            ViewComponent vc2 = new ViewComponent();
+            ViewComponentDAO vc2 = new ViewComponentDAO();
             vc2.view = view;
             vc2.headerName = "Y";
             vc2.headerOrder = 1;

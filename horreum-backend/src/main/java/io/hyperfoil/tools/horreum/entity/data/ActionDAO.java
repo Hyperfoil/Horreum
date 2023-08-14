@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -11,16 +10,12 @@ import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Entity(name = "Action")
-@RegisterForReflection
 public class ActionDAO extends PanacheEntityBase {
-   @JsonProperty(required = true)
    @Id
    @GenericGenerator(
          name = "actionSequence",
@@ -49,7 +44,6 @@ public class ActionDAO extends PanacheEntityBase {
    @NotNull
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
    @Column(name = "secrets")
-   @JsonIgnore
    public JsonNode secrets;
 
    @NotNull
@@ -78,14 +72,12 @@ public class ActionDAO extends PanacheEntityBase {
        this.runAlways = runAlways;
     }
 
-    @JsonProperty("secrets")
    public void setSecrets(JsonNode secrets) {
       this.secrets = secrets;
    }
 
    // Had we called this simply `getSecrets` Quarkus would rewrite (??!!) some property
    // accesses to use of that method
-   @JsonProperty("secrets")
    public JsonNode getMaskedSecrets() {
       if (secrets != null && secrets.isObject()) {
          ObjectNode masked = JsonNodeFactory.instance.objectNode();

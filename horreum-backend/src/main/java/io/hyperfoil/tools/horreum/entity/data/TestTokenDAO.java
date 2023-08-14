@@ -16,10 +16,6 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonSetter;
-
 @Entity(name = "test_token")
 public class TestTokenDAO {
    public static final int READ = 1;
@@ -43,7 +39,6 @@ public class TestTokenDAO {
 
    @ManyToOne(fetch = FetchType.LAZY)
    @JoinColumn(name = "test_id")
-   @JsonIgnore
    public TestDAO test;
 
    @SuppressWarnings({ "unused", "FieldCanBeLocal" })
@@ -58,12 +53,10 @@ public class TestTokenDAO {
    @NotNull
    public String description;
 
-   @JsonSetter("value")
    public void setValue(String value) {
       this.value = value;
    }
 
-   @JsonGetter("value")
    public String getValue() {
       return null;
    }

@@ -9,6 +9,9 @@ import java.util.function.Consumer;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
+import io.hyperfoil.tools.horreum.api.alerting.Change;
+import io.hyperfoil.tools.horreum.api.alerting.Variable;
+import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import org.junit.jupiter.api.Test;
 
@@ -32,20 +35,20 @@ public class NotificationPluginTest {
 
    @Test
    public void testDatasetChanges() {
-      DatasetChanges dc1 = new DatasetChanges(new DataSetDAO.Info(1, 1, 0, 1), null, "Dummy Test", true);
-      ChangeDAO c1 = new ChangeDAO();
+      DatasetChanges dc1 = new DatasetChanges(new DataSet.Info(1, 1, 0, 1), null, "Dummy Test", true);
+      Change c1 = new Change();
       c1.timestamp = Instant.now();
       c1.description = "foobar";
-      c1.variable = new VariableDAO();
+      c1.variable = new Variable();
       c1.variable.name = "some var";
-      ChangeDAO c2 = new ChangeDAO();
+      Change c2 = new Change();
       c2.timestamp = Instant.now();
-      c2.variable = new VariableDAO();
+      c2.variable = new Variable();
       c2.variable.group = "some group";
       c2.variable.name = "another var";
 
-      dc1.addChange(new ChangeDAO.Event(c1, dc1.testName, dc1.dataset, true));
-      dc1.addChange(new ChangeDAO.Event(c2, dc1.testName, dc1.dataset, true));
+      dc1.addChange(new Change.Event(c1, dc1.testName, dc1.dataset, true));
+      dc1.addChange(new Change.Event(c2, dc1.testName, dc1.dataset, true));
       withAllPlugins(notification -> notification.notifyChanges(dc1));
    }
 

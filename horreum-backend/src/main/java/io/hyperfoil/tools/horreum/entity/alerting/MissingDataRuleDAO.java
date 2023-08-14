@@ -20,8 +20,6 @@ import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
@@ -33,7 +31,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "MissingDataRule")
 @Table(name = "missingdata_rule")
 public class MissingDataRuleDAO extends PanacheEntityBase {
-   @JsonProperty(required = true)
    @Id
    @GenericGenerator(
          name = "mdrIdGenerator",
@@ -50,7 +47,6 @@ public class MissingDataRuleDAO extends PanacheEntityBase {
 
    @ManyToOne(optional = false)
    @JoinColumn(name = "test_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
-   @JsonIgnore
    public TestDAO test;
 
    @Type(type = "io.hyperfoil.tools.horreum.entity.converter.JsonUserType")
@@ -64,12 +60,10 @@ public class MissingDataRuleDAO extends PanacheEntityBase {
    @Column(name = "last_notification", columnDefinition = "timestamp")
    public Instant lastNotification;
 
-   @JsonProperty("testId")
    public int testId() {
       return test.id;
    }
 
-   @JsonProperty(value = "testId", required = true)
    public void setTestId(int testId) {
       this.test = TestDAO.getEntityManager().getReference(TestDAO.class, testId);
    }

@@ -37,7 +37,7 @@ import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
-import io.hyperfoil.tools.horreum.entity.data.ViewComponent;
+import io.hyperfoil.tools.horreum.entity.data.ViewComponentDAO;
 import org.hibernate.query.NativeQuery;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
@@ -156,7 +156,7 @@ public class BaseServiceTest {
       Util.withTx(tm, () -> {
          try (CloseMe ignored = roleManager.withRoles(Stream.concat(Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
                .collect(Collectors.toList()))) {
-            ViewComponent.deleteAll();
+            ViewComponentDAO.deleteAll();
             ViewDAO.deleteAll();
 
             em.createNativeQuery("DELETE FROM test_transformers").executeUpdate();

@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.converter;
 
 import io.hyperfoil.tools.horreum.api.ApiUtil;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.usertype.UserType;
@@ -15,7 +14,6 @@ import java.sql.Types;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
-@RegisterForReflection
 public class JsonUserType implements UserType {
    @Override
    public int[] sqlTypes() {
