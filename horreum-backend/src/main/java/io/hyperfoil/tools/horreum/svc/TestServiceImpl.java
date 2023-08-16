@@ -234,7 +234,7 @@ public class TestServiceImpl implements TestService {
    @Override
    @PermitAll
    @WithRoles
-   public List<Test> list(String roles, Integer limit, Integer page, String sort, SortDirection direction){
+   public TestQueryResult list(String roles, Integer limit, Integer page, String sort, SortDirection direction){
       PanacheQuery<TestDAO> query;
       Set<String> actualRoles = null;
       if (Roles.hasRolesParam(roles)) {
@@ -257,7 +257,7 @@ public class TestServiceImpl implements TestService {
       if (limit != null && page != null) {
          query.page(Page.of(page, limit));
       }
-      return query.list().stream().map(TestMapper::from).collect(Collectors.toList());
+      return new TestQueryResult( query.list().stream().map(TestMapper::from).collect(Collectors.toList()), TestDAO.count() ) ;
    }
 
    @Override

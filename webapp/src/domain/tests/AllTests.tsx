@@ -14,6 +14,8 @@ import {
     Modal,
     PageSection,
     Spinner,
+    CardFooter,
+    Pagination,
 } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
 import { EyeIcon, EyeSlashIcon, FolderOpenIcon } from "@patternfly/react-icons"
@@ -31,6 +33,7 @@ import * as selectors from "./selectors"
 
 import Table from "../../components/Table"
 import AccessIcon from "../../components/AccessIcon"
+import { alertAction } from "../../alerts"
 import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
 import TeamSelect, { Team, ONLY_MY_OWN } from "../../components/TeamSelect"
@@ -44,6 +47,7 @@ import { Access, isAuthenticatedSelector, useTester, teamToName, teamsSelector, 
 import { CellProps, Column, UseSortByColumnOptions } from "react-table"
 import { TestStorage, TestDispatch } from "./reducers"
 import { noop } from "../../utils"
+import Api, { SortDirection, TestQueryResult } from "../../api"
 
 type WatchDropdownProps = {
     id: number
@@ -282,6 +286,26 @@ export default function AllTests() {
             return <WatchDropdown watching={arg.cell.value} id={arg.row.original.id} />
         },
     }
+    const [page, setPage] = useState(1)
+    const [perPage, setPerPage] = useState(20)
+    const [direction] = useState<SortDirection>("Ascending")
+    const pagination = useMemo(() => ({ page, perPage, direction }), [page, perPage, direction])
+    const [tests, setTets] = useState<TestQueryResult>()
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        setLoading(true)
+        Api.testServiceList(
+            SortDirection.Ascending,
+            pagination.perPage,
+            pagination.page - 1
+
+        )
+            .then(setTets)
+            .catch(error => dispatch(alertAction("FETCH_Tests", "Failed to fetch Tests", error)))
+            .finally(() => setLoading(false))
+    }, [pagination, dispatch])
+
     let columns: Col[] = useMemo(
         () => [
             {
@@ -389,7 +413,6 @@ export default function AllTests() {
     }
 
     const isTester = useTester()
-    const isLoading = useSelector(selectors.isLoading)
     return (
         <PageSection>
             <Card>
@@ -424,12 +447,21 @@ export default function AllTests() {
                         }}
                     />
                     <Table columns={columns}
-                     data={allTests || []} 
-                     isLoading={isLoading} 
-                     sortBy={[{ id: "name", desc: false }]}
-                     
-                     />
+                        data={allTests || []}
+                        isLoading={loading}
+                        sortBy={[{ id: "name", desc: false }]}
+
+                    />
                 </CardBody>
+                <CardFooter style={{ textAlign: "right" }}>
+                    <Pagination
+                        itemCount={tests?.count || 0}
+                        perPage={perPage}
+                        page={page}
+                        onSetPage={(e, p) => setPage(p)}
+                        onPerPageSelect={(e, pp) => setPerPage(pp)}
+                    />
+                </CardFooter>
             </Card>
         </PageSection>
     )

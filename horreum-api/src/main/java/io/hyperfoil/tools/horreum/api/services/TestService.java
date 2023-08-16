@@ -44,7 +44,7 @@ public interface TestService {
    Test add(@RequestBody(required = true) Test test);
 
    @GET
-   List<Test> list(@QueryParam("roles") String roles,
+   TestQueryResult list(@QueryParam("roles") String roles,
                    @QueryParam("limit") Integer limit,
                    @QueryParam("page") Integer page,
                    @QueryParam("sort") @DefaultValue("name") String sort,
@@ -166,6 +166,18 @@ public interface TestService {
       public RecalculationStatus(long totalRuns) {
          this.timestamp = System.currentTimeMillis();
          this.totalRuns = totalRuns;
+      }
+   }
+
+   class TestQueryResult {
+      @NotNull
+      public List<Test> tests;
+      @JsonProperty(required = true)
+      public long count;
+
+      public TestQueryResult(List<Test> tests, long count) {
+         this.tests = tests;
+         this.count = count;
       }
    }
 }
