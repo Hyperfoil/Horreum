@@ -37,7 +37,7 @@
 
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-keycloak-admin-client-reactive</artifactId>
+            <artifactId>quarkus-keycloak-admin-client</artifactId>
         </dependency>
 
     </dependencies>
