@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
@@ -67,7 +68,7 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(DataPointDAO.EVENT_DATASET_PROCESSED, "ExperimentService", DataPointDAO.DatasetProcessedEvent.class, this::onDatapointsCreated);
+      messageBus.subscribe(DataPointDAO.EVENT_DATASET_PROCESSED, "ExperimentService", DataPoint.DatasetProcessedEvent.class, this::onDatapointsCreated);
       messageBus.subscribe(TestDAO.EVENT_DELETED, "ExperimentService", TestDAO.class, this::onTestDeleted);
    }
 
@@ -130,10 +131,10 @@ public class ExperimentServiceImpl implements ExperimentService {
          throw ServiceException.notFound("No dataset " + datasetId);
       }
       List<ExperimentService.ExperimentResult> results = new ArrayList<>();
-      DataSetDAO.Info info = dataset.getInfo();
+      DataSet.Info info = DataSetMapper.fromInfo(dataset.getInfo());
       runExperiments(info, results::add, logs -> results.add(
               new ExperimentResult(null, logs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
-                      DataSetMapper.fromInfo(info), Collections.emptyList(),
+                      info, Collections.emptyList(),
                       Collections.emptyMap(),
                       null, false)), false);
       return results;
@@ -141,7 +142,7 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onDatapointsCreated(DataPointDAO.DatasetProcessedEvent event) {
+   public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
       runExperiments(event.dataset, result -> messageBus.publish(ExperimentResult.NEW_RESULT, event.dataset.testId, result),
             logs -> logs.forEach(log -> log.persist()), event.notify);
@@ -163,7 +164,7 @@ public class ExperimentServiceImpl implements ExperimentService {
             level, "experiment", msg));
    }
 
-   private void runExperiments(DataSetDAO.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLogDAO>> noProfileConsumer, boolean notify) {
+   private void runExperiments(DataSet.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLogDAO>> noProfileConsumer, boolean notify) {
       List<DatasetLogDAO> logs = new ArrayList<>();
 
       Query selectorQuery = em.createNativeQuery("WITH lvalues AS (" +
@@ -290,8 +291,7 @@ public class ExperimentServiceImpl implements ExperimentService {
          Hibernate.initialize(profile.test.name);
          resultConsumer.accept(new ExperimentResult(ExperimentProfileMapper.from(profile),
                  profileLogs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
-                 DataSetMapper.fromInfo(info), baseline, results,
-                 extraLabels, notify));
+                 info, baseline, results, extraLabels, notify));
       }
    }
 

@@ -39,7 +39,7 @@ public class ActionServiceTest extends BaseServiceTest {
 
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
 
-      eventually(() -> Util.withTx(tm, () -> {
+      eventually((Runnable) () -> Util.withTx(tm, () -> {
          em.clear();
          try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
             return ActionLogDAO.find("testId", test.id).count() == 1;

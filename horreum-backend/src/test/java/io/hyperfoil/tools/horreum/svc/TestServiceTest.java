@@ -81,11 +81,11 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSetDAO.EventNew> newDatasetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       final int NUM_DATASETS = 5;
       for (int i = 0; i < NUM_DATASETS; ++i) {
          uploadRun(runWithValue(i, schema), test.name);
-         DataSetDAO.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertFalse(event.isRecalculation);
       }
@@ -101,7 +101,7 @@ public class TestServiceTest extends BaseServiceTest {
          return status.finished == status.totalRuns;
       });
       for (int i = 0; i < NUM_DATASETS; ++i) {
-         DataSetDAO.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertTrue(event.dataset.id > maxId);
          assertTrue(event.isRecalculation);
@@ -122,7 +122,7 @@ public class TestServiceTest extends BaseServiceTest {
 
       addAllowedSite("https://example.com");
 
-      ActionDAO action = addTestHttpAction(test, RunDAO.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(ActionDAO.class);
+      Action action = addTestHttpAction(test, RunDAO.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       action.active = false;
@@ -134,9 +134,9 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSetDAO.EventNew> newDatasetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       uploadRun(runWithValue(42, schema), test.name);
-      DataSetDAO.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
 
       ViewComponent vc = new ViewComponent();
@@ -170,7 +170,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSetDAO.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSetDAO.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<DataSet.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
       uploadRun(runWithValue(42, schema), test.name);
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));

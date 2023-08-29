@@ -41,8 +41,8 @@ public class SchemaServiceTest extends BaseServiceTest {
       Schema allowNoneSchema = createSchema("none", allowNone.path("$id").asText(), allowNone);
 
       Test test = createTest(createExampleTest("schemaTest"));
-      BlockingQueue<SchemaDAO.ValidationEvent> runValidations = eventConsumerQueue(SchemaDAO.ValidationEvent.class, RunDAO.EVENT_VALIDATED, e -> checkRunTestId(e.id, test.id));
-      BlockingQueue<SchemaDAO.ValidationEvent> datasetValidations = eventConsumerQueue(SchemaDAO.ValidationEvent.class, DataSetDAO.EVENT_VALIDATED, e -> checkTestId(e.id, test.id));
+      BlockingQueue<Schema.ValidationEvent> runValidations = eventConsumerQueue(Schema.ValidationEvent.class, RunDAO.EVENT_VALIDATED, e -> checkRunTestId(e.id, test.id));
+      BlockingQueue<Schema.ValidationEvent> datasetValidations = eventConsumerQueue(Schema.ValidationEvent.class, DataSetDAO.EVENT_VALIDATED, e -> checkTestId(e.id, test.id));
 
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
       data.addObject().put("$schema", allowAnySchema.uri).put("foo", "bar");
@@ -50,21 +50,21 @@ public class SchemaServiceTest extends BaseServiceTest {
       data.addObject().put("$schema", "urn:unknown:schema").put("foo", "bar");
       int runId = uploadRun(data.toString(), test.name);
 
-      SchemaDAO.ValidationEvent runValidation = runValidations.poll(10, TimeUnit.SECONDS);
+      Schema.ValidationEvent runValidation = runValidations.poll(10, TimeUnit.SECONDS);
       assertNotNull(runValidation);
       assertEquals(runId, runValidation.id);
       // one error for extra "foo" and one for "$schema"
       assertEquals(2, runValidation.errors.size());
       runValidation.errors.forEach(e -> {
-         assertEquals(allowNoneSchema.id, e.schema.id);
+         assertEquals(allowNoneSchema.id, e.getSchemaId());
          assertNotNull(e.error);
       });
 
-      SchemaDAO.ValidationEvent dsValidation = datasetValidations.poll(10, TimeUnit.SECONDS);
+      Schema.ValidationEvent dsValidation = datasetValidations.poll(10, TimeUnit.SECONDS);
       assertNotNull(dsValidation);
       assertEquals(2, dsValidation.errors.size());
       dsValidation.errors.forEach(e -> {
-         assertEquals(allowNoneSchema.id, e.schema.id);
+         assertEquals(allowNoneSchema.id, e.getSchemaId());
          assertNotNull(e.error);
       });
       assertEquals(0, runValidations.drainTo(new ArrayList<>()));
@@ -74,13 +74,13 @@ public class SchemaServiceTest extends BaseServiceTest {
       ((ObjectNode) allowAnySchema.schema).set("$id", allowAny.path("$id").deepCopy());
       addOrUpdateSchema(allowAnySchema);
 
-      SchemaDAO.ValidationEvent runValidation2 = runValidations.poll(10, TimeUnit.SECONDS);
+      Schema.ValidationEvent runValidation2 = runValidations.poll(10, TimeUnit.SECONDS);
       assertNotNull(runValidation2);
       assertEquals(runId, runValidation2.id);
       // This time we get errors for both schemas
       assertEquals(4, runValidation2.errors.size());
 
-      SchemaDAO.ValidationEvent datasetValidation2 = datasetValidations.poll(10, TimeUnit.SECONDS);
+      Schema.ValidationEvent datasetValidation2 = datasetValidations.poll(10, TimeUnit.SECONDS);
       assertNotNull(datasetValidation2);
       assertEquals(4, datasetValidation2.errors.size());
 

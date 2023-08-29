@@ -158,7 +158,7 @@ public class DatasetServiceImpl implements DatasetService {
    @PostConstruct
    void init() {
       sqlService.registerListener("calculate_labels", this::onLabelChanged);
-      messageBus.subscribe(DataSetDAO.EVENT_NEW, "DatasetService", DataSetDAO.EventNew.class, this::onNewDataset);
+      messageBus.subscribe(DataSetDAO.EVENT_NEW, "DatasetService", DataSet.EventNew.class, this::onNewDataset);
    }
 
    @PermitAll
@@ -440,7 +440,7 @@ public class DatasetServiceImpl implements DatasetService {
             (row, e, jsCode) -> logMessage(datasetId, PersistentLog.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
             out -> logMessage(datasetId, PersistentLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
-      messageBus.publish(DataSetDAO.EVENT_LABELS_UPDATED, testId, new DataSetDAO.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+      messageBus.publish(DataSetDAO.EVENT_LABELS_UPDATED, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -482,7 +482,7 @@ public class DatasetServiceImpl implements DatasetService {
       }
    }
 
-   public void onNewDataset(DataSetDAO.EventNew event) {
+   public void onNewDataset(DataSet.EventNew event) {
       withRecalculationLock(() -> calculateLabels(event.dataset.testid, event.dataset.id, -1, event.isRecalculation));
    }
 

@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
+import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.data.*;
@@ -74,7 +75,7 @@ public class ActionServiceImpl implements ActionService {
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
       messageBus.subscribe(TestDAO.EVENT_NEW, "ActionService", TestDAO.class, this::onNewTest);
       messageBus.subscribe(TestDAO.EVENT_DELETED, "ActionService", TestDAO.class, this::onTestDelete);
-      messageBus.subscribe(RunDAO.EVENT_NEW, "ActionService", RunDAO.class, this::onNewRun);
+      messageBus.subscribe(RunDAO.EVENT_NEW, "ActionService", Run.class, this::onNewRun);
       messageBus.subscribe(Change.EVENT_NEW, "ActionService", Change.Event.class, this::onNewChange);
       messageBus.subscribe(ExperimentService.ExperimentResult.NEW_RESULT, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
    }
@@ -142,7 +143,7 @@ public class ActionServiceImpl implements ActionService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onNewRun(RunDAO run) {
+   public void onNewRun(Run run) {
       Integer testId = run.testid;
       executeActions(RunDAO.EVENT_NEW, testId, run, true);
    }

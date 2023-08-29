@@ -192,7 +192,7 @@ public class MessageBus {
 
    private Object mapToDTO(Object entity) {
       if (entity instanceof RunDAO)
-         return RunMapper.from((RunDAO) entity, () -> new Run());
+         return RunMapper.from((RunDAO) entity);
       else if (entity instanceof TestDAO)
          return TestMapper.from((TestDAO) entity);
       // lets just return for now

@@ -25,6 +25,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -38,10 +39,7 @@ import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
-import io.hyperfoil.tools.horreum.entity.data.ViewComponentDAO;
 import org.hibernate.query.NativeQuery;
-import org.hibernate.type.CustomType;
-import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -369,11 +367,11 @@ public class BaseServiceTest {
       jsonRequest().delete("/api/schema/" + schema.id + "/labels/" + labelId).then().statusCode(204);
    }
 
-   protected void setTestVariables(Test test, String name, String label, ChangeDetectionDAO... rds) {
+   protected void setTestVariables(Test test, String name, String label, ChangeDetection... rds) {
       setTestVariables(test, name, Collections.singletonList(label), rds);
    }
 
-   protected void setTestVariables(Test test, String name, List<String> labels, ChangeDetectionDAO... rds) {
+   protected void setTestVariables(Test test, String name, List<String> labels, ChangeDetection... rds) {
       ArrayNode variables = JsonNodeFactory.instance.arrayNode();
       ObjectNode variable = JsonNodeFactory.instance.objectNode();
       variable.put("testid", test.id);
@@ -381,7 +379,7 @@ public class BaseServiceTest {
       variable.set("labels", labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll));
       if (rds.length > 0) {
          ArrayNode rdsArray = JsonNodeFactory.instance.arrayNode();
-         for (ChangeDetectionDAO rd : rds) {
+         for (ChangeDetection rd : rds) {
             rdsArray.add(JsonNodeFactory.instance.objectNode().put("model", rd.model).set("config", rd.config));
          }
          variable.set("changeDetection", rdsArray);
@@ -429,8 +427,8 @@ public class BaseServiceTest {
       return trashedQueue;
    }
 
-   protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSetDAO, T> testLogic) {
-      BlockingQueue<DataSetDAO.EventNew> dataSetQueue = eventConsumerQueue(DataSetDAO.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+   protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
       try {
          RunDAO run = new RunDAO();
          tm.begin();
@@ -448,7 +446,7 @@ public class BaseServiceTest {
                fail();
             }
          }
-         DataSetDAO.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
+         DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertNotNull(event.dataset);
          // only to cover the summary call in API
@@ -555,7 +553,7 @@ public class BaseServiceTest {
    }
 
    protected Response addTestHttpAction(Test test, String event, String url) {
-      ActionDAO action = new ActionDAO();
+      Action action = new Action();
       action.event = event;
       action.type = HttpAction.TYPE_HTTP;
       action.active = true;
@@ -564,7 +562,7 @@ public class BaseServiceTest {
    }
 
    protected Response addTestGithubIssueCommentAction(Test test, String event, String formatter, String owner, String repo, String issue, String secretToken) {
-      ActionDAO action = new ActionDAO();
+      Action action = new Action();
       action.event = event;
       action.type = GitHubIssueCommentAction.TYPE_GITHUB_ISSUE_COMMENT;
       action.active = true;
@@ -578,7 +576,7 @@ public class BaseServiceTest {
    }
 
    protected Response addGlobalAction(String event, String url) {
-      ActionDAO action = new ActionDAO();
+      Action action = new Action();
       action.event = event;
       action.type = "http";
       action.active = true;
@@ -587,12 +585,12 @@ public class BaseServiceTest {
             .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
    }
 
-   protected ChangeDetectionDAO addChangeDetectionVariable(Test test) {
+   protected ChangeDetection addChangeDetectionVariable(Test test) {
       return addChangeDetectionVariable(test, 0.1, 2);
    }
 
-   protected ChangeDetectionDAO addChangeDetectionVariable(Test test, double threshold, int window) {
-      ChangeDetectionDAO cd = new ChangeDetectionDAO();
+   protected ChangeDetection addChangeDetectionVariable(Test test, double threshold, int window) {
+      ChangeDetection cd = new ChangeDetection();
       cd.model = RelativeDifferenceChangeDetectionModel.NAME;
       cd.config = JsonNodeFactory.instance.objectNode().put("threshold", threshold).put("minPrevious", window).put("window", window).put("filter", "mean");
       setTestVariables(test, "Value", "value", cd);

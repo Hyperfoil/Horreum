@@ -22,7 +22,9 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import io.hypersistence.utils.hibernate.query.MapResultTransformer;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
@@ -432,8 +434,8 @@ public class RunServiceImpl implements RunService {
       // wait for at least one (1) dataset. we do not know how many datasets will be produced
       CountDownLatch dsAvailableLatch = new CountDownLatch(1);
       // create new dataset listener
-      messageBus.subscribe(DataSetDAO.EVENT_NEW,"DatasetService", DataSetDAO.EventNew.class, (event) -> {
-         if (event.dataset.run.id == runId) {
+      messageBus.subscribe(DataSetDAO.EVENT_NEW,"DatasetService", DataSet.EventNew.class, (event) -> {
+         if (event.dataset.runId == runId) {
             dsAvailableLatch.countDown();
          }
       });
@@ -582,7 +584,7 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.serverError("Failed to persist run");
       }
       log.debugf("Upload flushed, run ID %d", run.id);
-      messageBus.publish(RunDAO.EVENT_NEW, test.id, run);
+      messageBus.publish(RunDAO.EVENT_NEW, test.id, RunMapper.from(run));
 
       return run.id;
    }
@@ -880,7 +882,7 @@ public class RunServiceImpl implements RunService {
          List<DataSetDAO> datasets = DataSetDAO.list("run.id", id);
          log.debugf("Trashing run %d (test %d, %d datasets)", (long)run.id, (long)run.testid, datasets.size());
          for (var dataset : datasets) {
-            messageBus.publish(DataSetDAO.EVENT_DELETED, run.testid, dataset.getInfo());
+            messageBus.publish(DataSetDAO.EVENT_DELETED, run.testid, DataSetMapper.fromInfo( dataset.getInfo()));
             dataset.delete();
          }
          messageBus.publish(RunDAO.EVENT_TRASHED, run.testid, id);
@@ -1023,7 +1025,7 @@ public class RunServiceImpl implements RunService {
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
       for (DataSetDAO old : DataSetDAO.<DataSetDAO>list("run.id", runId)) {
-         messageBus.publish(DataSetDAO.EVENT_DELETED, old.testid, old.getInfo());
+         messageBus.publish(DataSetDAO.EVENT_DELETED, old.testid, DataSetMapper.fromInfo( old.getInfo()));
          old.delete();
       }
 
@@ -1219,7 +1221,7 @@ public class RunServiceImpl implements RunService {
    private void createDataset(DataSetDAO ds, boolean isRecalculation) {
       try {
          ds.persist();
-         messageBus.publish(DataSetDAO.EVENT_NEW, ds.testid, new DataSetDAO.EventNew(ds, isRecalculation));
+         messageBus.publish(DataSetDAO.EVENT_NEW, ds.testid, new DataSet.EventNew(DataSetMapper.from(ds), isRecalculation));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.", tre);
       }

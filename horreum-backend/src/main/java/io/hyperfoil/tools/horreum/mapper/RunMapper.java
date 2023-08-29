@@ -9,8 +9,8 @@ import java.util.stream.Collectors;
 
 public class RunMapper {
 
-    public static <T extends Run> T from(RunDAO run, Supplier<T> factory) {
-        T dto = factory.get();
+    public static Run from(RunDAO run) {
+        Run dto = new Run();
         dto.id = run.id;
         dto.start = run.start;
         dto.stop = run.stop;
