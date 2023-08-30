@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -22,7 +23,6 @@ import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import io.hypersistence.utils.hibernate.query.MapResultTransformer;
@@ -75,7 +75,9 @@ import io.vertx.core.Vertx;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.type.CustomType;
 import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
@@ -138,7 +140,7 @@ public class RunServiceImpl implements RunService {
    void init() {
       sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
       sqlService.registerListener("new_or_updated_schema", this::onNewOrUpdatedSchema);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "RunService", TestDAO.class, this::onTestDeleted);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "RunService", TestDAO.class, this::onTestDeleted);
    }
 
    @Transactional
@@ -432,7 +434,7 @@ public class RunServiceImpl implements RunService {
       // wait for at least one (1) dataset. we do not know how many datasets will be produced
       CountDownLatch dsAvailableLatch = new CountDownLatch(1);
       // create new dataset listener
-      messageBus.subscribe(MessageBusChannels.DATASET_NEW,"DatasetService", DataSet.EventNew.class, (event) -> {
+      messageBus.subscribe(DataSetDAO.EVENT_NEW,"DatasetService", DataSet.EventNew.class, (event) -> {
          if (event.dataset.runId == runId) {
             dsAvailableLatch.countDown();
          }
@@ -582,7 +584,7 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.serverError("Failed to persist run");
       }
       log.debugf("Upload flushed, run ID %d", run.id);
-      messageBus.publish(MessageBusChannels.RUN_NEW, test.id, RunMapper.from(run));
+      messageBus.publish(RunDAO.EVENT_NEW, test.id, RunMapper.from(run));
 
       return run.id;
    }
@@ -880,10 +882,10 @@ public class RunServiceImpl implements RunService {
          List<DataSetDAO> datasets = DataSetDAO.list("run.id", id);
          log.debugf("Trashing run %d (test %d, %d datasets)", (long)run.id, (long)run.testid, datasets.size());
          for (var dataset : datasets) {
-            messageBus.publish(MessageBusChannels.DATASET_DELETED, run.testid, DataSetMapper.fromInfo( dataset.getInfo()));
+            messageBus.publish(DataSetDAO.EVENT_DELETED, run.testid, DataSetMapper.fromInfo( dataset.getInfo()));
             dataset.delete();
          }
-         messageBus.publish(MessageBusChannels.RUN_TRASHED, run.testid, id);
+         messageBus.publish(RunDAO.EVENT_TRASHED, run.testid, id);
       } else {
          transform(id, true);
       }
@@ -1023,7 +1025,7 @@ public class RunServiceImpl implements RunService {
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
       for (DataSetDAO old : DataSetDAO.<DataSetDAO>list("run.id", runId)) {
-         messageBus.publish(MessageBusChannels.DATASET_DELETED, old.testid, DataSetMapper.fromInfo( old.getInfo()));
+         messageBus.publish(DataSetDAO.EVENT_DELETED, old.testid, DataSetMapper.fromInfo( old.getInfo()));
          old.delete();
       }
 
@@ -1219,7 +1221,7 @@ public class RunServiceImpl implements RunService {
    private void createDataset(DataSetDAO ds, boolean isRecalculation) {
       try {
          ds.persist();
-         messageBus.publish(MessageBusChannels.DATASET_NEW, ds.testid, new DataSet.EventNew(DataSetMapper.from(ds), isRecalculation));
+         messageBus.publish(DataSetDAO.EVENT_NEW, ds.testid, new DataSet.EventNew(DataSetMapper.from(ds), isRecalculation));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.", tre);
       }

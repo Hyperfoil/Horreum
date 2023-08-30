@@ -3,10 +3,10 @@ package io.hyperfoil.tools.horreum.svc;
 import com.networknt.schema.JsonMetaSchema;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
+import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.mapper.SchemaMapper;
 import io.hyperfoil.tools.horreum.mapper.TransformerMapper;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
@@ -68,6 +68,7 @@ import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.uri.URIFactory;
 import com.networknt.schema.uri.URIFetcher;
 import com.networknt.schema.uri.URLFactory;
+//import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
 
 @Startup
 public class SchemaServiceImpl implements SchemaService {
@@ -287,7 +288,7 @@ public class SchemaServiceImpl implements SchemaService {
          validateData(run.metadata, schemaFilter, run.validationErrors::add);
       }
       run.persist();
-      messageBus.publish(MessageBusChannels.RUN_VALIDATED, run.testid,
+      messageBus.publish(RunDAO.EVENT_VALIDATED, run.testid,
               new Schema.ValidationEvent(run.id, run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()) ));
    }
 
@@ -320,7 +321,7 @@ public class SchemaServiceImpl implements SchemaService {
          }
       }
       dataset.persist();
-      messageBus.publish(MessageBusChannels.DATASET_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DataSetMapper.from(dataset).validationErrors ));
+      messageBus.publish(DataSetDAO.EVENT_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DataSetMapper.from(dataset).validationErrors ));
    }
 
    private void revalidateAll(String params) {

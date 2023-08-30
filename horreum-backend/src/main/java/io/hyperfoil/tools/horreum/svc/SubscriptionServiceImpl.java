@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -49,7 +48,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "SubscriptionService", TestDAO.class, this::onTestDelete);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "SubscriptionService", TestDAO.class, this::onTestDelete);
    }
 
    private static Set<String> merge(Set<String> set, String item) {

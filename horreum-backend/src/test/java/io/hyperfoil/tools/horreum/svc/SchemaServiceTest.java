@@ -16,7 +16,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Schema;
@@ -42,8 +41,8 @@ public class SchemaServiceTest extends BaseServiceTest {
       Schema allowNoneSchema = createSchema("none", allowNone.path("$id").asText(), allowNone);
 
       Test test = createTest(createExampleTest("schemaTest"));
-      BlockingQueue<Schema.ValidationEvent> runValidations = eventConsumerQueue(Schema.ValidationEvent.class, MessageBusChannels.RUN_VALIDATED, e -> checkRunTestId(e.id, test.id));
-      BlockingQueue<Schema.ValidationEvent> datasetValidations = eventConsumerQueue(Schema.ValidationEvent.class, MessageBusChannels.DATASET_VALIDATED, e -> checkTestId(e.id, test.id));
+      BlockingQueue<Schema.ValidationEvent> runValidations = eventConsumerQueue(Schema.ValidationEvent.class, RunDAO.EVENT_VALIDATED, e -> checkRunTestId(e.id, test.id));
+      BlockingQueue<Schema.ValidationEvent> datasetValidations = eventConsumerQueue(Schema.ValidationEvent.class, DataSetDAO.EVENT_VALIDATED, e -> checkTestId(e.id, test.id));
 
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
       data.addObject().put("$schema", allowAnySchema.uri).put("foo", "bar");

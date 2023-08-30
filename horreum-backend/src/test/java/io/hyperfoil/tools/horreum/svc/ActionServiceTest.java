@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Arrays;
 
 import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import jakarta.ws.rs.core.HttpHeaders;
 import org.junit.jupiter.api.TestInfo;
@@ -36,7 +35,7 @@ public class ActionServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(testInfo)));
 
       addAllowedSite("http://some-non-existent-domain.com");
-      addTestHttpAction(test, MessageBusChannels.RUN_NEW, "http://some-non-existent-domain.com");
+      addTestHttpAction(test, RunDAO.EVENT_NEW, "http://some-non-existent-domain.com");
 
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
 
@@ -50,14 +49,14 @@ public class ActionServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testAddGlobalAction() {
-      String responseType = addGlobalAction(MessageBusChannels.TEST_NEW, "https://attacker.com")
+      String responseType = addGlobalAction(TestDAO.EVENT_NEW, "https://attacker.com")
             .then().statusCode(400).extract().header(HttpHeaders.CONTENT_TYPE);
       // constraint violations are mapped to 400 + JSON response, we want explicit error
       assertTrue(responseType.startsWith("text/plain")); // text/plain;charset=UTF-8
 
       addAllowedSite("https://example.com");
 
-      ActionDAO action = addGlobalAction(MessageBusChannels.TEST_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(ActionDAO.class);
+      ActionDAO action = addGlobalAction(TestDAO.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(ActionDAO.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       given().auth().oauth2(getAdminToken()).delete("/api/action/" + action.id);

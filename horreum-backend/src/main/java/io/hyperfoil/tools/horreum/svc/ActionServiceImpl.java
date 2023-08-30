@@ -3,7 +3,6 @@ package io.hyperfoil.tools.horreum.svc;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
 import io.hyperfoil.tools.horreum.api.data.Run;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.data.*;
@@ -74,17 +73,17 @@ public class ActionServiceImpl implements ActionService {
    @PostConstruct()
    public void postConstruct(){
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
-      messageBus.subscribe(MessageBusChannels.TEST_NEW, "ActionService", TestDAO.class, this::onNewTest);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ActionService", TestDAO.class, this::onTestDelete);
-      messageBus.subscribe(MessageBusChannels.RUN_NEW, "ActionService", Run.class, this::onNewRun);
-      messageBus.subscribe(MessageBusChannels.CHANGE_NEW, "ActionService", Change.Event.class, this::onNewChange);
-      messageBus.subscribe(MessageBusChannels.EXPERIMENT_RESULT_NEW, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
+      messageBus.subscribe(TestDAO.EVENT_NEW, "ActionService", TestDAO.class, this::onNewTest);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "ActionService", TestDAO.class, this::onTestDelete);
+      messageBus.subscribe(RunDAO.EVENT_NEW, "ActionService", Run.class, this::onNewRun);
+      messageBus.subscribe(Change.EVENT_NEW, "ActionService", Change.Event.class, this::onNewChange);
+      messageBus.subscribe(ExperimentService.ExperimentResult.NEW_RESULT, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
    }
 
-   private void executeActions(MessageBusChannels event, int testId, Object payload, boolean notify){
-      List<ActionDAO> actions = getActions(event.name(), testId);
+   private void executeActions(String event, int testId, Object payload, boolean notify){
+      List<ActionDAO> actions = getActions(event, testId);
       if (actions.isEmpty()) {
-         new ActionLogDAO(PersistentLog.DEBUG, testId, event.name(), null, "No actions found.").persist();
+         new ActionLogDAO(PersistentLog.DEBUG, testId, event, null, "No actions found.").persist();
          return;
       }
       for (ActionDAO action : actions) {
@@ -96,15 +95,15 @@ public class ActionServiceImpl implements ActionService {
             ActionPlugin plugin = plugins.get(action.type);
             if (plugin == null) {
                log.errorf("No plugin for action type %s", action.type);
-               new ActionLogDAO(PersistentLog.ERROR, testId, event.name(), action.type, "No plugin for action type " + action.type).persist();
+               new ActionLogDAO(PersistentLog.ERROR, testId, event, action.type, "No plugin for action type " + action.type).persist();
                continue;
             }
             plugin.execute(action.config, action.secrets, payload).subscribe()
-                  .with(item -> {}, throwable -> logActionError(testId, event.name(), action.type, throwable));
+                  .with(item -> {}, throwable -> logActionError(testId, event, action.type, throwable));
          } catch (Exception e) {
             log.errorf(e, "Failed to invoke action %d", action.id);
-            new ActionLogDAO(PersistentLog.ERROR, testId, event.name(), action.type, "Failed to invoke: " + e.getMessage()).persist();
-            new ActionLogDAO(PersistentLog.DEBUG, testId, event.name(), action.type,
+            new ActionLogDAO(PersistentLog.ERROR, testId, event, action.type, "Failed to invoke: " + e.getMessage()).persist();
+            new ActionLogDAO(PersistentLog.DEBUG, testId, event, action.type,
                   "Configuration: <pre>\n<code>" + action.config.toPrettyString() +
                   "\n<code></pre>Payload: <pre>\n<code>" + Util.OBJECT_MAPPER.valueToTree(payload).toPrettyString() +
                   "</code>\n</pre>").persist();
@@ -133,7 +132,7 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onNewTest(TestDAO test) {
-      executeActions(MessageBusChannels.TEST_NEW, -1, test, true);
+      executeActions(TestDAO.EVENT_NEW, -1, test, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -146,7 +145,7 @@ public class ActionServiceImpl implements ActionService {
    @Transactional
    public void onNewRun(Run run) {
       Integer testId = run.testid;
-      executeActions(MessageBusChannels.RUN_NEW, testId, run, true);
+      executeActions(RunDAO.EVENT_NEW, testId, run, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -154,7 +153,7 @@ public class ActionServiceImpl implements ActionService {
    public void onNewChange(Change.Event changeEvent) {
       int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
             .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
-      executeActions(MessageBusChannels.CHANGE_NEW, testId, changeEvent, changeEvent.notify);
+      executeActions(Change.EVENT_NEW, testId, changeEvent, changeEvent.notify);
    }
 
    void validate(Action action) {
@@ -287,7 +286,7 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onNewExperimentResult(ExperimentService.ExperimentResult result) {
-      executeActions(MessageBusChannels.EXPERIMENT_RESULT_NEW, result.profile.testId, result, result.notify);
+      executeActions(ExperimentService.ExperimentResult.NEW_RESULT, result.profile.testId, result, result.notify);
    }
 
    JsonNode exportTest(int testId) {

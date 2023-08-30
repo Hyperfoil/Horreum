@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.math.BigInteger;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,7 +28,6 @@ import java.util.stream.StreamSupport;
 
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.api.data.Run;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.IntArrayType;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.PostConstruct;
@@ -57,6 +58,7 @@ import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModel;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 
 import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
+import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.mapper.*;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -64,7 +66,9 @@ import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.transform.Transformers;
+import org.hibernate.type.CustomType;
 import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -269,11 +273,11 @@ public class AlertingServiceImpl implements AlertingService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(MessageBusChannels.DATASET_UPDATED_LABELS, "AlertingService", DataSet.LabelsUpdatedEvent.class, this::onLabelsUpdated);
-      messageBus.subscribe(MessageBusChannels.DATASET_DELETED, "AlertingService", DataSet.Info.class, this::onDatasetDeleted);
-      messageBus.subscribe(MessageBusChannels.DATAPOINT_NEW, "AlertingService", DataPoint.Event.class, this::onNewDataPoint);
-      messageBus.subscribe(MessageBusChannels.RUN_NEW, "AlertingService", Run.class, this::removeExpected);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "AlertingService", TestDAO.class, this::onTestDeleted);
+      messageBus.subscribe(DataSetDAO.EVENT_LABELS_UPDATED, "AlertingService", DataSet.LabelsUpdatedEvent.class, this::onLabelsUpdated);
+      messageBus.subscribe(DataSetDAO.EVENT_DELETED, "AlertingService", DataSet.Info.class, this::onDatasetDeleted);
+      messageBus.subscribe(DataPointDAO.EVENT_NEW, "AlertingService", DataPoint.Event.class, this::onNewDataPoint);
+      messageBus.subscribe(RunDAO.EVENT_NEW, "AlertingService", Run.class, this::removeExpected);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "AlertingService", TestDAO.class, this::onTestDeleted);
    }
 
    private void recalculateDatapointsForDataset(DataSetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
@@ -486,9 +490,9 @@ public class AlertingServiceImpl implements AlertingService {
             output -> logCalculationMessage(dataset, PersistentLog.DEBUG, "Output while calculating variable: <pre>%s</pre>", output)
       );
       if (!missingValueVariables.isEmpty()) {
-         messageBus.publish(MessageBusChannels.DATASET_MISSING_VALUES, dataset.testid, new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify));
+         messageBus.publish(DataSetDAO.EVENT_MISSING_VALUES, dataset.testid, new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify));
       }
-      messageBus.publish(MessageBusChannels.DATAPOINT_PROCESSED, dataset.testid, new DataPoint.DatasetProcessedEvent( DataSetMapper.fromInfo( dataset.getInfo()), notify));
+      messageBus.publish(DataPointDAO.EVENT_DATASET_PROCESSED, dataset.testid, new DataPoint.DatasetProcessedEvent( DataSetMapper.fromInfo( dataset.getInfo()), notify));
    }
 
    private void createDataPoint(DataSetDAO dataset, Instant timestamp, int variableId, double value, boolean notify) {
@@ -498,7 +502,7 @@ public class AlertingServiceImpl implements AlertingService {
       dataPoint.timestamp = timestamp;
       dataPoint.value = value;
       dataPoint.persist();
-      messageBus.publish(MessageBusChannels.DATAPOINT_NEW, dataset.testid,
+      messageBus.publish(DataPointDAO.EVENT_NEW, dataset.testid,
               new DataPoint.Event(DataPointMapper.from( dataPoint), dataset.testid, notify));
    }
 
@@ -652,7 +656,7 @@ public class AlertingServiceImpl implements AlertingService {
                em.persist(change);
                Hibernate.initialize(change.dataset.run.id);
                String testName = TestDAO.<TestDAO>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
-               messageBus.publish(MessageBusChannels.CHANGE_NEW, change.dataset.testid,
+               messageBus.publish(Change.EVENT_NEW, change.dataset.testid,
                        new Change.Event(ChangeMapper.from(change), testName, DataSetMapper.fromInfo(info), notify));
             });
          }
@@ -1220,7 +1224,7 @@ public class AlertingServiceImpl implements AlertingService {
    void onDatasetDeleted(DataSet.Info info) {
       log.debugf("Removing datasets and changes for dataset %d (%d/%d, test %d)", info.id, info.runId, info.ordinal, info.testId);
       for (DataPointDAO dp : DataPointDAO.<DataPointDAO>list("dataset.id", info.id)) {
-         messageBus.publish(MessageBusChannels.DATAPOINT_DELETED, info.testId,
+         messageBus.publish(DataPointDAO.EVENT_DELETED, info.testId,
                  new DataPoint.Event(DataPointMapper.from(dp), info.testId, false));
          dp.delete();
       }

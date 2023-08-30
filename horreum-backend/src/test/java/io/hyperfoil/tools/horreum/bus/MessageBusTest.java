@@ -48,7 +48,7 @@ public class MessageBusTest {
       AtomicInteger counter = new AtomicInteger();
       CountDownLatch firstLatch = new CountDownLatch(1);
       CountDownLatch secondLatch = new CountDownLatch(1);
-      messageBus.subscribe(MessageBusChannels.FOOBAR, "test", String.class, str -> {
+      messageBus.subscribe(CHANNEL, "test", String.class, str -> {
          if (counter.getAndIncrement() == 0) {
             firstLatch.countDown();
             throw RETRY_EXCEPTION;
@@ -56,7 +56,7 @@ public class MessageBusTest {
          secondLatch.countDown();
       });
       Util.withTx(tm, () -> {
-         messageBus.publish(MessageBusChannels.FOOBAR, 1, "foo");
+         messageBus.publish(CHANNEL, 1, "foo");
          return null;
       });
       assertTrue(firstLatch.await(10, TimeUnit.SECONDS));
@@ -81,7 +81,7 @@ public class MessageBusTest {
       AtomicInteger alive = new AtomicInteger(100);
       Phaser phaser = new Phaser(100);
       int currentPhase = phaser.getPhase();
-      messageBus.subscribe(MessageBusChannels.FOOBAR, "testMany", String.class, str -> {
+      messageBus.subscribe(CHANNEL, "testMany", String.class, str -> {
          if (ThreadLocalRandom.current().nextBoolean()) {
             int value = alive.decrementAndGet();
             log.debugf("Decreased to %d", value);
@@ -93,7 +93,7 @@ public class MessageBusTest {
       });
       Util.withTx(tm, () -> {
          for (int i = 0; i < 100; ++i) {
-            messageBus.publish(MessageBusChannels.FOOBAR, 1, "foo" + i);
+            messageBus.publish(CHANNEL, 1, "foo" + i);
          }
          return null;
       });

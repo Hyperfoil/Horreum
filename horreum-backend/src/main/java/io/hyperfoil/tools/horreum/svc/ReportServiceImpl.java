@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.io.ByteArrayOutputStream;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,7 +14,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
@@ -35,7 +35,9 @@ import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.type.CustomType;
 import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -75,7 +77,7 @@ public class ReportServiceImpl implements ReportService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ReportService", TestDAO.class, this::onTestDelete);
+      messageBus.subscribe(TestDAO.EVENT_DELETED, "ReportService", TestDAO.class, this::onTestDelete);
    }
 
    @PermitAll

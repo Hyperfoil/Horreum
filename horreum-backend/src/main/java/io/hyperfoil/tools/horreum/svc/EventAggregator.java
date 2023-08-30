@@ -3,7 +3,6 @@ package io.hyperfoil.tools.horreum.svc;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -33,7 +32,7 @@ public class EventAggregator {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(MessageBusChannels.CHANGE_NEW, "EventAggregator", Change.Event.class, this::onNewChange);
+      messageBus.subscribe(Change.EVENT_NEW, "EventAggregator", Change.Event.class, this::onNewChange);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -54,7 +53,7 @@ public class EventAggregator {
          if (next == null) {
             return;
          } else if (next.emitTimestamp() <= now) {
-            messageBus.publish(MessageBusChannels.DATASET_CHANGES_NEW, next.dataset.testId, next);
+            messageBus.publish(DatasetChanges.EVENT_NEW, next.dataset.testId, next);
             datasetChanges.remove(next.dataset.id);
          } else {
             if (timerId >= 0) {
