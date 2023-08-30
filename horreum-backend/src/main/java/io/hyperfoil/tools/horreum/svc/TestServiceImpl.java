@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.ActionMapper;
@@ -47,8 +48,6 @@ import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.Transformers;
-import org.hibernate.type.CustomType;
-import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -116,7 +115,7 @@ public class TestServiceImpl implements TestService {
       }
       log.debugf("Deleting test %s (%d)", test.name, test.id);
       test.delete();
-      messageBus.publish(TestDAO.EVENT_DELETED, test.id, test);
+      messageBus.publish(MessageBusChannels.TEST_DELETED, test.id, test);
    }
 
    @Override
@@ -229,7 +228,7 @@ public class TestServiceImpl implements TestService {
                throw new WebApplicationException(e, Response.serverError().build());
             }
          }
-         messageBus.publish(TestDAO.EVENT_NEW, test.id, test);
+         messageBus.publish(MessageBusChannels.TEST_NEW, test.id, test);
       }
    }
 

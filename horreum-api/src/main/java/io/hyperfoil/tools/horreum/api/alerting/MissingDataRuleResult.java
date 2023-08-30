@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class MissingDataRuleResult {
-     private Pk pk;
+    private Pk pk;
     public Instant timestamp;
     public MissingDataRule rule;
 

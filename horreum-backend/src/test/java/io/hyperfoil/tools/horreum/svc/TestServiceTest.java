@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
@@ -24,16 +25,12 @@ import io.hyperfoil.tools.horreum.api.data.ViewComponent;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import org.hibernate.query.NativeQuery;
-import org.hibernate.type.CustomType;
-import org.hibernate.type.StandardBasicTypes;
-import org.hibernate.type.spi.TypeConfiguration;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.action.ExperimentResultToMarkdown;
-import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.entity.ExperimentProfileDAO;
 import io.hyperfoil.tools.horreum.server.CloseMe;
@@ -61,7 +58,7 @@ public class TestServiceTest extends BaseServiceTest {
       int runId = uploadRun("{ \"foo\" : \"bar\" }", test.name);
 
       deleteTest(test);
-      BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, RunDAO.EVENT_TRASHED, id -> id == runId);
+      BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, MessageBusChannels.RUN_TRASHED, id -> id == runId);
       assertNotNull(events.poll(10, TimeUnit.SECONDS));
 
       em.clear();
@@ -81,7 +78,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
       final int NUM_DATASETS = 5;
       for (int i = 0; i < NUM_DATASETS; ++i) {
          uploadRun(runWithValue(i, schema), test.name);
@@ -118,11 +115,11 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testAddTestAction(TestInfo info) {
       Test test = createTest(createExampleTest(getTestName(info)));
-      addTestHttpAction(test, RunDAO.EVENT_NEW, "https://attacker.com").then().statusCode(400);
+      addTestHttpAction(test, MessageBusChannels.RUN_NEW, "https://attacker.com").then().statusCode(400);
 
       addAllowedSite("https://example.com");
 
-      Action action = addTestHttpAction(test, RunDAO.EVENT_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
+      Action action = addTestHttpAction(test, MessageBusChannels.RUN_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       action.active = false;
@@ -136,7 +133,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
       uploadRun(runWithValue(42, schema), test.name);
       DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
@@ -172,7 +169,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, DataSetDAO.EVENT_LABELS_UPDATED, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<DataSet.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
       uploadRun(runWithValue(42, schema), test.name);
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
@@ -213,8 +210,8 @@ public class TestServiceTest extends BaseServiceTest {
       view.components = Collections.singletonList(vc);
       updateView(test.id, view);
 
-      addTestHttpAction(test, RunDAO.EVENT_NEW, "http://example.com");
-      addTestGithubIssueCommentAction(test, ExperimentService.ExperimentResult.NEW_RESULT,
+      addTestHttpAction(test, MessageBusChannels.RUN_NEW, "http://example.com");
+      addTestGithubIssueCommentAction(test, MessageBusChannels.EXPERIMENT_RESULT_NEW,
             ExperimentResultToMarkdown.NAME, "hyperfoil", "horreum", "123", "super-secret-github-token");
 
       addChangeDetectionVariable(test);

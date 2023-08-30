@@ -22,9 +22,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "DataPoint")
 @Table(name = "DataPoint")
 public class DataPointDAO extends PanacheEntityBase {
-   public static final String EVENT_NEW = "datapoint/new";
-   public static final String EVENT_DELETED = "datapoint/deleted";
-   public static final String EVENT_DATASET_PROCESSED = "datapoint/dataset_processed";
 
    @Id
    @GeneratedValue(strategy = GenerationType.AUTO)
@@ -64,38 +61,4 @@ public class DataPointDAO extends PanacheEntityBase {
       return dataset.id;
    }
 
-   public static class Event {
-      public DataPointDAO dataPoint;
-      public int testId;
-      public boolean notify;
-
-      public Event() {
-      }
-
-      public Event(DataPointDAO dataPoint, int testId, boolean notify) {
-         this.dataPoint = dataPoint;
-         this.testId = testId;
-         this.notify = notify;
-      }
-
-      @Override
-      public String toString() {
-         return "DataPoint.Event{" +
-                 "dataPoint=" + dataPoint +
-                 ", notify=" + notify +
-                 '}';
-      }
-   }
-
-   public static class DatasetProcessedEvent {
-      public DataSetDAO.Info dataset;
-      public boolean notify;
-
-      public DatasetProcessedEvent() {}
-
-      public DatasetProcessedEvent(DataSetDAO.Info dataset, boolean notify) {
-         this.dataset = dataset;
-         this.notify = notify;
-      }
-   }
 }

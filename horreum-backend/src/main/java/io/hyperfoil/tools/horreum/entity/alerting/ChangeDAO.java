@@ -24,7 +24,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "Change")
 @Table(name = "change")
 public class ChangeDAO extends PanacheEntityBase {
-   public static final String EVENT_NEW = "change/new";
 
    @Id
    @GeneratedValue
@@ -75,28 +74,4 @@ public class ChangeDAO extends PanacheEntityBase {
       return change;
    }
 
-   public static class Event {
-      public ChangeDAO change;
-      public String testName;
-      public DataSetDAO.Info dataset;
-      public boolean notify;
-
-      public Event() {}
-
-      public Event(ChangeDAO change, String testName, DataSetDAO.Info dataset, boolean notify) {
-         this.change = change;
-         this.testName = testName;
-         this.dataset = dataset;
-         this.notify = notify;
-      }
-
-      @Override
-      public String toString() {
-         return "Change.Event{" +
-                 "change=" + change +
-                 ", dataset=" + dataset +
-                 ", notify=" + notify +
-                 '}';
-      }
-   }
 }

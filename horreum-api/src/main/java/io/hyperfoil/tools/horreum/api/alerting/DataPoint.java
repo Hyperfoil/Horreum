@@ -6,9 +6,6 @@ import io.hyperfoil.tools.horreum.api.data.DataSet;
 import java.time.Instant;
 
 public class DataPoint {
-    public static final String EVENT_NEW = "datapoint/new";
-    public static final String EVENT_DELETED = "datapoint/deleted";
-    public static final String EVENT_DATASET_PROCESSED = "datapoint/dataset_processed";
     public Integer id;
     public Instant timestamp;
     public double value;

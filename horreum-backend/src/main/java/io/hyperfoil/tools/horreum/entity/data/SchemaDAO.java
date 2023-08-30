@@ -1,9 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
-import java.util.Collection;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
-import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import org.hibernate.annotations.GenericGenerator;
@@ -91,13 +88,4 @@ public class SchemaDAO extends ProtectedBaseEntity {
    @Column(columnDefinition = "jsonb")
    public JsonNode schema;
 
-   public static class ValidationEvent {
-      public int id; // context = run/dataset depends on event name
-      public Collection<ValidationErrorDAO> errors;
-
-      public ValidationEvent(int id, Collection<ValidationErrorDAO> errors) {
-         this.id = id;
-         this.errors = errors;
-      }
-   }
 }

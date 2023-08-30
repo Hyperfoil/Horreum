@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.entity;
 
 import java.time.Instant;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

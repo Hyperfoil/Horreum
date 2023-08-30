@@ -97,15 +97,15 @@ public class MessageBus {
    }
 
    @Transactional(Transactional.TxType.MANDATORY)
-   public void publish(String channel, int testId, Object payload) {
+   public void publish(MessageBusChannels channel, int testId, Object payload) {
       JsonNode json = Util.OBJECT_MAPPER.valueToTree(payload);
-      Integer componentFlag = flags.get(channel);
+      Integer componentFlag = flags.get(channel.name());
       BigInteger id;
       if (componentFlag != null && componentFlag != 0) {
          try (CloseMe ignored = roleManager.withRoles(Collections.singleton(Roles.HORREUM_MESSAGEBUS))) {
             id = (BigInteger) em.createNativeQuery("INSERT INTO messagebus (id, \"timestamp\", channel, testid, message, flags) VALUES (nextval('messagebus_seq'), NOW(), ?1, ?2, ?3, ?4) RETURNING id", BigInteger.class)
                   .unwrap(NativeQuery.class)
-                  .setParameter(1, channel)
+                  .setParameter(1, channel.name())
                   .setParameter(2, testId)
                   .setParameter(3, json, JsonBinaryType.INSTANCE)
                   .setParameter(4, componentFlag)
@@ -120,7 +120,7 @@ public class MessageBus {
          log.debugf("Publishing %d on test %d with flag %X on %s: %s", id.longValue(), testId, flag, channel, payload);
          Util.doAfterCommitThrowing(tm, () -> {
             log.debugf("Sending %d on test %d with flag %X to eventbus %s ", id.longValue(), testId, flag, channel);
-            eventBus.publish(channel, new Message(id.longValue(), testId, flag, payload));
+            eventBus.publish(channel.name(), new Message(id.longValue(), testId, flag, payload));
          });
       } catch (RollbackException e) {
          log.debug("Not publishing the event as the transaction has been marked rollback-only");
@@ -129,8 +129,8 @@ public class MessageBus {
       }
    }
 
-   public <T> AutoCloseable subscribe(String channel, String component, Class<T> payloadClass, Handler<T> handler) {
-      payloadClasses.compute(channel, (c, current) -> {
+   public <T> AutoCloseable subscribe(MessageBusChannels channel, String component, Class<T> payloadClass, Handler<T> handler) {
+      payloadClasses.compute(channel.name(), (c, current) -> {
          if (current == null || current.isAssignableFrom(payloadClass)) {
             return payloadClass;
          } else if (payloadClass.isAssignableFrom(current)) {
@@ -141,14 +141,14 @@ public class MessageBus {
       });
       int index = registerIndex(channel, component);
       log.debugf("Channel %s, component %s has index %d", channel, component, index);
-      MessageConsumer<Object> consumer = eventBus.consumer(channel, event -> {
+      MessageConsumer<Object> consumer = eventBus.consumer(channel.name(), event -> {
          if (!(event.body() instanceof Message)) {
-            log.errorf("Not a message on %s: %s", channel, event.body());
+            log.errorf("Not a message on %s: %s", channel.name(), event.body());
             return;
          }
          Message msg = (Message) event.body();
          if ((msg.componentFlags & (1 << index)) == 0) {
-            log.debugf("%s ignoring message %d on %s with flags %X: doesn't match index %d", component, msg.id, channel, msg.componentFlags, index);
+            log.debugf("%s ignoring message %d on %s with flags %X: doesn't match index %d", component, msg.id, channel.name(), msg.componentFlags, index);
             return;
          }
          executeForTest(msg.testId, () -> {
@@ -162,9 +162,9 @@ public class MessageBus {
                         // so we'll remove the record with a trigger
                         int updateCount = em.createNativeQuery("UPDATE messagebus SET flags = flags & ~(1 << ?1) WHERE id = ?2")
                               .setParameter(1, index).setParameter(2, msg.id).executeUpdate();
-                        log.debugf("%s consumed %d on %s - %d records updated", component, msg.id, channel, updateCount);
+                        log.debugf("%s consumed %d on %s - %d records updated", component, msg.id, channel.name(), updateCount);
                      } else {
-                        log.debugf("Rolling back, %s cannot consume %d on %s", component, msg.id, channel);
+                        log.debugf("Rolling back, %s cannot consume %d on %s", component, msg.id, channel.name());
                      }
                   } catch (SystemException e) {
                      log.error("Exception querying transaction status", e);
@@ -177,16 +177,16 @@ public class MessageBus {
                   return null;
                });
             } catch (Throwable t) {
-               errorReporter.reportException(t, ERROR_SUBJECT, "Exception in handler for message bus channel %s, message %s%n%n", channel, msg.payload);
+               errorReporter.reportException(t, ERROR_SUBJECT, "Exception in handler for message bus channel %s, message %s%n%n", channel.name(), msg.payload);
             }
          });
       });
       unregisters.add(consumer::unregister);
       return () -> {
-         removeIndex(channel, index);
-         int newFlags = flags.compute(channel, (c, current) -> current != null ? current & ~(1 << index) : 0);
+         removeIndex(channel.name(), index);
+         int newFlags = flags.compute(channel.name(), (c, current) -> current != null ? current & ~(1 << index) : 0);
          consumer.unregister();
-         log.debugf("Unregistered index %d on channel %s, new flags: %d", index, channel, Integer.valueOf(newFlags));
+         log.debugf("Unregistered index %d on channel %s, new flags: %d", index, channel.name(), Integer.valueOf(newFlags));
       };
    }
 
@@ -199,14 +199,14 @@ public class MessageBus {
       return entity;
    }
 
-   private int registerIndex(String channel, String component) {
+   private int registerIndex(MessageBusChannels channel, String component) {
       Integer index;
       do {
-         index = tryRegisterIndex(channel, component);
+         index = tryRegisterIndex(channel.name(), component);
          Thread.yield();
       } while (index == null);
       int finalIndex = index;
-      flags.compute(channel, (c, current) -> (current == null ? 0 : current) | (1 << finalIndex));
+      flags.compute(channel.name(), (c, current) -> (current == null ? 0 : current) | (1 << finalIndex));
       return index;
    }
 

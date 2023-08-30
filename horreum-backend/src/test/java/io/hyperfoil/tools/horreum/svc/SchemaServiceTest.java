@@ -1,13 +1,11 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -21,6 +19,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Schema;
@@ -48,8 +47,8 @@ public class SchemaServiceTest extends BaseServiceTest {
       Schema allowNoneSchema = createSchema("none", allowNone.path("$id").asText(), allowNone);
 
       Test test = createTest(createExampleTest("schemaTest"));
-      BlockingQueue<Schema.ValidationEvent> runValidations = eventConsumerQueue(Schema.ValidationEvent.class, RunDAO.EVENT_VALIDATED, e -> checkRunTestId(e.id, test.id));
-      BlockingQueue<Schema.ValidationEvent> datasetValidations = eventConsumerQueue(Schema.ValidationEvent.class, DataSetDAO.EVENT_VALIDATED, e -> checkTestId(e.id, test.id));
+      BlockingQueue<Schema.ValidationEvent> runValidations = eventConsumerQueue(Schema.ValidationEvent.class, MessageBusChannels.RUN_VALIDATED, e -> checkRunTestId(e.id, test.id));
+      BlockingQueue<Schema.ValidationEvent> datasetValidations = eventConsumerQueue(Schema.ValidationEvent.class, MessageBusChannels.DATASET_VALIDATED, e -> checkTestId(e.id, test.id));
 
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
       data.addObject().put("$schema", allowAnySchema.uri).put("foo", "bar");

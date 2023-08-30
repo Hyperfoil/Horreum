@@ -29,6 +29,7 @@ import io.hyperfoil.tools.horreum.api.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.HttpHeaders;
 
@@ -66,7 +67,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
       Extractor path = new Extractor("foo", "$.value", false);
       Schema schema = createExampleSchema(info);
 
@@ -82,7 +83,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testTransformationWithoutSchema(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
 
       Schema schema = createExampleSchema(info);
 
@@ -122,7 +123,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testTransformationWithoutSchemaInUpload(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
 
       setTestVariables(test, "Value", "value");
 
@@ -138,7 +139,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
       Schema schema = createExampleSchema(info);
 
       Transformer transformer = createTransformer("acme", schema, "");
@@ -159,7 +160,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
       Schema schema = createExampleSchema("AcneCorp", "AcneInc", "AcneRrUs", false);
 
       Extractor path = new Extractor("foo", "$.value", false);
@@ -189,7 +190,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(exampleTest);
       addTransformer(test, acmeTransformer, roadRunnerTransformer);
 
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
 
       String data = runWithValue(42.0d, acmeSchema, roadRunnerSchema).toString();
       int runId = uploadRun(data, test.name);
@@ -211,7 +212,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
       Schema acmeSchema = createExampleSchema("AceCorp", "AceInc", "AceRrUs", false);
 
       uploadRun(runWithValue(42.0d, acmeSchema), test.name);
@@ -231,7 +232,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testTransformationNestedSchemasWithoutTransformers(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
       Schema schemaA = createExampleSchema("Ada", "Ada", "Ada", false);
       Schema schemaB = createExampleSchema("Bdb", "Bdb", "Bdb", false);
       Schema schemaC = createExampleSchema("Cdc", "Cdc", "Cdc", false);
@@ -265,7 +266,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
 
       Schema appleSchema = createExampleSchema("AppleCorp", "AppleInc", "AppleRrUs", false);
 
@@ -307,7 +308,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(exampleTest);
       addTransformer(test, arrayTransformer, scalarTransformer);
 
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
 
       ObjectNode data = runWithValue(42.0d, schema);
 
@@ -339,7 +340,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerA, transformerB);
 
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
 
       uploadRun(runWithValue(42, schemaB), test.name);
       DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
@@ -374,7 +375,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(exampleTest);
       addTransformer(test, scalarTransformer);
 
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
 
       ObjectNode data = runWithValue(42.0d, schema);
 
@@ -403,7 +404,7 @@ public class RunServiceTest extends BaseServiceTest {
 
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerNoFunc, transformerFunc, transformerCombined);
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
 
       uploadRun(data, test.name);
       DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
@@ -578,7 +579,7 @@ public class RunServiceTest extends BaseServiceTest {
       metadata.add(simpleObject("urn:bar", "bar", "yyy"));
       metadata.add(simpleObject("urn:goo", "goo", "zzz"));
 
-      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid == (int) test.id);
+      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid == (int) test.id);
 
       int run1 = uploadRun(now, data, metadata, test.name);
 

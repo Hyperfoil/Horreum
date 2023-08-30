@@ -31,11 +31,11 @@ import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.transaction.Status;
 import jakarta.transaction.TransactionManager;
 import jakarta.ws.rs.core.HttpHeaders;
@@ -491,7 +491,7 @@ public class BaseServiceTest {
               .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, Variable.class));
    }
 
-   protected <E> BlockingQueue<E> eventConsumerQueue(Class<? extends E> eventClass, String eventType, Predicate<E> filter) {
+   protected <E> BlockingQueue<E> eventConsumerQueue(Class<? extends E> eventClass, MessageBusChannels eventType, Predicate<E> filter) {
       BlockingQueue<E> queue = new LinkedBlockingDeque<>();
       AutoCloseable closeable = messageBus.subscribe(eventType, getClass().getName() + "_" + ThreadLocalRandom.current().nextLong(), eventClass, msg -> {
          if (eventClass.isInstance(msg)) {
@@ -524,14 +524,14 @@ public class BaseServiceTest {
    }
 
    protected BlockingQueue<Integer> trashRun(int runId) throws InterruptedException {
-      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, RunDAO.EVENT_TRASHED, r -> true);
+      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, MessageBusChannels.RUN_TRASHED, r -> true);
       jsonRequest().post("/api/run/" + runId + "/trash").then().statusCode(204);
       assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
       return trashedQueue;
    }
 
    protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, DataSetDAO.EVENT_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
       try {
          RunDAO run = new RunDAO();
          tm.begin();
@@ -655,18 +655,18 @@ public class BaseServiceTest {
             .body(prefix).post("/api/action/allowedSites").then().statusCode(200);
    }
 
-   protected Response addTestHttpAction(Test test, String event, String url) {
+   protected Response addTestHttpAction(Test test, MessageBusChannels event, String url) {
       Action action = new Action();
-      action.event = event;
+      action.event = event.name();
       action.type = HttpAction.TYPE_HTTP;
       action.active = true;
       action.config = JsonNodeFactory.instance.objectNode().put("url", url);
       return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
    }
 
-   protected Response addTestGithubIssueCommentAction(Test test, String event, String formatter, String owner, String repo, String issue, String secretToken) {
+   protected Response addTestGithubIssueCommentAction(Test test, MessageBusChannels event, String formatter, String owner, String repo, String issue, String secretToken) {
       Action action = new Action();
-      action.event = event;
+      action.event = event.name();
       action.type = GitHubIssueCommentAction.TYPE_GITHUB_ISSUE_COMMENT;
       action.active = true;
       action.config = JsonNodeFactory.instance.objectNode()
@@ -678,9 +678,9 @@ public class BaseServiceTest {
       return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
    }
 
-   protected Response addGlobalAction(String event, String url) {
+   protected Response addGlobalAction(MessageBusChannels event, String url) {
       Action action = new Action();
-      action.event = event;
+      action.event = event.name();
       action.type = "http";
       action.active = true;
       action.config = JsonNodeFactory.instance.objectNode().put("url", url);

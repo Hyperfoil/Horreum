@@ -28,8 +28,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.smallrye.common.constraint.NotNull;
-import org.hibernate.type.CustomType;
-import org.hibernate.type.spi.TypeConfiguration;
 
 /**
  * Purpose of this object is to represent derived run data.
@@ -37,11 +35,6 @@ import org.hibernate.type.spi.TypeConfiguration;
 @Entity(name="dataset")
 @JsonIgnoreType
 public class DataSetDAO extends OwnedEntityBase {
-   public static final String EVENT_NEW = "dataset/new";
-   public static final String EVENT_LABELS_UPDATED = "dataset/updatedlabels";
-   public static final String EVENT_MISSING_VALUES = "dataset/missing_values";
-   public static final String EVENT_DELETED = "dataset/deleted";
-   public static final String EVENT_VALIDATED = "dataset/validated";
 
    @Id
    @SequenceGenerator(
@@ -125,21 +118,6 @@ public class DataSetDAO extends OwnedEntityBase {
                  "dataset=" + dataset.id + " (" + dataset.run.id + "/" + dataset.ordinal +
                  "), isRecalculation=" + isRecalculation +
                  '}';
-      }
-   }
-
-   public static class LabelsUpdatedEvent {
-      public int testId;
-      public int datasetId;
-      public boolean isRecalculation;
-
-      public LabelsUpdatedEvent() {
-      }
-
-      public LabelsUpdatedEvent(int testId, int datasetId, boolean isRecalculation) {
-         this.testId = testId;
-         this.datasetId = datasetId;
-         this.isRecalculation = isRecalculation;
       }
    }
 

@@ -12,8 +12,6 @@ import org.hibernate.annotations.Type;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Entity(name = "Action")
 public class ActionDAO extends PanacheEntityBase {
@@ -73,21 +71,4 @@ public class ActionDAO extends PanacheEntityBase {
        this.runAlways = runAlways;
     }
 
-   public void setSecrets(JsonNode secrets) {
-      this.secrets = secrets;
-   }
-
-   // Had we called this simply `getSecrets` Quarkus would rewrite (??!!) some property
-   // accesses to use of that method
-   public JsonNode getMaskedSecrets() {
-      if (secrets != null && secrets.isObject()) {
-         ObjectNode masked = JsonNodeFactory.instance.objectNode();
-         secrets.fieldNames().forEachRemaining(name -> {
-            masked.put(name, "********");
-         });
-         return masked;
-      } else {
-         return JsonNodeFactory.instance.objectNode();
-      }
-   }
 }
