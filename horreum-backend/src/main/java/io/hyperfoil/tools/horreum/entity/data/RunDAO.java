@@ -27,9 +27,6 @@ import org.hibernate.annotations.Type;
 @DynamicUpdate // We don't want to trigger schema analysis when trashing the run
 @JsonIgnoreType
 public class RunDAO extends ProtectedBaseEntity {
-   public static final String EVENT_NEW = "run/new";
-   public static final String EVENT_TRASHED = "run/trashed";
-   public static final String EVENT_VALIDATED = "run/validated";
 
    @Id
    @SequenceGenerator(

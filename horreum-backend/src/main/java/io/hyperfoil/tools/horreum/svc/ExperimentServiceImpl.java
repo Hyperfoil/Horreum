@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
@@ -68,8 +69,8 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(DataPointDAO.EVENT_DATASET_PROCESSED, "ExperimentService", DataPoint.DatasetProcessedEvent.class, this::onDatapointsCreated);
-      messageBus.subscribe(TestDAO.EVENT_DELETED, "ExperimentService", TestDAO.class, this::onTestDeleted);
+      messageBus.subscribe(MessageBusChannels.DATAPOINT_PROCESSED, "ExperimentService", DataPoint.DatasetProcessedEvent.class, this::onDatapointsCreated);
+      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ExperimentService", TestDAO.class, this::onTestDeleted);
    }
 
    @WithRoles
@@ -144,7 +145,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @Transactional
    public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
-      runExperiments(event.dataset, result -> messageBus.publish(ExperimentResult.NEW_RESULT, event.dataset.testId, result),
+      runExperiments(event.dataset, result -> messageBus.publish(MessageBusChannels.EXPERIMENT_RESULT_NEW, event.dataset.testId, result),
             logs -> logs.forEach(log -> log.persist()), event.notify);
    }
 

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -51,7 +52,7 @@ public class LogServiceImpl implements LogService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(TestDAO.EVENT_DELETED, "LogService", TestDAO.class, this::onTestDelete);
+      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "LogService", TestDAO.class, this::onTestDelete);
    }
 
    private Integer withDefault(Integer value, Integer defValue) {

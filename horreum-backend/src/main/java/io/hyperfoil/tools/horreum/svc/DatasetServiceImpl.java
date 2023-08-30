@@ -6,6 +6,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
@@ -158,7 +159,7 @@ public class DatasetServiceImpl implements DatasetService {
    @PostConstruct
    void init() {
       sqlService.registerListener("calculate_labels", this::onLabelChanged);
-      messageBus.subscribe(DataSetDAO.EVENT_NEW, "DatasetService", DataSet.EventNew.class, this::onNewDataset);
+      messageBus.subscribe(MessageBusChannels.DATASET_NEW, "DatasetService", DataSet.EventNew.class, this::onNewDataset);
    }
 
    @PermitAll
@@ -440,7 +441,7 @@ public class DatasetServiceImpl implements DatasetService {
             (row, e, jsCode) -> logMessage(datasetId, PersistentLog.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
             out -> logMessage(datasetId, PersistentLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
-      messageBus.publish(DataSetDAO.EVENT_LABELS_UPDATED, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+      messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)

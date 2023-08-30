@@ -7,7 +7,6 @@ import io.hyperfoil.tools.horreum.api.data.DataSet;
 import java.time.Instant;
 
 public class Change {
-    public static final String EVENT_NEW = "change/new";
     @JsonProperty( required = true )
     public int id;
     @JsonProperty( required = true )

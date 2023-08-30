@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -71,8 +72,8 @@ public class NotificationServiceImpl implements NotificationService {
    @PostConstruct
    public void init() {
       notificationPlugins.forEach(plugin -> plugins.put(plugin.method(), plugin));
-      messageBus.subscribe(DatasetChanges.EVENT_NEW, "NotificationService", DatasetChanges.class, this::onNewChanges);
-      messageBus.subscribe(DataSetDAO.EVENT_MISSING_VALUES, "NotificationService", MissingValuesEvent.class, this::onMissingValues);
+      messageBus.subscribe(MessageBusChannels.DATASET_CHANGES_NEW, "NotificationService", DatasetChanges.class, this::onNewChanges);
+      messageBus.subscribe(MessageBusChannels.DATASET_MISSING_VALUES, "NotificationService", MissingValuesEvent.class, this::onMissingValues);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)

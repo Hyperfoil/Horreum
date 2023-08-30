@@ -24,7 +24,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "Change")
 @Table(name = "change")
 public class ChangeDAO extends PanacheEntityBase {
-   public static final String EVENT_NEW = "change/new";
 
    @Id
    @GeneratedValue

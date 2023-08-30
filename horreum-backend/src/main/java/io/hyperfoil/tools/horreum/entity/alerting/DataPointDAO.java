@@ -22,9 +22,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "DataPoint")
 @Table(name = "DataPoint")
 public class DataPointDAO extends PanacheEntityBase {
-   public static final String EVENT_NEW = "datapoint/new";
-   public static final String EVENT_DELETED = "datapoint/deleted";
-   public static final String EVENT_DATASET_PROCESSED = "datapoint/dataset_processed";
 
    @Id
    @GeneratedValue(strategy = GenerationType.AUTO)

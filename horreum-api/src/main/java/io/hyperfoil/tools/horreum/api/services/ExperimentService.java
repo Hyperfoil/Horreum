@@ -63,7 +63,6 @@ public interface ExperimentService {
 
    @Schema(name = "ExperimentResult")
    class ExperimentResult {
-      public static final String NEW_RESULT = "experiment_result/new";
 
       public ExperimentProfile profile;
       public List<DatasetLog> logs;
