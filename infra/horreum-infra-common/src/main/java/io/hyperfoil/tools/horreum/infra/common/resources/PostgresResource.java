@@ -1,8 +1,10 @@
 package io.hyperfoil.tools.horreum.infra.common.resources;
 
 import io.hyperfoil.tools.horreum.infra.common.ResourceLifecycleManager;
+import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.SelinuxContext;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,6 +23,7 @@ public class PostgresResource implements ResourceLifecycleManager {
     private HorreumPostgreSQLContainer<?> postgresContainer;
 
     private Boolean inContainer = false;
+    private Boolean prodBackup = false;
     private String networkAlias = "";
 
     @Override
@@ -35,12 +38,16 @@ public class PostgresResource implements ResourceLifecycleManager {
 
             networkAlias = initArgs.get(HORREUM_DEV_POSTGRES_NETWORK_ALIAS);
 
-            //TODO: do not hard code these values
-            postgresContainer = new HorreumPostgreSQLContainer<>(POSTGRES_IMAGE)
-                    .withDatabaseName("horreum")
-                    .withUsername("dbadmin")
-                    .withPassword("secret")
-                    ;
+            postgresContainer = new HorreumPostgreSQLContainer<>(POSTGRES_IMAGE, initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ? 1 : 2)
+                    .withDatabaseName(initArgs.get(HORREUM_DEV_DB_DATABASE))
+                    .withUsername(initArgs.get(HORREUM_DEV_DB_USERNAME))
+                    .withPassword(initArgs.get(HORREUM_DEV_DB_PASSWORD))
+            ;
+
+            if ( initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ) {
+                postgresContainer.addFileSystemBind(initArgs.get(HORREUM_DEV_POSTGRES_BACKUP), "/var/lib/postgresql/data", BindMode.READ_WRITE, SelinuxContext.SINGLE);
+                prodBackup = true;
+            }
 
             String resourceName = POSTGRES_CONFIG_PROPERTIES; // could also be a constant
             Properties props = new Properties();
@@ -71,12 +78,14 @@ public class PostgresResource implements ResourceLifecycleManager {
         }
 
         postgresContainer.start();
-        try (Connection conn = DriverManager.getConnection(postgresContainer.getJdbcUrl(), "dbadmin", "secret")) {
-            conn.createStatement().executeUpdate("CREATE ROLE appuser noinherit login password 'secret';");
-            conn.createStatement().executeUpdate("CREATE ROLE keycloak noinherit login password 'secret';");
-            conn.createStatement().executeUpdate("CREATE DATABASE keycloak WITH OWNER = 'keycloak';");
-        } catch (SQLException t) {
-            throw new RuntimeException(t);
+        if ( !prodBackup ) {
+            try (Connection conn = DriverManager.getConnection(postgresContainer.getJdbcUrl(), "dbadmin", "secret")) {
+                conn.createStatement().executeUpdate("CREATE ROLE appuser noinherit login password 'secret';");
+                conn.createStatement().executeUpdate("CREATE ROLE keycloak noinherit login password 'secret';");
+                conn.createStatement().executeUpdate("CREATE DATABASE keycloak WITH OWNER = 'keycloak';");
+            } catch (SQLException t) {
+                throw new RuntimeException(t);
+            }
         }
         String postgresContainerName = postgresContainer.getContainerName().replaceAll("/", "");
         Integer port = postgresContainer.getMappedPort(5432);
@@ -86,6 +95,7 @@ public class PostgresResource implements ResourceLifecycleManager {
 
         return Map.of(
                 "postgres.container.name", postgresContainerName,
+                "postgres.container.port", port.toString(),
                 "quarkus.datasource.jdbc.url", postgresContainer.getJdbcUrl(),
                 "quarkus.datasource.migration.jdbc.url", postgresContainer.getJdbcUrl(),
                 "quarkus.datasource.jdbc.url.internal", jdbcUrl
