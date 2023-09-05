@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
+import io.quarkus.panache.common.Sort;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -76,7 +77,7 @@ public class BannerServiceImpl implements BannerService {
 
    private BannerDAO getBanner() {
       @SuppressWarnings("unchecked")
-      List<BannerDAO> banners = em.createQuery("SELECT b FROM Banner b WHERE active IS TRUE ORDER BY created DESC").setMaxResults(1).getResultList();
+      List<BannerDAO> banners = BannerDAO.list("active=?1 ORDER BY created DESC",true);
       return banners != null && !banners.isEmpty() ? banners.get(0) : null;
    }
 }

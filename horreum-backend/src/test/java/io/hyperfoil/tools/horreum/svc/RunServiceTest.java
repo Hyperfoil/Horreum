@@ -9,6 +9,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
+import io.hyperfoil.tools.horreum.api.services.RunService;
 import jakarta.ws.rs.core.HttpHeaders;
 
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
@@ -466,14 +467,15 @@ public class RunServiceTest extends BaseServiceTest {
       long now = System.currentTimeMillis();
       int runID = uploadRun(now, now, JsonNodeFactory.instance.objectNode(), test.name, test.owner, Access.PRIVATE);
 
-      String response = RestAssured.given().auth().oauth2(getTesterToken())
+      RunService.RunExtended response = RestAssured.given().auth().oauth2(getTesterToken())
               .header(HttpHeaders.CONTENT_TYPE, "application/json")
               .body(org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode())
               .get("/api/run/" + runID)
               .then()
               .statusCode(200)
-              .extract().asString();
+              .extract().as(RunService.RunExtended.class);
       assertNotNull(response);
+      assertEquals(test.name, response.testname);
    }
 
    @org.junit.jupiter.api.Test
