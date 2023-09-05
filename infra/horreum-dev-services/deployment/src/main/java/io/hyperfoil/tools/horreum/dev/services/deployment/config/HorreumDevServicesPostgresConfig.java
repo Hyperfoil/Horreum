@@ -4,9 +4,10 @@ import io.quarkus.runtime.annotations.ConfigGroup;
 import io.quarkus.runtime.annotations.ConfigItem;
 
 import java.io.File;
-import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
+
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_POSTGRES_IMAGE;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_POSTGRES_NETWORK_ALIAS;
 
 /**
  * Configuration for Horreum dev services.
@@ -23,19 +24,20 @@ public class HorreumDevServicesPostgresConfig {
     /**
      * Container image name for postgres service
      */
-    @ConfigItem(defaultValue = "postgres:13")
+    @ConfigItem(defaultValue = DEFAULT_POSTGRES_IMAGE)
     public String image;
+
+
+    /**
+     * Container name for postgres container
+     */
+    @ConfigItem(defaultValue = DEFAULT_POSTGRES_NETWORK_ALIAS)
+    public String networkAlias;
 
     /**
      * File path to production backup of database
      */
     @ConfigItem()
     public Optional<File> databaseBackup;
-
-    /**
-     * Container name for postgres container
-     */
-    @ConfigItem(defaultValue = "horreum-dev-postgres")
-    public String networkAlias;
 
 }

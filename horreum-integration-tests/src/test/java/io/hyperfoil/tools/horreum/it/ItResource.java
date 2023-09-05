@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.it;
 
-import io.quarkus.runtime.annotations.ConfigItem;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import org.jboss.logging.Logger;
 
@@ -26,10 +25,15 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
 
                     //todo: pick up from configuration
                     Map<String, String> containerArgs = Map.of(
-                            HORREUM_DEV_KEYCLOAK_IMAGE, "quay.io/keycloak/keycloak:21.1",
-                            HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS, "horreum-dev-postgres",
-                            HORREUM_DEV_POSTGRES_IMAGE, "postgres:13",
-                            HORREUM_DEV_POSTGRES_NETWORK_ALIAS, "horreum-dev-keycloak"
+                            HORREUM_DEV_KEYCLOAK_IMAGE, DEFAULT_KEYCLOAK_IMAGE,
+                            HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS, DEFAULT_KEYCLOAK_NETWORK_ALIAS,
+                            HORREUM_DEV_POSTGRES_IMAGE, DEFAULT_POSTGRES_IMAGE,
+                            HORREUM_DEV_POSTGRES_NETWORK_ALIAS, DEFAULT_POSTGRES_NETWORK_ALIAS,
+                            HORREUM_DEV_KEYCLOAK_DB_USERNAME, DEFAULT_KC_DB_USERNAME,
+                            HORREUM_DEV_KEYCLOAK_DB_PASSWORD, DEFAULT_KC_DB_PASSWORD,
+                            HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME, DEFAULT_KC_ADMIN_USERNAME,
+                            HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD, DEFAULT_KC_ADMIN_PASSWORD
+
                     );
                     return startContainers(containerArgs);
                 } catch (Exception e){

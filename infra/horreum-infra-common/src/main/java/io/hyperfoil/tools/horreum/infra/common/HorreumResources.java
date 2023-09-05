@@ -22,6 +22,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static io.hyperfoil.tools.horreum.infra.common.Const.*;
+
 
 public class HorreumResources {
 
@@ -110,6 +112,7 @@ public class HorreumResources {
     public static Map<String, String> startContainers(Map<String, String> initArgs) {
 
 
+
         Map<String, String> envVariables = new HashMap<>();
 
 
@@ -122,6 +125,10 @@ public class HorreumResources {
 
         envVariables.putAll(initArgs);
         envVariables.put("inContainer", "true");
+
+        envVariables.put(HORREUM_DEV_DB_DATABASE, DEFAULT_DBDATABASE);
+        envVariables.put(HORREUM_DEV_DB_USERNAME, DEFAULT_DB_USERNAME);
+        envVariables.put(HORREUM_DEV_DB_PASSWORD, DEFAULT_DB_PASSWORD);
 
         postgreSQLResource.init(envVariables);
 
@@ -138,51 +145,71 @@ public class HorreumResources {
 
         waitForContainerReady(keycloakResource.getContainer(), "started in");
 
-        keycloak = KeycloakBuilder.builder()
-                .serverUrl(keycloakEnv.get("keycloak.host"))
-                .realm(KEYCLOAK_REALM)
-                .username("admin")
-                .password("secret")
-                .clientId("admin-cli")
-                .build();
-
         envVariables.put("keycloak.host", keycloakEnv.get("keycloak.host"));
         envVariables.put("horreum.keycloak.url", keycloakEnv.get("keycloak.host"));
         envVariables.put("quarkus.oidc.auth-server-url", keycloakEnv.get("keycloak.host").concat("/realms/").concat(HORREUM_REALM));
-        // Obtain client secrets for Horreum
-        envVariables.put("quarkus.oidc.credentials.secret", generateClientSecret.apply("horreum"));
 
-        // Create roles and example user in Keycloak
-        RoleRepresentation uploaderRole = getRoleID.apply("uploader");
-        RoleRepresentation testerRole = getRoleID.apply("tester");
-        RoleRepresentation viewerRole = getRoleID.apply("viewer");
-        RoleRepresentation adminRole = getRoleID.apply("admin");
+        String keycloakAdminUser = initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME);
+        String keycloakAdminPassword = initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD);
 
-        RoleRepresentation devTeamRole = createRole.apply(() -> RoleBuilder.create().name("dev-team").build());
-        RoleRepresentation teamViewerRole = createRole.apply(() -> RoleBuilder.create().name("dev-viewer").composite().realmComposite(devTeamRole).realmComposite(viewerRole).build());
-        RoleRepresentation teamUploaderRole = createRole.apply(() -> RoleBuilder.create().name("dev-uploader").composite().realmComposite(devTeamRole).realmComposite(uploaderRole).build());
-        RoleRepresentation teamTesterRole = createRole.apply(() -> RoleBuilder.create().name("dev-tester").composite().realmComposite(devTeamRole).realmComposite(testerRole).build());
-        RoleRepresentation teamManagerRole = createRole.apply(() -> RoleBuilder.create().name("dev-manager").composite().realmComposite(devTeamRole).build());
+        keycloak = KeycloakBuilder.builder()
+                .serverUrl(keycloakEnv.get("keycloak.host"))
+                .realm(KEYCLOAK_REALM)
+                .username(keycloakAdminUser)
+                .password(keycloakAdminPassword)
+                .clientId("admin-cli")
+                .build();
 
-        UserRepresentation dummyUser = createUser.apply(() ->
-                UserBuilder.create()
-                        .username("user")
-                        .firstName("Dummy")
-                        .lastName("User")
-                        .password("secret")
-                        .email("user@example.com")
-                        .enabled(true)
-                        .build()
-        );
+        if ( ! initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ) {
+            // Not using a backup db, so need to create the dummy roles
 
-        keycloak.realm(HORREUM_REALM).users().get(dummyUser.getId()).roles().realmLevel().add(Arrays.asList(teamUploaderRole, teamTesterRole, teamViewerRole, teamManagerRole, adminRole));
 
-        ClientRepresentation accountClient = findClient.apply("account");
+            // Obtain client secrets for Horreum
+            envVariables.put("quarkus.oidc.credentials.secret", generateClientSecret.apply("horreum"));
 
-        RoleRepresentation viewProfileRole = getClientRoleID.apply(accountClient.getId(), "view-profile");
+            // Create roles and example user in Keycloak
+            RoleRepresentation uploaderRole = getRoleID.apply("uploader");
+            RoleRepresentation testerRole = getRoleID.apply("tester");
+            RoleRepresentation viewerRole = getRoleID.apply("viewer");
+            RoleRepresentation adminRole = getRoleID.apply("admin");
 
-        keycloak.realm(HORREUM_REALM).users().get(dummyUser.getId()).roles().clientLevel(accountClient.getId()).add(Collections.singletonList(viewProfileRole));
+            RoleRepresentation devTeamRole = createRole.apply(() -> RoleBuilder.create().name("dev-team").build());
+            RoleRepresentation teamViewerRole = createRole.apply(() -> RoleBuilder.create().name("dev-viewer").composite().realmComposite(devTeamRole).realmComposite(viewerRole).build());
+            RoleRepresentation teamUploaderRole = createRole.apply(() -> RoleBuilder.create().name("dev-uploader").composite().realmComposite(devTeamRole).realmComposite(uploaderRole).build());
+            RoleRepresentation teamTesterRole = createRole.apply(() -> RoleBuilder.create().name("dev-tester").composite().realmComposite(devTeamRole).realmComposite(testerRole).build());
+            RoleRepresentation teamManagerRole = createRole.apply(() -> RoleBuilder.create().name("dev-manager").composite().realmComposite(devTeamRole).build());
 
+            UserRepresentation dummyUser = createUser.apply(() ->
+                    UserBuilder.create()
+                            .username("user")
+                            .firstName("Dummy")
+                            .lastName("User")
+                            .password("secret")
+                            .email("user@example.com")
+                            .enabled(true)
+                            .build()
+            );
+
+            keycloak.realm(HORREUM_REALM).users().get(dummyUser.getId()).roles().realmLevel().add(Arrays.asList(teamUploaderRole, teamTesterRole, teamViewerRole, teamManagerRole, adminRole));
+
+            ClientRepresentation accountClient = findClient.apply("account");
+
+            RoleRepresentation viewProfileRole = getClientRoleID.apply(accountClient.getId(), "view-profile");
+
+            keycloak.realm(HORREUM_REALM).users().get(dummyUser.getId()).roles().clientLevel(accountClient.getId()).add(Collections.singletonList(viewProfileRole));
+        } else {
+            try {
+                //TODO: resolve the host and quarkus port
+
+                ClientRepresentation clientRepresentation = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum-ui").get(0);
+                clientRepresentation.getWebOrigins().add("http://localhost:8080");
+                clientRepresentation.getRedirectUris().add("http://localhost:8080/*");
+
+                keycloak.realm(HORREUM_REALM).clients().get(clientRepresentation.getId()).update(clientRepresentation);
+            } catch (Exception e){
+                log.warn("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
+            }
+        }
         log.info("Waiting for test infrastructure to start");
 
         return envVariables;
