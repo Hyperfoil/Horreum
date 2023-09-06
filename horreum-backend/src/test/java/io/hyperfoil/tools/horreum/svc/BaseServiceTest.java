@@ -1,20 +1,11 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import static io.restassured.RestAssured.given;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,6 +18,7 @@ import java.util.stream.Stream;
 
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Status;
@@ -624,7 +616,19 @@ public class BaseServiceTest {
          return comp;
       }).collect(Collectors.toList());
 
-      jsonRequest().body(profile).post("/api/experiments/" + test.id + "/profiles");
+      // add new experimentProfile
+      int profileId = jsonRequest().body(profile)
+              .post("/api/experiment/" + test.id + "/profiles")
+              .then().statusCode(200).extract().as(Integer.class);
+      assertTrue( profileId > 0);
+
+      //make sure the profile has been correctly stored
+      Collection<ExperimentProfile> profiles = jsonRequest().get("/api/experiment/" + test.id + "/profiles")
+              .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(Collection.class, ExperimentProfile.class));
+
+      assertEquals(1, profiles.size());
+      assertEquals(profileId, profiles.stream().findFirst().get().id);
+      assertEquals(test.id, profiles.stream().findFirst().get().testId);
    }
 
    protected void validateDatabaseContents(HashMap<String, List<JsonNode>> tableContents) {

@@ -76,7 +76,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @PermitAll
    @Override
    public Collection<ExperimentProfile> profiles(int testId) {
-      List<ExperimentProfileDAO> profiles = ExperimentProfileDAO.list("test_id", testId);
+      List<ExperimentProfileDAO> profiles = ExperimentProfileDAO.list("test.id", testId);
       return profiles.stream().map(ExperimentProfileMapper::from).collect(Collectors.toList());
    }
 
@@ -92,13 +92,11 @@ public class ExperimentServiceImpl implements ExperimentService {
       }
       ExperimentProfileDAO profile = ExperimentProfileMapper.to(dto);
       profile.test = em.getReference(TestDAO.class, testId);
-      if ( profile == null || profile.id == null ){
-         throw ServiceException.badRequest("Profile ID can not be null");
-      }
-      if (profile.id < 0) {
+      if (profile.id == null || profile.id < 1) {
          profile.id = null;
          profile.persist();
-      } else {
+      }
+      else {
          if (profile.test.id != testId) {
             throw ServiceException.badRequest("Test ID does not match");
          }
@@ -310,14 +308,14 @@ public class ExperimentServiceImpl implements ExperimentService {
 
                if (node.has("comparisons") ){
                   node.get("comparisons").forEach( (compNode) ->{
-                     VariableDAO variableDAO = VariableDAO.<VariableDAO>find("testId = ?1 and name = ?2", testId, compNode.get("variable").asText() ).firstResult();
+                     VariableDAO variableDAO = VariableDAO.<VariableDAO>find("testId = ?1 and name = ?2", testId, compNode.get("variableId").asText() ).firstResult();
                      if ( variableDAO != null ) {
                         Integer variableID = variableDAO.id;
                         ((ObjectNode) compNode).put("variableId", variableID);
                      } else {
-                        log.warnf("Could not import comparison for variable: %s", compNode.get("variable").asText());
+                        log.warnf("Could not import comparison for variable: %s", compNode.get("variableId").asText());
                      }
-                     ((ObjectNode) compNode).remove("variable");
+                     ((ObjectNode) compNode).remove("variableId");
 
                   });
 
