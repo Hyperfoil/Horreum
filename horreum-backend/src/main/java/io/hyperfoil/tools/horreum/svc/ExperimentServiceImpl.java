@@ -305,17 +305,16 @@ public class ExperimentServiceImpl implements ExperimentService {
          for (JsonNode node : experiments) {
             ExperimentProfileDAO profile;
             try {
-
                if (node.has("comparisons") ){
                   node.get("comparisons").forEach( (compNode) ->{
-                     VariableDAO variableDAO = VariableDAO.<VariableDAO>find("testId = ?1 and name = ?2", testId, compNode.get("variableId").asText() ).firstResult();
+                     VariableDAO variableDAO = VariableDAO.<VariableDAO>find("id = ?1 and testId = ?2", compNode.get("variableId").asText() , testId).firstResult();
                      if ( variableDAO != null ) {
                         Integer variableID = variableDAO.id;
                         ((ObjectNode) compNode).put("variableId", variableID);
                      } else {
                         log.warnf("Could not import comparison for variable: %s", compNode.get("variableId").asText());
+                        ((ObjectNode) compNode).remove("variableId");
                      }
-                     ((ObjectNode) compNode).remove("variableId");
 
                   });
 
