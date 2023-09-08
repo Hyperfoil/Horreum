@@ -3,7 +3,11 @@ package io.hyperfoil.tools.horreum.svc;
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -16,7 +20,10 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
+import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import jakarta.inject.Inject;
@@ -76,6 +83,9 @@ public class BaseServiceTest {
 
    @Inject
    MessageBus messageBus;
+
+   @Inject
+   ObjectMapper mapper;
 
    List<Runnable> afterMethodCleanup = new ArrayList<>();
 
@@ -679,5 +689,66 @@ public class BaseServiceTest {
          return null;
       });
       return tableContents;
+   }
+
+   protected void populateDateFromFiles() throws IOException {
+      Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
+      p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+
+      Test t = new ObjectMapper().readValue(
+              readFile(p.resolve("roadrunner_test.json").toFile()), Test.class);
+      assertEquals("dev-team", t.owner);
+      t.owner = "foo-team";
+      t = createTest(t);
+
+      Schema s = new ObjectMapper().readValue(
+              readFile(p.resolve("acme_benchmark_schema.json").toFile()), Schema.class);
+      assertEquals("dev-team", s.owner);
+      s.owner = "foo-team";
+      s = addOrUpdateSchema(s);
+
+      Label l = new ObjectMapper().readValue(
+              readFile(p.resolve("throughput_label.json").toFile()), Label.class);
+      assertEquals("dev-team", l.owner);
+      l.owner = "foo-team";
+      Response response = jsonRequest().body(l)
+              .post("/api/schema/" + s.id + "/labels");
+      assertEquals(200, response.statusCode());
+      l.id = Integer.parseInt(response.body().asString());
+
+      Transformer transformer = new ObjectMapper().readValue(
+              readFile(p.resolve("acme_transformer.json").toFile()), Transformer.class);
+      assertEquals("dev-team", transformer.owner);
+      transformer.owner = "foo-team";
+      addTransformer(t, transformer);
+
+      List<Variable> variables = new ObjectMapper().readValue(
+              readFile(p.resolve("roadrunner_variables.json").toFile()), new TypeReference<>() { });
+      assertEquals(1, variables.size());
+      jsonRequest().body(variables).post("/api/alerting/variables?test=" + t.id).then().statusCode(204);
+
+      Run r = mapper.readValue(
+              readFile(p.resolve("roadrunner_run.json").toFile()), Run.class);
+      assertEquals("dev-team", r.owner);
+      r.owner = "foo-team";
+      r.testid = t.id;
+      response = jsonRequest()
+              .auth()
+              .oauth2(getUploaderToken())
+              .body(r)
+              .post("/api/run/test/");
+      assertEquals(200, response.statusCode());
+
+   }
+
+   private String readFile(File file) {
+      if(file.isFile()) {
+         try {
+            return new String(Files.readAllBytes(file.toPath()));
+         } catch (IOException e) {
+            throw new RuntimeException(e);
+         }
+      }
+      return null;
    }
 }

@@ -81,7 +81,7 @@ public interface RunService {
                      @Parameter(required = true) @QueryParam("access") Access access);
 
    @POST
-   @Path("test/{test}")
+   @Path("test")
    @Consumes(MediaType.APPLICATION_JSON)
    Response add(@PathParam("test") String testNameOrId,
               @QueryParam("owner") String owner,

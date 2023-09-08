@@ -2,6 +2,10 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,6 +13,10 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import jakarta.ws.rs.core.HttpHeaders;
 
@@ -579,6 +587,52 @@ public class RunServiceTest extends BaseServiceTest {
       assertEquals(2, event2.dataset.data.size());
       JsonNode qqq = getBySchema(event2.dataset.data, "urn:q");
       assertEquals("xxx", qqq.path("qqq").asText());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testListAllRuns() throws IOException {
+      Test test = createTest(createExampleTest("with_meta"));
+      createSchema("Foo", "urn:foo");
+      createSchema("Bar", "urn:bar");
+      createSchema("Q", "urn:q");
+      Schema gooSchema = createSchema("Goo", "urn:goo");
+      Transformer transformer = createTransformer("ttt", gooSchema, "goo => ({ oog: goo })", new Extractor("goo", "$.goo", false));
+      addTransformer(test, transformer);
+      Schema postSchema = createSchema("Post", "uri:Goo-post-function");
+
+      long now = System.currentTimeMillis();
+      ObjectNode data = simpleObject("urn:foo", "foo", "xxx");
+      ArrayNode metadata = JsonNodeFactory.instance.arrayNode();
+      metadata.add(simpleObject("urn:bar", "bar", "yyy"));
+      metadata.add(simpleObject("urn:goo", "goo", "zzz"));
+
+      int run1 = uploadRun(now, data, metadata, test.name);
+
+      RunService.RunsSummary runs = jsonRequest()
+            .get("/api/run/list?limit=10&page=1&query=$.*")
+              .then()
+              .statusCode(200)
+              .extract()
+              .as(RunService.RunsSummary.class);
+
+      assertEquals(1, runs.runs.size());
+      assertEquals(test.name, runs.runs.get(0).testname);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testListAllRunsFromFiles() throws IOException {
+      populateDateFromFiles();
+
+      RunService.RunsSummary runs = jsonRequest()
+              .get("/api/run/list?limit=10&page=1&"+
+                      "query=$.buildHash ? (@ == \"defec8eddeadbeafcafebabeb16b00b5\")"
+              )
+              .then()
+              .statusCode(200)
+              .extract()
+              .as(RunService.RunsSummary.class);
+
+      assertEquals(1, runs.runs.size());
    }
 
    private JsonNode getBySchema(JsonNode data, String schema) {

@@ -369,6 +369,14 @@ public class RunServiceImpl implements RunService {
          run.access = access;
       }
       log.debugf("About to add new run to test %s using owner", testNameOrId, owner);
+      if(testNameOrId == null || testNameOrId.isEmpty()) {
+         if (run.testid == null || run.testid == 0) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("No test name or id provided").build();
+         }
+         else
+            testNameOrId = run.testid.toString();
+      }
+
       TestDAO test = testService.ensureTestExists(testNameOrId, token);
       run.testid = test.id;
       Integer runId = addAuthenticated(RunMapper.to(run), test);
@@ -554,6 +562,9 @@ public class RunServiceImpl implements RunService {
    private Integer addAuthenticated(RunDAO run, TestDAO test) {
       // Id will be always generated anew
       run.id = null;
+      //if run.metadata is null on the client, it will be converted to a NullNode, not null...
+      if(run.metadata != null && run.metadata.isNull())
+         run.metadata = null;
 
       if (run.owner == null) {
          List<String> uploaders = identity.getRoles().stream().filter(role -> role.endsWith("-uploader")).collect(Collectors.toList());
@@ -760,8 +771,10 @@ public class RunServiceImpl implements RunService {
 
       RunSummary run = new RunSummary();
       run.id = (int) row[0];
-      run.start = ((Timestamp) row[1]).getTime();
-      run.stop = ((Timestamp) row[2]).getTime();
+      if(row[1] != null)
+         run.start = ((Instant) row[1]).toEpochMilli();
+      if(row[2] != null)
+         run.stop = ((Instant) row[2]).toEpochMilli();
       run.testid = (int) row[3];
       run.owner = (String) row[4];
       run.access = (int) row[5];
@@ -770,16 +783,24 @@ public class RunServiceImpl implements RunService {
       run.description = (String) row[8];
       run.hasMetadata = (boolean) row[9];
       run.testname = (String) row[10];
-      run.schemas = Util.OBJECT_MAPPER.convertValue(row[11], new TypeReference<List<SchemaService.SchemaUsage>>() {});
-      try {
-         run.datasets = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[12]), Integer[].class);
-      } catch (JsonProcessingException e) {
-         log.warnf("Could not map datasets to array");
+
+      if(row[11] != null && ((String) row[11]).length() > 2) {
+         run.schemas = Util.OBJECT_MAPPER.convertValue(row[11], new TypeReference<List<SchemaService.SchemaUsage>>() {
+         });
       }
-      try {
-         run.validationErrors = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[13]), ValidationError[].class);
-      } catch (JsonProcessingException e) {
-         log.warnf("Could not map validation errors to array");
+      if(row[12] != null && ((String) row[12]).length() > 2) {
+         try {
+            run.datasets = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[12]), Integer[].class);
+         } catch (JsonProcessingException e) {
+            log.warnf("Could not map datasets to array");
+         }
+      }
+      if(row[13] != null && ((String) row[13]).length() > 2) {
+         try {
+            run.validationErrors = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[13]), ValidationError[].class);
+         } catch (JsonProcessingException e) {
+            log.warnf("Could not map validation errors to array");
+         }
       }
       return run;
    }
