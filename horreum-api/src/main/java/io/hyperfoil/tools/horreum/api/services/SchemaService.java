@@ -271,7 +271,7 @@ public interface SchemaService {
       public boolean filtering;
       @NotNull
       public List<SchemaDescriptor> schemas = new ArrayList<>();
-
+      public LabelInfo() {}
       public LabelInfo(String name) {
          this.name = name;
       }

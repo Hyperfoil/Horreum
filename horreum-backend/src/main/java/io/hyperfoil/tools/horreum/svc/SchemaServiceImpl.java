@@ -509,7 +509,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Override
    public List<Transformer> listTransformers(int schemaId) {
-      List<TransformerDAO> transformers = TransformerDAO.find("schema_id", Sort.by("name"), schemaId).list();
+      List<TransformerDAO> transformers = TransformerDAO.find("schema.id", Sort.by("name"), schemaId).list();
       return transformers.stream().map(TransformerMapper::from).collect(Collectors.toList());
    }
 
@@ -599,7 +599,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Override
    public List<Label> labels(int schemaId) {
-      List<LabelDAO> labels = LabelDAO.find("schema_id", schemaId).list();
+      List<LabelDAO> labels = LabelDAO.find("schema.id", schemaId).list();
       return labels.stream().map(LabelMapper::from).collect(Collectors.toList());
    }
 
@@ -682,7 +682,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Override
    public Collection<LabelInfo> allLabels(String filterName) {
-      String sqlQuery = "SELECT label.name, label.metrics, label.filtering, schema_id, schema.name as schemaName, schema.uri FROM label JOIN schema ON schema.id = label.schema_id";
+      String sqlQuery = "SELECT label.name, label.metrics, label.filtering, schema.id, schema.name as schemaName, schema.uri FROM label JOIN schema ON schema.id = label.schema_id";
       if (filterName != null && !filterName.isBlank()) {
          sqlQuery += " WHERE label.name = ?1";
       }
