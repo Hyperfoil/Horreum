@@ -494,8 +494,10 @@ public class DatasetServiceImpl implements DatasetService {
 
    private void logMessage(int datasetId, int level, String message, Object... params) {
       String msg = String.format(message, params);
-      int testId = (int) em.createNativeQuery("SELECT testid FROM dataset WHERE id = ?1").setParameter(1, datasetId).getSingleResult();
-      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
-      new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId), level, "labels", msg).persist();
+      DataSetDAO dataset = DataSetDAO.findById(datasetId);
+      if(dataset != null) {
+         log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), dataset.testid, datasetId, msg);
+         new DatasetLogDAO(em.getReference(TestDAO.class, dataset.testid), em.getReference(DataSetDAO.class, datasetId), level, "labels", msg).persist();
+      }
    }
 }

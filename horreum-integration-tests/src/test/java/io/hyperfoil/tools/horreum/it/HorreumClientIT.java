@@ -103,7 +103,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         JsonNode data = JsonNodeFactory.instance.objectNode()
                 .put("$schema", schema.uri)
                 .put("value", "foobar");
-        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, null, null, data);
+        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null, data);
 
         int datasetId = -1;
         while (System.currentTimeMillis() < now + 10000) {

@@ -752,8 +752,8 @@ public class RunServiceImpl implements RunService {
    private void initTypes(Query query) {
       query.unwrap(NativeQuery.class)
             .addScalar("id", StandardBasicTypes.INTEGER)
-            .addScalar("start", StandardBasicTypes.TIMESTAMP)
-            .addScalar("stop", StandardBasicTypes.TIMESTAMP)
+            .addScalar("start", StandardBasicTypes.INSTANT)
+            .addScalar("stop", StandardBasicTypes.INSTANT)
             .addScalar("testid", StandardBasicTypes.INTEGER)
             .addScalar("owner", StandardBasicTypes.TEXT)
             .addScalar("access", StandardBasicTypes.INTEGER)
@@ -784,18 +784,21 @@ public class RunServiceImpl implements RunService {
       run.hasMetadata = (boolean) row[9];
       run.testname = (String) row[10];
 
-      if(row[11] != null && ((String) row[11]).length() > 2) {
+      //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
+      if(row[11] != null && !(row[11] instanceof String)) {
          run.schemas = Util.OBJECT_MAPPER.convertValue(row[11], new TypeReference<List<SchemaService.SchemaUsage>>() {
          });
       }
-      if(row[12] != null && ((String) row[12]).length() > 2) {
+      //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
+      if(row[12] != null && !(row[12] instanceof String)) {
          try {
             run.datasets = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[12]), Integer[].class);
          } catch (JsonProcessingException e) {
             log.warnf("Could not map datasets to array");
          }
       }
-      if(row[13] != null && ((String) row[13]).length() > 2) {
+      //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
+      if(row[13] != null && !(row[13] instanceof String)) {
          try {
             run.validationErrors = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[13]), ValidationError[].class);
          } catch (JsonProcessingException e) {

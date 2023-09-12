@@ -761,6 +761,7 @@ public class AlertingServiceImpl implements AlertingService {
          log.error("Failed to update variables", e);
          throw new WebApplicationException(e, Response.serverError().build());
       }
+      log.info("everything is fine, returning");
    }
 
    private void ensureDefaults(Set<ChangeDetectionDAO> rds) {

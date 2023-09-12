@@ -172,7 +172,7 @@ public class TestServiceImpl implements TestService {
          log.debugf("Failed to retrieve test %s - could not find it in the database", input);
       }
       // we need to be vague about the test existence
-      throw ServiceException.notFound("Cannot upload to test " + input);
+      throw ServiceException.badRequest("Cannot upload to test " + input);
    }
 
    @Override

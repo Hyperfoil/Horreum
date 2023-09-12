@@ -6,24 +6,37 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
+import io.hyperfoil.tools.horreum.api.services.AlertingService;
+import io.hyperfoil.tools.horreum.api.services.DatasetService;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.HttpHeaders;
 
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.entity.data.*;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -467,13 +480,14 @@ public class RunServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testUploadToPrivateTest() {
+   public void testUploadToPrivateTest() throws JsonProcessingException {
       Test test = createExampleTest("supersecret");
       test.access = Access.PRIVATE;
       test = createTest(test);
 
+      JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
       long now = System.currentTimeMillis();
-      int runID = uploadRun(now, now, JsonNodeFactory.instance.objectNode(), test.name, test.owner, Access.PRIVATE);
+      int runID = uploadRun(now, now, payload, test.name, test.owner, Access.PRIVATE);
 
       RunService.RunExtended response = RestAssured.given().auth().oauth2(getTesterToken())
               .header(HttpHeaders.CONTENT_TYPE, "application/json")
@@ -633,6 +647,215 @@ public class RunServiceTest extends BaseServiceTest {
               .as(RunService.RunsSummary.class);
 
       assertEquals(1, runs.runs.size());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testAddRunFromData() throws JsonProcessingException {
+      Test test = createExampleTest("supersecret");
+      test.access = Access.PRIVATE;
+      test = createTest(test);
+
+      JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
+
+      int runId = uploadRun("$.start", "$.stop", test.name, test.owner, Access.PUBLIC,
+              null, null, "test", payload);
+      assertTrue(runId > 0);
+   }
+   @org.junit.jupiter.api.Test
+   public void testAddRunWithMetadataData() throws JsonProcessingException {
+      Test test = createExampleTest("supersecret");
+      test.access = Access.PRIVATE;
+      test = createTest(test);
+
+      JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
+      JsonNode metadata = JsonNodeFactory.instance.objectNode().put("$schema", "urn:foobar").put("foo", "bar");
+
+      int runId = uploadRun("$.start", "$.stop", payload, metadata, test.name, test.owner, Access.PUBLIC);
+      assertTrue(runId > 0);
+   }
+   @org.junit.jupiter.api.Test
+   public void testJavascriptExecution() throws InterruptedException {
+      Test test = createExampleTest("supersecret");
+      test = createTest(test);
+
+      Schema schema = new Schema();
+      schema.uri = "urn:dummy:schema";
+      schema.name = "Dummy";
+      schema.owner = test.owner;
+      schema.access = Access.PUBLIC;
+      schema = addOrUpdateSchema(schema);
+
+      long now = System.currentTimeMillis();
+      String ts = String.valueOf(now);
+      JsonNode data = JsonNodeFactory.instance.objectNode()
+              .put("$schema", schema.uri)
+              .put("value", "foobar");
+      uploadRun(ts, ts, test.name, test.owner, Access.PUBLIC, null, schema.uri, null, data);
+
+      int datasetId = -1;
+      while (System.currentTimeMillis() < now + 10000) {
+         DatasetService.DatasetList datasets = jsonRequest().get("/api/dataset/list/" + test.id).then().statusCode(200).extract().body().as(DatasetService.DatasetList.class);
+         if (datasets.datasets.isEmpty()) {
+            //noinspection BusyWait
+            Thread.sleep(50);
+         } else {
+            Assertions.assertEquals(1, datasets.datasets.size());
+            datasetId = datasets.datasets.iterator().next().id;
+         }
+      }
+      Assertions.assertNotEquals(-1, datasetId);
+
+      Label label = new Label();
+      label.name = "foo";
+      label.schemaId = schema.id;
+      label.function = "value => value";
+      label.extractors = Collections.singletonList(new Extractor("value", "$.value", false));
+      DatasetService.LabelPreview preview = jsonRequest().body(label).post("/api/dataset/"+datasetId+"/previewLabel").then().statusCode(200).extract().body().as(DatasetService.LabelPreview.class);
+      Assertions.assertEquals("foobar", preview.value.textValue());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void runExperiment() throws InterruptedException {
+      Test test = createExampleTest("supersecret");
+      test = createTest(test);
+
+      try {
+         //1. Create new Schema
+         Schema schema = new Schema();
+         schema.uri = "urn:test-schema:0.1";
+         schema.name = "test";
+         schema.owner = test.owner;
+         schema.access = Access.PUBLIC;
+         schema = addOrUpdateSchema(schema);
+
+         //2. Define schema labels
+         Label lblCpu = new Label();
+         lblCpu.name = "cpu";
+         Extractor cpuExtractor = new Extractor("cpu", "$.data.cpu", false);
+         lblCpu.extractors = List.of(cpuExtractor);
+         lblCpu.access = Access.PUBLIC;
+         lblCpu.owner = test.owner;
+         lblCpu.metrics = true;
+         lblCpu.filtering = false;
+         lblCpu.id = addOrUpdateLabel(schema.id, lblCpu);
+
+         Label lblThroughput = new Label();
+         lblThroughput.name = "throughput";
+         Extractor throughputExtractor = new Extractor("throughput", "$.data.throughput", false);
+         lblThroughput.extractors = List.of(throughputExtractor);
+         lblThroughput.access = Access.PUBLIC;
+         lblThroughput.owner = test.owner;
+         lblThroughput.metrics = true;
+         lblThroughput.filtering = false;
+         lblThroughput.id = addOrUpdateLabel(schema.id, lblThroughput);
+
+         Label lblJob = new Label();
+         lblJob.name = "job";
+         Extractor jobExtractor = new Extractor("job", "$.job", false);
+         lblJob.extractors = List.of(jobExtractor);
+         lblJob.access = Access.PUBLIC;
+         lblJob.owner = test.owner;
+         lblJob.metrics = false;
+         lblJob.filtering = true;
+         lblJob.id = addOrUpdateLabel(schema.id, lblJob);
+
+         Label lblBuildID = new Label();
+         lblBuildID.name = "build-id";
+         Extractor buildIDExtractor = new Extractor("build-id", "$.build-id", false);
+         lblBuildID.extractors = List.of(buildIDExtractor);
+         lblBuildID.access = Access.PUBLIC;
+         lblBuildID.owner = test.owner;
+         lblBuildID.metrics = false;
+         lblBuildID.filtering = true;
+         lblBuildID.id = addOrUpdateLabel(schema.id, lblBuildID);
+
+         //3. Config change detection variables
+         Variable variable = new Variable();
+         variable.testId = test.id;
+         variable.name = "throughput";
+         variable.order = 0;
+         variable.labels = mapper.readTree("[ \"throughput\" ]");
+         ChangeDetection changeDetection = new ChangeDetection();
+         changeDetection.model = "relativeDifference";
+
+         changeDetection.config = mapper.readTree("{" +
+                 "          \"window\": 1," +
+                 "          \"filter\": \"mean\"," +
+                 "          \"threshold\": 0.2," +
+                 "          \"minPrevious\": 5" +
+                 "        }");
+         variable.changeDetection = new HashSet<>();
+         variable.changeDetection.add(changeDetection);
+
+         updateVariables( test.id, Collections.singletonList(variable));
+
+         //need this for defining experiment
+         List<Variable> variableList = variables(test.id);
+
+         AlertingService.ChangeDetectionUpdate update = new AlertingService.ChangeDetectionUpdate();
+         update.fingerprintLabels = Collections.emptyList();
+         update.timelineLabels = Collections.emptyList();
+         updateChangeDetection(test.id, update);
+
+
+         //4. Define experiments
+         ExperimentProfile experimentProfile = new ExperimentProfile();
+         experimentProfile.id = -1;  //TODO: fix profile add/Update
+         experimentProfile.name = "robust-experiment";
+         experimentProfile.selectorLabels = mapper.readTree(" [ \"job\" ] ");
+         experimentProfile.selectorFilter = "value => !!value";
+         experimentProfile.baselineLabels = mapper.readTree(" [ \"build-id\" ] ");
+         experimentProfile.baselineFilter = "value => value == 1";
+
+         ExperimentComparison experimentComparison = new ExperimentComparison();
+         experimentComparison.model = "relativeDifference";
+         experimentComparison.variableId = variableList.get(0).id; //should only contain one variable
+         experimentComparison.config = mapper.readTree("{" +
+                 "          \"maxBaselineDatasets\": 0," +
+                 "          \"threshold\": 0.1," +
+                 "          \"greaterBetter\": true" +
+                 "        }");
+
+
+         experimentProfile.comparisons = Collections.singletonList(experimentComparison);
+
+         addOrUpdateProfile(test.id, experimentProfile);
+
+         //5. upload some data
+         Test finalTest = test;
+         Schema finalSchema = schema;
+         Consumer<JsonNode> uploadData = (payload) -> uploadRun("$.start", "$.stop", finalTest.name, finalTest.owner, Access.PUBLIC, null, finalSchema.uri, null, payload);
+
+         uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds1.json")));
+         uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds2.json")));
+         uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds3.json")));
+
+         //6. run experiments
+         RunService.RunsSummary runsSummary = listTestRuns(test.id, false, null, null, "name", SortDirection.Ascending);
+
+         Integer lastRunID = runsSummary.runs.stream().map(run -> run.id).max((Comparator.comparingInt(anInt -> anInt))).get();
+
+         //wait for dataset(s) to be calculated
+         waitForDatasets(lastRunID);
+
+         RunService.RunExtended extendedRun = getRun(lastRunID, null);
+
+         assertNotNull(extendedRun.datasets);
+
+         Integer maxDataset = Arrays.stream(extendedRun.datasets).max(Comparator.comparingInt(anInt -> anInt)).get();
+
+         List<ExperimentService.ExperimentResult> experimentResults = runExperiments(maxDataset);
+
+         assertNotNull(experimentResults);
+         assertTrue(experimentResults.size() > 0);
+
+         System.out.println(extendedRun.testname);
+
+      }
+      catch (Exception e) {
+         e.printStackTrace();
+         fail(e.getMessage());
+      }
    }
 
    private JsonNode getBySchema(JsonNode data, String schema) {
