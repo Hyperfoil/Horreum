@@ -792,7 +792,7 @@ public class BaseServiceTest {
       return tableContents;
    }
 
-   protected void populateDateFromFiles() throws IOException {
+   protected void populateDataFromFiles() throws IOException {
       Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
       p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
 
