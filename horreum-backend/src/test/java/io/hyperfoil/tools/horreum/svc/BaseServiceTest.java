@@ -837,7 +837,7 @@ public class BaseServiceTest {
               .auth()
               .oauth2(getUploaderToken())
               .body(r)
-              .post("/api/run/test/");
+              .post("/api/run/test");
       assertEquals(200, response.statusCode());
 
    }
