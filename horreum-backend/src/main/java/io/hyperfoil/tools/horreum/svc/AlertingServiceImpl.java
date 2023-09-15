@@ -1219,12 +1219,7 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void onDatasetDeleted(DataSet.Info info) {
-      log.debugf("Removing datasets and changes for dataset %d (%d/%d, test %d)", info.id, info.runId, info.ordinal, info.testId);
-      for (DataPointDAO dp : DataPointDAO.<DataPointDAO>list("dataset.id", info.id)) {
-         messageBus.publish(MessageBusChannels.DATAPOINT_DELETED, info.testId,
-                 new DataPoint.Event(DataPointMapper.from(dp), info.testId, false));
-         dp.delete();
-      }
+      log.debugf("Removing changes for dataset %d (%d/%d, test %d)", info.id, info.runId, info.ordinal, info.testId);
       for (ChangeDAO c: ChangeDAO.<ChangeDAO>list("dataset.id = ?1 AND confirmed = false", info.id)) {
          c.delete();
       }

@@ -551,7 +551,6 @@ public class AlertingServiceTest extends BaseServiceTest {
       addChangeDetectionVariable(test);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
-      BlockingQueue<DataPoint.Event> datapointDeletedQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_DELETED, e -> e.testId == test.id);
 
       uploadRun(runWithValue(42, schema), test.name);
       DataPoint first = assertValue(datapointQueue, 42);
@@ -563,11 +562,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       DataPoint second = assertValue(datapointQueue, 42);
       assertNotEquals(first.id, second.id);
 
-      // Prevent flakiness if the new datapoint is created before the old one is deleted
-      // Ideally we would add a delay into AlertingServiceImpl.onDatasetDeleted() to test this synchronization
-      // but we cannot mock the service - Quarkus mocking disables interceptors for the whole class.
-      DataPoint.Event deleted = datapointDeletedQueue.poll(10, TimeUnit.SECONDS);
-      assertEquals(deleted.dataPoint.id, first.id);
+      assertEquals(0, DataPointDAO.count("id", first.id));
 
       em.clear();
       // We need to use system role in the test because as the policy fetches ownership from dataset

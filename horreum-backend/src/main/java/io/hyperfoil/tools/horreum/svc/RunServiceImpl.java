@@ -21,9 +21,12 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.hyperfoil.tools.horreum.mapper.DataPointMapper;
 import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import io.hypersistence.utils.hibernate.query.MapResultTransformer;
 import jakarta.annotation.PostConstruct;
@@ -1048,6 +1051,11 @@ public class RunServiceImpl implements RunService {
       // break the runid,ordinal uniqueness constraint
       for (DataSetDAO old : DataSetDAO.<DataSetDAO>list("run.id", runId)) {
          messageBus.publish(MessageBusChannels.DATASET_DELETED, old.testid, DataSetMapper.fromInfo( old.getInfo()));
+         for (DataPointDAO dp : DataPointDAO.<DataPointDAO>list("dataset.id", old.getInfo().id)){
+            messageBus.publish(MessageBusChannels.DATAPOINT_DELETED, old.testid,
+                new DataPoint.Event(DataPointMapper.from(dp), old.testid, false));
+            dp.delete();
+         }
          old.delete();
       }
 
