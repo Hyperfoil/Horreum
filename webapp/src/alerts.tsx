@@ -195,7 +195,12 @@ function Alerts() {
                         />
                     }
                 >
-                    {alert.content}
+                    /* 
+                    *we're checking if alert.content exists. If it does, we wrap it in a React fragment (<>...</>) to ensure it's treated as a ReactNode.
+                    */
+                    {alert.content && (
+                        <>{alert.content}</>
+                    )}
                 </PatternflyAlert>
             ))}
         </div>

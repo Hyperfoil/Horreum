@@ -157,12 +157,13 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
         )
     }, [varId, dispatch])
     const isTester = useTester(testOwner)
+
     const columns: C[] = [
         {
             Header: "Confirmed",
             accessor: "confirmed",
-            Cell: (arg: any) => (arg.cell.value ? <CheckIcon id={"change_" + arg.row.original.id} /> : ""),
-        },
+            Cell: (arg: any) => (arg.cell.value ? <CheckIcon id={"change_" + String(arg.row.original.id)} /> : null), 
+          },
         {
             Header: "Time",
             accessor: "timestamp",

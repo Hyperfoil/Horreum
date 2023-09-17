@@ -9,9 +9,9 @@ type ActionLogModalProps = {
 } & CommonLogModalProps
 
 export default function ActionLogModal(props: ActionLogModalProps) {
-    const fetchCount = useCallback(level => Api.logServiceGetActionLogCount(props.testId, level), [props.testId])
+    const fetchCount = useCallback((level: number | undefined) => Api.logServiceGetActionLogCount(props.testId, level), [props.testId])
     const fetchLogs = useCallback(
-        (level, page, limit) =>
+        (level: number | undefined, page: number | undefined, limit: number | undefined) =>
             Api.logServiceGetActionLog(props.testId, level, limit, page).then(response =>
                 (response as ActionLog[]).map(log => ({
                     cells: [
@@ -25,7 +25,7 @@ export default function ActionLogModal(props: ActionLogModalProps) {
             ),
         [props.testId]
     )
-    const deleteLogs = useCallback((from, to) => Api.logServiceDeleteActionLogs(props.testId, from, to), [props.testId])
+    const deleteLogs = useCallback((from: number | undefined, to: number | undefined) => Api.logServiceDeleteActionLogs(props.testId, from, to), [props.testId])
     return (
         <LogModal
             {...props}

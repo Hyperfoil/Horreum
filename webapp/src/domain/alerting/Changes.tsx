@@ -271,18 +271,18 @@ export default function Changes() {
         }
     }, [endTime /* date omitted intentionally */])
     const [selectedChange, setSelectedChange] = useState<number>()
-    const [selectedVariable, setSelectedVariable] = useState<number>()
+    const [selectedVariable, setSelectedVariable] = useState<number>();
 
-    const onSelectTest = useCallback((selection, _, isInitial) => {
-        if (selection === undefined) {
-            setSelectedTest(undefined)
-        } else if (selectedTest !== selection) {
-            setSelectedTest(selection as SelectedTest)
-        }
-        if (!isInitial) {
-            setSelectedFingerprint(undefined)
-        }
-    }, [])
+   const onSelectTest: any = useCallback((selection: number | undefined, _: any, isInitial: boolean) => {
+    if (selection === undefined) {
+        setSelectedVariable(undefined);
+    } else if (selectedVariable !== selection) {
+        setSelectedVariable(selection);
+    }
+    if (!isInitial) {
+        setSelectedFingerprint(undefined);
+    }
+}, []);
 
     const [linkCopyOpen, setLinkCopyOpen] = useState(false)
     const fingerprintSource = useCallback(() => {

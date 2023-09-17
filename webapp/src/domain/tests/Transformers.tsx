@@ -221,8 +221,8 @@ export default function Transformers(props: TransformersProps) {
                             availableOptions={options}
                             chosenOptions={chosen}
                             onListChange={(newAvailable, newChosen) => {
-                                setOptions(newAvailable as SchemaItem[])
-                                setChosen(newChosen as SchemaItem[])
+                                setOptions(newAvailable as unknown as SchemaItem[])
+                                setChosen(newChosen as unknown as SchemaItem[])
                             }}
                         />
                     ))}
