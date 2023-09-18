@@ -1031,7 +1031,7 @@ public class AlertingServiceImpl implements AlertingService {
       Query query = em.createNativeQuery(FIND_LAST_DATAPOINTS)
             .unwrap(NativeQuery.class)
             .setParameter(1, Util.parseFingerprint(params.fingerprint), JsonBinaryType.INSTANCE)
-            .setParameter(2, params.variables, IntArrayType.INT_ARRAY);
+            .setParameter(2, params.variables, IntArrayType.INSTANCE);
       SqlServiceImpl.setResultTransformer(query, Transformers.aliasToBean(DatapointLastTimestamp.class));
       //noinspection unchecked
       return query.getResultList();
