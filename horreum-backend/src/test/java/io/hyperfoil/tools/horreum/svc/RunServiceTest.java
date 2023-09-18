@@ -38,6 +38,7 @@ import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -715,7 +716,7 @@ public class RunServiceTest extends BaseServiceTest {
       Assertions.assertEquals("foobar", preview.value.textValue());
    }
 
-   /*
+   @Disabled
    @org.junit.jupiter.api.Test
    public void runExperiment() throws InterruptedException {
       Test test = createExampleTest("supersecret");
@@ -857,8 +858,6 @@ public class RunServiceTest extends BaseServiceTest {
          fail(e.getMessage());
       }
    }
-
-    */
 
    private JsonNode getBySchema(JsonNode data, String schema) {
       JsonNode foo = StreamSupport.stream(data.spliterator(), false)

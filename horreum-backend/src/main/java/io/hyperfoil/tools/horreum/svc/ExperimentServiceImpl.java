@@ -218,8 +218,7 @@ public class ExperimentServiceImpl implements ExperimentService {
             .unwrap(NativeQuery.class)
             .addScalar("profile_id", StandardBasicTypes.INTEGER)
             .addScalar("baseline_filter", StandardBasicTypes.TEXT)
-            .addScalar("value", StandardBasicTypes.TEXT)
-              //.addScalar("value", JsonNodeBinaryType.INSTANCE)
+            .addScalar("value", JsonBinaryType.INSTANCE)
             .addScalar("dataset_id", StandardBasicTypes.INTEGER)
             .getResultList();
 
@@ -284,8 +283,7 @@ public class ExperimentServiceImpl implements ExperimentService {
                "LEFT JOIN label_values lv ON label.id = lv.label_id WHERE ep.id = ?1 AND lv.dataset_id = ?2")
                .setParameter(1, profile.id).setParameter(2, info.id)
                .unwrap(NativeQuery.class)
-               .addScalar("value", StandardBasicTypes.TEXT)
-                 //.addScalar("value", JsonNodeBinaryType.INSTANCE)
+               .addScalar("value", JsonBinaryType.INSTANCE)
                .getSingleResult();
          Hibernate.initialize(profile.test.name);
          resultConsumer.accept(new ExperimentResult(ExperimentProfileMapper.from(profile),
