@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.PostConstruct;
@@ -75,7 +76,7 @@ public class ReportServiceImpl implements ReportService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ReportService", TestDAO.class, this::onTestDelete);
+      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ReportService", Test.class, this::onTestDelete);
    }
 
    @PermitAll
@@ -716,7 +717,7 @@ public class ReportServiceImpl implements ReportService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(TestDAO test) {
+   public void onTestDelete(Test test) {
       int changedRows = em.createNativeQuery("UPDATE tablereportconfig SET testid = NULL WHERE testid = ?")
             .setParameter(1, test.id).executeUpdate();
       log.infof("Disowned %d report configs as test %s(%d) was deleted.", changedRows, test.name, test.id);

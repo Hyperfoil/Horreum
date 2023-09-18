@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -23,6 +22,7 @@ import java.util.stream.StreamSupport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -141,12 +141,12 @@ public class RunServiceImpl implements RunService {
    void init() {
       sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
       sqlService.registerListener("new_or_updated_schema", this::onNewOrUpdatedSchema);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "RunService", TestDAO.class, this::onTestDeleted);
+      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "RunService", Test.class, this::onTestDeleted);
    }
 
    @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   void onTestDeleted(TestDAO test) {
+   void onTestDeleted(Test test) {
       log.debugf("Trashing runs for test %s (%d)", test.name, test.id);
       ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, test.id));
       while (results.next()) {

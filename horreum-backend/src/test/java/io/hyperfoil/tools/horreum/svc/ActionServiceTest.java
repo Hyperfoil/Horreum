@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 
+import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
@@ -15,9 +16,6 @@ import org.junit.jupiter.api.TestInfo;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
-import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
-import io.hyperfoil.tools.horreum.entity.data.RunDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -57,7 +55,7 @@ public class ActionServiceTest extends BaseServiceTest {
 
       addAllowedSite("https://example.com");
 
-      ActionDAO action = addGlobalAction(MessageBusChannels.TEST_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(ActionDAO.class);
+      Action action = addGlobalAction(MessageBusChannels.TEST_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       given().auth().oauth2(getAdminToken()).delete("/api/action/" + action.id);

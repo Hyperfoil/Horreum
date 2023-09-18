@@ -115,7 +115,7 @@ public class TestServiceImpl implements TestService {
       }
       log.debugf("Deleting test %s (%d)", test.name, test.id);
       test.delete();
-      messageBus.publish(MessageBusChannels.TEST_DELETED, test.id, test);
+      messageBus.publish(MessageBusChannels.TEST_DELETED, test.id, TestMapper.from(test));
    }
 
    @Override
@@ -228,7 +228,7 @@ public class TestServiceImpl implements TestService {
                throw new WebApplicationException(e, Response.serverError().build());
             }
          }
-         messageBus.publish(MessageBusChannels.TEST_NEW, test.id, test);
+         messageBus.publish(MessageBusChannels.TEST_NEW, test.id, TestMapper.from(test));
       }
    }
 

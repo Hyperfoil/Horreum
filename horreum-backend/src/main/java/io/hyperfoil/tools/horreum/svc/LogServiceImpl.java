@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
@@ -26,7 +27,6 @@ import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLogDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
@@ -52,7 +52,7 @@ public class LogServiceImpl implements LogService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "LogService", TestDAO.class, this::onTestDelete);
+      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "LogService", Test.class, this::onTestDelete);
    }
 
    private Integer withDefault(Integer value, Integer defValue) {
@@ -67,9 +67,9 @@ public class LogServiceImpl implements LogService {
       limit = withDefault(limit, 25);
       PanacheQuery<DatasetLogDAO> query;
       if (datasetId == null) {
-         query = DatasetLogDAO.find("testId = ?1 AND source = ?2 AND level >= ?3", Sort.descending("timestamp"), testId, source, level);
+         query = DatasetLogDAO.find("test.id = ?1 AND source = ?2 AND level >= ?3", Sort.descending("timestamp"), testId, source, level);
       } else {
-         query = DatasetLogDAO.find("dataset_id = ?1 AND source = ?2 AND level >= ?3", Sort.descending("timestamp"), datasetId, source, level);
+         query = DatasetLogDAO.find("dataset.id = ?1 AND source = ?2 AND level >= ?3", Sort.descending("timestamp"), datasetId, source, level);
       }
       return query.page(Page.of(page, limit)).list().stream().map(DatasetLogMapper::from).collect(Collectors.toList());
    }
@@ -79,9 +79,9 @@ public class LogServiceImpl implements LogService {
    @RolesAllowed(Roles.TESTER)
    public long getDatasetLogCount(String source, int testId, int level, Integer datasetId) {
       if (datasetId == null) {
-         return DatasetLogDAO.count("testId = ?1 AND source = ?2 AND level >= ?3", testId, source, level);
+         return DatasetLogDAO.count("test.id = ?1 AND source = ?2 AND level >= ?3", testId, source, level);
       } else {
-         return DatasetLogDAO.count("dataset_id = ?1 AND source = ?2 AND level > ?3", datasetId, source, level);
+         return DatasetLogDAO.count("dataset.id = ?1 AND source = ?2 AND level >= ?3", datasetId, source, level);
       }
    }
 
@@ -95,9 +95,9 @@ public class LogServiceImpl implements LogService {
       Instant toTs = to == null ? FAR_FUTURE : Instant.ofEpochMilli(to);
       long deleted;
       if (datasetId == null) {
-         deleted = DatasetLogDAO.delete("testId = ?1 AND source = ?2 AND timestamp >= ?3 AND timestamp < ?4", testId, source, fromTs, toTs);
+         deleted = DatasetLogDAO.delete("test.id = ?1 AND source = ?2 AND timestamp >= ?3 AND timestamp < ?4", testId, source, fromTs, toTs);
       } else {
-         deleted = DatasetLogDAO.delete("testId = ?1 AND source = ?2 AND timestamp >= ?3 AND timestamp < ?4 AND dataset_id = ?5", testId, source, fromTs, toTs, datasetId);
+         deleted = DatasetLogDAO.delete("test.id = ?1 AND source = ?2 AND timestamp >= ?3 AND timestamp < ?4 AND dataset.id = ?5", testId, source, fromTs, toTs, datasetId);
       }
       log.debugf("Deleted %d logs for test %s", deleted, testId);
    }
@@ -109,11 +109,11 @@ public class LogServiceImpl implements LogService {
       page = withDefault(page, 0);
       limit = withDefault(limit, 25);
       if (runId == null || runId <= 0) {
-         List<TransformationLogDAO> logs = TransformationLogDAO.find("testid = ?1 AND level >= ?2", Sort.descending("timestamp"), testId, level)
+         List<TransformationLogDAO> logs = TransformationLogDAO.find("test.id = ?1 AND level >= ?2", Sort.descending("timestamp"), testId, level)
                .page(Page.of(page, limit)).list();
          return logs.stream().map(TransformationLogMapper::from).collect(Collectors.toList());
       } else {
-         List<TransformationLogDAO> logs = TransformationLogDAO.find("testid = ?1 AND level >= ?2 AND runid = ?3", Sort.descending("timestamp"), testId, level, runId)
+         List<TransformationLogDAO> logs = TransformationLogDAO.find("test.id = ?1 AND level >= ?2 AND run.id = ?3", Sort.descending("timestamp"), testId, level, runId)
                .page(Page.of(page, limit)).list();
          return logs.stream().map(TransformationLogMapper::from).collect(Collectors.toList());
       }
@@ -124,9 +124,9 @@ public class LogServiceImpl implements LogService {
    @Override
    public long getTransformationLogCount(int testId, int level, Integer runId) {
       if (runId == null || runId <= 0) {
-         return TransformationLogDAO.count("testid = ?1 AND level >= ?2", testId, level);
+         return TransformationLogDAO.count("test.id = ?1 AND level >= ?2", testId, level);
       } else {
-         return TransformationLogDAO.count("testid = ?1 AND level >= ?2 AND runid = ?3", testId, level, runId);
+         return TransformationLogDAO.count("test.id = ?1 AND level >= ?2 AND run.id = ?3", testId, level, runId);
       }
    }
 
@@ -140,9 +140,9 @@ public class LogServiceImpl implements LogService {
       Instant toTs = to == null ? FAR_FUTURE : Instant.ofEpochMilli(to);
       long deleted;
       if (runId == null || runId <= 0) {
-         deleted = TransformationLogDAO.delete("testid = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
+         deleted = TransformationLogDAO.delete("test.id = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
       } else {
-         deleted = TransformationLogDAO.delete("testid = ?1 AND runid = ?2 AND timestamp >= ?3 AND timestamp < ?4", testId, runId, fromTs, toTs);
+         deleted = TransformationLogDAO.delete("test.id = ?1 AND run.id = ?2 AND timestamp >= ?3 AND timestamp < ?4", testId, runId, fromTs, toTs);
       }
       log.debugf("Deleted %d logs for test %d, run %d", deleted, testId, runId == null ? -1 : 0);
    }
@@ -153,7 +153,7 @@ public class LogServiceImpl implements LogService {
    public List<ActionLog> getActionLog(int testId, int level, Integer page, Integer limit) {
       page = withDefault(page, 0);
       limit = withDefault(limit, 25);
-      List<ActionLogDAO> logs = ActionLogDAO.find("testid = ?1 AND level >= ?2", Sort.descending("timestamp"), testId, level)
+      List<ActionLogDAO> logs = ActionLogDAO.find("testId = ?1 AND level >= ?2", Sort.descending("timestamp"), testId, level)
                .page(Page.of(page, limit)).list();
       return logs.stream().map(ActionLogMapper::from).collect(Collectors.toList());
    }
@@ -162,7 +162,7 @@ public class LogServiceImpl implements LogService {
    @WithRoles
    @RolesAllowed(Roles.TESTER)
    public long getActionLogCount(int testId, int level) {
-      return ActionLogDAO.find("testid = ?1 AND level >= ?2", testId, level).count();
+      return ActionLogDAO.find("testId = ?1 AND level >= ?2", testId, level).count();
    }
 
    @Override
@@ -172,13 +172,13 @@ public class LogServiceImpl implements LogService {
    public void deleteActionLogs(int testId, Long from, Long to) {
       Instant fromTs = from == null ? EPOCH_START : Instant.ofEpochMilli(from);
       Instant toTs = to == null ? FAR_FUTURE : Instant.ofEpochMilli(to);
-      long deleted = ActionLogDAO.delete("testid = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
+      long deleted = ActionLogDAO.delete("test.id = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
       log.debugf("Deleted %d logs for test %d", deleted, testId);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(TestDAO test) {
+   public void onTestDelete(Test test) {
       DatasetLogDAO.delete("test.id", test.id);
       TransformationLogDAO.delete("test.id", test.id);
    }

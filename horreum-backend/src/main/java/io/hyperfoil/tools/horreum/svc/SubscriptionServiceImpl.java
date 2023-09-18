@@ -10,7 +10,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -28,7 +30,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.api.services.SubscriptionService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -49,7 +50,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
    @PostConstruct
    void init() {
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "SubscriptionService", TestDAO.class, this::onTestDelete);
+      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "SubscriptionService", Test.class, this::onTestDelete);
    }
 
    private static Set<String> merge(Set<String> set, String item) {
@@ -249,7 +250,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(TestDAO test) {
+   public void onTestDelete(Test test) {
       var subscriptions = WatchDAO.list("test.id = ?1", test.id);
       log.infof("Deleting %d subscriptions for test %s (%d)", subscriptions.size(), test.name, test.id);
       for (var subscription : subscriptions) {

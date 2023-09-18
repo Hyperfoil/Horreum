@@ -26,6 +26,7 @@ import java.util.stream.StreamSupport;
 
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.IntArrayType;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -273,7 +274,7 @@ public class AlertingServiceImpl implements AlertingService {
       messageBus.subscribe(MessageBusChannels.DATASET_DELETED, "AlertingService", DataSet.Info.class, this::onDatasetDeleted);
       messageBus.subscribe(MessageBusChannels.DATAPOINT_NEW, "AlertingService", DataPoint.Event.class, this::onNewDataPoint);
       messageBus.subscribe(MessageBusChannels.RUN_NEW, "AlertingService", Run.class, this::removeExpected);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "AlertingService", TestDAO.class, this::onTestDeleted);
+      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "AlertingService", Test.class, this::onTestDeleted);
    }
 
    private void recalculateDatapointsForDataset(DataSetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
@@ -1227,7 +1228,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void onTestDeleted(TestDAO test) {
+   void onTestDeleted(Test test) {
       // We need to delete in a loop to cascade this to ChangeDetection
       List<VariableDAO> variables = VariableDAO.list("testId", test.id);
       log.debugf("Deleting %d variables for test %s (%d)", variables.size(), test.name, test.id);

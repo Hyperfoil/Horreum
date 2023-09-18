@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.PostConstruct;
@@ -70,7 +71,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @PostConstruct
    void init() {
       messageBus.subscribe(MessageBusChannels.DATAPOINT_PROCESSED, "ExperimentService", DataPoint.DatasetProcessedEvent.class, this::onDatapointsCreated);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ExperimentService", TestDAO.class, this::onTestDeleted);
+      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ExperimentService", Test.class, this::onTestDeleted);
    }
 
    @WithRoles
@@ -149,7 +150,7 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDeleted(TestDAO test) {
+   public void onTestDeleted(Test test) {
       // we need to iterate in order to cascade the operation
       for (var profile : ExperimentProfileDAO.list("test.id", test.id)) {
          profile.delete();

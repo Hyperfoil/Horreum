@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.svc;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
 import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
@@ -74,8 +75,8 @@ public class ActionServiceImpl implements ActionService {
    @PostConstruct()
    public void postConstruct(){
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
-      messageBus.subscribe(MessageBusChannels.TEST_NEW, "ActionService", TestDAO.class, this::onNewTest);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ActionService", TestDAO.class, this::onTestDelete);
+      messageBus.subscribe(MessageBusChannels.TEST_NEW, "ActionService", Test.class, this::onNewTest);
+      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ActionService", Test.class, this::onTestDelete);
       messageBus.subscribe(MessageBusChannels.RUN_NEW, "ActionService", Run.class, this::onNewRun);
       messageBus.subscribe(MessageBusChannels.CHANGE_NEW, "ActionService", Change.Event.class, this::onNewChange);
       messageBus.subscribe(MessageBusChannels.EXPERIMENT_RESULT_NEW, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
@@ -132,13 +133,13 @@ public class ActionServiceImpl implements ActionService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onNewTest(TestDAO test) {
+   public void onNewTest(Test test) {
       executeActions(MessageBusChannels.TEST_NEW, -1, test, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(TestDAO test) {
+   public void onTestDelete(Test test) {
       ActionDAO.delete("testId", test.id);
    }
 
