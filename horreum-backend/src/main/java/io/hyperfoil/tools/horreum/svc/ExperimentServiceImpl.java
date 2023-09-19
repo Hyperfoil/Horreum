@@ -36,9 +36,7 @@ import io.hyperfoil.tools.horreum.mapper.ExperimentProfileMapper;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.Transformers;
-import org.hibernate.type.CustomType;
 import org.hibernate.type.StandardBasicTypes;
-import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -159,7 +157,7 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    private void addLog(List<DatasetLogDAO> logs, int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
-      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
+      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
       logs.add(new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId),
             level, "experiment", msg));
    }
@@ -194,11 +192,11 @@ public class ExperimentServiceImpl implements ExperimentService {
             matchingProfile.add((Integer) r[0]);
          }
       }, (r, ex, code) -> addLog(logs, info.testId, info.id,
-            PersistentLog.ERROR, "Selector filter failed: %s Code: %s", ex.getMessage(), code),
+            PersistentLogDAO.ERROR, "Selector filter failed: %s Code: %s", ex.getMessage(), code),
          output -> addLog(logs, info.testId, info.id,
-            PersistentLog.DEBUG, "Selector filter output: %s", output));
+            PersistentLogDAO.DEBUG, "Selector filter output: %s", output));
       if (matchingProfile.isEmpty()) {
-         addLog(logs, info.testId, info.id, PersistentLog.INFO, "There are no matching experiment profiles.");
+         addLog(logs, info.testId, info.id, PersistentLogDAO.INFO, "There are no matching experiment profiles.");
          noProfileConsumer.accept(logs);
          return;
       }
@@ -234,9 +232,9 @@ public class ExperimentServiceImpl implements ExperimentService {
             baselines.computeIfAbsent((Integer) r[0], profileId -> new ArrayList<>()).add((Integer) r[3]);
          }
       }, (r, ex, code) -> addLog(perProfileLogs.get((Integer) r[0]), info.testId, (Integer) r[3],
-               PersistentLog.ERROR, "Baseline filter failed: %s Code: %s", ex.getMessage(), code),
+               PersistentLogDAO.ERROR, "Baseline filter failed: %s Code: %s", ex.getMessage(), code),
          output -> perProfileLogs.forEach((profileId, pls)-> addLog(pls, info.testId, info.id,
-               PersistentLog.DEBUG, "Baseline filter output: %s", output)));
+               PersistentLogDAO.DEBUG, "Baseline filter output: %s", output)));
 
       Map<Integer, DataPointDAO> datapoints = DataPointDAO.<DataPointDAO>find("dataset_id = ?1", info.id)
             .stream().collect(Collectors.toMap(dp -> dp.variable.id, Function.identity(),
@@ -249,7 +247,7 @@ public class ExperimentServiceImpl implements ExperimentService {
          List<DatasetLogDAO> profileLogs = perProfileLogs.get(entry.getKey());
          ExperimentProfileDAO profile = ExperimentProfileDAO.findById(entry.getKey());
          Map<Integer, List<DataPointDAO>> byVar = new HashMap<>();
-         List<Integer> variableIds = profile.comparisons.stream().map(io.hyperfoil.tools.horreum.entity.ExperimentComparison::getVariableId).collect(Collectors.toList());
+         List<Integer> variableIds = profile.comparisons.stream().map(ExperimentComparisonDAO::getVariableId).collect(Collectors.toList());
          DataPointDAO.<DataPointDAO>find("dataset_id IN ?1 AND variable_id IN ?2", Sort.descending("timestamp", "dataset_id"), entry.getValue(), variableIds)
                .stream().forEach(dp -> byVar.computeIfAbsent(dp.variable.id, v -> new ArrayList<>()).add(dp));
          Map<ExperimentComparison, ComparisonResult> results = new HashMap<>();
@@ -257,17 +255,17 @@ public class ExperimentServiceImpl implements ExperimentService {
             Hibernate.initialize(comparison.variable);
             ExperimentConditionModel model = MODELS.get(comparison.model);
             if (model == null) {
-               addLog(profileLogs, info.testId, info.id, PersistentLog.ERROR, "Unknown experiment comparison model '%s' for variable %s in profile %s", comparison.model, comparison.variable.name, profile.name);
+               addLog(profileLogs, info.testId, info.id, PersistentLogDAO.ERROR, "Unknown experiment comparison model '%s' for variable %s in profile %s", comparison.model, comparison.variable.name, profile.name);
                continue;
             }
             List<DataPointDAO> baseline = byVar.get(comparison.getVariableId());
             if (baseline == null) {
-               addLog(profileLogs, info.testId, info.id, PersistentLog.INFO, "Baseline for comparison of variable %s in profile %s is empty (datapoints are not present)", comparison.variable.name, profile.name);
+               addLog(profileLogs, info.testId, info.id, PersistentLogDAO.INFO, "Baseline for comparison of variable %s in profile %s is empty (datapoints are not present)", comparison.variable.name, profile.name);
                continue;
             }
             DataPointDAO datapoint = datapoints.get(comparison.getVariableId());
             if (datapoint == null) {
-               addLog(profileLogs, info.testId, info.id, PersistentLog.ERROR, "No datapoint for comparison of variable %s in profile %s", comparison.variable.name, profile.name);
+               addLog(profileLogs, info.testId, info.id, PersistentLogDAO.ERROR, "No datapoint for comparison of variable %s in profile %s", comparison.variable.name, profile.name);
                continue;
             }
             results.put(ExperimentProfileMapper.fromExperimentComparison(comparison),

@@ -4,17 +4,21 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 
 public class Change {
     @JsonProperty( required = true )
     public int id;
+    @NotNull
     @JsonProperty( required = true )
     public Variable variable;
     @JsonIgnore
     public DataSet dataset;
+    @NotNull
     @JsonProperty( required = true )
     public Instant timestamp;
+    @NotNull
     @JsonProperty( required = true )
     public boolean confirmed;
     public String description;

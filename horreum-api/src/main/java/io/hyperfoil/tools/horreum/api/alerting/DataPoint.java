@@ -2,15 +2,20 @@ package io.hyperfoil.tools.horreum.api.alerting;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
 
 public class DataPoint {
     public Integer id;
+    @NotNull
     public Instant timestamp;
+    @NotNull
     public double value;
+    @NotNull
     public Variable variable;
 
+    @NotNull
     @JsonProperty("datasetId")
     public Integer datasetId;
 

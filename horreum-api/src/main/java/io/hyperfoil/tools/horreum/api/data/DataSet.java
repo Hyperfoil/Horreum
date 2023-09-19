@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.data;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.time.Instant;
@@ -11,16 +12,23 @@ import java.util.Objects;
 
 public class DataSet {
     public Integer id;
+    @NotNull
     public Instant start;
+    @NotNull
     public Instant stop;
     public String description;
 
+    @NotNull
     public Integer testid;
+    @NotNull
     @JsonProperty( required = true )
     public String owner;
+    @NotNull
     @JsonProperty( required = true )
     public Access access;
+    @NotNull
     public JsonNode data;
+    @NotNull
     public int ordinal;
 
     public Collection<ValidationError> validationErrors;

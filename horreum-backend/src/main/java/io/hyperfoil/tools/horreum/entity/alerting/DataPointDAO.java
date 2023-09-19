@@ -28,6 +28,7 @@ public class DataPointDAO extends PanacheEntityBase {
    @Column(columnDefinition = "SERIAL")
    public Integer id;
 
+   @NotNull
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
    @JoinColumn(name = "dataset_id")
    public DataSetDAO dataset;

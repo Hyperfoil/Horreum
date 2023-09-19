@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.api.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Collection;
@@ -9,12 +10,15 @@ import java.util.Collection;
 public class Test {
     @JsonProperty(required = true)
     public Integer id;
+    @NotNull
     @JsonProperty(required = true)
     public String name;
     public String folder;
     public String description;
+    @NotNull
     @JsonProperty(required = true)
     public String owner;
+    @NotNull
     @JsonProperty(required = true)
     public Access access;
     public Collection<TestToken> tokens;
@@ -24,10 +28,12 @@ public class Test {
     @Schema(implementation = String[].class)
     public JsonNode fingerprintLabels;
     public String fingerprintFilter;
+    @NotNull
     @JsonProperty(required = true)
     public Collection<View> views;
     public String compareUrl;
     public Collection<Transformer> transformers;
+    @NotNull
     @JsonProperty(required = true)
     public Boolean notificationsEnabled;
 

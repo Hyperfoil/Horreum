@@ -26,9 +26,7 @@ import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
-import org.hibernate.type.CustomType;
 import org.hibernate.type.StandardBasicTypes;
-import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -40,7 +38,7 @@ import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.QueryResult;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.entity.PersistentLog;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLogDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
@@ -420,7 +418,7 @@ public class DatasetServiceImpl implements DatasetService {
                      .addScalar("value", JsonBinaryType.INSTANCE)
                      .getResultList();
       } catch (PersistenceException e) {
-         logMessageInNewTx(datasetId, PersistentLog.ERROR, "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
+         logMessageInNewTx(datasetId, PersistentLogDAO.ERROR, "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
          findFailingExtractor(datasetId);
          return;
       }
@@ -438,9 +436,9 @@ public class DatasetServiceImpl implements DatasetService {
       Util.evaluateMany(extracted, row -> (String) row[2], row -> (JsonNode) row[3],
             (row, result) -> createLabel(datasetId, (int) row[0], Util.convertToJson(result)),
             row -> createLabel(datasetId, (int) row[0], (JsonNode) row[3]),
-            (row, e, jsCode) -> logMessage(datasetId, PersistentLog.ERROR,
+            (row, e, jsCode) -> logMessage(datasetId, PersistentLogDAO.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
-            out -> logMessage(datasetId, PersistentLog.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
+            out -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
       messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
    }
 
@@ -458,12 +456,12 @@ public class DatasetServiceImpl implements DatasetService {
             em.createNativeQuery("SELECT jsonb_path_query_first(data -> (?1), (?2)::::jsonpath)#>>'{}' FROM dataset WHERE id = ?3")
                   .setParameter(1, row[3]).setParameter(2, row[4]).setParameter(3, datasetId).getSingleResult();
          } catch (PersistenceException e) {
-            logMessageInNewTx(datasetId, PersistentLog.ERROR, "There seems to be an error in schema <code>%s</code> label <code>%s</code>, extractor <code>%s</code>, JSONPath expression <code>%s</code>: %s",
+            logMessageInNewTx(datasetId, PersistentLogDAO.ERROR, "There seems to be an error in schema <code>%s</code> label <code>%s</code>, extractor <code>%s</code>, JSONPath expression <code>%s</code>: %s",
                   row[0], row[1], row[2], row[4], Util.explainCauses(e));
             return;
          }
       }
-      logMessage(datasetId, PersistentLog.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
+      logMessage(datasetId, PersistentLogDAO.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
    }
 
    private void createLabel(int datasetId, int labelId, JsonNode value) {
@@ -497,7 +495,7 @@ public class DatasetServiceImpl implements DatasetService {
       String msg = String.format(message, params);
       DataSetDAO dataset = DataSetDAO.findById(datasetId);
       if(dataset != null) {
-         log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), dataset.testid, datasetId, msg);
+         log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), dataset.testid, datasetId, msg);
          new DatasetLogDAO(em.getReference(TestDAO.class, dataset.testid), em.getReference(DataSetDAO.class, datasetId), level, "labels", msg).persist();
       }
    }

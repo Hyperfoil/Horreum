@@ -14,7 +14,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import org.hibernate.annotations.Type;
 
 @Embeddable
-public class ExperimentComparison {
+public class ExperimentComparisonDAO {
    @NotNull
    @ManyToOne(optional = false, fetch = FetchType.LAZY)
    @JoinColumn(name = "variable_id")

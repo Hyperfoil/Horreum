@@ -1,11 +1,14 @@
 package io.hyperfoil.tools.horreum.api.alerting;
 
+import jakarta.validation.constraints.NotNull;
+
 import java.time.Instant;
 import java.io.Serializable;
 import java.util.Objects;
 
 public class MissingDataRuleResult {
     private Pk pk;
+    @NotNull
     public Instant timestamp;
     public MissingDataRule rule;
 

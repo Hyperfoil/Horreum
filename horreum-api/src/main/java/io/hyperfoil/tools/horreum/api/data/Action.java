@@ -5,22 +5,30 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.validation.constraints.NotNull;
 
 public class Action {
     @JsonProperty( required = true )
     public Integer id;
+    @NotNull
     @JsonProperty( required = true )
     public String event;
+    @NotNull
     @JsonProperty( required = true )
     public String type;
+    @NotNull
     @JsonProperty( required = true )
     public JsonNode config;
+    @NotNull
     @JsonIgnore
     public JsonNode secrets;
+    @NotNull
     @JsonProperty( required = true )
     public Integer testId;
+    @NotNull
     @JsonProperty( required = true )
     public boolean active = true;
+    @NotNull
     @JsonProperty( required = true )
     public boolean runAlways;
 

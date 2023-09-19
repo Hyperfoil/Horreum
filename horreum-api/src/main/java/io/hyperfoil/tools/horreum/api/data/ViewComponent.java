@@ -5,16 +5,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.Objects;
 
 public class ViewComponent {
     @JsonProperty(required = true)
     public Integer id;
+    @NotNull
     @JsonProperty(required = true)
     public int headerOrder;
+    @NotNull
     @JsonProperty(required = true)
     public String headerName;
+    @NotNull
     @JsonProperty(required = true)
     public JsonNode labels;
     @JsonInclude(JsonInclude.Include.NON_NULL)

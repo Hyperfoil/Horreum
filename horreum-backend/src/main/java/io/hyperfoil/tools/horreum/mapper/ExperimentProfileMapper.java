@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.mapper;
 
 import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
+import io.hyperfoil.tools.horreum.entity.ExperimentComparisonDAO;
 import io.hyperfoil.tools.horreum.entity.ExperimentProfileDAO;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 
@@ -24,7 +25,7 @@ public class ExperimentProfileMapper {
         return dto;
     }
 
-    public static ExperimentComparison fromExperimentComparison(io.hyperfoil.tools.horreum.entity.ExperimentComparison ec) {
+    public static ExperimentComparison fromExperimentComparison(ExperimentComparisonDAO ec) {
         ExperimentComparison dto = new ExperimentComparison();
         dto.variableId = ec.getVariableId();
         dto.variableName = ec.variable.name;
@@ -49,8 +50,8 @@ public class ExperimentProfileMapper {
         return ep;
     }
 
-    public static io.hyperfoil.tools.horreum.entity.ExperimentComparison toExperimentComparison(ExperimentComparison dto) {
-        io.hyperfoil.tools.horreum.entity.ExperimentComparison ec = new io.hyperfoil.tools.horreum.entity.ExperimentComparison();
+    public static ExperimentComparisonDAO toExperimentComparison(ExperimentComparison dto) {
+        ExperimentComparisonDAO ec = new ExperimentComparisonDAO();
         ec.config = dto.config;
         ec.model = dto.model;
         if(dto.variableId != null && dto.variableId > 0)

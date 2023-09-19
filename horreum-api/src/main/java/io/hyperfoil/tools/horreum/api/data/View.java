@@ -1,15 +1,21 @@
 package io.hyperfoil.tools.horreum.api.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 public class View {
     @JsonProperty(required = true)
     public Integer id;
+    @NotNull
     @JsonProperty(required = true)
     public String name;
+    //@NotNull - we can not enforce this check until we have clean workflows in the UI
+    // atm it is possible to have a new test in the UI and create an experiment profile
+    // before the test is saved, therefore the test might not have an ID
     public Integer testId;
+    @NotNull
     @JsonProperty(required = true)
     public List<ViewComponent> components;
 
