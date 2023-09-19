@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.alerting;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Set;
@@ -10,13 +11,17 @@ import java.util.Set;
 public class Variable {
     @JsonProperty( required = true )
     public Integer id;
+    @NotNull
     @JsonProperty(required = true)
     public int testId;
+    @NotNull
     @JsonProperty(required = true)
     public String name;
     public String group;
+    @NotNull
     @JsonProperty(required = true)
     public int order;
+    @NotNull
     @JsonProperty(required = true)
     public JsonNode labels;
     @JsonInclude(JsonInclude.Include.NON_NULL)

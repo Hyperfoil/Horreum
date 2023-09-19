@@ -46,7 +46,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.hyperfoil.tools.horreum.api.services.ReportService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.entity.PersistentLog;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.runtime.Startup;
@@ -342,7 +342,7 @@ public class ReportServiceImpl implements ReportService {
          }
          timestampQuery = em.createNativeQuery("SELECT id, start FROM dataset WHERE id IN :datasets").setParameter("datasets", datasetIds);
       } else {
-         log(report, PersistentLog.DEBUG, "Table report %s(%d) includes all datasets for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
+         log(report, PersistentLogDAO.DEBUG, "Table report %s(%d) includes all datasets for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
          series = selectByTest(config.test.id, config.seriesLabels);
          log.debugf("Series: %s", rowsToMap(series));
          if (!nullOrEmpty(config.scaleLabels)) {
@@ -403,15 +403,15 @@ public class ReportServiceImpl implements ReportService {
                   try {
                      Value calculatedValue = context.eval("js", jsCode);
                      Double maybeDouble = Util.toDoubleOrNull(calculatedValue,
-                           err -> log(report, PersistentLog.ERROR, err),
-                           info -> log(report, PersistentLog.INFO, info));
+                           err -> log(report, PersistentLogDAO.ERROR, err),
+                           info -> log(report, PersistentLogDAO.INFO, info));
                      if (maybeDouble != null) {
                         data.values.add(maybeDouble);
                      } else {
                         data.values.add(Util.convertToJson(calculatedValue));
                      }
                   } catch (PolyglotException e) {
-                     log(report, PersistentLog.ERROR, "Failed to run report %s(%d) label function on run %d. Offending code: <br><pre>%s</pre>",
+                     log(report, PersistentLogDAO.ERROR, "Failed to run report %s(%d) label function on run %d. Offending code: <br><pre>%s</pre>",
                            config.title, config.id, datasetId, jsCode);
                      log.debug("Caused by exception", e);
                   }
@@ -457,7 +457,7 @@ public class ReportServiceImpl implements ReportService {
                try {
                   data.category = Util.convert(context.eval("js", jsCode)).toString();
                } catch (PolyglotException e) {
-                  log(report, PersistentLog.ERROR, "Failed to run report %s(%d) category function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
+                  log(report, PersistentLogDAO.ERROR, "Failed to run report %s(%d) category function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
                         config.title, config.id, data.runId, data.ordinal + 1, data.datasetId, jsCode);
                   log.debug("Caused by exception", e);
                   continue;
@@ -472,7 +472,7 @@ public class ReportServiceImpl implements ReportService {
             JsonNode value = (JsonNode) row[3];
             TableReportDAO.Data data = datasetData.get(datasetId);
             if (data == null) {
-               log(report, PersistentLog.ERROR, "Missing values for dataset %d!", datasetId);
+               log(report, PersistentLogDAO.ERROR, "Missing values for dataset %d!", datasetId);
                continue;
             }
             if (nullOrEmpty(config.seriesFunction)) {
@@ -482,7 +482,7 @@ public class ReportServiceImpl implements ReportService {
                try {
                   data.series = Util.convert(context.eval("js", jsCode)).toString();
                } catch (PolyglotException e) {
-                  log(report, PersistentLog.ERROR, "Failed to run report %s(%d) series function on run %d/%d (%d). Offending code: <br><pre>%s</pre>", config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
+                  log(report, PersistentLogDAO.ERROR, "Failed to run report %s(%d) series function on run %d/%d (%d). Offending code: <br><pre>%s</pre>", config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
                   log.debug("Caused by exception", e);
                }
             }
@@ -494,7 +494,7 @@ public class ReportServiceImpl implements ReportService {
             JsonNode value = (JsonNode) row[3];
             TableReportDAO.Data data = datasetData.get(datasetId);
             if (data == null) {
-               log(report, PersistentLog.ERROR, "Missing values for dataset %d!", datasetId);
+               log(report, PersistentLogDAO.ERROR, "Missing values for dataset %d!", datasetId);
                continue;
             }
             if (nullOrEmpty(config.scaleFunction)) {
@@ -504,7 +504,7 @@ public class ReportServiceImpl implements ReportService {
                try {
                   data.scale = Util.convert(context.eval("js", jsCode)).toString();
                } catch (PolyglotException e) {
-                  log(report, PersistentLog.ERROR, "Failed to run report %s(%d) label function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
+                  log(report, PersistentLogDAO.ERROR, "Failed to run report %s(%d) label function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
                         config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
                   log.debug("Caused by exception", e);
                }
@@ -626,7 +626,7 @@ public class ReportServiceImpl implements ReportService {
    private List<Integer> filterDatasetIds(TableReportConfigDAO config, TableReportDAO report) {
       List<Object[]> list = selectByTest(config.test.id, config.filterLabels);
       if (list.isEmpty()) {
-         log(report, PersistentLog.WARN, "There are no matching datasets for test %s (%d)", config.test.name, config.test.id);
+         log(report, PersistentLogDAO.WARN, "There are no matching datasets for test %s (%d)", config.test.name, config.test.id);
       }
       List<Integer> datasetIds = new ArrayList<>(list.size());
       if (nullOrEmpty(config.filterFunction)) {
@@ -645,7 +645,7 @@ public class ReportServiceImpl implements ReportService {
                debugList.append("(filtered)");
             }
          }
-         log(report, PersistentLog.DEBUG, "Datasets considered for report: %s", debugList);
+         log(report, PersistentLogDAO.DEBUG, "Datasets considered for report: %s", debugList);
       } else {
          executeInContext(config, context -> {
             StringBuilder debugList = new StringBuilder();
@@ -670,17 +670,17 @@ public class ReportServiceImpl implements ReportService {
                      }
                   } else {
                      debugList.append("(filtered: not boolean)");
-                     log(report, PersistentLog.ERROR, "Report %s(%d) filter result for dataset %d/%d (%d) is not a boolean: %s. Offending code: <br><pre>%s</pre>",
+                     log(report, PersistentLogDAO.ERROR, "Report %s(%d) filter result for dataset %d/%d (%d) is not a boolean: %s. Offending code: <br><pre>%s</pre>",
                            config.title, config.id, runId, ordinal + 1, datasetId, value, jsCode);
                   }
                } catch (PolyglotException e) {
                   debugList.append("(filtered: JS error)");
-                  log(report, PersistentLog.ERROR, "Failed to run report %s(%d) filter function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
+                  log(report, PersistentLogDAO.ERROR, "Failed to run report %s(%d) filter function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
                         config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
                   log.debug("Caused by exception", e);
                }
             }
-            log(report, PersistentLog.DEBUG, "Datasets considered for report: %s", debugList);
+            log(report, PersistentLogDAO.DEBUG, "Datasets considered for report: %s", debugList);
          });
       }
       return datasetIds;

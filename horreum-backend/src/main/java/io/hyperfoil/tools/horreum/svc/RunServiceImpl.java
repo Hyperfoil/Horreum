@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -66,7 +65,7 @@ import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.api.services.SqlService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.entity.PersistentLog;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLogDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
@@ -1121,7 +1120,7 @@ public class RunServiceImpl implements RunService {
                            .getResultList());
                   }
                } catch (PersistenceException e) {
-                  logMessage(run, PersistentLog.ERROR, "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
+                  logMessage(run, PersistentLogDAO.ERROR, "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
                   findFailingExtractor(runId);
                   extractedData = Collections.emptyList();
                }
@@ -1137,13 +1136,13 @@ public class RunServiceImpl implements RunService {
                   root = root.iterator().next();
                }
             }
-            logMessage(run, PersistentLog.DEBUG, "Run transformer %s/%s with input: <pre>%s</pre>, function: <pre>%s</pre>",
+            logMessage(run, PersistentLogDAO.DEBUG, "Run transformer %s/%s with input: <pre>%s</pre>, function: <pre>%s</pre>",
                   uri, t.name, limitLength(root.toPrettyString()), t.function);
             if (t.function != null && !t.function.isBlank()) {
                result = Util.evaluateOnce(t.function, root, Util::convertToJson,
-                     (code, e) -> logMessage(run, PersistentLog.ERROR,
+                     (code, e) -> logMessage(run, PersistentLogDAO.ERROR,
                            "Evaluation of transformer %s/%s failed: '%s' Code: <pre>%s</pre>", uri, t.name, e.getMessage(), code),
-                     output -> logMessage(run, PersistentLog.DEBUG, "Output while running transformer %s/%s: <pre>%s</pre>", uri, t.name, output));
+                     output -> logMessage(run, PersistentLogDAO.DEBUG, "Output while running transformer %s/%s: <pre>%s</pre>", uri, t.name, output));
                if (result == null) {
                   // this happens upon error
                   result = JsonNodeFactory.instance.nullNode();
@@ -1167,7 +1166,7 @@ public class RunServiceImpl implements RunService {
                }
             } else if (!result.isContainerNode() || (result.isObject() && !result.has("$schema")) ||
                   (result.isArray() && StreamSupport.stream(result.spliterator(), false).anyMatch(item -> !item.has("$schema")))) {
-               logMessage(run, PersistentLog.WARN, "Dataset will contain element without a schema.");
+               logMessage(run, PersistentLogDAO.WARN, "Dataset will contain element without a schema.");
             }
             JsonNode existing = transformerResults.get(transformerId);
             if (existing == null) {
@@ -1203,7 +1202,7 @@ public class RunServiceImpl implements RunService {
                   throw new IllegalStateException("Unknown type " + type);
             }
             nakedNodes.add(node);
-            logMessage(run, PersistentLog.DEBUG, "This test (%d) does not use any transformer for schema %s (key %s), passing as-is.", run.testid, uri, key);
+            logMessage(run, PersistentLogDAO.DEBUG, "This test (%d) does not use any transformer for schema %s (key %s), passing as-is.", run.testid, uri, key);
          }
       }
       if (schemasAndTransformers > 0) {
@@ -1222,11 +1221,11 @@ public class RunServiceImpl implements RunService {
                      String message = String.format("Transformer %d produced an array of %d elements but other transformer " +
                                  "produced %d elements; dataset %d/%d might be missing some data.",
                            entry.getKey(), node.size(), max, run.id, ordinal);
-                     logMessage(run, PersistentLog.WARN, "%s", message);
+                     logMessage(run, PersistentLogDAO.WARN, "%s", message);
                      log.warnf(message);
                   }
                } else {
-                  logMessage(run, PersistentLog.WARN, "Unexpected result provided by one of the transformers: %s", node);
+                  logMessage(run, PersistentLogDAO.WARN, "Unexpected result provided by one of the transformers: %s", node);
                   log.warnf("Unexpected result provided by one of the transformers: %s", node);
                }
             }
@@ -1236,7 +1235,7 @@ public class RunServiceImpl implements RunService {
          }
          return ordinal;
       } else {
-         logMessage(run, PersistentLog.INFO, "No applicable schema, dataset will be empty.");
+         logMessage(run, PersistentLogDAO.INFO, "No applicable schema, dataset will be empty.");
          createDataset(new DataSetDAO(
                run, 0, "Empty DataSet for run data without any schema.",
                instance.arrayNode()), isRecalculation);
@@ -1286,12 +1285,12 @@ public class RunServiceImpl implements RunService {
                      .setParameter(3, runId).getSingleResult();
             }
          } catch (PersistenceException e) {
-            logMessage(em.getReference(RunDAO.class, runId), PersistentLog.ERROR, "There seems to be an error in schema <code>%s</code> transformer <code>%s</code>, extractor <code>%s</code>, JSONPath expression <code>%s</code>: %s",
+            logMessage(em.getReference(RunDAO.class, runId), PersistentLogDAO.ERROR, "There seems to be an error in schema <code>%s</code> transformer <code>%s</code>, extractor <code>%s</code>, JSONPath expression <code>%s</code>: %s",
                   row[0], row[3], row[4], row[5], Util.explainCauses(e));
             return;
          }
       }
-      logMessage(em.getReference(RunDAO.class, runId), PersistentLog.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
+      logMessage(em.getReference(RunDAO.class, runId), PersistentLogDAO.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
    }
 
 
@@ -1313,7 +1312,7 @@ public class RunServiceImpl implements RunService {
          if (node.path("$schema").isMissingNode()) {
             node.put("$schema", uri);
          } else {
-            logMessage(run, PersistentLog.DEBUG, "<code>$schema</code> present (%s), not overriding with %s", node.path("$schema").asText(), uri);
+            logMessage(run, PersistentLogDAO.DEBUG, "<code>$schema</code> present (%s), not overriding with %s", node.path("$schema").asText(), uri);
          }
       }
    }

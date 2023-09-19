@@ -51,7 +51,7 @@ import io.hyperfoil.tools.horreum.api.services.AlertingService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.changedetection.FixedThresholdModel;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
-import io.hyperfoil.tools.horreum.entity.PersistentLog;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModel;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
@@ -253,14 +253,14 @@ public class AlertingServiceImpl implements AlertingService {
                      createMissingDataRuleResult(dataset, ruleId);
                   }
                } else {
-                  logMissingDataMessage(dataset, PersistentLog.ERROR,
+                  logMissingDataMessage(dataset, PersistentLogDAO.ERROR,
                         "Result for missing data rule %d, dataset %d is not a boolean: %s", ruleId, dataset.id, result);
                }
             },
             // Absence of condition means that this dataset is taken into account. This happens e.g. when value == NULL
             row -> createMissingDataRuleResult(dataset, (int) row[0]),
-            (row, exception, code) -> logMissingDataMessage(dataset, PersistentLog.ERROR, "Exception evaluating missing data rule %d, dataset %d: '%s' Code: <pre>%s</pre>", row[0], dataset.id, exception.getMessage(), code),
-            output -> logMissingDataMessage(dataset, PersistentLog.DEBUG, "Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output));
+            (row, exception, code) -> logMissingDataMessage(dataset, PersistentLogDAO.ERROR, "Exception evaluating missing data rule %d, dataset %d: '%s' Code: <pre>%s</pre>", row[0], dataset.id, exception.getMessage(), code),
+            output -> logMissingDataMessage(dataset, PersistentLogDAO.DEBUG, "Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output));
    }
 
    private void createMissingDataRuleResult(DataSetDAO dataset, int ruleId) {
@@ -311,13 +311,13 @@ public class AlertingServiceImpl implements AlertingService {
       }
       boolean testResult = Util.evaluateTest(filter, fingerprint,
             value -> {
-               logCalculationMessage(dataset, PersistentLog.ERROR, "Evaluation of fingerprint failed: '%s' is not a boolean", value);
+               logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of fingerprint failed: '%s' is not a boolean", value);
                return false;
             },
-            (code, e) -> logCalculationMessage(dataset, PersistentLog.ERROR, "Evaluation of fingerprint filter failed: '%s' Code:<pre>%s</pre>", e.getMessage(), code),
-            output -> logCalculationMessage(dataset, PersistentLog.DEBUG, "Output while evaluating fingerprint filter: <pre>%s</pre>", output));
+            (code, e) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of fingerprint filter failed: '%s' Code:<pre>%s</pre>", e.getMessage(), code),
+            output -> logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Output while evaluating fingerprint filter: <pre>%s</pre>", output));
       if (!testResult) {
-         logCalculationMessage(dataset, PersistentLog.DEBUG, "Fingerprint %s was filtered out.", fingerprint);
+         logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Fingerprint %s was filtered out.", fingerprint);
       }
       return testResult;
    }
@@ -409,7 +409,7 @@ public class AlertingServiceImpl implements AlertingService {
             .getResultList();
       if (debug) {
          for (VariableData data : values) {
-            logCalculationMessage(dataset, PersistentLog.DEBUG, "Fetched value for variable %s: <pre>%s</pre>", data.fullName(), data.value);
+            logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Fetched value for variable %s: <pre>%s</pre>", data.fullName(), data.value);
          }
       }
       @SuppressWarnings("unchecked") List<Object[]> timestampList = em.createNativeQuery(LOOKUP_TIMESTAMP)
@@ -425,12 +425,12 @@ public class AlertingServiceImpl implements AlertingService {
          JsonNode value = (JsonNode) timestampList.get(0)[1];
          if (timestampFunction != null && !timestampFunction.isBlank()) {
             value = Util.evaluateOnce(timestampFunction, value, Util::convertToJson,
-                  (code, throwable) -> logCalculationMessage(dataset, PersistentLog.ERROR, "Evaluation of timestamp failed: '%s' Code: <code><pre>%s</pre></code>", throwable.getMessage(), code),
-                  output -> logCalculationMessage(dataset, PersistentLog.DEBUG, "Output while calculating timestamp: <pre>%s</pre>", output));
+                  (code, throwable) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of timestamp failed: '%s' Code: <code><pre>%s</pre></code>", throwable.getMessage(), code),
+                  output -> logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Output while calculating timestamp: <pre>%s</pre>", output));
          }
          timestamp = Util.toInstant(value);
          if (timestamp == null) {
-            logCalculationMessage(dataset, PersistentLog.ERROR, "Cannot parse timestamp, must be number or ISO-8601 timestamp: %s", value);
+            logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Cannot parse timestamp, must be number or ISO-8601 timestamp: %s", value);
             timestamp = dataset.start;
          }
       }
@@ -438,8 +438,8 @@ public class AlertingServiceImpl implements AlertingService {
       Util.evaluateMany(values, data -> data.calculation, data -> data.value,
             (data, result) -> {
                Double value = Util.toDoubleOrNull(result,
-                     error -> logCalculationMessage(dataset, PersistentLog.ERROR, "Evaluation of variable %s failed: %s", data.fullName(), error),
-                     info -> logCalculationMessage(dataset, PersistentLog.INFO, "Evaluation of variable %s: %s", data.fullName(), info));
+                     error -> logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of variable %s failed: %s", data.fullName(), error),
+                     info -> logCalculationMessage(dataset, PersistentLogDAO.INFO, "Evaluation of variable %s: %s", data.fullName(), info));
                if (value != null) {
                   createDataPoint(dataset, finalTimestamp, data.variableId, value, notify);
                } else {
@@ -451,10 +451,10 @@ public class AlertingServiceImpl implements AlertingService {
             },
             data -> {
                if (data.numLabels > 1) {
-                  logCalculationMessage(dataset, PersistentLog.WARN, "Variable %s has more than one label (%s) but no calculation function.", data.fullName(), data.value.fieldNames());
+                  logCalculationMessage(dataset, PersistentLogDAO.WARN, "Variable %s has more than one label (%s) but no calculation function.", data.fullName(), data.value.fieldNames());
                }
                if (data.value == null || data.value.isNull()) {
-                  logCalculationMessage(dataset, PersistentLog.INFO, "Null value for variable %s - datapoint is not created", data.fullName());
+                  logCalculationMessage(dataset, PersistentLogDAO.INFO, "Null value for variable %s - datapoint is not created", data.fullName());
                   if (recalculation != null) {
                      recalculation.datasetsWithoutValue.put(dataset.id, dataset.getInfo());
                   }
@@ -473,7 +473,7 @@ public class AlertingServiceImpl implements AlertingService {
                   }
                }
                if (value == null) {
-                  logCalculationMessage(dataset, PersistentLog.ERROR, "Cannot turn %s into a floating-point value for variable %s", data.value, data.fullName());
+                  logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Cannot turn %s into a floating-point value for variable %s", data.value, data.fullName());
                   if (recalculation != null) {
                      recalculation.errors++;
                   }
@@ -482,8 +482,8 @@ public class AlertingServiceImpl implements AlertingService {
                   createDataPoint(dataset, finalTimestamp, data.variableId, value, notify);
                }
             },
-            (data, exception, code) -> logCalculationMessage(dataset, PersistentLog.ERROR, "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", data.fullName(), exception.getMessage(), code),
-            output -> logCalculationMessage(dataset, PersistentLog.DEBUG, "Output while calculating variable: <pre>%s</pre>", output)
+            (data, exception, code) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", data.fullName(), exception.getMessage(), code),
+            output -> logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Output while calculating variable: <pre>%s</pre>", output)
       );
       if (!missingValueVariables.isEmpty()) {
          messageBus.publish(MessageBusChannels.DATASET_MISSING_VALUES, dataset.testid, new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify));
@@ -508,7 +508,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
-      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
+      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
       new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId),
             level, "variables", msg).persist();
    }
@@ -519,14 +519,14 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void logMissingDataMessage(int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
-      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
+      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
       new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId),
             level, "missingdata", msg).persist();
    }
 
    private void logChangeDetectionMessage(int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
-      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLog.logLevel(level), testId, datasetId, msg);
+      log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
       new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId),
             level, "changes", msg).persist();
    }
@@ -640,11 +640,11 @@ public class AlertingServiceImpl implements AlertingService {
          for (ChangeDetectionDAO detection : ChangeDetectionDAO.<ChangeDetectionDAO>find("variable", variable).list()) {
             ChangeDetectionModel model = MODELS.get(detection.model);
             if (model == null) {
-               logChangeDetectionMessage(variable.testId, datasetId, PersistentLog.ERROR, "Cannot find change detection model %s", detection.model);
+               logChangeDetectionMessage(variable.testId, datasetId, PersistentLogDAO.ERROR, "Cannot find change detection model %s", detection.model);
                continue;
             }
             model.analyze(dataPoints, detection.config, change -> {
-               logChangeDetectionMessage(variable.testId, datasetId, PersistentLog.DEBUG,
+               logChangeDetectionMessage(variable.testId, datasetId, PersistentLogDAO.DEBUG,
                      "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
                Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id = ?1");
                SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSetDAO.Info.class));
@@ -967,7 +967,7 @@ public class AlertingServiceImpl implements AlertingService {
       ChangeDAO.delete("dataset.id in ?1 AND confirmed = false", ids);
       if (ids.size() > 0) {
          // Due to RLS policies we cannot add a record to a dataset we don't own
-         logCalculationMessage(testId, ids.get(0), PersistentLog.INFO, "Starting recalculation of %d runs.", ids.size());
+         logCalculationMessage(testId, ids.get(0), PersistentLogDAO.INFO, "Starting recalculation of %d runs.", ids.size());
       }
       return ids;
    }
@@ -1182,13 +1182,13 @@ public class AlertingServiceImpl implements AlertingService {
       if (rule.condition != null && !rule.condition.isBlank()) {
          String ruleName = rule.name == null ? "#" + rule.id : rule.name;
          match = Util.evaluateTest(rule.condition, value, notBoolean -> {
-            logMissingDataMessage(rule.testId(), datasetId, PersistentLog.ERROR,
+            logMissingDataMessage(rule.testId(), datasetId, PersistentLogDAO.ERROR,
                   "Missing data rule %s result is not a boolean: %s", ruleName, notBoolean);
             return true;
          },
-            (code, exception) -> logMissingDataMessage(rule.testId(), datasetId, PersistentLog.ERROR,
+            (code, exception) -> logMissingDataMessage(rule.testId(), datasetId, PersistentLogDAO.ERROR,
                "Error evaluating missing data rule %s: '%s' Code:<pre>%s</pre>", ruleName, exception.getMessage(), code),
-            output -> logMissingDataMessage(rule.testId(), datasetId, PersistentLog.DEBUG,
+            output -> logMissingDataMessage(rule.testId(), datasetId, PersistentLogDAO.DEBUG,
                   "Output while evaluating missing data rule %s: '%s'", ruleName, output)
          );
       }

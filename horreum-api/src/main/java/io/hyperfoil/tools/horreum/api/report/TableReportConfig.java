@@ -3,12 +3,14 @@ package io.hyperfoil.tools.horreum.api.report;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.hyperfoil.tools.horreum.api.data.Test;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 public class TableReportConfig {
     @JsonProperty(required = true)
     public Integer id;
+    @NotNull
     @JsonProperty(required = true)
     public String title;
     public Test test;
@@ -17,6 +19,7 @@ public class TableReportConfig {
     public ArrayNode categoryLabels;
     public String categoryFunction;
     public String categoryFormatter;
+    @NotNull
     @JsonProperty(required = true)
     public ArrayNode seriesLabels;
     public String seriesFunction;
@@ -25,6 +28,7 @@ public class TableReportConfig {
     public String scaleFunction;
     public String scaleFormatter;
     public String scaleDescription;
+    @NotNull
     @JsonProperty(required = true)
     public List<ReportComponent> components;
 

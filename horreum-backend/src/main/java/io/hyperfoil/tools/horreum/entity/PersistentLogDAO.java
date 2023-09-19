@@ -13,7 +13,7 @@ import org.jboss.logging.Logger;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @MappedSuperclass
-public abstract class PersistentLog extends PanacheEntityBase {
+public abstract class PersistentLogDAO extends PanacheEntityBase {
    public static final int DEBUG = 0;
    public static final int INFO = 1;
    public static final int WARN = 2;
@@ -33,7 +33,7 @@ public abstract class PersistentLog extends PanacheEntityBase {
    @NotNull
    public String message;
 
-   public PersistentLog(int level, String message) {
+   public PersistentLogDAO(int level, String message) {
       this.level = level;
       this.message = message;
       this.timestamp = Instant.now();

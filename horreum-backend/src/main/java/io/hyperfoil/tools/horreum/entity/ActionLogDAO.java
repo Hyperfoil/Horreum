@@ -4,7 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.validation.constraints.NotNull;
 
 @Entity(name = "ActionLog")
-public class ActionLogDAO extends PersistentLog {
+public class ActionLogDAO extends PersistentLogDAO {
    @NotNull
    public int testId;
 

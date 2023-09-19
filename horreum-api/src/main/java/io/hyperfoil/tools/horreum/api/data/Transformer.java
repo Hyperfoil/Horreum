@@ -1,19 +1,23 @@
 package io.hyperfoil.tools.horreum.api.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.Collection;
 
 public class Transformer {
     @JsonProperty(required = true)
     public Integer id;
+    @NotNull
     @JsonProperty(required = true)
     public String name;
     public String description;
     public String targetSchemaUri;
+    @NotNull
     @JsonProperty(required = true)
     public Collection<Extractor> extractors;
     public String function;
+    @NotNull
     @JsonProperty(value = "schemaId", required = true)
     public Integer schemaId;
 
@@ -23,9 +27,11 @@ public class Transformer {
     @JsonProperty(value = "schemaName", required = true)
     public String schemaName;
 
+    @NotNull
     @JsonProperty(required = true)
     public String owner;
 
+    @NotNull
     public Access access = Access.PUBLIC;
 
     public Transformer() {

@@ -4,7 +4,6 @@ import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
-import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.ActionMapper;
@@ -14,7 +13,7 @@ import io.hyperfoil.tools.horreum.api.services.ActionService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
-import io.hyperfoil.tools.horreum.entity.PersistentLog;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.action.ActionPlugin;
 import io.hyperfoil.tools.horreum.server.EncryptionManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -84,7 +83,7 @@ public class ActionServiceImpl implements ActionService {
    private void executeActions(MessageBusChannels event, int testId, Object payload, boolean notify){
       List<ActionDAO> actions = getActions(event.name(), testId);
       if (actions.isEmpty()) {
-         new ActionLogDAO(PersistentLog.DEBUG, testId, event.name(), null, "No actions found.").persist();
+         new ActionLogDAO(PersistentLogDAO.DEBUG, testId, event.name(), null, "No actions found.").persist();
          return;
       }
       for (ActionDAO action : actions) {
@@ -96,15 +95,15 @@ public class ActionServiceImpl implements ActionService {
             ActionPlugin plugin = plugins.get(action.type);
             if (plugin == null) {
                log.errorf("No plugin for action type %s", action.type);
-               new ActionLogDAO(PersistentLog.ERROR, testId, event.name(), action.type, "No plugin for action type " + action.type).persist();
+               new ActionLogDAO(PersistentLogDAO.ERROR, testId, event.name(), action.type, "No plugin for action type " + action.type).persist();
                continue;
             }
             plugin.execute(action.config, action.secrets, payload).subscribe()
                   .with(item -> {}, throwable -> logActionError(testId, event.name(), action.type, throwable));
          } catch (Exception e) {
             log.errorf(e, "Failed to invoke action %d", action.id);
-            new ActionLogDAO(PersistentLog.ERROR, testId, event.name(), action.type, "Failed to invoke: " + e.getMessage()).persist();
-            new ActionLogDAO(PersistentLog.DEBUG, testId, event.name(), action.type,
+            new ActionLogDAO(PersistentLogDAO.ERROR, testId, event.name(), action.type, "Failed to invoke: " + e.getMessage()).persist();
+            new ActionLogDAO(PersistentLogDAO.DEBUG, testId, event.name(), action.type,
                   "Configuration: <pre>\n<code>" + action.config.toPrettyString() +
                   "\n<code></pre>Payload: <pre>\n<code>" + Util.OBJECT_MAPPER.valueToTree(payload).toPrettyString() +
                   "</code>\n</pre>").persist();
@@ -127,7 +126,7 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    void doLogActionError(int testId, String event, String type, Throwable throwable) {
-      new ActionLogDAO(PersistentLog.ERROR, testId, event, type, throwable.getMessage()).persist();
+      new ActionLogDAO(PersistentLogDAO.ERROR, testId, event, type, throwable.getMessage()).persist();
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)

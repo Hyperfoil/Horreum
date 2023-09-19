@@ -50,7 +50,7 @@ public class TransformerDAO extends OwnedEntityBase implements Comparable<Transf
    @NotNull
    @ElementCollection(fetch = FetchType.EAGER)
    @CollectionTable(name = "transformer_extractors")
-   public Collection<Extractor> extractors;
+   public Collection<ExtractorDAO> extractors;
 
    public String function;
 

@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.api.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.validation.constraints.NotNull;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -10,25 +11,29 @@ import java.util.Objects;
 public class Label {
     @JsonProperty( required = true )
     public Integer id;
+    @NotNull
     @JsonProperty( required = true )
     public String name;
+    @NotNull
     @JsonProperty( required = true )
     public Collection<Extractor> extractors;
     public String function;
+    @NotNull
     @JsonProperty( required = true )
     public boolean filtering = true;
+    @NotNull
     @JsonProperty( required = true )
     public boolean metrics = true;
     @JsonProperty( required = true )
     public String owner;
     @JsonProperty( required = true )
     public Access access = Access.PUBLIC;
+    @NotNull
+    @JsonProperty( value = "schemaId", required = true )
+    public int schemaId;
 
     public Label() {
     }
-
-    @JsonProperty( value = "schemaId", required = true )
-    public int schemaId;
 
     public static class Value implements Serializable {
         public int datasetId;

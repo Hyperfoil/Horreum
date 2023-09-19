@@ -51,7 +51,7 @@ public class LabelDAO extends OwnedEntityBase {
    @NotNull
    @ElementCollection(fetch = FetchType.EAGER)
    @CollectionTable(name = "label_extractors")
-   public Collection<Extractor> extractors;
+   public Collection<ExtractorDAO> extractors;
 
    public String function;
 

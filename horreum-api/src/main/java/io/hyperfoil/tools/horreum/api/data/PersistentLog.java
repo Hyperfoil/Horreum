@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.api.data;
 
+import jakarta.validation.constraints.NotNull;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -15,12 +16,15 @@ public abstract class PersistentLog {
    @JsonProperty(required = true)
    public Long id;
 
+   @NotNull
    @JsonProperty(required = true)
    public int level;
 
+   @NotNull
    @JsonProperty(required = true)
    public Instant timestamp;
 
+   @NotNull
    @JsonProperty(required = true)
    public String message;
 

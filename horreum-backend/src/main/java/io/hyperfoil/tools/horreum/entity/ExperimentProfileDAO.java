@@ -67,7 +67,7 @@ public class ExperimentProfileDAO extends PanacheEntityBase {
    @ElementCollection(fetch = FetchType.EAGER)
    @CollectionTable(name="experiment_comparisons", joinColumns=@JoinColumn(name="profile_id"))
    @OrderBy("variable_id, model")
-   public Collection<ExperimentComparison> comparisons;
+   public Collection<ExperimentComparisonDAO> comparisons;
 
    /* These labels are not used in Horreum but are added to the result event */
    @Column(name = "extra_labels", columnDefinition = "jsonb")

@@ -5,7 +5,7 @@ import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.NotNull;
 
 @Embeddable
-public class Extractor {
+public class ExtractorDAO {
    @NotNull
    public String name;
 
@@ -16,10 +16,10 @@ public class Extractor {
    @Column(name = "isarray")
    public boolean array;
 
-   public Extractor() {
+   public ExtractorDAO() {
    }
 
-   public Extractor(String name, String jsonpath, boolean array) {
+   public ExtractorDAO(String name, String jsonpath, boolean array) {
       this.name = name;
       this.jsonpath = jsonpath;
       this.array = array;

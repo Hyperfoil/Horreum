@@ -2,12 +2,14 @@ package io.hyperfoil.tools.horreum.api.alerting;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.validation.constraints.NotNull;
 
 public class ChangeDetection {
     @JsonProperty( required = true )
     public Integer id;
     @JsonProperty( required = true )
     public String model;
+    @NotNull
     @JsonProperty( required = true )
     public JsonNode config;
 

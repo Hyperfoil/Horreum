@@ -4,10 +4,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
-import io.hyperfoil.tools.horreum.entity.PersistentLog;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 
 @Entity(name = "ReportLog")
-public class ReportLogDAO extends PersistentLog {
+public class ReportLogDAO extends PersistentLogDAO {
    @ManyToOne(optional = false)
    @JoinColumn(name = "report_id")
    TableReportDAO report;
