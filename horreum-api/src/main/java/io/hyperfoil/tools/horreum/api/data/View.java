@@ -11,7 +11,9 @@ public class View {
     @NotNull
     @JsonProperty(required = true)
     public String name;
-    @NotNull
+    //@NotNull - we can not enforce this check until we have clean workflows in the UI
+    // atm it is possible to have a new test in the UI and create an experiment profile
+    // before the test is saved, therefore the test might not have an ID
     public Integer testId;
     @NotNull
     @JsonProperty(required = true)
