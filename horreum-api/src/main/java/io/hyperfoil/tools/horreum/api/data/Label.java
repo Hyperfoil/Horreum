@@ -3,6 +3,8 @@ package io.hyperfoil.tools.horreum.api.data;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -27,6 +29,7 @@ public class Label {
     @JsonProperty( required = true )
     public String owner;
     @JsonProperty( required = true )
+    @Schema( type = SchemaType.INTEGER, implementation = Access.class)
     public Access access = Access.PUBLIC;
     @NotNull
     @JsonProperty( value = "schemaId", required = true )
@@ -38,6 +41,7 @@ public class Label {
     public static class Value implements Serializable {
         public int datasetId;
         public int labelId;
+        @Schema(implementation = String.class)
         public JsonNode value;
 
         public Value() {

@@ -16,7 +16,6 @@ import io.hyperfoil.tools.horreum.api.services.RunService.RunSummary;
 import io.hyperfoil.tools.horreum.api.services.RunService.RunCount;
 
 import io.hyperfoil.tools.horreum.api.data.Run;
-import io.hyperfoil.tools.horreum.api.services.QueryResult;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataOutput;
 
@@ -56,10 +55,10 @@ public class RunServiceExtension implements RunService {
       return delegate.getMetadata(id, token, schemaUri);
    }
 
-   @Override
-   public QueryResult queryData(int id, String jsonpath, String schemaUri, boolean array) {
-      return delegate.queryData(id, jsonpath, schemaUri, array);
-   }
+//   @Override
+//   public QueryResult queryData(int id, String jsonpath, String schemaUri, boolean array) {
+//      return delegate.queryData(id, jsonpath, schemaUri, array);
+//   }
 
    @Override
    public String resetToken(int id) {

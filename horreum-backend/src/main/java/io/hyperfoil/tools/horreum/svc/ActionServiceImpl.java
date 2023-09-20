@@ -4,6 +4,7 @@ import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.data.*;
@@ -70,6 +71,9 @@ public class ActionServiceImpl implements ActionService {
 
    @Inject
    EncryptionManager encryptionManager;
+
+   @Inject
+   TestServiceImpl testService;
 
    @PostConstruct()
    public void postConstruct(){
@@ -190,7 +194,6 @@ public class ActionServiceImpl implements ActionService {
          ActionDAO actionEntity = ActionMapper.to(action);
          merge(actionEntity);
       }
-      em.flush();
       return action;
    }
 
@@ -219,6 +222,31 @@ public class ActionServiceImpl implements ActionService {
       return ActionMapper.from(action);
    }
 
+   @Override
+   @RolesAllowed(Roles.TESTER)
+   @WithRoles
+   @Transactional
+   public Action update(Action dto) {
+      if (dto.testId <= 0) {
+         throw ServiceException.badRequest("Missing test id");
+      }
+      // just ensure the test exists
+      testService.getTestForUpdate(dto.testId);
+      validate(dto);
+
+      ActionDAO action = ActionMapper.to(dto);
+      if (action.id == null) {
+         action.persist();
+      } else {
+         if (!action.active) {
+            ActionDAO.deleteById(action.id);
+            return null;
+         } else {
+            merge(action);
+         }
+      }
+      return ActionMapper.from(action);
+   }
 
    @WithRoles
    @RolesAllowed(Roles.ADMIN)

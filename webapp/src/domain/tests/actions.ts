@@ -16,6 +16,7 @@ import {
     UpdateFolderAction,
     UpdateTransformersAction,
     UpdateRunsAndDatasetsAction,
+    LoadedViewsAction,
 } from "./reducers"
 import Api, { Access, Action, Test, Transformer, View, Watch } from "../../api"
 import { Dispatch } from "redux"
@@ -33,7 +34,7 @@ export function fetchSummary(roles?: string, folder?: string) {
             listing =>
                 dispatch({
                     type: actionTypes.LOADED_SUMMARY,
-                    tests: listing.tests?.map(t => ({ ...t, views: [], notificationsEnabled: false })) || [],
+                    tests: listing.tests?.map(t => ({ ...t, notificationsEnabled: false })) || [],
                 }),
             error => {
                 dispatch(loading(false))
@@ -80,6 +81,24 @@ export function sendTest(test: Test) {
     }
 }
 
+export function fetchViews(testId: number) {
+    return (dispatch: Dispatch<LoadingAction | LoadedViewsAction | AddAlertAction>) => {
+        dispatch(loading(true))
+        return Api.uIServiceGetViews(testId).then(
+            views => dispatch({ type: actionTypes.LOADED_VIEWS, testId, views }),
+            error => {
+                dispatch(loading(false))
+                return dispatchError(
+                    dispatch,
+                    error,
+                    "FETCH_VIEWS",
+                    "Failed to fetch test views; the views may not exist or you don't have sufficient permissions to access them."
+                )
+            }
+        )
+    }
+}
+
 export function updateView(testId: number, view: View) {
     return (dispatch: Dispatch<UpdateViewAction | AddAlertAction>): Promise<number> => {
         for (const c of view.components) {
@@ -94,7 +113,8 @@ export function updateView(testId: number, view: View) {
                 return Promise.reject()
             }
         }
-        return Api.testServiceUpdateView(testId, view).then(
+        view.testId = testId
+        return Api.uIServiceUpdateView(view).then(
             viewId => {
                 const id: number = ensureInteger(viewId)
                 dispatch({
@@ -114,7 +134,7 @@ export function updateView(testId: number, view: View) {
 
 export function deleteView(testId: number, viewId: number) {
     return (dispatch: Dispatch<DeleteViewAction | AddAlertAction>) => {
-        return Api.testServiceDeleteView(testId, viewId).then(
+        return Api.uIServiceDeleteView(testId, viewId).then(
             _ => {
                 dispatch({
                     type: actionTypes.DELETE_VIEW,
@@ -147,7 +167,8 @@ export function updateActions(testId: number, actions: Action[]) {
         const promises: any[] = []
         actions.forEach(action => {
             promises.push(
-                Api.testServiceUpdateAction(testId, action).then(
+                (action.testId = testId),
+                Api.actionServiceUpdate(action).then(
                     response => {
                         dispatch({
                             type: actionTypes.UPDATE_ACTION,

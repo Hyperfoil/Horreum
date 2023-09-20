@@ -23,6 +23,8 @@ import PrintButton from "../../components/PrintButton"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
 
 import { renderValue } from "./components"
+import { fetchViews } from "../tests/actions"
+import { viewsSelector } from "./selectors"
 
 type Ds = {
     id: number
@@ -35,11 +37,16 @@ export default function DatasetComparison() {
     const history = useHistory()
     const params = new URLSearchParams(history.location.search)
     const testId = parseInt(params.get("testId") || "-1")
+    const views = useSelector(viewsSelector(testId))
     const dispatch = useDispatch()
     const [test, setTest] = useState<Test>()
     useEffect(() => {
-        Api.testServiceGet(testId).then(setTest, e =>
-            dispatchError(dispatch, e, "FETCH_TEST", "Failed to fetch test " + testId)
+        Api.testServiceGet(testId).then(
+            test => {
+                setTest(test)
+                dispatch(fetchViews(testId))
+            },
+            e => dispatchError(dispatch, e, "FETCH_TEST", "Failed to fetch test " + testId)
         )
     }, [testId])
     const datasets = useMemo(
@@ -71,7 +78,8 @@ export default function DatasetComparison() {
         [datasets]
     )
 
-    const defaultView = test?.views.find(v => (v.name = "Default"))
+    const defaultView = views?.find(v => (v.name = "Default"))
+
     return (
         <PageSection>
             <Card>
@@ -224,7 +232,7 @@ function ViewComparison(props: ViewComparisonProps) {
                                         vc.labels.length == 1 ? vc.labels[0] : undefined,
                                         token
                                     )
-                                    return render(summary.view[vc.id], summary)
+                                    return render(summary.view?.[vc.id], summary)
                                 }),
                             ],
                         }))

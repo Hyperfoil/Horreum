@@ -2,9 +2,12 @@ package io.hyperfoil.tools.horreum.api.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Collection;
 
+@Schema(name = "Transformer", type = SchemaType.OBJECT)
 public class Transformer {
     @JsonProperty(required = true)
     public Integer id;
@@ -32,6 +35,8 @@ public class Transformer {
     public String owner;
 
     @NotNull
+    @JsonProperty(required = true)
+    @Schema( type = SchemaType.INTEGER, implementation = Access.class)
     public Access access = Access.PUBLIC;
 
     public Transformer() {

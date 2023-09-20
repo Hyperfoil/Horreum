@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.services;
 import java.util.List;
 import java.util.Map;
 
+import io.hyperfoil.tools.horreum.api.data.DataSet;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
@@ -32,6 +33,7 @@ import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
@@ -40,14 +42,27 @@ import org.jboss.resteasy.reactive.multipart.FileUpload;
 @Consumes({ MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 public interface RunService {
-   @APIResponse(content = @Content(schema = @Schema(implementation = RunExtended.class)), description = "Returns an instance of RunExtended")
    @GET
    @Path("{id}")
+   @APIResponse(
+           responseCode = "404",
+           description = "If no Run have been found with the given id",
+           content = @Content(mediaType = MediaType.APPLICATION_JSON))
+   @APIResponseSchema( value = RunExtended.class,
+           responseDescription = "Run data with the referenced schemas and generated datasets",
+           responseCode = "200")
    RunExtended getRun(@PathParam("id") int id,
                  @QueryParam("token") String token);
 
    @GET
    @Path("{id}/summary")
+   @APIResponse(
+           responseCode = "404",
+           description = "If no Run have been found with the given id",
+           content = @Content(mediaType = MediaType.APPLICATION_JSON))
+   @APIResponseSchema( value = RunSummary.class,
+           responseDescription = "Run summary with the referenced schemas and generated datasets",
+           responseCode = "200")
    RunSummary getRunSummary(@PathParam("id") int id, @QueryParam("token") String token);
 
    @GET
@@ -57,13 +72,6 @@ public interface RunService {
    @GET
    @Path("{id}/metadata")
    Object getMetadata(@PathParam("id") int id, @QueryParam("token") String token, @QueryParam("schemaUri") String schemaUri);
-
-   @GET
-   @Path("{id}/query")
-   QueryResult queryData(@PathParam("id") int id,
-                         @Parameter(required = true) @QueryParam("query") String jsonpath,
-                         @QueryParam("uri") String schemaUri,
-                         @QueryParam("array") @DefaultValue("false") boolean array);
 
    @POST
    @Path("{id}/resetToken")
@@ -91,7 +99,15 @@ public interface RunService {
 
    @POST
    @Path("data")
-   @Produces(MediaType.TEXT_PLAIN) // run ID as string
+   @RequestBody(content = @Content( mediaType = MediaType.APPLICATION_JSON,
+           schema = @Schema( type = SchemaType.STRING, implementation = String.class)) )
+   @APIResponse(
+           responseCode = "400",
+           description = "Some fields are missing or invalid",
+           content = @Content(mediaType = MediaType.APPLICATION_JSON))
+   @APIResponseSchema(value = Integer.class,
+           responseDescription = "Returns the id of the newly generated run.",
+           responseCode = "200")
    Response addRunFromData(@Parameter(required = true) @QueryParam("start") String start,
                          @Parameter(required = true) @QueryParam("stop") String stop,
                          @Parameter(required = true) @QueryParam("test") String test,
@@ -100,7 +116,7 @@ public interface RunService {
                          @Parameter(description = "Horreum internal token. Incompatible with Keycloak") @QueryParam("token") String token,
                          @QueryParam("schema") String schemaUri,
                          @QueryParam("description") String description,
-                         @RequestBody(required = true) JsonNode data);
+                         @RequestBody(required = true) String data);
 
    @POST
    @Path("data")
@@ -214,8 +230,10 @@ public interface RunService {
    @JsonIgnoreProperties({ "token", "old_start" }) //ignore properties that have not been mapped
    class RunExtended extends Run {
       @NotNull
+      @Schema(required = true)
       public List<SchemaService.SchemaUsage> schemas;
       @NotNull
+      @Schema(required = true)
       public String testname;
       @Schema(required = true, implementation = int[].class)
       public Integer[] datasets;

@@ -272,7 +272,6 @@ export default function TableReportConfigPage() {
                                             owner: "",
                                             access: 0,
                                             notificationsEnabled: false,
-                                            views: [],
                                         },
                                     })
                                 }}

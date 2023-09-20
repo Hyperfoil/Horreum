@@ -40,13 +40,14 @@ import Transformers from "./Transformers"
 import Labels from "./Labels"
 import { Access, Schema as SchemaDef } from "../../api"
 import SchemaExportImport from "./SchemaExportImport"
+import { Json } from "../../generated"
 
 type SchemaParams = {
     schemaId: string
 }
 
 type GeneralProps = {
-    schema: SchemaDef | undefined
+    schema: SchemaDef | Json
     onChange(partialSchema: SchemaDef): void
     getUri?(): string
 }

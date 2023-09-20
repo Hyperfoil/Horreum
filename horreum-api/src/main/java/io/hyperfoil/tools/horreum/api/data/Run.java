@@ -10,22 +10,26 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import java.time.Instant;
 import java.util.Collection;
 
+@Schema(name = "Run", type = SchemaType.OBJECT,
+        description = "Data object that represents a test run entry")
 public class Run {
     @JsonProperty(required = true)
     public Integer id;
     @NotNull
-    @Schema(type = SchemaType.NUMBER, required = true)
+    @Schema(type = SchemaType.NUMBER, implementation = Instant.class)
     public Instant start;
     @NotNull
-    @Schema(type = SchemaType.NUMBER, required = true)
+    @Schema(type = SchemaType.NUMBER, implementation = Instant.class)
     public Instant stop;
     public String description;
     @NotNull
     @JsonProperty(required = true)
     public Integer testid;
     @NotNull
+    @Schema(implementation = JsonNode.class, type = SchemaType.STRING)
     @JsonProperty(required = true)
     public JsonNode data;
+    @Schema(implementation = JsonNode.class, type = SchemaType.STRING)
     public JsonNode metadata;
     @NotNull
     @JsonProperty(required = true)
@@ -38,6 +42,7 @@ public class Run {
     public String owner;
     @NotNull
     @JsonProperty(required = true)
+    @Schema( type = SchemaType.INTEGER, implementation = Access.class)
     public Access access;
 
     public Run() {

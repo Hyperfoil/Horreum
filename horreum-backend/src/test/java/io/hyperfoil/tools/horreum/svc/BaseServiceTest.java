@@ -203,13 +203,18 @@ public class BaseServiceTest {
       test.name = testName;
       test.description = "Bar";
       test.owner = TESTER_ROLES[0];
-      View defaultView = new View();
-      defaultView.name = "Default";
-      defaultView.components = new ArrayList<>();
-      defaultView.components.add(new io.hyperfoil.tools.horreum.api.data.ViewComponent("Some column", null, "foo"));
-      test.views = Collections.singleton(defaultView);
       test.transformers = new ArrayList<>();
       return test;
+   }
+
+   public static List<View> createExampleViews(int testId) {
+      View defaultView = new View();
+      defaultView.name = "Default";
+      defaultView.testId = testId;
+      defaultView.components = new ArrayList<>();
+      defaultView.components.add(new io.hyperfoil.tools.horreum.api.data.ViewComponent("Some column", null, "foo"));
+
+      return Collections.singletonList(defaultView);
    }
 
    public static String getAccessToken(String userName, String... groups) {
@@ -344,12 +349,35 @@ public class BaseServiceTest {
    }
 
    protected Test createTest(Test test) {
-      return jsonRequest()
+      test = jsonRequest()
             .body(test)
             .post("/api/test")
             .then()
             .statusCode(200)
             .extract().body().as(Test.class);
+
+      return test;
+   }
+
+   protected void createViews(List<View> views) {
+      jsonRequest()
+              .body(views)
+              .post("/api/ui/views")
+              .then()
+              .statusCode(204);
+   }
+
+   protected int createView(View view) {
+      return jsonRequest()
+              .body(view)
+              .post("/api/ui/view")
+              .then()
+              .statusCode(200).extract().body().as(Integer.class);
+   }
+
+   protected List<View> getViews(int testId) {
+      return jsonRequest().get("/api/ui/"+testId+"/views")
+              .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, View.class));
    }
 
    protected void deleteTest(Test test) {
@@ -660,8 +688,9 @@ public class BaseServiceTest {
       action.event = event.name();
       action.type = HttpAction.TYPE_HTTP;
       action.active = true;
+      action.testId = test.id;
       action.config = JsonNodeFactory.instance.objectNode().put("url", url);
-      return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
+      return jsonRequest().auth().oauth2(getAdminToken()).body(action).post("/api/action");
    }
 
    protected Response addTestGithubIssueCommentAction(Test test, MessageBusChannels event, String formatter, String owner, String repo, String issue, String secretToken) {
@@ -804,6 +833,12 @@ public class BaseServiceTest {
       assertEquals("dev-team", t.owner);
       t.owner = "foo-team";
       t = createTest(t);
+
+      View view = new ObjectMapper().readValue(
+              readFile(p.resolve("roadrunner_view.json").toFile()), View.class);
+      assertEquals("Default", view.name);
+      view.testId = t.id;
+      view.id = createView(view);
 
       Schema s = new ObjectMapper().readValue(
               readFile(p.resolve("acme_benchmark_schema.json").toFile()), Schema.class);

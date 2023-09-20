@@ -22,6 +22,7 @@ import java.util.stream.StreamSupport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.JsonpathValidation;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
@@ -61,7 +62,7 @@ import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
-import io.hyperfoil.tools.horreum.api.services.QueryResult;
+import io.hyperfoil.tools.horreum.api.data.QueryResult;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.api.services.SqlService;
@@ -290,30 +291,7 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   @PermitAll
-   @WithRoles
-   @WithToken
-   @Override
-   public QueryResult queryData(int id, String jsonpath, String schemaUri, boolean array) {
-      String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";
-      QueryResult result = new QueryResult();
-      result.jsonpath = jsonpath;
-      try {
-         if (schemaUri != null && !schemaUri.isEmpty()) {
-            String sqlQuery = "SELECT " + func + "((CASE " +
-                  "WHEN rs.type = 0 THEN run.data WHEN rs.type = 1 THEN run.data->rs.key ELSE run.data->(rs.key::::integer) END)" +
-                  ", (?1)::::jsonpath)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?2 AND rs.uri = ?3";
-            result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id, schemaUri));
-         } else {
-            String sqlQuery = "SELECT " + func + "(data, (?1)::::jsonpath)#>>'{}' FROM run WHERE id = ?2";
-            result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id));
-         }
-         result.valid = true;
-      } catch (PersistenceException pe) {
-         SqlServiceImpl.setFromException(pe, result);
-      }
-      return result;
-   }
+
 
    @RolesAllowed(Roles.TESTER)
    @WithRoles
@@ -389,7 +367,7 @@ public class RunServiceImpl implements RunService {
    public Response addRunFromData(String start, String stop, String test,
                                   String owner, Access access, String token,
                                   String schemaUri, String description,
-                                  JsonNode data) {
+                                  String data) {
       return addRunFromData(start, stop, test, owner, access, token, schemaUri, description, data, null);
    }
 
@@ -434,7 +412,7 @@ public class RunServiceImpl implements RunService {
          log.error("Failed to read data/metadata from upload file", e);
          throw ServiceException.badRequest("Provided data/metadata can't be read (JSON encoding problem?)");
       }
-      return addRunFromData(start, stop, test, owner, access, token, schemaUri, description, dataNode, metadataNode);
+      return addRunFromData(start, stop, test, owner, access, token, schemaUri, description, dataNode.toString(), metadataNode);
    }
 
    @Override
@@ -467,10 +445,16 @@ public class RunServiceImpl implements RunService {
    Response addRunFromData(String start, String stop, String test,
                                 String owner, Access access, String token,
                                 String schemaUri, String description,
-                                JsonNode data, JsonNode metadata) {
-      if (data == null) {
+                                String stringData, JsonNode metadata) {
+      if (stringData == null) {
          log.debugf("Failed to upload for test %s with description %s because of missing data.", test, description);
          throw ServiceException.badRequest("No data!");
+      }
+      JsonNode data = null;
+      try {
+         data = Util.OBJECT_MAPPER.readValue(stringData, JsonNode.class);
+      } catch (JsonProcessingException e) {
+         throw ServiceException.badRequest("Could not map incoming data to JsonNode: "+e.getMessage());
       }
       Object foundTest = findIfNotSet(test, data);
       Object foundStart = findIfNotSet(start, data);
@@ -735,7 +719,7 @@ public class RunServiceImpl implements RunService {
             Transaction old = tm.suspend();
             try {
                for (String jsonpath : queryParts) {
-                  SqlService.JsonpathValidation result = sqlService.testJsonPathInternal(jsonpath);
+                  JsonpathValidation result = sqlService.testJsonPathInternal(jsonpath);
                   if (!result.valid) {
                      throw new WebApplicationException(Response.status(400).entity(result).build());
                   }

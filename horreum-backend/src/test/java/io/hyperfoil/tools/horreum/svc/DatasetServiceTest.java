@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import io.hyperfoil.tools.horreum.api.services.SqlService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.inject.Inject;
 
@@ -31,7 +32,7 @@ import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.entity.data.ViewComponentDAO;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
-import io.hyperfoil.tools.horreum.api.services.QueryResult;
+import io.hyperfoil.tools.horreum.api.data.QueryResult;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
@@ -48,6 +49,9 @@ import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 public class DatasetServiceTest extends BaseServiceTest {
    @Inject
    DatasetService datasetService;
+
+   @Inject
+   SqlService sqlService;
 
    @org.junit.jupiter.api.Test
    public void testDataSetQueryNoSchema() {
@@ -83,7 +87,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       AtomicReference<String> result = new AtomicReference<>();
       withExampleSchemas(schemas -> result.set(withExampleDataset(createTest(createExampleTest("dummy")),
               createABData(), ds -> {
-         QueryResult queryResult = datasetService.queryData(ds.id, jsonPath, array, schemaUri);
+         QueryResult queryResult = sqlService.queryDatasetData(ds.id, jsonPath, array, schemaUri);
          assertTrue(queryResult.valid);
          return queryResult.value;
       })), "urn:A", "urn:B");
@@ -279,7 +283,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest("dummy"));
       Util.withTx(tm, () -> {
          try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-            ViewDAO view = ViewDAO.findById(test.views.iterator().next().id);
+            ViewDAO view = ViewDAO.find("test.id", test.id).firstResult();
             view.components.clear();
             ViewComponentDAO vc1 = new ViewComponentDAO();
             vc1.view = view;

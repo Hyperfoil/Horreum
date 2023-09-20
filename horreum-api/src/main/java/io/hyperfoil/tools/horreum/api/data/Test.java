@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.data;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Collection;
@@ -20,6 +21,7 @@ public class Test {
     public String owner;
     @NotNull
     @JsonProperty(required = true)
+    @Schema( type = SchemaType.INTEGER, implementation = Access.class)
     public Access access;
     public Collection<TestToken> tokens;
     @Schema(implementation = String[].class)
@@ -28,9 +30,6 @@ public class Test {
     @Schema(implementation = String[].class)
     public JsonNode fingerprintLabels;
     public String fingerprintFilter;
-    @NotNull
-    @JsonProperty(required = true)
-    public Collection<View> views;
     public String compareUrl;
     public Collection<Transformer> transformers;
     @NotNull
@@ -55,7 +54,6 @@ public class Test {
                 ", timelineFunction='" + timelineFunction + '\'' +
                 ", fingerprintLabels=" + fingerprintLabels +
                 ", fingerprintFilter='" + fingerprintFilter + '\'' +
-                ", views=" + views +
                 ", compareUrl='" + compareUrl + '\'' +
                 ", transformers=" + transformers +
                 ", notificationsEnabled=" + notificationsEnabled +
@@ -66,7 +64,5 @@ public class Test {
         id = null;
         if(tokens != null)
             tokens.stream().forEach( t -> t.clearId());
-        if(views != null)
-            views.stream().forEach( v -> v.clearId());
     }
 }

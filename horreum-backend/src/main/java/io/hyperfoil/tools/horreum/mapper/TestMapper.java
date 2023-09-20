@@ -4,6 +4,7 @@ import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.entity.data.TestTokenDAO;
 import io.hyperfoil.tools.horreum.api.data.TestToken;
+import io.hyperfoil.tools.horreum.entity.data.ViewDAO;
 
 import java.util.stream.Collectors;
 
@@ -24,8 +25,6 @@ public class TestMapper {
         dto.notificationsEnabled = t.notificationsEnabled;
         if(t.tokens != null)
             dto.tokens = t.tokens.stream().map(TestMapper::fromTestToken).collect(Collectors.toList());
-        if (t.views != null)
-            dto.views = t.views.stream().map(ViewMapper::from).collect(Collectors.toList());
         if (t.transformers != null)
             dto.transformers = t.transformers.stream().map(TransformerMapper::from).collect(Collectors.toList());
 
@@ -60,8 +59,7 @@ public class TestMapper {
         t.notificationsEnabled = dto.notificationsEnabled;
         if(dto.tokens != null)
             t.tokens = dto.tokens.stream().map(token -> TestMapper.toTestToken(token,t) ).collect(Collectors.toList());
-        if (dto.views != null)
-            t.views = dto.views.stream().map(ViewMapper::to).collect(Collectors.toList());
+        t.views = ViewDAO.<ViewDAO>find("test.id", dto.id).list();
         if (dto.transformers != null)
             t.transformers = dto.transformers.stream().map(TransformerMapper::to).collect(Collectors.toList());
 

@@ -73,6 +73,7 @@ public interface ExperimentService {
       @JsonDeserialize(keyUsing = ExperimentComparisonDeserializer.class)
       public Map<ExperimentComparison, ComparisonResult> results;
 
+      @Schema(implementation = String.class)
       public JsonNode extraLabels;
       public boolean notify;
 

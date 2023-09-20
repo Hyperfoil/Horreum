@@ -353,9 +353,9 @@ export default function Experiments(props: ExperimentsProps) {
                                             <ConditionComponent
                                                 {...comp}
                                                 isTester={isTester}
-                                                value={c.config[comp.name]}
+                                                value={JSON.parse(c.config)[comp.name]}
                                                 onChange={value => {
-                                                    c.config[comp.name] = value
+                                                    JSON.parse(c.config)[comp.name] = value
                                                     update({ comparisons: [...selected.comparisons] })
                                                 }}
                                             />
@@ -389,7 +389,7 @@ export default function Experiments(props: ExperimentsProps) {
                                                         {
                                                             model: modelToAdd,
                                                             config:
-                                                                models.find(m => m.name === modelToAdd)?.defaults || {},
+                                                                JSON.stringify(models.find(m => m.name === modelToAdd)?.defaults) || "",
                                                             variableId: variables[0].id,
                                                         },
                                                     ],
