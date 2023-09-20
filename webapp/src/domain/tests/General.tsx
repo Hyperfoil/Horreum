@@ -51,7 +51,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 name,
                 folder,
                 description,
-                views: [], // automatically insert default view in backend
+                //views: [], // automatically insert default view in backend
                 compareUrl: compareUrl || undefined, // when empty set to undefined
                 notificationsEnabled,
                 fingerprintLabels: [],

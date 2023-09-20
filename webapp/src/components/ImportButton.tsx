@@ -8,7 +8,7 @@ import { Bullseye, Button, FileUpload, Modal, Spinner } from "@patternfly/react-
 type ImportProps = {
     label?: string
     onLoad(config: Record<string, unknown>): Promise<any> | any
-    onImport(config: Record<string, unknown>): Promise<unknown>
+    onImport(config: string): Promise<unknown>
     onImported(): void
 }
 
@@ -17,7 +17,7 @@ export default function ImportButton({label, onLoad, onImport, onImported}: Impo
     const [filename, setFilename] = useState<string>()
     const [loading, setLoading] = useState(false)
     const [checking, setChecking] = useState(false)
-    const [config, setConfig] = useState<Record<string, unknown>>()
+    const [config, setConfig] = useState<string>()
     const [uploading, setUploading] = useState(false)
     const [parseError, setParseError] = useState<any>()
     const [overridden, setOverridden] = useState<any>()

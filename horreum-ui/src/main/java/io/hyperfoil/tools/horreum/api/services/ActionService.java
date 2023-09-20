@@ -33,6 +33,10 @@ public interface ActionService {
    @Path("{id}")
    void delete(@PathParam("id") int id);
 
+   @POST
+   @Path("update")
+   Action update(@RequestBody(required = true) Action action);
+
    @GET
    @Path("list")
    List<Action> list(@QueryParam("limit") Integer limit,

@@ -64,6 +64,7 @@ export default function Test() {
         if (testId !== 0) {
             setLoaded(false)
             dispatch(actions.fetchTest(testId))
+                .then( () => dispatch(actions.fetchViews(testId)) )
                 .catch(noop)
                 .finally(() => setLoaded(true))
         }
@@ -147,7 +148,7 @@ export default function Test() {
                             >
                                 <Views
                                     testId={testId}
-                                    views={test?.views || []}
+                                    views={ test?.views || [] }
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
                                     funcsRef={viewFuncsRef}

@@ -106,7 +106,7 @@ export default function RunData(props: RunDataProps) {
             )}
             <JsonPathSearchToolbar
                 originalData={data}
-                onRemoteQuery={(query, array) => Api.runServiceQueryData(props.run.id, query, array)}
+                onRemoteQuery={(query, array) => Api.sqlServiceQueryRunData(props.run.id, query, array)}
                 onDataUpdate={setEditorData}
             />
             <MaybeLoading loading={loading}>{memoizedEditor}</MaybeLoading>

@@ -79,9 +79,9 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
         }
         let response: Promise<QueryResult>
         if (props.target === "run") {
-            response = Api.runServiceQueryData(id, props.jsonpath, props.array, props.uri)
+            response = Api.sqlServiceQueryRunData(id, props.jsonpath, props.array, props.uri)
         } else {
-            response = Api.datasetServiceQueryData(id, props.jsonpath, props.array, props.uri)
+            response = Api.sqlServiceQueryDatasetData(id, props.jsonpath, props.array, props.uri)
         }
         return response.then(
             result => {

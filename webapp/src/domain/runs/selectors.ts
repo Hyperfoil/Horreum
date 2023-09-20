@@ -52,6 +52,14 @@ export const get = (id: number) => (state: State) => {
     return state.runs.byId.get(id)
 }
 
+export const viewsSelector = (testID : number) => (state: State) => {
+    if (!state.tests.byId) {
+        return undefined
+    }
+    return state.tests.byId.get(testID)?.views
+
+}
+
 export const filter = (pagination: PaginationInfo) => (state: State) => {
     const byId = state.runs.byId
     if (!byId) {

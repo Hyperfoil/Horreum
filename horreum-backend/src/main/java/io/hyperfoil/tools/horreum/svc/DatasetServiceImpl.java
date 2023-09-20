@@ -35,7 +35,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
-import io.hyperfoil.tools.horreum.api.services.QueryResult;
+import io.hyperfoil.tools.horreum.api.data.QueryResult;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
@@ -245,37 +245,6 @@ public class DatasetServiceImpl implements DatasetService {
          Util.addOrderBy(sql, sort, direction);
       }
       Util.addLimitOffset(sql, limit, page);
-   }
-
-   @WithRoles
-   @Override
-   public QueryResult queryData(int datasetId, String jsonpath, boolean array, String schemaUri) {
-      if (schemaUri != null && schemaUri.isBlank()) {
-         schemaUri = null;
-      }
-      QueryResult result = new QueryResult();
-      result.jsonpath = jsonpath;
-      try {
-         if (schemaUri == null) {
-            String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";
-            String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ?";
-            result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, datasetId));
-         } else {
-            // This schema-aware query already assumes that DataSet.data is an array of objects with defined schema
-            String schemaQuery = "jsonb_path_query(data, '$[*] ? (@.\"$schema\" == $schema)', ('{\"schema\":\"' || ? || '\"}')::::jsonb)";
-            String sqlQuery;
-            if (!array) {
-               sqlQuery = "SELECT jsonb_path_query_first(" + schemaQuery + ", ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ? LIMIT 1";
-            } else {
-               sqlQuery = "SELECT jsonb_agg(v)#>>'{}' FROM (SELECT jsonb_path_query(" + schemaQuery + ", ?::::jsonpath) AS v FROM dataset WHERE id = ?) AS values";
-            }
-            result.value = String.valueOf(Util.runQuery(em, sqlQuery, schemaUri, jsonpath, datasetId));
-         }
-         result.valid = true;
-      } catch (PersistenceException pe) {
-         SqlServiceImpl.setFromException(pe, result);
-      }
-      return result;
    }
 
    @WithRoles

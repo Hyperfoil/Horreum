@@ -727,7 +727,7 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Transactional
    @Override
-   public JsonNode exportSchema(int id) {
+   public String exportSchema(int id) {
       SchemaDAO schema = SchemaDAO.findById(id);
       if (schema == null) {
          throw ServiceException.notFound("Schema not found");
@@ -735,14 +735,20 @@ public class SchemaServiceImpl implements SchemaService {
       ObjectNode exported = Util.OBJECT_MAPPER.valueToTree(schema);
       exported.set("labels", Util.OBJECT_MAPPER.valueToTree(LabelDAO.list("schema", schema)));
       exported.set("transformers", Util.OBJECT_MAPPER.valueToTree(TransformerDAO.list("schema", schema)));
-      return exported;
+      return exported.toString();
    }
 
    @RolesAllowed({Roles.TESTER, Roles.ADMIN})
    @WithRoles
    @Transactional
    @Override
-   public void importSchema(JsonNode config) {
+   public void importSchema(String newSchema) {
+      JsonNode config = null;
+      try {
+         config = Util.OBJECT_MAPPER.readValue(newSchema, JsonNode.class);
+      } catch (JsonProcessingException e) {
+         throw ServiceException.badRequest("Could not map Schema to JsonNode: "+e.getMessage());
+      }
       if (!config.isObject()) {
          throw ServiceException.badRequest("Bad format of schema; expecting an object");
       }

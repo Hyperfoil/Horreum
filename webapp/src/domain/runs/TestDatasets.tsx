@@ -51,6 +51,7 @@ import { NoSchemaInDataset } from "./NoSchema"
 import ButtonLink from "../../components/ButtonLink"
 import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
 import ViewSelect from "../../components/ViewSelect"
+import {viewsSelector} from "./selectors";
 
 type C = CellProps<DatasetSummary> &
     UseTableOptions<DatasetSummary> &
@@ -139,6 +140,7 @@ export default function TestDatasets() {
     const [loading, setLoading] = useState(false)
     const [datasets, setDatasets] = useState<DatasetList>()
     const [comparedDatasets, setComparedDatasets] = useState<DatasetSummary[]>()
+    const views = useSelector(viewsSelector(testId))
     const teams = useSelector(teamsSelector)
     const token = useSelector(tokenSelector)
     useEffect(() => {
@@ -194,7 +196,7 @@ export default function TestDatasets() {
                 },
             })
         }
-        const view = test?.views.find(v => v.id === viewId) || test?.views.find(v => v.name === "Default")
+        const view = views?.find(v => v.id === viewId) || views?.find(v => v.name === "Default")
         const components = view?.components || []
         components.forEach(vc => {
             allColumns.push({
@@ -232,8 +234,8 @@ export default function TestDatasets() {
                                     <FlexItem>View:</FlexItem>
                                     <FlexItem>
                                         <ViewSelect
-                                            views={test?.views || []}
-                                            viewId={viewId || test?.views.find(v => v.name === "Default")?.id || -1}
+                                            views={views || []}
+                                            viewId={viewId || views?.find(v => v.name === "Default")?.id || -1}
                                             onChange={setViewId}
                                         />
                                     </FlexItem>

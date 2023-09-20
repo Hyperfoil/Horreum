@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
@@ -69,6 +70,9 @@ public class TestServiceImpl implements TestService {
          "WHERE dataset.testid = ?1 AND (label.id IS NULL OR (?2 AND label.filtering) OR (?3 AND label.metrics))" +
          "GROUP BY dataset_id";
    //@formatter:on
+
+   @Inject
+   ObjectMapper mapper;
 
    @Inject
    EntityManager em;
@@ -398,50 +402,6 @@ public class TestServiceImpl implements TestService {
    @RolesAllowed("tester")
    @WithRoles
    @Transactional
-   public int updateView(int testId, View dto) {
-      if (testId <= 0) {
-         throw ServiceException.badRequest("Missing test id");
-      }
-      TestDAO test = getTestForUpdate(testId);
-      ViewDAO view = ViewMapper.to(dto);
-      view.ensureLinked();
-      view.test = test;
-      if (view.id == null || view.id < 0) {
-         view.id = null;
-         view.persist();
-      } else {
-         view = em.merge(view);
-         int viewId = view.id;
-         test.views.removeIf(v -> v.id == viewId);
-      }
-      test.views.add(view);
-      test.persist();
-      em.flush();
-      return view.id;
-   }
-
-   @Override
-   @WithRoles
-   @Transactional
-   public void deleteView(int testId, int viewId) {
-      TestDAO test = getTestForUpdate(testId);
-      if (test.views == null) {
-         test.views = Collections.singleton(new ViewDAO("Default", test));
-      } else if (test.views.stream().anyMatch(v -> v.id == viewId && "Default".equals(v.name))) {
-         throw ServiceException.badRequest("Cannot remove default view.");
-      }
-      if (!test.views.removeIf(v -> v.id == viewId)) {
-         throw ServiceException.badRequest("Test does not contain this view!");
-      }
-      // the orphan removal doesn't work for some reason, we need to remove if manually
-      ViewDAO.deleteById(viewId);
-      test.persist();
-   }
-
-   @Override
-   @RolesAllowed("tester")
-   @WithRoles
-   @Transactional
    public void updateNotifications(int id,
                                    boolean enabled) {
       Query query = em.createNativeQuery(UPDATE_NOTIFICATIONS)
@@ -463,34 +423,6 @@ public class TestServiceImpl implements TestService {
       TestDAO test = getTestForUpdate(id);
       test.folder = normalizeFolderName(folder);
       test.persist();
-   }
-
-   @Override
-   @RolesAllowed("tester")
-   @WithRoles
-   @Transactional
-   public Action updateAction(int testId, Action dto) {
-      if (testId <= 0) {
-         throw ServiceException.badRequest("Missing test id");
-      }
-      // just ensure the test exists
-      getTestForUpdate(testId);
-      dto.testId = testId;
-      actionService.validate(dto);
-
-      ActionDAO action = ActionMapper.to(dto);
-      if (action.id == null) {
-         action.persist();
-      } else {
-         if (!action.active) {
-            ActionDAO.deleteById(action.id);
-            return null;
-         } else {
-            actionService.merge(action);
-         }
-      }
-      em.flush();
-      return ActionMapper.from(action);
    }
 
    @WithRoles
@@ -599,7 +531,7 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @Transactional
    @Override
-   public JsonNode export(int testId) {
+   public String export(int testId) {
       TestDAO test = TestDAO.findById(testId);
       if (test == null) {
          throw ServiceException.notFound("Test " + testId + " was not found");
@@ -640,14 +572,21 @@ public class TestServiceImpl implements TestService {
       export.set("actions", actionService.exportTest(testId));
       export.set("experiments", experimentService.exportTest(testId));
       export.set("subscriptions", subscriptionService.exportSubscriptions(testId));
-      return export;
+      return export.toString();
    }
 
    @RolesAllowed({Roles.ADMIN, Roles.TESTER})
    @WithRoles
    @Transactional
    @Override
-   public void importTest(JsonNode testConfig) {
+   public void importTest(String newTest) {
+      JsonNode testConfig = null;
+      try {
+         testConfig = mapper.readValue(newTest, JsonNode.class);
+      }
+      catch (JsonProcessingException e) {
+         throw ServiceException.badRequest("Request object could not be mapped to JsonNode: "+ e.getMessage());
+      }
       if (!testConfig.isObject()) {
          throw ServiceException.badRequest("Expected Test object as request body, got " + testConfig.getNodeType());
       }
@@ -662,11 +601,10 @@ public class TestServiceImpl implements TestService {
       JsonNode actions = config.remove("actions");
       JsonNode experiments = config.remove("experiments");
       JsonNode subscriptions = config.remove("subscriptions");
-      //Test test;
       Test dto;
       boolean forceUseTestId = false;
       try {
-         dto = Util.OBJECT_MAPPER.treeToValue(config, Test.class);
+         dto = mapper.treeToValue(config, Test.class);
          //test = TestMapper.to( dto);
          //test.ensureLinked();
          if (dto.tokens != null && !dto.tokens.isEmpty()) {
@@ -697,13 +635,17 @@ public class TestServiceImpl implements TestService {
       } catch (JsonProcessingException e) {
          throw ServiceException.badRequest("Failed to deserialize test: " + e.getMessage());
       }
-      alertingService.importTest(dto.id, alerting, forceUseTestId);
-      actionService.importTest(dto.id, actions, forceUseTestId);
-      experimentService.importTest(dto.id, experiments, forceUseTestId);
-      subscriptionService.importSubscriptions(dto.id, subscriptions);
+      if(alerting != null)
+         alertingService.importTest(dto.id, alerting, forceUseTestId);
+      if(actions != null)
+         actionService.importTest(dto.id, actions, forceUseTestId);
+      if(experiments != null)
+         experimentService.importTest(dto.id, experiments, forceUseTestId);
+      if(subscriptions != null)
+         subscriptionService.importSubscriptions(dto.id, subscriptions);
    }
 
-   TestDAO getTestForUpdate(int testId) {
+   protected TestDAO getTestForUpdate(int testId) {
       TestDAO test = TestDAO.findById(testId);
       if (test == null) {
          throw ServiceException.notFound("Test " + testId + " was not found");

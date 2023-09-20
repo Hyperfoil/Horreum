@@ -2,7 +2,15 @@ import * as actionTypes from "./actionTypes"
 import { Map } from "immutable"
 import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction } from "../../alerts"
-import { Access, Action, Run, Test, TestToken, Transformer, View } from "../../api"
+import {
+    Access,
+    Action,
+    Run,
+    Test,
+    TestToken,
+    Transformer,
+    View
+} from "../../api"
 import { AnyAction } from "redux"
 
 export type CompareFunction = (runs: Run[]) => string
@@ -11,6 +19,7 @@ export interface TestStorage extends Test {
     datasets?: number // dataset count in AllTests
     runs?: number // run count in AllTests
     watching?: string[]
+    views?: View[]
 }
 
 export class TestsState {
@@ -52,6 +61,17 @@ export interface UpdateAccessAction {
 export interface UpdateTestWatchAction {
     type: typeof actionTypes.UPDATE_TEST_WATCH
     byId: Map<number, string[] | undefined>
+}
+
+export interface GetViewsAction {
+    type: typeof actionTypes.GET_VIEWS
+    testId: number
+}
+
+export interface LoadedViewsAction {
+    type: typeof actionTypes.LOADED_VIEWS
+    testId: number
+    views: View[]
 }
 
 export interface UpdateViewAction {
@@ -125,6 +145,7 @@ export type TestAction =
     | DeleteAction
     | UpdateAccessAction
     | UpdateTestWatchAction
+    | LoadedViewsAction
     | UpdateViewAction
     | DeleteViewAction
     | UpdateActionAction
@@ -160,6 +181,14 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             }
             state.byId = (state.byId as Map<number, Test>).set(action.test.id, action.test)
             break
+        case actionTypes.LOADED_VIEWS:
+            {
+                const test = state.byId?.get(action.testId)
+                if (test) {
+                    state.byId = state.byId?.set(action.testId, {...test, views: action.views})
+                }
+            }
+            break
         case actionTypes.UPDATE_ACCESS:
             {
                 const test = state.byId?.get(action.id)
@@ -182,11 +211,12 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             {
                 const test = state.byId?.get(action.testId)
                 if (test) {
+                    const loadedViews : View[] = test.views || []
                     let views
-                    if (test.views.some(v => v.id === action.view.id)) {
-                        views = test.views.map(v => (v.id === action.view.id ? action.view : v))
+                    if (loadedViews.some(v => v.id === action.view.id)) {
+                        views = loadedViews.map(v => (v.id === action.view.id ? action.view : v))
                     } else {
-                        views = [...test.views, action.view]
+                        views = [...loadedViews, action.view]
                     }
                     state.byId = state.byId?.set(action.testId, { ...test, views })
                 }
@@ -199,7 +229,7 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
                     // just ignore deleting default view, that's not legal
                     state.byId = state.byId?.set(action.testId, {
                         ...test,
-                        views: test.views.filter(v => v.id !== action.viewId),
+                        views: test.views?.filter(v => v.id !== action.viewId),
                     })
                 }
             }

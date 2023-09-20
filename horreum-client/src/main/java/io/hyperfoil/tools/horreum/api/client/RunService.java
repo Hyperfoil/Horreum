@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Run;
-import io.hyperfoil.tools.horreum.api.services.QueryResult;
 
 import io.hyperfoil.tools.horreum.api.services.RunService.RunsSummary;
 import io.hyperfoil.tools.horreum.api.services.RunService.RunSummary;
@@ -52,12 +51,12 @@ public interface RunService {
    @Path("{id}/metadata")
    Object getMetadata(@PathParam("id") int id, @QueryParam("token") String token, @QueryParam("schemaUri") String schemaUri);
 
-   @GET
-   @Path("{id}/query")
-   QueryResult queryData(@PathParam("id") int id,
-                         @QueryParam("query") String jsonpath,
-                         @QueryParam("uri") String schemaUri,
-                         @QueryParam("array") @DefaultValue("false") boolean array);
+//   @GET
+//   @Path("{id}/query")
+//   QueryResult queryData(@PathParam("id") int id,
+//                         @QueryParam("query") String jsonpath,
+//                         @QueryParam("uri") String schemaUri,
+//                         @QueryParam("array") @DefaultValue("false") boolean array);
 
    @POST
    @Path("{id}/resetToken")

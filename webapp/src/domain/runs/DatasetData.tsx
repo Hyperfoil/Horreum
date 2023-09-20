@@ -73,7 +73,7 @@ export default function DatasetData(props: DatasetDataProps) {
                 <FlexItem>
                     <JsonPathSearchToolbar
                         originalData={originalData}
-                        onRemoteQuery={(query, array) => Api.datasetServiceQueryData(props.datasetId, query, array)}
+                        onRemoteQuery={(query, array) => Api.sqlServiceQueryDatasetData(props.datasetId, query, array)}
                         onDataUpdate={setEditorData}
                     />
                 </FlexItem>

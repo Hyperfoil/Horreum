@@ -34,7 +34,7 @@ export default function SchemaList(props: SchemaListProps) {
                                 <br />
                                 <ul>
                                     {validationErrors.map((e, i) => (
-                                        <li key={i}>{e.error.message}</li>
+                                        <li key={i}>{JSON.parse(e.error).message}</li>
                                     ))}
                                 </ul>
                                 Visit run/dataset for details.
@@ -61,7 +61,7 @@ export default function SchemaList(props: SchemaListProps) {
                             <br />
                             <ul>
                                 {noSchemaErrors.map((e, i) => (
-                                    <li key={i}>{e.error.message}</li>
+                                    <li key={i}>{JSON.parse(e.error).message}</li>
                                 ))}
                             </ul>
                             Visit run/dataset for details.

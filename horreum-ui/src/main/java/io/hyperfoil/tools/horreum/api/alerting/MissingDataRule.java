@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.alerting;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -11,6 +12,7 @@ public class MissingDataRule {
     @JsonProperty( required = true )
     public Integer id;
     public String name;
+    @Schema(implementation = String[].class)
     public ArrayNode labels;
     public String condition;
     @NotNull

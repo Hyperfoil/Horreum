@@ -95,7 +95,7 @@
                             <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
                             <output>${project.basedir}/../webapp/src/generated</output>
                             <generatorName>typescript-fetch</generatorName>
-                            <skipValidateSpec>true</skipValidateSpec>
+                            <skipValidateSpec>false</skipValidateSpec>
                             <typeMappings>Array=any</typeMappings>
                             <globalProperties>
                                 <skipFormModel>false</skipFormModel>

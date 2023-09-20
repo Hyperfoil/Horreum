@@ -14,7 +14,8 @@
     <dependencies>
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
-            <artifactId>horreum-api</artifactId>
+            <artifactId>horreum-ui</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <!-- We need this dep for build ordering, but is provided scope so is not included in the output application -->
         <dependency>
