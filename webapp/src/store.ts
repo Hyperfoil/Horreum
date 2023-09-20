@@ -1,6 +1,6 @@
 import { createBrowserHistory } from "history"
-import { createStore, combineReducers, compose, applyMiddleware, StoreEnhancer } from "redux"
-import { connectRouter } from "connected-react-router"
+import {legacy_createStore as createStore, combineReducers, compose, applyMiddleware, StoreEnhancer } from "redux"
+import { createRouterReducer } from "@lagunovsky/redux-react-router"
 import thunk from "redux-thunk"
 
 import { RunsState, reducer as runReducer } from "./domain/runs/reducers"
@@ -22,7 +22,7 @@ export interface State {
 }
 
 const appReducers = combineReducers({
-    router: connectRouter(history),
+    router: createRouterReducer(history),
     runs: runReducer,
     tests: testReducer,
     actions: actionReducer,
