@@ -3,10 +3,10 @@ import "@patternfly/patternfly/patternfly.css" //have to use this import to cust
 
 import { Nav, NavItem, NavList, Page, PageHeader, PageHeaderTools } from "@patternfly/react-core"
 import { ReduxRouter } from '@lagunovsky/redux-react-router'
-import {createBrowserRouter, RouterProvider, Route, Routes, Link } from "react-router-dom"
+import { NavLink } from "react-router-dom"
 
 import { Provider, useSelector } from "react-redux"
-import { Switch } from "react-router"
+import { Route, Switch } from "react-router"
 
 import store, { history } from "./store"
 import { isAdminSelector, LoginLogout } from "./auth"
@@ -62,15 +62,15 @@ function Main() {
                             <Nav aria-label="Nav" variant="horizontal">
                                 <NavList>
                                     <NavItem itemId={-1}>
-                                        <Link to="/">
+                                        <NavLink to="/">
                                             <img width="24" height="24" src="/logo.png" alt="Horreum Logo" />
                                         </NavLink>
                                     </NavItem>
-                                    {/* TODO: fix links colors properly */}
+                                    {/* TODO: fix NavLinks colors properly */}
                                     <NavItem itemId={0}>
                                         <NavLink
                                             to="/test"
-                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__NavLink--Color)" }}
                                         >
                                             Tests
                                         </NavLink>
@@ -78,7 +78,7 @@ function Main() {
                                     <NavItem itemId={1}>
                                         <NavLink
                                             to="/schema"
-                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__NavLink--Color)" }}
                                         >
                                             Schema
                                         </NavLink>
@@ -86,7 +86,7 @@ function Main() {
                                     <NavItem itemId={2}>
                                         <NavLink
                                             to="/changes"
-                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__NavLink--Color)" }}
                                         >
                                             Changes
                                         </NavLink>
@@ -94,7 +94,7 @@ function Main() {
                                     <NavItem itemId={3}>
                                         <NavLink
                                             to="/reports"
-                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__NavLink--Color)" }}
                                         >
                                             Reports
                                         </NavLink>
@@ -103,7 +103,7 @@ function Main() {
                                         <NavItem itemId={4}>
                                             <NavLink
                                                 to="/admin"
-                                                style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                                style={{ color: "var(--pf-c-nav--m-horizontal__NavLink--Color)" }}
                                             >
                                                 Administration
                                             </NavLink>
@@ -123,28 +123,28 @@ function Main() {
                 }
             >
                 <Alerts />
-                <Routes>
-                    <Route exact path="/" elements={AllTests} />
-                    <Route exact path="/test" elements={AllTests} />
-                    <Route exact path="/test/:testId" elements={Test} />
+                <Switch>
+                    <Route exact path="/" component={AllTests} />
+                    <Route exact path="/test" component={AllTests} />
+                    <Route exact path="/test/:testId" component={Test} />
 
-                    <Route exact path="/run/list/:testId" elements={TestRuns} />
-                    <Route exact path="/run/dataset/list/:testId" elements={TestDatasets} />
-                    <Route exact path="/run/:id" elements={Run} />
-                    <Route exact path="/dataset/comparison" elements={DatasetComparison} />
+                    <Route exact path="/run/list/:testId" component={TestRuns} />
+                    <Route exact path="/run/dataset/list/:testId" component={TestDatasets} />
+                    <Route exact path="/run/:id" component={Run} />
+                    <Route exact path="/dataset/comparison" component={DatasetComparison} />
 
-                    <Route exact path="/schema" elements={AllSchema} />
-                    <Route path="/schema/:schemaId" elements={Schema} />
+                    <Route exact path="/schema" component={AllSchema} />
+                    <Route path="/schema/:schemaId" component={Schema} />
 
-                    <Route exact path="/changes" elements={Changes} />
+                    <Route exact path="/changes" component={Changes} />
 
-                    <Route exact path="/reports" elements={Reports} />
-                    <Route exact path="/reports/table/config/:configId" elements={TableReportConfigPage} />
-                    <Route exact path="/reports/table/:id" elements={TableReportPage} />
+                    <Route exact path="/reports" component={Reports} />
+                    <Route exact path="/reports/table/config/:configId" component={TableReportConfigPage} />
+                    <Route exact path="/reports/table/:id" component={TableReportPage} />
 
-                    <Route exact path="/admin" elements={Admin} />
-                    <Route exact path="/usersettings" elements={UserSettings} />
-                </Routes>
+                    <Route exact path="/admin" component={Admin} />
+                    <Route exact path="/usersettings" component={UserSettings} />
+                </Switch>
             </Page>
         </ReduxRouter>
     )
