@@ -2,7 +2,7 @@ import { Component } from "react"
 import "@patternfly/patternfly/patternfly.css" //have to use this import to customize scss-variables.scss
 
 import { Nav, NavItem, NavList, Page, PageHeader, PageHeaderTools } from "@patternfly/react-core"
-import { ConnectedRouter } from "connected-react-router"
+import { ReduxRouter } from '@lagunovsky/redux-react-router'
 import { NavLink } from "react-router-dom"
 
 import { Provider, useSelector } from "react-redux"
@@ -53,7 +53,7 @@ class App extends Component {
 function Main() {
     const isAdmin = useSelector(isAdminSelector)
     return (
-        <ConnectedRouter history={history}>
+        <ReduxRouter history={history}>
             <Banner />
             <Page
                 header={
@@ -146,7 +146,7 @@ function Main() {
                     <Route exact path="/usersettings" component={UserSettings} />
                 </Switch>
             </Page>
-        </ConnectedRouter>
+        </ReduxRouter>
     )
 }
 
