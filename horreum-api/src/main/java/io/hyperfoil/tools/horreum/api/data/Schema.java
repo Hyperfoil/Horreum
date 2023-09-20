@@ -6,18 +6,25 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.Collection;
 
+@org.eclipse.microprofile.openapi.annotations.media.Schema(name = "Schema",
+        description = "Data object that describes the schema definition for a test" )
 public class Schema {
 
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(required = true)
     @JsonProperty(required = true)
     public Integer id;
     @NotNull
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(required = true)
     @JsonProperty(required = true)
     public String uri;
     @NotNull
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(required = true)
     @JsonProperty(required = true)
     public String name;
     public String description;
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = String.class)
     public JsonNode schema;
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(required = true)
     @JsonProperty(required = true)
     public String owner;
     public Access access;

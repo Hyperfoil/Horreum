@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 public class Action {
     @JsonProperty( required = true )
@@ -18,9 +19,11 @@ public class Action {
     public String type;
     @NotNull
     @JsonProperty( required = true )
+    @Schema(implementation = String.class)
     public JsonNode config;
     @NotNull
     @JsonIgnore
+    @Schema(implementation = String.class)
     public JsonNode secrets;
     @NotNull
     @JsonProperty( required = true )

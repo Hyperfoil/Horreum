@@ -46,12 +46,6 @@ public interface DatasetService {
                           @QueryParam("direction") SortDirection direction,
                           @QueryParam("viewId") Integer viewId);
 
-   @Path("{id}/query")
-   @GET
-   QueryResult queryData(@PathParam("id") int datasetId,
-                         @Parameter(required = true) @QueryParam("query") String jsonpath,
-                         @QueryParam("array") @DefaultValue("false") boolean array,
-                         @QueryParam("schemaUri") String schemaUri);
 
    @GET
    @Path("bySchema")
@@ -93,6 +87,7 @@ public interface DatasetService {
       public String owner;
       @Schema(required = true, implementation = Access.class)
       public int access;
+      @Schema(implementation = String.class)
       public ObjectNode view;
       @JsonProperty(required = true)
       public List<SchemaService.SchemaUsage> schemas;
@@ -114,10 +109,12 @@ public interface DatasetService {
       public String name;
       @NotNull
       public SchemaService.SchemaDescriptor schema;
+      @Schema(implementation = String.class)
       public JsonNode value;
    }
 
    class LabelPreview {
+      @Schema(implementation = String.class)
       public JsonNode value;
       public String output;
    }

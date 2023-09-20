@@ -20,11 +20,14 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 
 
 @Path("api/schema")
@@ -32,6 +35,9 @@ public interface SchemaService {
    @GET
    @Path("{id}")
    @Produces(MediaType.APPLICATION_JSON)
+   @APIResponseSchema(value = Schema.class,
+           responseCode = "200",
+           responseDescription = "Returns Schema if a matching id is found")
    Schema getSchema(@PathParam("id") int id, @QueryParam("token") String token);
 
    @GET
@@ -125,12 +131,18 @@ public interface SchemaService {
    @GET
    @Path("{id}/export")
    @Produces(MediaType.APPLICATION_JSON)
-   JsonNode exportSchema(@PathParam("id") int id);
+   @APIResponseSchema(value = String.class,
+           responseDescription = "A JSON representation of the Schema object",
+           responseCode = "200")
+   String exportSchema(@PathParam("id") int id);
 
    @POST
    @Path("import")
    @Consumes(MediaType.APPLICATION_JSON)
-   void importSchema(JsonNode config);
+   @RequestBody(content = @Content( mediaType = MediaType.APPLICATION_JSON,
+           schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(
+                   type = SchemaType.STRING, implementation = String.class)) )
+   void importSchema(String config);
 
    class SchemaQueryResult {
       @NotNull
@@ -248,6 +260,7 @@ public interface SchemaService {
    }
 
    // this roughly matches run_schemas table
+
    class SchemaUsage extends SchemaDescriptor {
       // 0 is data, 1 is metadata. DataSets always use 0
       @JsonProperty(required = true)

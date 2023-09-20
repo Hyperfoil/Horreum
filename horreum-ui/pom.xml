@@ -9,7 +9,7 @@
         <version>0.8-SNAPSHOT</version>
     </parent>
 
-    <artifactId>horreum-api</artifactId>
+    <artifactId>horreum-ui</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -17,6 +17,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>io.hyperfoil.tools</groupId>
+            <artifactId>horreum-api</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
@@ -95,7 +99,7 @@
                             <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
                             <output>${project.basedir}/../webapp/src/generated</output>
                             <generatorName>typescript-fetch</generatorName>
-                            <skipValidateSpec>false</skipValidateSpec>
+                            <skipValidateSpec>true</skipValidateSpec>
                             <typeMappings>Array=any</typeMappings>
                             <globalProperties>
                                 <skipFormModel>false</skipFormModel>

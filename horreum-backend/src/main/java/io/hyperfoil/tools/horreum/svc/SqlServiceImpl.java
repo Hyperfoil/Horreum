@@ -1,8 +1,12 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import io.hyperfoil.tools.horreum.api.data.JsonpathValidation;
+import io.hyperfoil.tools.horreum.api.data.QueryResult;
 import io.hyperfoil.tools.horreum.api.services.SqlService;
 import io.hyperfoil.tools.horreum.server.ErrorReporter;
 import io.hyperfoil.tools.horreum.server.RoleManager;
+import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.mutiny.subscription.UniSubscriber;
 import io.smallrye.mutiny.subscription.UniSubscription;
@@ -79,6 +83,60 @@ public class SqlServiceImpl implements SqlService {
       } else {
          result.reason = pe.getMessage();
       }
+   }
+   @PermitAll
+   @WithRoles
+   @WithToken
+   @Override
+   public QueryResult queryRunData(int id, String jsonpath, String schemaUri, boolean array) {
+      String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";
+      QueryResult result = new QueryResult();
+      result.jsonpath = jsonpath;
+      try {
+         if (schemaUri != null && !schemaUri.isEmpty()) {
+            String sqlQuery = "SELECT " + func + "((CASE " +
+                    "WHEN rs.type = 0 THEN run.data WHEN rs.type = 1 THEN run.data->rs.key ELSE run.data->(rs.key::::integer) END)" +
+                    ", (?1)::::jsonpath)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?2 AND rs.uri = ?3";
+            result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id, schemaUri));
+         } else {
+            String sqlQuery = "SELECT " + func + "(data, (?1)::::jsonpath)#>>'{}' FROM run WHERE id = ?2";
+            result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id));
+         }
+         result.valid = true;
+      } catch (PersistenceException pe) {
+         SqlServiceImpl.setFromException(pe, result);
+      }
+      return result;
+   }
+   @WithRoles
+   @Override
+   public QueryResult queryDatasetData(int datasetId, String jsonpath, boolean array, String schemaUri) {
+      if (schemaUri != null && schemaUri.isBlank()) {
+         schemaUri = null;
+      }
+      QueryResult result = new QueryResult();
+      result.jsonpath = jsonpath;
+      try {
+         if (schemaUri == null) {
+            String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";
+            String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ?";
+            result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, datasetId));
+         } else {
+            // This schema-aware query already assumes that DataSet.data is an array of objects with defined schema
+            String schemaQuery = "jsonb_path_query(data, '$[*] ? (@.\"$schema\" == $schema)', ('{\"schema\":\"' || ? || '\"}')::::jsonb)";
+            String sqlQuery;
+            if (!array) {
+               sqlQuery = "SELECT jsonb_path_query_first(" + schemaQuery + ", ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ? LIMIT 1";
+            } else {
+               sqlQuery = "SELECT jsonb_agg(v)#>>'{}' FROM (SELECT jsonb_path_query(" + schemaQuery + ", ?::::jsonpath) AS v FROM dataset WHERE id = ?) AS values";
+            }
+            result.value = String.valueOf(Util.runQuery(em, sqlQuery, schemaUri, jsonpath, datasetId));
+         }
+         result.valid = true;
+      } catch (PersistenceException pe) {
+         SqlServiceImpl.setFromException(pe, result);
+      }
+      return result;
    }
 
    @Override

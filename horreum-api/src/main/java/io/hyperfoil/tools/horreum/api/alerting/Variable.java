@@ -23,6 +23,7 @@ public class Variable {
     public int order;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(implementation = String.class)
     public JsonNode labels;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public String calculation;

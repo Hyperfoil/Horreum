@@ -27,6 +27,7 @@ public class DataSet {
     @JsonProperty( required = true )
     public Access access;
     @NotNull
+    @Schema(implementation = String.class)
     public JsonNode data;
     @NotNull
     public int ordinal;

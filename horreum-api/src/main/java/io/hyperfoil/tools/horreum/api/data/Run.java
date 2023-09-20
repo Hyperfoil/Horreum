@@ -10,6 +10,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import java.time.Instant;
 import java.util.Collection;
 
+@Schema(name = "Run", description = "Data object that represents a test run entry")
 public class Run {
     @JsonProperty(required = true)
     public Integer id;
@@ -24,8 +25,10 @@ public class Run {
     @JsonProperty(required = true)
     public Integer testid;
     @NotNull
+    @Schema(implementation = JsonNode.class, type = SchemaType.OBJECT)
     @JsonProperty(required = true)
     public JsonNode data;
+    @Schema(implementation = JsonNode.class, type = SchemaType.OBJECT)
     public JsonNode metadata;
     @NotNull
     @JsonProperty(required = true)

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Objects;
 
@@ -20,6 +21,7 @@ public class ViewComponent {
     public String headerName;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(implementation = String.class)
     public JsonNode labels;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public String render;

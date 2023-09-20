@@ -157,7 +157,7 @@ public class TestServiceTest extends BaseServiceTest {
    }
 
    private void updateView(int testId, View view) {
-      Integer viewId = jsonRequest().body(view).post("/api/test/" + testId + "/view")
+      Integer viewId = jsonRequest().body(view).post("/api/ui/" + testId + "/view")
             .then().statusCode(200).extract().body().as(Integer.class);
       if (view.id != null) {
          assertEquals(view.id, viewId);

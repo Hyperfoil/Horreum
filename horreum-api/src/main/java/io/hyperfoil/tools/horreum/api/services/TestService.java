@@ -17,12 +17,16 @@ import jakarta.ws.rs.core.MediaType;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 
 @Path("/api/test")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -79,14 +83,6 @@ public interface TestService {
                      @Parameter(required = true) @QueryParam("access") Access access);
 
    @POST
-   @Path("{testId}/view")
-   int updateView(@PathParam("testId") int testId, @RequestBody(required = true) View view);
-
-   @DELETE
-   @Path("{testId}/view/{viewId}")
-   void deleteView(@PathParam("testId") int testId, @PathParam("viewId") int viewId);
-
-   @POST
    @Consumes // any
    @Path("{id}/notifications")
    void updateNotifications(@PathParam("id") int id, @Parameter(required = true) @QueryParam("enabled") boolean enabled);
@@ -124,11 +120,18 @@ public interface TestService {
 
    @GET
    @Path("{id}/export")
-   JsonNode export(@PathParam("id") int testId);
+   @APIResponseSchema(value = String.class,
+           responseDescription = "A Run data object formatted as json",
+           responseCode = "200")
+   String export(@PathParam("id") int testId);
 
    @POST
    @Path("import")
-   void importTest(JsonNode testConfig);
+   @APIResponse(responseCode = "204", description = "Import a new test")
+   @RequestBody(content = @Content( mediaType = MediaType.APPLICATION_JSON,
+           schema = @Schema( type = SchemaType.STRING, implementation = String.class)) )
+   void importTest(
+           String testConfig);
 
    class TestListing {
       public List<TestSummary> tests;

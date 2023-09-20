@@ -58,6 +58,7 @@ public class ChangesServiceImpl implements ChangesService {
    @WithRoles
    @Override
    public String[] search(Target query) {
+      //TODO: this is shit, needs to be fixed
       return VariableDAO.<VariableDAO>listAll().stream().map(v -> String.valueOf(v.id)).toArray(String[]::new);
    }
 
