@@ -63,7 +63,8 @@ public class SchemaServiceTest extends BaseServiceTest {
       assertEquals(2, runValidation.errors.size());
       runValidation.errors.forEach(e -> {
          assertEquals(allowNoneSchema.id, e.getSchemaId());
-         assertNotNull(e.error);
+         assertNotNull(e.type);
+         assertNotNull(e.message);
       });
 
       Schema.ValidationEvent dsValidation = datasetValidations.poll(10, TimeUnit.SECONDS);
@@ -71,7 +72,8 @@ public class SchemaServiceTest extends BaseServiceTest {
       assertEquals(2, dsValidation.errors.size());
       dsValidation.errors.forEach(e -> {
          assertEquals(allowNoneSchema.id, e.getSchemaId());
-         assertNotNull(e.error);
+         assertNotNull(e.type);
+         assertNotNull(e.message);
       });
       assertEquals(0, runValidations.drainTo(new ArrayList<>()));
       assertEquals(0, datasetValidations.drainTo(new ArrayList<>()));

@@ -53,7 +53,7 @@ export function getSummary(id: number, token?: string) {
             response =>
                 dispatch(
                     loaded({
-                        data: undefined,
+                        data: JSON,
                         schemas: [],
                         metadata: response.hasMetadata ? {} : undefined,
                         ...response,

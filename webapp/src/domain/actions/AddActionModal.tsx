@@ -57,6 +57,7 @@ function AddActionModal({isOpen, onClose, onSubmit}: AddActionModalProps) {
         >
             <ActionComponentForm
                 action={action}
+        config={action.config}
                 onUpdate={setAction}
                 eventTypes={globalEventTypes}
                 isTester={true}

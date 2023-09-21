@@ -19,11 +19,11 @@ public class Action {
     public String type;
     @NotNull
     @JsonProperty( required = true )
-    @Schema(implementation = String.class)
+    @Schema(implementation = JsonNode.class)
     public JsonNode config;
     @NotNull
     @JsonIgnore
-    @Schema(implementation = String.class)
+    @Schema(implementation = JsonNode.class)
     public JsonNode secrets;
     @NotNull
     @JsonProperty( required = true )

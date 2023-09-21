@@ -25,7 +25,7 @@ public class Run {
     @JsonProperty(required = true)
     public Integer testid;
     @NotNull
-    @Schema(implementation = JsonNode.class, type = SchemaType.OBJECT)
+    @Schema(implementation = JsonNode.class, required = true)
     @JsonProperty(required = true)
     public JsonNode data;
     @Schema(implementation = JsonNode.class, type = SchemaType.OBJECT)

@@ -22,11 +22,11 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
                     ) : (
                         "(none)"
                     ),
-                    e.error.type,
-                    <code>{e.error.path}</code>,
-                    <code>{e.error.schemaPath}</code>,
-                    <code>{e.error.arguments}</code>,
-                    e.error.message,
+                    e.type,
+                   // <code>{e.error.path}</code>,
+                   // <code>{e.error.schemaPath}</code>,
+                   // <code>{e.error.arguments}</code>,
+                    e.message,
                 ],
             })),
         [props.errors, props.schemas]
