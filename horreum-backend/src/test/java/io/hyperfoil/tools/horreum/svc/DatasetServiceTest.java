@@ -102,6 +102,15 @@ public class DatasetServiceTest extends BaseServiceTest {
       }, "urn:A", "urn:B");
    }
 
+   @org.junit.jupiter.api.Test
+   public void testDatasetLabelSingleWithReduceFunctionArray() {
+      withExampleSchemas((schemas) -> {
+         int labelReduce = addLabel(schemas[0], "sum", "value => { return value.reduce((a,b) => a+b); }", new Extractor("value", "$.samplesArray", true));
+         List<Label.Value> values = withLabelValues(createSampleArray());
+         assertEquals(30, values.stream().filter(v -> v.labelId == labelReduce).map(v -> v.value.numberValue()).findFirst().orElse(null));
+      }, "urn:A");
+   }
+
    private ArrayNode createXYData() {
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
       ObjectNode a = JsonNodeFactory.instance.objectNode();
@@ -361,6 +370,16 @@ public class DatasetServiceTest extends BaseServiceTest {
       return data;
    }
 
+   private ArrayNode createSampleArray() {
+      ArrayNode data = JsonNodeFactory.instance.arrayNode();
+      ObjectNode a = JsonNodeFactory.instance.objectNode();
+      a.put("$schema", "urn:A");
+      ArrayNode array = a.arrayNode();
+      array.add(2).add(4).add(6).add(8).add(10);
+      a.putIfAbsent("samplesArray", array);
+      data.add(a);
+      return data;
+   }
    private void waitForUpdate(BlockingQueue<DataSet.LabelsUpdatedEvent> updateQueue, DataSet ds) {
       try {
          DataSet.LabelsUpdatedEvent event = updateQueue.poll(10, TimeUnit.SECONDS);
