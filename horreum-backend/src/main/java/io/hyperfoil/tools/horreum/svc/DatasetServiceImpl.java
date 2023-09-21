@@ -6,6 +6,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.PostConstruct;
@@ -433,13 +434,25 @@ public class DatasetServiceImpl implements DatasetService {
          LabelDAO.Value.delete("datasetId = ?1 AND labelId = ?2", datasetId, queryLabelId);
       }
 
-      Util.evaluateMany(extracted, row -> (String) row[2], row -> (JsonNode) row[3],
+      Util.evaluateMany(extracted, row -> (String) row[2], row -> (row[3] instanceof ArrayNode ? flatten((ArrayNode) row[3]) : (JsonNode) row[3]),
             (row, result) -> createLabel(datasetId, (int) row[0], Util.convertToJson(result)),
             row -> createLabel(datasetId, (int) row[0], (JsonNode) row[3]),
             (row, e, jsCode) -> logMessage(datasetId, PersistentLogDAO.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
             out -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
       messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+   }
+
+   private ArrayNode flatten(ArrayNode bucket){
+      JsonNode data = bucket.get(0);
+      if (data == null)
+         return bucket;
+
+      if (data instanceof ArrayNode){
+         bucket.removeAll();
+         data.forEach(bucket::add);
+      }
+      return bucket;
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
