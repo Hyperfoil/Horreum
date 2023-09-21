@@ -1,5 +1,5 @@
 import { ReactElement, ReactNode, useMemo, useState, MutableRefObject } from "react"
-import { useHistory } from "react-router"
+import { useHistory } from "react-router-dom"
 import { Tab, Tabs } from "@patternfly/react-core"
 import { noop } from "../utils"
 

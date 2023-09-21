@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { useDispatch } from "react-redux"
-import { useHistory, useParams } from "react-router"
+import { useHistory, useParams } from "react-router-dom"
 
 import {
     ActionGroup,

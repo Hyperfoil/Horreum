@@ -1,6 +1,6 @@
 import { MutableRefObject, ReactElement, useEffect, useMemo, useState, useRef } from "react"
-import { useHistory } from "react-router"
-import { Location, UnregisterCallback } from "history"
+import { Prompt, useHistory } from 'react-router-dom';
+import { Location } from "history"
 import { ActionGroup, Button, Spinner } from "@patternfly/react-core"
 import SaveChangesModal from "./SaveChangesModal"
 import FragmentTabs, { FragmentTab, FragmentTabProps } from "./FragmentTabs"
@@ -40,29 +40,37 @@ type SavedTabsProps = {
 }
 
 export default function SavedTabs(props: SavedTabsProps) {
-    const history = useHistory()
+    const history = useHistory();
     const children = useMemo(
         () => (Array.isArray(props.children) ? props.children : [props.children]),
         [props.children]
-    )
-    const activeKey = useRef(0)
-    const [requestedNavigation, setRequestedNavigation] = useState<() => void>()
-    const [saving, setSaving] = useState(false)
-    const [requestedLocation, setRequestedLocation] = useState<Location<any>>()
-    const historyUnblock = useRef<UnregisterCallback>()
+    );
+
+    const activeKey = useRef(0);
+    const [requestedNavigation, setRequestedNavigation] = useState<() => void>();
+    const [saving, setSaving] = useState(false);
+    const [requestedLocation, setRequestedLocation] = useState<Location<any>>();
+    const historyUnblock = useRef<UnregisterCallback>();
+
+    const [unsavedChanges, setUnsavedChanges] = useState(false);
+
     useEffect(() => {
-        const unblock = history.block(location => {
-            const childProps = children[activeKey.current].props
+        const unblock = history.block((location) => {
+            const childProps = children[activeKey.current].props;
             if ("isModified" in childProps && childProps.isModified()) {
-                setRequestedLocation(location)
-                return false
+                setUnsavedChanges(true);
+                setRequestedLocation(location);
+                return false;
             }
-        })
-        historyUnblock.current = unblock
+            return true;
+        });
+
+        historyUnblock.current = unblock;
+
         return () => {
-            unblock()
-        }
-    }, [activeKey.current, children, history])
+            unblock();
+        };
+    }, [activeKey.current, children, history]);
     const navigate = () => {
         if (requestedNavigation !== undefined) {
             requestedNavigation()

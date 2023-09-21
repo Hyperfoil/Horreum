@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
-import { useHistory } from "react-router"
+import { useHistory } from "react-router-dom"
 
 import { Bullseye, FormGroup, Popover, Spinner, TextInput } from "@patternfly/react-core"
 

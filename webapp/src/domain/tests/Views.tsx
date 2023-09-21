@@ -12,7 +12,7 @@ import {
     FormGroup,
     TextInput,
 } from "@patternfly/react-core"
-import { useHistory } from "react-router"
+import { useHistory } from "react-router-dom"
 
 import { useTester } from "../../auth"
 

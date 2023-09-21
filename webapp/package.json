@@ -5,9 +5,9 @@
   "dependencies": {
     "@lagunovsky/redux-react-router": "^4.3.0",
     "@monaco-editor/react": "^4.5.2",
-    "@patternfly/patternfly": "^5.0.4",
-    "@patternfly/react-core": "^5.0.1",
-    "@patternfly/react-table": "^5.0.1",
+    "@patternfly/patternfly": "4.224.2",
+    "@patternfly/react-core": "4.276.6",
+    "@patternfly/react-table": "4.112.39",
     "@types/jsonpath": "0.2.0",
     "@types/luxon": "^3.2.0",
     "@types/react": "^18.2.21",

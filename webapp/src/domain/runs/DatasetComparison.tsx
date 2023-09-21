@@ -11,7 +11,7 @@ import {
     Spinner,
 } from "@patternfly/react-core"
 import { expandable, ICell, IRow, Table, TableHeader, TableBody } from "@patternfly/react-table"
-import { useHistory, NavLink } from "react-router-dom"
+import { NavLink, useHistory} from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 
 import Api, { Test, View } from "../../api"
