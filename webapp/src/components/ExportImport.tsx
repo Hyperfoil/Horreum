@@ -9,14 +9,14 @@ import ExportButton from "./ExportButton"
 type ExportImportProps = {
     name: string
     export(): Promise<any>
-    import(cfg: string | undefined): Promise<void>
-    validate(cfg: string | undefined): Promise<boolean>
+    import(cfg: Record<string, unknown>): Promise<void>
+    validate(cfg: Record<string, unknown>): Promise<boolean>
 }
 
 export default function ExportImport(props: ExportImportProps) {
     const [uploadName, setUploadName] = useState<string>()
     const [loading, setLoading] = useState(false)
-    const [uploadContent, setUploadContent] = useState<string | undefined>()
+    const [uploadContent, setUploadContent] = useState<Record<string, unknown>>()
     const [uploading, setUploading] = useState(false)
     const [parseError, setParseError] = useState<any>(undefined)
     const dispatch = useDispatch()
@@ -46,7 +46,7 @@ export default function ExportImport(props: ExportImportProps) {
                                     .then(
                                         cfg => {
                                             try {
-                                                setUploadContent(JSON.parse(cfg) as string)
+                                                setUploadContent(JSON.parse(cfg) as Record<string, unknown>)
                                             } catch (e) {
                                                 setParseError(e)
                                                 return
