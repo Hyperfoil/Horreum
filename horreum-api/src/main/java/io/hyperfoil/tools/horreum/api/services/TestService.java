@@ -129,8 +129,9 @@ public interface TestService {
    @Path("import")
    @APIResponse(responseCode = "204", description = "Import a new test")
    @RequestBody(content = @Content( mediaType = MediaType.APPLICATION_JSON,
-           schema = @Schema( type = SchemaType.STRING, implementation = JsonNode.class)) )
-   void importTest(JsonNode testConfig);
+           schema = @Schema( type = SchemaType.STRING, implementation = String.class)) )
+   void importTest(
+           String testConfig);
 
    class TestListing {
       public List<TestSummary> tests;

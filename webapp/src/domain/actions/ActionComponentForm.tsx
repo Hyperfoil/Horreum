@@ -35,7 +35,6 @@ function defaultConfig(type: string) {
 
 type ActionComponentFormProps = {
     action: Action
-    config: any
     onUpdate(action: Action): void
     eventTypes: string[][]
     isTester: boolean
@@ -43,8 +42,6 @@ type ActionComponentFormProps = {
 } & Omit<React.HTMLProps<HTMLFormElement>, "action">
 
 export default function ActionComponentForm(props: ActionComponentFormProps) {
-    props.config = JSON.stringify(props.action.config);
-
     function update(patch: Partial<Action>) {
         props.onUpdate({ ...props.action, ...patch })
     }
@@ -97,7 +94,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
             {props.action.type === "http" && (
                 <HttpActionUrlSelector
                     active={props.isTester}
-                    value={props.config?.url || ""}
+                    value={props.action.config?.url || ""}
                     setValue={value => {
                         update({ config: { url: value } })
                     }}
@@ -119,7 +116,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     name="issue"
                                     id="url"
                                     label="Use issue URL"
-                                    isChecked={props.config.issueUrl !== undefined}
+                                    isChecked={props.action.config.issueUrl !== undefined}
                                     onChange={checked => updateConfig({ issueUrl: checked ? "" : undefined })}
                                 />
                             </FlexItem>
@@ -128,18 +125,18 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     name="issue"
                                     id="components"
                                     label="Use owner/repo/issue"
-                                    isChecked={props.config.issueUrl === undefined}
+                                    isChecked={props.action.config.issueUrl === undefined}
                                     onChange={checked => updateConfig({ issueUrl: checked ? undefined : "" })}
                                 />
                             </FlexItem>
                         </Flex>
                     </FormGroup>
 
-                    {props.config.issueUrl !== undefined ? (
+                    {props.action.config.issueUrl !== undefined ? (
                         <FormGroup label="Issue URL" labelIcon={<ExpressionHelp {...props} />} fieldId="issueUrl">
                             <TextInput
                                 id="issueUrl"
-                                value={props.config.issueUrl}
+                                value={props.action.config.issueUrl}
                                 onChange={issueUrl => update({ config: { ...props.action.config, issueUrl } })}
                             />
                         </FormGroup>
@@ -148,21 +145,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                             <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
                                 <TextInput
                                     id="owner"
-                                    value={props.config.owner}
+                                    value={props.action.config.owner}
                                     onChange={owner => updateConfig({ owner })}
                                 />
                             </FormGroup>
                             <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
                                 <TextInput
                                     id="repo"
-                                    value={props.config.repo}
+                                    value={props.action.config.repo}
                                     onChange={repo => updateConfig({ repo })}
                                 />
                             </FormGroup>
                             <FormGroup label="Issue" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
                                 <TextInput
                                     id="issue"
-                                    value={props.config.issue}
+                                    value={props.action.config.issue}
                                     onChange={issue => updateConfig({ issue })}
                                 />
                             </FormGroup>
@@ -175,7 +172,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     ? { experimentResultToMarkdown: "Experiment result to Markdown" }
                                     : {}
                             }
-                            selected={props.config.formatter}
+                            selected={props.action.config.formatter}
                             onSelect={formatter => updateConfig({ formatter })}
                         />
                     </FormGroup>
@@ -191,21 +188,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                     <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
                         <TextInput
                             id="owner"
-                            value={props.config.owner}
+                            value={props.action.config.owner}
                             onChange={owner => updateConfig({ owner })}
                         />
                     </FormGroup>
                     <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
                         <TextInput
                             id="repo"
-                            value={props.config.repo}
+                            value={props.action.config.repo}
                             onChange={repo => updateConfig({ repo })}
                         />
                     </FormGroup>
                     <FormGroup label="Title" labelIcon={<ExpressionHelp {...props} />} fieldId="title">
                         <TextInput
                             id="title"
-                            value={props.config.title}
+                            value={props.action.config.title}
                             onChange={title => updateConfig({ title })}
                         />
                     </FormGroup>
@@ -214,7 +211,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                             options={
                                 props.action.event === CHANGE_NEW ? { changeToMarkdown: "Change to Markdown" } : {}
                             }
-                            selected={props.config.formatter}
+                            selected={props.action.config.formatter}
                             onSelect={formatter => updateConfig({ formatter })}
                         />
                     </FormGroup>

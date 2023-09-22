@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.api.services;
 
 import java.util.List;
-import java.util.Map;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
@@ -88,7 +87,7 @@ public interface DatasetService {
       public String owner;
       @Schema(required = true, implementation = Access.class)
       public int access;
-      @Schema(required = true, implementation = String[].class)
+      @Schema(implementation = String.class)
       public ObjectNode view;
       @JsonProperty(required = true)
       public List<SchemaService.SchemaUsage> schemas;

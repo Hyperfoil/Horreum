@@ -72,6 +72,9 @@ public class TestServiceImpl implements TestService {
    //@formatter:on
 
    @Inject
+   ObjectMapper mapper;
+
+   @Inject
    EntityManager em;
 
    @Inject
@@ -604,7 +607,14 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @Transactional
    @Override
-   public void importTest(JsonNode testConfig) {
+   public void importTest(String newTest) {
+      JsonNode testConfig = null;
+      try {
+         testConfig = mapper.readValue(newTest, JsonNode.class);
+      }
+      catch (JsonProcessingException e) {
+         throw ServiceException.badRequest("Request object could not be mapped to JsonNode: "+ e.getMessage());
+      }
       if (!testConfig.isObject()) {
          throw ServiceException.badRequest("Expected Test object as request body, got " + testConfig.getNodeType());
       }
@@ -622,7 +632,7 @@ public class TestServiceImpl implements TestService {
       Test dto;
       boolean forceUseTestId = false;
       try {
-         dto = Util.OBJECT_MAPPER.treeToValue(config, Test.class);
+         dto = mapper.treeToValue(config, Test.class);
          //test = TestMapper.to( dto);
          //test.ensureLinked();
          if (dto.tokens != null && !dto.tokens.isEmpty()) {

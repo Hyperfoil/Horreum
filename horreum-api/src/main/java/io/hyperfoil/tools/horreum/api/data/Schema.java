@@ -22,7 +22,7 @@ public class Schema {
     @JsonProperty(required = true)
     public String name;
     public String description;
-    @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = JsonNode.class, required = true)
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = String.class)
     public JsonNode schema;
     @org.eclipse.microprofile.openapi.annotations.media.Schema(required = true)
     @JsonProperty(required = true)

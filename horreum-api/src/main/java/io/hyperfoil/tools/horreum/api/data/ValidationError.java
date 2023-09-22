@@ -8,11 +8,9 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 public class ValidationError {
     public int schemaId;
     @NotNull
-    @Schema(implementation = String.class, required = true)
-    public String type;
-    @NotNull
-    @Schema(implementation = String.class, required = true)
-    public String message;
+    @JsonProperty(required = true)
+    @Schema(implementation = String.class)
+    public JsonNode error;
 
     public ValidationError() {
     }

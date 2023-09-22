@@ -149,7 +149,7 @@ export const reducer = (state = new RunsState(), action: RunsAction) => {
                     if (run !== undefined) {
                         testMap = testMap.set(run.id, {
                             ...testMap.get(run.id),
-                            data: JSON,
+                            data: undefined,
                             schemas: [],
                             ...run,
                         })

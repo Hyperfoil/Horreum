@@ -742,8 +742,13 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Transactional
    @Override
-   public void importSchema(String incoming) {
-      JsonNode config = Util.OBJECT_MAPPER.valueToTree(incoming);
+   public void importSchema(String newSchema) {
+      JsonNode config = null;
+      try {
+         config = Util.OBJECT_MAPPER.readValue(newSchema, JsonNode.class);
+      } catch (JsonProcessingException e) {
+         throw ServiceException.badRequest("Could not map Schema to JsonNode: "+e.getMessage());
+      }
       if (!config.isObject()) {
          throw ServiceException.badRequest("Bad format of schema; expecting an object");
       }
