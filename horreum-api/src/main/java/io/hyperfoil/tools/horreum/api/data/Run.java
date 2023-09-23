@@ -25,10 +25,10 @@ public class Run {
     @JsonProperty(required = true)
     public Integer testid;
     @NotNull
-    @Schema(implementation = JsonNode.class, type = SchemaType.OBJECT)
+    @Schema(implementation = JsonNode.class, type = SchemaType.STRING)
     @JsonProperty(required = true)
     public JsonNode data;
-    @Schema(implementation = JsonNode.class, type = SchemaType.OBJECT)
+    @Schema(implementation = JsonNode.class, type = SchemaType.STRING)
     public JsonNode metadata;
     @NotNull
     @JsonProperty(required = true)

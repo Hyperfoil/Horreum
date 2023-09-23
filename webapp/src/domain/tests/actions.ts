@@ -33,7 +33,7 @@ export function fetchSummary(roles?: string, folder?: string) {
             listing =>
                 dispatch({
                     type: actionTypes.LOADED_SUMMARY,
-                    tests: listing.tests?.map(t => ({ ...t, views: [], notificationsEnabled: false })) || [],
+                    tests: listing.tests?.map(t => ({ ...t, notificationsEnabled: false })) || [],
                 }),
             error => {
                 dispatch(loading(false))
@@ -94,7 +94,8 @@ export function updateView(testId: number, view: View) {
                 return Promise.reject()
             }
         }
-        return Api.testServiceUpdateView(testId, view).then(
+        view.testId = testId;
+        return Api.uIServiceUpdateView(view).then(
             viewId => {
                 const id: number = ensureInteger(viewId)
                 dispatch({
@@ -114,7 +115,7 @@ export function updateView(testId: number, view: View) {
 
 export function deleteView(testId: number, viewId: number) {
     return (dispatch: Dispatch<DeleteViewAction | AddAlertAction>) => {
-        return Api.testServiceDeleteView(testId, viewId).then(
+        return Api.uIServiceDeleteView(testId, viewId).then(
             _ => {
                 dispatch({
                     type: actionTypes.DELETE_VIEW,
@@ -147,7 +148,8 @@ export function updateActions(testId: number, actions: Action[]) {
         const promises: any[] = []
         actions.forEach(action => {
             promises.push(
-                Api.testServiceUpdateAction(testId, action).then(
+                action.testId = testId,
+                Api.actionServiceUpdate(action).then(
                     response => {
                         dispatch({
                             type: actionTypes.UPDATE_ACTION,
