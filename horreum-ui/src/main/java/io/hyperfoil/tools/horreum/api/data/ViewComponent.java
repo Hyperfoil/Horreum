@@ -21,7 +21,6 @@ public class ViewComponent {
     public String headerName;
     @NotNull
     @JsonProperty(required = true)
-    @Schema(implementation = String.class)
     public JsonNode labels;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public String render;

@@ -12,6 +12,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class UIServiceImpl implements UIService {
 
@@ -25,12 +27,28 @@ public class UIServiceImpl implements UIService {
     @RolesAllowed("tester")
     @WithRoles
     @Transactional
-    public int updateView(int testId, View dto) {
-        if (testId <= 0) {
-            throw ServiceException.badRequest("Missing test id");
+    public int updateView(View dto) {
+        if (dto.testId <= 0) {
+            throw ServiceException.badRequest("Missing test id on view");
         }
-        TestDAO test = testService.getTestForUpdate(testId);
-        ViewDAO view = ViewMapper.to(dto);
+        return doUpdate(testService.getTestForUpdate(dto.testId), ViewMapper.to(dto));
+    }
+
+    @Override
+    @RolesAllowed({Roles.ADMIN, Roles.TESTER})
+    @WithRoles
+    @Transactional
+    public void createViews(List<View> views) {
+        if (views.isEmpty() || views.get(0).testId <= 0) {
+            throw ServiceException.badRequest("Missing test id on view");
+        }
+        TestDAO test = testService.getTestForUpdate(views.get(0).testId);
+        for(View view : views) {
+            doUpdate(test, ViewMapper.to(view));
+        }
+    }
+
+    private int doUpdate(TestDAO test, ViewDAO view) {
         view.ensureLinked();
         view.test = test;
         if (view.id == null || view.id < 0) {
@@ -63,6 +81,18 @@ public class UIServiceImpl implements UIService {
         // the orphan removal doesn't work for some reason, we need to remove if manually
         ViewDAO.deleteById(viewId);
         test.persist();
+    }
+
+    @Override
+    @RolesAllowed({Roles.ADMIN, Roles.TESTER})
+    @WithRoles
+    @Transactional
+    public List<View> getViews(int testId) {
+        if (testId <= 0) {
+            throw ServiceException.badRequest("Missing test id");
+        }
+        return ViewDAO.<ViewDAO>find("test.id", testId)
+                .stream().map(ViewMapper::from).collect(Collectors.toList());
     }
 
 }

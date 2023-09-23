@@ -425,34 +425,6 @@ public class TestServiceImpl implements TestService {
       test.persist();
    }
 
-   @Override
-   @RolesAllowed("tester")
-   @WithRoles
-   @Transactional
-   public Action updateAction(int testId, Action dto) {
-      if (testId <= 0) {
-         throw ServiceException.badRequest("Missing test id");
-      }
-      // just ensure the test exists
-      getTestForUpdate(testId);
-      dto.testId = testId;
-      actionService.validate(dto);
-
-      ActionDAO action = ActionMapper.to(dto);
-      if (action.id == null) {
-         action.persist();
-      } else {
-         if (!action.active) {
-            ActionDAO.deleteById(action.id);
-            return null;
-         } else {
-            actionService.merge(action);
-         }
-      }
-      em.flush();
-      return ActionMapper.from(action);
-   }
-
    @WithRoles
    @SuppressWarnings("unchecked")
    @Override
@@ -669,7 +641,7 @@ public class TestServiceImpl implements TestService {
       subscriptionService.importSubscriptions(dto.id, subscriptions);
    }
 
-   TestDAO getTestForUpdate(int testId) {
+   protected TestDAO getTestForUpdate(int testId) {
       TestDAO test = TestDAO.findById(testId);
       if (test == null) {
          throw ServiceException.notFound("Test " + testId + " was not found");

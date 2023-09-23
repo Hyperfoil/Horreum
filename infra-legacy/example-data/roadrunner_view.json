@@ -1,0 +1,16 @@
+{
+  "name": "Default",
+  "components": [
+    {
+      "headerOrder": 1,
+      "headerName": "Test",
+      "labels": [ "benchmark_test" ]
+    },
+    {
+      "headerOrder": 1,
+      "headerName": "Throughput",
+      "labels": [ "throughput" ],
+      "render": "value => value + \"req/s\""
+    }
+  ]
+}

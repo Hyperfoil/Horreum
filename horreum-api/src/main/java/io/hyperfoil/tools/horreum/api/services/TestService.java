@@ -91,10 +91,6 @@ public interface TestService {
    @Path("{id}/move")
    void updateFolder(@PathParam("id") int id, @QueryParam("folder") String folder);
 
-   @POST
-   @Path("{testId}/action")
-   Action updateAction(@PathParam("testId") int testId, @RequestBody(required = true) Action action);
-
    @GET
    @Path("{id}/fingerprint")
    List<JsonNode> listFingerprints(@PathParam("id") int testId);
@@ -130,8 +126,7 @@ public interface TestService {
    @APIResponse(responseCode = "204", description = "Import a new test")
    @RequestBody(content = @Content( mediaType = MediaType.APPLICATION_JSON,
            schema = @Schema( type = SchemaType.STRING, implementation = String.class)) )
-   void importTest(
-           String testConfig);
+   void importTest( String testConfig);
 
    class TestListing {
       public List<TestSummary> tests;

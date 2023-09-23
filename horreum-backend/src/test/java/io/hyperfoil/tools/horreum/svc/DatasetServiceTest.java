@@ -274,7 +274,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest("dummy"));
       Util.withTx(tm, () -> {
          try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-            ViewDAO view = ViewDAO.findById(test.views.iterator().next().id);
+            ViewDAO view = ViewDAO.find("test.id", test.id).firstResult();
             view.components.clear();
             ViewComponentDAO vc1 = new ViewComponentDAO();
             vc1.view = view;

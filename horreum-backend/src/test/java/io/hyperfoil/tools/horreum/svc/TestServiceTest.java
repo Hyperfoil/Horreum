@@ -123,7 +123,8 @@ public class TestServiceTest extends BaseServiceTest {
       assertNotNull(action.id);
       assertTrue(action.active);
       action.active = false;
-      jsonRequest().body(action).post("/api/test/" + test.id + "/action").then().statusCode(204);
+      action.testId = test.id;
+      jsonRequest().body(action).post("/api/action/update").then().statusCode(204);
 
       deleteTest(test);
    }
@@ -141,9 +142,11 @@ public class TestServiceTest extends BaseServiceTest {
       ViewComponent vc = new ViewComponent();
       vc.headerName = "Foobar";
       vc.labels = JsonNodeFactory.instance.arrayNode().add("value");
-      View defaultView = test.views.stream().filter(v -> "Default".equals(v.name)).findFirst().orElseThrow();
+      List<View> views = getViews(test.id);
+      View defaultView = views.stream().filter(v -> "Default".equals(v.name)).findFirst().orElseThrow();
       defaultView.components.add(vc);
-      updateView(test.id, defaultView);
+      defaultView.testId = test.id;
+      updateView(defaultView);
 
       TestUtil.eventually(() -> {
          em.clear();
@@ -156,8 +159,8 @@ public class TestServiceTest extends BaseServiceTest {
       });
    }
 
-   private void updateView(int testId, View view) {
-      Integer viewId = jsonRequest().body(view).post("/api/ui/" + testId + "/view")
+   private void updateView(View view) {
+      Integer viewId = jsonRequest().body(view).post("/api/ui/view")
             .then().statusCode(200).extract().body().as(Integer.class);
       if (view.id != null) {
          assertEquals(view.id, viewId);
@@ -208,7 +211,8 @@ public class TestServiceTest extends BaseServiceTest {
       vc.labels = JsonNodeFactory.instance.arrayNode().add("foo");
       vc.headerName = "Some foo";
       view.components = Collections.singletonList(vc);
-      updateView(test.id, view);
+      view.testId = test.id;
+      updateView(view);
 
       addTestHttpAction(test, MessageBusChannels.RUN_NEW, "http://example.com");
       addTestGithubIssueCommentAction(test, MessageBusChannels.EXPERIMENT_RESULT_NEW,
