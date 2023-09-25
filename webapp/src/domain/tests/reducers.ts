@@ -2,8 +2,9 @@ import * as actionTypes from "./actionTypes"
 import { Map } from "immutable"
 import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction } from "../../alerts"
-import { Access, Action, Run, Test, TestToken, Transformer, View } from "../../api"
+import Api, { Access, Action, Run, Test, TestToken, Transformer, View } from "../../api"
 import { AnyAction } from "redux"
+import { getViews } from "./actions"
 
 export type CompareFunction = (runs: Run[]) => string
 
@@ -52,6 +53,12 @@ export interface UpdateAccessAction {
 export interface UpdateTestWatchAction {
     type: typeof actionTypes.UPDATE_TEST_WATCH
     byId: Map<number, string[] | undefined>
+}
+
+export interface GetViewsAction {
+    type: typeof actionTypes.GET_VIEWS
+    testId: number
+    views: View[]
 }
 
 export interface UpdateViewAction {
@@ -125,6 +132,7 @@ export type TestAction =
     | DeleteAction
     | UpdateAccessAction
     | UpdateTestWatchAction
+    | GetViewsAction
     | UpdateViewAction
     | DeleteViewAction
     | UpdateActionAction
@@ -182,9 +190,10 @@ export const reducer = (state = new TestsState(), action: TestAction) => {
             {
                 const test = state.byId?.get(action.testId)
                 if (test) {
+                    let loadedViews : View[] = getViews(test.id);
                     let views
-                    if (test.views.some(v => v.id === action.view.id)) {
-                        views = test.views.map(v => (v.id === action.view.id ? action.view : v))
+                    if (loadedViews.some(v => v.id === action.view.id)) {
+                        views = loadedViews.map(v => (v.id === action.view.id ? action.view : v))
                     } else {
                         views = [...test.views, action.view]
                     }

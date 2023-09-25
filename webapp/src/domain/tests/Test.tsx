@@ -36,6 +36,7 @@ import Access from "./Access"
 import Subscriptions from "./Subscriptions"
 import Transformers from "./Transformers"
 import MissingDataNotifications from "./MissingDataNotifications"
+import Api from "../../api"
 
 type Params = {
     testId: string
@@ -147,7 +148,7 @@ export default function Test() {
                             >
                                 <Views
                                     testId={testId}
-                                    views={test?.views || []}
+                                    views={ actions.getViews(testId) || []}
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
                                     funcsRef={viewFuncsRef}
