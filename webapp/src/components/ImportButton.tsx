@@ -39,7 +39,7 @@ export default function ImportButton({label, onLoad, onImport, onImported}: Impo
                 {label || "Import"}
             </Button>
             <Modal
-                title="Import test"
+                title={label}
                 variant="small"
                 isOpen={open}
                 onClose={close}
