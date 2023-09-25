@@ -55,14 +55,14 @@ To run with test cases do
 
 ```bash
 mvn install
-mvn quarkus:dev -pl '!horreum-integration-tests'
+mvn quarkus:dev -pl 'horreum-backend'
 ```
 
 To run without test cases do
 
 ```bash
 mvn -DskipTests=true -DskipITs install
-mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev  -pl '!horreum-integration-tests'
+mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev -pl 'horreum-backend'
 ```
 
 ## Get Access
