@@ -640,10 +640,10 @@ public class ReportServiceImpl implements ReportService {
                debugList.append(", ");
             }
             debugList.append(runId).append('/').append(ordinal + 1);
-            if (((JsonNode) row[3]).asBoolean(false)) {
+            if (row[3] != null && ((JsonNode) row[3]).asBoolean(false)) {
                datasetIds.add(datasetId);
             } else {
-               debugList.append("(filtered)");
+               debugList.append("(filtered, null dataset id, check for run without a schema)");
             }
          }
          log(report, PersistentLogDAO.DEBUG, "Datasets considered for report: %s", debugList);
