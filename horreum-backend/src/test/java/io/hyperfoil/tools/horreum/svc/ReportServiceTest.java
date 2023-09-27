@@ -229,4 +229,23 @@ public class ReportServiceTest extends BaseServiceTest {
       assertEquals(3, data.values.size());
       data.values.forEach(value -> assertTrue(value.isNull()));
    }
+
+   @org.junit.jupiter.api.Test
+   public void testUndefinedComponent() throws InterruptedException {
+      Test test = createTest(createExampleTest("previewMissingComponent"));
+      createComparisonSchema();
+
+      BlockingQueue<DataSet.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      int runId = uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
+      assertNotNull(queue.poll(10, TimeUnit.SECONDS));
+
+      TableReportConfig config = newExampleTableReportConfig(test);
+      TableReport report = jsonRequest().body(config).post("/api/report/table/config")
+          .then().statusCode(200).extract().body().as(TableReport.class);
+
+      TableReport preview = jsonRequest().body(config).post("/api/report/table/preview?edit=" + report.id)
+          .then().statusCode(200).extract().body().as(TableReport.class);
+      assertNotNull(preview);
+   }
+
 }
