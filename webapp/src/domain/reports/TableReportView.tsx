@@ -439,7 +439,8 @@ export default function TableReportView(props: TableReportViewProps) {
                                 categoryData.forEach(d => {
                                     const componentData = d.values[i2]
                                     if (typeof componentData == "object") {
-                                        const keys = [...Object.keys(componentData)]
+                                        const tmp = componentData || {}
+                                        const keys = [...Object.keys(tmp)]
                                         keys.forEach(k => set.add(k))
                                     } else {
                                         set.add("")
