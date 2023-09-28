@@ -33,7 +33,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
     const dispatch = useDispatch<RunsDispatch>()
     const [pathQuery, setPathQuery] = useState("")
     const [pathInvalid, setPathInvalid] = useState(false)
-    const [pathType, setPathType] = useState("js")
+    const [pathType, setPathType] = useState("jsonb_path_query_first")
     const [pathTypeOpen, setPathTypeOpen] = useState(false)
     const [pathSuggestions, setPathSuggestions] = useState<string[]>([])
 
@@ -137,15 +137,15 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
                                 </DropdownToggle>
                             }
                             dropdownItems={[
-                                <DropdownItem id="js" key="query">
-                                    js
-                                </DropdownItem>,
                                 <DropdownItem id="jsonb_path_query_first" key="jsonb_path_query_first">
                                     jsonb_path_query_first
                                 </DropdownItem>,
                                 <DropdownItem id="jsonb_path_query_array" key="jsonb_path_query_array">
                                     jsonb_path_query_array
                                 </DropdownItem>,
+                                <DropdownItem id="js" key="query">
+                                    js
+                                </DropdownItem>
                             ]}
                         ></Dropdown>
                         <SearchQueryHelp pathType={pathType} />
