@@ -831,6 +831,13 @@ public class BaseServiceTest {
       assertEquals(1, variables.size());
       jsonRequest().body(variables).post("/api/alerting/variables?test=" + t.id).then().statusCode(204);
 
+      Action a = new ObjectMapper().readValue(
+              readFile(p.resolve("new_run_action.json").toFile()), Action.class);
+      assertEquals("run/new", a.event);
+      //This request should return a bad request as the url is not set
+      jsonRequest().auth().oauth2(getAdminToken()).body(a).post("/api/action").then().statusCode(400);
+
+
       Run r = mapper.readValue(
               readFile(p.resolve("roadrunner_run.json").toFile()), Run.class);
       assertEquals("dev-team", r.owner);
