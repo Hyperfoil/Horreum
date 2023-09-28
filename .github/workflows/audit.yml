@@ -2,39 +2,36 @@ name: Audit build
 
 on:
   schedule:
-    - cron: '0 0 * * 1'
+    - cron: "0 0 * * 1"
 
 jobs:
   build:
     strategy:
       matrix:
         os:
-          - {
-            name: "ubuntu-latest",
-            build-options: ""
-          }
+          - { name: "ubuntu-latest", build-options: "" }
     env:
       ENVIRONMENT: CI
-    runs-on:  ${{ matrix.os.name }}
+    runs-on: ${{ matrix.os.name }}
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3 
-      with:
-        distribution: 'adopt'
-        java-version: 17
-    - name: Cache Maven packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-    - name: Maven Version
-      run: mvn --version
-    - name: Clean nodejs
-      run: mvn --file pom.xml -Premove-node-cache clean
-    - name: Build with Maven
-      run: mvn clean package -B --file pom.xml -DskipTests ${{ matrix.os.build-options }}
-    - name: Run audit
-      run: cd webapp && node/node/npm audit --production
+      - uses: actions/checkout@v3
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: "adopt"
+          java-version: 21
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: Maven Version
+        run: mvn --version
+      - name: Clean nodejs
+        run: mvn --file pom.xml -Premove-node-cache clean
+      - name: Build with Maven
+        run: mvn clean package -B --file pom.xml -DskipTests ${{ matrix.os.build-options }}
+      - name: Run audit
+        run: cd webapp && node/node/npm audit --production
