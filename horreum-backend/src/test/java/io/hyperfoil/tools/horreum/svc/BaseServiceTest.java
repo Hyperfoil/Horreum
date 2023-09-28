@@ -793,6 +793,9 @@ public class BaseServiceTest {
    }
 
    protected void populateDataFromFiles() throws IOException {
+      if(getClass().getClassLoader().getResource(".") == null ) {
+         fail("Could not find resource directory, aborting test");
+      }
       Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
       p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
 
