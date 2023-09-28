@@ -19,6 +19,7 @@ import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.reactive.ReactiveMailer;
 import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class EmailPlugin implements NotificationPlugin {
@@ -46,6 +47,7 @@ public class EmailPlugin implements NotificationPlugin {
    @Inject
    ReactiveMailer mailer;
 
+   private final Logger log = Logger.getLogger(getClass());
    @Override
    public String method() {
       return "email";
@@ -84,6 +86,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("changes", event.changes())
                .render();
          mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
+         log.info("Sending mail: "+content);
       }
 
       @Override
@@ -100,6 +103,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("lastTimestamp", lastTimestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date.from(lastTimestamp)))
                .render();
          mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
+         log.info("Sending mail: "+content);
       }
 
       @Override
@@ -117,6 +121,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("variables", event.variables)
                .render();
          mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
+         log.info("Sending mail: "+content);
       }
 
       @Override
@@ -132,6 +137,7 @@ public class EmailPlugin implements NotificationPlugin {
                .data("backlink", backlink)
                .render();
          mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
+         log.info("Sending mail: "+content);
       }
    }
 
