@@ -450,7 +450,7 @@
                         <executable>sh</executable>
                         <arguments>
                           <argument>-c</argument>
-                          <argument>rm -rf webapp/node webapp/node_modules webapp/package-lock.json</argument>
+                          <argument>rm -rf webapp/node webapp/node_modules webapp/package-lock.json webapp/src/generated/</argument>
                         </arguments>
                       </configuration>
                     </execution>
