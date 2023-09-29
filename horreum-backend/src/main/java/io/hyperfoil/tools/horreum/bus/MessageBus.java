@@ -245,6 +245,7 @@ public class MessageBus {
          every = "{horreum.messagebus.retry.check:5m}",
          delayed = "{horreum.messagebus.retry.delay:30s}",
          concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
+   @Transactional
    public void retryFailedMessages() {
 
       try(ScrollableResults<ChannelMessage> results = (ScrollableResults<ChannelMessage>) em.createNativeQuery("SELECT channel, id, testid, flags, message FROM messagebus WHERE \"timestamp\" + make_interval(secs => ?1) <= now()")
