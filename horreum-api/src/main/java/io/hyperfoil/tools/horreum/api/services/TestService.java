@@ -64,7 +64,6 @@ public interface TestService {
 
    @POST
    @Path("{id}/addToken")
-   @Produces(MediaType.TEXT_PLAIN)
    int addToken(@PathParam("id") int testId, TestToken token);
 
    @GET

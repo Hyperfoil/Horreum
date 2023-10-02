@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.data;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Collection;
@@ -20,6 +21,7 @@ public class Test {
     public String owner;
     @NotNull
     @JsonProperty(required = true)
+    @Schema( type = SchemaType.INTEGER, implementation = Access.class)
     public Access access;
     public Collection<TestToken> tokens;
     @Schema(implementation = String[].class)

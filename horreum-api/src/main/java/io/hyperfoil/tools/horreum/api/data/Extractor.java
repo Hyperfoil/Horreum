@@ -2,7 +2,10 @@ package io.hyperfoil.tools.horreum.api.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
+@Schema(name = "Extractor", type = SchemaType.OBJECT)
 public class Extractor {
     @NotNull
     @JsonProperty( required = true )

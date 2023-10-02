@@ -17,6 +17,7 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.api.data.Label;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
@@ -27,6 +28,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.data.Access;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 
 @Path("/api/dataset")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -34,6 +37,14 @@ import io.hyperfoil.tools.horreum.api.data.Access;
 public interface DatasetService {
    @Path("{id}")
    @GET
+   @Produces(MediaType.APPLICATION_JSON)
+   @APIResponse(
+           responseCode = "404",
+           description = "No Dataset with the given id was found",
+           content = @Content(mediaType = "application/json"))
+   @APIResponseSchema(value = DataSet.class,
+           responseDescription = "JVM system properties of a particular host.",
+           responseCode = "200")
    DataSet getDataSet(@PathParam("id") int datasetId);
 
    @Path("list/{testId}")

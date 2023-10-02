@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.services;
 import java.util.List;
 import java.util.Map;
 
+import io.hyperfoil.tools.horreum.api.data.DataSet;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
@@ -41,19 +42,27 @@ import org.jboss.resteasy.reactive.multipart.FileUpload;
 @Consumes({ MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 public interface RunService {
-   @APIResponse(content =
-   @Content( mediaType = MediaType.APPLICATION_JSON),
-           description = "Returns an instance of RunExtended")
+   @GET
+   @Path("{id}")
+   @APIResponse(
+           responseCode = "404",
+           description = "If no Run have been found with the given id",
+           content = @Content(mediaType = MediaType.APPLICATION_JSON))
    @APIResponseSchema( value = RunExtended.class,
            responseDescription = "Run data with the referenced schemas and generated datasets",
            responseCode = "200")
-   @GET
-   @Path("{id}")
    RunExtended getRun(@PathParam("id") int id,
                  @QueryParam("token") String token);
 
    @GET
    @Path("{id}/summary")
+   @APIResponse(
+           responseCode = "404",
+           description = "If no Run have been found with the given id",
+           content = @Content(mediaType = MediaType.APPLICATION_JSON))
+   @APIResponseSchema( value = RunSummary.class,
+           responseDescription = "Run summary with the referenced schemas and generated datasets",
+           responseCode = "200")
    RunSummary getRunSummary(@PathParam("id") int id, @QueryParam("token") String token);
 
    @GET
@@ -90,9 +99,15 @@ public interface RunService {
 
    @POST
    @Path("data")
-   @Produces(MediaType.TEXT_PLAIN) // run ID as string
    @RequestBody(content = @Content( mediaType = MediaType.APPLICATION_JSON,
            schema = @Schema( type = SchemaType.STRING, implementation = String.class)) )
+   @APIResponse(
+           responseCode = "400",
+           description = "Some fields are missing or invalid",
+           content = @Content(mediaType = MediaType.APPLICATION_JSON))
+   @APIResponseSchema(value = Integer.class,
+           responseDescription = "Returns the id of the newly generated run.",
+           responseCode = "200")
    Response addRunFromData(@Parameter(required = true) @QueryParam("start") String start,
                          @Parameter(required = true) @QueryParam("stop") String stop,
                          @Parameter(required = true) @QueryParam("test") String test,

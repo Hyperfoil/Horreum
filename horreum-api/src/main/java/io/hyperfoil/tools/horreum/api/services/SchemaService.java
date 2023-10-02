@@ -25,14 +25,20 @@ import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 
 
 @Path("api/schema")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes({ MediaType.APPLICATION_JSON})
 public interface SchemaService {
    @GET
    @Path("{id}")
-   @Produces(MediaType.APPLICATION_JSON)
+   @APIResponse(
+           responseCode = "404",
+           description = "No Schema with the given id was found",
+           content = @Content(mediaType = "application/json"))
    @APIResponseSchema(value = Schema.class,
            responseCode = "200",
            responseDescription = "Returns Schema if a matching id is found")
@@ -60,18 +66,15 @@ public interface SchemaService {
    List<SchemaDescriptor> descriptors(@QueryParam("id") List<Integer> ids);
 
    @POST
-   @Produces(MediaType.TEXT_PLAIN)
    @Path("{id}/resetToken")
    String resetToken(@PathParam("id") int id);
 
    @POST
-   @Produces(MediaType.TEXT_PLAIN)
    @Path("{id}/dropToken")
    String dropToken(@PathParam("id") int id);
 
    @POST
    @Path("{id}/updateAccess")
-   @Consumes(MediaType.TEXT_PLAIN) //is POST the correct verb for this method as we are not uploading a new artefact?
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
    void updateAccess(@PathParam("id") int id,
                      @Parameter(required = true) @QueryParam("owner") String owner,
@@ -154,9 +157,7 @@ public interface SchemaService {
       }
    }
 
-   @org.eclipse.microprofile.openapi.annotations.media.Schema(anyOf = {
-         LabelInFingerprint.class, LabelInRule.class, LabelInReport.class, LabelInVariable.class, LabelInView.class
-   })
+   @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelLocation", type = SchemaType.OBJECT)
    abstract class LabelLocation {
       public final String type;
       public int testId;
@@ -169,12 +170,22 @@ public interface SchemaService {
       }
    }
 
+   @org.eclipse.microprofile.openapi.annotations.media.Schema(
+           name = "LabelInFingerprint",
+           type = SchemaType.OBJECT,
+           allOf = {LabelLocation.class}
+   )
    class LabelInFingerprint extends LabelLocation {
       public LabelInFingerprint(int testId, String testName) {
          super("FINGERPRINT", testId, testName);
       }
    }
 
+   @org.eclipse.microprofile.openapi.annotations.media.Schema(
+           name = "LabelInRule",
+           type = SchemaType.OBJECT,
+           allOf = {LabelLocation.class}
+   )
    class LabelInRule extends LabelLocation {
       public int ruleId;
       public String ruleName;
@@ -186,6 +197,11 @@ public interface SchemaService {
       }
    }
 
+   @org.eclipse.microprofile.openapi.annotations.media.Schema(
+           name = "LabelInVariable",
+           type = SchemaType.OBJECT,
+           allOf = {LabelLocation.class}
+   )
    class LabelInVariable extends LabelLocation {
       public int variableId;
       public String variableName;
@@ -197,6 +213,11 @@ public interface SchemaService {
       }
    }
 
+   @org.eclipse.microprofile.openapi.annotations.media.Schema(
+           name = "LabelInView",
+           type = SchemaType.OBJECT,
+           allOf = {LabelLocation.class}
+   )
    class LabelInView extends LabelLocation {
       public int viewId;
       public String viewName;
@@ -212,6 +233,11 @@ public interface SchemaService {
       }
    }
 
+   @org.eclipse.microprofile.openapi.annotations.media.Schema(
+           name = "LabelInReport",
+           type = SchemaType.OBJECT,
+           allOf = {LabelLocation.class}
+   )
    class LabelInReport extends LabelLocation {
       public int configId;
       public String title;

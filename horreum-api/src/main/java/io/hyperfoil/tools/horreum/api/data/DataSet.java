@@ -4,12 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Objects;
 
+@Schema(name = "DataSet", type = SchemaType.OBJECT)
 public class DataSet {
     public Integer id;
     @NotNull
@@ -25,6 +27,7 @@ public class DataSet {
     public String owner;
     @NotNull
     @JsonProperty( required = true )
+    @Schema( type = SchemaType.INTEGER, implementation = Access.class)
     public Access access;
     @NotNull
     @Schema(implementation = String.class)

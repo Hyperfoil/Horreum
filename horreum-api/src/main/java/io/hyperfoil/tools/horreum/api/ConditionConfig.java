@@ -7,11 +7,13 @@ import java.util.Map;
 
 import jakarta.validation.constraints.NotNull;
 
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
+@Schema(name = "ConditionConfig", type = SchemaType.OBJECT)
 public class ConditionConfig {
    @NotNull
    public String name;
@@ -51,6 +53,7 @@ public class ConditionConfig {
       @NotNull
       public String description;
       @NotNull
+      @Schema( type = SchemaType.OBJECT, implementation = ComponentType.class)
       public ComponentType type;
       @NotNull
       public Map<String, Object> properties = new HashMap<>();
