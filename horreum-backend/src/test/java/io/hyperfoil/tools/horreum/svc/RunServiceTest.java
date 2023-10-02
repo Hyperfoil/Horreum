@@ -324,6 +324,27 @@ public class RunServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
+   public void testSelectRunBySchema(TestInfo info) throws InterruptedException {
+      Schema schemaA = createExampleSchema("Aba", "Aba", "Aba", false);
+      Test test = createTest(createExampleTest(getTestName(info)));
+
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
+
+      uploadRun(runWithValue(42, schemaA), test.name);
+      DataSet.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      assertNotNull(event);
+      assertNull(dataSetQueue.poll(50, TimeUnit.MILLISECONDS));
+
+      RunService.RunsSummary runsSummary = jsonRequest()
+              .get("/api/run/bySchema?uri=" + schemaA.uri)
+              .then()
+              .statusCode(200)
+              .extract().body().as(RunService.RunsSummary.class);
+
+      assertNotNull(runsSummary);
+      assertEquals(1, runsSummary.total);
+   }
+   @org.junit.jupiter.api.Test
    public void testTransformationChoosingSchema(TestInfo info) throws InterruptedException {
       Schema schemaA = createExampleSchema("Aba", "Aba", "Aba", false);
       Extractor path = new Extractor("value", "$.value", false);

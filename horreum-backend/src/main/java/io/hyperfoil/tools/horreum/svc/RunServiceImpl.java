@@ -888,8 +888,7 @@ public class RunServiceImpl implements RunService {
 
       RunsSummary summary = new RunsSummary();
       summary.runs = runs.stream().map(this::createSummary).collect(Collectors.toList());
-      summary.total = ((BigInteger) em.createNativeQuery("SELECT count(*) FROM run_schemas WHERE uri = ?")
-            .setParameter(1, uri).getSingleResult()).longValue();
+      summary.total = SchemaDAO.count("uri", uri);
       return summary;
    }
 
