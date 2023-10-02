@@ -23,7 +23,7 @@ import PrintButton from "../../components/PrintButton"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
 
 import { renderValue } from "./components"
-import * as actions from "../tests/actions"
+import { fetchViews } from "../tests/actions"
 import { viewsSelector } from "./selectors"
 
 type Ds = {
@@ -44,7 +44,7 @@ export default function DatasetComparison() {
         Api.testServiceGet(testId).then(
             test => {
                 setTest(test)
-                dispatch(actions.fetchViews(testId))
+                dispatch(fetchViews(testId))
             },
             e => dispatchError(dispatch, e, "FETCH_TEST", "Failed to fetch test " + testId)
         )

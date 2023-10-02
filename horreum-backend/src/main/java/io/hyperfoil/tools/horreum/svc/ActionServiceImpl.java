@@ -194,7 +194,6 @@ public class ActionServiceImpl implements ActionService {
          ActionDAO actionEntity = ActionMapper.to(action);
          merge(actionEntity);
       }
-      em.flush();
       return action;
    }
 
@@ -246,7 +245,6 @@ public class ActionServiceImpl implements ActionService {
             merge(action);
          }
       }
-      em.flush();
       return ActionMapper.from(action);
    }
 
