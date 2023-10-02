@@ -15,13 +15,13 @@ import {
     UpdateFoldersAction,
     UpdateFolderAction,
     UpdateTransformersAction,
-    UpdateRunsAndDatasetsAction, LoadedViewsAction,
+    UpdateRunsAndDatasetsAction,
+    LoadedViewsAction,
 } from "./reducers"
 import Api, { Access, Action, Test, Transformer, View, Watch } from "../../api"
 import { Dispatch } from "redux"
 import { Map } from "immutable"
 import { alertAction, AddAlertAction, constraintValidationFormatter, dispatchError } from "../../alerts"
-import {GET_VIEWS} from "./actionTypes";
 
 function loading(isLoading: boolean): LoadingAction {
     return { type: actionTypes.LOADING, isLoading }
@@ -99,7 +99,6 @@ export function fetchViews(testId: number) {
     }
 }
 
-
 export function updateView(testId: number, view: View) {
     return (dispatch: Dispatch<UpdateViewAction | AddAlertAction>): Promise<number> => {
         for (const c of view.components) {
@@ -114,7 +113,7 @@ export function updateView(testId: number, view: View) {
                 return Promise.reject()
             }
         }
-        view.testId = testId;
+        view.testId = testId
         return Api.uIServiceUpdateView(view).then(
             viewId => {
                 const id: number = ensureInteger(viewId)
@@ -168,7 +167,7 @@ export function updateActions(testId: number, actions: Action[]) {
         const promises: any[] = []
         actions.forEach(action => {
             promises.push(
-                action.testId = testId,
+                (action.testId = testId),
                 Api.actionServiceUpdate(action).then(
                     response => {
                         dispatch({
