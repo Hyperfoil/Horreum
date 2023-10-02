@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 
@@ -45,7 +46,8 @@ public class IntArrayType implements UserType<int[]> {
     @Override
     public int[] nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner)
             throws SQLException {
-        final String json = rs.getString(position);
+        if(rs.wasNull())
+            return null;
         Array array = rs.getArray(position);
         if (array == null) {
             return null;
@@ -61,11 +63,13 @@ public class IntArrayType implements UserType<int[]> {
     public void nullSafeSet(PreparedStatement ps, int[] value, int index, SharedSessionContractImplementor session)
             throws SQLException {
         if (value == null) {
-            ps.setNull(index, Types.OTHER);
+            ps.setNull(index, Types.ARRAY);
             return;
         }
         try {
-            ps.setObject(index, value, Types.OTHER);
+            Integer[] castArray = IntStream.of(value).boxed().toArray( Integer[]::new );
+            Array array = ps.getConnection().createArrayOf("integer", castArray);
+            ps.setArray(index, array);
         } catch (final Exception ex) {
             throw new RuntimeException(format("Failed to convert JSON to String: %s", ex.getMessage()), ex);
         }

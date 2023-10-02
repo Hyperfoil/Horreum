@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,6 +24,7 @@ import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.inject.Inject;
 
@@ -737,6 +739,19 @@ public class AlertingServiceTest extends BaseServiceTest {
       drainQueue(changeQueue);
       Thread.sleep(2000);
       checkChanges(test);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testFindLastDatapoints(TestInfo info) throws IOException {
+      populateDataFromFiles();
+      AlertingService.LastDatapointsParams params = new AlertingService.LastDatapointsParams();
+      params.fingerprint = mapper.valueToTree("{ \"fingerprint\":\"benchmark_test\"}").asText();
+      params.variables = new int[] {1,2,3};
+
+      List<AlertingService.DatapointLastTimestamp> timestamps =
+      jsonRequest().body(params).post("/api/alerting/datapoint/last")
+              .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, AlertingService.DatapointLastTimestamp.class));
+      System.out.println("timestamps = " + timestamps);
    }
 
    private void checkChanges(Test test) {
