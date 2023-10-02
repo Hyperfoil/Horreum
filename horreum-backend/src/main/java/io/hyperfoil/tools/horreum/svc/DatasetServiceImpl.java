@@ -23,6 +23,7 @@ import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
+import jakarta.ws.rs.DefaultValue;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.AliasToBeanResultTransformer;
@@ -249,7 +250,8 @@ public class DatasetServiceImpl implements DatasetService {
 
    @WithRoles
    @Override
-   public DatasetService.DatasetList listBySchema(String uri, Integer limit, Integer page, String sort, SortDirection direction) {
+   public DatasetService.DatasetList listBySchema(String uri, Integer limit, Integer page, String sort,
+                                                  @DefaultValue("Descending")  SortDirection direction) {
       StringBuilder sql = new StringBuilder(LIST_SCHEMA_DATASETS);
       // TODO: filtering by fingerprint
       addOrderAndPaging(limit, page, sort, direction, sql);

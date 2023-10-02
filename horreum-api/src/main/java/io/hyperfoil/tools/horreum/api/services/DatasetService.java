@@ -53,7 +53,7 @@ public interface DatasetService {
                             @QueryParam("limit") Integer limit,
                             @QueryParam("page") Integer page,
                             @QueryParam("sort") @DefaultValue("start") String sort,
-                            @QueryParam("direction") @DefaultValue("Descending") SortDirection direction);
+                            @QueryParam("direction") SortDirection direction);
 
    @GET
    @Path("{datasetId}/labelValues")

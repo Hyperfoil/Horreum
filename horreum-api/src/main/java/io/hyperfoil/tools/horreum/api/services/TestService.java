@@ -52,7 +52,7 @@ public interface TestService {
                    @QueryParam("limit") Integer limit,
                    @QueryParam("page") Integer page,
                    @QueryParam("sort") @DefaultValue("name") String sort,
-                   @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
+                   @QueryParam("direction") SortDirection direction);
 
    @Path("summary")
    @GET

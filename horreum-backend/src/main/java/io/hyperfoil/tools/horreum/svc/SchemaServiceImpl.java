@@ -51,6 +51,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import jakarta.ws.rs.DefaultValue;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
@@ -190,7 +191,8 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @WithRoles
    @Override
-   public SchemaQueryResult list(Integer limit, Integer page, String sort, SortDirection direction) {
+   public SchemaQueryResult list(Integer limit, Integer page, String sort,
+                                 @DefaultValue("Ascending")  SortDirection direction) {
       if (sort == null || sort.isEmpty()) {
          sort = "name";
       }

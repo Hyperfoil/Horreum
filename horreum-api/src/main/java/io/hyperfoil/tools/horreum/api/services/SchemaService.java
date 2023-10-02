@@ -7,7 +7,6 @@ import java.util.List;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -26,7 +25,6 @@ import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 
 
@@ -53,7 +51,7 @@ public interface SchemaService {
    SchemaQueryResult list(@QueryParam("limit") Integer limit,
                           @QueryParam("page") Integer page,
                           @QueryParam("sort") String sort,
-                          @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
+                          @QueryParam("direction") SortDirection direction);
 
 
    @GET
