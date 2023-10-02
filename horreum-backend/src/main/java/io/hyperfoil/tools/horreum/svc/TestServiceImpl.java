@@ -187,6 +187,8 @@ public class TestServiceImpl implements TestService {
       if (!identity.hasRole(dto.owner)) {
          throw ServiceException.forbidden("This user does not have the " + dto.owner + " role!");
       }
+      if(dto.name == null || dto.name.isBlank())
+         throw ServiceException.badRequest("Test name can not be empty");
       TestDAO test = TestMapper.to(dto);
       addAuthenticated(test);
       Hibernate.initialize(test.tokens);
