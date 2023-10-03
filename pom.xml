@@ -79,7 +79,7 @@
         <graalvm.version>22.3.3</graalvm.version>
         <quarkus.version>3.4.1</quarkus.version>
         <quarkus-plugin.version>3.4.1</quarkus-plugin.version>
-        <quinoa.version>2.1.0</quinoa.version>
+        <quinoa.version>2.2.0</quinoa.version>
         <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
         <failsafe-plugin.version>3.3.0</failsafe-plugin.version>
         <keycloak-admin-client.version>22.0.1</keycloak-admin-client.version>
