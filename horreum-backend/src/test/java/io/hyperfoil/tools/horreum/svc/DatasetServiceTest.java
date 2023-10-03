@@ -36,7 +36,6 @@ import io.hyperfoil.tools.horreum.api.data.QueryResult;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
-import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -206,9 +205,14 @@ public class DatasetServiceTest extends BaseServiceTest {
 
             updateLabel(schemas[0], labelA, "value", null, new Extractor("value", "$.value", true));
             updateLabel(schemas[1], labelB, "value", "({ x, y }) => x + y", new Extractor("x", "$.value", false), new Extractor("y", "$.value", false));
+            waitForUpdate(updateQueue, ds);
+            waitForUpdate(updateQueue, ds);
             deleteLabel(schemas[1], labelC);
-            waitForUpdate(updateQueue, ds);
-            waitForUpdate(updateQueue, ds);
+            try {
+               Thread.sleep(200);
+            } catch (InterruptedException e) {
+               throw new RuntimeException(e);
+            }
             // delete does not cause any update
 
             values = LabelDAO.Value.<LabelDAO.Value>find("datasetId", ds.id).list();
@@ -234,7 +238,7 @@ public class DatasetServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testSchemaAfterData() throws InterruptedException {
       Test test = createTest(createExampleTest("xxx"));
-      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       BlockingQueue<DataSet.LabelsUpdatedEvent> labelQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
       JsonNode data = JsonNodeFactory.instance.arrayNode()
             .add(JsonNodeFactory.instance.objectNode().put("$schema", "urn:another"))
@@ -242,28 +246,28 @@ public class DatasetServiceTest extends BaseServiceTest {
       int runId = uploadRun(data, test.name);
       DataSet.EventNew firstEvent = dsQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(firstEvent);
-      assertEquals(runId, firstEvent.dataset.runId);
-      TestUtil.assertEmptyArray(firstEvent.dataset.data);
+      assertEquals(runId, firstEvent.runId);
+//      TestUtil.assertEmptyArray(firstEvent.dataset.data);
       // this update is for no label values - there's no schema
       DataSet.LabelsUpdatedEvent firstUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(firstUpdate);
-      assertEquals(firstEvent.dataset.id, firstUpdate.datasetId);
+      assertEquals(firstEvent.datasetId, firstUpdate.datasetId);
 
-      assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM dataset_schemas").getSingleResult()).intValue());
+      assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM dataset_schemas where dataset_id = ?1").setParameter(1, firstEvent.datasetId).getSingleResult()).intValue());
       Schema schema = createSchema("Foobar", "urn:foobar");
 
       DataSet.EventNew secondEvent = dsQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(secondEvent);
-      assertEquals(runId, secondEvent.dataset.runId);
+      assertEquals(runId, secondEvent.runId);
       // empty again - we have schema but no labels defined
       DataSet.LabelsUpdatedEvent secondUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(secondUpdate);
-      assertEquals(secondEvent.dataset.id, secondUpdate.datasetId);
+      assertEquals(secondEvent.datasetId, secondUpdate.datasetId);
 
       @SuppressWarnings("unchecked") List<Object[]> ds =
-            em.createNativeQuery("SELECT dataset_id, index FROM dataset_schemas").getResultList();
+            em.createNativeQuery("SELECT dataset_id, index FROM dataset_schemas where dataset_id = ?1").setParameter(1, secondEvent.datasetId).getResultList();
       assertEquals(1, ds.size());
-      assertEquals(secondEvent.dataset.id, ds.get(0)[0]);
+      assertEquals(secondEvent.datasetId, ds.get(0)[0]);
       assertEquals(0, ds.get(0)[1]);
       assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM label_values").getSingleResult()).intValue());
 
@@ -271,9 +275,9 @@ public class DatasetServiceTest extends BaseServiceTest {
       // not empty anymore
       DataSet.LabelsUpdatedEvent thirdUpdate = labelQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(thirdUpdate);
-      assertEquals(secondEvent.dataset.id, thirdUpdate.datasetId);
+      assertEquals(secondEvent.datasetId, thirdUpdate.datasetId);
 
-      List<LabelDAO.Value> values = LabelDAO.Value.listAll();
+      List<LabelDAO.Value> values = LabelDAO.Value.list("datasetId", thirdUpdate.datasetId);
       assertEquals(1, values.size());
       assertEquals(42, values.get(0).value.asInt());
    }

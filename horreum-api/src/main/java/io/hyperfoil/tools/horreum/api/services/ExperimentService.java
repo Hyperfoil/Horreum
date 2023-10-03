@@ -102,12 +102,7 @@ public interface ExperimentService {
       public String result;
 
       public ComparisonResult() {
-         this.overall = null;
-         this.experimentValue = 0.0;
-         this.baselineValue = 0.0;
-         this.result = null;
       }
-
       public ComparisonResult(BetterOrWorse overall, double experimentValue, double baselineValue, String result) {
          this.overall = overall;
          this.experimentValue = experimentValue;

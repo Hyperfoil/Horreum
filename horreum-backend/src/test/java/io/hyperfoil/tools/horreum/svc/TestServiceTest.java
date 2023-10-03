@@ -55,10 +55,12 @@ public class TestServiceTest extends BaseServiceTest {
          assertNotNull(TestDAO.findById(test.id));
       }
 
+      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       int runId = uploadRun("{ \"foo\" : \"bar\" }", test.name);
+      assertNotNull(dsQueue.poll(10, TimeUnit.SECONDS));
 
-      deleteTest(test);
       BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, MessageBusChannels.RUN_TRASHED, id -> id == runId);
+      deleteTest(test);
       assertNotNull(events.poll(10, TimeUnit.SECONDS));
 
       em.clear();
@@ -78,7 +80,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       final int NUM_DATASETS = 5;
       for (int i = 0; i < NUM_DATASETS; ++i) {
          uploadRun(runWithValue(i, schema), test.name);
@@ -100,7 +102,7 @@ public class TestServiceTest extends BaseServiceTest {
       for (int i = 0; i < NUM_DATASETS; ++i) {
          DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
-         assertTrue(event.dataset.id > maxId);
+         assertTrue(event.datasetId > maxId);
          assertTrue(event.isRecalculation);
       }
       datasets = DataSetDAO.list("testid", test.id);
@@ -134,7 +136,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       uploadRun(runWithValue(42, schema), test.name);
       DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
@@ -152,7 +154,7 @@ public class TestServiceTest extends BaseServiceTest {
          em.clear();
          @SuppressWarnings("unchecked") List<JsonNode> list = em.createNativeQuery(
                "SELECT value FROM dataset_view WHERE dataset_id = ?1 AND view_id = ?2")
-               .setParameter(1, event.dataset.id).setParameter(2, defaultView.id)
+               .setParameter(1, event.datasetId).setParameter(2, defaultView.id)
                .unwrap(NativeQuery.class).addScalar("value", JsonBinaryType.INSTANCE)
                .getResultList();
          return !list.isEmpty() && !list.get(0).isEmpty();
@@ -189,16 +191,16 @@ public class TestServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testImportExportWithWipe() {
+   public void testImportExportWithWipe() throws InterruptedException {
       testImportExport(true);
    }
 
    @org.junit.jupiter.api.Test
-   public void testImportExportWithoutWipe() {
+   public void testImportExportWithoutWipe() throws InterruptedException {
       testImportExport(false);
    }
 
-   private void testImportExport(boolean wipe) {
+   private void testImportExport(boolean wipe) throws InterruptedException {
       Schema schema = createSchema("Example", "urn:example:1.0");
       Transformer transformer = createTransformer("Foobar", schema, null, new Extractor("foo", "$.foo", false));
 
@@ -231,7 +233,9 @@ public class TestServiceTest extends BaseServiceTest {
             .statusCode(200).extract().body().asString();
 
       if (wipe) {
+         BlockingQueue<Test> events = eventConsumerQueue(Test.class, MessageBusChannels.TEST_DELETED, t -> (t.id == test.id));
          deleteTest(test);
+         assertNotNull(events.poll(10, TimeUnit.SECONDS));
 
          TestUtil.eventually(() -> {
             em.clear();

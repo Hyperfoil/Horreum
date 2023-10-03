@@ -33,6 +33,7 @@ import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -559,7 +560,7 @@ public class BaseServiceTest {
    }
 
    protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       try {
          RunDAO run = new RunDAO();
          tm.begin();
@@ -568,7 +569,12 @@ public class BaseServiceTest {
             run.testid = test.id;
             run.start = run.stop = Instant.now();
             run.owner = UPLOADER_ROLES[0];
-            run.persistAndFlush();
+            Response response = jsonRequest()
+                 .auth()
+                 .oauth2(getUploaderToken())
+                 .body(run)
+                 .post("/api/run/test");
+            run.id = response.body().as(Integer.class);
          } finally {
             if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
                tm.commit();
@@ -579,14 +585,15 @@ public class BaseServiceTest {
          }
          DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
-         assertNotNull(event.dataset);
+         assertTrue(event.datasetId > 0);
          // only to cover the summary call in API
-         jsonRequest().get("/api/dataset/" + event.dataset.id + "/summary").then().statusCode(200);
-         T value = testLogic.apply(event.dataset);
+         jsonRequest().get("/api/dataset/" + event.datasetId + "/summary").then().statusCode(200);
+         T value = testLogic.apply(DataSetMapper.from(
+                 DataSetDAO.<DataSetDAO>findById(event.datasetId)));
          tm.begin();
          Throwable error = null;
          try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
-            DataSetDAO oldDs = DataSetDAO.findById(event.dataset.id);
+            DataSetDAO oldDs = DataSetDAO.findById(event.datasetId);
             if (oldDs != null) {
                oldDs.delete();
             }

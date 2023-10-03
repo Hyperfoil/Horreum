@@ -3,15 +3,12 @@ package io.hyperfoil.tools.horreum.svc;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
-import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -29,12 +26,10 @@ public class EventAggregator {
    @Inject
    MessageBus messageBus;
 
-   private long timerId = -1;
+   @Inject
+   ServiceMediator mediator;
 
-   @PostConstruct
-   void init() {
-      messageBus.subscribe(MessageBusChannels.CHANGE_NEW, "EventAggregator", Change.Event.class, this::onNewChange);
-   }
+   private long timerId = -1;
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
@@ -54,7 +49,7 @@ public class EventAggregator {
          if (next == null) {
             return;
          } else if (next.emitTimestamp() <= now) {
-            messageBus.publish(MessageBusChannels.DATASET_CHANGES_NEW, next.dataset.testId, next);
+            mediator.executeBlocking(() -> mediator.newDatasetChanges(next)) ;
             datasetChanges.remove(next.dataset.id);
          } else {
             if (timerId >= 0) {

@@ -24,4 +24,13 @@ public class ExtractorDAO {
       this.jsonpath = jsonpath;
       this.array = array;
    }
+
+   @Override
+   public String toString() {
+      return "ExtractorDAO{" +
+              "name='" + name + '\'' +
+              ", jsonpath='" + jsonpath + '\'' +
+              ", array=" + array +
+              '}';
+   }
 }

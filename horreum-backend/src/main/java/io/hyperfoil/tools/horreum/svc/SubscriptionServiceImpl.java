@@ -45,14 +45,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    @Inject
    SecurityIdentity identity;
 
-   @Inject
-   MessageBus messageBus;
-
-   @PostConstruct
-   void init() {
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "SubscriptionService", Test.class, this::onTestDelete);
-   }
-
    private static Set<String> merge(Set<String> set, String item) {
       if (set == null) {
          set = new HashSet<>();
@@ -250,9 +242,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(Test test) {
-      var subscriptions = WatchDAO.list("test.id = ?1", test.id);
-      log.infof("Deleting %d subscriptions for test %s (%d)", subscriptions.size(), test.name, test.id);
+   public void onTestDelete(int testId) {
+      var subscriptions = WatchDAO.list("test.id = ?1", testId);
+      log.infof("Deleting %d subscriptions for test (%d)", subscriptions.size(), testId);
       for (var subscription : subscriptions) {
          subscription.delete();
       }

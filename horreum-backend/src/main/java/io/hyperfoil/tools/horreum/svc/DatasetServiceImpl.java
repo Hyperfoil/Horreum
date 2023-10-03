@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -7,9 +8,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -37,7 +39,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
-import io.hyperfoil.tools.horreum.api.data.QueryResult;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
@@ -142,10 +143,10 @@ public class DatasetServiceImpl implements DatasetService {
    EntityManager em;
 
    @Inject
-   SqlServiceImpl sqlService;
+   MessageBus messageBus;
 
    @Inject
-   MessageBus messageBus;
+   ServiceMediator mediator;
 
    @Inject
    SecurityIdentity identity;
@@ -155,12 +156,6 @@ public class DatasetServiceImpl implements DatasetService {
    // probably due to false sharing of locks. For some reason even using advisory locks in DB does not
    // solve the issue so we have to serialize this even outside the problematic transactions.
    private final ReentrantLock recalculationLock = new ReentrantLock();
-
-   @PostConstruct
-   void init() {
-      sqlService.registerListener("calculate_labels", this::onLabelChanged);
-      messageBus.subscribe(MessageBusChannels.DATASET_NEW, "DatasetService", DataSet.EventNew.class, this::onNewDataset);
-   }
 
    @PermitAll
    @WithRoles
@@ -357,7 +352,7 @@ public class DatasetServiceImpl implements DatasetService {
       return DataSetMapper.from(dataset);
    }
 
-   private void onLabelChanged(String param) {
+   public void onLabelChanged(String param) {
       String[] parts = param.split(";");
       if (parts.length != 3) {
          log.errorf("Invalid parameter to onLabelChanged: %s", param);
@@ -405,13 +400,26 @@ public class DatasetServiceImpl implements DatasetService {
          LabelDAO.Value.delete("datasetId = ?1 AND labelId = ?2", datasetId, queryLabelId);
       }
 
+      FingerprintDAO.deleteById(datasetId);
       Util.evaluateMany(extracted, row -> (String) row[2], row -> (row[3] instanceof ArrayNode ? flatten((ArrayNode) row[3]) : (JsonNode) row[3]),
-            (row, result) -> createLabel(datasetId, (int) row[0], Util.convertToJson(result)),
-            row -> createLabel(datasetId, (int) row[0], (JsonNode) row[3]),
+            (row, result) -> createLabel(datasetId, testId, (int) row[0], Util.convertToJson(result)),
+            row -> createLabel(datasetId, testId, (int) row[0], (JsonNode) row[3]),
             (row, e, jsCode) -> logMessage(datasetId, PersistentLogDAO.ERROR,
                   "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
             out -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
-      messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+
+      createFingerprint(datasetId, testId);
+      mediator.updateLabels(new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+      if(mediator.testMode())
+         messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+   }
+
+   @Transactional
+   public void deleteDataset(int datasetId) {
+      em.createNativeQuery("DELETE FROM label_values WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
+      em.createNativeQuery("DELETE FROM dataset_schemas WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
+      em.createNativeQuery("DELETE FROM fingerprint WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
+      DataSetDAO.deleteById(datasetId);
    }
 
    private ArrayNode flatten(ArrayNode bucket){
@@ -448,12 +456,45 @@ public class DatasetServiceImpl implements DatasetService {
       logMessage(datasetId, PersistentLogDAO.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
    }
 
-   private void createLabel(int datasetId, int labelId, JsonNode value) {
+   private void createLabel(int datasetId, int testId, int labelId, JsonNode value) {
       LabelDAO.Value labelValue = new LabelDAO.Value();
       labelValue.datasetId = datasetId;
       labelValue.labelId = labelId;
       labelValue.value = value;
       labelValue.persist();
+   }
+    private void createFingerprint(int datasetId, int testId) {
+      JsonNode json = em.createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
+              .setParameter(1, testId).getSingleResult();
+      if(json == null)
+         return;
+
+      ObjectNode fpNode = JsonNodeFactory.instance.objectNode();
+      List<LabelDAO.Value> labelValues = LabelDAO.Value.find("datasetId", datasetId).list();
+      List<String[]> labelPairs = new ArrayList<>(labelValues.size());
+      for(var lv : labelValues)
+         labelPairs.add(new String[]{LabelDAO.<LabelDAO>findById(lv.labelId).name, lv.value.asText()});
+
+      for(int i=0; i < json.size(); i++)
+         for(var name : labelPairs) {
+            if (json.get(i).asText().equals(name[0]))
+               fpNode.put(name[0], name[1]);
+         }
+
+      FingerprintDAO fp = new FingerprintDAO();
+      fp.datasetId = datasetId;
+      fp.dataset = DataSetDAO.findById(datasetId);
+      fp.fingerprint = fpNode;
+      if(fp.datasetId > 0 && fp.dataset != null)
+         fp.persist();
+   }
+
+   @Transactional
+   void updateFingerprints(int testId) {
+      for(var dataset : DataSetDAO.<DataSetDAO>find("testid", testId).list()) {
+         FingerprintDAO.deleteById(dataset.id);
+         createFingerprint(dataset.id, testId);
+      }
    }
 
    void withRecalculationLock(Runnable runnable) {
@@ -466,7 +507,14 @@ public class DatasetServiceImpl implements DatasetService {
    }
 
    public void onNewDataset(DataSet.EventNew event) {
-      withRecalculationLock(() -> calculateLabels(event.dataset.testid, event.dataset.id, -1, event.isRecalculation));
+      withRecalculationLock(() -> calculateLabels(event.testId, event.datasetId, event.labelId, event.isRecalculation));
+   }
+
+   public void onNewDataset(int testId, int datasetId, int labelId, boolean isRecalculation) {
+      withRecalculationLock(() -> calculateLabels(testId, datasetId, labelId, isRecalculation));
+   }
+   public void onNewDatasetNoLock(DataSet.EventNew event) {
+      calculateLabels(event.testId, event.datasetId, event.labelId , event.isRecalculation);
    }
 
    @Transactional(Transactional.TxType.REQUIRES_NEW)

@@ -72,8 +72,6 @@ public class NotificationServiceImpl implements NotificationService {
    @PostConstruct
    public void init() {
       notificationPlugins.forEach(plugin -> plugins.put(plugin.method(), plugin));
-      messageBus.subscribe(MessageBusChannels.DATASET_CHANGES_NEW, "NotificationService", DatasetChanges.class, this::onNewChanges);
-      messageBus.subscribe(MessageBusChannels.DATASET_MISSING_VALUES, "NotificationService", MissingValuesEvent.class, this::onMissingValues);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -109,7 +107,7 @@ public class NotificationServiceImpl implements NotificationService {
       List<Object[]> results = em.createNativeQuery(GET_NOTIFICATIONS)
             .setParameter(1, testId).getResultList();
       if (results.isEmpty()) {
-         log.warnf("There are no subscribers for notification on test %d!", testId);
+         log.infof("There are no subscribers for notification on test %d!", testId);
       }
       for (Object[] pair : results) {
          if (pair.length != 3) {

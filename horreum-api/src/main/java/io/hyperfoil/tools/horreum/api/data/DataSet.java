@@ -117,19 +117,39 @@ public class DataSet {
     }
 
     public static class EventNew {
-        public DataSet dataset;
+
+        public int datasetId;
+        public int testId;
+        public int runId;
+        public int labelId = -1;
         public boolean isRecalculation;
 
         public EventNew() {
         }
 
-        public EventNew(DataSet dataset, boolean isRecalculation) {
-            this.dataset = dataset;
+        public EventNew(DataSet dataSet, boolean isRecalculation) {
+            this.datasetId = dataSet.id;
+            this.testId = dataSet.testid;
+            this.runId = dataSet.runId;
+            this.isRecalculation = isRecalculation;
+        }
+        public EventNew(int datasetId, int testId, int runId, int labelId, boolean isRecalculation) {
+            this.datasetId = datasetId;
+            this.testId = testId;
+            this.runId = runId;
+            this.labelId = labelId;
             this.isRecalculation = isRecalculation;
         }
 
+        @Override
         public String toString() {
-            return "DataSetDTO.EventNew{dataset=" + this.dataset.id + " (" + this.dataset.runId + "/" + this.dataset.ordinal + "), isRecalculation=" + this.isRecalculation + '}';
+            return "EventNew{" +
+                    "datasetId=" + datasetId +
+                    ", testId=" + testId +
+                    ", runId=" + runId +
+                    ", labelId=" + labelId +
+                    ", isRecalculation=" + isRecalculation +
+                    '}';
         }
     }
 }

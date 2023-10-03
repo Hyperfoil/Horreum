@@ -6,10 +6,8 @@ import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import io.hyperfoil.tools.horreum.mapper.ActionMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
 import io.hyperfoil.tools.horreum.mapper.TestTokenMapper;
-import io.hyperfoil.tools.horreum.mapper.ViewMapper;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.server.EncryptionManager;
@@ -85,25 +83,10 @@ public class TestServiceImpl implements TestService {
    SecurityIdentity identity;
 
    @Inject
-   RunServiceImpl runService;
-
-   @Inject
-   DatasetServiceImpl datasetService;
-
-   @Inject
-   ActionServiceImpl actionService;
-
-   @Inject
-   AlertingServiceImpl alertingService;
-
-   @Inject
-   ExperimentServiceImpl experimentService;
-
-   @Inject
-   SubscriptionServiceImpl subscriptionService;
-
-   @Inject
    EncryptionManager encryptionManager;
+
+   @Inject
+   ServiceMediator mediator;
 
    private final ConcurrentHashMap<Integer, RecalculationStatus> recalculations = new ConcurrentHashMap<>();
 
@@ -119,8 +102,10 @@ public class TestServiceImpl implements TestService {
          throw ServiceException.forbidden("You are not an owner of test " + id);
       }
       log.debugf("Deleting test %s (%d)", test.name, test.id);
+      mediator.deleteTest(test.id);
       test.delete();
-      messageBus.publish(MessageBusChannels.TEST_DELETED, test.id, TestMapper.from(test));
+      if(mediator.testMode())
+         messageBus.publish(MessageBusChannels.TEST_DELETED, test.id, TestMapper.from(test));
    }
 
    @Override
@@ -213,9 +198,16 @@ public class TestServiceImpl implements TestService {
             throw ServiceException.forbidden("This user does not have the " + existing.owner + " role!");
          }
          // We're not updating views using this method
+         boolean shouldRecalculateLables = false;
+         if(!Objects.equals(test.fingerprintFilter,existing.fingerprintFilter) ||
+                 !Objects.equals(test.fingerprintLabels,existing.fingerprintLabels))
+            shouldRecalculateLables = true;
+
          test.views = existing.views;
          test.tokens = existing.tokens;
          em.merge(test);
+         if(shouldRecalculateLables)
+           mediator.updateFingerprints(test.id);
       } else {
          if (test.views != null) {
             test.views.forEach(ViewDAO::ensureLinked);
@@ -235,7 +227,9 @@ public class TestServiceImpl implements TestService {
                throw new WebApplicationException(e, Response.serverError().build());
             }
          }
-         messageBus.publish(MessageBusChannels.TEST_NEW, test.id, TestMapper.from(test));
+         mediator.newTest(TestMapper.from(test));
+         if(mediator.testMode())
+            messageBus.publish(MessageBusChannels.TEST_NEW, test.id, TestMapper.from(test));
       }
    }
 
@@ -295,7 +289,7 @@ public class TestServiceImpl implements TestService {
          testQuery.setParameter(1, folder);
          Roles.addRolesParam(identity, testQuery, 2, roles);
       }
-      SqlServiceImpl.setResultTransformer(testQuery, Transformers.aliasToBean(TestSummary.class));
+      Util.setResultTransformer(testQuery, Transformers.aliasToBean(TestSummary.class));
 
       TestListing listing = new TestListing();
       //noinspection unchecked
@@ -502,10 +496,13 @@ public class TestServiceImpl implements TestService {
          int runId = (int) results.get();
          log.debugf("Recalculate DataSets for run %d - forcing recalculation for test %d (%s)", runId, testId, test.name);
          // transform will add proper roles anyway
-         messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> {
+//         messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> {
+//         mediator.executeBlocking(() -> mediator.transform(runId, true));
+         mediator.executeBlocking(() -> mediator.withRecalculationLock(() -> {
             int newDatasets = 0;
             try {
-               newDatasets = runService.transform(runId, true);
+               newDatasets = mediator.transform(runId, true);
+//               mediator.queueRunRecalculation(runId);
             } finally {
                synchronized (status) {
                   status.finished++;
@@ -572,10 +569,7 @@ public class TestServiceImpl implements TestService {
             }
          }
       }
-      export.set("alerting", alertingService.exportTest(testId));
-      export.set("actions", actionService.exportTest(testId));
-      export.set("experiments", experimentService.exportTest(testId));
-      export.set("subscriptions", subscriptionService.exportSubscriptions(testId));
+      mediator.exportTest(export, testId);
       return export.toString();
    }
 
@@ -639,14 +633,7 @@ public class TestServiceImpl implements TestService {
       } catch (JsonProcessingException e) {
          throw ServiceException.badRequest("Failed to deserialize test: " + e.getMessage());
       }
-      if(alerting != null)
-         alertingService.importTest(dto.id, alerting, forceUseTestId);
-      if(actions != null)
-         actionService.importTest(dto.id, actions, forceUseTestId);
-      if(experiments != null)
-         experimentService.importTest(dto.id, experiments, forceUseTestId);
-      if(subscriptions != null)
-         subscriptionService.importSubscriptions(dto.id, subscriptions);
+      mediator.importTestToAll(dto.id, alerting, actions, experiments, subscriptions, forceUseTestId);
    }
 
    protected TestDAO getTestForUpdate(int testId) {

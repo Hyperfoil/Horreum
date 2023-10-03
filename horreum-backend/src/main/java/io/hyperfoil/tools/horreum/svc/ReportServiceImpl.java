@@ -69,15 +69,7 @@ public class ReportServiceImpl implements ReportService {
    EntityManager em;
 
    @Inject
-   MessageBus messageBus;
-
-   @Inject
    TimeService timeService;
-
-   @PostConstruct
-   void init() {
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ReportService", Test.class, this::onTestDelete);
-   }
 
    @PermitAll
    @WithRoles
@@ -717,9 +709,9 @@ public class ReportServiceImpl implements ReportService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(Test test) {
+   public void onTestDelete(int testId) {
       int changedRows = em.createNativeQuery("UPDATE tablereportconfig SET testid = NULL WHERE testid = ?")
-            .setParameter(1, test.id).executeUpdate();
-      log.infof("Disowned %d report configs as test %s(%d) was deleted.", changedRows, test.name, test.id);
+            .setParameter(1, testId).executeUpdate();
+      log.infof("Disowned %d report configs as test (%d) was deleted.", changedRows, testId);
    }
 }

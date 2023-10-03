@@ -10,6 +10,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.Type;
 
+import java.util.Objects;
+
 @Embeddable
 public class ValidationErrorDAO {
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -26,5 +28,26 @@ public class ValidationErrorDAO {
 
    public Integer getSchemaId() {
       return schema == null ? null : schema.id;
+   }
+
+   @Override
+   public String toString() {
+      return "ValidationErrorDAO{" +
+              "schema=" + schema.id +
+              ", error=" + error +
+              '}';
+   }
+
+   @Override
+   public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      ValidationErrorDAO that = (ValidationErrorDAO) o;
+      return Objects.equals(schema.id, that.schema.id) && Objects.equals(error, that.error);
+   }
+
+   @Override
+   public int hashCode() {
+      return Objects.hash(schema.id, error);
    }
 }

@@ -45,15 +45,7 @@ public class LogServiceImpl implements LogService {
    String transformationLogMaxLifespan;
 
    @Inject
-   MessageBus messageBus;
-
-   @Inject
    TimeService timeService;
-
-   @PostConstruct
-   void init() {
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "LogService", Test.class, this::onTestDelete);
-   }
 
    private Integer withDefault(Integer value, Integer defValue) {
       return value != null ? value : defValue;
@@ -178,9 +170,9 @@ public class LogServiceImpl implements LogService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(Test test) {
-      DatasetLogDAO.delete("test.id", test.id);
-      TransformationLogDAO.delete("test.id", test.id);
+   public void onTestDelete(int testId) {
+      DatasetLogDAO.delete("test.id", testId);
+      TransformationLogDAO.delete("test.id", testId);
    }
 
    @Scheduled(every = "{horreum.transformationlog.check}")

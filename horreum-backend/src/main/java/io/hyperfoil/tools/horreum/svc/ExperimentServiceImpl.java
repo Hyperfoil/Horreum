@@ -11,10 +11,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
-import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -62,15 +60,10 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @Inject
    EntityManager em;
-
+   @Inject
+   ServiceMediator mediator;
    @Inject
    MessageBus messageBus;
-
-   @PostConstruct
-   void init() {
-      messageBus.subscribe(MessageBusChannels.DATAPOINT_PROCESSED, "ExperimentService", DataPoint.DatasetProcessedEvent.class, this::onDatapointsCreated);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ExperimentService", Test.class, this::onTestDeleted);
-   }
 
    @WithRoles
    @PermitAll
@@ -148,9 +141,9 @@ public class ExperimentServiceImpl implements ExperimentService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDeleted(Test test) {
+   public void onTestDeleted(int testId) {
       // we need to iterate in order to cascade the operation
-      for (var profile : ExperimentProfileDAO.list("test.id", test.id)) {
+      for (var profile : ExperimentProfileDAO.list("test.id", testId)) {
          profile.delete();
       }
    }
@@ -273,7 +266,7 @@ public class ExperimentServiceImpl implements ExperimentService {
          }
 
          Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id IN ?1 ORDER BY start DESC");
-         SqlServiceImpl.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSet.Info.class));
+         Util.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSet.Info.class));
          @SuppressWarnings("unchecked") List<DataSet.Info> baseline =
                (List<DataSet.Info>) datasetQuery.setParameter(1, entry.getValue()).getResultList();
 
@@ -285,9 +278,12 @@ public class ExperimentServiceImpl implements ExperimentService {
                .addScalar("value", JsonBinaryType.INSTANCE)
                .getSingleResult();
          Hibernate.initialize(profile.test.name);
-         resultConsumer.accept(new ExperimentResult(ExperimentProfileMapper.from(profile),
+         ExperimentResult result = new ExperimentResult(ExperimentProfileMapper.from(profile),
                  profileLogs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
-                 info, baseline, results, extraLabels, notify));
+                 info, baseline, results, extraLabels, notify);
+         mediator.newExperimentResult(result);
+         if(mediator.testMode())
+            resultConsumer.accept(result);
       }
    }
 
