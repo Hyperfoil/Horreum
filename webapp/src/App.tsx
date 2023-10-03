@@ -2,8 +2,8 @@ import { Component } from "react"
 import "@patternfly/patternfly/patternfly.css" //have to use this import to customize scss-variables.scss
 
 import { Nav, NavItem, NavList, Page, PageHeader, PageHeaderTools } from "@patternfly/react-core"
-import { ConnectedRouter } from "connected-react-router"
-import { NavLink } from "react-router-dom"
+ 
+import {Router, NavLink } from "react-router-dom"
 
 import { Provider, useSelector } from "react-redux"
 import { Route, Switch } from "react-router"
@@ -53,7 +53,8 @@ class App extends Component {
 function Main() {
     const isAdmin = useSelector(isAdminSelector)
     return (
-        <ConnectedRouter history={history}>
+        <Provider store={store}>
+        <Router history={history}>
             <Banner />
             <Page
                 header={
@@ -70,7 +71,7 @@ function Main() {
                                     <NavItem itemId={0}>
                                         <NavLink
                                             to="/test"
-                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                         >
                                             Tests
                                         </NavLink>
@@ -78,7 +79,7 @@ function Main() {
                                     <NavItem itemId={1}>
                                         <NavLink
                                             to="/schema"
-                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                         >
                                             Schema
                                         </NavLink>
@@ -86,7 +87,7 @@ function Main() {
                                     <NavItem itemId={2}>
                                         <NavLink
                                             to="/changes"
-                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                         >
                                             Changes
                                         </NavLink>
@@ -94,7 +95,7 @@ function Main() {
                                     <NavItem itemId={3}>
                                         <NavLink
                                             to="/reports"
-                                            style={{ fontWeight: "bold", color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
+                                            style={{ color: "var(--pf-c-nav--m-horizontal__link--Color)" }}
                                         >
                                             Reports
                                         </NavLink>
@@ -146,7 +147,9 @@ function Main() {
                     <Route exact path="/usersettings" component={UserSettings} />
                 </Switch>
             </Page>
-        </ConnectedRouter>
+            {/* <ContextHelp /> */}
+        </Router>
+    </Provider>
     )
 }
 

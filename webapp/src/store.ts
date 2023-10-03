@@ -1,7 +1,12 @@
 import { createBrowserHistory } from "history"
 import { createStore, combineReducers, compose, applyMiddleware, StoreEnhancer } from "redux"
-import { connectRouter } from "connected-react-router"
+import { createReduxHistoryContext } from "redux-first-history"
 import thunk from "redux-thunk"
+
+const { routerMiddleware, routerReducer } = createReduxHistoryContext({
+    history: createBrowserHistory(),
+    //other options if needed
+})
 
 import { RunsState, reducer as runReducer } from "./domain/runs/reducers"
 import { TestsState, reducer as testReducer } from "./domain/tests/reducers"
@@ -22,7 +27,7 @@ export interface State {
 }
 
 const appReducers = combineReducers({
-    router: connectRouter(history),
+    router: routerReducer,
     runs: runReducer,
     tests: testReducer,
     actions: actionReducer,
@@ -30,7 +35,7 @@ const appReducers = combineReducers({
     auth: authReducer,
     alerts: alertReducer,
 })
-const enhancer = compose(applyMiddleware(thunk), enableDevMode())
+const enhancer = compose(applyMiddleware(thunk), applyMiddleware(routerMiddleware), enableDevMode())
 const store = createStore(appReducers, enhancer)
 
 export function enableDevMode(): StoreEnhancer {
