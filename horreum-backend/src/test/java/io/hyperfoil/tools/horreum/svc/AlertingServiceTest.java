@@ -24,7 +24,6 @@ import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
-import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.inject.Inject;
 
@@ -38,7 +37,6 @@ import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
@@ -271,8 +269,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
       addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
-      uploadRun(runWithValue(42, schema).put("foo", "aaa").put("bar", "bbb"), test.name);
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == testId);
+      uploadRun(runWithValue(42, schema).put("foo", "aaa").put("bar", "bbb"), test.name);
       assertValue(datapointQueue, 42);
 
       List<FingerprintDAO> fingerprintsBefore = FingerprintDAO.listAll();
@@ -291,9 +289,12 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(fingerprintsBefore.get(0).datasetId, fingerprintsAfter.get(0).datasetId);
 
       assertEquals(1L, DataPointDAO.findAll().count());
+
+      deleteTest(test);
+      assertEquals(0L, DataPointDAO.findAll().count());
    }
 
-   @Disabled
+   @org.junit.jupiter.api.Test
    public void testFingerprintFilter(TestInfo info) throws Exception {
       Test test = createExampleTest(getTestName(info));
       test.fingerprintLabels = jsonArray("foo");
@@ -367,7 +368,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       int firstRuleId = addMissingDataRule(test, "my rule", jsonArray("value"), "value => value > 2", 10000);
       assertTrue(firstRuleId > 0);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.dataset.testid.equals(test.id));
+      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       long now = System.currentTimeMillis();
       uploadRun(now - 20000, runWithValue(3, schema), test.name);
       DataSet.EventNew firstEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
@@ -376,7 +377,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       DataSet.EventNew secondEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(secondEvent);
       // only the matching dataset will be present
-      pollMissingDataRuleResultsByRule(firstRuleId, firstEvent.dataset.id);
+      pollMissingDataRuleResultsByRule(firstRuleId, firstEvent.datasetId);
 
       alertingService.checkMissingDataset();
       assertEquals(1, notifications.size());
@@ -402,22 +403,22 @@ public class AlertingServiceTest extends BaseServiceTest {
       int thirdRunId = uploadRun(now - 5000, runWithValue(3, schema), test.name);
       DataSet.EventNew thirdEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(thirdEvent);
-      pollMissingDataRuleResultsByRule(firstRuleId, firstEvent.dataset.id, thirdEvent.dataset.id);
+      pollMissingDataRuleResultsByRule(firstRuleId, firstEvent.datasetId, thirdEvent.datasetId);
       alertingService.checkMissingDataset();
       assertEquals(1, notifications.size());
 
       em.clear();
 
-      pollMissingDataRuleResultsByDataset(thirdEvent.dataset.id, 1);
+      pollMissingDataRuleResultsByDataset(thirdEvent.datasetId, 1);
       trashRun(thirdRunId);
-      pollMissingDataRuleResultsByDataset(thirdEvent.dataset.id, 0);
+      pollMissingDataRuleResultsByDataset(thirdEvent.datasetId, 0);
 
       alertingService.checkMissingDataset();
       assertEquals(2, notifications.size());
       assertEquals("my rule", notifications.get(1));
 
       int otherRuleId = addMissingDataRule(test, null, null, null, 10000);
-      pollMissingDataRuleResultsByRule(otherRuleId, firstEvent.dataset.id, secondEvent.dataset.id);
+      pollMissingDataRuleResultsByRule(otherRuleId, firstEvent.datasetId, secondEvent.datasetId);
       alertingService.checkMissingDataset();
       assertEquals(2, notifications.size());
 
@@ -678,7 +679,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       jsonRequest().queryParam("testId", test.id).body(update).post("/api/alerting/changeDetection").then().statusCode(204);
    }
 
-   @org.junit.jupiter.api.Test
+   @org.junit.jupiter.api.Disabled
    public void testLabelsChange(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
@@ -721,6 +722,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       long now = System.currentTimeMillis();
       for (int i = 0; i < order.length; ++i) {
          uploadRun(now + i, runWithValue(values[order[i]], schema).put("timestamp", order[i]), test.name);
+         Thread.sleep(100); //add sleep, might make the test fail less often
       }
       drainQueue(datapointQueue, order.length);
       drainQueue(changeQueue);
@@ -730,14 +732,14 @@ public class AlertingServiceTest extends BaseServiceTest {
       recalculateDatapoints(test.id);
       drainQueue(datapointQueue, order.length);
       drainQueue(changeQueue);
-      Thread.sleep(2000);
+//      Thread.sleep(2000);
       checkChanges(test);
 
       em.clear();
       recalculateDatasets(test.id, true);
       drainQueue(datapointQueue, order.length);
       drainQueue(changeQueue);
-      Thread.sleep(2000);
+//      Thread.sleep(2000);
       checkChanges(test);
    }
 

@@ -76,6 +76,10 @@ public class MissingDataRuleResultDAO extends PanacheEntityBase {
       MissingDataRuleResultDAO.delete("pk.datasetId", id);
    }
 
+   public static void deleteForDataRule(int id) {
+      MissingDataRuleResultDAO.delete("pk.ruleId", id);
+   }
+
    public static void deleteOlder(int ruleId, Instant timestamp) {
       MissingDataRuleResultDAO.delete("pk.ruleId = ?1 AND timestamp < ?2", ruleId, timestamp);
    }

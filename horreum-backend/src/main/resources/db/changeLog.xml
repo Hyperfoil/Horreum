@@ -4126,4 +4126,47 @@
                                  baseTableName="datapoint" baseColumnNames="dataset_id"
                                  referencedTableName="dataset" referencedColumnNames="id" />
     </changeSet>
+    <changeSet id="109" author="stalep">
+        <sql>
+            DROP TRIGGER IF EXISTS before_run_delete ON run;
+            DROP FUNCTION IF EXISTS before_run_delete_func();
+            DROP TRIGGER IF EXISTS before_schema_delete ON schema;
+            DROP FUNCTION IF EXISTS before_schema_delete_func();
+            DROP TRIGGER IF EXISTS mdr_before_delete ON test;
+            DROP FUNCTION IF EXISTS mdr_on_test_delete();
+            DROP TRIGGER IF EXISTS mdr_before_delete ON missingdata_rule;
+            DROP FUNCTION IF EXISTS mdr_on_rule_delete();
+            DROP TRIGGER IF EXISTS mdr_before_delete ON dataset;
+            DROP FUNCTION IF EXISTS mdr_on_dataset_delete();
+            DROP TRIGGER IF EXISTS rs_after_run_trash ON run;
+            DROP FUNCTION IF EXISTS rs_after_run_trash();
+            DROP TRIGGER IF EXISTS after_run_delete ON run;
+            DROP FUNCTION IF EXISTS after_run_delete_func();
+            DROP TRIGGER IF EXISTS lv_before_delete ON dataset;
+            DROP FUNCTION IF EXISTS lv_before_dataset_delete_func();
+            DROP TRIGGER IF EXISTS lv_before_delete ON label;
+            DROP FUNCTION IF EXISTS lv_before_label_delete_func();
+            DROP TRIGGER IF EXISTS lv_before_delete ON label_extractors;
+            DROP FUNCTION IF EXISTS lv_before_le_delete_func();
+            DROP TRIGGER IF EXISTS lv_after_delete ON label_extractors;
+            DROP FUNCTION IF EXISTS lv_after_le_delete_func();
+            DROP TRIGGER IF EXISTS after_run_update on run;
+            DROP FUNCTION IF EXISTS after_run_update_func();
+            DROP TRIGGER IF EXISTS fp_after_delete ON label_values;
+            DROP FUNCTION IF EXISTS fp_after_lv_delete_func();
+            DROP TRIGGER IF EXISTS fp_after_insert ON label_values;
+            DROP FUNCTION IF EXISTS fp_after_lv_insert_func();
+            DROP TRIGGER IF EXISTS recalc_fingerprint ON fingerprint_recalc_queue;
+            DROP TRIGGER IF EXISTS fp_after_update ON test;
+            DROP FUNCTION IF EXISTS fp_after_test_update_func();
+            DROP TRIGGER IF EXISTS after_schema_update ON schema;
+            DROP FUNCTION IF EXISTS after_schema_update_func();
+            DROP TRIGGER IF EXISTS validate_run_data ON run;
+            DROP FUNCTION IF EXISTS validate_run_data();
+            DROP TRIGGER IF EXISTS validate_dataset_data ON dataset;
+            DROP FUNCTION IF EXISTS validate_dataset_data();
+            DROP TRIGGER IF EXISTS revalidate_all ON schema;
+            DROP FUNCTION IF EXISTS revalidate_all();
+        </sql>
+    </changeSet>
 </databaseChangeLog>

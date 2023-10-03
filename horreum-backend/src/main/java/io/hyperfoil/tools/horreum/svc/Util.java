@@ -44,6 +44,7 @@ import org.graalvm.polyglot.Value;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.transform.ResultTransformer;
 import org.jboss.logging.Logger;
 import org.postgresql.util.PSQLException;
 
@@ -656,6 +657,11 @@ public class Util {
       } else {
          return null;
       }
+   }
+
+   @SuppressWarnings("deprecation")
+   public static void setResultTransformer(Query query, ResultTransformer transformer) {
+      query.unwrap(org.hibernate.query.Query.class).setResultTransformer(transformer);
    }
 
    interface ExecutionExceptionConsumer<T> {

@@ -27,6 +27,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
+/* When we make changes to label we need to ensure that we remove label_values where label_id = id
+*  After delete on extractors we need to execute:
+*  https://github.com/Hyperfoil/Horreum/blob/master/horreum-backend/src/main/resources/db/changeLog.xml#L2566
+* */
 @Entity(name="label")
 public class LabelDAO extends OwnedEntityBase {
    @Id
@@ -67,6 +71,19 @@ public class LabelDAO extends OwnedEntityBase {
 
    public void setSchema(int schemaId) {
       schema = getEntityManager().getReference(SchemaDAO.class, schemaId);
+   }
+
+   @Override
+   public String toString() {
+      return "LabelDAO{" +
+              "id=" + id +
+              ", name='" + name + '\'' +
+              ", schemaId=" + schema.id +
+              ", extractors=" + extractors +
+              ", function='" + function + '\'' +
+              ", filtering=" + filtering +
+              ", metrics=" + metrics +
+              '}';
    }
 
    @Entity

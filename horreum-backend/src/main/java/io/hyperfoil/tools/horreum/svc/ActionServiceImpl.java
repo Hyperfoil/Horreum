@@ -67,9 +67,6 @@ public class ActionServiceImpl implements ActionService {
    Vertx vertx;
 
    @Inject
-   MessageBus messageBus;
-
-   @Inject
    EncryptionManager encryptionManager;
 
    @Inject
@@ -78,11 +75,6 @@ public class ActionServiceImpl implements ActionService {
    @PostConstruct()
    public void postConstruct(){
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
-      messageBus.subscribe(MessageBusChannels.TEST_NEW, "ActionService", Test.class, this::onNewTest);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "ActionService", Test.class, this::onTestDelete);
-      messageBus.subscribe(MessageBusChannels.RUN_NEW, "ActionService", Run.class, this::onNewRun);
-      messageBus.subscribe(MessageBusChannels.CHANGE_NEW, "ActionService", Change.Event.class, this::onNewChange);
-      messageBus.subscribe(MessageBusChannels.EXPERIMENT_RESULT_NEW, "ActionService", ExperimentService.ExperimentResult.class, this::onNewExperimentResult);
    }
 
    private void executeActions(MessageBusChannels event, int testId, Object payload, boolean notify){
@@ -142,8 +134,8 @@ public class ActionServiceImpl implements ActionService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onTestDelete(Test test) {
-      ActionDAO.delete("testId", test.id);
+   public void onTestDelete(int testId) {
+      ActionDAO.delete("testId", testId);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)

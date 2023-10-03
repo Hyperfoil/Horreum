@@ -19,13 +19,11 @@ import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
-import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.vertx.core.Vertx;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
@@ -44,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -70,7 +67,7 @@ import com.networknt.schema.uri.URIFactory;
 import com.networknt.schema.uri.URIFetcher;
 import com.networknt.schema.uri.URLFactory;
 
-@Startup
+@ApplicationScoped
 public class SchemaServiceImpl implements SchemaService {
    private static final Logger log = Logger.getLogger(SchemaServiceImpl.class);
 
@@ -102,8 +99,7 @@ public class SchemaServiceImpl implements SchemaService {
       }
    };
    private static final String[] ALL_URNS = Stream.concat(
-         URLFactory.SUPPORTED_SCHEMES.stream(), Stream.of("urn", "uri")
-   ).toArray(String[]::new);
+         URLFactory.SUPPORTED_SCHEMES.stream(), Stream.of("urn", "uri")).toArray(String[]::new);
 
    private static final AliasToBeanResultTransformer DESCRIPTOR_TRANSFORMER = new AliasToBeanResultTransformer(SchemaDescriptor.class);
 
@@ -114,23 +110,16 @@ public class SchemaServiceImpl implements SchemaService {
    SecurityIdentity identity;
 
    @Inject
-   SqlServiceImpl sqlService;
-
-   @Inject
    RunServiceImpl runService;
 
    @Inject
-   Vertx vertx;
+   ServiceMediator mediator;
 
    @Inject
    MessageBus messageBus;
 
-   @PostConstruct
-   void init() {
-      sqlService.registerListener("validate_run_data", this::validateRunData);
-      sqlService.registerListener("validate_dataset_data", this::validateDatasetData);
-      sqlService.registerListener("revalidate_all", this::revalidateAll);
-   }
+   @Inject
+   DatasetServiceImpl datasetService;
 
    @WithToken
    @WithRoles
@@ -173,19 +162,32 @@ public class SchemaServiceImpl implements SchemaService {
       if (schemaDTO.schema != null && schemaDTO.schema.isEmpty()) {
          schemaDTO.schema = null;
       }
-      SchemaDAO returnSchema = null;
       SchemaDAO schema = SchemaMapper.to(schemaDTO);
-      if (schemaDTO.id != null) {
-         //this is a hack as Horreum is currently passing managed `Entities` over rest API, and .merge() is being called for unmanaged entities
-         //TODO:: revert when https://github.com/Hyperfoil/Horreum/issues/343 is fixed
-         returnSchema = em.merge(schema);
-      } else {
-         schema.persist();
-         returnSchema = schema;
+      if (schemaDTO.id != null && schemaDTO.id > 0) {
+         SchemaDAO existing = SchemaDAO.findById(schema.id);
+         if(existing == null)
+            throw ServiceException.badRequest("An id was given, but it does not exist.");
+         em.merge(schema);
+         em.flush();
+         if(!Objects.equals(schema.uri, existing.uri) ||
+                 Objects.equals(schema.schema, existing.schema)) {
+            //We need to delete from run_schemas and dataset_schemas as they will be recreated
+            //when we create new datasets psql will still create new entries in dataset_schemas
+            // https://github.com/Hyperfoil/Horreum/blob/master/horreum-backend/src/main/resources/db/changeLog.xml#L2522
+            em.createNativeQuery("DELETE FROM run_schemas WHERE schemaid = ?1")
+                    .setParameter(1, schema.id).executeUpdate();
+            em.createNativeQuery("DELETE FROM dataset_schemas WHERE schema_id = ?1")
+                    .setParameter(1, schema.id).executeUpdate();
+            mediator.newOrUpdatedSchema(schema);
+         }
       }
-      log.debugf("Added schema %s (%d), URI %s", returnSchema.name, returnSchema.id, returnSchema.uri);
-      em.flush(); //manually flush to validate constraints
-      return returnSchema.id;
+      else {
+         schema.persist();
+         em.flush();
+         mediator.newOrUpdatedSchema(schema);
+      }
+      log.debugf("Added schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
+      return schema.id;
    }
 
    @PermitAll
@@ -271,7 +273,7 @@ public class SchemaServiceImpl implements SchemaService {
 
    private void validateRunData(String params) {
       int runId = Integer.parseInt(params);
-      Util.executeBlocking(vertx, () -> validateRunData(runId, null));
+      mediator.executeBlocking(() -> validateRunData(runId, null));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -283,19 +285,27 @@ public class SchemaServiceImpl implements SchemaService {
          log.errorf("Cannot load run %d for schema validation", runId);
          return;
       }
-      run.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
-      validateData(run.data, schemaFilter, run.validationErrors::add);
+      // remember to clear prev validation errors
+      em.createNativeQuery("DELETE FROM run_validationerrors WHERE run_id = ?1")
+              .setParameter(1, runId).executeUpdate();
+
+      if(run.validationErrors != null)
+         run.validationErrors.removeIf(e -> schemaFilter == null || schemaFilter.test(e.schema.uri));
+      if(run.validationErrors == null)
+         run.validationErrors = new ArrayList<>();
+      validateData(run.data, schemaFilter, run.validationErrors);
       if (run.metadata != null) {
-         validateData(run.metadata, schemaFilter, run.validationErrors::add);
+         validateData(run.metadata, schemaFilter, run.validationErrors);
       }
       run.persist();
-      messageBus.publish(MessageBusChannels.RUN_VALIDATED, run.testid,
-              new Schema.ValidationEvent(run.id, run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()) ));
+      if(mediator.testMode())
+         messageBus.publish(MessageBusChannels.RUN_VALIDATED, run.testid,
+                 new Schema.ValidationEvent(run.id, run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()) ));
    }
 
    private void validateDatasetData(String params) {
       int datasetId = Integer.parseInt(params);
-      Util.executeBlocking(vertx, () -> validateDatasetData(datasetId, null));
+      mediator.executeBlocking(() -> validateDatasetData(datasetId, null));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -311,27 +321,32 @@ public class SchemaServiceImpl implements SchemaService {
          }
          return;
       }
-      dataset.validationErrors.removeIf(e -> schemaFilter == null || (e.schema != null && schemaFilter.test(e.schema.uri)));
-      validateData(dataset.data, schemaFilter, dataset.validationErrors::add);
-      for (var item : dataset.data) {
-         String uri = item.path("$schema").asText();
-         if (uri == null || uri.isBlank()) {
-            ValidationErrorDAO error = new ValidationErrorDAO();
-            error.error = JsonNodeFactory.instance.objectNode().put("type", "No schema").put("message", "Element in the dataset does not reference any schema through the '$schema' property.");
-            dataset.validationErrors.add(error);
+      em.createNativeQuery("DELETE FROM dataset_validationerrors WHERE dataset_id = ?1")
+              .setParameter(1, dataset.id).executeUpdate();
+      if(dataset.data == null)
+         return;
+      if(dataset.validationErrors != null)
+         dataset.validationErrors.removeIf(e -> schemaFilter == null || (e.schema != null && schemaFilter.test(e.schema.uri)));
+      if(dataset.data != null) {
+         if(dataset.validationErrors == null)
+            dataset.validationErrors = new ArrayList<>();
+         validateData(dataset.data, schemaFilter, dataset.validationErrors);
+         for (var item : dataset.data) {
+            String uri = item.path("$schema").asText();
+            if (uri == null || uri.isBlank()) {
+               ValidationErrorDAO error = new ValidationErrorDAO();
+               error.error = JsonNodeFactory.instance.objectNode().put("type", "No schema").put("message", "Element in the dataset does not reference any schema through the '$schema' property.");
+               dataset.validationErrors.add(error);
+            }
          }
+         dataset.persist();
       }
-      dataset.persist();
-      messageBus.publish(MessageBusChannels.DATASET_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DataSetMapper.from(dataset).validationErrors ));
-   }
-
-   private void revalidateAll(String params) {
-      int schemaId = Integer.parseInt(params);
-      Util.executeBlocking(vertx, () -> revalidateAll(schemaId));
+      if(mediator.testMode())
+         messageBus.publish(MessageBusChannels.DATASET_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DataSetMapper.from(dataset).validationErrors ));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   @Transactional
+   @Transactional(Transactional.TxType.REQUIRES_NEW)
    @TransactionConfiguration(timeout = 3600) // 1 hour, this may run a long time
    void revalidateAll(int schemaId) {
       SchemaDAO schema = SchemaDAO.findById(schemaId);
@@ -339,6 +354,12 @@ public class SchemaServiceImpl implements SchemaService {
          log.errorf("Cannot load schema %d for validation", schemaId);
          return;
       }
+      //clear tables on schemaId
+      em.createNativeQuery("DELETE FROM dataset_validationerrors WHERE schema_id = ?1")
+              .setParameter(1, schemaId).executeUpdate();
+      em.createNativeQuery("DELETE FROM run_validationerrors WHERE schema_id = ?1")
+              .setParameter(1, schemaId).executeUpdate();
+
       Predicate<String> schemaFilter = uri -> uri.equals(schema.uri);
       // If the URI was updated together with JSON schema run_schemas are removed and filled-in asynchronously
       // so we cannot rely on run_schemas
@@ -363,7 +384,7 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
-   private void validateData(JsonNode data, Predicate<String> filter, Consumer<ValidationErrorDAO> consumer) {
+   private void validateData(JsonNode data, Predicate<String> filter, Collection<ValidationErrorDAO> consumer) {
       Map<String, List<JsonNode>> toCheck = new HashMap<>();
       addIfHasSchema(toCheck, data);
       for (JsonNode child : data) {
@@ -400,7 +421,8 @@ public class SchemaServiceImpl implements SchemaService {
                   ValidationErrorDAO error = new ValidationErrorDAO();
                   error.schema = rootSchema;
                   error.error = Util.OBJECT_MAPPER.valueToTree(msg);
-                  consumer.accept(error);
+                  if(!consumer.contains(error))
+                     consumer.add(error);
                });
             }
          } catch (Throwable e) {
@@ -409,7 +431,8 @@ public class SchemaServiceImpl implements SchemaService {
             ValidationErrorDAO error = new ValidationErrorDAO();
             error.schema = rootSchema;
             error.error = JsonNodeFactory.instance.objectNode().put("type", "Execution error").put("message", e.getMessage());
-            consumer.accept(error);
+            if(!consumer.contains(error))
+               consumer.add(error);
          }
          log.debug("Validation completed");
       }
@@ -434,14 +457,28 @@ public class SchemaServiceImpl implements SchemaService {
          log.debugf("Deleting schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
          em.createNativeQuery("DELETE FROM label_extractors WHERE label_id IN (SELECT id FROM label WHERE schema_id = ?1)")
                .setParameter(1, id).executeUpdate();
-         LabelDAO.delete("schema.id", id);
+         updateLabelsForDelete(id);
          em.createNativeQuery("DELETE FROM transformer_extractors WHERE transformer_id IN (SELECT id FROM transformer WHERE schema_id = ?1)")
                .setParameter(1, id).executeUpdate();
          em.createNativeQuery("DELETE FROM test_transformers WHERE transformer_id IN (SELECT id FROM transformer WHERE schema_id = ?1)")
                .setParameter(1, id).executeUpdate();
          TransformerDAO.delete("schema.id", id);
+         em.createNativeQuery("DELETE FROM run_schemas WHERE schemaid = ?1").setParameter(1, id).executeUpdate();
+         em.createNativeQuery("DELETE FROM dataset_schemas WHERE schema_id = ?1").setParameter(1, id).executeUpdate();
          schema.delete();
       }
+   }
+
+   private void updateLabelsForDelete(int schemaId) {
+      for(LabelDAO label : LabelDAO.<LabelDAO>list( "schema.id = ?1",schemaId)) {
+         doUpdateLabelForDelete(label);
+      }
+   }
+
+   private void doUpdateLabelForDelete(LabelDAO label) {
+      em.createNativeQuery("DELETE FROM label_values WHERE label_id = ?1").setParameter(1, label.id).executeUpdate();
+      label.delete();
+      emitLabelChanged(label);
    }
 
    @PermitAll
@@ -625,6 +662,7 @@ public class SchemaServiceImpl implements SchemaService {
          label.schema = em.getReference(SchemaDAO.class, schemaId);
          checkSameName(label);
          label.persistAndFlush();
+         emitLabelChanged(label);
       } else {
          LabelDAO existing = LabelDAO.findById(label.id);
          if (existing == null) {
@@ -642,6 +680,10 @@ public class SchemaServiceImpl implements SchemaService {
             checkSameName(label);
          }
          existing.name = label.name;
+         //When we clear extractors we should also delete label_values
+         if(existing.id > 0) {
+            em.createNativeQuery("DELETE FROM label_values WHERE label_id = ?1").setParameter(1, existing.id).executeUpdate();
+         }
          existing.extractors.clear();
          existing.extractors.addAll(label.extractors);
          existing.function = label.function;
@@ -650,8 +692,37 @@ public class SchemaServiceImpl implements SchemaService {
          existing.filtering = label.filtering;
          existing.metrics = label.metrics;
          existing.persistAndFlush();
+
+         emitLabelChanged(existing);
       }
       return label.id;
+   }
+
+   private void emitLabelChanged(LabelDAO label) {
+      try {
+         List<Integer> datasetIds = em.createNativeQuery("SELECT dataset_id from dataset_schemas WHERE schema_id = ?1")
+                 .setParameter(1, label.getSchemaId())
+                 .unwrap(NativeQuery.class)
+                 .addScalar("dataset_id", StandardBasicTypes.INTEGER)
+                 .getResultList();
+         if (datasetIds == null || datasetIds.isEmpty() || datasetIds.get(0) < 1) {
+            log.debug("Could not extract datasetIds from dataset_schemas with schemaId="+label.getSchemaId());
+            return;
+         }
+         int testId = (int) em.createNativeQuery("SELECT testid from dataset WHERE id = ?1")
+                 .setParameter(1, datasetIds.get(0)).getSingleResult();
+         if (testId < 1) {
+            log.debug("Could not extract testId from dataset where id="+datasetIds.get(0));
+            return;
+         }
+
+         for(var datasetId : datasetIds) {
+            mediator.queueDatasetEvents(new DataSet.EventNew(datasetId, testId, 0, label.id, true));
+         }
+      }
+      catch (NoResultException nre) {
+        log.debug("Could not find datasetId/testId to recalculate labels: "+nre.getMessage());
+      }
    }
 
    private void checkSameName(LabelDAO label) {
@@ -676,7 +747,7 @@ public class SchemaServiceImpl implements SchemaService {
       if (!identity.hasRole(testerRole)) {
          throw ServiceException.forbidden("You are not an owner of label " + labelId + "(" + label.owner + "); missing role " + testerRole + ", available roles: " + identity.getRoles());
       }
-      label.delete();
+      doUpdateLabelForDelete(label);
    }
 
    @PermitAll

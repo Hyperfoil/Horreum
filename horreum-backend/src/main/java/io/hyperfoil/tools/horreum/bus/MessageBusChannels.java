@@ -2,12 +2,10 @@ package io.hyperfoil.tools.horreum.bus;
 
 public enum MessageBusChannels {
     DATAPOINT_NEW,
-    DATAPOINT_DELETED,
     DATAPOINT_PROCESSED,
     DATASET_NEW,
     DATASET_UPDATED_LABELS,
     DATASET_MISSING_VALUES,
-    DATASET_DELETED,
     DATASET_VALIDATED,
     DATASET_CHANGES_NEW,
     TEST_NEW,
@@ -18,7 +16,4 @@ public enum MessageBusChannels {
     CHANGE_NEW,
     EXPERIMENT_RESULT_NEW,
     FOOBAR
-
-
-
 }

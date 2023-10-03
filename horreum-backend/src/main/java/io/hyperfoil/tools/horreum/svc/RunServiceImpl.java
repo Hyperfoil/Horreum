@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -15,22 +14,17 @@ import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import io.hyperfoil.tools.horreum.api.data.JsonpathValidation;
-import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import io.hyperfoil.tools.horreum.mapper.DataPointMapper;
 import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
 import io.hypersistence.utils.hibernate.query.MapResultTransformer;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -62,10 +56,8 @@ import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
-import io.hyperfoil.tools.horreum.api.data.QueryResult;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
-import io.hyperfoil.tools.horreum.api.services.SqlService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLogDAO;
@@ -124,9 +116,6 @@ public class RunServiceImpl implements RunService {
    SqlServiceImpl sqlService;
 
    @Inject
-   Vertx vertx;
-
-   @Inject
    MessageBus messageBus;
 
    @Inject
@@ -138,21 +127,17 @@ public class RunServiceImpl implements RunService {
    @Inject
    ObjectMapper mapper;
 
-   @PostConstruct
-   void init() {
-      sqlService.registerListener("calculate_datasets", this::onCalculateDataSets);
-      sqlService.registerListener("new_or_updated_schema", this::onNewOrUpdatedSchema);
-      messageBus.subscribe(MessageBusChannels.TEST_DELETED, "RunService", Test.class, this::onTestDeleted);
-   }
+   @Inject
+   ServiceMediator mediator;
 
    @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   void onTestDeleted(Test test) {
-      log.debugf("Trashing runs for test %s (%d)", test.name, test.id);
-      ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, test.id));
+   void onTestDeleted(int testId) {
+      log.debugf("Trashing runs for test (%d)", testId);
+      ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, testId));
       while (results.next()) {
          int id = (int) results.get();
-         messageBus.executeForTest(test.id, () -> trashDueToTestDeleted(id));
+         trashDueToTestDeleted(id);
       }
    }
 
@@ -161,17 +146,6 @@ public class RunServiceImpl implements RunService {
    @Transactional
    void trashDueToTestDeleted(int id) {
       trashInternal(id, true);
-   }
-
-   private void onNewOrUpdatedSchema(String schemaIdString) {
-      int schemaId;
-      try {
-         schemaId = Integer.parseInt(schemaIdString);
-      } catch (NumberFormatException e) {
-         log.errorf("Cannot process schema add/update: invalid id %s", schemaIdString);
-         return;
-      }
-      Util.executeBlocking(vertx, () -> onNewOrUpdatedSchema(schemaId));
    }
 
    // We cannot run this without a transaction (to avoid timeout) because we have not request going on
@@ -185,10 +159,15 @@ public class RunServiceImpl implements RunService {
          log.errorf("Cannot process schema add/update: cannot load schema %d", schemaId);
          return;
       }
+      processNewOrUpdatedSchema(schema);
+   }
+
+   @Transactional
+   void processNewOrUpdatedSchema(SchemaDAO schema) {
       // we don't have to care about races with new runs
       findRunsWithUri(schema.uri, (runId, testId) -> {
          log.debugf("Recalculate DataSets for run %d - schema %d (%s) changed", runId, schema.id, schema.uri);
-         messageBus.executeForTest(testId, () -> onNewOrUpdatedSchemaForRun(runId));
+         onNewOrUpdatedSchemaForRun(runId, schema.id);
       });
    }
 
@@ -212,9 +191,16 @@ public class RunServiceImpl implements RunService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void onNewOrUpdatedSchemaForRun(int runId) {
+   void onNewOrUpdatedSchemaForRun(int runId, int schemaId) {
       em.createNativeQuery("SELECT update_run_schemas(?1)::::text").setParameter(1, runId).getSingleResult();
-      transform(runId, true);
+      //clear validation error tables by schemaId
+      em.createNativeQuery("DELETE FROM dataset_validationerrors WHERE schema_id = ?1")
+              .setParameter(1, schemaId).executeUpdate();
+      em.createNativeQuery("DELETE FROM run_validationerrors WHERE schema_id = ?1")
+              .setParameter(1, schemaId).executeUpdate();
+
+      mediator.queueRunRecalculation(runId);
+//      transform(runId, true);
    }
 
    @PermitAll
@@ -417,12 +403,15 @@ public class RunServiceImpl implements RunService {
 
    @Override
    public void waitForDatasets(int runId) {
+      //first check if we have a dataset already generated
+      if(DataSetDAO.count("run.id = ?1", runId) > 0)
+         return;
 
       // wait for at least one (1) dataset. we do not know how many datasets will be produced
       CountDownLatch dsAvailableLatch = new CountDownLatch(1);
       // create new dataset listener
       messageBus.subscribe(MessageBusChannels.DATASET_NEW,"DatasetService", DataSet.EventNew.class, (event) -> {
-         if (event.dataset.runId == runId) {
+         if (event.runId == runId) {
             dsAvailableLatch.countDown();
          }
       });
@@ -572,6 +561,7 @@ public class RunServiceImpl implements RunService {
          if (run.id == null) {
             em.persist(run);
          } else {
+            trashConnectedDatasets(run.id, run.testid);
             em.merge(run);
          }
          em.flush();
@@ -580,7 +570,11 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.serverError("Failed to persist run");
       }
       log.debugf("Upload flushed, run ID %d", run.id);
-      messageBus.publish(MessageBusChannels.RUN_NEW, test.id, RunMapper.from(run));
+
+      mediator.newRun(RunMapper.from(run));
+      transform(run.id, false);
+      if(mediator.testMode())
+         messageBus.publish(MessageBusChannels.RUN_NEW, test.id, RunMapper.from(run));
 
       return run.id;
    }
@@ -885,17 +879,39 @@ public class RunServiceImpl implements RunService {
    }
 
    private void trashInternal(int id, boolean trashed) {
-      RunDAO run = updateRun(id, r -> r.trashed = trashed);
+      RunDAO run = RunDAO.findById(id);
+      if (run == null) {
+         throw ServiceException.notFound("Run not found: " + id);
+      }
+      if(run.trashed == trashed)
+         throw ServiceException.badRequest("The run "+id+" has already been trashed, not possible to trash it again.");
       if (trashed) {
-         List<DataSetDAO> datasets = DataSetDAO.list("run.id", id);
-         log.debugf("Trashing run %d (test %d, %d datasets)", (long)run.id, (long)run.testid, datasets.size());
-         for (var dataset : datasets) {
-            messageBus.publish(MessageBusChannels.DATASET_DELETED, run.testid, DataSetMapper.fromInfo( dataset.getInfo()));
-            dataset.delete();
+         run.trashed = trashed;
+         trashConnectedDatasets(run.id, run.testid);
+         run.persist();
+         if(mediator.testMode())
+            messageBus.publish(MessageBusChannels.RUN_TRASHED, run.testid, id);
+      }
+      // if the run was trashed because of a deleted test we need to ensure that the test actually exist
+      // before we try to recalculate the dataset
+      else {
+         if(TestDAO.findById(run.testid) != null) {
+            run.trashed = trashed;
+            run.persistAndFlush();
+            transform(id, true);
          }
-         messageBus.publish(MessageBusChannels.RUN_TRASHED, run.testid, id);
-      } else {
-         transform(id, true);
+         else
+            throw ServiceException.badRequest("Not possible to un-trash a run that's not referenced to a Test");
+      }
+   }
+
+   private void trashConnectedDatasets(int runId, int testId) {
+      //Make sure to remove run_schemas as we've trashed the run
+      em.createNativeQuery("DELETE FROM run_schemas WHERE runid = ?1").setParameter(1, runId).executeUpdate();
+      List<DataSetDAO> datasets = DataSetDAO.list("run.id", runId);
+      log.debugf("Trashing run %d (test %d, %d datasets)", runId, testId, datasets.size());
+      for (var dataset : datasets) {
+         mediator.propagatedDatasetDelete(dataset.id);
       }
    }
 
@@ -905,17 +921,12 @@ public class RunServiceImpl implements RunService {
    @Override
    public void updateDescription(int id, String description) {
       // FIXME: fetchival stringifies the body into JSON string :-/
-      updateRun(id, run -> run.description = Util.destringify(description));
-   }
-
-   public RunDAO updateRun(int id, Consumer<RunDAO> consumer) {
       RunDAO run = RunDAO.findById(id);
       if (run == null) {
          throw ServiceException.notFound("Run not found: " + id);
       }
-      consumer.accept(run);
+      run.description = description;
       run.persistAndFlush();
-      return run;
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -953,6 +964,7 @@ public class RunServiceImpl implements RunService {
       }
       run.data = updated;
       run.persist();
+      trashConnectedDatasets(run.id, run.testid);
       Query query = em.createNativeQuery("SELECT schemaid AS key, uri AS value FROM run_schemas WHERE runid = ?");
       query.setParameter(1, run.id);
       //noinspection deprecation
@@ -1005,21 +1017,9 @@ public class RunServiceImpl implements RunService {
          Recalculate r = results.get();
          log.debugf("Recalculate DataSets for run %d - forcing recalculation of all between %s and %s", r.runId, from, to);
          // transform will add proper roles anyway
-         messageBus.executeForTest(r.testId, () -> datasetService.withRecalculationLock(() -> transform(r.runId, true)));
+//         messageBus.executeForTest(r.testId, () -> datasetService.withRecalculationLock(() -> transform(r.runId, true)));
+         mediator.queueRunRecalculation(r.runId);
       }
-   }
-
-   private void onCalculateDataSets(String param) {
-      String[] parts = param.split(";", 2);
-      int runId;
-      try {
-         runId = Integer.parseInt(parts[0]);
-      } catch (NumberFormatException e) {
-         log.errorf("Received notification to calculate dataset for run but cannot parse as run ID.", parts[0]);
-         return;
-      }
-      boolean isRecalculation = parts.length > 1 && Boolean.parseBoolean(parts[1]);
-      Util.executeBlocking(vertx, () -> transform(runId, isRecalculation));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -1033,13 +1033,10 @@ public class RunServiceImpl implements RunService {
       // We need to make sure all old datasets are gone before creating new; otherwise we could
       // break the runid,ordinal uniqueness constraint
       for (DataSetDAO old : DataSetDAO.<DataSetDAO>list("run.id", runId)) {
-         messageBus.publish(MessageBusChannels.DATASET_DELETED, old.testid, DataSetMapper.fromInfo( old.getInfo()));
          for (DataPointDAO dp : DataPointDAO.<DataPointDAO>list("dataset.id", old.getInfo().id)){
-            messageBus.publish(MessageBusChannels.DATAPOINT_DELETED, old.testid,
-                new DataPoint.Event(DataPointMapper.from(dp), old.testid, false));
             dp.delete();
          }
-         old.delete();
+         mediator.propagatedDatasetDelete(old.id);
       }
 
       RunDAO run = RunDAO.findById(runId);
@@ -1214,15 +1211,16 @@ public class RunServiceImpl implements RunService {
                }
             }
             nakedNodes.forEach(all::add);
-            createDataset(new DataSetDAO(run, ordinal++, run.description,
-                  all), isRecalculation);
+            createDataset(new DataSetDAO(run, ordinal++, run.description, all), isRecalculation);
          }
+         mediator.validateRun(run.id);
          return ordinal;
       } else {
          logMessage(run, PersistentLogDAO.INFO, "No applicable schema, dataset will be empty.");
          createDataset(new DataSetDAO(
                run, 0, "Empty DataSet for run data without any schema.",
                instance.arrayNode()), isRecalculation);
+         mediator.validateRun(run.id);
          return 1;
       }
    }
@@ -1233,8 +1231,11 @@ public class RunServiceImpl implements RunService {
 
    private void createDataset(DataSetDAO ds, boolean isRecalculation) {
       try {
-         ds.persist();
-         messageBus.publish(MessageBusChannels.DATASET_NEW, ds.testid, new DataSet.EventNew(DataSetMapper.from(ds), isRecalculation));
+         ds.persistAndFlush();
+         mediator.newDataSet(new DataSet.EventNew(DataSetMapper.from(ds), isRecalculation));
+         mediator.validateDataset(ds.id);
+         if(mediator.testMode())
+            messageBus.publish(MessageBusChannels.DATASET_NEW, ds.testid, new DataSet.EventNew(DataSetMapper.from(ds), isRecalculation));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send DataSet event during inactive Transaction. Likely due to prior error.", tre);
       }

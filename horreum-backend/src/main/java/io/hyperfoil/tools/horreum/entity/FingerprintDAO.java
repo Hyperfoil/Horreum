@@ -18,11 +18,10 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import org.hibernate.annotations.Type;
 
 @Entity(name = "Fingerprint")
-@Immutable
 public class FingerprintDAO extends PanacheEntityBase {
    @Id
    @Column(name = "dataset_id")
-   public int datasetId;
+   public Integer datasetId;
 
    @OneToOne(fetch = FetchType.LAZY)
    @MapsId
@@ -33,4 +32,11 @@ public class FingerprintDAO extends PanacheEntityBase {
    @Column(columnDefinition = "jsonb")
    public JsonNode fingerprint;
 
+   @Override
+   public String toString() {
+      return "FP{" +
+              "datasetId=" + datasetId +
+              ", fingerprint=" + fingerprint +
+              '}';
+   }
 }

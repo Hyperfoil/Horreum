@@ -120,9 +120,9 @@ public class LogServiceTest extends BaseServiceTest {
                 .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, ActionLog.class));
         assertEquals(actionCountLog, actionLogs.size());
 
-        deleteTest(test);
-        BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, MessageBusChannels.RUN_TRASHED, id -> id == runId);
-        assertNotNull(events.poll(10, TimeUnit.SECONDS));
+      BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, MessageBusChannels.RUN_TRASHED, id -> id == runId);
+      deleteTest(test);
+      assertNotNull(events.poll(10, TimeUnit.SECONDS));
 
         datasetLogCount = jsonRequest()
                 .auth()
