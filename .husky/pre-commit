@@ -1,6 +1,0 @@
-#!/bin/sh
-# . "$(dirname "$0")/_/husky.sh"
-
-# cd webapp
-# export PATH=`pwd`/node/node:$PATH
-# node/node/node_modules/npm/bin/npm run prettier-format
