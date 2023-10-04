@@ -93,7 +93,7 @@ public class HorreumDevServicesProcessor {
                                     .putAll(Map.of(HORREUM_DEV_POSTGRES_BACKUP, backupFilename))
                                     .build();
                         }
-                        HorreumResources.startContainers(containerArgs);
+                        Map<String, String> envvars = HorreumResources.startContainers(containerArgs);
 
                         Map<String, String> postrgesConfig = new HashMap<>();
                         String jdbcUrl = HorreumResources.postgreSQLResource.getJdbcUrl();
@@ -112,6 +112,7 @@ public class HorreumDevServicesProcessor {
 
                         keycloakConfig.put("quarkus.oidc.auth-server-url", "http://localhost:" + keycloakPort + "/realms/horreum");
                         keycloakConfig.put("horreum.keycloak.url", "http://localhost:" + keycloakPort);
+                        keycloakConfig.put("quarkus.oidc.credentials.secret", envvars.get("quarkus.oidc.credentials.secret"));
 
                         horreumKeycloakDevService = new DevServicesResultBuildItem.RunningDevService(
                                 HorreumResources.keycloakResource.getContainer().getContainerName(),
