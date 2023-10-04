@@ -120,7 +120,7 @@ if [ "$IMPORT" != "false" ]; then
   requireId ROADRUNNER_TEST_ID
   post -s /test/$ROADRUNNER_TEST_ID/transformers '['$ACME_TRANSFORMER_ID']'
 
-  post -s /run/test/$ROADRUNNER_TEST_ID roadrunner_run.json
+  post -s /run/test?test=$ROADRUNNER_TEST_ID roadrunner_run.json
 
   post -s /schema/$ACME_HORREUM_SCHEMA_ID/labels test_label.json
   post -s /schema/$ACME_HORREUM_SCHEMA_ID/labels throughput_label.json
