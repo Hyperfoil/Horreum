@@ -116,7 +116,7 @@ public interface TestService {
    @GET
    @Path("{id}/export")
    @APIResponseSchema(value = String.class,
-           responseDescription = "A Run data object formatted as json",
+           responseDescription = "A Test defintion formatted as json",
            responseCode = "200")
    String export(@PathParam("id") int testId);
 

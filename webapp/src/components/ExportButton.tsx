@@ -21,7 +21,7 @@ export default function ExportButton(props: ExportButtonProps) {
                     .export()
                     .then(
                         cfg => {
-                            const url = window.URL.createObjectURL(new Blob([cfg]))
+                            const url = window.URL.createObjectURL(new Blob([JSON.stringify(cfg, null, 2)]))
                             const link = document.createElement("a")
                             link.href = url
                             link.setAttribute("download", `${props.name}.json`)
