@@ -32,6 +32,7 @@ import Reports from "./domain/reports/Reports"
 import Banner from "./Banner"
 import TableReportPage from "./domain/reports/TableReportPage"
 import TableReportConfigPage from "./domain/reports/TableReportConfigPage"
+import NotFound from "./404"
 
 import About from "./About"
 
@@ -145,6 +146,7 @@ function Main() {
 
                     <Route exact path="/admin" component={Admin} />
                     <Route exact path="/usersettings" component={UserSettings} />
+                    <Route component={NotFound} />
                 </Switch>
             </Page>
             {/* <ContextHelp /> */}

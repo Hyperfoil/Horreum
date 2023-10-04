@@ -34,3 +34,18 @@ code {
 .pf-c-tab-content {
     margin: 20px !important;
 }
+
+.not-found-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  
+}
+
+.title{
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
