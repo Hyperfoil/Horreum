@@ -28,11 +28,10 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.hibernate.exception.ConstraintViolationException;
 import org.jboss.logging.Logger;
-import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.RoleMappingResource;
 import org.keycloak.admin.client.resource.RoleResource;
 import org.keycloak.admin.client.resource.RoleScopeResource;
@@ -53,8 +52,11 @@ import io.vertx.core.Vertx;
 public class UserServiceImpl implements UserService {
    private static final Logger log = Logger.getLogger(UserServiceImpl.class);
    private static final String[] ROLE_TYPES = new String[] { "team", Roles.VIEWER, Roles.TESTER, Roles.UPLOADER, Roles.MANAGER };
-   private static final String REALM = "horreum";
 
+   @ConfigProperty(name="horreum.keycloak.realm", defaultValue="horreum")
+   String realm;
+
+   @Inject
    Keycloak keycloak;
 
    @Inject
@@ -67,33 +69,14 @@ public class UserServiceImpl implements UserService {
       return new UserData(rep.getId(), rep.getUsername(), rep.getFirstName(), rep.getLastName(), rep.getEmail());
    }
 
-
-   @PostConstruct
-   public void init() throws MalformedURLException {
-      // horreum.keycloak.url is the URL advertised to clients; we need the url on internal network
-      String serverUrl = ConfigProvider.getConfig().getOptionalValue("horreum.keycloak.internal.url", String.class).orElse(null);
-      if (serverUrl == null) {
-         URL url = new URL(ConfigProvider.getConfig().getValue("quarkus.oidc.auth-server-url", String.class));
-         serverUrl = url.getProtocol() + "://" + url.getAuthority();
-      }
-      keycloak = KeycloakBuilder.builder()
-            .serverUrl(serverUrl)
-            .realm(REALM)
-            .clientId("horreum")
-            .clientSecret(ConfigProvider.getConfig().getValue("quarkus.oidc.credentials.secret", String.class))
-            .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
-            .build();
-
-   }
-
    @Override
    @Blocking
    public List<UserData> searchUsers(String query) {
       if (identity.isAnonymous()) {
          throw ServiceException.forbidden("Please log in and try again");
       }
-      return keycloak.realm(REALM).users().search(query, null, null).stream()
-            .map(UserServiceImpl::toUserInfo).collect(Collectors.toList());
+      return keycloak.realm(realm).users().search(query, null, null).stream()
+                     .map(UserServiceImpl::toUserInfo).collect(Collectors.toList());
    }
 
    @RolesAllowed({Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
@@ -106,7 +89,7 @@ public class UserServiceImpl implements UserService {
       List<UserData> users = new ArrayList<>();
       for (String username: usernames) {
             try {
-               List<UserRepresentation> res = keycloak.realm(REALM).users().search(username);
+               List<UserRepresentation> res = keycloak.realm(realm).users().search(username);
                for (var u : res) {
                   if (username.equals(u.getUsername())) {
                      users.add(toUserInfo(u));
@@ -148,12 +131,12 @@ public class UserServiceImpl implements UserService {
       credentials.setValue(user.password);
       rep.setCredentials(Collections.singletonList(credentials));
 
-      Response response = keycloak.realm(REALM).users().create(rep);
+      Response response = keycloak.realm(realm).users().create(rep);
       if (response.getStatusInfo().getFamily() != Response.Status.Family.SUCCESSFUL) {
          log.errorf("Failed to create new user %s: %s", rep, response);
          throw ServiceException.badRequest("Failed to create new user.");
       }
-      List<UserRepresentation> matchingUsers = keycloak.realm(REALM).users().search(rep.getUsername(), true);
+      List<UserRepresentation> matchingUsers = keycloak.realm(realm).users().search(rep.getUsername(), true);
       if (matchingUsers == null || matchingUsers.isEmpty()) {
          throw ServiceException.badRequest("User " + rep.getUsername() + " does not exist.");
       } else if (matchingUsers.size() > 1) {
@@ -166,15 +149,15 @@ public class UserServiceImpl implements UserService {
          for (String role : user.roles) {
             addedRoles.add(ensureRole(prefix + role));
          }
-         keycloak.realm(REALM).users().get(userId).roles().realmLevel().add(addedRoles);
+         keycloak.realm(realm).users().get(userId).roles().realmLevel().add(addedRoles);
       }
 
-      ClientRepresentation account = keycloak.realm(REALM).clients().query("account").stream()
-            .filter(c -> "account".equals(c.getName())).findFirst().orElse(null);
+      ClientRepresentation account = keycloak.realm(realm).clients().query("account").stream()
+                                             .filter(c -> "account".equals(c.getName())).findFirst().orElse(null);
       if (account != null) {
-         RoleRepresentation viewProfile = keycloak.realm(REALM).clients().get(account.getId()).roles().get("view-profile").toRepresentation();
+         RoleRepresentation viewProfile = keycloak.realm(realm).clients().get(account.getId()).roles().get("view-profile").toRepresentation();
          if (viewProfile != null) {
-            keycloak.realm(REALM).users().get(userId).roles().clientLevel(account.getClientId()).add(Collections.singletonList(viewProfile));
+            keycloak.realm(realm).users().get(userId).roles().clientLevel(account.getClientId()).add(Collections.singletonList(viewProfile));
          }
       }
    }
@@ -185,8 +168,8 @@ public class UserServiceImpl implements UserService {
       if (identity.isAnonymous()) {
          throw ServiceException.forbidden("Please log in and try again");
       }
-      return keycloak.realm(REALM).roles().list().stream().map(RoleRepresentation::getName)
-            .filter(n -> n.endsWith("-team")).collect(Collectors.toList());
+      return keycloak.realm(realm).roles().list().stream().map(RoleRepresentation::getName)
+                     .filter(n -> n.endsWith("-team")).collect(Collectors.toList());
    }
 
    @WithRoles(addUsername = true)
@@ -231,7 +214,7 @@ public class UserServiceImpl implements UserService {
    }
 
    private String findMatchingUserId(String username) {
-      List<UserRepresentation> matchingUsers = keycloak.realm(REALM).users().search(username, true);
+      List<UserRepresentation> matchingUsers = keycloak.realm(realm).users().search(username, true);
       if (matchingUsers == null || matchingUsers.isEmpty()) {
          log.errorf("Cannot find user with username %s", username);
          throw ServiceException.badRequest("User " + username + " does not exist.");
@@ -253,7 +236,7 @@ public class UserServiceImpl implements UserService {
       for (String role : ROLE_TYPES) {
          try {
             // The call below does not consider transitivity with composite roles
-            Set<UserRepresentation> users = keycloak.realm(REALM).roles().get(prefix + role).getRoleUserMembers();
+            Set<UserRepresentation> users = keycloak.realm(realm).roles().get(prefix + role).getRoleUserMembers();
             for (UserRepresentation user : users) {
                List<String> userRoles = userMap.computeIfAbsent(user.getUsername(), u -> new ArrayList<>());
                userRoles.add(role);
@@ -280,7 +263,7 @@ public class UserServiceImpl implements UserService {
       for (var entry : roles.entrySet()) {
          vertx.executeBlocking(promise -> { //leave call to vertx.executeBlocking as this will make calls to keycloack in parrallel
             String userId = findMatchingUserId(entry.getKey());
-            RoleMappingResource rolesMappingResource = keycloak.realm(REALM).users().get(userId).roles();
+            RoleMappingResource rolesMappingResource = keycloak.realm(realm).users().get(userId).roles();
             List<RoleRepresentation> userRoles = rolesMappingResource.getAll().getRealmMappings();
             if (userRoles == null) {
                userRoles = Collections.emptyList();
@@ -334,11 +317,11 @@ public class UserServiceImpl implements UserService {
       for (String type : ROLE_TYPES) {
          vertx.executeBlocking(promise -> {
             String roleName = prefix + type;
-            RoleResource roleResource = keycloak.realm(REALM).roles().get(roleName);
+            RoleResource roleResource = keycloak.realm(realm).roles().get(roleName);
             RoleRepresentation role = roleResource.toRepresentation();
             for (var user : roleResource.getRoleUserMembers()) {
                if (!roles.containsKey(user.getUsername())) {
-                  keycloak.realm(REALM).users().get(user.getId()).roles().realmLevel().remove(
+                  keycloak.realm(realm).users().get(user.getId()).roles().realmLevel().remove(
                      Collections.singletonList(role));
                }
             }
@@ -354,10 +337,10 @@ public class UserServiceImpl implements UserService {
 
    private RoleRepresentation ensureRole(String roleName) {
       try {
-         return keycloak.realm(REALM).roles().get(roleName).toRepresentation();
+         return keycloak.realm(realm).roles().get(roleName).toRepresentation();
       } catch (NotFoundException e) {
-         keycloak.realm(REALM).roles().create(new RoleRepresentation(roleName, null, false));
-         return keycloak.realm(REALM).roles().get(roleName).toRepresentation();
+         keycloak.realm(realm).roles().create(new RoleRepresentation(roleName, null, false));
+         return keycloak.realm(realm).roles().get(roleName).toRepresentation();
       }
    }
 
@@ -367,8 +350,8 @@ public class UserServiceImpl implements UserService {
    public List<String> getAllTeams() {
       List<String> teams;
       try {
-         teams = keycloak.realm(REALM).roles().list().stream()
-                 .map(RoleRepresentation::getName).filter(role -> role.endsWith("-team")).collect(Collectors.toList());
+         teams = keycloak.realm(realm).roles().list().stream()
+                         .map(RoleRepresentation::getName).filter(role -> role.endsWith("-team")).collect(Collectors.toList());
       } catch (Exception e) {
          throw ServiceException.serverError("Please check with the System Administrators that you have the correct permissions.");
       }
@@ -396,7 +379,7 @@ public class UserServiceImpl implements UserService {
          role.setComposites(composites);
       }
       try {
-         keycloak.realm(REALM).roles().create(role);
+         keycloak.realm(realm).roles().create(role);
       } catch (ClientErrorException e) {
          if (e.getResponse().getStatus() == Response.Status.CONFLICT.getStatusCode()) {
             log.warnf("Role %s already exists, registration failed", roleName);
@@ -424,7 +407,7 @@ public class UserServiceImpl implements UserService {
       String prefix = getTeamPrefix(team);
       for (String type : ROLE_TYPES) {
          try {
-            keycloak.realm(REALM).roles().deleteRole(prefix + type);
+            keycloak.realm(realm).roles().deleteRole(prefix + type);
          } catch (NotFoundException e) {
             log.warnf("Role %s%s was not found when we tried to delete it", prefix, type);
          } catch (Exception e) {
@@ -439,7 +422,7 @@ public class UserServiceImpl implements UserService {
    public List<UserData> administrators() {
          List<UserData> admins = new ArrayList<>();
          try {
-            for (var user : keycloak.realm(REALM).roles().get(Roles.ADMIN).getRoleUserMembers()) {
+            for (var user : keycloak.realm(realm).roles().get(Roles.ADMIN).getRoleUserMembers()) {
                admins.add(new UserData(user.getId(), user.getUsername(), user.getFirstName(), user.getLastName(), user.getEmail()));
             }
             return admins;
@@ -455,7 +438,7 @@ public class UserServiceImpl implements UserService {
       if (!newAdmins.contains(identity.getPrincipal().getName())) {
          throw ServiceException.badRequest("Cannot remove yourselves from administrator list");
       }
-      RoleResource roleResource = keycloak.realm(REALM).roles().get(Roles.ADMIN);
+      RoleResource roleResource = keycloak.realm(realm).roles().get(Roles.ADMIN);
 
       CountDownFuture<Void> future = new CountDownFuture<>(null, 1 + newAdmins.size());
       vertx.<RoleRepresentation>executeBlocking(promise ->
@@ -464,7 +447,7 @@ public class UserServiceImpl implements UserService {
          for (String username : newAdmins) {
             vertx.executeBlocking(promise -> {
                String userId = findMatchingUserId(username);
-               RoleScopeResource userRoles = keycloak.realm(REALM).users().get(userId).roles().realmLevel();
+               RoleScopeResource userRoles = keycloak.realm(realm).users().get(userId).roles().realmLevel();
                for (var role : userRoles.listAll()) {
                   if (Roles.ADMIN.equals(role.getName())) {
                      promise.complete();
@@ -482,7 +465,7 @@ public class UserServiceImpl implements UserService {
             Set<UserRepresentation> oldAdmins = roleResource.getRoleUserMembers();
             for (UserRepresentation user : oldAdmins) {
                if (!newAdmins.contains(user.getUsername())) {
-                  keycloak.realm(REALM).users().get(user.getId()).roles().realmLevel().remove(Collections.singletonList(adminRole));
+                  keycloak.realm(realm).users().get(user.getId()).roles().realmLevel().remove(Collections.singletonList(adminRole));
                }
             }
             promise.complete();
