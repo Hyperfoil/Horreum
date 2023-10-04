@@ -12,7 +12,6 @@
     "@types/luxon": "3.2.0",
     "@types/react": "17.0.37",
     "@types/react-autosuggest": "10.1.5",
-    "@types/react-dom": "17.0.11",
     "@types/react-redux": "7.1.20",
     "@types/react-router-dom": "5.3.3",
     "@types/react-table": "7.7.14",
@@ -72,6 +71,7 @@
     ]
   },
   "devDependencies": {
+    "@types/react-dom": "^18.2.9",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "eslint": "8.49.0",
