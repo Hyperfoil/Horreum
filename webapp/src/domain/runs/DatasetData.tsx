@@ -28,13 +28,11 @@ export default function DatasetData(props: DatasetDataProps) {
     const [editorData, setEditorData] = useState<string>()
     const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
     const [schemas, setSchemas] = useState<SchemaUsage[]>()
-    const [loading, setLoading] = useState(false)
     const [labelValuesOpen, setLabelValuesOpen] = useState(false)
     const [labelsLogOpen, setLabelsLogOpen] = useState(false)
     const [hasExperiments, setHasExperiments] = useState(false)
     const [experimentsOpen, setExperimentsOpen] = useState(false)
     useEffect(() => {
-        setLoading(true)
         Api.datasetServiceGetDataSet(props.datasetId)
             .then(
                 dataset => {
@@ -47,7 +45,7 @@ export default function DatasetData(props: DatasetDataProps) {
                         noop
                     )
             )
-            .finally(() => setLoading(false))
+
     }, [props.datasetId])
     useEffect(() => {
         Api.datasetServiceGetSummary(props.datasetId).then(
@@ -112,7 +110,6 @@ export default function DatasetData(props: DatasetDataProps) {
                     )}
                 </FlexItem>
             </Flex>
-            <MaybeLoading loading={loading}>
                 <Editor
                     height="600px"
                     value={editorData}
@@ -121,7 +118,6 @@ export default function DatasetData(props: DatasetDataProps) {
                         readOnly: true,
                     }}
                 />
-            </MaybeLoading>
         </>
     )
 }
