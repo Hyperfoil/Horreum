@@ -6,6 +6,7 @@ import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.entity.data.ViewDAO;
 import io.hyperfoil.tools.horreum.mapper.ViewMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -84,13 +85,20 @@ public class UIServiceImpl implements UIService {
     }
 
     @Override
-    @RolesAllowed({Roles.ADMIN, Roles.TESTER})
+    @PermitAll
     @WithRoles
     @Transactional
     public List<View> getViews(int testId) {
         if (testId <= 0) {
             throw ServiceException.badRequest("Missing test id");
         }
+
+        TestDAO test = TestDAO.findById(testId);
+
+        if (test == null ){
+            throw ServiceException.badRequest("Test not found with id: ".concat(Integer.toString(testId)));
+        }
+
         return ViewDAO.<ViewDAO>find("test.id", testId)
                 .stream().map(ViewMapper::from).collect(Collectors.toList());
     }
