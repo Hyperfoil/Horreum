@@ -11,7 +11,6 @@ import Editor from "../../components/Editor/monaco/Editor"
 
 import Api, { RunExtended } from "../../api"
 import { toString } from "../../components/Editor"
-import MaybeLoading from "../../components/MaybeLoading"
 import ChangeSchemaModal from "./ChangeSchemaModal"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInRun } from "./NoSchema"
@@ -41,7 +40,6 @@ type RunDataProps = {
 }
 
 export default function RunData(props: RunDataProps) {
-    const [loading, setLoading] = useState(false)
     const [data, setData] = useState()
     const [editorData, setEditorData] = useState<string>()
     const [updateCounter, setUpdateCounter] = useState(0)
@@ -52,7 +50,6 @@ export default function RunData(props: RunDataProps) {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get("token")
-        setLoading(true)
         Api.runServiceGetData(props.run.id, token || undefined)
             .then(
                 data => {
@@ -61,7 +58,6 @@ export default function RunData(props: RunDataProps) {
                 },
                 error => dispatchError(dispatch, error, "FETCH_RUN_DATA", "Failed to fetch run data").catch(noop)
             )
-            .finally(() => setLoading(false))
     }, [dispatch, props.run.id, teams, updateCounter])
 
     const isTester = useTester(props.run.owner)
@@ -109,7 +105,7 @@ export default function RunData(props: RunDataProps) {
                 onRemoteQuery={(query, array) => Api.sqlServiceQueryRunData(props.run.id, query, array)}
                 onDataUpdate={setEditorData}
             />
-            <MaybeLoading loading={loading}>{memoizedEditor}</MaybeLoading>
+            {memoizedEditor}
         </>
     )
 }
