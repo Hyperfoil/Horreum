@@ -778,13 +778,13 @@ public class RunServiceTest extends BaseServiceTest {
 
          Label lblBuildID = new Label();
          lblBuildID.name = "build-id";
-         Extractor buildIDExtractor = new Extractor("build-id", "$.build-id", false);
+         Extractor buildIDExtractor = new Extractor("build-id", "$.\"build-id\"", false);
          lblBuildID.extractors = List.of(buildIDExtractor);
          lblBuildID.access = Access.PUBLIC;
          lblBuildID.owner = test.owner;
          lblBuildID.metrics = false;
          lblBuildID.filtering = true;
-         //lblBuildID.id = addOrUpdateLabel(schema.id, lblBuildID);
+         lblBuildID.id = addOrUpdateLabel(schema.id, lblBuildID);
 
          //3. Config change detection variables
          Variable variable = new Variable();
