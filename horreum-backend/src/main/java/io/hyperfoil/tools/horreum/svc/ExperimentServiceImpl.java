@@ -236,7 +236,7 @@ public class ExperimentServiceImpl implements ExperimentService {
          output -> perProfileLogs.forEach((profileId, pls)-> addLog(pls, info.testId, info.id,
                PersistentLogDAO.DEBUG, "Baseline filter output: %s", output)));
 
-      Map<Integer, DataPointDAO> datapoints = DataPointDAO.<DataPointDAO>find("dataset_id = ?1", info.id)
+      Map<Integer, DataPointDAO> datapoints = DataPointDAO.<DataPointDAO>find("dataset.id = ?1", info.id)
             .stream().collect(Collectors.toMap(dp -> dp.variable.id, Function.identity(),
                   // defensive merge: although we should not be able to load any old datapoints
                   // (with identical dataset_id+variable_id combo) these may temporarily appear
@@ -248,7 +248,7 @@ public class ExperimentServiceImpl implements ExperimentService {
          ExperimentProfileDAO profile = ExperimentProfileDAO.findById(entry.getKey());
          Map<Integer, List<DataPointDAO>> byVar = new HashMap<>();
          List<Integer> variableIds = profile.comparisons.stream().map(ExperimentComparisonDAO::getVariableId).collect(Collectors.toList());
-         DataPointDAO.<DataPointDAO>find("dataset_id IN ?1 AND variable_id IN ?2", Sort.descending("timestamp", "dataset_id"), entry.getValue(), variableIds)
+         DataPointDAO.<DataPointDAO>find("dataset.id IN ?1 AND variable.id IN ?2", Sort.descending("timestamp", "dataset_id"), entry.getValue(), variableIds)
                .stream().forEach(dp -> byVar.computeIfAbsent(dp.variable.id, v -> new ArrayList<>()).add(dp));
          Map<ExperimentComparison, ComparisonResult> results = new HashMap<>();
          for (var comparison : profile.comparisons) {
