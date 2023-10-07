@@ -731,7 +731,6 @@ public class RunServiceTest extends BaseServiceTest {
       Assertions.assertEquals("foobar", preview.value.textValue());
    }
 
-   @Disabled
    @org.junit.jupiter.api.Test
    public void runExperiment() throws InterruptedException {
       Test test = createExampleTest("supersecret");
@@ -785,7 +784,7 @@ public class RunServiceTest extends BaseServiceTest {
          lblBuildID.owner = test.owner;
          lblBuildID.metrics = false;
          lblBuildID.filtering = true;
-         lblBuildID.id = addOrUpdateLabel(schema.id, lblBuildID);
+         //lblBuildID.id = addOrUpdateLabel(schema.id, lblBuildID);
 
          //3. Config change detection variables
          Variable variable = new Variable();

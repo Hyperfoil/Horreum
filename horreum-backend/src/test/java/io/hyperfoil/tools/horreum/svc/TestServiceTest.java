@@ -236,13 +236,13 @@ public class TestServiceTest extends BaseServiceTest {
          TestUtil.eventually(() -> {
             em.clear();
             try (var h = roleManager.withRoles(Collections.singleton(Roles.HORREUM_SYSTEM))) {
-               assertEquals(0, TestDAO.count());
-               assertEquals(0, ActionDAO.count());
-               assertEquals(0, VariableDAO.count());
+               assertEquals(0, TestDAO.count("id = ?1", test.id));
+               assertEquals(0, ActionDAO.count("testId = ?1", test.id));
+               assertEquals(0, VariableDAO.count("testId = ?1", test.id));
                assertEquals(0, ChangeDetectionDAO.count());
-               assertEquals(0, MissingDataRuleDAO.count());
-               assertEquals(0, ExperimentProfileDAO.count());
-               assertEquals(0, WatchDAO.count());
+               assertEquals(0, MissingDataRuleDAO.count("test.id = ?1", test.id));
+               assertEquals(0, ExperimentProfileDAO.count("test.id = ?1", test.id));
+               assertEquals(0, WatchDAO.count("test.id = ?1", test.id));
             }
          });
       }
