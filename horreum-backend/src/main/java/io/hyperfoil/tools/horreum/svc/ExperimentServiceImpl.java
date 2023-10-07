@@ -248,7 +248,7 @@ public class ExperimentServiceImpl implements ExperimentService {
          ExperimentProfileDAO profile = ExperimentProfileDAO.findById(entry.getKey());
          Map<Integer, List<DataPointDAO>> byVar = new HashMap<>();
          List<Integer> variableIds = profile.comparisons.stream().map(ExperimentComparisonDAO::getVariableId).collect(Collectors.toList());
-         DataPointDAO.<DataPointDAO>find("dataset.id IN ?1 AND variable.id IN ?2", Sort.descending("timestamp", "dataset_id"), entry.getValue(), variableIds)
+         DataPointDAO.<DataPointDAO>find("dataset.id IN ?1 AND variable.id IN ?2", Sort.descending("timestamp", "dataset.id"), entry.getValue(), variableIds)
                .stream().forEach(dp -> byVar.computeIfAbsent(dp.variable.id, v -> new ArrayList<>()).add(dp));
          Map<ExperimentComparison, ComparisonResult> results = new HashMap<>();
          for (var comparison : profile.comparisons) {

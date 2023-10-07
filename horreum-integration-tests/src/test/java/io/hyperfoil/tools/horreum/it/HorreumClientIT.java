@@ -175,7 +175,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
             Label lblBuildID = new Label();
             lblBuildID.name = "build-id";
-            Extractor buildIDExtractor = new Extractor("build-id", "$.build-id", false);
+            Extractor buildIDExtractor = new Extractor("build-id", "$.\"build-id\"", false);
             lblBuildID.extractors = List.of(buildIDExtractor);
             lblBuildID.access = Access.PUBLIC;
             lblBuildID.owner = dummyTest.owner;
