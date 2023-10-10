@@ -1,12 +1,3 @@
-####
-# Base for JVM images, build using Jib with -Dquarkus.container-image.build=true
-#
-# Build this with
-#
-#   docker build -f src/main/docker/Dockerfile.jvm.base -t quay.io/hyperfoil/horreum-base:latest .
-#
-###
-FROM docker.io/fabric8/java-alpine-openjdk11-jre
-RUN apk add jq
+FROM registry.access.redhat.com/ubi9/openjdk-17
 COPY src/main/resources/horreum.sh /deployments/
 COPY src/main/resources/k8s-setup.sh /deployments/
