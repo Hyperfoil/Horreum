@@ -27,11 +27,12 @@ public class TableReportMapper {
         TableReportConfig dto = new TableReportConfig();
         dto.id = trc.id;
         dto.title = trc.title;
-        dto.test = TestMapper.from(trc.test);
+        if(trc.test != null)
+            dto.test = TestMapper.from(trc.test);
         dto.filterLabels = trc.filterLabels;
         dto.filterFunction = trc.filterFunction;
         dto.categoryLabels = trc.categoryLabels;
-        dto.filterFunction = trc.categoryFunction;
+        dto.categoryFunction = trc.categoryFunction;
         dto.categoryFormatter = trc.categoryFormatter;
         dto.seriesLabels = trc.seriesLabels;
         dto.seriesFunction = trc.seriesFunction;
