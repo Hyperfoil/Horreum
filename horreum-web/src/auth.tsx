@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { Button } from "@patternfly/react-core"
 
 import { State } from "./store"
-import Api, { UserData } from "./api"
+import Api, { UserData } from "./api";
 import { AddAlertAction, dispatchError } from "./alerts"
 import { Dispatch } from "redux"
 import { ThunkDispatch } from "redux-thunk"

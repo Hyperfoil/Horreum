@@ -357,7 +357,7 @@
                 <configuration>
                     <filesets>
                         <fileset>
-                            <directory>webapp/src/generated</directory>
+                            <directory>horreum-web/src/generated</directory>
                             <includes>
                                 <include>**/*</include>
                             </includes>
@@ -459,7 +459,7 @@
                         <executable>sh</executable>
                         <arguments>
                           <argument>-c</argument>
-                          <argument>rm -rf webapp/node webapp/node_modules webapp/package-lock.json webapp/src/generated/</argument>
+                          <argument>rm -rf horreum-web/node horreum-web/node_modules horreum-web/package-lock.json horreum-web/src/generated/</argument>
                         </arguments>
                       </configuration>
                     </execution>
