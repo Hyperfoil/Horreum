@@ -33,6 +33,7 @@ public class HorreumResources {
 
     static Function<String, ClientRepresentation> findClient = clientName -> keycloak.realm(HORREUM_REALM).clients().findByClientId(clientName).get(0);
     static Function<String, String> generateClientSecret = clientName -> keycloak.realm(HORREUM_REALM).clients().get(findClient.apply(clientName).getId()).generateNewSecret().getValue();
+    static Function<String, String> getClientSecret = clientName -> keycloak.realm(HORREUM_REALM).clients().get(findClient.apply(clientName).getId()).getSecret().getValue();
     static Function<String, RoleRepresentation> getRoleID = role -> keycloak.realm(HORREUM_REALM).roles().get(role).toRepresentation();
     static BiFunction<String, String, RoleRepresentation> getClientRoleID = (clientId, role) -> keycloak.realm(HORREUM_REALM).clients().get(clientId).roles().get(role).toRepresentation();
 
@@ -205,9 +206,11 @@ public class HorreumResources {
                 clientRepresentation.getWebOrigins().add("http://localhost:8080");
                 clientRepresentation.getRedirectUris().add("http://localhost:8080/*");
 
+                envVariables.put("quarkus.oidc.credentials.secret", getClientSecret.apply("horreum"));
+
                 keycloak.realm(HORREUM_REALM).clients().get(clientRepresentation.getId()).update(clientRepresentation);
             } catch (Exception e){
-                log.warn("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
+                log.error("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
             }
         }
         log.info("Waiting for test infrastructure to start");
