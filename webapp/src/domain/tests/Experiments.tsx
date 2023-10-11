@@ -353,9 +353,9 @@ export default function Experiments(props: ExperimentsProps) {
                                             <ConditionComponent
                                                 {...comp}
                                                 isTester={isTester}
-                                                value={JSON.parse(c.config)[comp.name]}
+                                                value={(c.config as any)[comp.name]}
                                                 onChange={value => {
-                                                    JSON.parse(c.config)[comp.name] = value
+                                                    (c.config as any)[comp.name] = value
                                                     update({ comparisons: [...selected.comparisons] })
                                                 }}
                                             />

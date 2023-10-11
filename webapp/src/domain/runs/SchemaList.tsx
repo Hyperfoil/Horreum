@@ -4,8 +4,8 @@ import { Tooltip } from "@patternfly/react-core"
 import { TimesIcon } from "@patternfly/react-icons"
 import { interleave } from "../../utils"
 import { SchemaUsage, ValidationError } from "../../api"
-// import ErrorBadge from "../../components/ErrorBadge"
-// import WarnBadge from "../../components/WarnBadge"
+import ErrorBadge from "../../components/ErrorBadge"
+import WarnBadge from "../../components/WarnBadge"
 
 type SchemaListProps = {
     schemas: SchemaUsage[]
@@ -13,8 +13,8 @@ type SchemaListProps = {
 }
 
 export default function SchemaList(props: SchemaListProps) {
-    const lines = props.schemas.map((schema, i) => {
-        // const validationErrors = props.validationErrors?.filter(e => e.schemaId === schema.id)
+    let lines = props.schemas.map((schema, i) => {
+        const validationErrors = props.validationErrors?.filter(e => e.schemaId === schema.id)
         return (
             <React.Fragment key={2 * i}>
                 <Tooltip content={<code>{schema.uri}</code>}>
@@ -25,39 +25,34 @@ export default function SchemaList(props: SchemaListProps) {
                         <TimesIcon style={{ fill: "#AAA" }} />
                     </Tooltip>
                 )}
-                {//validationErrors.length > 0 && (
-                    /*
-                        <Tooltip
-                            isContentLeftAligned
-                            content={
-                                <>
-                                    There are {validationErrors.length} errors validating the data against this schema:
-                                    <br />
-                                    <ul>
-                                        {validationErrors.map((e, i) => (
-                                            <li key={i}>{JSON.parse(e.error).message}</li>
-                                        ))}
-                                    </ul>
-                                    Visit run/dataset for details.
-                                </>
-                            }
-                        >
+                {validationErrors.length > 0 && (
+                    <Tooltip
+                        isContentLeftAligned
+                        content={
+                            <>
+                                There are {validationErrors.length} errors validating the data against this schema:
+                                <br />
+                                <ul>
+                                    {validationErrors.map((e, i) => (
+                                        <li key={i}>{(e.error as any).message}</li>
+                                    ))}
+                                </ul>
+                                Visit run/dataset for details.
+                            </>
+                        }
+                    >
                         <ErrorBadge>{validationErrors.length}</ErrorBadge>
                     </Tooltip>
-                )
-                    */
-                }
+                )}
             </React.Fragment>
         )
     })
-/*
     const noSchemaErrors = props.validationErrors?.filter(e => !e.schemaId)
     if (noSchemaErrors.length > 0) {
         lines = [
             ...lines,
             <React.Fragment key="no_schema">
                 (none){" "}
-{/*
                 <Tooltip
                     isContentLeftAligned
                     content={
@@ -66,21 +61,18 @@ export default function SchemaList(props: SchemaListProps) {
                             <br />
                             <ul>
                                 {noSchemaErrors.map((e, i) => (
-                                    <li key={i}>{JSON.parse(e.error).message}</li>
+                                    <li key={i}>{(e.error as any).message}</li>
                                 ))}
                             </ul>
                             Visit run/dataset for details.
                         </>
                     }
                 >
-}
                     <WarnBadge>{noSchemaErrors.length}</WarnBadge>
                 </Tooltip>
             </React.Fragment>,
         ]
     }
-*/
-
     return (
         <>
             {interleave(lines, i => (

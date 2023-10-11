@@ -11,7 +11,6 @@ type ValidationErrorTableProps = {
 }
 
 export default function ValidationErrorTable(props: ValidationErrorTableProps) {
-  let err: Json;
     const rows = useMemo(
         () =>
             props.errors &&
@@ -24,12 +23,11 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
                     ) : (
                         "(none)"
                     ),
-                    err = JSON.parse(e.error),
-                    err.type,
-                    <code>{err.path}</code>,
-                    <code>{err.schemaPath}</code>,
-                    <code>{err.arguments}</code>,
-                    err.message,
+                    (e.error as any).type,
+                    <code>{(e.error as any).path}</code>,
+                    <code>{(e.error as any).schemaPath}</code>,
+                    <code>{(e.error as any).arguments}</code>,
+                    (e.error as any).message,
                 ],
             })),
         [props.errors, props.schemas]
