@@ -13,7 +13,7 @@ export function initKeycloak(state: State) {
     if (!keycloak) {
         keycloakPromise = fetchival("/api/config/keycloak", { responseAs: "json" })
             .get()
-            .then((response: any) => Keycloak(response as KeycloakConfig))
+            .then((response: any) => new Keycloak(response as KeycloakConfig))
     } else {
         keycloakPromise = Promise.resolve(keycloak)
     }

@@ -32,6 +32,6 @@ public class Const {
     public static final String DEFAULT_POSTGRES_IMAGE = "postgres:13";
 
     public static final String DEFAULT_KEYCLOAK_NETWORK_ALIAS = "horreum-dev-keycloak";
-    public static final String DEFAULT_KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:21.1";
+    public static final String DEFAULT_KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:22.0";
 
 }
