@@ -46,7 +46,7 @@ export default function ExportImport(props: ExportImportProps) {
                                     .then(
                                         cfg => {
                                             try {
-                                                setUploadContent(JSON.parse(cfg))
+                                                setUploadContent((cfg as any))
                                             } catch (e) {
                                                 setParseError(e)
                                                 return
