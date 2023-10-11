@@ -3,7 +3,6 @@ import { NavLink } from "react-router-dom"
 
 import { SchemaDescriptor, ValidationError } from "../../api"
 import { Table, TableBody, TableHeader } from "@patternfly/react-table"
-import { Json } from "../../generated"
 
 type ValidationErrorTableProps = {
     errors: ValidationError[]
@@ -11,7 +10,6 @@ type ValidationErrorTableProps = {
 }
 
 export default function ValidationErrorTable(props: ValidationErrorTableProps) {
-  let err: Json;
     const rows = useMemo(
         () =>
             props.errors &&
@@ -24,12 +22,11 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
                     ) : (
                         "(none)"
                     ),
-                    err = JSON.parse(e.error),
-                    err.type,
-                    <code>{err.path}</code>,
-                    <code>{err.schemaPath}</code>,
-                    <code>{err.arguments}</code>,
-                    err.message,
+                    e.error.type,
+                    <code>{e.error.path}</code>,
+                    <code>{e.error.schemaPath}</code>,
+                    <code>{e.error.arguments}</code>,
+                    e.error.message,
                 ],
             })),
         [props.errors, props.schemas]

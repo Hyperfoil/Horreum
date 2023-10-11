@@ -1,15 +1,13 @@
 package io.hyperfoil.tools.horreum.entity;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.NotNull;
-
-import com.fasterxml.jackson.databind.JsonNode;
-
-import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 import org.hibernate.annotations.Type;
 
 @Embeddable
