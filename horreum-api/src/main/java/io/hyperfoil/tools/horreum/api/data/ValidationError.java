@@ -1,17 +1,14 @@
 package io.hyperfoil.tools.horreum.api.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotNull;
-import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
+import java.util.Map;
 
 public class ValidationError {
     public int schemaId;
-    @NotNull
     @JsonProperty(required = true)
-    @Schema(implementation = String.class)
-    //TODO: stalep, does this really need to be a JsonNode?
-    public JsonNode error;
+    public ErrorDetails error;
 
     public ValidationError() {
     }
@@ -24,5 +21,20 @@ public class ValidationError {
     @JsonProperty( value = "schemaId", required = true )
     public Integer getSchemaId() {
         return schemaId;
+    }
+
+    public static class ErrorDetails{
+        @NotNull
+        @JsonProperty(required = true)
+        public String type;
+        public String code;
+        public String path;
+        public String schemaPath;
+        public String[] arguments;
+        public Map<String, Object> details;
+        @NotNull
+        @JsonProperty(required = true)
+        public String message;
+
     }
 }
