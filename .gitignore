@@ -38,19 +38,19 @@ release.properties
 .env
 
 # dependencies
-/webapp/node_modules
-/webapp/node
+/horreum-web/node_modules
+/horreum-web/node
 .pnp
 .pnp.js
 
 # testing
-/webapp/coverage
+/horreum-web/coverage
 
 # production
-/webapp/build
+/horreum-web/build
 
 # generated API
-/webapp/src/generated
+/horreum-web/src/generated
 
 # misc
 .env.local

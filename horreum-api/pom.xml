@@ -87,7 +87,7 @@
                         </goals>
                         <configuration>
                             <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
-                            <output>${project.basedir}/../webapp/src/generated</output>
+                            <output>${project.basedir}/../horreum-web/src/generated</output>
                             <generatorName>typescript-fetch</generatorName>
                             <skipValidateSpec>false</skipValidateSpec>
                             <typeMappings>Array=any</typeMappings>

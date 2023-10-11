@@ -37,4 +37,4 @@ jobs:
     - name: Build with Maven
       run: mvn clean package -B --file pom.xml -DskipTests ${{ matrix.os.build-options }}
     - name: Run audit
-      run: cd webapp && node/node/npm audit --production
+      run: cd horreum-web && node/node/npm audit --production
