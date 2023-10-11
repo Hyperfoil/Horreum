@@ -92,15 +92,6 @@ Horreum is running on [localhost:8080](http://localhost:8080)
 | User | `user` | `secret` |
 
 
-### Keycloak
-
-Keycloak is running on [localhost:8180](http://localhost:8180)
-
-| Role | Name | Password | Realm |
-| ---- | ---- | -------- | ----- |
-| Admin | `admin` | `secret` | |
-| User | `user` | `secret` | `horreum` |
-
 ### Troubleshooting development infrastructure
 
 1. Clean cached files and rebuild
@@ -109,7 +100,6 @@ Keycloak is running on [localhost:8180](http://localhost:8180)
 $ mvn clean -p remove-node-cache
 $ mvn clean install -DskipTests -DskipITs
 ```
-TODO:: troubleshooting with dev services
 
 ## Tested platforms
 
