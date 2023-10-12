@@ -19,6 +19,16 @@ You can preload Horreum with some [example data](https://github.com/Hyperfoil/Ho
 
 once Horreum is running.
 
+## OpenAPI
+
+The [OpenAPI](https://www.openapis.org/) for [Horreum](https://github.com/Hyperfoil/Horreum/) will be located in
+
+```bash
+./horreum-api/target/generated/openapi.yaml
+```
+
+after the build.
+
 ## Main configuration
 
 The main configuration of Horreum is in the [application.properties](https://github.com/Hyperfoil/Horreum/blob/master/horreum-backend/src/main/resources/application.properties) file.
