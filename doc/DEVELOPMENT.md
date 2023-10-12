@@ -1,104 +1,59 @@
 # Development
 
-## Using existing data
+## Build
 
-You can use a backup - f.ex a [pgmoneta](https://pgmoneta.github.io/) one - from an existing setup, like
-
-```bash
-cd /tmp
-scp <username>@<hostname>:/path/to/backup/horreum-timestamp.tar.zstd .
-mkdir data
-cd data
-tar -axf ../horreum-timestamp.tar.zstd
-cd ..
-chown -R <username>:<groupname> data/
-```
-
-and then starting the container with
+You will need Java 17 and Maven 3.9 then execute
 
 ```bash
-podman run --name postgres --rm -d --network=host -v "/tmp/data/:/var/lib/postgresql/data:rw,z" docker.io/postgres:13
+mvn clean install
+mvn quarkus:dev -pl 'horreum-backend'
 ```
 
-You have to choose the PostgreSQL container image that aligns with your backup files.
+## Example data
 
-
-You can start the rest of the stack using the
+You can preload Horreum with some [example data](https://github.com/Hyperfoil/Horreum/blob/master/infra-legacy/example-configuration.sh) with
 
 ```bash
-./infra/podman-compose.sh
+./infra-legacy/example-configuration.sh
 ```
 
-script. But, you need to comment out the
+once Horreum is running.
 
-* `postgres`
-* `db-init`
+## Main configuration
 
-steps in `infra/docker-compose.yml` first.
+The main configuration of Horreum is in the [application.properties](https://github.com/Hyperfoil/Horreum/blob/master/horreum-backend/src/main/resources/application.properties) file.
 
-Depending on your setup you may have to change user names and passwords in the following files:
+The database bootstrap script is in the [changeLog.xml](https://github.com/Hyperfoil/Horreum/blob/master/horreum-backend/src/main/resources/db/changeLog.xml)
 
-In `horreum-backend/src/main/resources/application.properties`
 
-* `quarkus.datasource.jdbc.url`
-* `quarkus.datasource.username`
-* `quarkus.datasource.password`
-* `quarkus.datasource.migration.jdbc.url`
-* `quarkus.datasource.migration.username`
-* `quarkus.datasource.migration.password`
-* `quarkus.liquibase.migration.migrate-at-start=false`
-* `horreum.db.secret`
+## Access Keycloak
 
-, in `infra/Dockerfile.keycloak `
-
-* `ENV KC_DB_USERNAME`
-* `ENV KC_DB_PASSWORD`
-
-and in `infra/app-init.sh`
-
-* `POSTGRES_PORT`
-* `KEYCLOAK_ADMIN_TOKEN`
-
-Make sure that the `hostname` and `port` against the database are defined. Like `DB_PORT` in `infra/docker-compose.yml`.
-
-## Build tooling set-up
+You can access the Keycloak instance by using the URL provided by the
 
 ```bash
-mvn -N io.takari:maven:wrapper
+curl http://localhost:8080/api/config/keycloak | jq -r .url
 ```
 
-This set's up your environment with the maven wrapper tool
+command.
 
-##
+The following users are defined
 
-Alternatively you can build Horreum image (with `dev` tag) and run it (assuming that you've started the docker-compose/podman-compose infrastructure):
+| Role | Name | Password | Realm |
+| ---- | ---- | -------- | ----- |
+| Admin | `admin` | `secret` | |
+| User | `user` | `secret` | `horreum` |
+
+## Using an existing backup
+
+You can use an existing backup of the database (PostgreSQL 13+) by a command like
 
 ```bash
-# The base image contains tools like curl and jq and horreum.sh script
-podman build -f src/main/docker/Dockerfile.jvm.base -t quay.io/hyperfoil/horreum-base:latest .
-podman push quay.io/hyperfoil/horreum-base:latest
-mvn package
-podman run --rm --name horreum_app --env-file horreum-backend/.env --network=host quay.io/hyperfoil/horreum:dev
+mvn  quarkus:dev -pl '!horreum-integration-tests' \
+  -Dhorreum.dev-services.postgres.database-backup=/opt/databases/horreum-prod-db/ \
+  -Dhorreum.db.secret='M3g45ecr5t!' \
+  -Dhorreum.dev-services.keycloak.db-password='prod-password' \
+  -Dhorreum.dev-services.keycloak.admin-password='ui-prod-password' \
+  -Dquarkus.datasource.username=user \
+  -Dquarkus.datasource.password='prod-password' \
+  -Dquarkus.liquibase.migration.migrate-at-start=false
 ```
-
-> :warning: _If npm install fails_: please try clearing the node module cache `npm cache clean`
-
-## Running in dev mode over HTTPS
-
-> TODO: Dev mode currently does not work over HTTPS (this is Quinoa issue)
-
-By default, the local setup uses plain HTTP. If you need to test HTTPS, run the docker-compose/podman-compose as usual (in this setup the other containers won't be secured) and then run:
-
-```bash
-./enable-https.sh
-```
-
-This script will amend `.env` file with few extra variables and configure Keycloak to redirect to secured ports. Then you can run
-
-```bash
-HTTPS=true mvn quarkus:dev
-```
-
-as usual - the `HTTPS=true` will use secured connections on the live-reload proxy on port 3000.
-
-When you want to revert back to plain HTTP, run `./disable-https.sh` and drop the `HTTPS=true` env var.

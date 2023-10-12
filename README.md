@@ -25,11 +25,11 @@ Horreum is a [Quarkus](https://quarkus.io/) based application which uses
 
 ## Prerequisites
 
-* [Java 11](https://adoptium.net/temurin/releases/?version=11)
+* [Java 17](https://adoptium.net/temurin/releases/?version=17)
 * [Apache Maven 3.8](https://maven.apache.org/)
-* [Docker ](https://www.docker.com/)
+* [Docker](https://www.docker.com/)
   * or
-* [Podman 4.5.1](https://podman.io/)
+* [Podman 4](https://podman.io/)
 
 ### Local development with Podman
 
@@ -65,25 +65,7 @@ mvn -DskipTests=true -DskipITs install
 mvn -Dquarkus.test.continuous-testing=disabled quarkus:dev -pl 'horreum-backend'
 ```
 
-## Get Access
-
-* For the create-react-app live code server [localhost:3000](http://localhost:3000)
-* For the Quarkus development code server   [localhost:8080](http://localhost:8080)
-
-
-### Example configuration
-
-You can preload Horreum with some example data with
-
-```bash
-./infra-legacy/example-configuration.sh
-```
-
-once Horreum is running.
-
 ## Credentials
-
-### Horreum
 
 Horreum is running on [localhost:8080](http://localhost:8080)
 
@@ -92,7 +74,7 @@ Horreum is running on [localhost:8080](http://localhost:8080)
 | User | `user` | `secret` |
 
 
-### Troubleshooting development infrastructure
+## Troubleshooting development infrastructure
 
 1. Clean cached files and rebuild
 
