@@ -31,7 +31,7 @@ The database bootstrap script is in the [changeLog.xml](https://github.com/Hyper
 You can access the Keycloak instance by using the URL provided by the
 
 ```bash
-curl http://localhost:8080/api/config/keycloak | jq -r .url
+curl -k -s http://localhost:8080/api/config/keycloak | jq -r .url
 ```
 
 command.
