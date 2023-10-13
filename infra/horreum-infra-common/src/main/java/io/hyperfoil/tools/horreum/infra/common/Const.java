@@ -12,6 +12,9 @@ public class Const {
     public static final String HORREUM_DEV_KEYCLOAK_CONTAINER_PORT = "horreum.dev-services.keycloak.container-port";
     public static final String HORREUM_DEV_KEYCLOAK_DB_USERNAME = "horreum.dev-services.keycloak.db-username";
     public static final String HORREUM_DEV_KEYCLOAK_DB_PASSWORD = "horreum.dev-services.keycloak.db-password";
+    public static final String HORREUM_DEV_KEYCLOAK_HTTPS_ENABLED = "horreum.dev-services.keycloak.https-enabled";
+    public static final String HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE = "horreum.dev-services.keycloak.https-certificate";
+    public static final String HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY = "horreum.dev-services.keycloak.https-certificate-key";
 
     public static final String HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME = "horreum.dev-services.keycloak.admin-username";
     public static final String HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD = "horreum.dev-services.keycloak.admin-password";
