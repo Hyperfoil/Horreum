@@ -4,10 +4,14 @@ import io.hyperfoil.tools.horreum.infra.common.resources.KeycloakResource;
 import io.hyperfoil.tools.horreum.infra.common.resources.PostgresResource;
 import io.hyperfoil.tools.horreum.infra.common.utils.RoleBuilder;
 import io.hyperfoil.tools.horreum.infra.common.utils.UserBuilder;
+import jakarta.ws.rs.client.ClientBuilder;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
-import org.keycloak.representations.idm.*;
+import org.keycloak.representations.idm.ClientRepresentation;
+import org.keycloak.representations.idm.RoleRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
@@ -89,11 +93,10 @@ public class HorreumResources {
         }
     }
 
-    private static final boolean started = false;
-
     private static final Network network = Network.newNetwork();
     public static PostgresResource postgreSQLResource = new PostgresResource();
     public static KeycloakResource keycloakResource = new KeycloakResource();
+
     protected static String getProperty(String propertyName) {
         String override = System.getProperty(propertyName);
         if (override != null) {
@@ -109,16 +112,10 @@ public class HorreumResources {
         return value.trim();
     }
 
-
     public static Map<String, String> startContainers(Map<String, String> initArgs) {
-
-
-
         Map<String, String> envVariables = new HashMap<>();
 
-
         String QUARKUS_DATASOURCE_PASSWORD = getProperty("quarkus.datasource.password");
-
         envVariables.put("QUARKUS_DATASOURCE_PASSWORD", QUARKUS_DATASOURCE_PASSWORD);
         envVariables.put("QUARKUS_DATASOURCE_MIGRATION_PASSWORD", QUARKUS_DATASOURCE_PASSWORD);
 
@@ -149,6 +146,9 @@ public class HorreumResources {
         envVariables.put("keycloak.host", keycloakEnv.get("keycloak.host"));
         envVariables.put("horreum.keycloak.url", keycloakEnv.get("keycloak.host"));
         envVariables.put("quarkus.oidc.auth-server-url", keycloakEnv.get("keycloak.host").concat("/realms/").concat(HORREUM_REALM));
+        if (Boolean.parseBoolean(initArgs.get(HORREUM_DEV_KEYCLOAK_HTTPS_ENABLED))) {
+            envVariables.put("quarkus.oidc.tls.trust-store-file", HorreumResources.class.getClassLoader().getResource("horreum-dev-keycloak.pkcs12").getPath());
+        }
 
         String keycloakAdminUser = initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME);
         String keycloakAdminPassword = initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD);
@@ -159,11 +159,11 @@ public class HorreumResources {
                 .username(keycloakAdminUser)
                 .password(keycloakAdminPassword)
                 .clientId("admin-cli")
+                .resteasyClient(((ResteasyClientBuilder) ClientBuilder.newBuilder()).disableTrustManager().build())
                 .build();
 
         if ( ! initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ) {
             // Not using a backup db, so need to create the dummy roles
-
 
             // Obtain client secrets for Horreum
             envVariables.put("quarkus.oidc.credentials.secret", generateClientSecret.apply("horreum"));
@@ -218,8 +218,7 @@ public class HorreumResources {
         return envVariables;
     }
 
-    private static void waitForContainerReady(GenericContainer container, String pattern) {
-
+    private static void waitForContainerReady(GenericContainer<?> container, String pattern) {
         if (container != null) {
             WaitingConsumer waitingConsumer = new WaitingConsumer();
 
@@ -235,10 +234,9 @@ public class HorreumResources {
                 throw new RuntimeException("Timed out waiting for " + container.getContainerName() + " container to start");
             }
         } else {
-            throw new RuntimeException("Could not find container: " + container.getContainerName());
+            throw new RuntimeException("No container!");
         }
     }
-
 
     public static void stopContainers() {
         postgreSQLResource.stop();

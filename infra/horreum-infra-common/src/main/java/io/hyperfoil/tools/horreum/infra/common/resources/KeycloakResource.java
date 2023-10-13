@@ -6,6 +6,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
+import org.testcontainers.utility.MountableFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +24,6 @@ public class KeycloakResource implements ResourceLifecycleManager {
     private GenericContainer<?> keycloakContainer;
 
     private String networkAlias = "";
-    private Integer containerPort;
 
     @Override
     public void init(Map<String, String> initArgs) {
@@ -45,24 +45,20 @@ public class KeycloakResource implements ResourceLifecycleManager {
             final String KEYCLOAK_IMAGE = initArgs.get(HORREUM_DEV_KEYCLOAK_IMAGE);
 
             networkAlias = initArgs.get(HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS);
-            String port = initArgs.get(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT);
-            containerPort = port != null ? Integer.parseInt(port) : null;
 
             //TODO: better way of detecting we are using a backup
             if (!initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP)) {
 
-                File tempKeycloakRealmFile = null;
-
+                File tempKeycloakRealmFile;
                 try (InputStream is = KeycloakResource.class.getClassLoader().getResourceAsStream("keycloak-horreum.json")) {
+                    if (is == null) {
+                        throw new RuntimeException("Failed to load keycloak realm configuration");
+                    }
                     tempKeycloakRealmFile = File.createTempFile("horreum-dev-keycloak-", ".json");
                     tempKeycloakRealmFile.deleteOnExit();
                     Files.copy(is, tempKeycloakRealmFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 } catch (IOException e) {
                     throw new RuntimeException("Could not extract Horreum Keycloak realm definition", e);
-                }
-
-                if (tempKeycloakRealmFile == null) {
-                    throw new RuntimeException("Failed to load keycloak realm configuration");
                 }
 
                 ImageFromDockerfile imageFromDockerfile = new ImageFromDockerfile().withDockerfileFromBuilder(builder ->
@@ -82,17 +78,17 @@ public class KeycloakResource implements ResourceLifecycleManager {
                                 .entryPoint("/opt/keycloak/bin/kc.sh ${KEYCLOAK_COMMAND:-start-dev} --import-realm $EXTRA_OPTIONS")
                                 .build()).withFileFromFile("/tmp/keycloak-horreum.json", tempKeycloakRealmFile);
 
-                keycloakContainer = (containerPort == null ) ?
-                        new GenericContainer<>().withExposedPorts(8080) :
-                        new FixedHostPortGenericContainer<>("were-going-to-override-this").withFixedExposedPort(containerPort, 8080);
+                keycloakContainer = (initArgs.containsKey(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT)) ?
+                        new FixedHostPortGenericContainer<>("were-going-to-override-this").withFixedExposedPort(Integer.parseInt(initArgs.get(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT)), 8080) :
+                        new GenericContainer<>().withExposedPorts(8080);
 
                 keycloakContainer.setImage(imageFromDockerfile);
 
             } else {
 
-                keycloakContainer = (containerPort == null ) ?
-                        new GenericContainer<>(KEYCLOAK_IMAGE).withExposedPorts(8080) :
-                        new FixedHostPortGenericContainer<>(KEYCLOAK_IMAGE).withFixedExposedPort(containerPort, 8080);
+                keycloakContainer = (initArgs.containsKey(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT)) ?
+                        new FixedHostPortGenericContainer<>("were-going-to-override-this").withFixedExposedPort(Integer.parseInt(initArgs.get(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT)), 8080) :
+                        new GenericContainer<>().withExposedPorts(8080);
 
                 keycloakContainer.withEnv("KC_HTTP_PORT", "8080")
                         .withEnv("JAVA_OPTS", "-Xms1024m -Xmx1024m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true")
@@ -108,10 +104,23 @@ public class KeycloakResource implements ResourceLifecycleManager {
                         .withCommand("-Dquarkus.http.http2=false", "start-dev");
             }
 
+            // copy HTTPS cert and key to the container
+            if (Boolean.parseBoolean(initArgs.get(HORREUM_DEV_KEYCLOAK_HTTPS_ENABLED))) {
+                try {
+                    keycloakContainer.withCopyFileToContainer(MountableFile.forClasspathResource("keycloak-tls.crt"), "/tmp/keycloak-tls.crt");
+                    keycloakContainer.addEnv("KC_HTTPS_CERTIFICATE_FILE", "/tmp/keycloak-tls.crt");
+                    keycloakContainer.withCopyFileToContainer(MountableFile.forClasspathResource("keycloak-tls.key"), "/tmp/keycloak-tls.key");
+                    keycloakContainer.addEnv("KC_HTTPS_CERTIFICATE_KEY_FILE", "/tmp/keycloak-tls.key");
+                    keycloakContainer.addExposedPort(8443);
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Please create the keycloak HTTPS certificate using the provided script");
+                }
+            }
+
+            // it can be helpful during development to have the HTTP port mapped, even when HTTPS is being used
+            keycloakContainer.addExposedPort(8080);
             keycloakContainer.waitingFor(Wait.defaultWaitStrategy().withStartupTimeout(Duration.ofSeconds(120)));
-
         }
-
     }
 
     @Override
@@ -126,16 +135,14 @@ public class KeycloakResource implements ResourceLifecycleManager {
         }
         keycloakContainer.start();
 
-        String mappedPort = keycloakContainer.getMappedPort(8080).toString();
-        String ipAddr = "localhost";
-        String keycloakHost = String.format("http://%s:%s", ipAddr, mappedPort);
-        String keycloakBase = String.format("%s/auth", keycloakHost);
-        String oidcAuthServerUrl = keycloakBase.concat("/realms/horreum");
+        boolean https = keycloakContainer.getExposedPorts().contains(8443);
+        String mappedPort = keycloakContainer.getMappedPort(https ? 8443 : 8080).toString();
+        String keycloakHost = String.format(https ? "https://%s:%s" : "http://%s:%s", keycloakContainer.getHost(), mappedPort);
 
         return Map.of(
                 "keycloak.host", keycloakHost,
                 "keycloak.admin.url", keycloakHost.concat("/realms/master/protocol/openid-connect/token"),
-                "quarkus.oidc.auth-server-url", oidcAuthServerUrl
+                "quarkus.oidc.auth-server-url", keycloakHost.concat("/auth/realms/horreum")
         );
     }
 
@@ -146,8 +153,7 @@ public class KeycloakResource implements ResourceLifecycleManager {
         }
     }
 
-    public GenericContainer getContainer() {
+    public GenericContainer<?> getContainer() {
         return this.keycloakContainer;
     }
-
 }

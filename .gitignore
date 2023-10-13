@@ -65,3 +65,7 @@ yarn.lock*
 
 react-app-env.d.ts
 
+# keycloak testcontainer temp certificate
+/infra/horreum-infra-common/src/main/resources/keycloak-tls.key
+/infra/horreum-infra-common/src/main/resources/keycloak-tls.crt
+/infra/horreum-infra-common/src/main/resources/horreum-dev-keycloak.pkcs12
