@@ -24,6 +24,12 @@ public class HorreumDevServicesKeycloakConfig {
     public boolean enabled;
 
     /**
+     * Setup and use the HTTPS listener.
+     */
+    @ConfigItem(defaultValue = "false")
+    public boolean httpsEnabled;
+
+    /**
      * Container image name for keycloak service
      */
     @ConfigItem
@@ -46,7 +52,6 @@ public class HorreumDevServicesKeycloakConfig {
      */
     @ConfigItem(defaultValue = DEFAULT_KC_DB_PASSWORD)
     public String dbPassword;
-
 
     /**
      * Admin Username password for keycloak
