@@ -96,10 +96,17 @@ public interface ExperimentService {
 
    @Schema(name = "ComparisonResult")
    class ComparisonResult {
-      public final BetterOrWorse overall;
-      public final double experimentValue;
-      public final double baselineValue;
-      public final String result;
+      public BetterOrWorse overall;
+      public double experimentValue;
+      public double baselineValue;
+      public String result;
+
+      public ComparisonResult() {
+         this.overall = null;
+         this.experimentValue = 0.0;
+         this.baselineValue = 0.0;
+         this.result = null;
+      }
 
       public ComparisonResult(BetterOrWorse overall, double experimentValue, double baselineValue, String result) {
          this.overall = overall;
