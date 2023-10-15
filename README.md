@@ -27,9 +27,7 @@ Horreum is a [Quarkus](https://quarkus.io/) based application which uses
 
 * [Java 17](https://adoptium.net/temurin/releases/?version=17)
 * [Apache Maven 3.8](https://maven.apache.org/)
-* [Docker](https://www.docker.com/)
-  * or
-* [Podman 4](https://podman.io/)
+* [Podman 4](https://podman.io/) or [Docker](https://www.docker.com/)
 
 ### Local development with Podman
 
