@@ -6,7 +6,6 @@ import io.quarkus.runtime.annotations.ConfigItem;
 import java.io.File;
 import java.util.Optional;
 
-import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_POSTGRES_IMAGE;
 import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_POSTGRES_NETWORK_ALIAS;
 
 /**
@@ -24,7 +23,7 @@ public class HorreumDevServicesPostgresConfig {
     /**
      * Container image name for postgres service
      */
-    @ConfigItem(defaultValue = DEFAULT_POSTGRES_IMAGE)
+    @ConfigItem
     public String image;
 
 

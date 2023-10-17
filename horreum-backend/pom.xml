@@ -209,6 +209,10 @@
                     <properties>
                         <quarkus.container-image.additional-tags>${buildNumber}</quarkus.container-image.additional-tags>
                     </properties>
+                    <systemProperties>
+                        <horreum.dev-services.keycloak.image>${dev.images.keycloak}</horreum.dev-services.keycloak.image>
+                        <horreum.dev-services.postgres.image>${dev.images.postgres}</horreum.dev-services.postgres.image>
+                    </systemProperties>
                 </configuration>
             </plugin>
             <plugin>
@@ -235,6 +239,8 @@
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
+                        <horreum.dev-services.keycloak.image>${dev.images.keycloak}</horreum.dev-services.keycloak.image>
+                        <horreum.dev-services.postgres.image>${dev.images.postgres}</horreum.dev-services.postgres.image>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

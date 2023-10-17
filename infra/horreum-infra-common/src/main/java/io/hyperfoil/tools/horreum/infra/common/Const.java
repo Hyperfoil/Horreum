@@ -8,6 +8,8 @@ public class Const {
     public static final String HORREUM_DEV_KEYCLOAK_ENABLED = "horreum.dev-services.keycloak.enabled";
     public static final String HORREUM_DEV_KEYCLOAK_IMAGE = "horreum.dev-services.keycloak.image";
     public static final String HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS = "horreum.dev-services.keycloak.network-alias";
+
+    public static final String HORREUM_DEV_KEYCLOAK_CONTAINER_PORT = "horreum.dev-services.keycloak.container-port";
     public static final String HORREUM_DEV_KEYCLOAK_DB_USERNAME = "horreum.dev-services.keycloak.db-username";
     public static final String HORREUM_DEV_KEYCLOAK_DB_PASSWORD = "horreum.dev-services.keycloak.db-password";
 
@@ -29,9 +31,7 @@ public class Const {
     public static final String DEFAULT_KC_ADMIN_PASSWORD = "secret";
 
     public static final String DEFAULT_POSTGRES_NETWORK_ALIAS = "horreum-dev-postgres";
-    public static final String DEFAULT_POSTGRES_IMAGE = "postgres:13";
 
     public static final String DEFAULT_KEYCLOAK_NETWORK_ALIAS = "horreum-dev-keycloak";
-    public static final String DEFAULT_KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:22.0";
 
 }

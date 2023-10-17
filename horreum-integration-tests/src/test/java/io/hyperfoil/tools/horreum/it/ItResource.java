@@ -5,9 +5,23 @@ import org.jboss.logging.Logger;
 
 import java.util.Map;
 
-import static io.hyperfoil.tools.horreum.infra.common.Const.*;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_ADMIN_PASSWORD;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_ADMIN_USERNAME;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_DB_PASSWORD;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_DB_USERNAME;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KEYCLOAK_NETWORK_ALIAS;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_POSTGRES_NETWORK_ALIAS;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_DB_PASSWORD;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_DB_USERNAME;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_IMAGE;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_IMAGE;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_NETWORK_ALIAS;
 import static io.hyperfoil.tools.horreum.infra.common.HorreumResources.startContainers;
 import static io.hyperfoil.tools.horreum.infra.common.HorreumResources.stopContainers;
+import static java.lang.System.getProperty;
 
 public class ItResource implements QuarkusTestResourceLifecycleManager {
 
@@ -23,11 +37,18 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
                 started = true;
                 try {
 
+                    String keycloakImage = getProperty(HORREUM_DEV_KEYCLOAK_IMAGE);
+                    String postgresImage = getProperty(HORREUM_DEV_POSTGRES_IMAGE);
+
+                    if ( keycloakImage == null || postgresImage == null ){
+                        throw new RuntimeException("Test container images are not defined");
+                    }
+
                     //todo: pick up from configuration
                     Map<String, String> containerArgs = Map.of(
-                            HORREUM_DEV_KEYCLOAK_IMAGE, DEFAULT_KEYCLOAK_IMAGE,
+                            HORREUM_DEV_KEYCLOAK_IMAGE, keycloakImage,
                             HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS, DEFAULT_KEYCLOAK_NETWORK_ALIAS,
-                            HORREUM_DEV_POSTGRES_IMAGE, DEFAULT_POSTGRES_IMAGE,
+                            HORREUM_DEV_POSTGRES_IMAGE, postgresImage,
                             HORREUM_DEV_POSTGRES_NETWORK_ALIAS, DEFAULT_POSTGRES_NETWORK_ALIAS,
                             HORREUM_DEV_KEYCLOAK_DB_USERNAME, DEFAULT_KC_DB_USERNAME,
                             HORREUM_DEV_KEYCLOAK_DB_PASSWORD, DEFAULT_KC_DB_PASSWORD,

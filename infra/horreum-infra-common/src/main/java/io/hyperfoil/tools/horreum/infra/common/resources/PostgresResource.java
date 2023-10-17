@@ -4,6 +4,7 @@ import io.hyperfoil.tools.horreum.infra.common.ResourceLifecycleManager;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.SelinuxContext;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,7 +45,7 @@ public class PostgresResource implements ResourceLifecycleManager {
             ;
 
             if ( initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ) {
-                postgresContainer.withFileSystemBind(initArgs.get(HORREUM_DEV_POSTGRES_BACKUP), "/var/lib/postgresql/data", BindMode.READ_WRITE);
+                postgresContainer.addFileSystemBind(initArgs.get(HORREUM_DEV_POSTGRES_BACKUP), "/var/lib/postgresql/data", BindMode.READ_WRITE, SelinuxContext.SHARED);
                 prodBackup = true;
             }
 
