@@ -55,7 +55,7 @@ public class HorreumDevServicesProcessor {
 
         LOG.infof("Horreum dev services (enabled: ".concat(Boolean.toString(horreumBuildTimeConfig.enabled)).concat(")"));
 
-        if ( horreumBuildTimeConfig.enabled ) {
+        if (horreumBuildTimeConfig.enabled) {
             try {
 
                 if (errors = !dockerStatusBuildItem.isDockerAvailable()) {
@@ -74,18 +74,20 @@ public class HorreumDevServicesProcessor {
                                 horreumBuildTimeConfig.postgres.databaseBackup.get().getAbsolutePath() :
                                 null;
 
-                        Map<String, String> containerArgs = Map.of(
-                                HORREUM_DEV_KEYCLOAK_ENABLED, Boolean.toString(horreumBuildTimeConfig.keycloak.enabled),
-                                HORREUM_DEV_KEYCLOAK_IMAGE, horreumBuildTimeConfig.keycloak.image,
-                                HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS, horreumBuildTimeConfig.keycloak.networkAlias,
-                                HORREUM_DEV_POSTGRES_ENABLED, Boolean.toString(horreumBuildTimeConfig.postgres.enabled),
-                                HORREUM_DEV_POSTGRES_IMAGE, horreumBuildTimeConfig.postgres.image,
-                                HORREUM_DEV_POSTGRES_NETWORK_ALIAS, horreumBuildTimeConfig.postgres.networkAlias,
-                                HORREUM_DEV_KEYCLOAK_DB_USERNAME, horreumBuildTimeConfig.keycloak.dbUsername,
-                                HORREUM_DEV_KEYCLOAK_DB_PASSWORD, horreumBuildTimeConfig.keycloak.dbPassword,
-                                HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME, horreumBuildTimeConfig.keycloak.adminUsername,
-                                HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD, horreumBuildTimeConfig.keycloak.adminPassword
-                        );
+                        Map<String, String> containerArgs = new HashMap<>();
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_ENABLED, Boolean.toString(horreumBuildTimeConfig.keycloak.enabled));
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_IMAGE, horreumBuildTimeConfig.keycloak.image);
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS, horreumBuildTimeConfig.keycloak.networkAlias);
+                        containerArgs.put(HORREUM_DEV_POSTGRES_ENABLED, Boolean.toString(horreumBuildTimeConfig.postgres.enabled));
+                        containerArgs.put(HORREUM_DEV_POSTGRES_IMAGE, horreumBuildTimeConfig.postgres.image);
+                        containerArgs.put(HORREUM_DEV_POSTGRES_NETWORK_ALIAS, horreumBuildTimeConfig.postgres.networkAlias);
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_DB_USERNAME, horreumBuildTimeConfig.keycloak.dbUsername);
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_DB_PASSWORD, horreumBuildTimeConfig.keycloak.dbPassword);
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME, horreumBuildTimeConfig.keycloak.adminUsername);
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD, horreumBuildTimeConfig.keycloak.adminPassword);
+                        String keyCloakPort = horreumBuildTimeConfig.keycloak.containerPort.orElse(null);
+                        if ( keyCloakPort != null )
+                            containerArgs.put(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT, keyCloakPort);
 
                         if (backupFilename != null) {
                             containerArgs = ImmutableMap.<String, String>builder()

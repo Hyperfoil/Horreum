@@ -94,6 +94,12 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <systemProperties>
+                        <horreum.dev-services.keycloak.image>${dev.images.keycloak}</horreum.dev-services.keycloak.image>
+                        <horreum.dev-services.postgres.image>${dev.images.postgres}</horreum.dev-services.postgres.image>
+                    </systemProperties>
+                </configuration>
             </plugin>
 
             <plugin>
@@ -104,6 +110,8 @@
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
                         <horreum.commit.id>${buildNumber}</horreum.commit.id>
+                        <horreum.dev-services.keycloak.image>${dev.images.keycloak}</horreum.dev-services.keycloak.image>
+                        <horreum.dev-services.postgres.image>${dev.images.postgres}</horreum.dev-services.postgres.image>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
@@ -146,6 +154,8 @@
                                 <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
                                 <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                                 <maven.home>${maven.home}</maven.home>
+                                <horreum.dev-services.keycloak.image>${dev.images.keycloak}</horreum.dev-services.keycloak.image>
+                                <horreum.dev-services.postgres.image>${dev.images.postgres}</horreum.dev-services.postgres.image>
                             </systemPropertyVariables>
                         </configuration>
                     </execution>

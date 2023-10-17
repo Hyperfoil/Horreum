@@ -3,7 +3,13 @@ package io.hyperfoil.tools.horreum.dev.services.deployment.config;
 import io.quarkus.runtime.annotations.ConfigGroup;
 import io.quarkus.runtime.annotations.ConfigItem;
 
-import static io.hyperfoil.tools.horreum.infra.common.Const.*;
+import java.util.Optional;
+
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_ADMIN_PASSWORD;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_ADMIN_USERNAME;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_DB_PASSWORD;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_DB_USERNAME;
+import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KEYCLOAK_NETWORK_ALIAS;
 
 /**
  * Configuration for Horreum dev services.
@@ -20,7 +26,7 @@ public class HorreumDevServicesKeycloakConfig {
     /**
      * Container image name for keycloak service
      */
-    @ConfigItem(defaultValue = DEFAULT_KEYCLOAK_IMAGE)
+    @ConfigItem
     public String image;
 
     /**
@@ -52,4 +58,11 @@ public class HorreumDevServicesKeycloakConfig {
      */
     @ConfigItem(defaultValue = DEFAULT_KC_ADMIN_PASSWORD)
     public String adminPassword;
+
+    /**
+     * Define host port to expose Keycloak service.
+     * Usage of this property is discouraged and should only be enabled in scenarios where the keycloak port can not be dynamic
+     */
+    @ConfigItem()
+    public Optional<String> containerPort;
 }
