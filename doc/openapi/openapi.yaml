@@ -1,0 +1,2636 @@
+---
+openapi: 3.0.3
+info:
+  title: Generated API
+  version: "1.0"
+paths:
+  /api/config/keycloak:
+    get:
+      operationId: ConfigService_keycloak
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeycloakConfig'
+  /api/config/version:
+    get:
+      operationId: ConfigService_version
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionInfo'
+  /api/dataset/bySchema:
+    get:
+      operationId: DatasetService_listBySchema
+      parameters:
+      - name: direction
+        in: query
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+      - name: limit
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: page
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: sort
+        in: query
+        schema:
+          default: start
+          type: string
+      - name: uri
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetList'
+  /api/dataset/list/{testId}:
+    get:
+      operationId: DatasetService_listByTest
+      parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: direction
+        in: query
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+      - name: filter
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: page
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: sort
+        in: query
+        schema:
+          type: string
+      - name: viewId
+        in: query
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetList'
+  /api/dataset/{datasetId}/labelValues:
+    get:
+      operationId: DatasetService_labelValues
+      parameters:
+      - name: datasetId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LabelValue'
+  /api/dataset/{datasetId}/previewLabel:
+    post:
+      operationId: DatasetService_previewLabel
+      parameters:
+      - name: datasetId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Label'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelPreview'
+  /api/dataset/{datasetId}/summary:
+    get:
+      operationId: DatasetService_getSummary
+      parameters:
+      - name: datasetId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: viewId
+        in: query
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetSummary'
+  /api/dataset/{id}:
+    get:
+      operationId: DatasetService_getDataSet
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "404":
+          description: No Dataset with the given id was found
+          content:
+            application/json: {}
+        "200":
+          description: JVM system properties of a particular host.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSet'
+  /api/experiment/models:
+    get:
+      operationId: ExperimentService_models
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConditionConfig'
+  /api/experiment/run:
+    get:
+      operationId: ExperimentService_runExperiments
+      parameters:
+      - name: datasetId
+        in: query
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExperimentResult'
+  /api/experiment/{testId}/profiles:
+    get:
+      operationId: ExperimentService_profiles
+      parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExperimentProfile'
+    post:
+      operationId: ExperimentService_addOrUpdateProfile
+      parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExperimentProfile'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+  /api/experiment/{testId}/profiles/{profileId}:
+    delete:
+      operationId: ExperimentService_deleteProfile
+      parameters:
+      - name: profileId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: testId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "204":
+          description: No Content
+  /api/run/autocomplete:
+    get:
+      operationId: RunService_autocomplete
+      parameters:
+      - name: query
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /api/run/bySchema:
+    get:
+      operationId: RunService_listBySchema
+      parameters:
+      - name: direction
+        in: query
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+      - name: limit
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: page
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: sort
+        in: query
+        schema:
+          type: string
+      - name: uri
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunsSummary'
+  /api/run/count:
+    get:
+      operationId: RunService_runCount
+      parameters:
+      - name: testId
+        in: query
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunCount'
+  /api/run/data:
+    post:
+      operationId: RunService_addRunFromData
+      parameters:
+      - name: access
+        in: query
+        schema:
+          $ref: '#/components/schemas/Access'
+      - name: description
+        in: query
+        schema:
+          type: string
+      - name: owner
+        in: query
+        schema:
+          type: string
+      - name: schema
+        in: query
+        schema:
+          type: string
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: stop
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: test
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: token
+        in: query
+        description: Horreum internal token. Incompatible with Keycloak
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                metadata:
+                  type: object
+      responses:
+        "400":
+          description: Some fields are missing or invalid
+          content:
+            application/json: {}
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+            text/plain:
+              schema:
+                type: string
+  /api/run/list:
+    get:
+      operationId: RunService_listAllRuns
+      parameters:
+      - name: direction
+        in: query
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+      - name: limit
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: matchAll
+        in: query
+        schema:
+          type: boolean
+      - name: page
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: query
+        in: query
+        schema:
+          type: string
+      - name: roles
+        in: query
+        schema:
+          type: string
+      - name: sort
+        in: query
+        schema:
+          type: string
+      - name: trashed
+        in: query
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunsSummary'
+  /api/run/list/{testId}:
+    get:
+      operationId: RunService_listTestRuns
+      parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: direction
+        in: query
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+      - name: limit
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: page
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: sort
+        in: query
+        schema:
+          type: string
+      - name: trashed
+        in: query
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunsSummary'
+  /api/run/recalculateAll:
+    post:
+      operationId: RunService_recalculateAll
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+      - name: to
+        in: query
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Created
+  /api/run/test:
+    post:
+      operationId: RunService_add
+      parameters:
+      - name: access
+        in: query
+        schema:
+          $ref: '#/components/schemas/Access'
+      - name: owner
+        in: query
+        schema:
+          type: string
+      - name: test
+        in: query
+        schema:
+          type: string
+      - name: token
+        in: query
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Run'
+        required: true
+      responses:
+        "200":
+          description: OK
+  /api/run/{id}:
+    get:
+      operationId: RunService_getRun
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: token
+        in: query
+        schema:
+          type: string
+      responses:
+        "404":
+          description: If no Run have been found with the given id
+          content:
+            application/json: {}
+        "200":
+          description: Run data with the referenced schemas and generated datasets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunExtended'
+  /api/run/{id}/data:
+    get:
+      operationId: RunService_getData
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: schemaUri
+        in: query
+        schema:
+          type: string
+      - name: token
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/run/{id}/description:
+    post:
+      operationId: RunService_updateDescription
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+        required: true
+      responses:
+        "201":
+          description: Created
+  /api/run/{id}/dropToken:
+    post:
+      operationId: RunService_dropToken
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+  /api/run/{id}/metadata:
+    get:
+      operationId: RunService_getMetadata
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: schemaUri
+        in: query
+        schema:
+          type: string
+      - name: token
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/run/{id}/recalculate:
+    post:
+      operationId: RunService_recalculateDatasets
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  format: int32
+                  type: integer
+  /api/run/{id}/resetToken:
+    post:
+      operationId: RunService_resetToken
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+  /api/run/{id}/schema:
+    post:
+      operationId: RunService_updateSchema
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: path
+        in: query
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+  /api/run/{id}/summary:
+    get:
+      operationId: RunService_getRunSummary
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: token
+        in: query
+        schema:
+          type: string
+      responses:
+        "404":
+          description: If no Run have been found with the given id
+          content:
+            application/json: {}
+        "200":
+          description: Run summary with the referenced schemas and generated datasets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunSummary'
+  /api/run/{id}/trash:
+    post:
+      operationId: RunService_trash
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: isTrashed
+        in: query
+        schema:
+          type: boolean
+      responses:
+        "201":
+          description: Created
+  /api/run/{id}/updateAccess:
+    post:
+      operationId: RunService_updateAccess
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: access
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Access'
+      - name: owner
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Created
+  /api/run/{id}/waitforDatasets:
+    get:
+      operationId: RunService_waitForDatasets
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "204":
+          description: No Content
+  /api/schema:
+    get:
+      operationId: SchemaService_list
+      parameters:
+      - name: direction
+        in: query
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+      - name: limit
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: page
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: sort
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaQueryResult'
+    post:
+      operationId: SchemaService_add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schema'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+  /api/schema/allLabels:
+    get:
+      operationId: SchemaService_allLabels
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LabelInfo'
+  /api/schema/allTransformers:
+    get:
+      operationId: SchemaService_allTransformers
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TransformerInfo'
+  /api/schema/descriptors:
+    get:
+      operationId: SchemaService_descriptors
+      parameters:
+      - name: id
+        in: query
+        schema:
+          type: array
+          items:
+            format: int32
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchemaDescriptor'
+  /api/schema/findUsages:
+    get:
+      operationId: SchemaService_findUsages
+      parameters:
+      - name: label
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LabelLocation'
+  /api/schema/idByUri/{uri}:
+    get:
+      operationId: SchemaService_idByUri
+      parameters:
+      - name: uri
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+  /api/schema/import:
+    post:
+      operationId: SchemaService_importSchema
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        "201":
+          description: Created
+  /api/schema/{id}:
+    get:
+      operationId: SchemaService_getSchema
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: token
+        in: query
+        schema:
+          type: string
+      responses:
+        "404":
+          description: No Schema with the given id was found
+          content:
+            application/json: {}
+        "200":
+          description: Returns Schema if a matching id is found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schema'
+    delete:
+      operationId: SchemaService_delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "204":
+          description: No Content
+  /api/schema/{id}/dropToken:
+    post:
+      operationId: SchemaService_dropToken
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+  /api/schema/{id}/export:
+    get:
+      operationId: SchemaService_exportSchema
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: A JSON representation of the Schema object
+          content:
+            application/json:
+              schema:
+                type: string
+  /api/schema/{id}/resetToken:
+    post:
+      operationId: SchemaService_resetToken
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+  /api/schema/{id}/updateAccess:
+    post:
+      operationId: SchemaService_updateAccess
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: access
+        in: query
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: owner
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Created
+  /api/schema/{schemaId}/labels:
+    get:
+      operationId: SchemaService_labels
+      parameters:
+      - name: schemaId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Label'
+    post:
+      operationId: SchemaService_addOrUpdateLabel
+      parameters:
+      - name: schemaId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Label'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+  /api/schema/{schemaId}/labels/{labelId}:
+    delete:
+      operationId: SchemaService_deleteLabel
+      parameters:
+      - name: labelId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: schemaId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "204":
+          description: No Content
+  /api/schema/{schemaId}/transformers:
+    get:
+      operationId: SchemaService_listTransformers
+      parameters:
+      - name: schemaId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transformer'
+    post:
+      operationId: SchemaService_addOrUpdateTransformer
+      parameters:
+      - name: schemaId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transformer'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+  /api/schema/{schemaId}/transformers/{transformerId}:
+    delete:
+      operationId: SchemaService_deleteTransformer
+      parameters:
+      - name: schemaId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: transformerId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "204":
+          description: No Content
+  /api/test:
+    get:
+      operationId: TestService_list
+      parameters:
+      - name: direction
+        in: query
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+      - name: limit
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: page
+        in: query
+        schema:
+          format: int32
+          type: integer
+      - name: roles
+        in: query
+        schema:
+          type: string
+      - name: sort
+        in: query
+        schema:
+          default: name
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestQueryResult'
+    post:
+      operationId: TestService_add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Test'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Test'
+  /api/test/byName/{name}:
+    get:
+      operationId: TestService_getByNameOrId
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Test'
+  /api/test/folders:
+    get:
+      operationId: TestService_folders
+      parameters:
+      - name: roles
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /api/test/import:
+    post:
+      operationId: TestService_importTest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        "204":
+          description: Import a new test
+  /api/test/summary:
+    get:
+      operationId: TestService_summary
+      parameters:
+      - name: folder
+        in: query
+        schema:
+          type: string
+      - name: roles
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestListing'
+  /api/test/{id}:
+    get:
+      operationId: TestService_get
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: token
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Test'
+    delete:
+      operationId: TestService_delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "204":
+          description: No Content
+  /api/test/{id}/addToken:
+    post:
+      operationId: TestService_addToken
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestToken'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+  /api/test/{id}/export:
+    get:
+      operationId: TestService_export
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: A Test defintion formatted as json
+          content:
+            application/json:
+              schema:
+                type: string
+  /api/test/{id}/fingerprint:
+    get:
+      operationId: TestService_listFingerprints
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {}
+  /api/test/{id}/labelValues:
+    get:
+      operationId: TestService_listLabelValues
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: filtering
+        in: query
+        schema:
+          default: true
+          type: boolean
+      - name: metrics
+        in: query
+        schema:
+          default: true
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {}
+  /api/test/{id}/move:
+    post:
+      operationId: TestService_updateFolder
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: folder
+        in: query
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Created
+  /api/test/{id}/notifications:
+    post:
+      operationId: TestService_updateNotifications
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: enabled
+        in: query
+        required: true
+        schema:
+          type: boolean
+      responses:
+        "201":
+          description: Created
+  /api/test/{id}/recalculate:
+    get:
+      operationId: TestService_getRecalculationStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecalculationStatus'
+    post:
+      operationId: TestService_recalculateDatasets
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "201":
+          description: Created
+  /api/test/{id}/revokeToken/{tokenId}:
+    post:
+      operationId: TestService_dropToken
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "201":
+          description: Created
+  /api/test/{id}/tokens:
+    get:
+      operationId: TestService_tokens
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TestToken'
+  /api/test/{id}/transformers:
+    post:
+      operationId: TestService_updateTransformers
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                format: int32
+                type: integer
+        required: true
+      responses:
+        "201":
+          description: Created
+  /api/test/{id}/updateAccess:
+    post:
+      operationId: TestService_updateAccess
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          format: int32
+          type: integer
+      - name: access
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Access'
+      - name: owner
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Created
+components:
+  schemas:
+    Access:
+      enum:
+      - 0
+      - 1
+      - 2
+      type: integer
+    BetterOrWorse:
+      enum:
+      - BETTER
+      - SAME
+      - WORSE
+      type: string
+    ComparisonResult:
+      type: object
+      properties:
+        overall:
+          $ref: '#/components/schemas/BetterOrWorse'
+        experimentValue:
+          format: double
+          type: number
+        baselineValue:
+          format: double
+          type: number
+        result:
+          type: string
+    ConditionComponent:
+      required:
+      - name
+      - title
+      - description
+      - type
+      - properties
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: false
+        title:
+          type: string
+          nullable: false
+        description:
+          type: string
+          nullable: false
+        type:
+          enum:
+          - LOG_SLIDER
+          - ENUM
+          - NUMBER_BOUND
+          - SWITCH
+          type: object
+          nullable: false
+        properties:
+          type: object
+          additionalProperties:
+            type: object
+          nullable: false
+    ConditionConfig:
+      required:
+      - name
+      - title
+      - description
+      - ui
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: false
+        title:
+          type: string
+          nullable: false
+        description:
+          type: string
+          nullable: false
+        ui:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConditionComponent'
+          nullable: false
+        defaults:
+          type: object
+          additionalProperties: {}
+    DataSet:
+      required:
+      - start
+      - stop
+      - testid
+      - owner
+      - access
+      - data
+      - ordinal
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        start:
+          format: date-time
+          type: string
+          nullable: false
+        stop:
+          format: date-time
+          type: string
+          nullable: false
+        description:
+          type: string
+        testid:
+          format: int32
+          type: integer
+          nullable: false
+        owner:
+          type: string
+          nullable: false
+        access:
+          enum:
+          - 0
+          - 1
+          - 2
+          type: integer
+          nullable: false
+        data:
+          type: string
+          nullable: false
+        ordinal:
+          format: int32
+          type: integer
+          nullable: false
+        validationErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        runId:
+          format: int32
+          type: integer
+    DatasetInfo:
+      required:
+      - id
+      - runId
+      - ordinal
+      - testId
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        runId:
+          format: int32
+          type: integer
+        ordinal:
+          format: int32
+          type: integer
+        testId:
+          format: int32
+          type: integer
+    DatasetList:
+      required:
+      - total
+      - datasets
+      type: object
+      properties:
+        total:
+          format: int64
+          type: integer
+        datasets:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatasetSummary'
+          nullable: false
+    DatasetLog:
+      required:
+      - id
+      - level
+      - timestamp
+      - message
+      - source
+      - testId
+      - runId
+      - datasetId
+      - datasetOrdinal
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        level:
+          format: int32
+          type: integer
+          nullable: false
+        timestamp:
+          format: date-time
+          type: string
+          nullable: false
+        message:
+          type: string
+          nullable: false
+        source:
+          type: string
+          nullable: false
+        testId:
+          format: int32
+          type: integer
+        runId:
+          format: int32
+          type: integer
+        datasetId:
+          format: int32
+          type: integer
+        datasetOrdinal:
+          format: int32
+          type: integer
+    DatasetSummary:
+      required:
+      - id
+      - runId
+      - ordinal
+      - testId
+      - testname
+      - start
+      - stop
+      - owner
+      - access
+      - schemas
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        runId:
+          format: int32
+          type: integer
+        ordinal:
+          format: int32
+          type: integer
+        testId:
+          format: int32
+          type: integer
+        testname:
+          type: string
+          nullable: false
+        description:
+          type: string
+        start:
+          format: int64
+          type: integer
+        stop:
+          format: int64
+          type: integer
+        owner:
+          type: string
+          nullable: false
+        access:
+          $ref: '#/components/schemas/Access'
+        view:
+          type: string
+        schemas:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemaUsage'
+        validationErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+    ErrorDetails:
+      required:
+      - type
+      - message
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: false
+        code:
+          type: string
+        path:
+          type: string
+        schemaPath:
+          type: string
+        arguments:
+          type: array
+          items:
+            type: string
+        details:
+          type: object
+          additionalProperties:
+            type: object
+        message:
+          type: string
+          nullable: false
+    ExperimentComparison:
+      required:
+      - model
+      - config
+      - variableId
+      type: object
+      properties:
+        model:
+          type: string
+          nullable: false
+        config:
+          type: string
+          nullable: false
+        variableId:
+          format: int32
+          type: integer
+          nullable: false
+    ExperimentProfile:
+      required:
+      - id
+      - name
+      - selectorLabels
+      - baselineLabels
+      - comparisons
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+          nullable: false
+        testId:
+          format: int32
+          type: integer
+        selectorLabels:
+          type: array
+          items:
+            type: string
+        selectorFilter:
+          type: string
+        baselineLabels:
+          type: array
+          items:
+            type: string
+        baselineFilter:
+          type: string
+        comparisons:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExperimentComparison'
+        extraLabels:
+          type: array
+          items:
+            type: string
+    ExperimentResult:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/ExperimentProfile'
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatasetLog'
+        datasetInfo:
+          $ref: '#/components/schemas/DatasetInfo'
+        baseline:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatasetInfo'
+        results:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComparisonResult'
+        extraLabels:
+          type: string
+        notify:
+          type: boolean
+    Extractor:
+      required:
+      - name
+      - jsonpath
+      - array
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: false
+        jsonpath:
+          type: string
+          nullable: false
+        array:
+          type: boolean
+          nullable: false
+    KeycloakConfig:
+      type: object
+      properties:
+        realm:
+          type: string
+        url:
+          type: string
+        clientId:
+          type: string
+    Label:
+      required:
+      - id
+      - name
+      - extractors
+      - filtering
+      - metrics
+      - owner
+      - access
+      - schemaId
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+          nullable: false
+        extractors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Extractor'
+          nullable: false
+        function:
+          type: string
+        filtering:
+          type: boolean
+          nullable: false
+        metrics:
+          type: boolean
+          nullable: false
+        owner:
+          type: string
+        access:
+          enum:
+          - 0
+          - 1
+          - 2
+          type: integer
+        schemaId:
+          format: int32
+          type: integer
+          nullable: false
+    LabelInFingerprint:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/LabelLocation'
+    LabelInReport:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/LabelLocation'
+      properties:
+        configId:
+          format: int32
+          type: integer
+        title:
+          type: string
+        where:
+          type: string
+        name:
+          type: string
+    LabelInRule:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/LabelLocation'
+      properties:
+        ruleId:
+          format: int32
+          type: integer
+        ruleName:
+          type: string
+    LabelInVariable:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/LabelLocation'
+      properties:
+        variableId:
+          format: int32
+          type: integer
+        variableName:
+          type: string
+    LabelInView:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/LabelLocation'
+      properties:
+        viewId:
+          format: int32
+          type: integer
+        viewName:
+          type: string
+        componentId:
+          format: int32
+          type: integer
+        header:
+          type: string
+    LabelInfo:
+      required:
+      - name
+      - metrics
+      - filtering
+      - schemas
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: false
+        metrics:
+          type: boolean
+        filtering:
+          type: boolean
+        schemas:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemaDescriptor'
+          nullable: false
+    LabelLocation:
+      type: object
+      properties:
+        type:
+          type: string
+        testId:
+          format: int32
+          type: integer
+        testName:
+          type: string
+    LabelPreview:
+      type: object
+      properties:
+        value:
+          type: string
+        output:
+          type: string
+    LabelValue:
+      required:
+      - id
+      - name
+      - schema
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+          nullable: false
+        schema:
+          allOf:
+          - $ref: '#/components/schemas/SchemaDescriptor'
+          - nullable: false
+        value:
+          type: string
+    RecalculationStatus:
+      required:
+      - timestamp
+      - totalRuns
+      - finished
+      - datasets
+      type: object
+      properties:
+        timestamp:
+          format: int64
+          type: integer
+        totalRuns:
+          format: int64
+          type: integer
+        finished:
+          format: int64
+          type: integer
+        datasets:
+          format: int64
+          type: integer
+    Run:
+      description: Data object that represents a test run entry
+      required:
+      - id
+      - start
+      - stop
+      - testid
+      - data
+      - trashed
+      - owner
+      - access
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        start:
+          format: date-time
+          type: number
+          nullable: false
+        stop:
+          format: date-time
+          type: number
+          nullable: false
+        description:
+          type: string
+        testid:
+          format: int32
+          type: integer
+          nullable: false
+        data:
+          type: string
+          nullable: false
+        metadata:
+          type: string
+        trashed:
+          type: boolean
+          nullable: false
+        validationErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        owner:
+          type: string
+          nullable: false
+        access:
+          enum:
+          - 0
+          - 1
+          - 2
+          type: integer
+          nullable: false
+    RunCount:
+      required:
+      - total
+      - active
+      - trashed
+      type: object
+      properties:
+        total:
+          format: int64
+          type: integer
+        active:
+          format: int64
+          type: integer
+        trashed:
+          format: int64
+          type: integer
+    RunExtended:
+      required:
+      - id
+      - start
+      - stop
+      - testid
+      - data
+      - trashed
+      - owner
+      - access
+      - schemas
+      - testname
+      - datasets
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        start:
+          format: date-time
+          type: number
+          nullable: false
+        stop:
+          format: date-time
+          type: number
+          nullable: false
+        description:
+          type: string
+        testid:
+          format: int32
+          type: integer
+          nullable: false
+        data:
+          type: string
+          nullable: false
+        metadata:
+          type: string
+        trashed:
+          type: boolean
+          nullable: false
+        validationErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        owner:
+          type: string
+          nullable: false
+        access:
+          enum:
+          - 0
+          - 1
+          - 2
+          type: integer
+          nullable: false
+        schemas:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemaUsage'
+          nullable: false
+        testname:
+          type: string
+          nullable: false
+        datasets:
+          type: array
+          items:
+            format: int32
+            type: integer
+    RunSummary:
+      required:
+      - id
+      - start
+      - stop
+      - testid
+      - owner
+      - access
+      - testname
+      - trashed
+      - hasMetadata
+      - datasets
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        start:
+          format: int64
+          type: integer
+        stop:
+          format: int64
+          type: integer
+        testid:
+          format: int32
+          type: integer
+        owner:
+          type: string
+          nullable: false
+        access:
+          $ref: '#/components/schemas/Access'
+        token:
+          type: string
+        testname:
+          type: string
+          nullable: false
+        trashed:
+          type: boolean
+        hasMetadata:
+          type: boolean
+        description:
+          type: string
+        schemas:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemaUsage'
+        datasets:
+          type: array
+          items:
+            format: int32
+            type: integer
+        validationErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+    RunsSummary:
+      required:
+      - total
+      - runs
+      type: object
+      properties:
+        total:
+          format: int64
+          type: integer
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/RunSummary'
+          nullable: false
+    Schema:
+      description: Data object that describes the schema definition for a test
+      required:
+      - id
+      - uri
+      - name
+      - owner
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        uri:
+          type: string
+          nullable: false
+        name:
+          type: string
+          nullable: false
+        description:
+          type: string
+        schema:
+          type: string
+        owner:
+          type: string
+        access:
+          enum:
+          - 0
+          - 1
+          - 2
+          type: integer
+        token:
+          type: string
+    SchemaDescriptor:
+      required:
+      - id
+      - name
+      - uri
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+          nullable: false
+        uri:
+          type: string
+          nullable: false
+    SchemaQueryResult:
+      required:
+      - schemas
+      - count
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Schema'
+          nullable: false
+        count:
+          format: int64
+          type: integer
+    SchemaUsage:
+      required:
+      - id
+      - name
+      - uri
+      - source
+      - type
+      - hasJsonSchema
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+          nullable: false
+        uri:
+          type: string
+          nullable: false
+        source:
+          format: int32
+          type: integer
+        type:
+          format: int32
+          type: integer
+        key:
+          type: string
+        hasJsonSchema:
+          type: boolean
+    SortDirection:
+      enum:
+      - Ascending
+      - Descending
+      type: string
+    Test:
+      required:
+      - id
+      - name
+      - owner
+      - access
+      - notificationsEnabled
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+          nullable: false
+        folder:
+          type: string
+        description:
+          type: string
+        owner:
+          type: string
+          nullable: false
+        access:
+          enum:
+          - 0
+          - 1
+          - 2
+          type: integer
+          nullable: false
+        tokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestToken'
+        timelineLabels:
+          type: array
+          items:
+            type: string
+        timelineFunction:
+          type: string
+        fingerprintLabels:
+          type: array
+          items:
+            type: string
+        fingerprintFilter:
+          type: string
+        compareUrl:
+          type: string
+        transformers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transformer'
+        notificationsEnabled:
+          type: boolean
+          nullable: false
+    TestListing:
+      type: object
+      properties:
+        tests:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestSummary'
+    TestQueryResult:
+      required:
+      - tests
+      - count
+      type: object
+      properties:
+        tests:
+          type: array
+          items:
+            $ref: '#/components/schemas/Test'
+          nullable: false
+        count:
+          format: int64
+          type: integer
+    TestSummary:
+      required:
+      - id
+      - name
+      - owner
+      - access
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+          nullable: false
+        folder:
+          type: string
+        description:
+          type: string
+        datasets:
+          type: number
+        runs:
+          type: number
+        owner:
+          type: string
+          nullable: false
+        access:
+          $ref: '#/components/schemas/Access'
+    TestToken:
+      required:
+      - id
+      - value
+      - permissions
+      - description
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        testId:
+          format: int32
+          type: integer
+        value:
+          type: string
+          nullable: false
+        permissions:
+          format: int32
+          type: integer
+          nullable: false
+        description:
+          type: string
+          nullable: false
+    Transformer:
+      required:
+      - id
+      - name
+      - extractors
+      - schemaId
+      - schemaUri
+      - schemaName
+      - owner
+      - access
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+          nullable: false
+        description:
+          type: string
+        targetSchemaUri:
+          type: string
+        extractors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Extractor'
+          nullable: false
+        function:
+          type: string
+        schemaId:
+          format: int32
+          type: integer
+          nullable: false
+        schemaUri:
+          type: string
+        schemaName:
+          type: string
+        owner:
+          type: string
+          nullable: false
+        access:
+          enum:
+          - 0
+          - 1
+          - 2
+          type: integer
+          nullable: false
+    TransformerInfo:
+      required:
+      - schemaId
+      - schemaUri
+      - schemaName
+      - transformerId
+      - transformerName
+      type: object
+      properties:
+        schemaId:
+          format: int32
+          type: integer
+        schemaUri:
+          type: string
+          nullable: false
+        schemaName:
+          type: string
+          nullable: false
+        transformerId:
+          format: int32
+          type: integer
+        transformerName:
+          type: string
+          nullable: false
+    ValidationError:
+      required:
+      - schemaId
+      - error
+      type: object
+      properties:
+        schemaId:
+          format: int32
+          type: integer
+        error:
+          $ref: '#/components/schemas/ErrorDetails'
+    VersionInfo:
+      required:
+      - version
+      - startTimestamp
+      type: object
+      properties:
+        version:
+          type: string
+          nullable: false
+        startTimestamp:
+          format: int64
+          type: integer
