@@ -1558,6 +1558,7 @@ components:
       - 1
       - 2
       type: integer
+      nullable: false
     BetterOrWorse:
       enum:
       - BETTER
@@ -1981,6 +1982,7 @@ components:
           - 1
           - 2
           type: integer
+          nullable: false
         schemaId:
           format: int32
           type: integer
@@ -2348,6 +2350,7 @@ components:
           - 1
           - 2
           type: integer
+          nullable: false
         token:
           type: string
     SchemaDescriptor:
