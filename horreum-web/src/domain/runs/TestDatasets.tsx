@@ -52,6 +52,7 @@ import ButtonLink from "../../components/ButtonLink"
 import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
 import ViewSelect from "../../components/ViewSelect"
 import {viewsSelector} from "./selectors";
+import * as actions from "../tests/actions";
 
 type C = CellProps<DatasetSummary> &
     UseTableOptions<DatasetSummary> &
@@ -145,6 +146,7 @@ export default function TestDatasets() {
     const token = useSelector(tokenSelector)
     useEffect(() => {
         dispatch(fetchTest(testId)).catch(noop)
+            .then( () => dispatch(actions.fetchViews(testId)) )
     }, [dispatch, testId, teams, token])
     useEffect(() => {
         setLoading(true)
