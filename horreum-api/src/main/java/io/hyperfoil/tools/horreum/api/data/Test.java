@@ -27,6 +27,10 @@ public class Test extends ProtectedType {
             example="Comprehensive benchmark to tests the limits of any system it is run against")
     public String description;
 
+    @NotNull
+    @Schema(description = "backend ID for backing datastore")
+    public Integer datastoreId;
+
     @Schema(description = "Array of API tokens associated with test")
     public Collection<TestToken> tokens;
     @Schema(type = SchemaType.ARRAY, implementation = String.class,
@@ -67,11 +71,12 @@ public class Test extends ProtectedType {
                 ", folder='" + folder + '\'' +
                 ", description='" + description + '\'' +
                 ", owner='" + owner + '\'' +
-                ", access=" + access +
-                ", tokens=" + tokens +
-                ", timelineLabels=" + timelineLabels +
+                ", access=" + access + '\'' +
+                ", datastoreId= " + datastoreId + '\'' +
+                ", tokens=" + tokens + '\'' +
+                ", timelineLabels=" + timelineLabels + '\'' +
                 ", timelineFunction='" + timelineFunction + '\'' +
-                ", fingerprintLabels=" + fingerprintLabels +
+                ", fingerprintLabels=" + fingerprintLabels + '\'' +
                 ", fingerprintFilter='" + fingerprintFilter + '\'' +
                 ", compareUrl='" + compareUrl + '\'' +
                 ", transformers=" + transformers +

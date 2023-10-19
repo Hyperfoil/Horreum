@@ -54,7 +54,7 @@ export default function SchemaList() {
 
     useEffect(() => {
         reloadSchemas()
-    }, [pagination])
+    }, [pagination, reloadCounter])
 
     const columns: Column<Schema>[] = useMemo(
         () => [

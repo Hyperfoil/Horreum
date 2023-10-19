@@ -206,11 +206,16 @@ public class BaseServiceTest {
    }
 
    public static Test createExampleTest(String testName) {
+      return createExampleTest(testName, null);
+   }
+
+      public static Test createExampleTest(String testName, Integer datastoreID) {
       Test test = new Test();
       test.name = testName;
       test.description = "Bar";
       test.owner = TESTER_ROLES[0];
       test.transformers = new ArrayList<>();
+      test.datastoreId = datastoreID;
       return test;
    }
 
@@ -241,6 +246,12 @@ public class BaseServiceTest {
       return runId;
    }
 
+   protected String uploadRun(Object runJson, String test, String schemaUri) {
+      long timestamp = System.currentTimeMillis();
+      String runId = uploadRun(Long.toString(timestamp), Long.toString(timestamp), test, UPLOADER_ROLES[0], Access.PUBLIC, null, schemaUri, null, runJson);
+      assertNotEquals("-1", runId);
+      return runId;
+   }
    protected int uploadRun(long timestamp, Object runJson, String test) {
       return uploadRun(timestamp, timestamp, runJson, test);
    }
@@ -260,9 +271,9 @@ public class BaseServiceTest {
       return Integer.parseInt(runIdString);
    }
 
-   protected int uploadRun(String start, String stop, String test, String owner, Access access, String token,
+   protected String uploadRun(String start, String stop, String test, String owner, Access access, String token,
                            String schemaUri, String description,  Object runJson) {
-      String runIdString = RestAssured.given().auth().oauth2(getUploaderToken())
+      return RestAssured.given().auth().oauth2(getUploaderToken())
               .header(HttpHeaders.CONTENT_TYPE, "application/json")
               .body(runJson)
               .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=" + owner
@@ -270,7 +281,6 @@ public class BaseServiceTest {
               .then()
               .statusCode(200)
               .extract().asString();
-      return Integer.parseInt(runIdString);
    }
 
    protected int uploadRun(long timestamp, JsonNode data, JsonNode metadata, String testName) {

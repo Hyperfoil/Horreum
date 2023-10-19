@@ -88,3 +88,6 @@ It is possible for a [`Run`](#run) to include multiple [`Datasets`](#dataset), a
 
 A `Fingerprint` is combination of [`Filtering labels`](#label) that unique identifies comparable [`datasets`](#dataset) within a [`test`](#test)
 
+## Datasource
+
+A `Datasource` is a **required** top-level organizational construct that defines the source of the data to be stored or retrieved by Horreum. Currently, Horreum supports 2 types of `Datasource`: Postgres and Elasticsearch

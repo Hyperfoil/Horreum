@@ -13,9 +13,10 @@ type FolderSelectProps = {
     onChange(folder: string): void
     canCreate: boolean
     readOnly: boolean
+    placeHolder: string
 }
 
-export default function FolderSelect({folder, onChange, canCreate, readOnly}: FolderSelectProps) {
+    export default function FolderSelect({folder, onChange, canCreate, readOnly, placeHolder}: FolderSelectProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
     const [open, setOpen] = useState(false)
     const [folders, setFolders] = useState<string[]>([])
@@ -39,11 +40,11 @@ export default function FolderSelect({folder, onChange, canCreate, readOnly}: Fo
             onCreateOption={newFolder => {
                 onChange(newFolder)
             }}
-            placeholderText="Horreum"
+            placeholderText={placeHolder}
         >
             {folders.map((folder, i) => (
                 <SelectOption key={i} value={folder || ""}>
-                    {folder || "Horreum"}
+                    {folder || placeHolder }
                 </SelectOption>
             ))}
         </Select>

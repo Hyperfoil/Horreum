@@ -1,0 +1,11 @@
+{
+  "name":"Elastic - Dev Mode",
+  "config": {
+    "host": "https://localhost:33137",
+    "apiKey": "",
+    "username": ""
+  },
+  "type":"ELASTICSEARCH",
+  "owner":"dev-team",
+  "access":2
+}

@@ -263,7 +263,7 @@ function MoveToFolderProvider(props: ActionMenuProps, isOwner: boolean, close: (
             >
                 Please select folder:
                 <br />
-                <FolderSelect canCreate={true} folder={newFolder} onChange={setNewFolder} readOnly={moving} />
+                <FolderSelect canCreate={true} folder={newFolder} onChange={setNewFolder} readOnly={moving} placeHolder={"Horreum"} />
             </Modal>
         ),
     }

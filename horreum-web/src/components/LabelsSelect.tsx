@@ -24,7 +24,7 @@ export function convertLabels(obj: any): string {
 
 function convertLabelValue(value: any) {
     if (typeof value === "object") {
-        // Use the same format as Postgres
+        // Use the same format as postgres
         return JSON.stringify(value).replaceAll(",", ", ").replaceAll(":", ": ")
     }
     return value

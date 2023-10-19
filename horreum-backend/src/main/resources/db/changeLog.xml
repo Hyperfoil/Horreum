@@ -4384,4 +4384,46 @@
         </sql>
     </changeSet>
 
+    <changeSet id="116" author="johara">
+        <validCheckSum>ANY</validCheckSum>
+        <createSequence sequenceName="backend_id_seq" startValue="10" incrementBy="1" cacheSize="1" />
+        <createTable tableName="backendconfig">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="name" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="configuration" type="jsonb">
+                <constraints nullable="false" />
+            </column>
+            <column name="type" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="owner" type="text">
+                <constraints nullable="false" />
+            </column>
+            <column name="access" type="integer">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE backendconfig TO "${quarkus.datasource.username}";
+            GRANT ALL ON SEQUENCE backend_id_seq TO "${quarkus.datasource.username}";
+        </sql>
+        <insert tableName="backendconfig">
+            <column name="id" value="1" />
+            <column name="name" value="Postgres - Default" />
+            <column name="owner" value="horreum.system" />
+            <column name="type" value="0" />
+            <column name="access" value="0" />
+            <column name="configuration" value='{ "builtIn": true }' />
+        </insert>
+        <addColumn tableName="test">
+            <column name="backendconfig_id" type="integer" />
+        </addColumn>
+        <sql>
+            update test set backendconfig_id = 1 WHERE backendconfig_id IS NULL;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

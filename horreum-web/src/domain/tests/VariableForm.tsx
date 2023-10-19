@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 
-import { ChangeDetection, ConditionConfig, Variable } from "../../api"
+import {ChangeDetection, ConditionConfig, Variable} from "../../api"
 
 import {
     ActionList,

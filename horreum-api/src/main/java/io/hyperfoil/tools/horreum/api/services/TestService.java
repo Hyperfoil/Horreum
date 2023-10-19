@@ -272,6 +272,9 @@ public interface TestService {
       @Schema(description="Subscriptions for each test for authenticated user",
               example="[]")
       public Set<String> watching;
+      @Schema(description="Datastore id",
+              example = "1", required = true)
+      public Integer datastoreId;
 
       public TestSummary(int id, String name, String folder, String description,
                          Number datasets, Number runs, String owner, Access access) {

@@ -743,9 +743,9 @@ public class RunServiceTest extends BaseServiceTest {
 
       JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
 
-      int runId = uploadRun("$.start", "$.stop", test.name, test.owner, Access.PUBLIC,
+      String runId = uploadRun("$.start", "$.stop", test.name, test.owner, Access.PUBLIC,
               null, null, "test", payload);
-      assertTrue(runId > 0);
+      assertTrue(Integer.parseInt(runId) > 0);
    }
    @org.junit.jupiter.api.Test
    public void testAddRunWithMetadataData() throws JsonProcessingException {

@@ -6,9 +6,7 @@ weight: 1
 ---
 
 
-This guide [WILL](https://github.com/RedHatPerf/project-tracking/issues/393) document production installation without helper \*-compose scripts.
-
-TODO: [THE CONTENT BELOW NEEDS TO BE UPDATED](https://github.com/RedHatPerf/project-tracking/issues/393)
+This guide documents production installation without helper \*-compose scripts.
 
 ## Setup database
 
