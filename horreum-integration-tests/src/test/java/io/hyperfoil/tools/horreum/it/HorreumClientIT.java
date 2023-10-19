@@ -128,7 +128,6 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
     }
 
 
-    @org.junit.jupiter.api.Disabled
     public void runExperiment() throws InterruptedException {
 
         ObjectMapper mapper = new ObjectMapper();
