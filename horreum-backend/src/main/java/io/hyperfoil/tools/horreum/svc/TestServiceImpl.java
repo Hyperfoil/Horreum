@@ -174,17 +174,16 @@ public class TestServiceImpl implements TestService {
       }
       if(dto.name == null || dto.name.isBlank())
          throw ServiceException.badRequest("Test name can not be empty");
-      TestDAO test = TestMapper.to(dto);
-      addAuthenticated(test);
+      TestDAO test = addAuthenticated(dto);
       Hibernate.initialize(test.tokens);
       return TestMapper.from(test);
    }
 
-   void addAuthenticated(TestDAO test) {
-      TestDAO existing = TestDAO.find("id", test.id).firstResult();
-      if (test.id != null && test.id <= 0) {
-         test.id = null;
-      }
+   TestDAO addAuthenticated(Test dto) {
+      TestDAO existing = TestDAO.find("id", dto.id).firstResult();
+      if(existing == null)
+         dto.id = null;
+      TestDAO test = TestMapper.to(dto);
       if (test.notificationsEnabled == null) {
          test.notificationsEnabled = true;
       }
@@ -192,8 +191,8 @@ public class TestServiceImpl implements TestService {
       if ("*".equals(test.folder)) {
          throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
       }
-      test.ensureLinked();
       if (existing != null) {
+         test.ensureLinked();
          if (!identity.hasRole(existing.owner)) {
             throw ServiceException.forbidden("This user does not have the " + existing.owner + " role!");
          }
@@ -208,17 +207,14 @@ public class TestServiceImpl implements TestService {
          em.merge(test);
          if(shouldRecalculateLables)
            mediator.updateFingerprints(test.id);
-      } else {
-         if (test.views != null) {
-            test.views.forEach(ViewDAO::ensureLinked);
-         }
+      }
+      else {
          // We need to persist the test before view in order for RLS to work
-         test.persist();
          if (test.views == null || test.views.isEmpty()) {
             test.views = Collections.singleton(new ViewDAO("Default", test));
-            test.persist();
          }
          try {
+            em.merge(test);
             em.flush();
          } catch (PersistenceException e) {
             if (e.getCause() instanceof org.hibernate.exception.ConstraintViolationException) {
@@ -231,6 +227,7 @@ public class TestServiceImpl implements TestService {
          if(mediator.testMode())
             messageBus.publish(MessageBusChannels.TEST_NEW, test.id, TestMapper.from(test));
       }
+      return test;
    }
 
    @Override
