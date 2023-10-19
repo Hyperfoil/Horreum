@@ -153,6 +153,7 @@ public class TestServiceImpl implements TestService {
          detached.id = test.id;
          detached.owner = test.owner;
          detached.name = input;
+         detached.backendConfig = test.backendConfig;
          if (Roles.hasRoleWithSuffix(identity, test.owner, "-uploader")) {
             return detached;
          } else if (token != null && test.tokens.stream().anyMatch(tt -> tt.valueEquals(token) && tt.hasUpload())) {

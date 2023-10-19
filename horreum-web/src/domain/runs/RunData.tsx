@@ -69,6 +69,7 @@ export default function RunData(props: RunDataProps) {
                     mode: "application/ld+json",
                     readOnly: true,
                 }}
+                onChange={setEditorData}
             />
         )
     }, [editorData])

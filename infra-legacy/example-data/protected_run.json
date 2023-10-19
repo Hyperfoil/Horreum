@@ -1,0 +1,12 @@
+{
+  "description": "Example run of Protected",
+  "owner": "dev-team",
+  "access": "PRIVATE",
+  "start": "2023-09-25T15:08:51Z",
+  "stop": "2023-09-25T15:08:52Z",
+  "$schema": "urn:acme:benchmark:0.1",
+  "data": {
+    "index": "tfb",
+    "id": "bd3cf79e20c1aba1b2c33baf7700bf29616e61bc"
+  }
+}

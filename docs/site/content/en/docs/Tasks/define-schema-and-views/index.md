@@ -21,7 +21,6 @@ User logged in
 
 Switch tab to 'Labels' and add two **labels**: let's call first `ci-url` where you'd extract just single item from the JSON document using PostgreSQL JSON Path `$.info."ci-url"`. In that case you can ignore the combination function as you don't need to combine/calculate anything. You can uncheck the 'filtering' checkbox as you likely won't search your datasets based on URL.
 
-<div class="screenshot"><img src="/assets/images/define_schema/02_first_label.png" /></div>
 {{% imgproc first_label Fit "1200x300" %}}
 User logged in
 {{% /imgproc %}}

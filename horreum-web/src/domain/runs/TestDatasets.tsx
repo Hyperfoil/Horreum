@@ -45,7 +45,9 @@ import {
     testApi,
     fetchTest,
     Test,
-    View, ExportedLabelValues, fetchViews,
+    View,
+    ExportedLabelValues,
+    fetchViews
 } from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
 import SchemaList from "./SchemaList"
@@ -153,7 +155,7 @@ export default function TestDatasets() {
     const teams = useSelector(teamsSelector)
     const token = useSelector(tokenSelector)
 
-    const [views, setViews] = useState<View[]>([]);
+    const [views, setViews] = useState<View[]>([])
 
     useEffect(() => {
         fetchTest(testId, alerting)

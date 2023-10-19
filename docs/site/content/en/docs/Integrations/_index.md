@@ -5,5 +5,5 @@ categories: [Integration]
 weight: 5
 ---
 
-### Get Horreum running locally and upload your first data
+### Details of Integrations with Horreum
 

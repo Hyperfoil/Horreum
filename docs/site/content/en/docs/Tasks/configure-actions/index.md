@@ -5,7 +5,6 @@ date: 2023-10-15
 weight: 7
 ---
 
-**TODO**: [UPDATE WITH DIFFERENT TYPES OF ACTIONS](https://github.com/RedHatPerf/project-tracking/issues/392)
 
 In the [change detection guide](./change_detection.html) you've seen how can you inform users about changes in your project's performance. You can use another mechanism to notify other services about noteworthy events, e.g. bots commenting on version control system, updating status page or triggering another job in CI: the webhooks.
 

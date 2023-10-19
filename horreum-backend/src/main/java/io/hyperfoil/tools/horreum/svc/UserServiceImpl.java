@@ -178,7 +178,7 @@ public class UserServiceImpl implements UserService {
          }
          userInfo.persistAndFlush();
       } catch (PersistenceException e) {
-         if (e.getCause() instanceof ConstraintViolationException) {
+         if (e instanceof ConstraintViolationException) {
             // silently ignore
             // note: alternative would be to define @SQLInsert with INSERT ... ON CONFLICT DO NOTHING
             log.tracef(e, "Concurrent insertion of %s", username);
@@ -235,6 +235,7 @@ public class UserServiceImpl implements UserService {
             // Was there a failure when creating the team?
             log.warnf("Cannot find role %s%s in Keycloak", prefix, role);
          } catch (Exception e) {
+            log.warnf("Error querying keycloak: %s", e.getMessage());
             ServiceException.serverError("Failed to retrieve role users from Keycloak.");
          }
       }

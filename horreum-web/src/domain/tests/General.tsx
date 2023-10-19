@@ -1,13 +1,13 @@
-import {useState, useEffect, useContext} from "react"
+import React, {useState, useEffect, useContext } from "react"
 import { useSelector } from "react-redux"
 
-import { Form, FormGroup, Switch, TextArea, TextInput } from "@patternfly/react-core"
+import {Form, FormGroup, FormSelect, FormSelectOption, Switch, TextArea, TextInput} from "@patternfly/react-core"
 
 import FolderSelect from "../../components/FolderSelect"
 import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
-import {Test, Access, sendTest} from "../../api"
+import {Test, Access, sendTest, configApi, Datastore, apiCall} from "../../api"
 import { useTester, defaultTeamSelector } from "../../auth"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
@@ -24,16 +24,30 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     const defaultRole = useSelector(defaultTeamSelector)
     const [name, setName] = useState("")
     const [folder, setFolder] = useState("")
+    const [datastoreId, setDatastoreId] = useState(test?.datastoreId)
     const [description, setDescription] = useState("")
     const [compareUrl, setCompareUrl] = useState<string | undefined>(undefined)
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
 
+    const [datastores, setDatastores] = useState<Datastore[]>([])
+    const [owner] = useState(test?.owner || defaultRole || "")
+
+    useEffect( () => {
+        apiCall(configApi.datastores(owner), alerting, "DATASTORE", "Error occurred fetching datastores")
+            .then(ds => setDatastores(ds))
+    }, [test])
+
     const updateState = (test?: Test) => {
         setName(test?.name || "")
         setFolder(test?.folder || "")
+        setDatastoreId( test?.datastoreId || 1 )
         setDescription(test?.description || "")
         setCompareUrl(test?.compareUrl?.toString() || undefined)
         setNotificationsEnabled(!test || test.notificationsEnabled)
+    }
+    const handleOptionChange = (value: string) => {
+        setDatastoreId(parseInt(value))
+        console.log('New datastore selected')
     }
 
     useEffect(() => {
@@ -50,6 +64,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 name,
                 folder,
                 description,
+                datastoreId: datastoreId || 1,
                 compareUrl: compareUrl || undefined, // when empty set to undefined
                 notificationsEnabled,
                 fingerprintLabels: [],
@@ -67,7 +82,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     const isTester = useTester(test?.owner)
     return (
         <>
-            <Form isHorizontal={true} >
+            <Form isHorizontal={true}>
                 <FormGroup
                     label="Name"
                     isRequired={true}
@@ -90,8 +105,22 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                         }}
                     />
                 </FormGroup>
+                <FormGroup label="Datastore" fieldId="datastoreId">
+                    <FormSelect
+                        value={datastoreId?.toString()}
+                        onChange={handleOptionChange}
+                        id="horizontal-form-datastore-type"
+                        name="horizontal-form-datastore-type"
+                        aria-label="Backend Type"
+                    >
+                        {datastores.map((datastore, index) => (
+                            <FormSelectOption key={index} value={datastore.id} label={datastore.name}/>
+                        ))}
+                    </FormSelect>
+                </FormGroup>
+
                 <FormGroup label="Folder" fieldId="folder">
-                    <FolderSelect folder={folder} onChange={setFolder} canCreate={true} readOnly={!isTester} />
+                    <FolderSelect folder={folder} onChange={setFolder} canCreate={true} readOnly={!isTester} placeHolder={"Horreum"}/>
                 </FormGroup>
                 <FormGroup label="Description" fieldId="description" helperText="" helperTextInvalid="">
                     <TextArea

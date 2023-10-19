@@ -14,14 +14,6 @@ Horreum will detect regressions and alert engineers when a performance anomoly o
 
 Horreum integrates into reporting tools to provide detailed analysis of key metrics of your software performance
 
-## Why do I want it?
-
-* **What is it good for?**: 
-
-* **What is it not good for?**: 
-
-* **What is it *not yet* good for?**: 
-
 ## Want to know more?
 
 Give your users next steps from the Overview. For example:

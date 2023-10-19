@@ -4,6 +4,7 @@ import java.util.Collection;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -16,6 +17,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.NotNull;
 
@@ -54,6 +56,9 @@ public class TestDAO extends PanacheEntityBase {
 
    @Column(name="description",unique = false)
    public String description;
+
+   @ManyToOne(fetch=FetchType.EAGER)
+   public DatastoreConfigDAO backendConfig;
 
    @NotNull
    public String owner;

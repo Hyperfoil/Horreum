@@ -108,6 +108,7 @@ fi
 
 if [ "$IMPORT" != "false" ]; then
   post -s /schema hyperfoil_schema.json
+  post -s /config/backends elastic-backend.json
   post -s /test protected_test.json
 
   ACME_BENCHMARK_SCHEMA_ID=$(post /schema acme_benchmark_schema.json) || exit 1

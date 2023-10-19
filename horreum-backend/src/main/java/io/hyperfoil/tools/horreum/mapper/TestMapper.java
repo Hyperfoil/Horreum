@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.mapper;
 
+import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.entity.data.TestTokenDAO;
@@ -17,6 +18,7 @@ public class TestMapper {
         dto.description = t.description;
         dto.owner = t.owner;
         dto.access = t.access;
+        dto.datastoreId = t.backendConfig == null ? 1 : t.backendConfig.id;
         dto.timelineLabels = t.timelineLabels;
         dto.timelineFunction = t.timelineFunction;
         dto.fingerprintLabels = t.fingerprintLabels;
@@ -57,6 +59,10 @@ public class TestMapper {
         t.fingerprintFilter = dto.fingerprintFilter;
         t.compareUrl = dto.compareUrl;
         t.notificationsEnabled = dto.notificationsEnabled;
+        if ( dto.datastoreId == null ) {
+            dto.datastoreId = 1; //by default we will push data into postgres
+        }
+        t.backendConfig = DatastoreConfigDAO.findById(dto.datastoreId);
         if(dto.tokens != null)
             t.tokens = dto.tokens.stream().map(token -> TestMapper.toTestToken(token,t) ).collect(Collectors.toList());
         t.views = ViewDAO.<ViewDAO>find("test.id", dto.id).list();

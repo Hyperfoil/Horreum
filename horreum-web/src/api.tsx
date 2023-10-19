@@ -364,7 +364,7 @@ export function updateDescription(id: number, testid: number, description: strin
 
 
 //Utils
-function apiCall<T>(apiCall: Promise<T>, alerting: AlertContextType, errorKey: string, errorMessage: string): Promise<T> {
+export function apiCall<T>(apiCall: Promise<T>, alerting: AlertContextType, errorKey: string, errorMessage: string): Promise<T> {
     return apiCall.then(
         response => response,
         error => alerting.dispatchError(error, errorKey, errorMessage)

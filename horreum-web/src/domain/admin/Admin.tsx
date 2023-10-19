@@ -11,6 +11,7 @@ import Teams from "./Teams"
 import Administrators from "./Administrators"
 import {useSelector} from "react-redux";
 import {isAdminSelector} from "../../auth";
+import Datastores from "./Datastores";
 
 export default function Admin() {
     const adminFuncsRef = useRef<TabFunctions>()
@@ -51,19 +52,24 @@ export default function Admin() {
                             <FragmentTab title="Notification Tests" fragment="notifications">
                                 <Notifications/>
                             </FragmentTab>
+                            <FragmentTab title="Datastores" fragment="datastores">
+                                <Datastores/>
+                            </FragmentTab>
                         </SavedTabs>
                     </CardBody>
                 </Card>
             </PageSection>
         )
     } else {
-        return             <PageSection>
-            <Card>
-                <CardBody>
-                    You are not authorized to view this page
-                </CardBody>
-            </Card>
-        </PageSection>
+        return (
+            <PageSection>
+                <Card>
+                    <CardBody>
+                        You are not authorized to view this page
+                    </CardBody>
+                </Card>
+            </PageSection>
+        )
 
     }
 }

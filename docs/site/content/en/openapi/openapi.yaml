@@ -26,6 +26,100 @@ tags:
   description: Endpoint giving access to tests defined in Horreum.
   x-smallrye-profile-external: ""
 paths:
+  /api/config/datastore:
+    put:
+      tags:
+      - Config
+      description: Update an existing Datastore definition
+      operationId: updateDatastore
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Datastore'
+      responses:
+        "200":
+          description: The ID of the updated Datastore
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+    post:
+      tags:
+      - Config
+      description: Create a new Datastore
+      operationId: newDatastore
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Datastore'
+      responses:
+        "200":
+          description: The ID for the new Datastore
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+  /api/config/datastore/{id}:
+    delete:
+      tags:
+      - Config
+      description: Test a Datastore
+      operationId: deleteDatastore
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+  /api/config/datastore/{id}/test:
+    get:
+      tags:
+      - Config
+      description: Test a Datastore connection
+      operationId: testDatastore
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatastoreTestResponse'
+  /api/config/datastore/{team}:
+    get:
+      tags:
+      - Config
+      description: Obtain list of configured datastores for particular team
+      operationId: datastores
+      parameters:
+      - name: team
+        in: path
+        description: name of the team to search for defined datastores
+        required: true
+        schema:
+          type: string
+        example: perf-team
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Datastore'
   /api/config/keycloak:
     get:
       tags:
@@ -2383,6 +2477,99 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
+    Datastore:
+      description: Type of backend datastore
+      required:
+      - access
+      - owner
+      - id
+      - name
+      - builtIn
+      - config
+      - type
+      type: object
+      properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          allOf:
+          - $ref: '#/components/schemas/Access'
+          example: PUBLIC
+          nullable: false
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+          nullable: false
+        id:
+          format: int32
+          description: Unique Datastore id
+          type: integer
+          example: 101
+        name:
+          description: "Name of the datastore, used to identify the datastore in the\
+            \ Test definition"
+          type: string
+          example: Perf Elasticsearch
+          nullable: false
+        builtIn:
+          description: Is this a built-in datastore? Built-in datastores cannot be
+            deleted or modified
+          type: boolean
+          example: false
+          nullable: false
+        config:
+          type: object
+          oneOf:
+          - $ref: '#/components/schemas/ElasticsearchDatastoreConfig'
+          - $ref: '#/components/schemas/PostgresDatastoreConfig'
+          nullable: false
+        type:
+          description: Type of backend datastore
+          enum:
+          - POSTGRES
+          - ELASTICSEARCH
+          type: string
+          example: ELASTICSEARCH
+          nullable: false
+    DatastoreTestResponse:
+      type: object
+      properties:
+        msg:
+          type: string
+        success:
+          type: boolean
+    DatastoreType:
+      description: Type of backend datastore
+      enum:
+      - POSTGRES
+      - ELASTICSEARCH
+      type: string
+      example: ELASTICSEARCH
+      nullable: false
+    ElasticsearchDatastoreConfig:
+      description: Type of backend datastore
+      required:
+      - builtIn
+      - apiKey
+      - url
+      type: object
+      properties:
+        builtIn:
+          description: Built In
+          type: boolean
+        apiKey:
+          description: Elasticsearch API KEY
+          type: string
+        url:
+          description: Elasticsearch url
+          type: string
     ErrorDetails:
       required:
       - type
@@ -2819,6 +3006,15 @@ components:
         message:
           type: string
           nullable: false
+    PostgresDatastoreConfig:
+      description: Built in backend datastore
+      required:
+      - builtIn
+      type: object
+      properties:
+        builtIn:
+          description: Built In
+          type: boolean
     ProtectedTimeType:
       required:
       - access
@@ -3693,6 +3889,7 @@ components:
       required:
       - id
       - name
+      - datastoreId
       - notificationsEnabled
       type: object
       allOf:
@@ -3718,6 +3915,11 @@ components:
           type: string
           example: Comprehensive benchmark to tests the limits of any system it is
             run against
+        datastoreId:
+          format: int32
+          description: backend ID for backing datastore
+          type: integer
+          nullable: false
         tokens:
           description: Array of API tokens associated with test
           type: array
@@ -3794,6 +3996,7 @@ components:
       required:
       - id
       - name
+      - datastoreId
       type: object
       allOf:
       - $ref: '#/components/schemas/ProtectedType'
@@ -3833,6 +4036,11 @@ components:
           items:
             type: string
           example: []
+        datastoreId:
+          format: int32
+          description: Datastore id
+          type: integer
+          example: 1
     TestToken:
       required:
       - id

@@ -55,13 +55,20 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
+import io.hyperfoil.tools.horreum.datastore.BackendResolver;
+import io.hyperfoil.tools.horreum.datastore.Datastore;
+import io.hyperfoil.tools.horreum.datastore.DatastoreResponse;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLogDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
+import io.hyperfoil.tools.horreum.entity.data.RunDAO;
+import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
+import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
@@ -137,6 +144,9 @@ public class RunServiceImpl implements RunService {
 
    @Inject
    ServiceMediator mediator;
+   @Inject
+   BackendResolver backendResolver;
+
 
    @Inject
    Session session;
@@ -460,10 +470,46 @@ public class RunServiceImpl implements RunService {
       } catch (JsonProcessingException e) {
          throw ServiceException.badRequest("Could not map incoming data to JsonNode: "+e.getMessage());
       }
+
       Object foundTest = findIfNotSet(test, data);
+      String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
+      if (testNameOrId == null || testNameOrId.isEmpty()) {
+         log.debugf("Failed to upload for test %s with description %s as the test cannot be identified.", test, description);
+         throw ServiceException.badRequest("Cannot identify test name.");
+      }
+
+      TestDAO testEntity = testService.ensureTestExists(testNameOrId, token);
+
+      Datastore datastore = backendResolver.getBackend(testEntity.backendConfig.type);
+      DatastoreResponse response = datastore.handleRun(data, metadata, testEntity.backendConfig, Optional.ofNullable(schemaUri), mapper);
+
+      List<Integer> runIds = new ArrayList<>();
+      if (datastore.uploadType() == Datastore.UploadType.MUILTI && response.payload instanceof  ArrayNode){
+         response.payload.forEach(jsonNode -> {
+            runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, null, jsonNode, testEntity));
+         });
+      } else {
+         runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, metadata, response.payload, testEntity));
+      }
+//      return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId).build();
+      String reponseString = String.valueOf(runIds.stream().map(val -> Integer.toString(val)).collect(Collectors.joining(", ")));
+      return Response.status(Response.Status.OK).entity(reponseString).build();
+   }
+
+   private Integer getPersistRun(String start, String stop, String test, String owner, Access access, String token, String schemaUri, String description, JsonNode metadata, JsonNode data, TestDAO testEntity) {
       Object foundStart = findIfNotSet(start, data);
       Object foundStop = findIfNotSet(stop, data);
       Object foundDescription = findIfNotSet(description, data);
+
+      Instant startInstant = toInstant(foundStart);
+      Instant stopInstant = toInstant(foundStop);
+      if (startInstant == null) {
+         log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStart, start);
+         throw ServiceException.badRequest("Cannot parse start time from " + foundStart + " (" + start + ")");
+      } else if (stopInstant == null) {
+         log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStop, stop);
+         throw ServiceException.badRequest("Cannot parse stop time from " + foundStop + " (" + stop + ")");
+      }
 
       if (schemaUri != null && !schemaUri.isEmpty()) {
          if (data.isObject()) {
@@ -476,24 +522,6 @@ public class RunServiceImpl implements RunService {
             });
          }
       }
-
-      String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
-      if (testNameOrId == null || testNameOrId.isEmpty()) {
-         log.debugf("Failed to upload for test %s with description %s as the test cannot be identified.", test, description);
-         throw ServiceException.badRequest("Cannot identify test name.");
-      }
-
-      Instant startInstant = toInstant(foundStart);
-      Instant stopInstant = toInstant(foundStop);
-      if (startInstant == null) {
-         log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStart, start);
-         throw ServiceException.badRequest("Cannot parse start time from " + foundStart + " (" + start + ")");
-      } else if (stopInstant == null) {
-         log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStop,stop);
-         throw ServiceException.badRequest("Cannot parse stop time from " + foundStop + " (" + stop + ")");
-      }
-
-      TestDAO testEntity = testService.ensureTestExists(testNameOrId, token);
 
       log.debugf("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id, foundDescription);
 
@@ -514,7 +542,7 @@ public class RunServiceImpl implements RunService {
       if (token != null) {
          // TODO: remove the token
       }
-      return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId).build();
+      return runId;
    }
 
    private Object findIfNotSet(String value, JsonNode data) {

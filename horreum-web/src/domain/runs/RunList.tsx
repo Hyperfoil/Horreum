@@ -15,6 +15,8 @@ import {
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
+    SplitItem,
+    Split,
 } from "@patternfly/react-core"
 import { ArrowRightIcon, TrashIcon } from "@patternfly/react-icons"
 import { Link, NavLink } from "react-router-dom"
@@ -42,6 +44,7 @@ import SchemaList from "./SchemaList"
 import AccessIconOnly from "../../components/AccessIconOnly"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {RunImportModal} from "./RunImportModal";
 
 type C = CellProps<RunSummary> &
     UseTableOptions<RunSummary> &
@@ -68,6 +71,7 @@ export default function RunList() {
     const [runCount, setRunCount] =useState(0)
     const teams = useSelector(teamsSelector)
     const [isLoading, setIsLoading] = useState(false)
+    const [showNewRunModal, setShowNewRunModal] = useState(false)
 
     const loadTestRuns = () => {
         setIsLoading(true)
@@ -218,6 +222,10 @@ export default function RunList() {
         },
     ]
 
+    const toggleNewRunModal = () => {
+        setShowNewRunModal(!showNewRunModal);
+    };
+
     return (
         <PageSection>
             <Card>
@@ -245,12 +253,26 @@ export default function RunList() {
                                 />
                             </ToolbarItem>
                             <ToolbarItem>
-                                <NavLink className="pf-c-button pf-m-primary" to={`/test/${testId}`}>
-                                    Edit test
-                                </NavLink>
-                                <NavLink className="pf-c-button pf-m-secondary" to={`/run/dataset/list/${testId}`}>
-                                    View datasets
-                                </NavLink>
+                                <Split hasGutter>
+                                    <SplitItem>
+                                        <Button
+                                            isDisabled={false}
+                                            variant="primary"
+                                            onClick={toggleNewRunModal}
+                                        >
+                                            Import Data
+                                        </Button></SplitItem>
+                                    <SplitItem>
+                                        <NavLink className="pf-c-button pf-m-primary" to={`/test/${testId}`}>
+                                            Edit test
+                                        </NavLink>
+                                    </SplitItem>
+                                    <SplitItem>
+                                        <NavLink className="pf-c-button pf-m-secondary" to={`/run/dataset/list/${testId}`}>
+                                            View datasets
+                                        </NavLink>
+                                    </SplitItem>
+                                </Split>
                             </ToolbarItem>
                             {test && test.compareUrl && (
                                 <ToolbarItem>
@@ -303,6 +325,7 @@ export default function RunList() {
                     />
                 </CardFooter>
             </Card>
+            <RunImportModal isOpen={showNewRunModal} onClose={toggleNewRunModal} test={test} owner={test?.owner || ""}/>
         </PageSection>
     )
 }

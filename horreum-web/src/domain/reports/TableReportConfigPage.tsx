@@ -273,6 +273,7 @@ export default function TableReportConfigPage() {
                                             name: "",
                                             owner: "",
                                             access: Access.Public,
+                                            datastoreId: 1,
                                             notificationsEnabled: false,
                                         },
                                     })

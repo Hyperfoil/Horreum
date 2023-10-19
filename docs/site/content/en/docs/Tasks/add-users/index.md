@@ -18,4 +18,3 @@ From the **Select team** drop down, select one of teams you manage. Search for e
 
 You can also use this screen to create new users to become members of your team.
 
-**TODO**: [Administation/Administrators and Administration/Teams](https://github.com/RedHatPerf/project-tracking/issues/391)

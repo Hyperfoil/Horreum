@@ -2,5 +2,6 @@
   "name": "Protected test",
   "description": "You should see this only when logged in",
   "owner": "dev-team",
-  "access": "PROTECTED"
+  "access": "PROTECTED",
+  "datastoreId": 11
 }

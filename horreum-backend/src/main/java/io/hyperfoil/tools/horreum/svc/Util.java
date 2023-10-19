@@ -599,7 +599,7 @@ public class Util {
       return "__x => (!!(" + function + ")(__x))";
    }
 
-   static Object runQuery(EntityManager em, String query, Object... params) {
+   static public Object runQuery(EntityManager em, String query, Object... params) {
       return runQuery(em, Object.class, query, params);
    }
 
