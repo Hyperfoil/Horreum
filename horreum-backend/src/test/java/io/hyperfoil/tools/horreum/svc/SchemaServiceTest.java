@@ -37,13 +37,15 @@ import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.common.mapper.TypeRef;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(HorreumTestProfile.class)
 public class SchemaServiceTest extends BaseServiceTest {
-   @org.junit.jupiter.api.Disabled
+   @org.junit.jupiter.api.Test
+   @DisabledIfEnvironmentVariable(named = "ci-test", matches = "true")
    public void testValidateRun() throws IOException, InterruptedException {
       JsonNode allowAny = load("/allow-any.json");
       Schema allowAnySchema = createSchema("any", allowAny.path("$id").asText(), allowAny);

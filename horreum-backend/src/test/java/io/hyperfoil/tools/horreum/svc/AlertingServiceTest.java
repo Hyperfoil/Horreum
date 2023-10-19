@@ -679,7 +679,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       jsonRequest().queryParam("testId", test.id).body(update).post("/api/alerting/changeDetection").then().statusCode(204);
    }
 
-   @org.junit.jupiter.api.Disabled
+   @org.junit.jupiter.api.Test
    public void testLabelsChange(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);

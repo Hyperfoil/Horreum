@@ -40,6 +40,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -186,7 +187,8 @@ public class DatasetServiceTest extends BaseServiceTest {
       }, "urn:X");
    }
 
-   @org.junit.jupiter.api.Disabled
+   @org.junit.jupiter.api.Test
+   @DisabledIfEnvironmentVariable(named = "ci-test", matches = "true")
    public void testDatasetLabelChanged() {
       withExampleSchemas((schemas) -> {
          int labelA = addLabel(schemas[0], "A", null, new Extractor("value", "$.value", false));
@@ -207,13 +209,13 @@ public class DatasetServiceTest extends BaseServiceTest {
             updateLabel(schemas[1], labelB, "value", "({ x, y }) => x + y", new Extractor("x", "$.value", false), new Extractor("y", "$.value", false));
             waitForUpdate(updateQueue, ds);
             waitForUpdate(updateQueue, ds);
+            //delete label will cause a recalculation of the labels&datapoints
             deleteLabel(schemas[1], labelC);
             try {
                Thread.sleep(200);
             } catch (InterruptedException e) {
                throw new RuntimeException(e);
             }
-            // delete does not cause any update
 
             values = LabelDAO.Value.<LabelDAO.Value>find("datasetId", ds.id).list();
             assertEquals(2, values.size());
@@ -235,7 +237,8 @@ public class DatasetServiceTest extends BaseServiceTest {
       });
    }
 
-   @org.junit.jupiter.api.Disabled
+   @org.junit.jupiter.api.Test
+   @DisabledIfEnvironmentVariable(named = "ci-test", matches = "true")
    public void testSchemaAfterData() throws InterruptedException {
       Test test = createTest(createExampleTest("xxx"));
       BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
