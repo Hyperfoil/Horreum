@@ -270,8 +270,13 @@ public class SchemaServiceImpl implements SchemaService {
       query.setParameter(1, owner);
       query.setParameter(2, access);
       query.setParameter(3, id);
-      if (query.executeUpdate() != 1) {
-         throw ServiceException.serverError("Access change failed (missing permissions?)");
+      try {
+         if (query.executeUpdate() != 1) {
+            throw ServiceException.serverError("Access change failed (missing permissions?)");
+         }
+      }
+      catch (Exception e) {
+         throw ServiceException.serverError("Access change failed (missing permissions?) "+e.getMessage());
       }
    }
 
