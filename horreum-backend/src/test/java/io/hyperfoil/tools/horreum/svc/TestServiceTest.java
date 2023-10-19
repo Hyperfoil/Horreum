@@ -274,6 +274,22 @@ public class TestServiceTest extends BaseServiceTest {
       }
    }
 
+   @org.junit.jupiter.api.Test
+   public void testImportWithTransformers() throws InterruptedException {
+      Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
+      p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+
+      String s = readFile(p.resolve("quarkus_sb_schema.json").toFile());
+      jsonRequest().body(s).post("/api/schema/import").then().statusCode(204);
+
+      String t = readFile(p.resolve("quarkus_sb_test.json").toFile());
+      jsonRequest().body(t).post("/api/test/import").then().statusCode(204);
+      TestDAO test = TestDAO.<TestDAO>find("name", "quarkus-spring-boot-comparison").firstResult();
+      assertEquals(1, test.transformers.size());
+
+   }
+
+
    private void addSubscription(Test test) {
       Watch watch = new Watch();
       watch.testId = test.id;

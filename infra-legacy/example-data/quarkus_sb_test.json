@@ -1,0 +1,180 @@
+{
+  "id": 113,
+  "name": "quarkus-spring-boot-comparison",
+  "folder": "quarkus",
+  "description": "Quarkus vs Spring boot build and runtime stats for IDC labs report application in native  and JVM modes",
+  "owner": "foo-team",
+  "access": 0,
+  "tokens": [],
+  "timelineLabels": ["version"],
+  "timelineFunction": null,
+  "fingerprintLabels": ["Runtime", "buildType"],
+  "fingerprintFilter": null,
+  "compareUrl": null,
+  "transformers": [
+    {
+      "id": 3243897,
+      "name": "quarkus-sb-comparison-transformer",
+      "schemaName": "quarkus-sb-compare",
+      "targetSchemaUri": "urn:quarkus-sb-compare-ds:0.1",
+      "schemaId": 64
+    }
+  ],
+  "notificationsEnabled": true,
+  "alerting": {
+    "variables": [
+      {
+        "id": 3523654,
+        "testId": 113,
+        "name": "Average Time to First Request",
+        "group": null,
+        "order": 0,
+        "labels": ["avTimeToFirstRequest"],
+        "changeDetection": [
+          {
+            "id": 3523656,
+            "model": "relativeDifference",
+            "config": {
+              "filter": "mean",
+              "window": 1,
+              "threshold": 0.2,
+              "minPrevious": 5
+            }
+          },
+          {
+            "id": 3523655,
+            "model": "relativeDifference",
+            "config": {
+              "filter": "mean",
+              "window": 5,
+              "threshold": 0.1,
+              "minPrevious": 5
+            }
+          }
+        ]
+      },
+      {
+        "id": 3525316,
+        "testId": 113,
+        "name": "Average Throughput",
+        "group": null,
+        "order": 1,
+        "labels": ["avThroughput"],
+        "changeDetection": [
+          {
+            "id": 3525317,
+            "model": "relativeDifference",
+            "config": {
+              "filter": "mean",
+              "window": 1,
+              "threshold": 0.2,
+              "minPrevious": 5
+            }
+          },
+          {
+            "id": 3525318,
+            "model": "relativeDifference",
+            "config": {
+              "filter": "mean",
+              "window": 5,
+              "threshold": 0.1,
+              "minPrevious": 5
+            }
+          }
+        ]
+      },
+      {
+        "id": 3525319,
+        "testId": 113,
+        "name": "Averge Build Time",
+        "group": null,
+        "order": 2,
+        "labels": ["avBuildTime"],
+        "changeDetection": [
+          {
+            "id": 3525320,
+            "model": "relativeDifference",
+            "config": {
+              "filter": "mean",
+              "window": 5,
+              "threshold": 0.1,
+              "minPrevious": 5
+            }
+          },
+          {
+            "id": 3525321,
+            "model": "relativeDifference",
+            "config": {
+              "filter": "mean",
+              "window": 1,
+              "threshold": 0.2,
+              "minPrevious": 5
+            }
+          }
+        ]
+      },
+      {
+        "id": 3525322,
+        "testId": 113,
+        "name": "Averge Time to First Request",
+        "group": null,
+        "order": 3,
+        "labels": ["avTimeToFirstRequest"],
+        "changeDetection": [
+          {
+            "id": 3525323,
+            "model": "relativeDifference",
+            "config": {
+              "filter": "mean",
+              "window": 1,
+              "threshold": 0.2,
+              "minPrevious": 5
+            }
+          },
+          {
+            "id": 3525324,
+            "model": "relativeDifference",
+            "config": {
+              "filter": "mean",
+              "window": 5,
+              "threshold": 0.1,
+              "minPrevious": 5
+            }
+          }
+        ]
+      }
+    ],
+    "missingDataRules": []
+  },
+  "actions": [],
+  "experiments": [
+    {
+      "id": 3524509,
+      "name": "Baseline - quarkus 2.16 - native",
+      "testId": 113,
+      "selectorLabels": ["version"],
+      "selectorFilter": "value => !!value",
+      "baselineLabels": ["version", "buildType"],
+      "baselineFilter": "value => value.version === \"2.16.5.Final\" && value.buildType ==='native'",
+      "comparisons": [
+        {
+          "model": "relativeDifference",
+          "config": {
+            "threshold": 0.1,
+            "greaterBetter": false,
+            "maxBaselineDatasets": 0
+          },
+          "variableId": 3523654
+        }
+      ],
+      "extraLabels": ["avThroughput", "rssStartup"]
+    }
+  ],
+  "subscriptions": {
+    "id": 304456,
+    "users": ["johara", "fnigro"],
+    "optout": [],
+    "teams": [],
+    "testId": 113
+  }
+}

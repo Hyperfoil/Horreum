@@ -191,6 +191,8 @@ public class TestServiceImpl implements TestService {
       if ("*".equals(test.folder)) {
          throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
       }
+      if(test.transformers != null && !test.transformers.isEmpty())
+         verifyTransformersBeforeAdd(test);
       if (existing != null) {
          test.ensureLinked();
          if (!identity.hasRole(existing.owner)) {
@@ -228,6 +230,19 @@ public class TestServiceImpl implements TestService {
             messageBus.publish(MessageBusChannels.TEST_NEW, test.id, TestMapper.from(test));
       }
       return test;
+   }
+   private void verifyTransformersBeforeAdd(TestDAO test) {
+      List<TransformerDAO> tmp = new ArrayList<>();
+      for(var t : test.transformers) {
+         if(TransformerDAO.findById(t.id) == null) {
+            TransformerDAO trans = TransformerDAO.find("targetSchemaUri", t.targetSchemaUri).firstResult();
+            if(trans != null)
+               tmp.add(trans);
+         }
+         else
+            tmp.add(t);
+      }
+      test.transformers = tmp;
    }
 
    @Override
@@ -544,6 +559,7 @@ public class TestServiceImpl implements TestService {
             // only for informative purposes
             ref.set("name", t.path("name"));
             ref.set("schemaName", t.path("schemaName"));
+            ref.set("targetSchemaUri", t.path("targetSchemaUri"));
             ref.set("schemaId", t.path("schemaId"));
             transformers.add(ref);
          });
@@ -600,8 +616,6 @@ public class TestServiceImpl implements TestService {
       boolean forceUseTestId = false;
       try {
          dto = mapper.treeToValue(config, Test.class);
-         //test = TestMapper.to( dto);
-         //test.ensureLinked();
          if (dto.tokens != null && !dto.tokens.isEmpty()) {
             dto.tokens.forEach(token -> token.decryptValue(ciphertext -> {
                try {
@@ -616,17 +630,8 @@ public class TestServiceImpl implements TestService {
                throw ServiceException.badRequest("Transformer " + transformer.name + " does not have ID set; Transformers must be imported via Schema.");
             });
          }
-         TestDAO existingTest = dto.id == null ? null : TestDAO.findById(dto.id);
-         if(existingTest != null) {
-            TestDAO test = em.merge(TestMapper.to(dto));
-            test.persistAndFlush();
-            dto = TestMapper.from(test);
-         }
-         else {
-            forceUseTestId = true;
-            dto.clearIds();
-            dto = add(dto);
-         }
+
+         dto = add(dto);
       } catch (JsonProcessingException e) {
          throw ServiceException.badRequest("Failed to deserialize test: " + e.getMessage());
       }
