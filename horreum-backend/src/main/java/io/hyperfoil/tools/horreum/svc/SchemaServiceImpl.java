@@ -147,17 +147,7 @@ public class SchemaServiceImpl implements SchemaService {
    @Transactional
    @Override
    public Integer add(Schema schemaDTO){
-      if (schemaDTO.uri == null || Arrays.stream(ALL_URNS).noneMatch(scheme -> schemaDTO.uri.startsWith(scheme + ":"))) {
-         throw ServiceException.badRequest("Please use URI starting with one of these schemes: " + Arrays.toString(ALL_URNS));
-      }
-      SchemaDAO byName = SchemaDAO.find("name", schemaDTO.name).firstResult();
-      if (byName != null && !Objects.equals(byName.id, schemaDTO.id)) {
-         throw ServiceException.serverError("Name already used");
-      }
-      SchemaDAO byUri = SchemaDAO.find("uri", schemaDTO.uri).firstResult();
-      if (byUri != null && !Objects.equals(byUri.id, schemaDTO.id)) {
-         throw ServiceException.serverError("URI already used");
-      }
+      verifyNewSchema(schemaDTO);
       // Note: isEmpty is true for all non-object and non-array nodes
       if (schemaDTO.schema != null && schemaDTO.schema.isEmpty()) {
          schemaDTO.schema = null;
@@ -188,6 +178,20 @@ public class SchemaServiceImpl implements SchemaService {
       }
       log.debugf("Added schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
       return schema.id;
+   }
+
+   private void verifyNewSchema(Schema schemaDTO) {
+      if (schemaDTO.uri == null || Arrays.stream(ALL_URNS).noneMatch(scheme -> schemaDTO.uri.startsWith(scheme + ":"))) {
+         throw ServiceException.badRequest("Please use URI starting with one of these schemes: " + Arrays.toString(ALL_URNS));
+      }
+      SchemaDAO byName = SchemaDAO.find("name", schemaDTO.name).firstResult();
+      if (byName != null && !Objects.equals(byName.id, schemaDTO.id)) {
+         throw ServiceException.badRequest("Name already used");
+      }
+      SchemaDAO byUri = SchemaDAO.find("uri", schemaDTO.uri).firstResult();
+      if (byUri != null && !Objects.equals(byUri.id, schemaDTO.id)) {
+         throw ServiceException.badRequest("URI already used");
+      }
    }
 
    @PermitAll
@@ -815,10 +819,10 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Transactional
    @Override
-   public void importSchema(String newSchema) {
+   public void importSchema(String importSchema) {
       JsonNode config = null;
       try {
-         config = Util.OBJECT_MAPPER.readValue(newSchema, JsonNode.class);
+         config = Util.OBJECT_MAPPER.readValue(importSchema, JsonNode.class);
       } catch (JsonProcessingException e) {
          throw ServiceException.badRequest("Could not map Schema to JsonNode: "+e.getMessage());
       }
@@ -835,21 +839,37 @@ public class SchemaServiceImpl implements SchemaService {
       } catch (JsonProcessingException e) {
          throw ServiceException.badRequest("Cannot deserialize schema: " + e.getMessage());
       }
+      boolean newSchema = true;
       if ( schema.id != null ) {
-         em.merge(schema);
-      } else {
+         //first check if this schema exists
+         SchemaDAO original = SchemaDAO.findById(schema.id);
+         if(original != null) {
+            em.merge(schema);
+            newSchema = false;
+         }
+         else {
+            verifyNewSchema(SchemaMapper.from(schema));
+            schema.id = null;
+            schema.persist();
+         }
+      }
+      else {
+         verifyNewSchema(SchemaMapper.from(schema));
          em.persist(schema);
       }
       if (labels == null || labels.isNull() || labels.isMissingNode()) {
          log.debugf("Import schema %d: no labels", schema.id);
-      } else if (labels.isArray()) {
+      }
+      else if (labels.isArray()) {
          for (JsonNode node : labels) {
             try {
                LabelDAO label = LabelMapper.to(Util.OBJECT_MAPPER.treeToValue(node, Label.class));
                label.schema = schema;
-               if ( label.id != null ){
+               if ( label.id != null && !newSchema){
                   em.merge(label);
                } else {
+                  label.id = null;
+                  label.schema = schema;
                   em.persist(label);
                }
             } catch (JsonProcessingException e) {
@@ -866,13 +886,33 @@ public class SchemaServiceImpl implements SchemaService {
             try {
                TransformerDAO transformer = TransformerMapper.to(Util.OBJECT_MAPPER.treeToValue(node, Transformer.class));
                transformer.schema = schema;
-               em.merge(transformer);
+               if(transformer.id == null || transformer.id < 1) {
+                  em.persist(transformer);
+               }
+               else {
+                  if(TransformerDAO.findById(transformer.id) != null) {
+                     transformer.schema = schema;
+                     em.merge(transformer);
+                  }
+                  else {
+                     transformer.id = null;
+                     transformer.schema = schema;
+                     em.persist(transformer);
+                  }
+               }
             } catch (JsonProcessingException e) {
                throw ServiceException.badRequest("Cannot deserialize transformer: " + e.getMessage());
             }
          }
       } else {
          throw ServiceException.badRequest("Wrong node type for transformers: " + transformers.getNodeType());
+      }
+      //let's wrap flush in a try/catch, if we get any role issues at commit we can give a sane msg
+      try {
+         em.flush();
+      }
+      catch (Exception e) {
+         throw ServiceException.serverError("Failed to persist Schema: "+e.getMessage());
       }
    }
 
