@@ -1,11 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -15,6 +11,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
@@ -40,6 +38,8 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -188,6 +188,19 @@ public class TestServiceTest extends BaseServiceTest {
       assertEquals(1, StreamSupport.stream(obj.spliterator(), false).filter(item -> item.size() == 0).count());
       assertEquals(1, StreamSupport.stream(obj.spliterator(), false).filter(item -> item.size() == 1 && item.has("value")).count());
       assertEquals(2, obj.size());
+   }
+   @org.junit.jupiter.api.Test
+   public void testImportFromFile() throws JsonProcessingException {
+      Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
+      p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+
+      Test t = new ObjectMapper().readValue(
+              readFile(p.resolve("quarkus_quickstart_test_empty.json").toFile()), Test.class);
+      assertEquals("perf-team", t.owner);
+      t.owner = "foo-team";
+      Test t2 = createTest(t);
+      assertEquals(t.description, t2.description);
+      assertNotEquals(t.id, t2.id);
    }
 
    @org.junit.jupiter.api.Test

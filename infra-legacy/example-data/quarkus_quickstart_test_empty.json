@@ -1,0 +1,25 @@
+{
+  "id": 15,
+  "name": "Quarkus - config-quickstart - native",
+  "folder": "quarkus",
+  "description": "tst",
+  "owner": "perf-team",
+  "access": 0,
+  "tokens": [
+    {
+      "id": 236000,
+      "testId": 15,
+      "permissions": 5,
+      "description": "startup-upload-token",
+      "value": "/JkjsKtl25K4uEUXziKQIw==;l0Y8ZYIUh3kYMRDUEqIp4UnriWfENFtGxgOv2Oj/OZQ/bdOc6TZq7qemhvfEw+hA7mzRsA8x43fa8fFHQGULfVE50X1oapxD6uWJLD/QBWU="
+    }
+  ],
+  "timelineLabels": null,
+  "timelineFunction": null,
+  "fingerprintLabels": [],
+  "fingerprintFilter": null,
+  "compareUrl": null,
+  "transformers": [],
+  "notificationsEnabled": true
+}
+
