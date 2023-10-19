@@ -3,15 +3,19 @@ package io.hyperfoil.tools.horreum.svc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -39,7 +43,7 @@ import org.junit.jupiter.api.Assertions;
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(HorreumTestProfile.class)
 public class SchemaServiceTest extends BaseServiceTest {
-   @org.junit.jupiter.api.Disabled
+   @org.junit.jupiter.api.Test
    public void testValidateRun() throws IOException, InterruptedException {
       JsonNode allowAny = load("/allow-any.json");
       Schema allowAnySchema = createSchema("any", allowAny.path("$id").asText(), allowAny);
@@ -192,6 +196,25 @@ public class SchemaServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
+   public void testImportWithTransformers() throws JsonProcessingException {
+      Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
+      p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+      String s1 = readFile(p.resolve("quarkus_sb_schema.json").toFile());
+
+      jsonRequest().body(s1).post("/api/schema/import").then().statusCode(204);
+
+      SchemaDAO s = SchemaDAO.find("uri", "urn:quarkus-sb-compare:0.1").firstResult();
+      assertNotNull(s);
+      assertEquals(30, LabelDAO.find("schema.id", s.id).count());
+      assertEquals(1, TransformerDAO.find("schema.id", s.id).count());
+
+      String s2 = readFile(p.resolve("quarkus_sb_schema_empty.json").toFile());
+      // this should fail since the uri is identical to an already imported test
+      jsonRequest().body(s2).post("/api/schema/import").then().statusCode(400);
+   }
+
+
+   @org.junit.jupiter.api.Test
    public void testExportImportWithWipe() {
       testExportImport(true);
    }
@@ -227,6 +250,9 @@ public class SchemaServiceTest extends BaseServiceTest {
       }
 
       jsonRequest().body(exportJson).post("/api/schema/import").then().statusCode(204);
-      validateDatabaseContents(db);
+      SchemaDAO s = SchemaDAO.find("uri", "urn:xxx:1.0").firstResult();
+      assertNotNull(s);
+      assertEquals(2, LabelDAO.find("schema.id", s.id).count());
+      assertEquals(1, TransformerDAO.find("schema.id", s.id).count());
    }
 }

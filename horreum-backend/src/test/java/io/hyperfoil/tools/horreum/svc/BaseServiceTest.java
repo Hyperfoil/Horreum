@@ -894,7 +894,7 @@ public class BaseServiceTest {
 
    }
 
-   private String readFile(File file) {
+    String readFile(File file) {
       if(file.isFile()) {
          try {
             return new String(Files.readAllBytes(file.toPath()));
