@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  *
  * Do not change unless changing constants in SQL policies.
  */
-@Schema(type = SchemaType.INTEGER, required = true)
+@Schema(type = SchemaType.INTEGER, required = true, description = "Resources have different visibility within the UI. 'PUBLIC', 'PROTECTED' and 'PRIVATE'. Restricted resources are not visible to users who do not have the correct permissions")
 public enum Access {
    /** Anyone can see */
    PUBLIC,

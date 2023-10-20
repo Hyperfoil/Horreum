@@ -42,7 +42,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
-import io.hyperfoil.tools.horreum.api.ConditionConfig;
+import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.alerting.*;
 import io.hyperfoil.tools.horreum.api.changes.Dashboard;
 import io.hyperfoil.tools.horreum.api.changes.Target;

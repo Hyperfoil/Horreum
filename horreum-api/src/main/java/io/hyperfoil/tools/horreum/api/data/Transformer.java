@@ -7,36 +7,53 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Collection;
 
-@Schema(name = "Transformer", type = SchemaType.OBJECT)
+@Schema(type = SchemaType.OBJECT,
+description = "A transformer extracts labals and applies a Function to convert a Run into one or more Datasets")
 public class Transformer {
     @JsonProperty(required = true)
+    @Schema(description="Unique Transformer id",
+            example="101")
     public Integer id;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(description="Transformer name",
+            example="normalize-techempower-result")
     public String name;
+    @Schema(description="Transformer description",
+            example="Normalizers a techempower output file to separate each framework into a dataset and normalize the JSON structure")
     public String description;
+    @Schema(description="The schema associated with the calculated Datasets. Where a transformer creates a new JSON object with a new structure, this Schema is used to extafct values from the new Dataset JSON document",
+            example="uri:normalized-techempower:0.1")
     public String targetSchemaUri;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(description="A collection of extractors to extract JSON values to create new Dataset JSON document")
     public Collection<Extractor> extractors;
     public String function;
     @NotNull
     @JsonProperty(value = "schemaId", required = true)
+    @Schema(description="Schema ID that the transform is registered against", example = "101")
     public Integer schemaId;
 
     @JsonProperty(value = "schemaUri", required = true)
+    @Schema(description="Schema Uri that the transform is registered against", example = "urn:techempower:0.1")
     public String schemaUri;
 
     @JsonProperty(value = "schemaName", required = true)
+    @Schema(description="Schema name that the transform is registered against", example = "techempower")
     public String schemaName;
 
     @NotNull
     @JsonProperty(required = true)
+    @Schema(description="Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
+            example="performance-team")
     public String owner;
 
     @NotNull
     @JsonProperty(required = true)
-    @Schema( type = SchemaType.INTEGER, implementation = Access.class)
+    @Schema( type = SchemaType.INTEGER, implementation = Access.class,
+            description = "Access rights for the test. This defines the visibility of the Test in the UI",
+            example = "0")
     public Access access = Access.PUBLIC;
 
     public Transformer() {

@@ -15,7 +15,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
-import io.hyperfoil.tools.horreum.api.ConditionConfig;
+import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.alerting.*;
 import io.hyperfoil.tools.horreum.api.data.DataSet;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;

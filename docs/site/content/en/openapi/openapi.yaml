@@ -1,11 +1,15 @@
 ---
 openapi: 3.0.3
 info:
-  title: Generated API
-  version: "1.0"
+  title: Horreum REST API
+  description: "Horreum automated change anomaly detection. For more information,\
+    \ please see [https://horreum.hyperfoil.io/](https://horreum.hyperfoil.io/)"
+  version: 0.10-SNAPSHOT
 paths:
   /api/config/keycloak:
     get:
+      description: Obtain configuration information about keycloak server securing
+        Horreum instance
       operationId: ConfigService_keycloak
       responses:
         "200":
@@ -16,6 +20,7 @@ paths:
                 $ref: '#/components/schemas/KeycloakConfig'
   /api/config/version:
     get:
+      description: Obtain version of the running Horreum instance
       operationId: ConfigService_version
       responses:
         "200":
@@ -26,32 +31,43 @@ paths:
                 $ref: '#/components/schemas/VersionInfo'
   /api/dataset/bySchema:
     get:
+      description: "Retrieve a paginated list of Datasets, with total count, by Schema"
       operationId: DatasetService_listBySchema
       parameters:
       - name: direction
         in: query
+        description: Sort direction
         schema:
           $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       - name: limit
         in: query
+        description: limit the number of results
         schema:
           format: int32
           type: integer
+        example: 20
       - name: page
         in: query
+        description: filter by page number of a paginated list of Schemas
         schema:
           format: int32
           type: integer
+        example: 2
       - name: sort
         in: query
+        description: Field name to sort results
         schema:
           default: start
           type: string
+        example: name
       - name: uri
         in: query
+        description: Schema URI
         required: true
         schema:
           type: string
+        example: uri:techempower:0.1
       responses:
         "200":
           description: OK
@@ -61,41 +77,57 @@ paths:
                 $ref: '#/components/schemas/DatasetList'
   /api/dataset/list/{testId}:
     get:
+      description: "Retrieve a paginated list of Datasets, with total count, by Test"
       operationId: DatasetService_listByTest
       parameters:
       - name: testId
         in: path
+        description: Test ID of test to retrieve list of Datasets
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: direction
         in: query
+        description: Sort direction
         schema:
           $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       - name: filter
         in: query
+        description: JOSN Filter expression to apply to query
         schema:
           type: string
+        example:
+          buildID: 111111
       - name: limit
         in: query
+        description: limit the number of results
         schema:
           format: int32
           type: integer
+        example: 20
       - name: page
         in: query
+        description: filter by page number of a paginated list of Schemas
         schema:
           format: int32
           type: integer
+        example: 2
       - name: sort
         in: query
+        description: Field name to sort results
         schema:
           type: string
+        example: name
       - name: viewId
         in: query
+        description: Optional View ID to filter datasets by view
         schema:
           format: int32
           type: integer
+        example: 202
       responses:
         "200":
           description: OK
@@ -169,14 +201,17 @@ paths:
                 $ref: '#/components/schemas/DatasetSummary'
   /api/dataset/{id}:
     get:
+      description: Retrieve Dataset by ID
       operationId: DatasetService_getDataSet
       parameters:
       - name: id
         in: path
+        description: Dataset ID to retrieve
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "404":
           description: No Dataset with the given id was found
@@ -190,6 +225,7 @@ paths:
                 $ref: '#/components/schemas/DataSet'
   /api/experiment/models:
     get:
+      description: Retrieve a list of Condition Config models
       operationId: ExperimentService_models
       responses:
         "200":
@@ -220,14 +256,17 @@ paths:
                   $ref: '#/components/schemas/ExperimentResult'
   /api/experiment/{testId}/profiles:
     get:
+      description: Retrieve Experiment Profiles by Test ID
       operationId: ExperimentService_profiles
       parameters:
       - name: testId
         in: path
+        description: Test ID to retrieve Experiment Profiles for
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
           description: OK
@@ -238,14 +277,17 @@ paths:
                 items:
                   $ref: '#/components/schemas/ExperimentProfile'
     post:
+      description: 'Save new or update existing Experiment Profiles for a Test '
       operationId: ExperimentService_addOrUpdateProfile
       parameters:
       - name: testId
         in: path
+        description: Test ID to retrieve Experiment Profiles for
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       requestBody:
         content:
           application/json:
@@ -262,20 +304,25 @@ paths:
                 type: integer
   /api/experiment/{testId}/profiles/{profileId}:
     delete:
+      description: Delete an Experiment Profiles for a Test
       operationId: ExperimentService_deleteProfile
       parameters:
       - name: profileId
         in: path
+        description: Experiment Profile ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 202
       - name: testId
         in: path
+        description: Test ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "204":
           description: No Content
@@ -299,31 +346,43 @@ paths:
                   type: string
   /api/run/bySchema:
     get:
+      description: Retrieve a paginated list of Runs with available count for a given
+        Schema URI
       operationId: RunService_listBySchema
       parameters:
       - name: direction
         in: query
+        description: Sort direction
         schema:
           $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       - name: limit
         in: query
+        description: limit the number of results
         schema:
           format: int32
           type: integer
+        example: 20
       - name: page
         in: query
+        description: filter by page number of a paginated list of Tests
         schema:
           format: int32
           type: integer
+        example: 2
       - name: sort
         in: query
+        description: Field name to sort results
         schema:
           type: string
+        example: name
       - name: uri
         in: query
+        description: Schema URI
         required: true
         schema:
           type: string
+        example: uri:my-schema:0.1
       responses:
         "200":
           description: OK
@@ -333,14 +392,17 @@ paths:
                 $ref: '#/components/schemas/RunsSummary'
   /api/run/count:
     get:
+      description: Run count summary for given Test ID
       operationId: RunService_runCount
       parameters:
       - name: testId
         in: query
+        description: Test ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
           description: OK
@@ -350,49 +412,91 @@ paths:
                 $ref: '#/components/schemas/RunCount'
   /api/run/data:
     post:
+      description: Upload a new Run
       operationId: RunService_addRunFromData
       parameters:
       - name: access
         in: query
+        description: New Access level
         schema:
           $ref: '#/components/schemas/Access'
+        example: 0
       - name: description
         in: query
+        description: Run description
         schema:
           type: string
+        example: AWS runs
       - name: owner
         in: query
+        description: Name of the new owner
         schema:
           type: string
+        example: perf-team
       - name: schema
         in: query
+        description: Schema URI
         schema:
           type: string
+        example: uri:my-benchmark:0.2
       - name: start
         in: query
+        description: "start timestamp of run, or json path expression"
         required: true
         schema:
           type: string
+        examples:
+          scalar value:
+            value: 2023-10-23T00:13:35Z
+          json path:
+            value: $.buildTimeStamp
       - name: stop
         in: query
+        description: "stop timestamp of run, or json path expression"
         required: true
         schema:
           type: string
+        examples:
+          scalar value:
+            value: 2023-10-23T00:13:35Z
+          json path:
+            value: $.buildTimeStamp
       - name: test
         in: query
+        description: test name of ID
         required: true
         schema:
           type: string
+        example: my-benchmark
       - name: token
         in: query
         description: Horreum internal token. Incompatible with Keycloak
         schema:
           type: string
+        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       requestBody:
         content:
           application/json:
             schema:
               type: string
+            example:
+            - tag: main
+              score: 2031.7424089224041
+              params:
+                size: "1000"
+                useTreeSet: "true"
+              $schema: urn:jmh:0.2
+              testName: org.drools.benchmarks.datastructures.QueueBenchmark.benchmark
+            - $schema: urn:horreum:jenkins-plugin:0.1
+              jobName: upstream-perf-bre-datastructures
+              buildUrl: https://qe.com/job/TESTING/job/upstream-perfx-datastructures/125/
+              startTime: 1698020160763
+              uploadTime: 1698020592674
+              buildNumber: 125
+              jobFullName: TESTING/RHBA/_upstream/decisions/8.x/performance/nightly/upstream-perf-bre-datastructures
+              scheduleTime: 1698020160756
+              jobDisplayName: upstream-perf-bre-datastructures
+              buildDisplayName: '#125'
           multipart/form-data:
             schema:
               type: object
@@ -402,10 +506,6 @@ paths:
                 metadata:
                   type: object
       responses:
-        "400":
-          description: Some fields are missing or invalid
-          content:
-            application/json: {}
         "200":
           description: OK
           content:
@@ -413,47 +513,68 @@ paths:
               schema:
                 format: int32
                 type: integer
+              example: 101
             text/plain:
               schema:
                 type: string
+        "400":
+          description: Some fields are missing or invalid
+          content:
+            application/json: {}
   /api/run/list:
     get:
+      description: Retrieve a paginated list of Runs with available count
       operationId: RunService_listAllRuns
       parameters:
       - name: direction
         in: query
+        description: Sort direction
         schema:
           $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       - name: limit
         in: query
+        description: limit the number of results
         schema:
           format: int32
           type: integer
+        example: 20
       - name: matchAll
         in: query
+        description: match all Runs?
         schema:
           type: boolean
+        example: false
       - name: page
         in: query
+        description: filter by page number of a paginated list of Tests
         schema:
           format: int32
           type: integer
+        example: 2
       - name: query
         in: query
+        description: query string to filter runs
         schema:
           type: string
       - name: roles
         in: query
+        description: "__my, __all or a comma delimited  list of roles"
         schema:
           type: string
+        example: __my
       - name: sort
         in: query
+        description: Field name to sort results
         schema:
           type: string
+        example: name
       - name: trashed
         in: query
+        description: show trashed runs
         schema:
           type: boolean
+        example: false
       responses:
         "200":
           description: OK
@@ -463,36 +584,50 @@ paths:
                 $ref: '#/components/schemas/RunsSummary'
   /api/run/list/{testId}:
     get:
+      description: Retrieve a paginated list of Runs with available count for a given
+        Test ID
       operationId: RunService_listTestRuns
       parameters:
       - name: testId
         in: path
+        description: Test ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: direction
         in: query
+        description: Sort direction
         schema:
           $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       - name: limit
         in: query
+        description: limit the number of results
         schema:
           format: int32
           type: integer
+        example: 20
       - name: page
         in: query
+        description: filter by page number of a paginated list of Tests
         schema:
           format: int32
           type: integer
+        example: 2
       - name: sort
         in: query
+        description: Field name to sort results
         schema:
           type: string
+        example: name
       - name: trashed
         in: query
+        description: include trashed runs
         schema:
           type: boolean
+        example: false
       responses:
         "200":
           description: OK
@@ -502,39 +637,53 @@ paths:
                 $ref: '#/components/schemas/RunsSummary'
   /api/run/recalculateAll:
     post:
+      description: Recalculate Datasets for Runs between two dates
       operationId: RunService_recalculateAll
       parameters:
       - name: from
         in: query
+        description: start timestamp
         schema:
           type: string
+        example: 1698013206000
       - name: to
         in: query
+        description: end timestamp
         schema:
           type: string
+        example: 1698013206000
       responses:
         "201":
           description: Created
   /api/run/test:
     post:
+      description: Upload a new Run
       operationId: RunService_add
       parameters:
       - name: access
         in: query
+        description: New Access level
         schema:
           $ref: '#/components/schemas/Access'
+        example: 0
       - name: owner
         in: query
+        description: Name of the new owner
         schema:
           type: string
+        example: perf-team
       - name: test
         in: query
+        description: test name of ID
         schema:
           type: string
+        example: my-benchmark
       - name: token
         in: query
+        description: API token
         schema:
           type: string
+        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       requestBody:
         content:
           application/json:
@@ -546,18 +695,23 @@ paths:
           description: OK
   /api/run/{id}:
     get:
+      description: Get extended Run information by Run ID
       operationId: RunService_getRun
       parameters:
       - name: id
         in: path
+        description: Run ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 202
       - name: token
         in: query
+        description: Run API token
         schema:
           type: string
+        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       responses:
         "404":
           description: If no Run have been found with the given id
@@ -571,39 +725,50 @@ paths:
                 $ref: '#/components/schemas/RunExtended'
   /api/run/{id}/data:
     get:
+      description: Get Run data by Run ID
       operationId: RunService_getData
       parameters:
       - name: id
         in: path
+        description: Run ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 202
       - name: schemaUri
         in: query
+        description: FIlter by Schmea URI
         schema:
           type: string
+        example: uri:my-benchmark:0.1
       - name: token
         in: query
+        description: Run API token
         schema:
           type: string
+        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       responses:
         "200":
-          description: OK
+          description: Run payload
           content:
             application/json:
               schema:
                 type: object
+              example: "{ \"buildID\": 1709, ...}"
   /api/run/{id}/description:
     post:
+      description: Update Run description
       operationId: RunService_updateDescription
       parameters:
       - name: id
         in: path
+        description: Run ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       requestBody:
         content:
           text/plain:
@@ -615,14 +780,17 @@ paths:
           description: Created
   /api/run/{id}/dropToken:
     post:
+      description: Remove access token for Run
       operationId: RunService_dropToken
       parameters:
       - name: id
         in: path
+        description: Token ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 102
       responses:
         "200":
           description: OK
@@ -632,42 +800,53 @@ paths:
                 type: string
   /api/run/{id}/metadata:
     get:
+      description: Get Run  meta data by Run ID
       operationId: RunService_getMetadata
       parameters:
       - name: id
         in: path
+        description: Run ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 202
       - name: schemaUri
         in: query
+        description: FIlter by Schmea URI
         schema:
           type: string
+        example: uri:my-benchmark:0.1
       - name: token
         in: query
+        description: Run API token
         schema:
           type: string
+        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       responses:
         "200":
-          description: OK
+          description: Run payload
           content:
             application/json:
               schema:
                 type: object
+              example: "{ \"metaDataID\": 1709, ...}"
   /api/run/{id}/recalculate:
     post:
+      description: Recalculate Datasets for Run
       operationId: RunService_recalculateDatasets
       parameters:
       - name: id
         in: path
+        description: Run ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
-          description: OK
+          description: Array of generated Datasets
           content:
             application/json:
               schema:
@@ -675,16 +854,23 @@ paths:
                 items:
                   format: int32
                   type: integer
+              example:
+              - 101
+              - 102
+              - 103
   /api/run/{id}/resetToken:
     post:
+      description: Regenerate access token for Run
       operationId: RunService_resetToken
       parameters:
       - name: id
         in: path
+        description: Token ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 102
       responses:
         "200":
           description: OK
@@ -692,20 +878,26 @@ paths:
             application/json:
               schema:
                 type: string
+              example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
   /api/run/{id}/schema:
     post:
+      description: Update Run schema for part of JSON data
       operationId: RunService_updateSchema
       parameters:
       - name: id
         in: path
+        description: Run ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: path
         in: query
+        description: JSON path expression to update schema
         schema:
           type: string
+        example: $.schemaURI
       requestBody:
         content:
           text/plain:
@@ -723,18 +915,23 @@ paths:
                   type: string
   /api/run/{id}/summary:
     get:
+      description: Get Run Summary information by Run ID
       operationId: RunService_getRunSummary
       parameters:
       - name: id
         in: path
+        description: Run ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 202
       - name: token
         in: query
+        description: Run API token
         schema:
           type: string
+        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       responses:
         "404":
           description: If no Run have been found with the given id
@@ -748,79 +945,103 @@ paths:
                 $ref: '#/components/schemas/RunSummary'
   /api/run/{id}/trash:
     post:
+      description: Trash a Run with a given ID
       operationId: RunService_trash
       parameters:
       - name: id
         in: path
+        description: Run ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: isTrashed
         in: query
+        description: should run be trashed?
         schema:
           type: boolean
+        example: true
       responses:
         "201":
           description: Created
   /api/run/{id}/updateAccess:
     post:
+      description: Update the Access configuration for a Run
       operationId: RunService_updateAccess
       parameters:
       - name: id
         in: path
+        description: Run ID to update Access
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: access
         in: query
+        description: New Access level
         required: true
         schema:
           $ref: '#/components/schemas/Access'
+        example: 0
       - name: owner
         in: query
+        description: Name of the new owner
         required: true
         schema:
           type: string
+        example: perf-team
       responses:
         "201":
           description: Created
   /api/run/{id}/waitforDatasets:
     get:
+      description: "Blocking call, waiting for datasets to be produced"
       operationId: RunService_waitForDatasets
       parameters:
       - name: id
         in: path
+        description: Run ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "204":
           description: No Content
   /api/schema:
     get:
+      description: Retrieve a paginated list of Schemas with available count
       operationId: SchemaService_list
       parameters:
       - name: direction
         in: query
+        description: Sort direction
         schema:
           $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       - name: limit
         in: query
+        description: limit the number of results
         schema:
           format: int32
           type: integer
+        example: 20
       - name: page
         in: query
+        description: filter by page number of a paginated list of Schemas
         schema:
           format: int32
           type: integer
+        example: 2
       - name: sort
         in: query
+        description: Field name to sort results
         schema:
           type: string
+        example: name
       responses:
         "200":
           description: OK
@@ -829,6 +1050,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SchemaQueryResult'
     post:
+      description: Save a new Schema
       operationId: SchemaService_add
       requestBody:
         content:
@@ -837,20 +1059,25 @@ paths:
               $ref: '#/components/schemas/Schema'
       responses:
         "200":
-          description: OK
+          description: Import a new Schema
           content:
             application/json:
               schema:
                 format: int32
                 type: integer
+              example: 103
   /api/schema/allLabels:
     get:
+      description: Retrieve list of Labels for ny name. Allows users to retrieve all
+        Label Definitions that have the same name
       operationId: SchemaService_allLabels
       parameters:
       - name: name
         in: query
+        description: Label name
         schema:
           type: string
+        example: buildID
       responses:
         "200":
           description: OK
@@ -862,6 +1089,7 @@ paths:
                   $ref: '#/components/schemas/LabelInfo'
   /api/schema/allTransformers:
     get:
+      description: Retrieve all transformers
       operationId: SchemaService_allTransformers
       responses:
         "200":
@@ -874,15 +1102,18 @@ paths:
                   $ref: '#/components/schemas/TransformerInfo'
   /api/schema/descriptors:
     get:
+      description: Retrieve a list of Schema Descriptors
       operationId: SchemaService_descriptors
       parameters:
       - name: id
         in: query
+        description: Limit to a single Schema by ID
         schema:
           type: array
           items:
             format: int32
             type: integer
+        example: 102
       responses:
         "200":
           description: OK
@@ -894,13 +1125,16 @@ paths:
                   $ref: '#/components/schemas/SchemaDescriptor'
   /api/schema/findUsages:
     get:
+      description: Find all usages of a Schema by label name
       operationId: SchemaService_findUsages
       parameters:
       - name: label
         in: query
+        description: Name of label to search for
         required: true
         schema:
           type: string
+        example: Throughput
       responses:
         "200":
           description: OK
@@ -912,13 +1146,16 @@ paths:
                   $ref: '#/components/schemas/LabelLocation'
   /api/schema/idByUri/{uri}:
     get:
+      description: Retrieve Schema ID by uri
       operationId: SchemaService_idByUri
       parameters:
       - name: uri
         in: path
+        description: Schema uri
         required: true
         schema:
           type: string
+        example: uri:my-schema:0.1
       responses:
         "200":
           description: OK
@@ -927,8 +1164,10 @@ paths:
               schema:
                 format: int32
                 type: integer
+              example: 101
   /api/schema/import:
     post:
+      description: Import an previously exported Schema
       operationId: SchemaService_importSchema
       requestBody:
         content:
@@ -940,18 +1179,23 @@ paths:
           description: Created
   /api/schema/{id}:
     get:
+      description: Retrieve Schema by ID
       operationId: SchemaService_getSchema
       parameters:
       - name: id
         in: path
+        description: Schema ID to retrieve
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: token
         in: query
+        description: API token for authorization
         schema:
           type: string
+        example: 101
       responses:
         "404":
           description: No Schema with the given id was found
@@ -964,27 +1208,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/Schema'
     delete:
+      description: Delete a Schema by id
       operationId: SchemaService_delete
       parameters:
       - name: id
         in: path
+        description: Schema ID to delete
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "204":
           description: No Content
   /api/schema/{id}/dropToken:
     post:
+      description: Remove access token for schema
       operationId: SchemaService_dropToken
       parameters:
       - name: id
         in: path
+        description: Token ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 102
       responses:
         "200":
           description: OK
@@ -994,14 +1244,17 @@ paths:
                 type: string
   /api/schema/{id}/export:
     get:
+      description: Export a Schema
       operationId: SchemaService_exportSchema
       parameters:
       - name: id
         in: path
+        description: Schema ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
           description: A JSON representation of the Schema object
@@ -1011,14 +1264,17 @@ paths:
                 type: string
   /api/schema/{id}/resetToken:
     post:
+      description: Regenerate access token for schema
       operationId: SchemaService_resetToken
       parameters:
       - name: id
         in: path
+        description: Token ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 102
       responses:
         "200":
           description: OK
@@ -1026,40 +1282,51 @@ paths:
             application/json:
               schema:
                 type: string
+              example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
   /api/schema/{id}/updateAccess:
     post:
+      description: Update the Access configuration for a Schema
       operationId: SchemaService_updateAccess
       parameters:
       - name: id
         in: path
+        description: Schema ID to update Access
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: access
         in: query
+        description: New Access level
         required: true
         schema:
           format: int32
           type: integer
+        example: 0
       - name: owner
         in: query
+        description: Name of the new owner
         required: true
         schema:
           type: string
+        example: perf-team
       responses:
         "201":
           description: Created
   /api/schema/{schemaId}/labels:
     get:
+      description: Retrieve list of Labels for a Schema by Schema ID
       operationId: SchemaService_labels
       parameters:
       - name: schemaId
         in: path
+        description: Schema ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
           description: OK
@@ -1070,14 +1337,17 @@ paths:
                 items:
                   $ref: '#/components/schemas/Label'
     post:
+      description: Save new or update existing Label for a Schema
       operationId: SchemaService_addOrUpdateLabel
       parameters:
       - name: schemaId
         in: path
+        description: Schema ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       requestBody:
         content:
           application/json:
@@ -1094,33 +1364,41 @@ paths:
                 type: integer
   /api/schema/{schemaId}/labels/{labelId}:
     delete:
+      description: Delete existing Label from a Schema
       operationId: SchemaService_deleteLabel
       parameters:
       - name: labelId
         in: path
+        description: Label ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 202
       - name: schemaId
         in: path
+        description: Schema ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "204":
           description: No Content
   /api/schema/{schemaId}/transformers:
     get:
+      description: List all Transformers defined for a Schema
       operationId: SchemaService_listTransformers
       parameters:
       - name: schemaId
         in: path
+        description: Schema ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
           description: OK
@@ -1131,14 +1409,17 @@ paths:
                 items:
                   $ref: '#/components/schemas/Transformer'
     post:
+      description: Save new or update existing Transformer defintion
       operationId: SchemaService_addOrUpdateTransformer
       parameters:
       - name: schemaId
         in: path
+        description: Schema ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       requestBody:
         content:
           application/json:
@@ -1155,50 +1436,66 @@ paths:
                 type: integer
   /api/schema/{schemaId}/transformers/{transformerId}:
     delete:
+      description: Delete a Transformer defined for a Schema
       operationId: SchemaService_deleteTransformer
       parameters:
       - name: schemaId
         in: path
+        description: Schema ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: transformerId
         in: path
+        description: Transformer ID
         required: true
         schema:
           format: int32
           type: integer
+        example: 202
       responses:
         "204":
           description: No Content
   /api/test:
     get:
+      description: Retrieve a paginated list of Tests with available count
       operationId: TestService_list
       parameters:
       - name: direction
         in: query
+        description: Sort direction
         schema:
           $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       - name: limit
         in: query
+        description: limit the number of results
         schema:
           format: int32
           type: integer
+        example: 20
       - name: page
         in: query
+        description: filter by page number of a paginated list of Tests
         schema:
           format: int32
           type: integer
+        example: 2
       - name: roles
         in: query
+        description: "__my, __all or a comma delimited  list of roles"
         schema:
           type: string
+        example: __my
       - name: sort
         in: query
+        description: Field name to sort results
         schema:
           default: name
           type: string
+        example: name
       responses:
         "200":
           description: OK
@@ -1207,6 +1504,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TestQueryResult'
     post:
+      description: Create a new test
       operationId: TestService_add
       requestBody:
         content:
@@ -1223,13 +1521,16 @@ paths:
                 $ref: '#/components/schemas/Test'
   /api/test/byName/{name}:
     get:
+      description: Retrieve a test by name
       operationId: TestService_getByNameOrId
       parameters:
       - name: name
         in: path
+        description: Name of test to retrieve
         required: true
         schema:
           type: string
+        example: my-comprehensive-benchmark
       responses:
         "200":
           description: OK
@@ -1239,23 +1540,30 @@ paths:
                 $ref: '#/components/schemas/Test'
   /api/test/folders:
     get:
+      description: Retrieve a list of all folders
       operationId: TestService_folders
       parameters:
       - name: roles
         in: query
+        description: "\"__my\", \"__all\" or a comma delimited  list of roles"
         schema:
           type: string
+        example: __my
       responses:
         "200":
-          description: OK
+          description: List of all folders
           content:
             application/json:
               schema:
                 type: array
                 items:
                   type: string
+              example:
+              - quarkus
+              - ocp-perf-team
   /api/test/import:
     post:
+      description: Import a previously exported Test
       operationId: TestService_importTest
       requestBody:
         content:
@@ -1267,16 +1575,21 @@ paths:
           description: Import a new test
   /api/test/summary:
     get:
+      description: Retrieve a summary of Tests in a folder
       operationId: TestService_summary
       parameters:
       - name: folder
         in: query
+        description: name of the Folder containing the Tests
         schema:
           type: string
+        example: My Team Folder
       - name: roles
         in: query
+        description: "\"__my\", \"__all\" or a comma delimited  list of roles"
         schema:
           type: string
+        example: __my
       responses:
         "200":
           description: OK
@@ -1286,6 +1599,7 @@ paths:
                 $ref: '#/components/schemas/TestListing'
   /api/test/{id}:
     get:
+      description: Retrieve a test by id
       operationId: TestService_get
       parameters:
       - name: id
@@ -1306,6 +1620,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Test'
     delete:
+      description: Delete a Test by id
       operationId: TestService_delete
       parameters:
       - name: id
@@ -1319,14 +1634,18 @@ paths:
           description: No Content
   /api/test/{id}/addToken:
     post:
+      description: "Add a Test API Token for access to provide access to a test data\
+        \ for integrated tooling, e.g. reporting services"
       operationId: TestService_addToken
       parameters:
       - name: id
         in: path
+        description: ID of test to add token to
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       requestBody:
         content:
           application/json:
@@ -1359,14 +1678,17 @@ paths:
                 type: string
   /api/test/{id}/fingerprint:
     get:
+      description: List all Fingerprints for a Test
       operationId: TestService_listFingerprints
       parameters:
       - name: id
         in: path
+        description: Test ID to retrieve Fingerprints for
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
           description: OK
@@ -1377,24 +1699,31 @@ paths:
                 items: {}
   /api/test/{id}/labelValues:
     get:
+      description: List all Label Values for a Test
       operationId: TestService_listLabelValues
       parameters:
       - name: id
         in: path
+        description: Test ID to retrieve Label Values for
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: filtering
         in: query
+        description: Retrieve values for Filtering Labels
         schema:
           default: true
           type: boolean
+        example: true
       - name: metrics
         in: query
+        description: Retrieve values for Metric Labels
         schema:
           default: true
           type: boolean
+        example: false
       responses:
         "200":
           description: OK
@@ -1405,49 +1734,63 @@ paths:
                 items: {}
   /api/test/{id}/move:
     post:
+      description: Update the folder for a Test. Tests can be moved to different folders
       operationId: TestService_updateFolder
       parameters:
       - name: id
         in: path
+        description: Test ID to update
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: folder
         in: query
+        description: New folder to store the tests
         schema:
           type: string
+        example: My Benchmark Folder
       responses:
         "201":
           description: Created
   /api/test/{id}/notifications:
     post:
+      description: "Update notifications for a Test. It is possible to disable notifications\
+        \ for a Test, so that no notifications are sent to subscribers"
       operationId: TestService_updateNotifications
       parameters:
       - name: id
         in: path
+        description: Test ID to update
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: enabled
         in: query
+        description: Whether notifications are enabled
         required: true
         schema:
           type: boolean
+        example: false
       responses:
         "201":
           description: Created
   /api/test/{id}/recalculate:
     get:
+      description: Get recalculation status for Test
       operationId: TestService_getRecalculationStatus
       parameters:
       - name: id
         in: path
+        description: Test ID to retrieve recalculation status for
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
           description: OK
@@ -1456,46 +1799,57 @@ paths:
               schema:
                 $ref: '#/components/schemas/RecalculationStatus'
     post:
+      description: Recalculate Datasets for Test
       operationId: TestService_recalculateDatasets
       parameters:
       - name: id
         in: path
+        description: Test ID to recalculate datasets for
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "201":
           description: Created
   /api/test/{id}/revokeToken/{tokenId}:
     post:
+      description: Revoke a Token defined for a Test
       operationId: TestService_dropToken
       parameters:
       - name: id
         in: path
+        description: Test ID to revoke token
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: tokenId
         in: path
+        description: ID of token to revoke
         required: true
         schema:
           format: int32
           type: integer
+        example: 202
       responses:
         "201":
           description: Created
   /api/test/{id}/tokens:
     get:
+      description: A collection of Test Tokens for a given Test
       operationId: TestService_tokens
       parameters:
       - name: id
         in: path
+        description: ID of test to retrieve list of tokens
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
           description: OK
@@ -1507,14 +1861,17 @@ paths:
                   $ref: '#/components/schemas/TestToken'
   /api/test/{id}/transformers:
     post:
+      description: Update transformers for Test
       operationId: TestService_updateTransformers
       parameters:
       - name: id
         in: path
+        description: Test ID to retrieve Label Values for
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       requestBody:
         content:
           application/json:
@@ -1529,35 +1886,45 @@ paths:
           description: Created
   /api/test/{id}/updateAccess:
     post:
+      description: Update the Access configuration for a Test
       operationId: TestService_updateAccess
       parameters:
       - name: id
         in: path
+        description: Test ID to revoke token
         required: true
         schema:
           format: int32
           type: integer
+        example: 101
       - name: access
         in: query
+        description: New Access level for the Test
         required: true
         schema:
           $ref: '#/components/schemas/Access'
+        example: 0
       - name: owner
         in: query
+        description: Name of the new owner
         required: true
         schema:
           type: string
+        example: perf-team
       responses:
         "201":
           description: Created
 components:
   schemas:
     Access:
+      description: Access rights for the test. This defines the visibility of the
+        Test in the UI
       enum:
       - 0
       - 1
       - 2
       type: integer
+      example: 0
       nullable: false
     BetterOrWorse:
       enum:
@@ -1566,17 +1933,25 @@ components:
       - WORSE
       type: string
     ComparisonResult:
+      description: Result of performing a Comparison
       type: object
       properties:
         overall:
-          $ref: '#/components/schemas/BetterOrWorse'
+          allOf:
+          - $ref: '#/components/schemas/BetterOrWorse'
+          - description: Was the Experiment dataset better or worse than the baseline
+              dataset
         experimentValue:
           format: double
+          description: Experiment value
           type: number
         baselineValue:
           format: double
+          description: Baseline value
           type: number
         result:
+          description: The relative difference between the Experiment and Baseline
+            Datasets
           type: string
     ConditionComponent:
       required:
@@ -1588,28 +1963,38 @@ components:
       type: object
       properties:
         name:
+          description: Change detection model component name
           type: string
+          example: min
           nullable: false
         title:
+          description: Change detection model component title
           type: string
+          example: Minimum
           nullable: false
         description:
+          description: Change detection model component description
           type: string
+          example: Lower bound for acceptable datapoint values.
           nullable: false
         type:
+          description: UI Component type
           enum:
           - LOG_SLIDER
           - ENUM
           - NUMBER_BOUND
           - SWITCH
           type: object
+          example: '"LOG_SLIDER"'
           nullable: false
         properties:
+          description: Map of properties for component
           type: object
           additionalProperties:
             type: object
           nullable: false
     ConditionConfig:
+      description: A configuration object for Change detection models
       required:
       - name
       - title
@@ -1618,23 +2003,34 @@ components:
       type: object
       properties:
         name:
+          description: Name of Change detection model
           type: string
+          example: fixedThreshold
           nullable: false
         title:
+          description: UI name for change detection model
           type: string
+          example: Fixed Threshold
           nullable: false
         description:
+          description: Change detection model description
           type: string
+          example: This model checks that the datapoint value is within fixed bounds.
           nullable: false
         ui:
+          description: A list of UI components for dynamically building the UI components
           type: array
           items:
             $ref: '#/components/schemas/ConditionComponent'
           nullable: false
         defaults:
+          description: A dictionary of UI default configuration items for dynamically
+            building the UI components
           type: object
           additionalProperties: {}
     DataSet:
+      description: A dataset is the JSON document used as the basis for all comparisons
+        and reporting
       required:
       - start
       - stop
@@ -1647,45 +2043,68 @@ components:
       properties:
         id:
           format: int32
+          description: Dataset Unique ID
           type: integer
+          example: 101
         start:
           format: date-time
+          description: Dataset Start timestamp
           type: string
+          example: "1698013206000"
           nullable: false
         stop:
           format: date-time
+          description: Dataset Stop timestamp
           type: string
+          example: "1698013206000"
           nullable: false
         description:
+          description: Run description
           type: string
+          example: Run on AWS with m7g.large
         testid:
           format: int32
+          description: Test ID that Dataset relates to
           type: integer
+          example: 101
           nullable: false
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
+          example: performance-team
           nullable: false
         access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
           enum:
           - 0
           - 1
           - 2
           type: integer
+          example: 0
           nullable: false
         data:
+          description: Data payload
           type: string
           nullable: false
         ordinal:
           format: int32
+          description: Dataset ordinal for ordered list of Datasets derived from a
+            Run
           type: integer
+          example: 1
           nullable: false
         validationErrors:
+          description: Collection of Validation Errors
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
         runId:
           format: int32
+          description: Run ID that Dataset relates to
           type: integer
+          example: 101
     DatasetInfo:
       required:
       - id
@@ -1696,17 +2115,27 @@ components:
       properties:
         id:
           format: int32
+          description: Dataset ID for Dataset
           type: integer
+          example: 101
         runId:
           format: int32
+          description: Run ID that Dataset relates to
           type: integer
+          example: 101
         ordinal:
           format: int32
+          description: Ordinal position in ordered list
           type: integer
+          example: 2
         testId:
           format: int32
+          description: Test ID that Dataset relates to
           type: integer
+          example: 103
     DatasetList:
+      description: Result containing a subset of Dataset Summaries and the total count
+        of available. Used in paginated tables
       required:
       - total
       - datasets
@@ -1714,8 +2143,12 @@ components:
       properties:
         total:
           format: int64
+          description: Total number of Dataset Summaries available
           type: integer
+          example: 64
         datasets:
+          description: List of Dataset Summaries. This is often a subset of total
+            available.
           type: array
           items:
             $ref: '#/components/schemas/DatasetSummary'
@@ -1778,35 +2211,55 @@ components:
       properties:
         id:
           format: int32
+          description: Unique Dataset ID
           type: integer
+          example: 101
         runId:
           format: int32
+          description: Run ID that Dataset relates to
           type: integer
+          example: 202
         ordinal:
           format: int32
+          description: Ordinal position of Dataset Summary on returned List
           type: integer
+          example: 3
         testId:
           format: int32
+          description: Test ID that Dataset relates to
           type: integer
+          example: 202
         testname:
+          description: Test name that the Dataset relates to
           type: string
+          example: my-comprehensive-benchmark
           nullable: false
         description:
+          description: Dataset description
           type: string
+          example: Run on AWS with m7g.large
         start:
           format: int64
+          description: Dataset Start timestamp
           type: integer
+          example: 1698013206000
         stop:
           format: int64
+          description: Dataset Stop timestamp
           type: integer
+          example: 1698013206000
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
-          nullable: false
+          example: performance-team
         access:
           $ref: '#/components/schemas/Access'
         view:
+          description: View definition
           type: string
         schemas:
+          description: List of Schema usages
           type: array
           items:
             $ref: '#/components/schemas/SchemaUsage'
@@ -1821,6 +2274,7 @@ components:
       type: object
       properties:
         type:
+          description: Validation Error type
           type: string
           nullable: false
         code:
@@ -1848,16 +2302,27 @@ components:
       type: object
       properties:
         model:
+          description: Name of comparison model
           type: string
+          example: relativeDifference
           nullable: false
         config:
+          description: Model JSON configuration
           type: string
           nullable: false
         variableId:
           format: int32
+          description: Variable ID to run experiment against
           type: integer
+          example: 101
           nullable: false
+        variableName:
+          description: Variable Name to run experiment against
+          type: string
+          example: Throughput
     ExperimentProfile:
+      description: An Experiment Profile defines the labels and filters for the dataset
+        and baseline
       required:
       - id
       - name
@@ -1868,49 +2333,77 @@ components:
       properties:
         id:
           format: int32
+          description: Experiment Profile unique ID
           type: integer
+          example: 101
         name:
+          description: Name of Experiment Profile
           type: string
+          example: Techempower comparison
           nullable: false
         testId:
           format: int32
+          description: Test ID that Experiment Profile relates to
           type: integer
+          example: 101
         selectorLabels:
+          description: Array of selector labels
           type: array
           items:
             type: string
+          example:
+          - Framework
         selectorFilter:
+          description: Selector filter to apply to Selector label values
           type: string
+          example: value => value === 'quarkus-resteasy-reactive-hibernate-reactive'
         baselineLabels:
+          description: Array of selector labels for comparison Baseline
           type: array
           items:
             type: string
+          example:
+          - timestamp
         baselineFilter:
+          description: Selector filter to apply to Baseline label values
           type: string
+          example: value => value === 1666955225547
         comparisons:
+          description: Collection of Experiment Comparisons to run during an Experiment
+            evaluation
           type: array
           items:
             $ref: '#/components/schemas/ExperimentComparison'
         extraLabels:
+          description: These labels are not used by Horreum but are added to the result
+            event and therefore can be used e.g. when firing an Action.
           type: array
           items:
             type: string
     ExperimentResult:
+      description: Result of running an Experiment
       type: object
       properties:
         profile:
-          $ref: '#/components/schemas/ExperimentProfile'
+          allOf:
+          - $ref: '#/components/schemas/ExperimentProfile'
+          - description: Experiment profile that results relates to
         logs:
+          description: A list of log statements recorded while Experiment was evaluated
           type: array
           items:
             $ref: '#/components/schemas/DatasetLog'
         datasetInfo:
-          $ref: '#/components/schemas/DatasetInfo'
+          allOf:
+          - $ref: '#/components/schemas/DatasetInfo'
+          - description: Dataset Info about dataset used for experiment
         baseline:
+          description: A list of Dataset Info for experiment baseline(s)
           type: array
           items:
             $ref: '#/components/schemas/DatasetInfo'
         results:
+          description: A Map of all comparisons and results evaluated during an Experiment
           type: object
           additionalProperties:
             $ref: '#/components/schemas/ComparisonResult'
@@ -1919,6 +2412,8 @@ components:
         notify:
           type: boolean
     Extractor:
+      description: "An Extractor defines how values are extracted from a JSON document,\
+        \ for use in Labels etc."
       required:
       - name
       - jsonpath
@@ -1926,24 +2421,40 @@ components:
       type: object
       properties:
         name:
+          description: Name of extractor. This name is used in Combination Functions
+            to refer to values by name
           type: string
+          example: buildID
           nullable: false
         jsonpath:
+          description: JSON path expression defining the location of the extractor
+            value in the JSON document. This is a pSQL json path expression
           type: string
+          example: $.buildInfo.buildID
           nullable: false
         array:
+          description: Does the JSON path expression reference an Array?
           type: boolean
+          example: false
           nullable: false
     KeycloakConfig:
       type: object
       properties:
         realm:
+          description: Keycloak realm securing Horreum instance
           type: string
+          example: horreum
         url:
+          description: URL of Keycloak instance securing Horreum
           type: string
+          example: https://horreum-keycloak.example.com
         clientId:
+          description: Keycloak client ID in Horreum realm for User Interface
           type: string
+          example: horreum-ui
     Label:
+      description: "A Label is a core component of Horreum, defining which components\
+        \ of the JSON document are part of a KPI and how the metric values are calculated"
       required:
       - id
       - name
@@ -1957,35 +2468,60 @@ components:
       properties:
         id:
           format: int32
+          description: Unique ID for Label
           type: integer
+          example: 101
         name:
+          description: "Name for label. NOTE: all Labels are considered to have the\
+            \ same semantic meaning throughout the entire system"
           type: string
+          example: Throughput
           nullable: false
         extractors:
+          description: "A collection of Extractors, that will be combined in the Combination\
+            \ Function"
           type: array
           items:
             $ref: '#/components/schemas/Extractor'
           nullable: false
         function:
+          description: A Combination Function that defines how values from Extractors
+            are combined to produce a Label Value
           type: string
+          example: "value => { return ((value.reduce((a,b) => a+b))/value.length*1000).toFixed(3);\
+            \ }"
         filtering:
+          description: Is Label a filtering label? Filtering labels contains values
+            that are used to filter datasets for comparison
           type: boolean
+          example: true
           nullable: false
         metrics:
+          description: Is Label a metrics label? Metrics labels are contain Metrics
+            that are used for comparison
           type: boolean
+          example: true
           nullable: false
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
+          example: performance-team
         access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
           enum:
           - 0
           - 1
           - 2
           type: integer
+          example: 0
           nullable: false
         schemaId:
           format: int32
+          description: Schema ID that the Label relates to
           type: integer
+          example: 101
           nullable: false
     LabelInFingerprint:
       type: object
@@ -2049,13 +2585,20 @@ components:
       type: object
       properties:
         name:
+          description: Label name
           type: string
+          example: buildID
           nullable: false
         metrics:
+          description: Is label a metrics label?
           type: boolean
+          example: true
         filtering:
+          description: Is label a filtering label?
           type: boolean
+          example: false
         schemas:
+          description: List of schemas where label is referenced
           type: array
           items:
             $ref: '#/components/schemas/SchemaDescriptor'
@@ -2064,20 +2607,34 @@ components:
       type: object
       properties:
         type:
+          description: Location of Label usage
           type: string
+          example: VIEW
         testId:
           format: int32
+          description: Unique ID for location that references Schema
           type: integer
+          example: 101
         testName:
+          description: Test name that references Schema
           type: string
+          example: My Benchmark
     LabelPreview:
+      description: Preview a Label Value derived from a Dataset Data. A preview allows
+        users to apply a Label to a dataset and preview the Label Value result and
+        processing errors in the UI
       type: object
       properties:
         value:
+          description: "Value value extracted from Dataset. This can be a scalar,\
+            \ array or JSON object"
           type: string
         output:
+          description: Description of errors occurred attempting to generate Label
+            Value Preview
           type: string
     LabelValue:
+      description: Label Value derived from Label definition and Dataset Data
       required:
       - id
       - name
@@ -2086,16 +2643,24 @@ components:
       properties:
         id:
           format: int32
+          description: Unique ID for Label Value
           type: integer
+          example: 101
         name:
+          description: Label name
           type: string
+          example: buildID
           nullable: false
         schema:
           allOf:
           - $ref: '#/components/schemas/SchemaDescriptor'
-          - nullable: false
+          - description: Summary description of Schema
+            nullable: false
         value:
+          description: "Value value extracted from Dataset. This can be a scalar,\
+            \ array or JSON object"
           type: string
+          example: "1724"
     RecalculationStatus:
       required:
       - timestamp
@@ -2106,16 +2671,24 @@ components:
       properties:
         timestamp:
           format: int64
+          description: Recalculation timestamp
           type: integer
+          example: 1698013206000
         totalRuns:
           format: int64
+          description: Total number of Runs being recalculated
           type: integer
+          example: 152
         finished:
           format: int64
+          description: Total number of completed recalculations
           type: integer
+          example: 93
         datasets:
           format: int64
+          description: Total number of generated datasets
           type: integer
+          example: 186
     Run:
       description: Data object that represents a test run entry
       required:
@@ -2131,42 +2704,68 @@ components:
       properties:
         id:
           format: int32
+          description: Unique Run ID
           type: integer
+          example: 101
         start:
           format: date-time
+          description: Run Start timestamp
           type: number
+          example: 1698013206000
           nullable: false
         stop:
           format: date-time
+          description: Run Stop timestamp
           type: number
+          example: 1698013206000
           nullable: false
         description:
+          description: Run description
           type: string
+          example: Run on AWS with m7g.large
         testid:
           format: int32
+          description: Test ID run relates to
           type: integer
+          example: 101
           nullable: false
         data:
+          description: Run result payload
           type: string
           nullable: false
         metadata:
+          description: "JSON metadata related to run, can be tool configuration etc"
           type: string
         trashed:
+          description: Has Run been deleted from UI
           type: boolean
+          example: false
           nullable: false
+        datasets:
+          description: Collection of Datasets derived from Run payload
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSet'
         validationErrors:
+          description: Collection of Validation Errors in Run payload
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
+          example: performance-team
           nullable: false
         access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
           enum:
           - 0
           - 1
           - 2
           type: integer
+          example: 0
           nullable: false
     RunCount:
       required:
@@ -2177,13 +2776,19 @@ components:
       properties:
         total:
           format: int64
+          description: Total count of Runs visible
           type: integer
+          example: 100
         active:
           format: int64
+          description: Total count of active Runs visible
           type: integer
+          example: 95
         trashed:
           format: int64
+          description: Total count of trashed Runs
           type: integer
+          example: 5
     RunExtended:
       required:
       - id
@@ -2201,56 +2806,86 @@ components:
       properties:
         id:
           format: int32
+          description: Unique Run ID
           type: integer
+          example: 101
         start:
           format: date-time
+          description: Run Start timestamp
           type: number
+          example: 1698013206000
           nullable: false
         stop:
           format: date-time
+          description: Run Stop timestamp
           type: number
+          example: 1698013206000
           nullable: false
         description:
+          description: Run description
           type: string
+          example: Run on AWS with m7g.large
         testid:
           format: int32
+          description: Test ID run relates to
           type: integer
+          example: 101
           nullable: false
         data:
+          description: Run result payload
           type: string
           nullable: false
         metadata:
+          description: "JSON metadata related to run, can be tool configuration etc"
           type: string
         trashed:
+          description: Has Run been deleted from UI
           type: boolean
+          example: false
           nullable: false
         validationErrors:
+          description: Collection of Validation Errors in Run payload
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
+          example: performance-team
           nullable: false
         access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
           enum:
           - 0
           - 1
           - 2
           type: integer
+          example: 0
           nullable: false
         schemas:
+          description: List of Schema Usages
           type: array
           items:
             $ref: '#/components/schemas/SchemaUsage'
           nullable: false
         testname:
+          description: Test name run references
           type: string
+          example: My benchmark
           nullable: false
         datasets:
+          description: List of DatasetIDs
           type: array
           items:
             format: int32
             type: integer
+          example:
+          - 101
+          - 102
+          - 104
+          - 106
     RunSummary:
       required:
       - id
@@ -2267,42 +2902,70 @@ components:
       properties:
         id:
           format: int32
+          description: Run unique ID
           type: integer
+          example: 202
         start:
           format: int64
+          description: Start timestamp
           type: integer
+          example: 1698013206000
         stop:
           format: int64
+          description: Stop timestamp
           type: integer
+          example: 1698013206000
         testid:
           format: int32
+          description: test ID run relates to
           type: integer
+          example: 101
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
+          example: performance-team
           nullable: false
         access:
           $ref: '#/components/schemas/Access'
         token:
+          description: Access token for Run
           type: string
+          example: "0"
         testname:
+          description: test ID run relates to
           type: string
+          example: My benchmark
           nullable: false
         trashed:
+          description: has Run been trashed in the UI
           type: boolean
+          example: false
         hasMetadata:
+          description: does Run have metadata uploaded alongside Run data
           type: boolean
+          example: false
         description:
+          description: Run description
           type: string
+          example: Run on AWS with m7g.large
         schemas:
+          description: List of all Schema Usages for Run
           type: array
           items:
             $ref: '#/components/schemas/SchemaUsage'
         datasets:
+          description: Array of datasets ids
           type: array
           items:
             format: int32
             type: integer
+          example:
+          - 101
+          - 102
+          - 103
         validationErrors:
+          description: Array of validation errors
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
@@ -2314,8 +2977,11 @@ components:
       properties:
         total:
           format: int64
+          description: Total count of Runs visible
           type: integer
+          example: 1
         runs:
+          description: List of Run Summaries
           type: array
           items:
             $ref: '#/components/schemas/RunSummary'
@@ -2331,28 +2997,49 @@ components:
       properties:
         id:
           format: int32
+          description: Unique Schema ID
           type: integer
+          example: 101
         uri:
+          description: "Unique, versioned schema URI"
           type: string
+          example: uri:my-schema:0.1
           nullable: false
         name:
+          description: Schema name
           type: string
+          example: My benchmark schema
           nullable: false
         description:
+          description: Schema Description
           type: string
+          example: Schema for processing my benchmark
         schema:
+          description: JSON validation schema. Used to validate uploaded JSON documents
           type: string
+          example: "{  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\"\
+            ,  \"$id\": \"https://example.com/product.schema.json\",  \"title\": \"\
+            Product\",  \"description\": \"A product in the catalog\",  \"type\":\
+            \ \"object\"}"
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
+          example: performance-team
         access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
           enum:
           - 0
           - 1
           - 2
           type: integer
+          example: 0
           nullable: false
         token:
+          description: Array of API tokens associated with test
           type: string
+          example: ""
     SchemaDescriptor:
       required:
       - id
@@ -2362,12 +3049,18 @@ components:
       properties:
         id:
           format: int32
+          description: Schema unique ID
           type: integer
+          example: 1
         name:
+          description: Schema name
           type: string
+          example: my-benchmark-schema
           nullable: false
         uri:
+          description: Schema name
           type: string
+          example: uri:my-schmea:0.1
           nullable: false
     SchemaQueryResult:
       required:
@@ -2376,13 +3069,17 @@ components:
       type: object
       properties:
         schemas:
+          description: Array of Schemas
           type: array
           items:
             $ref: '#/components/schemas/Schema'
           nullable: false
         count:
           format: int64
+          description: Count of available Schemas. This is a count of Schemas that
+            the current user has access to
           type: integer
+          example: 64
     SchemaUsage:
       required:
       - id
@@ -2395,29 +3092,46 @@ components:
       properties:
         id:
           format: int32
+          description: Schema unique ID
           type: integer
+          example: 1
         name:
+          description: Schema name
           type: string
+          example: my-benchmark-schema
           nullable: false
         uri:
+          description: Schema name
           type: string
+          example: uri:my-schmea:0.1
           nullable: false
         source:
           format: int32
+          description: "Source of schema usage, 0 is data, 1 is metadata. DataSets\
+            \ always use 0"
           type: integer
+          example: 1
         type:
           format: int32
+          description: "Location of Schema Usage, 0 for Run, 1 for Dataset"
           type: integer
+          example: 1
         key:
+          description: Ordinal position of schema usage in Run/Dataset
           type: string
+          example: "1"
         hasJsonSchema:
+          description: Does schema have a JSON validation schema defined?
           type: boolean
+          example: false
     SortDirection:
       enum:
       - Ascending
       - Descending
       type: string
     Test:
+      description: Represents a Test. Tests are typically equivalent to a particular
+        benchmark
       required:
       - id
       - name
@@ -2428,53 +3142,91 @@ components:
       properties:
         id:
           format: int32
+          description: Unique Test id
           type: integer
+          example: 101
         name:
+          description: Test name
           type: string
+          example: my-comprehensive-benchmark
           nullable: false
         folder:
+          description: Name of folder that the test is stored in. Folders allow tests
+            to be organised in the UI
           type: string
+          example: My Team Folder
         description:
+          description: Description of the test
           type: string
+          example: Comprehensive benchmark to tests the limits of any system it is
+            run against
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
+          example: performance-team
           nullable: false
         access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
           enum:
           - 0
           - 1
           - 2
           type: integer
+          example: 0
           nullable: false
         tokens:
+          description: Array of API tokens associated with test
           type: array
           items:
             $ref: '#/components/schemas/TestToken'
         timelineLabels:
+          description: List of label names that are used for determining metric to
+            use as the time series
           type: array
           items:
             type: string
+          example:
+          - timestamp
         timelineFunction:
+          description: Label function to modify timeline labels to a produce a value
+            used for ordering datapoints
           type: string
+          example: timestamp => timestamp
         fingerprintLabels:
+          description: 'Array of Label names that are used to create a fingerprint '
           type: array
           items:
             type: string
+          example:
+          - build_tag
         fingerprintFilter:
+          description: Filter function to filter out datasets that are comparable
+            for the purpose of change detection
           type: string
+          example: value => value === "true"
         compareUrl:
+          description: URL to external service that can be called to compare runs.  This
+            is typically an external reporting/visulization service
           type: string
+          example: "(ids, token) => 'http://repoting.example.com/report/specj?q='\
+            \ + ids.join('&q=') + \"&token=\"+token"
         transformers:
+          description: Array for transformers defined for the Test
           type: array
           items:
             $ref: '#/components/schemas/Transformer'
         notificationsEnabled:
+          description: Are notifications enabled for the test
           type: boolean
+          example: true
           nullable: false
     TestListing:
       type: object
       properties:
         tests:
+          description: Array of Test Summaries
           type: array
           items:
             $ref: '#/components/schemas/TestSummary'
@@ -2485,13 +3237,17 @@ components:
       type: object
       properties:
         tests:
+          description: Array of Tests
           type: array
           items:
             $ref: '#/components/schemas/Test'
           nullable: false
         count:
           format: int64
+          description: Count of available tests. This is a count of tests that the
+            current user has access to
           type: integer
+          example: 64
     TestSummary:
       required:
       - id
@@ -2502,20 +3258,37 @@ components:
       properties:
         id:
           format: int32
+          description: ID of tests
           type: integer
+          example: 101
         name:
+          description: Test name
           type: string
+          example: my-comprehensive-benchmark
           nullable: false
         folder:
+          description: Name of folder that the test is stored in. Folders allow tests
+            to be organised in the UI
           type: string
+          example: My Team Folder
         description:
+          description: Description of the test
           type: string
+          example: Comprehensive benchmark to tests the limits of any system it is
+            run against
         datasets:
+          description: Total number of Datasets for the Test
           type: number
+          example: 202
         runs:
+          description: Total number of Runs for the Test
           type: number
+          example: 101
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
+          example: performance-team
           nullable: false
         access:
           $ref: '#/components/schemas/Access'
@@ -2529,21 +3302,31 @@ components:
       properties:
         id:
           format: int32
+          description: Unique Token id
           type: integer
+          example: 101
         testId:
           format: int32
+          description: Test ID to apply Token
           type: integer
+          example: 201
         value:
+          description: Test value
           type: string
+          example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
           nullable: false
         permissions:
           format: int32
           type: integer
           nullable: false
         description:
+          description: Token description
           type: string
+          example: my reporting service token
           nullable: false
     Transformer:
+      description: A transformer extracts labals and applies a Function to convert
+        a Run into one or more Datasets
       required:
       - id
       - name
@@ -2557,15 +3340,28 @@ components:
       properties:
         id:
           format: int32
+          description: Unique Transformer id
           type: integer
+          example: 101
         name:
+          description: Transformer name
           type: string
+          example: normalize-techempower-result
           nullable: false
         description:
+          description: Transformer description
           type: string
+          example: Normalizers a techempower output file to separate each framework
+            into a dataset and normalize the JSON structure
         targetSchemaUri:
+          description: "The schema associated with the calculated Datasets. Where\
+            \ a transformer creates a new JSON object with a new structure, this Schema\
+            \ is used to extafct values from the new Dataset JSON document"
           type: string
+          example: uri:normalized-techempower:0.1
         extractors:
+          description: A collection of extractors to extract JSON values to create
+            new Dataset JSON document
           type: array
           items:
             $ref: '#/components/schemas/Extractor'
@@ -2574,21 +3370,33 @@ components:
           type: string
         schemaId:
           format: int32
+          description: Schema ID that the transform is registered against
           type: integer
+          example: 101
           nullable: false
         schemaUri:
+          description: Schema Uri that the transform is registered against
           type: string
+          example: urn:techempower:0.1
         schemaName:
+          description: Schema name that the transform is registered against
           type: string
+          example: techempower
         owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
           type: string
+          example: performance-team
           nullable: false
         access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
           enum:
           - 0
           - 1
           - 2
           type: integer
+          example: 0
           nullable: false
     TransformerInfo:
       required:
@@ -2601,18 +3409,28 @@ components:
       properties:
         schemaId:
           format: int32
+          description: Schema ID
           type: integer
+          example: 101
         schemaUri:
+          description: Schema uri
           type: string
+          example: uri:my-schema:0.1
           nullable: false
         schemaName:
+          description: Schema name
           type: string
+          example: my-benchmark-schema
           nullable: false
         transformerId:
           format: int32
+          description: Transformer ID
           type: integer
+          example: 201
         transformerName:
+          description: Transformer name
           type: string
+          example: my-dataset-transformer
           nullable: false
     ValidationError:
       required:
@@ -2622,9 +3440,13 @@ components:
       properties:
         schemaId:
           format: int32
+          description: Schema ID that Validation Error relates to
           type: integer
+          example: 101
         error:
-          $ref: '#/components/schemas/ErrorDetails'
+          allOf:
+          - $ref: '#/components/schemas/ErrorDetails'
+          - description: Validation Error Details
     VersionInfo:
       required:
       - version
@@ -2632,8 +3454,12 @@ components:
       type: object
       properties:
         version:
+          description: Version of Horreum
           type: string
+          example: 0.9.4
           nullable: false
         startTimestamp:
           format: int64
+          description: Timestamp of server startup
           type: integer
+          example: 2023-10-18 18:00:57

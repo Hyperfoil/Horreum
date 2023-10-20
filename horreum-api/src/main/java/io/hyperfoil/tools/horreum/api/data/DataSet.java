@@ -11,33 +11,49 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Objects;
 
-@Schema(name = "DataSet", type = SchemaType.OBJECT)
+@Schema(type = SchemaType.OBJECT,
+description = "A dataset is the JSON document used as the basis for all comparisons and reporting")
 public class DataSet {
+    @Schema(description = "Dataset Unique ID", example = "101")
     public Integer id;
     @NotNull
+    @Schema(type = SchemaType.STRING, implementation = Instant.class,
+            description = "Dataset Start timestamp", example = "1698013206000")
     public Instant start;
     @NotNull
+    @Schema(type = SchemaType.STRING, implementation = Instant.class,
+            description = "Dataset Stop timestamp", example = "1698013206000")
     public Instant stop;
+    @Schema(description = "Run description", example = "Run on AWS with m7g.large")
     public String description;
 
     @NotNull
+    @Schema(description = "Test ID that Dataset relates to", example = "101")
     public Integer testid;
     @NotNull
     @JsonProperty( required = true )
+    @Schema(description="Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
+            example="performance-team")
     public String owner;
     @NotNull
     @JsonProperty( required = true )
-    @Schema( type = SchemaType.INTEGER, implementation = Access.class)
+    @Schema( type = SchemaType.INTEGER, implementation = Access.class,
+            description = "Access rights for the test. This defines the visibility of the Test in the UI",
+            example = "0")
     public Access access;
     @NotNull
-    @Schema(implementation = String.class)
+    @Schema(implementation = JsonNode.class, type = SchemaType.STRING,
+            description = "Data payload")
     public JsonNode data;
     @NotNull
+    @Schema(description = "Dataset ordinal for ordered list of Datasets derived from a Run", example = "1")
     public int ordinal;
 
+    @Schema(description = "Collection of Validation Errors")
     public Collection<ValidationError> validationErrors;
 
     @JsonProperty("runId")
+    @Schema(description = "Run ID that Dataset relates to", example = "101")
     public Integer runId;
     @JsonIgnore
     public Info getInfo() {
@@ -63,12 +79,16 @@ public class DataSet {
     @Schema( name = "DatasetInfo" )
     public static class Info {
         @JsonProperty( required = true )
+        @Schema(description = "Dataset ID for Dataset", example = "101")
         public int id;
         @JsonProperty( required = true )
+        @Schema(description = "Run ID that Dataset relates to", example = "101")
         public int runId;
         @JsonProperty( required = true )
+        @Schema(description = "Ordinal position in ordered list", example = "2")
         public int ordinal;
         @JsonProperty( required = true )
+        @Schema(description = "Test ID that Dataset relates to", example = "103")
         public int testId;
 
         public Info() {

@@ -72,6 +72,7 @@
                             <goal>generate-schema</goal>
                         </goals>
                         <configuration>
+                            <configProperties>${basedir}/src/main/resources/application.properties</configProperties>
                             <scanPackages>
                                 io.hyperfoil.tools.horreum.api,
                                 io.hyperfoil.tools.horreum.api.alerting,

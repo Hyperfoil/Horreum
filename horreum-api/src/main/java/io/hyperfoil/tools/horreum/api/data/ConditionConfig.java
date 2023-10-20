@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api;
+package io.hyperfoil.tools.horreum.api.data;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,16 +13,21 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
-@Schema(name = "ConditionConfig", type = SchemaType.OBJECT)
+@Schema(type = SchemaType.OBJECT, description = "A configuration object for Change detection models")
 public class ConditionConfig {
    @NotNull
+   @Schema(description = "Name of Change detection model", example = "fixedThreshold")
    public String name;
    @NotNull
+   @Schema(description = "UI name for change detection model", example = "Fixed Threshold")
    public String title;
    @NotNull
+   @Schema(description = "Change detection model description", example = "This model checks that the datapoint value is within fixed bounds.")
    public String description;
    @NotNull
+   @Schema(description = "A list of UI components for dynamically building the UI components")
    public List<Component> ui = new ArrayList<>();
+   @Schema(description = "A dictionary of UI default configuration items for dynamically building the UI components")
    public Map<String, JsonNode> defaults = new HashMap<>();
 
    public ConditionConfig(String name, String title, String description) {
@@ -47,15 +52,20 @@ public class ConditionConfig {
    @Schema(name = "ConditionComponent")
    public class Component {
       @NotNull
+      @Schema(description = "Change detection model component name", example = "min")
       public String name;
       @NotNull
+      @Schema(description = "Change detection model component title", example = "Minimum")
       public String title;
       @NotNull
+      @Schema(description = "Change detection model component description", example = "Lower bound for acceptable datapoint values.")
       public String description;
       @NotNull
-      @Schema( type = SchemaType.OBJECT, implementation = ComponentType.class)
+      @Schema( type = SchemaType.OBJECT, implementation = ComponentType.class,
+              description = "UI Component type", example = "\"LOG_SLIDER\"")
       public ComponentType type;
       @NotNull
+      @Schema(description = "Map of properties for component", example = "")
       public Map<String, Object> properties = new HashMap<>();
 
       private Component(String name, String title, String description, ComponentType type) {
