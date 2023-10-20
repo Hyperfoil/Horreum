@@ -27,25 +27,7 @@ Horreum is a [Quarkus](https://quarkus.io/) based application which uses
 
 * [Java 17](https://adoptium.net/temurin/releases/?version=17)
 * [Apache Maven 3.8](https://maven.apache.org/)
-* [Podman 4](https://podman.io/) or [Docker](https://www.docker.com/)
-
-### Local development with Podman
-
-Install of the podman packages:
-
-``` bash
-dnf install -y podman podman-plugins podman-docker
-```
-
-In one terminal do
-``` bash
-podman system service -t 0
-```
-And then configure `DOCKER_HOST` environment variable to resolve to the podman socket
-
-``` bash
-export DOCKER_HOST=unix:///run/user/${UID}/podman/podman.sock
-```
+* [Docker](https://www.docker.com/)
 
 ## Getting Started with development server
 
@@ -71,15 +53,6 @@ Horreum is running on [localhost:8080](http://localhost:8080)
 | ---- | ---- | -------- |
 | User | `user` | `secret` |
 
-
-## Troubleshooting development infrastructure
-
-1. Clean cached files and rebuild
-
-```shell
-$ mvn clean -p remove-node-cache
-$ mvn clean install -DskipTests -DskipITs
-```
 
 ## Tested platforms
 
