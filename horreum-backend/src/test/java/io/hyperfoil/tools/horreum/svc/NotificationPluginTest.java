@@ -11,13 +11,11 @@ import jakarta.inject.Inject;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import org.junit.jupiter.api.Test;
 
-import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
-import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
-import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
@@ -35,7 +33,7 @@ public class NotificationPluginTest {
 
    @Test
    public void testDatasetChanges() {
-      DatasetChanges dc1 = new DatasetChanges(new DataSet.Info(1, 1, 0, 1), null, "Dummy Test", true);
+      DatasetChanges dc1 = new DatasetChanges(new Dataset.Info(1, 1, 0, 1), null, "Dummy Test", true);
       Change c1 = new Change();
       c1.timestamp = Instant.now();
       c1.description = "foobar";
@@ -64,7 +62,7 @@ public class NotificationPluginTest {
 
    @Test
    public void test() {
-      var event = new MissingValuesEvent(new DataSetDAO.Info(1, 1, 0, 1), new HashSet<>(Arrays.asList("foo", "bar")), true);
+      var event = new MissingValuesEvent(new DatasetDAO.Info(1, 1, 0, 1), new HashSet<>(Arrays.asList("foo", "bar")), true);
       withAllPlugins(notification -> notification.notifyMissingValues("Dummy Test", null, event));
    }
 

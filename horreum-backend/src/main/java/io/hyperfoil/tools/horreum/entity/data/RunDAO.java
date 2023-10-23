@@ -63,7 +63,7 @@ public class RunDAO extends ProtectedBaseEntity {
    public boolean trashed;
 
    @OneToMany(mappedBy = "run", cascade = CascadeType.ALL, orphanRemoval = true)
-   public Collection<DataSetDAO> datasets;
+   public Collection<DatasetDAO> datasets;
 
    @CollectionTable
    @ElementCollection

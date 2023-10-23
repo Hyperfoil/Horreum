@@ -1,6 +1,6 @@
 {
   "name": "ACME Horreum Schema",
-  "description": "Used in DataSets",
+  "description": "Used in Datasets",
   "owner": "dev-team",
   "access": "PUBLIC",
   "uri": "urn:acme:horreum:0.1"

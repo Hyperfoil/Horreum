@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.alerting.DatasetLog;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
@@ -66,8 +66,8 @@ public interface ExperimentService {
 
       public ExperimentProfile profile;
       public List<DatasetLog> logs;
-      public DataSet.Info datasetInfo;
-      public List<DataSet.Info> baseline;
+      public Dataset.Info datasetInfo;
+      public List<Dataset.Info> baseline;
 
       @JsonSerialize(keyUsing = ExperimentComparisonSerializer.class)
       @JsonDeserialize(keyUsing = ExperimentComparisonDeserializer.class)
@@ -81,7 +81,7 @@ public interface ExperimentService {
       }
 
       public ExperimentResult(ExperimentProfile profile, List<DatasetLog> logs,
-                              DataSet.Info datasetInfo, List<DataSet.Info> baseline,
+                              Dataset.Info datasetInfo, List<Dataset.Info> baseline,
                               Map<ExperimentComparison, ComparisonResult> results,
                               JsonNode extraLabels, boolean notify) {
          this.profile = profile;

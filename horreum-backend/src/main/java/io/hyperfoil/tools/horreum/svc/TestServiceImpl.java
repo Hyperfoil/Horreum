@@ -506,7 +506,7 @@ public class TestServiceImpl implements TestService {
             .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
          int runId = (int) results.get();
-         log.debugf("Recalculate DataSets for run %d - forcing recalculation for test %d (%s)", runId, testId, test.name);
+         log.debugf("Recalculate Datasets for run %d - forcing recalculation for test %d (%s)", runId, testId, test.name);
          // transform will add proper roles anyway
 //         messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> {
 //         mediator.executeBlocking(() -> mediator.transform(runId, true));
@@ -535,7 +535,7 @@ public class TestServiceImpl implements TestService {
       if (status == null) {
          status = new RecalculationStatus(RunDAO.count("testid = ?1 AND trashed = false", testId));
          status.finished = status.totalRuns;
-         status.datasets = DataSetDAO.count("testid", testId);
+         status.datasets = DatasetDAO.count("testid", testId);
       }
       return status;
    }

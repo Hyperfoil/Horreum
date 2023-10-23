@@ -5,7 +5,7 @@ import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.data.*;
-import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
+import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
 import io.hyperfoil.tools.horreum.mapper.SchemaMapper;
 import io.hyperfoil.tools.horreum.mapper.TransformerMapper;
@@ -321,7 +321,7 @@ public class SchemaServiceImpl implements SchemaService {
    @Transactional
    void validateDatasetData(int datasetId, Predicate<String> schemaFilter) {
       log.debugf("About to validate data for dataset %d", datasetId);
-      DataSetDAO dataset = DataSetDAO.findById(datasetId);
+      DatasetDAO dataset = DatasetDAO.findById(datasetId);
       if (dataset == null) {
          // Don't log error when the dataset is not present and we're revalidating all datasets - it might be
          // concurrently removed because of URI change
@@ -351,7 +351,7 @@ public class SchemaServiceImpl implements SchemaService {
          dataset.persist();
       }
       if(mediator.testMode())
-         messageBus.publish(MessageBusChannels.DATASET_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DataSetMapper.from(dataset).validationErrors ));
+         messageBus.publish(MessageBusChannels.DATASET_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DatasetMapper.from(dataset).validationErrors ));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -726,7 +726,7 @@ public class SchemaServiceImpl implements SchemaService {
          }
 
          for(var datasetId : datasetIds) {
-            mediator.queueDatasetEvents(new DataSet.EventNew(datasetId, testId, 0, label.id, true));
+            mediator.queueDatasetEvents(new Dataset.EventNew(datasetId, testId, 0, label.id, true));
          }
       }
       catch (NoResultException nre) {

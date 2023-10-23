@@ -2,7 +2,7 @@ package io.hyperfoil.tools.horreum.api.alerting;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
@@ -14,7 +14,7 @@ public class Change {
     @JsonProperty( required = true )
     public Variable variable;
     @JsonIgnore
-    public DataSet dataset;
+    public Dataset dataset;
     @NotNull
     @JsonProperty( required = true )
     public Instant timestamp;
@@ -27,7 +27,7 @@ public class Change {
     }
 
     @JsonProperty("dataset")
-    public DataSet.Info getDatasetId() {
+    public Dataset.Info getDatasetId() {
         return this.dataset != null ? this.dataset.getInfo() : null;
     }
 
@@ -38,13 +38,13 @@ public class Change {
     public static class Event {
         public Change change;
         public String testName;
-        public DataSet.Info dataset;
+        public Dataset.Info dataset;
         public boolean notify;
 
         public Event() {
         }
 
-        public Event(Change change, String testName, DataSet.Info dataset, boolean notify) {
+        public Event(Change change, String testName, Dataset.Info dataset, boolean notify) {
             this.change = change;
             this.testName = testName;
             this.dataset = dataset;

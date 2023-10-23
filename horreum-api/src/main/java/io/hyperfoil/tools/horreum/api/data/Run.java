@@ -35,7 +35,7 @@ public class Run {
     @JsonProperty(required = true)
     public boolean trashed;
     @JsonIgnore
-    public Collection<DataSet> datasets;
+    public Collection<Dataset> datasets;
     public Collection<ValidationError> validationErrors;
     @NotNull
     @JsonProperty(required = true)

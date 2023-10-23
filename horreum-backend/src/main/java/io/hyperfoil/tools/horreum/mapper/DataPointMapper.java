@@ -2,7 +2,7 @@ package io.hyperfoil.tools.horreum.mapper;
 
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
-import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 
 public class DataPointMapper {
 
@@ -23,7 +23,7 @@ public class DataPointMapper {
         dp.id = dto.id;
         dp.value = dto.value;
         dp.timestamp = dto.timestamp;
-        DataSetDAO ds = new DataSetDAO();
+        DatasetDAO ds = new DatasetDAO();
         ds.id = dto.datasetId;
         dp.dataset = ds;
         if(dto.variable != null)

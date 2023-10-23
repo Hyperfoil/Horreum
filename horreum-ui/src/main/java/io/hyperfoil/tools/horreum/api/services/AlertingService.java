@@ -17,7 +17,7 @@ import jakarta.ws.rs.core.MediaType;
 
 import io.hyperfoil.tools.horreum.api.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.alerting.*;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
@@ -162,7 +162,7 @@ public interface AlertingService {
       public Integer totalDatasets;
       public Integer errors;
       @NotNull
-      public Collection<DataSet.Info> datasetsWithoutValue;
+      public Collection<Dataset.Info> datasetsWithoutValue;
    }
 
 

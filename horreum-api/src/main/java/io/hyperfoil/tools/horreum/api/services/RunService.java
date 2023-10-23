@@ -3,10 +3,8 @@ package io.hyperfoil.tools.horreum.api.services;
 import java.util.List;
 import java.util.Map;
 
-import io.hyperfoil.tools.horreum.api.data.DataSet;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -18,8 +16,6 @@ import jakarta.ws.rs.core.Response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import io.hyperfoil.tools.horreum.api.ApiIgnore;
 import io.hyperfoil.tools.horreum.api.SortDirection;

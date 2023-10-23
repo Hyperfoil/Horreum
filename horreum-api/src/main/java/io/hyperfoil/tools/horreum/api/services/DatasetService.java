@@ -15,7 +15,7 @@ import jakarta.ws.rs.core.MediaType;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
@@ -42,10 +42,10 @@ public interface DatasetService {
            responseCode = "404",
            description = "No Dataset with the given id was found",
            content = @Content(mediaType = "application/json"))
-   @APIResponseSchema(value = DataSet.class,
+   @APIResponseSchema(value = Dataset.class,
            responseDescription = "JVM system properties of a particular host.",
            responseCode = "200")
-   DataSet getDataSet(@PathParam("id") int datasetId);
+   Dataset getDataset(@PathParam("id") int datasetId);
 
    @Path("list/{testId}")
    @GET
