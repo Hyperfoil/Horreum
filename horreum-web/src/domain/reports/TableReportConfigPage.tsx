@@ -28,7 +28,7 @@ import {
 } from "@patternfly/react-core"
 import { Link, NavLink } from "react-router-dom"
 
-import Api, { TableReport, TableReportConfig, ReportComponent } from "../../api"
+import {TableReport, TableReportConfig, ReportComponent, reportApi} from "../../api"
 import TableReportView from "./TableReportView"
 import ReportLogModal from "./ReportLogModal"
 
@@ -153,7 +153,7 @@ export default function TableReportConfigPage() {
         }
         setLoading(true)
         document.title = "Loading report config ... | Horreum"
-        Api.reportServiceGetTableReportConfig(id)
+        reportApi.getTableReportConfig(id)
             .then((config: TableReportConfig) => {
                 setConfig(config)
                 setTest({
@@ -193,7 +193,7 @@ export default function TableReportConfigPage() {
                 onClick={() => {
                     // TODO save locally for faster reload...
                     setSaving(true)
-                    Api.reportServiceUpdateTableReportConfig(reportId, config)
+                    reportApi.updateTableReportConfig(reportId, config)
                         .then(
                             report => history.push("/reports/table/" + report.id),
                             error => dispatch(alertAction("SAVE_CONFIG", "Failed to save report configuration.", error))
@@ -232,7 +232,7 @@ export default function TableReportConfigPage() {
                         <FlexItem>
                             <ExportButton
                                 name={config?.title || "tablereport"}
-                                export={() => Api.reportServiceExportTableReportConfig(id)}
+                                export={() => reportApi.exportTableReportConfig(id)}
                             />
                         </FlexItem>
                     </Flex>
@@ -580,7 +580,7 @@ export default function TableReportConfigPage() {
                                     isDisabled={!configValid || saving}
                                     onClick={() => {
                                         setSaving(true)
-                                        Api.reportServicePreviewTableReport(reportId, config)
+                                        reportApi.previewTableReport(reportId, config)
                                             .then(
                                                 report => setPreview(report),
                                                 error =>

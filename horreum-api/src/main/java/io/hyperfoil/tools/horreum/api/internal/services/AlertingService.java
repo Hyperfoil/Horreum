@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api.services;
+package io.hyperfoil.tools.horreum.api.internal.services;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,10 +22,12 @@ import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Consumes({ MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 @Path("/api/alerting")
+@Tag(name = "alerting", description = "Manage alerts")
 public interface AlertingService {
    @GET
    @Path("variables")

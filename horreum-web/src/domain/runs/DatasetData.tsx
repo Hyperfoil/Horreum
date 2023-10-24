@@ -9,7 +9,7 @@ import Editor from "../../components/Editor/monaco/Editor"
 import MaybeLoading from "../../components/MaybeLoading"
 import DatasetLogModal from "../tests/DatasetLogModal"
 
-import Api, { SchemaUsage, ValidationError } from "../../api"
+import {datasetApi, experimentApi, SchemaUsage, sqlApi, ValidationError} from "../../api"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInDataset } from "./NoSchema"
 import LabelValuesModal from "./LabelValuesModal"
@@ -33,7 +33,7 @@ export default function DatasetData(props: DatasetDataProps) {
     const [hasExperiments, setHasExperiments] = useState(false)
     const [experimentsOpen, setExperimentsOpen] = useState(false)
     useEffect(() => {
-        Api.datasetServiceGetDataset(props.datasetId)
+        datasetApi.getDataset(props.datasetId)
             .then(
                 dataset => {
                     setOriginalData(dataset.data)
@@ -48,13 +48,13 @@ export default function DatasetData(props: DatasetDataProps) {
 
     }, [props.datasetId])
     useEffect(() => {
-        Api.datasetServiceGetSummary(props.datasetId).then(
+        datasetApi.getSummary(props.datasetId).then(
             ds => setSchemas(ds.schemas),
             e => dispatchError(dispatch, e, "FETCH_DATASET_SUMMARY", "Failed to fetch dataset schemas").catch(noop)
         )
     }, [props.datasetId])
     useEffect(() => {
-        Api.experimentServiceProfiles(props.testId).then(
+        experimentApi.profiles(props.testId).then(
             profiles => setHasExperiments(profiles && profiles.length > 0),
             error => dispatchError(dispatch, error, "FETCH_EXPERIMENT_PROFILES", "Cannot fetch experiment profiles")
         )
@@ -71,7 +71,7 @@ export default function DatasetData(props: DatasetDataProps) {
                 <FlexItem>
                     <JsonPathSearchToolbar
                         originalData={originalData}
-                        onRemoteQuery={(query, array) => Api.sqlServiceQueryDatasetData(props.datasetId, query, array)}
+                        onRemoteQuery={(query, array) => sqlApi.queryDatasetData(props.datasetId, query, array)}
                         onDataUpdate={setEditorData}
                     />
                 </FlexItem>

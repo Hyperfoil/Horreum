@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import io.hyperfoil.tools.horreum.api.services.SqlService;
+import io.hyperfoil.tools.horreum.api.internal.services.SqlService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.inject.Inject;
 

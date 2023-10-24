@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux"
 import { UseSortByColumnOptions } from "react-table"
 import { Bullseye, Button, Spinner, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 
-import Api, { AllowedSite } from "../../api"
+import {actionApi, AllowedSite} from "../../api"
 
 import { alertAction } from "../../alerts"
 
@@ -19,7 +19,7 @@ function AllowedSiteList() {
     const [prefixes, setPrefixes] = useState<AllowedSite[]>()
     useEffect(() => {
         setPrefixes(undefined)
-        Api.actionServiceAllowedSites().then(setPrefixes, e =>
+        actionApi.allowedSites().then(setPrefixes, e =>
             dispatch(alertAction("FETCH_ALLOWED_SITES", "Failed to fetch allowed sites", e))
         )
     }, [dispatch])
@@ -50,7 +50,7 @@ function AllowedSiteList() {
                                 if (prefixes) {
                                     setPrefixes(prefixes.filter(p => p.id !== value))
                                 }
-                                Api.actionServiceDeleteSite(value).catch(e =>
+                                actionApi.deleteSite(value).catch(e =>
                                     dispatch(alertAction("REMOVE_ALLOWED_SITE", "Failed to remove allowed site", e))
                                 )
                             }}
@@ -70,7 +70,7 @@ function AllowedSiteList() {
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
                 onSubmit={prefix =>
-                    Api.actionServiceAddSite(prefix).then(
+                    actionApi.addSite(prefix).then(
                         p => setPrefixes([...(prefixes || []), p]),
                         e => dispatch(alertAction("ADD_ALLOWED_SITE", "Failed to add allowed site.", e))
                     )

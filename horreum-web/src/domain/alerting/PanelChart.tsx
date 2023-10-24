@@ -14,7 +14,7 @@ import {
 } from "recharts"
 import { Bullseye, Button, EmptyState, Spinner, Title } from "@patternfly/react-core"
 import { DateTime } from "luxon"
-import Api, { AnnotationDefinition, TimeseriesTarget } from "../../api"
+import {alertingApi, AnnotationDefinition, TimeseriesTarget} from "../../api"
 import { fingerprintToString } from "../../utils"
 import { fetchDatapoints, fetchAllAnnotations } from "./Changes"
 import { alertAction, dispatchInfo } from "../../alerts"
@@ -200,7 +200,7 @@ export default function PanelChart({title, variables, fingerprint, timespan, end
                                 isDisabled={gettingLast}
                                 onClick={() => {
                                     setGettingLast(true)
-                                    Api.alertingServiceFindLastDatapoints({
+                                    alertingApi.findLastDatapoints({
                                         variables: variables,
                                         fingerprint: fingerprintToString(fingerprint),
                                     })

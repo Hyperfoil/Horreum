@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { Button, DualListSelector, Form, FormGroup, Modal, Spinner, TextInput } from "@patternfly/react-core"
 
 import { TabFunctionsRef } from "../../components/SavedTabs"
-import Api, { UserData } from "../../api"
+import {userApi, UserData} from "../../api"
 import UserSearch from "../../components/UserSearch"
 import { isAdminSelector, userName } from "../../auth"
 import { dispatchInfo, dispatchError } from "../../alerts"
@@ -31,7 +31,7 @@ export default function Administrators(props: AdministratorsProps) {
     const isAdmin = useSelector(isAdminSelector)
     useEffect(() => {
         if (isAdmin) {
-            Api.userServiceAdministrators().then(
+            userApi.administrators().then(
                 list => setAdmins(list.map(userElement)),
                 error => dispatchError(dispatch, error, "FETCH ADMINS", "Cannot fetch administrators")
             )
@@ -39,7 +39,7 @@ export default function Administrators(props: AdministratorsProps) {
     }, [isAdmin, resetCounter])
     props.funcsRef.current = {
         save: () =>
-            Api.userServiceUpdateAdministrators(
+            userApi.updateAdministrators(
                 admins.map(a => {
                     const user: UserData = a.props["data-user"]
                     return user.username
@@ -104,7 +104,7 @@ export default function Administrators(props: AdministratorsProps) {
                 isOpen={createNewUser}
                 onClose={() => setCreateNewUser(false)}
                 onCreate={(user, password) => {
-                    return Api.userServiceCreateUser({ user, password }).then(
+                    return userApi.createUser({ user, password }).then(
                         () => {
                             dispatchInfo(
                                 dispatch,

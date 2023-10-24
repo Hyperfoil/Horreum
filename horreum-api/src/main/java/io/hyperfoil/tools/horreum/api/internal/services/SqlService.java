@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api.services;
+package io.hyperfoil.tools.horreum.api.internal.services;
 
 import io.hyperfoil.tools.horreum.api.data.JsonpathValidation;
 import io.hyperfoil.tools.horreum.api.data.QueryResult;
@@ -12,10 +12,12 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Path("/api/sql")
 @Consumes({ MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "sql", description = "Manage sql service")
 public interface SqlService {
    @GET
    @Path("testjsonpath")

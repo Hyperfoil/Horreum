@@ -12,7 +12,7 @@ import OptionalFunction from "../../components/OptionalFunction"
 import SplitForm from "../../components/SplitForm"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
-import Api, { MissingDataRule, Test } from "../../api"
+import {alertingApi, MissingDataRule, Test} from "../../api"
 import { useTester } from "../../auth"
 import { dispatchError } from "../../alerts"
 
@@ -49,7 +49,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
         if (!props.test) {
             return
         }
-        Api.alertingServiceMissingDataRules(props.test.id).then(
+        alertingApi.missingDataRules(props.test.id).then(
             rules => {
                 if (rules) {
                     rules = rules.map(r => ({ ...r, maxStalenessStr: millisToDuration(r.maxStaleness) }))
@@ -99,7 +99,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
         save: () =>
             Promise.all([
                 ...deleted.map(rule =>
-                    Api.alertingServiceDeleteMissingDataRule(rule.id).catch(e => {
+                    alertingApi.deleteMissingDataRule(rule.id).catch(e => {
                         dispatchError(
                             dispatch,
                             e,
@@ -112,7 +112,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                 ...rules
                     .filter(rule => rule.modified)
                     .map(rule =>
-                        Api.alertingServiceUpdateMissingDataRule(rule.testId, rule).then(
+                        alertingApi.updateMissingDataRule(rule.testId, rule).then(
                             () => {
                                 rule.modified = false
                             },

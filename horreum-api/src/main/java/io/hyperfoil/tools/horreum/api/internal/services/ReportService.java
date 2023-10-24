@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api.services;
+package io.hyperfoil.tools.horreum.api.internal.services;
 
 import java.time.Instant;
 import java.util.List;
@@ -21,10 +21,12 @@ import io.hyperfoil.tools.horreum.api.report.TableReport;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Path("/api/report")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes({ MediaType.APPLICATION_JSON})
+@Tag(name = "report", description = "Manage reports")
 public interface ReportService {
    @GET
    @Path("table")

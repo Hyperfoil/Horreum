@@ -16,7 +16,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.hyperfoil.tools.horreum.api.services.ChangesService;
+import io.hyperfoil.tools.horreum.api.internal.services.ChangesService;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;

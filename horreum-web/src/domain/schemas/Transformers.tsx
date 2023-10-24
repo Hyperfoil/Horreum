@@ -13,7 +13,7 @@ import FunctionFormItem from "../../components/FunctionFormItem"
 import SchemaSelect from "../../components/SchemaSelect"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
-import Api, { Transformer } from "../../api"
+import {schemaApi, Transformer} from "../../api"
 import JsonExtractor from "./JsonExtractor"
 
 const TARGET_SCHEMA_HELP = (
@@ -83,13 +83,13 @@ export default function Transformers(props: TransformersProps) {
                 ...transformers
                     .filter(t => t.modified)
                     .map(t =>
-                        Api.schemaServiceAddOrUpdateTransformer(t.schemaId, t).then(id => {
+                        schemaApi.addOrUpdateTransformer(t.schemaId, t).then(id => {
                             t.id = id
                             t.modified = false
                         })
                     ),
                 ...deleted.map(t =>
-                    Api.schemaServiceDeleteTransformer(t.schemaId, t.id).catch(e => {
+                    schemaApi.deleteTransformer(t.schemaId, t.id).catch(e => {
                         setTransformers([...transformers, t])
                         throw e
                     })
@@ -115,7 +115,7 @@ export default function Transformers(props: TransformersProps) {
         }
         setLoading(true)
         setTransformers([])
-        Api.schemaServiceListTransformers(props.schemaId)
+        schemaApi.listTransformers(props.schemaId)
             .then(
                 ts => {
                     setTransformers(ts)

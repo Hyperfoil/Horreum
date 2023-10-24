@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
-import io.hyperfoil.tools.horreum.api.services.AlertingService;
+import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;

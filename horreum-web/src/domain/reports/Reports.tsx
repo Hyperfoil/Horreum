@@ -23,7 +23,7 @@ import TestSelect, { SelectedTest } from "../../components/TestSelect"
 import { alertAction } from "../../alerts"
 import { formatDateTime } from "../../utils"
 
-import Api, { AllTableReports, SortDirection, TableReportSummary } from "../../api"
+import {AllTableReports, reportApi, SortDirection, TableReportSummary} from "../../api"
 import ButtonLink from "../../components/ButtonLink"
 import { useTester, teamsSelector } from "../../auth"
 
@@ -58,7 +58,7 @@ export default function Reports() {
 
     useEffect(() => {
         setLoading(true)
-        Api.reportServiceGetTableReports(
+        reportApi.getTableReports(
             pagination.direction,
             folder,
             pagination.perPage,
@@ -175,7 +175,7 @@ export default function Reports() {
                                         if (!config.id) {
                                             return null
                                         }
-                                        return Api.reportServiceGetTableReportConfig(config.id as number).then(
+                                        return reportApi.getTableReportConfig(config.id as number).then(
                                             existing => (
                                                 <>
                                                     This configuration is going to override table report configuration{" "}
@@ -192,7 +192,7 @@ export default function Reports() {
                                             _ => null /* errors because the config does not exist => OK */
                                         )
                                     }}
-                                    onImport={config => Api.reportServiceImportTableReportConfig(config)}
+                                    onImport={config => reportApi.importTableReportConfig(config)}
                                     onImported={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
                                 />
                             </FlexItem>

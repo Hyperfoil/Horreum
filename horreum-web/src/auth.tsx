@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { Button } from "@patternfly/react-core"
 
 import { State } from "./store"
-import Api, { UserData } from "./api";
+import {userApi, UserData} from "./api";
 import { AddAlertAction, dispatchError } from "./alerts"
 import { Dispatch } from "redux"
 import { ThunkDispatch } from "redux-thunk"
@@ -149,7 +149,7 @@ export const defaultTeamSelector = (state: State) => {
 
 export function updateDefaultTeam(team: string) {
     return (dispatch: Dispatch<UpdateDefaultTeamAction | AddAlertAction>) =>
-        Api.userServiceSetDefaultTeam(team).then(
+        userApi.setDefaultTeam(team).then(
             _ => dispatch({ type: UPDATE_DEFAULT_TEAM, team }),
             error => dispatchError(dispatch, error, "SET_DEFAULT_TEAM", "Failed to update default team.")
         )

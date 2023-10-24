@@ -2,7 +2,7 @@ import { useState, useRef } from "react"
 
 import { Button, Modal } from "@patternfly/react-core"
 
-import Api from "../../api"
+import {schemaApi} from "../../api"
 import ExportImport from "../../components/ExportImport"
 
 type SchemaExportImportProps = {
@@ -25,8 +25,8 @@ export default function SchemaExportImport(props: SchemaExportImportProps) {
         <>
             <ExportImport
                 name={props.name}
-                export={() => Api.schemaServiceExportSchema(props.id)}
-                import={cfg => Api.schemaServiceImportSchema(cfg)}
+                export={() => schemaApi.exportSchema(props.id)}
+                import={cfg => schemaApi.importSchema(cfg)}
                 validate={cfg => {
                     return new Promise((resolve, _) => {
                         setImportConfig(cfg)

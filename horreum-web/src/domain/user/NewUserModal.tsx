@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useDispatch } from "react-redux"
 import { Button, Checkbox, Form, FormGroup, List, ListItem, Modal, Spinner, TextInput } from "@patternfly/react-core"
 
-import Api, { UserData } from "../../api"
+import {userApi, UserData} from "../../api"
 import { dispatchInfo, dispatchError } from "../../alerts"
 import { noop } from "../../utils"
 import { getRoles } from "./TeamMembers"
@@ -50,7 +50,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                         setCreating(true)
                         const user = { id: "", username: username || "", email, firstName, lastName }
                         const roles = getRoles(viewer, tester, uploader, manager)
-                        Api.userServiceCreateUser({ user, password, team: props.team, roles })
+                        userApi.createUser({ user, password, team: props.team, roles })
                             .then(() => {
                                 props.onCreate(user, roles)
                                 dispatchInfo(

@@ -9,7 +9,7 @@ import { dispatchError } from "../../alerts"
 
 import Editor from "../../components/Editor/monaco/Editor"
 
-import Api, { RunExtended } from "../../api"
+import {runApi, RunExtended, sqlApi} from "../../api"
 import { toString } from "../../components/Editor"
 import ChangeSchemaModal from "./ChangeSchemaModal"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
@@ -50,7 +50,7 @@ export default function RunData(props: RunDataProps) {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get("token")
-        Api.runServiceGetData(props.run.id, token || undefined)
+        runApi.getData(props.run.id, token || undefined)
             .then(
                 data => {
                     setData(data as any)
@@ -102,7 +102,7 @@ export default function RunData(props: RunDataProps) {
             )}
             <JsonPathSearchToolbar
                 originalData={data}
-                onRemoteQuery={(query, array) => Api.sqlServiceQueryRunData(props.run.id, query, array)}
+                onRemoteQuery={(query, array) => sqlApi.queryRunData(props.run.id, query, array)}
                 onDataUpdate={setEditorData}
             />
             {memoizedEditor}

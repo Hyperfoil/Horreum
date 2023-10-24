@@ -5,9 +5,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -22,8 +19,7 @@ import io.hyperfoil.tools.horreum.mapper.TransformationLogMapper;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
-import io.hyperfoil.tools.horreum.api.services.LogService;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
+import io.hyperfoil.tools.horreum.api.internal.services.LogService;
 import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLogDAO;

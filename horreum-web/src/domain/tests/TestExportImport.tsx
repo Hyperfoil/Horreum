@@ -2,7 +2,7 @@ import { useState, useRef } from "react"
 
 import { Button, Modal } from "@patternfly/react-core"
 
-import Api from "../../api"
+import {testApi} from "../../api"
 import ExportImport from "../../components/ExportImport"
 
 type TestExportImportProps = {
@@ -25,8 +25,8 @@ export default function TestExportImport(props: TestExportImportProps) {
         <>
             <ExportImport
                 name={props.name}
-                export={() => Api.testServiceExport(props.id)}
-                import={cfg => Api.testServiceImportTest(cfg)}
+                export={() => testApi._export(props.id)}
+                import={cfg => testApi.importTest(cfg)}
                 validate={cfg => {
                     return new Promise((resolve, _) => {
                         setImportConfig(cfg)

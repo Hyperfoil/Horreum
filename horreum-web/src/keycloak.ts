@@ -2,7 +2,7 @@ import Keycloak, { KeycloakConfig } from "keycloak-js"
 import fetchival from "fetchival"
 
 import store, { State } from "./store"
-import Api from "./api"
+import { userApi } from "./api"
 import { alertAction, CLEAR_ALERT } from "./alerts"
 import { noop } from "./utils"
 import { keycloakSelector, INIT, STORE_PROFILE, UPDATE_DEFAULT_TEAM, UPDATE_ROLES } from "./auth"
@@ -43,7 +43,7 @@ export function initKeycloak(state: State) {
                                     alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error)
                                 )
                             )
-                        Api.userServiceDefaultTeam().then(
+                        userApi.defaultTeam().then(
                             response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
                             error =>
                                 store.dispatch(

@@ -1,8 +1,28 @@
-import { DefaultApi } from "./generated/apis"
-import { Configuration, Middleware } from "./generated"
+import {
+    ActionApi,
+    AlertingApi,
+    BannerApi,
+    ChangesApi,
+    ConfigApi,
+    DatasetApi,
+    ExperimentApi,
+    LogApi,
+    NotificationsApi,
+    ReportApi,
+    RunApi,
+    SchemaApi,
+    SqlApi,
+    SubscriptionsApi,
+    TestApi,
+    UiApi,
+    UserApi,
+
+} from "./generated/apis"
+import {Configuration, Middleware} from "./generated"
 import store from "./store"
-import { ADD_ALERT } from "./alerts"
-import { TryLoginAgain } from "./auth"
+import {ADD_ALERT} from "./alerts"
+import {TryLoginAgain} from "./auth"
+
 export * from "./generated/models"
 
 const authMiddleware: Middleware = {
@@ -16,7 +36,7 @@ const authMiddleware: Middleware = {
                             url: ctx.url,
                             init: {
                                 ...ctx.init,
-                                headers: { ...ctx.init.headers, Authorization: "Bearer " + keycloak.token },
+                                headers: {...ctx.init.headers, Authorization: "Bearer " + keycloak.token},
                             },
                         }
                     }
@@ -27,7 +47,7 @@ const authMiddleware: Middleware = {
                         alert: {
                             type: "TOKEN_UPDATE_FAILED",
                             title: "Token update failed",
-                            content: <TryLoginAgain />,
+                            content: <TryLoginAgain/>,
                         },
                     })
                     return Promise.reject(e)
@@ -46,7 +66,7 @@ const authMiddleware: Middleware = {
                 alert: {
                     type: "REQUEST_FORBIDDEN",
                     title: "Request failed due to insufficient permissions",
-                    content: <TryLoginAgain />,
+                    content: <TryLoginAgain/>,
                 },
             })
 
@@ -83,7 +103,7 @@ const serialize = (input: any): any => {
 
 const serializationMiddleware: Middleware = {
     pre: ctx => {
-        return Promise.resolve({ url: ctx.url, init: { ...ctx.init, body: serialize(ctx.init.body) } })
+        return Promise.resolve({url: ctx.url, init: {...ctx.init, body: serialize(ctx.init.body)}})
     },
     // we won't deserialize functions eagerly
 }
@@ -107,11 +127,26 @@ const noResponseMiddleware: Middleware = {
     },
 }
 
-const Api = new DefaultApi(
-    new Configuration({
-        basePath: window.location.origin,
-        middleware: [authMiddleware, serializationMiddleware, noResponseMiddleware],
-    })
-)
 
-export default Api
+const configuration = new Configuration({
+    basePath: window.location.origin,
+    middleware: [authMiddleware, serializationMiddleware, noResponseMiddleware],
+});
+
+export const actionApi = new ActionApi(configuration)
+export const alertingApi = new AlertingApi(configuration)
+export const bannerApi = new BannerApi(configuration)
+export const changesApi = new ChangesApi(configuration)
+export const datasetApi = new DatasetApi(configuration)
+export const experimentApi = new ExperimentApi(configuration)
+export const logApi = new LogApi(configuration)
+export const notificationsApi = new NotificationsApi(configuration)
+export const reportApi = new ReportApi(configuration)
+export const runApi = new RunApi(configuration)
+export const schemaApi = new SchemaApi(configuration)
+export const sqlApi = new SqlApi(configuration)
+export const subscriptionsApi = new SubscriptionsApi(configuration)
+export const testApi = new TestApi(configuration)
+export const uiApi = new UiApi(configuration)
+export const userApi = new UserApi(configuration)
+export const configApi = new ConfigApi(configuration)

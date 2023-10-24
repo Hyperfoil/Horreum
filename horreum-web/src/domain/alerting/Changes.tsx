@@ -8,7 +8,7 @@ import PanelChart from "./PanelChart"
 import { fingerprintToString, formatDate } from "../../utils"
 import { teamsSelector } from "../../auth"
 import { DateTime } from "luxon"
-import Api, { PanelInfo, AnnotationDefinition, TimeseriesTarget } from "../../api"
+import {PanelInfo, AnnotationDefinition, TimeseriesTarget, alertingApi, testApi, changesApi} from "../../api"
 
 import {
     Button,
@@ -156,7 +156,7 @@ export const fetchDatapoints = (
             refId: "ignored",
         })),
     }
-    return Api.changesServiceQuery(query)
+    return changesApi.query(query)
 }
 
 export const fetchAnnotations = (
@@ -171,7 +171,7 @@ export const fetchAnnotations = (
             query: variableId + ";" + fingerprintToString(fingerprint),
         },
     }
-    return Api.changesServiceAnnotations(query)
+    return changesApi.annotations(query)
 }
 
 export const fetchAllAnnotations = (
@@ -254,7 +254,7 @@ export default function Changes() {
         // We need to prevent fetching dashboard until we are sure if we need the fingerprint
         if (selectedTest && !loadingFingerprints) {
             setLoadingPanels(true)
-            Api.alertingServiceDashboard(selectedTest.id, fingerprintToString(selectedFingerprint))
+            alertingApi.dashboard(selectedTest.id, fingerprintToString(selectedFingerprint))
                 .then(
                     response => {
                         setPanels(response.panels)
@@ -290,7 +290,7 @@ export default function Changes() {
             return Promise.resolve([])
         }
         setLoadingFingerprints(true)
-        return Api.testServiceListFingerprints(selectedTest?.id)
+        return testApi.listFingerprints(selectedTest?.id)
             .then(
                 response => {
                     setRequiresFingerprint(!!response && response.length > 1)

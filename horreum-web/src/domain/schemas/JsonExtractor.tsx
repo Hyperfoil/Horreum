@@ -17,7 +17,7 @@ import { HelpIcon } from "@patternfly/react-icons"
 import { v4 as uuidv4 } from "uuid"
 
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
-import Api, { Extractor } from "../../api"
+import {Extractor, sqlApi} from "../../api"
 import TryJsonPathModal, { JsonPathTarget } from "./TryJsonPathModal"
 import { JsonpathValidation } from "../../generated"
 
@@ -167,7 +167,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                                 }
                                 extractor.validationTimer = window.setTimeout(() => {
                                     if (extractor.jsonpath) {
-                                        Api.sqlServiceTestJsonPath(extractor.jsonpath).then(result => {
+                                        sqlApi.testJsonPath(extractor.jsonpath).then(result => {
                                             extractor.validationResult = result
                                             props.onUpdate()
                                         })

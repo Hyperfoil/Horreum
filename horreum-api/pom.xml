@@ -50,7 +50,38 @@
                 <groupId>io.smallrye</groupId>
                 <version>2.1.22</version>
                 <executions>
+                    <!--Generate External Schema-->
                     <execution>
+                        <id>external</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>generate-schema</goal>
+                        </goals>
+                        <configuration>
+                            <configProperties>${basedir}/src/main/resources/application.properties</configProperties>
+                            <infoVersion>${version}</infoVersion>
+                            <scanPackages>
+                                io.hyperfoil.tools.horreum.api,
+                                io.hyperfoil.tools.horreum.api.alerting,
+                                io.hyperfoil.tools.horreum.api.data,
+                                io.hyperfoil.tools.horreum.api.grafana,
+                                io.hyperfoil.tools.horreum.api.report
+                            </scanPackages>
+                            <scanExcludePackages>
+                                io.hyperfoil.tools.horreum.api.internal
+                            </scanExcludePackages>
+                            <scanProfiles>
+                                external
+                            </scanProfiles>
+
+                            <operationIdStrategy>METHOD</operationIdStrategy>
+                            <schemaFilename>openapi</schemaFilename>
+                        </configuration>
+                    </execution>
+
+                    <!-- Generate Internal Schema -->
+                    <execution>
+                        <id>internal</id>
                         <phase>process-classes</phase>
                         <goals>
                             <goal>generate-schema</goal>
@@ -66,7 +97,42 @@
                                 io.hyperfoil.tools.horreum.api.report
                             </scanPackages>
                             <scanClasses>.*</scanClasses>
-                            <operationIdStrategy>CLASS_METHOD</operationIdStrategy>
+                            <operationIdStrategy>METHOD</operationIdStrategy>
+                            <schemaFilename>openapi-internal</schemaFilename>
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>7.0.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.build.directory}/generated/openapi-internal.yaml</inputSpec>
+                            <output>${project.basedir}/../horreum-web/src/generated</output>
+                            <generatorName>typescript-fetch</generatorName>
+                            <skipValidateSpec>true</skipValidateSpec>
+                            <typeMappings>Array=any</typeMappings>
+                            <globalProperties>
+                                <skipFormModel>false</skipFormModel>
+                            </globalProperties>
+                            <modelNameMappings>
+                                <modelNameMapping>Tag=Label</modelNameMapping>
+                            </modelNameMappings>
+                            <configOptions>
+                                <supportsES6>true</supportsES6>
+                                <useSingleRequestParameter>false</useSingleRequestParameter>
+                                <typescriptThreePlus>true</typescriptThreePlus>
+                                <prefixParameterInterfaces>true</prefixParameterInterfaces>
+                            </configOptions>
                         </configuration>
                     </execution>
                 </executions>

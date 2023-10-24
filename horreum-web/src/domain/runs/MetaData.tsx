@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux"
 import { Bullseye, Spinner } from "@patternfly/react-core"
 
 import { dispatchError } from "../../alerts"
-import Api, { RunExtended } from "../../api"
+import {runApi, RunExtended} from "../../api"
 import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"
 import { NoSchemaInRun } from "./NoSchema"
@@ -20,7 +20,7 @@ export default function MetaData(props: MetaDataProps) {
     const dispatch = useDispatch()
     useEffect(() => {
         setLoading(true)
-        Api.runServiceGetMetadata(props.run.id)
+        runApi.getMetadata(props.run.id)
             .then(
                 md => setMetadata(toString(md)),
                 error => dispatchError(dispatch, error, "FETCH_METADATA", "Failed to fetch run metadata")

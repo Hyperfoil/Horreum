@@ -4,7 +4,7 @@ import { getSubscription, updateSubscription } from "./actions"
 import { TestDispatch } from "./reducers"
 import { noop } from "../../utils"
 import { Divider, DualListSelector } from "@patternfly/react-core"
-import Api, { UserData } from "../../api"
+import {userApi, UserData} from "../../api"
 import { alertAction } from "../../alerts"
 import { teamToName, useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -55,7 +55,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
         }
         dispatch(getSubscription(props.testId)).then(watch => {
             if (watch.users.length > 0) {
-                Api.userServiceInfo(watch.users).then(
+                userApi.info(watch.users).then(
                     users => setWatchingUsers(users.map(userElement)),
                     error => dispatch(alertAction("USER_INFO", "User info lookup failed, error", error))
                 )
@@ -63,7 +63,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 setWatchingUsers([])
             }
             if (watch.optout.length > 0) {
-                Api.userServiceInfo(watch.optout).then(
+                userApi.info(watch.optout).then(
                     users => setOptoutUsers(users.map(userElement)),
                     error => dispatch(alertAction("USER_INFO", "User info lookup failed, error", error))
                 )
@@ -72,7 +72,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
             }
             setWatchingTeams(watch.teams.map(teamElement))
         }, noop)
-        Api.userServiceGetTeams().then(
+        userApi.getTeams().then(
             // We will filter in the component to not recompute this on watchingTeams change
             teamRoles => setAvailableTeams(teamRoles.map(teamElement)),
             error => dispatch(alertAction("TEAM_LOOKUP", "Team lookup failed", error))

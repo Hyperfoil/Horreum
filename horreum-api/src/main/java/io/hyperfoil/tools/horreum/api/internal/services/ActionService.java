@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api.services;
+package io.hyperfoil.tools.horreum.api.internal.services;
 
 import java.util.List;
 
@@ -17,10 +17,12 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Path("/api/action")
 @Consumes({ MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "action", description = "Manage Actions")
 public interface ActionService {
    @POST
    Action add(Action action);

@@ -4,7 +4,7 @@ import { updateRunsAndDatasetsAction } from "./actions"
 import { get } from "./selectors"
 import { dispatchError } from "../../alerts"
 import { Bullseye, Button, Modal, Progress, Spinner } from "@patternfly/react-core"
-import Api, { RecalculationStatus } from "../../api"
+import {RecalculationStatus, testApi} from "../../api"
 
 type RecalculateDatasetsModalProps = {
     testId: number
@@ -33,7 +33,7 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
             return
         }
         if (test?.runs === undefined) {
-            Api.testServiceGetRecalculationStatus(props.testId).then(status => {
+            testApi.getRecalculationStatus(props.testId).then(status => {
                 dispatch(updateRunsAndDatasetsAction(props.testId, status.totalRuns, status.datasets))
             })
         }
@@ -52,10 +52,10 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
                               key="recalculate"
                               onClick={() => {
                                   setProgress(0)
-                                  Api.testServiceRecalculateDatasets(props.testId)
+                                  testApi.recalculateDatasets(props.testId)
                                       .then(() => {
                                           timerId.current = window.setInterval(() => {
-                                              Api.testServiceGetRecalculationStatus(props.testId)
+                                              testApi.getRecalculationStatus(props.testId)
                                                   .then(status => {
                                                       setStatus(status)
                                                       setProgress(status.finished)

@@ -1,4 +1,4 @@
-import Api, { Action } from "../../api"
+import {Action, actionApi} from "../../api"
 import * as actionTypes from "./actionTypes"
 import { LoadedAction, DeleteAction } from "./reducers"
 import { Dispatch } from "redux"
@@ -17,7 +17,7 @@ const removed = (id: number): DeleteAction => ({
 
 export function getAction(id: number) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        Api.actionServiceGet(id).then(
+        actionApi.get(id).then(
             response => dispatch(loaded(response)),
             error => {
                 dispatch(loaded([]))
@@ -28,7 +28,7 @@ export function getAction(id: number) {
 
 export function addAction(action: Action) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        Api.actionServiceAdd(action).then(
+        actionApi.add(action).then(
             response => dispatch(loaded(response)),
             error => dispatchError(dispatch, error, "ADD_ACTION", "Failed to add action")
         )
@@ -36,7 +36,7 @@ export function addAction(action: Action) {
 
 export function allActions() {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        Api.actionServiceList().then(
+        actionApi.list().then(
             response => dispatch(loaded(response)),
             error => dispatchError(dispatch, error, "GET_ACTIONS", "Failed to get actions")
         )
@@ -44,7 +44,7 @@ export function allActions() {
 
 export function removeAction(id: number) {
     return (dispatch: Dispatch<DeleteAction | AddAlertAction>) =>
-        Api.actionServiceDelete(id).then(
+        actionApi._delete(id).then(
             _ => dispatch(removed(id)),
             error => dispatchError(dispatch, error, "REMOVE_ACTION", "Failed to remove action")
         )

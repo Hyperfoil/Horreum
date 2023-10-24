@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
-import io.quarkus.panache.common.Sort;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -15,7 +14,7 @@ import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.data.Banner;
 import io.hyperfoil.tools.horreum.mapper.BannerMapper;
-import io.hyperfoil.tools.horreum.api.services.BannerService;
+import io.hyperfoil.tools.horreum.api.internal.services.BannerService;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 

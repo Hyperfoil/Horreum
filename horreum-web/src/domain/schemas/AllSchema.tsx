@@ -14,7 +14,7 @@ import ActionMenu, { useShareLink, useChangeAccess, useDelete } from "../../comp
 import ButtonLink from "../../components/ButtonLink"
 import { CellProps, Column } from "react-table"
 import { SchemaDispatch } from "./reducers"
-import Api, { Access, SortDirection, SchemaQueryResult, Schema } from "../../api"
+import {Access, SortDirection, SchemaQueryResult, Schema, schemaApi} from "../../api"
 import SchemaImportButton from "./SchemaImportButton"
 
 type C = CellProps<Schema>
@@ -32,7 +32,7 @@ export default function AllSchema() {
 
     useEffect(() => {
         setLoading(true)
-        Api.schemaServiceList(
+        schemaApi.list(
              'Ascending',
              pagination.perPage,
              pagination.page - 1

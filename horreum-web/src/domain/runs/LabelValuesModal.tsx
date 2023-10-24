@@ -7,7 +7,7 @@ import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 
 import { dispatchError } from "../../alerts"
 import "../../components/LogModal.css"
-import Api, { LabelValue } from "../../api"
+import {datasetApi, LabelValue} from "../../api"
 
 type LabelValuesModalProps = {
     datasetId: number
@@ -32,7 +32,7 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
         }
         setLoading(true)
         setLabelValues([])
-        Api.datasetServiceLabelValues(props.datasetId)
+        datasetApi.labelValues(props.datasetId)
             .then(setLabelValues, error =>
                 dispatchError(dispatch, error, "FETCH_LABEL_VALUES", "Cannot retrieve effective values for labels.")
             )

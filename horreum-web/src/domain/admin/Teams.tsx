@@ -6,7 +6,7 @@ import SplitForm from "../../components/SplitForm"
 import TeamMembers, { TeamMembersFunctions } from "../user/TeamMembers"
 import NewUserModal from "../user/NewUserModal"
 import { isAdminSelector } from "../../auth"
-import Api from "../../api"
+import {userApi} from "../../api"
 import { dispatchError, dispatchInfo } from "../../alerts"
 import { noop } from "../../utils"
 
@@ -38,7 +38,7 @@ export default function Teams(props: TeamsProps) {
             return // happens during reload
         }
         setLoading(true)
-        Api.userServiceGetAllTeams()
+        userApi.getAllTeams()
             .then(teams => {
                 const loaded = teams.sort().map((t, i) => ({ id: i, name: t, exists: true }))
                 setTeams(loaded)
@@ -59,7 +59,7 @@ export default function Teams(props: TeamsProps) {
         }
     }
     function createTeam(team: Team) {
-        return Api.userServiceAddTeam(team.name)
+        return userApi.addTeam(team.name)
             .then(() => {
                 // no-need to re-render
                 team.exists = true
@@ -104,7 +104,7 @@ export default function Teams(props: TeamsProps) {
                     Promise.all([
                         ...teams.filter(team => !team.exists).map(team => createTeam(team)),
                         ...reallyDeleted.map(team =>
-                            Api.userServiceDeleteTeam(team).then(
+                            userApi.deleteTeam(team).then(
                                 _ => dispatchInfo(dispatch, "DELETED TEAM", "Team " + team + " was deleted", "", 3000),
                                 error => dispatchError(dispatch, error, "DELETE TEAM", "Cannot delete team " + team)
                             )

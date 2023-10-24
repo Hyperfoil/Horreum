@@ -1,8 +1,7 @@
-package io.hyperfoil.tools.horreum.api.services;
+package io.hyperfoil.tools.horreum.api.internal.services;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletionStage;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
@@ -17,10 +16,12 @@ import jakarta.ws.rs.core.MediaType;
 
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Path("api/user")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "user", description = "Manage users")
 public interface UserService {
    @GET
    @Path("search")

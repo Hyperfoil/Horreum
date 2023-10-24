@@ -6,7 +6,7 @@ import { NavLink } from "react-router-dom"
 import { Checkbox, Flex, FlexItem, Select, SelectOption, Tooltip } from "@patternfly/react-core"
 import { ExclamationCircleIcon } from "@patternfly/react-icons"
 
-import Api, { LabelInfo } from "../api"
+import {LabelInfo, schemaApi} from "../api"
 
 import { dispatchError } from "../alerts"
 import EnumSelect from "./EnumSelect"
@@ -34,7 +34,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
     const [filtering, setFiltering] = useState(defaultFiltering === undefined || defaultFiltering)
     const dispatch = useDispatch()
     useEffect(() => {
-        Api.schemaServiceAllLabels().then(
+        schemaApi.allLabels().then(
             labels => {
                 setOptions(labels)
                 const sfo: Record<string, ReactNode> = { ...schemaFilterOptions }

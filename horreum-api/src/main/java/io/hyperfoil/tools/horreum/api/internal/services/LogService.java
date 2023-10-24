@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api.services;
+package io.hyperfoil.tools.horreum.api.internal.services;
 
 import java.util.List;
 
@@ -14,9 +14,11 @@ import jakarta.ws.rs.core.MediaType;
 import io.hyperfoil.tools.horreum.api.data.ActionLog;
 import io.hyperfoil.tools.horreum.api.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.api.alerting.TransformationLog;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Produces(MediaType.APPLICATION_JSON)
 @Path("/api/log")
+@Tag(name = "log", description = "Manage processing logs")
 public interface LogService {
    @GET
    @Path("dataset/{source}/{testId}")
