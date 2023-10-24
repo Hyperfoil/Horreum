@@ -24,7 +24,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.IntArrayType;
@@ -55,7 +55,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModel;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 
-import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.mapper.*;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -197,10 +197,10 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   public void onLabelsUpdated(DataSet.LabelsUpdatedEvent event) {
+   public void onLabelsUpdated(Dataset.LabelsUpdatedEvent event) {
       boolean sendNotifications;
       DataPointDAO.delete("dataset.id", event.datasetId);
-      DataSetDAO dataset = DataSetDAO.findById(event.datasetId);
+      DatasetDAO dataset = DatasetDAO.findById(event.datasetId);
       if (dataset == null) {
          // The run is not committed yet?
          // Retry `horreum.alerting.updateLabel.retries` times before logging a warning
@@ -235,7 +235,7 @@ public class AlertingServiceImpl implements AlertingService {
       recalculateMissingDataRules(dataset);
    }
 
-   private void recalculateMissingDataRules(DataSetDAO dataset) {
+   private void recalculateMissingDataRules(DatasetDAO dataset) {
       MissingDataRuleResultDAO.deleteForDataset(dataset.id);
       @SuppressWarnings("unchecked") List<Object[]> ruleValues = em.createNativeQuery(LOOKUP_RULE_LABEL_VALUES)
             .setParameter(1, dataset.id).setParameter(2, dataset.testid)
@@ -262,11 +262,11 @@ public class AlertingServiceImpl implements AlertingService {
             output -> logMissingDataMessage(dataset, PersistentLogDAO.DEBUG, "Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output));
    }
 
-   private void createMissingDataRuleResult(DataSetDAO dataset, int ruleId) {
+   private void createMissingDataRuleResult(DatasetDAO dataset, int ruleId) {
       new MissingDataRuleResultDAO(ruleId, dataset.id, dataset.start).persist();
    }
 
-   private void recalculateDatapointsForDataset(DataSetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
+   private void recalculateDatapointsForDataset(DatasetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
       log.debugf("Analyzing dataset %d (%d/%d)", (long)dataset.id, (long)dataset.run.id, dataset.ordinal);
       TestDAO test = TestDAO.findById(dataset.testid);
       if (test == null) {
@@ -280,7 +280,7 @@ public class AlertingServiceImpl implements AlertingService {
       emitDatapoints(dataset, notify, debug, recalculation);
    }
 
-   private boolean testFingerprint(DataSetDAO dataset, String filter) {
+   private boolean testFingerprint(DatasetDAO dataset, String filter) {
       if (filter == null || filter.isBlank()) {
          return true;
       }
@@ -382,7 +382,7 @@ public class AlertingServiceImpl implements AlertingService {
       }
    }
 
-   private void emitDatapoints(DataSetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
+   private void emitDatapoints(DatasetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
       Set<String> missingValueVariables = new HashSet<>();
       @SuppressWarnings("unchecked")
       List<VariableData> values = em.createNativeQuery(LOOKUP_VARIABLES)
@@ -481,14 +481,14 @@ public class AlertingServiceImpl implements AlertingService {
             messageBus.publish(MessageBusChannels.DATASET_MISSING_VALUES, dataset.testid, event);
          mediator.missingValuesDataset(event);
       }
-      DataPoint.DatasetProcessedEvent event = new DataPoint.DatasetProcessedEvent( DataSetMapper.fromInfo( dataset.getInfo()), notify);
+      DataPoint.DatasetProcessedEvent event = new DataPoint.DatasetProcessedEvent( DatasetMapper.fromInfo( dataset.getInfo()), notify);
       if(mediator.testMode())
          messageBus.publish(MessageBusChannels.DATAPOINT_PROCESSED, dataset.testid, event);
       mediator.dataPointsProcessed(event);
    }
 
    @Transactional
-   void createDataPoint(DataSetDAO dataset, Instant timestamp, int variableId, double value, boolean notify) {
+   void createDataPoint(DatasetDAO dataset, Instant timestamp, int variableId, double value, boolean notify) {
       DataPointDAO dataPoint = new DataPointDAO();
       dataPoint.variable = VariableDAO.findById(variableId);
       dataPoint.dataset = dataset;
@@ -501,32 +501,32 @@ public class AlertingServiceImpl implements AlertingService {
          messageBus.publish(MessageBusChannels.DATAPOINT_NEW, dataset.testid, event);
    }
 
-   private void logCalculationMessage(DataSetDAO dataSet, int level, String format, Object... args) {
+   private void logCalculationMessage(DatasetDAO dataSet, int level, String format, Object... args) {
       logCalculationMessage(dataSet.testid, dataSet.id, level, format, args);
    }
 
    private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
       log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
-      new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId),
+      new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DatasetDAO.class, datasetId),
             level, "variables", msg).persist();
    }
 
-   private void logMissingDataMessage(DataSetDAO dataSet, int level, String format, Object... args) {
+   private void logMissingDataMessage(DatasetDAO dataSet, int level, String format, Object... args) {
       logMissingDataMessage(dataSet.testid, dataSet.id, level, format, args);
    }
 
    private void logMissingDataMessage(int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
       log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
-      new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId),
+      new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DatasetDAO.class, datasetId),
             level, "missingdata", msg).persist();
    }
 
    private void logChangeDetectionMessage(int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
       log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
-      new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId),
+      new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DatasetDAO.class, datasetId),
             level, "changes", msg).persist();
    }
 
@@ -646,12 +646,12 @@ public class AlertingServiceImpl implements AlertingService {
                logChangeDetectionMessage(variable.testId, datasetId, PersistentLogDAO.DEBUG,
                      "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
                Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id = ?1");
-               Util.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSetDAO.Info.class));
-               DataSetDAO.Info info = (DataSetDAO.Info) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
+               Util.setResultTransformer(datasetQuery, Transformers.aliasToBean(DatasetDAO.Info.class));
+               DatasetDAO.Info info = (DatasetDAO.Info) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
                em.persist(change);
                Hibernate.initialize(change.dataset.run.id);
                String testName = TestDAO.<TestDAO>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
-               Change.Event event = new Change.Event(ChangeMapper.from(change), testName, DataSetMapper.fromInfo(info), notify);
+               Change.Event event = new Change.Event(ChangeMapper.from(change), testName, DatasetMapper.fromInfo(info), notify);
                if(mediator.testMode())
                   messageBus.publish(MessageBusChannels.CHANGE_NEW, change.dataset.testid, event);
                mediator.executeBlocking(() -> mediator.newChange(event)) ;
@@ -976,7 +976,7 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    void recalculateForDataset(Integer datasetId, boolean notify, boolean debug, Recalculation recalculation) {
-      DataSetDAO dataset = DataSetDAO.findById(datasetId);
+      DatasetDAO dataset = DatasetDAO.findById(datasetId);
       if ( dataset != null ) {
          recalculateDatapointsForDataset(dataset, notify, debug, recalculation);
       } else {
@@ -994,7 +994,7 @@ public class AlertingServiceImpl implements AlertingService {
       if (recalculation != null) {
          status.totalDatasets = recalculation.datasets.size();
          status.errors = recalculation.errors;
-         status.datasetsWithoutValue = recalculation.datasetsWithoutValue.values().stream().map(DataSetMapper::fromInfo).collect(Collectors.toList());
+         status.datasetsWithoutValue = recalculation.datasetsWithoutValue.values().stream().map(DatasetMapper::fromInfo).collect(Collectors.toList());
       }
       return status;
    }
@@ -1263,7 +1263,7 @@ public class AlertingServiceImpl implements AlertingService {
       int progress;
       boolean done;
       public int errors;
-      Map<Integer, DataSetDAO.Info> datasetsWithoutValue = new HashMap<>();
+      Map<Integer, DatasetDAO.Info> datasetsWithoutValue = new HashMap<>();
    }
 
    static final class VarAndFingerprint {

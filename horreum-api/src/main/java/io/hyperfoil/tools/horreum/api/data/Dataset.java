@@ -11,9 +11,9 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Objects;
 
-@Schema(type = SchemaType.OBJECT,
+@Schema(name = "Dataset", type = SchemaType.OBJECT,
 description = "A dataset is the JSON document used as the basis for all comparisons and reporting")
-public class DataSet {
+public class Dataset {
     @Schema(description = "Dataset Unique ID", example = "101")
     public Integer id;
     @NotNull
@@ -60,11 +60,11 @@ public class DataSet {
         return new Info(this.id, this.runId, this.ordinal, this.testid);
     }
 
-    public DataSet() {
+    public Dataset() {
         access = Access.PUBLIC;
     }
 
-    public DataSet(Run run, int ordinal, String description, JsonNode data) {
+    public Dataset(Run run, int ordinal, String description, JsonNode data) {
         this.runId = run.id;
         this.start = run.start;
         this.stop = run.stop;
@@ -147,7 +147,7 @@ public class DataSet {
         public EventNew() {
         }
 
-        public EventNew(DataSet dataSet, boolean isRecalculation) {
+        public EventNew(Dataset dataSet, boolean isRecalculation) {
             this.datasetId = dataSet.id;
             this.testId = dataSet.testid;
             this.runId = dataSet.runId;

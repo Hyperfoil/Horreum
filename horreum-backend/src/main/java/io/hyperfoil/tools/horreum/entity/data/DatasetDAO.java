@@ -34,7 +34,7 @@ import io.smallrye.common.constraint.NotNull;
  */
 @Entity(name="dataset")
 @JsonIgnoreType
-public class DataSetDAO extends OwnedEntityBase {
+public class DatasetDAO extends OwnedEntityBase {
 
    @Id
    @SequenceGenerator(
@@ -97,33 +97,33 @@ public class DataSetDAO extends OwnedEntityBase {
       }
    }
 
-   public DataSetDAO.Info getInfo() {
-      return new DataSetDAO.Info(id, run.id, ordinal, testid);
+   public DatasetDAO.Info getInfo() {
+      return new DatasetDAO.Info(id, run.id, ordinal, testid);
    }
 
    public static class EventNew {
-      public DataSetDAO dataset;
+      public DatasetDAO dataset;
       public boolean isRecalculation;
 
       public EventNew() {}
 
-      public EventNew(DataSetDAO dataset, boolean isRecalculation) {
+      public EventNew(DatasetDAO dataset, boolean isRecalculation) {
          this.dataset = dataset;
          this.isRecalculation = isRecalculation;
       }
 
       @Override
       public String toString() {
-         return "DataSet.EventNew{" +
+         return "Dataset.EventNew{" +
                  "dataset=" + dataset.id + " (" + dataset.run.id + "/" + dataset.ordinal +
                  "), isRecalculation=" + isRecalculation +
                  '}';
       }
    }
 
-   public DataSetDAO() {}
+   public DatasetDAO() {}
 
-   public DataSetDAO(RunDAO run, int ordinal, String description, JsonNode data) {
+   public DatasetDAO(RunDAO run, int ordinal, String description, JsonNode data) {
       this.run = run;
       this.start = run.start;
       this.stop = run.stop;

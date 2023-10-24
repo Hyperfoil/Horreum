@@ -1,10 +1,8 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.api.data.Run;
 
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class RunMapper {
@@ -22,7 +20,7 @@ public class RunMapper {
         if(run.validationErrors != null)
             dto.validationErrors = run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList());
         if(run.datasets != null)
-            dto.datasets = run.datasets.stream().map(DataSetMapper::from).collect(Collectors.toList());
+            dto.datasets = run.datasets.stream().map(DatasetMapper::from).collect(Collectors.toList());
         dto.owner = run.owner;
         dto.access = run.access;
 
@@ -43,7 +41,7 @@ public class RunMapper {
            run.validationErrors = dto.validationErrors.stream().map(ValidationErrorMapper::toValidationError).collect(Collectors.toList());
        }
        if(dto.datasets != null) {
-           run.datasets = dto.datasets.stream().map(dsDTO -> DataSetMapper.to(dsDTO, run)).collect(Collectors.toList());
+           run.datasets = dto.datasets.stream().map(dsDTO -> DatasetMapper.to(dsDTO, run)).collect(Collectors.toList());
        }
 
        return run;

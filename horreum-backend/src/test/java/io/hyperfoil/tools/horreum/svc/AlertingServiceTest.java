@@ -23,7 +23,7 @@ import java.util.stream.IntStream;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.alerting.RunExpectation;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.inject.Inject;
 
@@ -316,7 +316,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       uploadRun(runWithValue(3, schema).put("foo", "bbb"), test.name);
       assertNull(datapointQueue.poll(50, TimeUnit.MILLISECONDS));
-      assertEquals(3, DataSetDAO.count());
+      assertEquals(3, DatasetDAO.count());
       assertEquals(1, DataPointDAO.count());
       em.clear();
 
@@ -326,7 +326,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       uploadRun(runWithValue(4, schema).put("foo", "bbb").put("bar", "aaa"), test.name);
       assertValue(datapointQueue, 4);
-      assertEquals(4, DataSetDAO.count());
+      assertEquals(4, DatasetDAO.count());
       assertEquals(2, DataPointDAO.count());
 
       recalculateDatapoints(test.id);
@@ -368,13 +368,13 @@ public class AlertingServiceTest extends BaseServiceTest {
       int firstRuleId = addMissingDataRule(test, "my rule", jsonArray("value"), "value => value > 2", 10000);
       assertTrue(firstRuleId > 0);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> newDatasetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       long now = System.currentTimeMillis();
       uploadRun(now - 20000, runWithValue(3, schema), test.name);
-      DataSet.EventNew firstEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      Dataset.EventNew firstEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(firstEvent);
       uploadRun(now - 5000, runWithValue(1, schema), test.name);
-      DataSet.EventNew secondEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      Dataset.EventNew secondEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(secondEvent);
       // only the matching dataset will be present
       pollMissingDataRuleResultsByRule(firstRuleId, firstEvent.datasetId);
@@ -401,7 +401,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       em.clear();
 
       int thirdRunId = uploadRun(now - 5000, runWithValue(3, schema), test.name);
-      DataSet.EventNew thirdEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      Dataset.EventNew thirdEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(thirdEvent);
       pollMissingDataRuleResultsByRule(firstRuleId, firstEvent.datasetId, thirdEvent.datasetId);
       alertingService.checkMissingDataset();

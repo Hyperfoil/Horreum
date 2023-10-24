@@ -44,7 +44,7 @@ public class Run {
     public boolean trashed;
     @JsonIgnore
     @Schema(description = "Collection of Datasets derived from Run payload")
-    public Collection<DataSet> datasets;
+    public Collection<Dataset> datasets;
     @Schema(description = "Collection of Validation Errors in Run payload")
     public Collection<ValidationError> validationErrors;
     @NotNull

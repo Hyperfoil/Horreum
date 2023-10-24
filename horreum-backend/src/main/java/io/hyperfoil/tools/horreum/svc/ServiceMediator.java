@@ -5,14 +5,13 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.Action;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
-import io.quarkus.runtime.Startup;
 import io.smallrye.reactive.messaging.annotations.Blocking;
 import io.vertx.core.Vertx;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,7 +23,6 @@ import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.eclipse.microprofile.reactive.messaging.OnOverflow;
-import org.eclipse.microprofile.reactive.messaging.Outgoing;
 
 @ApplicationScoped
 public class ServiceMediator {
@@ -73,7 +71,7 @@ public class ServiceMediator {
 
     @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
     @Channel("dataset-event-out")
-    Emitter<DataSet.EventNew> dataSetEmitter;
+    Emitter<Dataset.EventNew> dataSetEmitter;
 
     @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
     @Channel("run-recalc-out")
@@ -122,11 +120,11 @@ public class ServiceMediator {
     }
 
     @Transactional
-    void updateLabels(DataSet.LabelsUpdatedEvent event) {
+    void updateLabels(Dataset.LabelsUpdatedEvent event) {
         alertingService.onLabelsUpdated(event);
     }
 
-    void newDataSet(DataSet.EventNew eventNew) {
+    void newDataset(Dataset.EventNew eventNew) {
         //Note: should we call onNewDataset which will enable a lock?
         datasetService.onNewDataset(eventNew);
     }
@@ -140,13 +138,13 @@ public class ServiceMediator {
     @Incoming("dataset-event-in")
     @Blocking(ordered = false, value = "horreum.dataset.pool")
     @ActivateRequestContext
-    public void processDatasetEvents(DataSet.EventNew newEvent) {
+    public void processDatasetEvents(Dataset.EventNew newEvent) {
             datasetService.onNewDatasetNoLock(newEvent);
             validateDataset(newEvent.datasetId);
     }
 
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
-    void queueDatasetEvents(DataSet.EventNew event) {
+    void queueDatasetEvents(Dataset.EventNew event) {
         dataSetEmitter.send(event);
     }
     @Incoming("run-recalc-in")

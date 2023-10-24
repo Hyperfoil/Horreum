@@ -33,7 +33,7 @@ export default function DatasetData(props: DatasetDataProps) {
     const [hasExperiments, setHasExperiments] = useState(false)
     const [experimentsOpen, setExperimentsOpen] = useState(false)
     useEffect(() => {
-        Api.datasetServiceGetDataSet(props.datasetId)
+        Api.datasetServiceGetDataset(props.datasetId)
             .then(
                 dataset => {
                     setOriginalData(dataset.data)

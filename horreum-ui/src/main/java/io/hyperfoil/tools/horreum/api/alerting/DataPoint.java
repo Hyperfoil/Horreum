@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.api.alerting;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
@@ -31,13 +31,13 @@ public class DataPoint {
     }
 
     public static class DatasetProcessedEvent {
-        public DataSet.Info dataset;
+        public Dataset.Info dataset;
         public boolean notify;
 
         public DatasetProcessedEvent() {
         }
 
-        public DatasetProcessedEvent(DataSet.Info dataset, boolean notify) {
+        public DatasetProcessedEvent(Dataset.Info dataset, boolean notify) {
             this.dataset = dataset;
             this.notify = notify;
         }

@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
+
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
@@ -19,6 +21,9 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+
+import java.util.List;
+
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -28,8 +33,6 @@ import org.eclipse.microprofile.openapi.annotations.parameters.Parameters;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
-
-import java.util.List;
 
 @Path("/api/dataset")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -47,10 +50,10 @@ public interface DatasetService {
            responseCode = "404",
            description = "No Dataset with the given id was found",
            content = @Content(mediaType = "application/json"))
-   @APIResponseSchema(value = DataSet.class,
+   @APIResponseSchema(value = Dataset.class,
            responseDescription = "JVM system properties of a particular host.",
            responseCode = "200")
-   DataSet getDataSet(@PathParam("id") int datasetId);
+   Dataset getDataset(@PathParam("id") int datasetId);
 
    @Path("list/{testId}")
    @GET

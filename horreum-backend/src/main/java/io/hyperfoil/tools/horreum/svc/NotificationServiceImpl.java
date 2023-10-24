@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -28,7 +27,7 @@ import org.jboss.logging.Logger;
 import io.hyperfoil.tools.horreum.api.services.NotificationService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettingsDAO;
-import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.notification.Notification;
@@ -98,7 +97,7 @@ public class NotificationServiceImpl implements NotificationService {
       String testName = test == null ? "unknown" : test.name;
       log.debugf("Received missing values event in test %d (%s), run %d, variables %s", event.dataset.testId, testName, event.dataset.id, event.variables);
 
-      String fingerprint = em.getReference(DataSetDAO.class, event.dataset.id).getFingerprint();
+      String fingerprint = em.getReference(DatasetDAO.class, event.dataset.id).getFingerprint();
       notifyAll(event.dataset.testId, n -> n.notifyMissingValues(testName, fingerprint, event));
    }
 

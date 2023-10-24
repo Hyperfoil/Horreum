@@ -22,13 +22,13 @@ import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 import io.hyperfoil.tools.horreum.entity.*;
 import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import io.hyperfoil.tools.horreum.entity.data.*;
-import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
+import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.DatasetLogMapper;
 import io.hyperfoil.tools.horreum.mapper.ExperimentProfileMapper;
 import org.hibernate.Hibernate;
@@ -117,12 +117,12 @@ public class ExperimentServiceImpl implements ExperimentService {
    @WithRoles
    @Transactional
    public List<ExperimentResult> runExperiments(int datasetId) {
-      DataSetDAO dataset = DataSetDAO.findById(datasetId);
+      DatasetDAO dataset = DatasetDAO.findById(datasetId);
       if (dataset == null) {
          throw ServiceException.notFound("No dataset " + datasetId);
       }
       List<ExperimentService.ExperimentResult> results = new ArrayList<>();
-      DataSet.Info info = DataSetMapper.fromInfo(dataset.getInfo());
+      Dataset.Info info = DatasetMapper.fromInfo(dataset.getInfo());
       runExperiments(info, results::add, logs -> results.add(
               new ExperimentResult(null, logs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
                       info, Collections.emptyList(),
@@ -151,11 +151,11 @@ public class ExperimentServiceImpl implements ExperimentService {
    private void addLog(List<DatasetLogDAO> logs, int testId, int datasetId, int level, String format, Object... args) {
       String msg = args.length == 0 ? format : String.format(format, args);
       log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
-      logs.add(new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DataSetDAO.class, datasetId),
+      logs.add(new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DatasetDAO.class, datasetId),
             level, "experiment", msg));
    }
 
-   private void runExperiments(DataSet.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLogDAO>> noProfileConsumer, boolean notify) {
+   private void runExperiments(Dataset.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLogDAO>> noProfileConsumer, boolean notify) {
       List<DatasetLogDAO> logs = new ArrayList<>();
 
       Query selectorQuery = em.createNativeQuery("WITH lvalues AS (" +
@@ -266,9 +266,9 @@ public class ExperimentServiceImpl implements ExperimentService {
          }
 
          Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id IN ?1 ORDER BY start DESC");
-         Util.setResultTransformer(datasetQuery, Transformers.aliasToBean(DataSet.Info.class));
-         @SuppressWarnings("unchecked") List<DataSet.Info> baseline =
-               (List<DataSet.Info>) datasetQuery.setParameter(1, entry.getValue()).getResultList();
+         Util.setResultTransformer(datasetQuery, Transformers.aliasToBean(Dataset.Info.class));
+         @SuppressWarnings("unchecked") List<Dataset.Info> baseline =
+               (List<Dataset.Info>) datasetQuery.setParameter(1, entry.getValue()).getResultList();
 
          JsonNode extraLabels = (JsonNode) em.createNativeQuery("SELECT COALESCE(jsonb_object_agg(COALESCE(label.name, ''), lv.value), '{}'::::jsonb) AS value " +
                "FROM experiment_profile ep JOIN label ON json_contains(ep.extra_labels, label.name) " +

@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.report.ReportComment;
 import io.hyperfoil.tools.horreum.api.report.ReportComponent;
 import io.hyperfoil.tools.horreum.api.report.TableReport;
@@ -145,7 +145,7 @@ public class ReportServiceTest extends BaseServiceTest {
    }
 
    private void uploadExampleRuns(Test test) throws InterruptedException {
-      BlockingQueue<DataSet.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
 
       long ts = System.currentTimeMillis();
       uploadRun(ts - 1, createRunData("production", "windows", "jvm", 1, 0.5, 150_000_000, 123) , test.name);
@@ -212,7 +212,7 @@ public class ReportServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest("missing"));
       createComparisonSchema();
 
-      BlockingQueue<DataSet.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
       int runId = uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(queue.poll(10, TimeUnit.SECONDS));
 
@@ -235,7 +235,7 @@ public class ReportServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest("previewMissingComponent"));
       createComparisonSchema();
 
-      BlockingQueue<DataSet.LabelsUpdatedEvent> queue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
       int runId = uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(queue.poll(10, TimeUnit.SECONDS));
 

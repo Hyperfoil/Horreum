@@ -89,7 +89,7 @@ public class SqlServiceImpl implements SqlService {
             String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ?";
             result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, datasetId));
          } else {
-            // This schema-aware query already assumes that DataSet.data is an array of objects with defined schema
+            // This schema-aware query already assumes that Dataset.data is an array of objects with defined schema
             String schemaQuery = "jsonb_path_query(data, '$[*] ? (@.\"$schema\" == $schema)', ('{\"schema\":\"' || ? || '\"}')::::jsonb)";
             String sqlQuery;
             if (!array) {

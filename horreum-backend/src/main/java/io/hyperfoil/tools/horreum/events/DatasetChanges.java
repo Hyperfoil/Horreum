@@ -6,15 +6,13 @@ import java.util.List;
 import java.util.Objects;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
-import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
-import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 
 public class DatasetChanges {
    public static final String EVENT_NEW = "datasetChanges/new";
 
    private static final long EMIT_DELAY = 1000;
-   public DataSet.Info dataset;
+   public Dataset.Info dataset;
    public String fingerprint;
    public String testName;
    private boolean notify;
@@ -23,7 +21,7 @@ public class DatasetChanges {
 
    public DatasetChanges() {}
 
-   public DatasetChanges(DataSet.Info dataset, String fingerprint, String testName, boolean notify) {
+   public DatasetChanges(Dataset.Info dataset, String fingerprint, String testName, boolean notify) {
       this.dataset = Objects.requireNonNull(dataset);
       this.fingerprint = fingerprint;
       this.testName = Objects.requireNonNull(testName);

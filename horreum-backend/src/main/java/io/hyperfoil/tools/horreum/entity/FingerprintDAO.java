@@ -9,11 +9,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 
-import org.hibernate.annotations.Immutable;
-
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import org.hibernate.annotations.Type;
 
@@ -26,7 +24,7 @@ public class FingerprintDAO extends PanacheEntityBase {
    @OneToOne(fetch = FetchType.LAZY)
    @MapsId
    @JoinColumn(name = "dataset_id")
-   public DataSetDAO dataset;
+   public DatasetDAO dataset;
 
    @Type(JsonBinaryType.class)
    @Column(columnDefinition = "jsonb")

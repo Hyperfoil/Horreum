@@ -12,7 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 
-import io.hyperfoil.tools.horreum.entity.data.DataSetDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -35,7 +35,7 @@ public class ChangeDAO extends PanacheEntityBase {
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)
    @JoinColumn(name = "dataset_id")
-   public DataSetDAO dataset;
+   public DatasetDAO dataset;
 
    @NotNull
    @Column(columnDefinition = "timestamp")
@@ -46,7 +46,7 @@ public class ChangeDAO extends PanacheEntityBase {
 
    public String description;
 
-   public DataSetDAO.Info getDatasetId() {
+   public DatasetDAO.Info getDatasetId() {
       if (dataset != null) {
          return dataset.getInfo();
       } else {

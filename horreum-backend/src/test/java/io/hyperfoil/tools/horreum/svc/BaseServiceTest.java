@@ -33,7 +33,7 @@ import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
+import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -180,7 +180,7 @@ public class BaseServiceTest {
             ChangeDetectionDAO.deleteAll();
             VariableDAO.deleteAll();
 
-            DataSetDAO.deleteAll();
+            DatasetDAO.deleteAll();
             RunDAO.deleteAll();
 
             em.createNativeQuery("DELETE FROM label_extractors").executeUpdate();
@@ -559,8 +559,8 @@ public class BaseServiceTest {
       return trashedQueue;
    }
 
-   protected <T> T withExampleDataset(Test test, JsonNode data, Function<DataSet, T> testLogic) {
-      BlockingQueue<DataSet.EventNew> dataSetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+   protected <T> T withExampleDataset(Test test, JsonNode data, Function<Dataset, T> testLogic) {
+      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       try {
          RunDAO run = new RunDAO();
          tm.begin();
@@ -583,21 +583,21 @@ public class BaseServiceTest {
                fail();
             }
          }
-         DataSet.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
+         Dataset.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertTrue(event.datasetId > 0);
          // only to cover the summary call in API
          jsonRequest().get("/api/dataset/" + event.datasetId + "/summary").then().statusCode(200);
-         T value = testLogic.apply(DataSetMapper.from(
-                 DataSetDAO.<DataSetDAO>findById(event.datasetId)));
+         T value = testLogic.apply(DatasetMapper.from(
+                 DatasetDAO.<DatasetDAO>findById(event.datasetId)));
          tm.begin();
          Throwable error = null;
          try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
-            DataSetDAO oldDs = DataSetDAO.findById(event.datasetId);
+            DatasetDAO oldDs = DatasetDAO.findById(event.datasetId);
             if (oldDs != null) {
                oldDs.delete();
             }
-            DataSetDAO.delete("run.id", run.id);
+            DatasetDAO.delete("run.id", run.id);
             RunDAO.findById(run.id).delete();
          } catch (Throwable t) {
             error = t;

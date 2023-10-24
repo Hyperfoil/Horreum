@@ -55,7 +55,7 @@ public class TestServiceTest extends BaseServiceTest {
          assertNotNull(TestDAO.findById(test.id));
       }
 
-      BlockingQueue<DataSet.EventNew> dsQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dsQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       int runId = uploadRun("{ \"foo\" : \"bar\" }", test.name);
       assertNotNull(dsQueue.poll(10, TimeUnit.SECONDS));
 
@@ -71,7 +71,7 @@ public class TestServiceTest extends BaseServiceTest {
          assertNotNull(run);
          assertTrue(run.trashed);
 
-         assertEquals(0, DataSetDAO.count("testid", test.id));
+         assertEquals(0, DatasetDAO.count("testid", test.id));
       }
    }
 
@@ -80,15 +80,15 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> newDatasetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       final int NUM_DATASETS = 5;
       for (int i = 0; i < NUM_DATASETS; ++i) {
          uploadRun(runWithValue(i, schema), test.name);
-         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         Dataset.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertFalse(event.isRecalculation);
       }
-      List<DataSetDAO> datasets = DataSetDAO.list("testid", test.id);
+      List<DatasetDAO> datasets = DatasetDAO.list("testid", test.id);
       assertEquals(NUM_DATASETS, datasets.size());
       int maxId = datasets.stream().mapToInt(ds -> ds.id).max().orElse(0);
 
@@ -100,12 +100,12 @@ public class TestServiceTest extends BaseServiceTest {
          return status.finished == status.totalRuns;
       });
       for (int i = 0; i < NUM_DATASETS; ++i) {
-         DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+         Dataset.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
          assertNotNull(event);
          assertTrue(event.datasetId > maxId);
          assertTrue(event.isRecalculation);
       }
-      datasets = DataSetDAO.list("testid", test.id);
+      datasets = DatasetDAO.list("testid", test.id);
       assertEquals(NUM_DATASETS, datasets.size());
       datasets.forEach(ds -> {
          assertTrue(ds.id > maxId);
@@ -136,9 +136,9 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.EventNew> newDatasetQueue = eventConsumerQueue(DataSet.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> newDatasetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
       uploadRun(runWithValue(42, schema), test.name);
-      DataSet.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
+      Dataset.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
 
       ViewComponent vc = new ViewComponent();
@@ -174,7 +174,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<DataSet.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(DataSet.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
       uploadRun(runWithValue(42, schema), test.name);
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));

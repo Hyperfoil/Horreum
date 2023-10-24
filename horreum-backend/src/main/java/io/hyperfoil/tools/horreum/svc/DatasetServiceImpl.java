@@ -22,10 +22,10 @@ import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.data.DataSet;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.entity.data.*;
-import io.hyperfoil.tools.horreum.mapper.DataSetMapper;
+import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import jakarta.ws.rs.DefaultValue;
 import org.hibernate.Hibernate;
 import org.hibernate.query.NativeQuery;
@@ -196,7 +196,7 @@ public class DatasetServiceImpl implements DatasetService {
       DatasetService.DatasetList list = new DatasetService.DatasetList();
       //noinspection unchecked
       list.datasets = query.getResultList();
-      list.total = DataSetDAO.count("testid = ?1", testId);
+      list.total = DatasetDAO.count("testid = ?1", testId);
       return list;
    }
 
@@ -289,7 +289,7 @@ public class DatasetServiceImpl implements DatasetService {
    public LabelPreview previewLabel(int datasetId, Label label) {
       // This is executed with elevated permissions, but with the same as a normal label calculation would use
       // Therefore we need to explicitly check dataset ownership
-      DataSetDAO dataset = DataSetDAO.findById(datasetId);
+      DatasetDAO dataset = DatasetDAO.findById(datasetId);
       if (dataset == null || !Roles.hasRoleWithSuffix(identity, dataset.owner, "-tester")) {
          throw ServiceException.badRequest("Dataset not found or insufficient privileges.");
       }
@@ -344,12 +344,12 @@ public class DatasetServiceImpl implements DatasetService {
    @WithToken
    @WithRoles
    @Override
-   public DataSet getDataSet(int datasetId) {
-      DataSetDAO dataset = DataSetDAO.findById(datasetId);
+   public Dataset getDataset(int datasetId) {
+      DatasetDAO dataset = DatasetDAO.findById(datasetId);
       if (dataset != null) {
          Hibernate.initialize(dataset.data);
       }
-      return DataSetMapper.from(dataset);
+      return DatasetMapper.from(dataset);
    }
 
    public void onLabelChanged(String param) {
@@ -409,9 +409,9 @@ public class DatasetServiceImpl implements DatasetService {
             out -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
 
       createFingerprint(datasetId, testId);
-      mediator.updateLabels(new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+      mediator.updateLabels(new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
       if(mediator.testMode())
-         messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new DataSet.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+         messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
    }
 
    @Transactional
@@ -419,7 +419,7 @@ public class DatasetServiceImpl implements DatasetService {
       em.createNativeQuery("DELETE FROM label_values WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
       em.createNativeQuery("DELETE FROM dataset_schemas WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
       em.createNativeQuery("DELETE FROM fingerprint WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
-      DataSetDAO.deleteById(datasetId);
+      DatasetDAO.deleteById(datasetId);
    }
 
    private ArrayNode flatten(ArrayNode bucket){
@@ -483,7 +483,7 @@ public class DatasetServiceImpl implements DatasetService {
 
       FingerprintDAO fp = new FingerprintDAO();
       fp.datasetId = datasetId;
-      fp.dataset = DataSetDAO.findById(datasetId);
+      fp.dataset = DatasetDAO.findById(datasetId);
       fp.fingerprint = fpNode;
       if(fp.datasetId > 0 && fp.dataset != null)
          fp.persist();
@@ -491,7 +491,7 @@ public class DatasetServiceImpl implements DatasetService {
 
    @Transactional
    void updateFingerprints(int testId) {
-      for(var dataset : DataSetDAO.<DataSetDAO>find("testid", testId).list()) {
+      for(var dataset : DatasetDAO.<DatasetDAO>find("testid", testId).list()) {
          FingerprintDAO.deleteById(dataset.id);
          createFingerprint(dataset.id, testId);
       }
@@ -506,14 +506,14 @@ public class DatasetServiceImpl implements DatasetService {
       }
    }
 
-   public void onNewDataset(DataSet.EventNew event) {
+   public void onNewDataset(Dataset.EventNew event) {
       withRecalculationLock(() -> calculateLabels(event.testId, event.datasetId, event.labelId, event.isRecalculation));
    }
 
    public void onNewDataset(int testId, int datasetId, int labelId, boolean isRecalculation) {
       withRecalculationLock(() -> calculateLabels(testId, datasetId, labelId, isRecalculation));
    }
-   public void onNewDatasetNoLock(DataSet.EventNew event) {
+   public void onNewDatasetNoLock(Dataset.EventNew event) {
       calculateLabels(event.testId, event.datasetId, event.labelId , event.isRecalculation);
    }
 
@@ -525,10 +525,10 @@ public class DatasetServiceImpl implements DatasetService {
 
    private void logMessage(int datasetId, int level, String message, Object... params) {
       String msg = String.format(message, params);
-      DataSetDAO dataset = DataSetDAO.findById(datasetId);
+      DatasetDAO dataset = DatasetDAO.findById(datasetId);
       if(dataset != null) {
          log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), dataset.testid, datasetId, msg);
-         new DatasetLogDAO(em.getReference(TestDAO.class, dataset.testid), em.getReference(DataSetDAO.class, datasetId), level, "labels", msg).persist();
+         new DatasetLogDAO(em.getReference(TestDAO.class, dataset.testid), em.getReference(DatasetDAO.class, datasetId), level, "labels", msg).persist();
       }
    }
 }
