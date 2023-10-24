@@ -24,7 +24,7 @@ import io.hyperfoil.tools.horreum.api.alerting.NotificationSettings;
 import io.hyperfoil.tools.horreum.mapper.NotificationSettingsMapper;
 import org.jboss.logging.Logger;
 
-import io.hyperfoil.tools.horreum.api.services.NotificationService;
+import io.hyperfoil.tools.horreum.api.internal.services.NotificationService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettingsDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;

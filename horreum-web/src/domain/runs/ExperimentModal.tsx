@@ -6,7 +6,7 @@ import { TableComposable, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-tab
 import { useDispatch } from "react-redux"
 import { NavLink } from "react-router-dom"
 import { dispatchError } from "../../alerts"
-import Api, { ExperimentResult } from "../../api"
+import {experimentApi, ExperimentResult} from "../../api"
 import { LogLevelIcon } from "../../components/LogModal"
 import { interleave } from "../../utils"
 
@@ -23,7 +23,7 @@ export default function ExperimentModal(props: ExperimentModalProps) {
     const dispatch = useDispatch()
     useEffect(() => {
         if (props.isOpen && !results) {
-            Api.experimentServiceRunExperiments(props.datasetId).then(
+            experimentApi.runExperiments(props.datasetId).then(
                 results => {
                     setResults(results)
                     if (results.length > 0 && results[0].profile) {

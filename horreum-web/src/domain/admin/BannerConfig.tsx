@@ -15,10 +15,10 @@ import {
 import Editor from "../../components/Editor/monaco/Editor"
 import { alertAction, dispatchInfo } from "../../alerts"
 import { isAdminSelector } from "../../auth"
-import Api from "../../api"
+import {bannerApi} from "../../api"
 
 function setBanner(severity: string, title: string, message: string) {
-    return Api.bannerServiceSet({ severity, title, message, active: true })
+    return bannerApi.set({ severity, title, message, active: true })
 }
 
 export default function BannerConfig() {
@@ -29,7 +29,7 @@ export default function BannerConfig() {
     const isAdmin = useSelector(isAdminSelector)
     const dispatch = useDispatch()
     useEffect(() => {
-        Api.bannerServiceGet().then(
+        bannerApi.get().then(
             banner => {
                 if (banner) {
                     setSeverity(banner.severity)

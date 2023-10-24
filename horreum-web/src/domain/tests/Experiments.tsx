@@ -18,7 +18,7 @@ import {
     TextInput,
 } from "@patternfly/react-core"
 
-import Api, { ConditionConfig, Test, Variable } from "../../api"
+import {alertingApi, ConditionConfig, experimentApi, Test, Variable} from "../../api"
 import { useTester } from "../../auth"
 import HelpButton from "../../components/HelpButton"
 import Labels from "../../components/Labels"
@@ -57,7 +57,7 @@ export default function Experiments(props: ExperimentsProps) {
         }
         setLoading(true)
         Promise.all([
-            Api.experimentServiceProfiles(testId).then(
+            experimentApi.profiles(testId).then(
                 ps => {
                     setProfiles(ps)
                     if (ps.length > 0) {
@@ -67,13 +67,13 @@ export default function Experiments(props: ExperimentsProps) {
                 error =>
                     dispatchError(dispatch, error, "FETCH_EXPERIMENT_PROFILES", "Cannot fetch experiment profiles.")
             ),
-            Api.alertingServiceVariables(testId).then(setVariables, error =>
+            alertingApi.variables(testId).then(setVariables, error =>
                 dispatchError(dispatch, error, "FETCH_VARIABLES", "Cannot fetch change detection variables")
             ),
         ]).finally(() => setLoading(false))
     }, [props.test?.id, resetCounter])
     useEffect(() => {
-        Api.experimentServiceModels().then(setModels, error =>
+        experimentApi.models().then(setModels, error =>
             dispatchError(dispatch, error, "FETCH_EXPERIMENT_MODELS", "Cannot fetch experiment condition models")
         )
     }, [])
@@ -93,7 +93,7 @@ export default function Experiments(props: ExperimentsProps) {
                 ...profiles
                     .filter(p => Object.prototype.hasOwnProperty.call(p, "modified"))
                     .map(p =>
-                        Api.experimentServiceAddOrUpdateProfile(testId, p).then(
+                        experimentApi.addOrUpdateProfile(testId, p).then(
                             id => {
                                 p.id = id
                                 dispatchInfo(
@@ -114,7 +114,7 @@ export default function Experiments(props: ExperimentsProps) {
                         )
                     ),
                 ...deleted.map(id => {
-                    Api.experimentServiceDeleteProfile(id, testId).then(
+                    experimentApi.deleteProfile(id, testId).then(
                         () =>
                             dispatchInfo(
                                 dispatch,

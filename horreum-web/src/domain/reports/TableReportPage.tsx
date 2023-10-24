@@ -20,7 +20,7 @@ import { Link } from "react-router-dom"
 import { alertAction } from "../../alerts"
 import { useTester } from "../../auth"
 
-import Api, { TableReport } from "../../api"
+import {reportApi, TableReport} from "../../api"
 import TableReportView from "./TableReportView"
 import ButtonLink from "../../components/ButtonLink"
 import PrintButton from "../../components/PrintButton"
@@ -37,7 +37,7 @@ export default function TableReportPage() {
         if (id) {
             setLoading(true)
             document.title = "Loading report... | Horreum"
-            Api.reportServiceGetTableReport(id)
+            reportApi.getTableReport(id)
                 .then(
                     report => {
                         document.title = report.config.title + " | Horreum"

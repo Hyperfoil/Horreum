@@ -18,7 +18,19 @@ import {
     UpdateRunsAndDatasetsAction,
     LoadedViewsAction,
 } from "./reducers"
-import Api, { Access, Action, Test, Transformer, View, Watch } from "../../api"
+import {
+    uiApi,
+    testApi,
+    subscriptionsApi,
+    Access,
+    Action,
+    Test,
+    Transformer,
+    View,
+    Watch,
+    alertingApi,
+    actionApi
+} from "../../api"
 import { Dispatch } from "redux"
 import { Map } from "immutable"
 import { alertAction, AddAlertAction, constraintValidationFormatter, dispatchError } from "../../alerts"
@@ -30,7 +42,7 @@ function loading(isLoading: boolean): LoadingAction {
 export function fetchSummary(roles?: string, folder?: string) {
     return (dispatch: Dispatch<LoadingAction | LoadedSummaryAction | AddAlertAction>) => {
         dispatch(loading(true))
-        return Api.testServiceSummary(folder, roles).then(
+        return testApi.summary(folder, roles).then(
             listing =>
                 dispatch({
                     type: actionTypes.LOADED_SUMMARY,
@@ -47,7 +59,7 @@ export function fetchSummary(roles?: string, folder?: string) {
 export function fetchTest(id: number) {
     return (dispatch: Dispatch<LoadingAction | LoadedTestAction | AddAlertAction>) => {
         dispatch(loading(true))
-        return Api.testServiceGet(id).then(
+        return testApi.get(id).then(
             test => dispatch({ type: actionTypes.LOADED_TEST, test }),
             error => {
                 dispatch(loading(false))
@@ -64,7 +76,7 @@ export function fetchTest(id: number) {
 
 export function sendTest(test: Test) {
     return (dispatch: Dispatch<LoadedTestAction | AddAlertAction>) => {
-        return Api.testServiceAdd(test).then(
+        return testApi.add(test).then(
             response => {
                 dispatch({ type: actionTypes.LOADED_TEST, test: response })
                 return response
@@ -84,7 +96,7 @@ export function sendTest(test: Test) {
 export function fetchViews(testId: number) {
     return (dispatch: Dispatch<LoadingAction | LoadedViewsAction | AddAlertAction>) => {
         dispatch(loading(true))
-        return Api.uIServiceGetViews(testId).then(
+        return uiApi.getViews(testId).then(
             views => dispatch({ type: actionTypes.LOADED_VIEWS, testId, views }),
             error => {
                 dispatch(loading(false))
@@ -114,7 +126,7 @@ export function updateView(testId: number, view: View) {
             }
         }
         view.testId = testId
-        return Api.uIServiceUpdateView(view).then(
+        return uiApi.updateView(view).then(
             viewId => {
                 const id: number = ensureInteger(viewId)
                 dispatch({
@@ -134,7 +146,7 @@ export function updateView(testId: number, view: View) {
 
 export function deleteView(testId: number, viewId: number) {
     return (dispatch: Dispatch<DeleteViewAction | AddAlertAction>) => {
-        return Api.uIServiceDeleteView(testId, viewId).then(
+        return uiApi.deleteView(testId, viewId).then(
             _ => {
                 dispatch({
                     type: actionTypes.DELETE_VIEW,
@@ -150,7 +162,7 @@ export function deleteView(testId: number, viewId: number) {
 
 export function updateFolder(testId: number, prevFolder: string, newFolder: string) {
     return (dispatch: Dispatch<UpdateFolderAction | AddAlertAction>) =>
-        Api.testServiceUpdateFolder(testId, newFolder).then(
+        testApi.updateFolder(testId, newFolder).then(
             _ =>
                 dispatch({
                     type: actionTypes.UPDATE_FOLDER,
@@ -168,7 +180,7 @@ export function updateActions(testId: number, actions: Action[]) {
         actions.forEach(action => {
             promises.push(
                 (action.testId = testId),
-                Api.actionServiceUpdate(action).then(
+                actionApi.update(action).then(
                     response => {
                         dispatch({
                             type: actionTypes.UPDATE_ACTION,
@@ -193,9 +205,9 @@ export function updateActions(testId: number, actions: Action[]) {
 
 export function addToken(testId: number, value: string, description: string, permissions: number) {
     return (dispatch: Dispatch<UpdateTokensAction | AddAlertAction>) =>
-        Api.testServiceAddToken(testId, { id: -1, value, description, permissions }).then(
+        testApi.addToken(testId, { id: -1, value, description, permissions }).then(
             () =>
-                Api.testServiceTokens(testId).then(
+                testApi.tokens(testId).then(
                     tokens =>
                         dispatch({
                             type: actionTypes.UPDATE_TOKENS,
@@ -211,7 +223,7 @@ export function addToken(testId: number, value: string, description: string, per
 
 export function revokeToken(testId: number, tokenId: number) {
     return (dispatch: Dispatch<RevokeTokenAction | AddAlertAction>) =>
-        Api.testServiceDropToken(testId, tokenId).then(
+        testApi.dropToken(testId, tokenId).then(
             () =>
                 dispatch({
                     type: actionTypes.REVOKE_TOKEN,
@@ -224,7 +236,7 @@ export function revokeToken(testId: number, tokenId: number) {
 
 export function updateAccess(id: number, owner: string, access: Access) {
     return (dispatch: Dispatch<UpdateAccessAction | AddAlertAction>) =>
-        Api.testServiceUpdateAccess(id, access, owner).then(
+        testApi.updateAccess(id, access, owner).then(
             () => dispatch({ type: actionTypes.UPDATE_ACCESS, id, owner, access }),
             error =>
                 dispatchError(
@@ -239,7 +251,7 @@ export function updateAccess(id: number, owner: string, access: Access) {
 
 export function deleteTest(id: number) {
     return (dispatch: Dispatch<DeleteAction | AddAlertAction>) =>
-        Api.testServiceDelete(id).then(
+        testApi._delete(id).then(
             () => dispatch({ type: actionTypes.DELETE, id }),
             error => dispatchError(dispatch, error, "DELETE_TEST", "Failed to delete test " + id)
         )
@@ -247,7 +259,7 @@ export function deleteTest(id: number) {
 
 export function allSubscriptions(folder?: string) {
     return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
-        Api.subscriptionServiceAll(folder).then(
+        subscriptionsApi.all(folder).then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -263,7 +275,7 @@ function watchToList(watch: Watch) {
 
 export function getSubscription(testId: number) {
     return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
-        Api.subscriptionServiceGet(testId).then(
+        subscriptionsApi.get(testId).then(
             watch => {
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -277,7 +289,7 @@ export function getSubscription(testId: number) {
 
 export function updateSubscription(watch: Watch) {
     return (dispatch: Dispatch<UpdateTestWatchAction | AddAlertAction>) =>
-        Api.subscriptionServiceUpdate(watch.testId, watch).then(
+        subscriptionsApi.update(watch.testId, watch).then(
             () =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -293,7 +305,7 @@ export function addUserOrTeam(id: number, userOrTeam: string) {
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map([[id, undefined]]),
         })
-        return Api.subscriptionServiceAddUserOrTeam(id, userOrTeam).then(
+        return subscriptionsApi.addUserOrTeam(id, userOrTeam).then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -310,7 +322,7 @@ export function removeUserOrTeam(id: number, userOrTeam: string) {
             type: actionTypes.UPDATE_TEST_WATCH,
             byId: Map([[id, undefined]]),
         })
-        return Api.subscriptionServiceRemoveUserOrTeam(id, userOrTeam).then(
+        return subscriptionsApi.removeUserOrTeam(id, userOrTeam).then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_TEST_WATCH,
@@ -323,7 +335,7 @@ export function removeUserOrTeam(id: number, userOrTeam: string) {
 
 export function fetchFolders() {
     return (dispatch: Dispatch<UpdateFoldersAction | AddAlertAction>) => {
-        return Api.testServiceFolders().then(
+        return testApi.folders().then(
             response =>
                 dispatch({
                     type: actionTypes.UPDATE_FOLDERS,
@@ -336,7 +348,7 @@ export function fetchFolders() {
 
 export function updateTransformers(testId: number, transformers: Transformer[]) {
     return (dispatch: Dispatch<UpdateTransformersAction | AddAlertAction>) => {
-        return Api.testServiceUpdateTransformers(
+        return testApi.updateTransformers(
             testId,
             transformers.map(t => t.id)
         ).then(
@@ -366,7 +378,7 @@ export function updateChangeDetection(
             fingerprintLabels,
             fingerprintFilter,
         }
-        return Api.alertingServiceUpdateChangeDetection(testId, update).then(
+        return alertingApi.updateChangeDetection(testId, update).then(
             () =>
                 dispatch({
                     type: actionTypes.UPDATE_CHANGE_DETECTION,

@@ -3,7 +3,7 @@ import { Bullseye, Button, Dropdown, DropdownItem, DropdownToggle, Modal, Spinne
 import { QuestionCircleIcon } from "@patternfly/react-icons"
 import { Table, TableBody } from "@patternfly/react-table"
 
-import Api from "./api"
+import { configApi } from "./api"
 import { formatDateTime } from "./utils"
 
 type VersionInfo = {
@@ -22,7 +22,7 @@ export default function About() {
     const [versionInfo, setVersionInfo] = useState<VersionInfo>()
     useEffect(() => {
         if (isModalOpen) {
-            Api.configServiceVersion().then(
+            configApi.version().then(
                 response => setVersionInfo(response),
                 _ => setVersionInfo(VERSION_ERROR)
             )

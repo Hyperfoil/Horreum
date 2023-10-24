@@ -3,7 +3,7 @@ import { useDispatch } from "react-redux"
 
 import { ActionGroup, Button, Form, FormGroup, TextInput } from "@patternfly/react-core"
 import NotificationMethodSelect from "../../components/NotificationMethodSelect"
-import Api from "../../api"
+import { notificationsApi } from "../../api"
 import { dispatchInfo, dispatchError } from "../../alerts"
 
 export default function Notifications() {
@@ -21,7 +21,7 @@ export default function Notifications() {
             <ActionGroup>
                 <Button
                     onClick={() =>
-                        Api.notificationServiceTestNotifications(data, method).then(
+                        notificationsApi.testNotifications(data, method).then(
                             () =>
                                 dispatchInfo(
                                     dispatch,

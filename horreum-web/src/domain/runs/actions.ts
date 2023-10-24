@@ -16,7 +16,7 @@ import {
     UpdateDatasetsAction,
 } from "../runs/reducers"
 import * as actionTypes from "./actionTypes"
-import Api, {RunExtended, RunSummary, SortDirection} from "../../api"
+import {runApi, RunExtended, RunSummary, SortDirection} from "../../api"
 import { isFetchingSuggestions, suggestQuery } from "./selectors"
 import store from "../../store"
 import { PaginationInfo } from "../../utils"
@@ -37,7 +37,7 @@ const testId = (id: number, runs: RunSummary[], total: number): TestIdAction => 
 
 export function get(id: number, token?: string) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        Api.runServiceGetRun(id, token).then(
+        runApi.getRun(id, token).then(
             response => dispatch(loaded(response)),
             error => {
                 dispatch(alertAction("FETCH_RUN", "Failed to fetch data for run " + id, error))
@@ -49,7 +49,7 @@ export function get(id: number, token?: string) {
 
 export function getSummary(id: number, token?: string) {
     return (dispatch: Dispatch<LoadedAction | AddAlertAction>) =>
-        Api.runServiceGetRunSummary(id, token).then(
+        runApi.getRunSummary(id, token).then(
             response =>
                 dispatch(
                     loaded({
@@ -70,7 +70,7 @@ export function getSummary(id: number, token?: string) {
 export function byTest(id: number, pagination: PaginationInfo, trashed: boolean) {
     return (dispatch: Dispatch<LoadingAction | TestIdAction | AddAlertAction>) => {
         dispatch({ type: actionTypes.LOADING })
-        return Api.runServiceListTestRuns(
+        return runApi.listTestRuns(
             id,
             pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             pagination.perPage,
@@ -114,7 +114,7 @@ function fetchSuggestions(
     roles: string,
     dispatch: Dispatch<SuggestAction | LoadSuggestionsAction | AddAlertAction>
 ) {
-    Api.runServiceAutocomplete(query)
+    runApi.autocomplete(query)
         .then(
             response => {
                 dispatch({
@@ -149,7 +149,7 @@ export const selectRoles = (selection: Team): SelectRolesAction => {
 
 export function resetToken(id: number, testid: number) {
     return (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) => {
-        return Api.runServiceResetToken(id).then(
+        return runApi.resetToken(id).then(
             token => {
                 dispatch({
                     type: actionTypes.UPDATE_TOKEN,
@@ -164,7 +164,7 @@ export function resetToken(id: number, testid: number) {
 }
 
 export const dropToken = (id: number, testid: number) => (dispatch: Dispatch<UpdateTokenAction | AddAlertAction>) => {
-    return Api.runServiceDropToken(id).then(
+    return runApi.dropToken(id).then(
         _ => {
             dispatch({
                 type: actionTypes.UPDATE_TOKEN,
@@ -179,7 +179,7 @@ export const dropToken = (id: number, testid: number) => (dispatch: Dispatch<Upd
 
 export function updateAccess(id: number, testid: number, owner: string, access: Access) {
     return (dispatch: Dispatch<UpdateAccessAction | AddAlertAction>) => {
-        return Api.runServiceUpdateAccess(id, access, owner).then(
+        return runApi.updateAccess(id, access, owner).then(
             _ => {
                 dispatch({
                     type: actionTypes.UPDATE_ACCESS,
@@ -196,7 +196,7 @@ export function updateAccess(id: number, testid: number, owner: string, access: 
 
 export function trash(id: number, testid: number, isTrashed = true) {
     return (dispatch: Dispatch<TrashAction | AddAlertAction>) =>
-        Api.runServiceTrash(id, isTrashed).then(
+        runApi.trash(id, isTrashed).then(
             _ => {
                 dispatch({
                     type: actionTypes.TRASH,
@@ -211,7 +211,7 @@ export function trash(id: number, testid: number, isTrashed = true) {
 
 export function updateDescription(id: number, testid: number, description: string) {
     return (dispatch: Dispatch<UpdateDescriptionAction | AddAlertAction>) =>
-        Api.runServiceUpdateDescription(id, description).then(
+        runApi.updateDescription(id, description).then(
             _ => {
                 dispatch({
                     type: actionTypes.UPDATE_DESCRIPTION,
@@ -226,7 +226,7 @@ export function updateDescription(id: number, testid: number, description: strin
 
 export function updateSchema(id: number, testid: number, path: string | undefined, schemaUri: string) {
     return (dispatch: Dispatch<UpdateSchemaAction | AddAlertAction>) =>
-        Api.runServiceUpdateSchema(id, schemaUri, path).then(
+        runApi.updateSchema(id, schemaUri, path).then(
             schemas =>
                 dispatch({
                     type: actionTypes.UPDATE_SCHEMA,
@@ -242,7 +242,7 @@ export function updateSchema(id: number, testid: number, path: string | undefine
 
 export function recalculateDatasets(id: number, testid: number) {
     return (dispatch: Dispatch<UpdateDatasetsAction | AddAlertAction>) =>
-        Api.runServiceRecalculateDatasets(id).then(
+        runApi.recalculateDatasets(id).then(
             datasets =>
                 dispatch({
                     type: actionTypes.UPDATE_DATASETS,

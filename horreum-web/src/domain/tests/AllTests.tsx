@@ -47,7 +47,7 @@ import { Access, isAuthenticatedSelector, useTester, teamToName, teamsSelector, 
 import { CellProps, Column, UseSortByColumnOptions } from "react-table"
 import { TestStorage, TestDispatch } from "./reducers"
 import { noop } from "../../utils"
-import Api, { SortDirection, TestQueryResult } from "../../api"
+import { SortDirection, testApi, TestQueryResult } from "../../api"
 
 type WatchDropdownProps = {
     id: number
@@ -295,7 +295,7 @@ export default function AllTests() {
 
     useEffect(() => {
         setLoading(true)
-        Api.testServiceList(
+        testApi.list(
             SortDirection.Ascending,
             pagination.perPage,
             pagination.page - 1

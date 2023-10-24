@@ -6,7 +6,7 @@ import { Button, Checkbox, Form, FormGroup, Modal, Progress } from "@patternfly/
 import { Table, TableBody } from "@patternfly/react-table"
 import { NavLink } from "react-router-dom"
 
-import Api, { DatapointRecalculationStatus, DatasetInfo } from "../../api"
+import {alertingApi, DatapointRecalculationStatus, DatasetInfo} from "../../api"
 import { alertAction } from "../../alerts"
 import TimeRangeSelect, { TimeRange } from "../../components/TimeRangeSelect"
 
@@ -63,7 +63,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
         onClose()
     }
     const fetchProgress = () => {
-        Api.alertingServiceGetRecalculationStatus(testId).then(
+        alertingApi.getRecalculationStatus(testId).then(
             response => {
                 if (response.done) {
                     close()
@@ -104,7 +104,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
                                   variant="primary"
                                   onClick={() => {
                                       setProgress(0)
-                                      Api.alertingServiceRecalculateDatapoints(
+                                      alertingApi.recalculateDatapoints(
                                           testId,
                                           debug,
                                           timeRange?.from,

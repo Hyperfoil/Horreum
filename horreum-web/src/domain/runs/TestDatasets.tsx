@@ -43,7 +43,7 @@ import {
     Column,
     UseSortByColumnOptions,
 } from "react-table"
-import Api, {DatasetSummary, DatasetList, SortDirection} from "../../api"
+import {DatasetSummary, DatasetList, SortDirection, datasetApi, testApi} from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
 import { TestDispatch } from "../tests/reducers"
 import SchemaList from "./SchemaList"
@@ -150,7 +150,7 @@ export default function TestDatasets() {
     }, [dispatch, testId, teams, token])
     useEffect(() => {
         setLoading(true)
-        Api.datasetServiceListByTest(
+        datasetApi.listByTest(
             testId,
             pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             fingerprintToString(filter),
@@ -213,7 +213,7 @@ export default function TestDatasets() {
         })
         return allColumns
     }, [test, token, comparedDatasets, viewId])
-    const labelsSource = useCallback(() => Api.testServiceListLabelValues(testId, true, false), [testId, teams, token])
+    const labelsSource = useCallback(() => testApi.listLabelValues(testId, true, false), [testId, teams, token])
     return (
         <PageSection>
             <Card>

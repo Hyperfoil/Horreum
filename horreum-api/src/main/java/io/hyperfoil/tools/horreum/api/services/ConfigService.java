@@ -8,7 +8,9 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.extensions.Extension;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 
@@ -16,7 +18,8 @@ import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 @PermitAll
 @Path("/api/config")
 @Produces(APPLICATION_JSON)
-//@Tag(name = "config", description = "Endpoint providing configuration for the Horreum System")
+@Tag(name = "Config", description = "Endpoint providing configuration for the Horreum System")
+@Extension(name = "x-smallrye-profile-external", value = "")
 public interface ConfigService {
    long startTimestamp = System.currentTimeMillis();
    String KEYCLOAK_BOOTSTRAP_URL = "/api/config/keycloak";

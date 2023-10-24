@@ -4,7 +4,7 @@ import { useHistory } from "react-router"
 
 import { useTester } from "../../auth"
 import { alertAction } from "../../alerts"
-import Api, { ChangeDetection, ConditionConfig, Variable } from "../../api"
+import { ChangeDetection, ConditionConfig, Variable, alertingApi} from "../../api"
 import { NavLink } from "react-router-dom"
 
 import {
@@ -99,7 +99,7 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm }: TestSelectModalProps) => 
                             if (!t) {
                                 return
                             }
-                            Api.alertingServiceVariables(t.id).then(
+                            alertingApi.variables(t.id).then(
                                 response => setGroups(groupNames(response)),
                                 error => dispatchError(dispatch, error, "FETCH_VARIABLES", "Failed to fetch variables")
                             )
@@ -258,7 +258,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
     // dummy variable to cause reloading of variables
     const [reload, setReload] = useState(0)
     useEffect(() => {
-        Api.alertingServiceVariables(test.id).then(
+        alertingApi.variables(test.id).then(
             response => {
                 response.forEach((v: Variable) => {
                     // convert nulls to undefined
@@ -274,10 +274,10 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
         )
     }, [test.id, reload, dispatch])
     useEffect(() => {
-        Api.alertingServiceChangeDetectionModels().then(setChangeDetectionModels, error =>
+        alertingApi.changeDetectionModels().then(setChangeDetectionModels, error =>
             dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
         )
-        Api.alertingServiceDefaultChangeDetectionConfigs().then(setDefaultChangeDetectionConfigs, error =>
+        alertingApi.defaultChangeDetectionConfigs().then(setDefaultChangeDetectionConfigs, error =>
             dispatch(alertAction("FETCH_MODELS", "Failed to fetch available change detection models.", error))
         )
     }, [])
@@ -311,7 +311,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                         fingerprintFilter
                     )
                 ),
-                Api.alertingServiceUpdateVariables(test.id, variables)
+                alertingApi.updateVariables(test.id, variables)
                     .catch(error =>
                         dispatchError(
                             dispatch,
@@ -607,7 +607,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 isOpen={copyOpen}
                 onClose={() => setCopyOpen(false)}
                 onConfirm={(otherTestId, group) => {
-                    return Api.alertingServiceVariables(otherTestId).then(
+                    return alertingApi.variables(otherTestId).then(
                         response => {
                             const copied = group ? response.filter((v: Variable) => v.group === group) : response
                             setVariables([

@@ -17,7 +17,7 @@ import JsonExtractor from "./JsonExtractor"
 import SplitForm from "../../components/SplitForm"
 import TestLabelModal from "./TestLabelModal"
 
-import Api, { Label } from "../../api"
+import {Label, schemaApi} from "../../api"
 
 const LABEL_FUNCTION_HELP = (
     <>
@@ -59,13 +59,13 @@ export default function Labels({schemaId, schemaUri, funcsRef}: LabelsProps) {
                 ...labels
                     .filter(l => l.modified)
                     .map(l =>
-                        Api.schemaServiceAddOrUpdateLabel(l.schemaId, l).then(id => {
+                        schemaApi.addOrUpdateLabel(l.schemaId, l).then(id => {
                             l.id = id
                             l.modified = false
                         })
                     ),
                 ...deleted.map(l =>
-                    Api.schemaServiceDeleteLabel(l.id, l.schemaId).catch(e => {
+                    schemaApi.deleteLabel(l.id, l.schemaId).catch(e => {
                         setLabels([...labels, l])
                         throw e
                     })
@@ -96,7 +96,7 @@ export default function Labels({schemaId, schemaUri, funcsRef}: LabelsProps) {
     const history = useHistory()
     useEffect(() => {
         setLoading(true)
-        Api.schemaServiceLabels(schemaId)
+        schemaApi.labels(schemaId)
             .then(
                 labels => {
                     setLabels(labels)

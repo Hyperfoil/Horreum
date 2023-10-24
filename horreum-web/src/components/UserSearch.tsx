@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useDispatch } from "react-redux"
 import { Button, Flex, FlexItem, SearchInput } from "@patternfly/react-core"
 import { ArrowRightIcon } from "@patternfly/react-icons"
-import Api, { UserData } from "../api"
+import {userApi, UserData} from "../api"
 import { alertAction } from "../alerts"
 
 type UserSearchProps = {
@@ -17,7 +17,7 @@ export default function UserSearch(props: UserSearchProps) {
             // do not query all users in the system
             return
         }
-        Api.userServiceSearchUsers(query).then(
+        userApi.searchUsers(query).then(
             users => props.onUsers(users),
             error => dispatch(alertAction("USER_LOOKUP", "User lookup failed", error))
         )

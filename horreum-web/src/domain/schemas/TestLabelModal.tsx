@@ -7,7 +7,7 @@ import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 
 import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"
-import Api, {DatasetSummary, Label, SortDirection} from "../../api"
+import {datasetApi, DatasetSummary, Label, SortDirection} from "../../api"
 import { alertAction } from "../../alerts"
 
 type TestLabelModalProps = {
@@ -33,7 +33,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
             return
         }
         setLoading(true)
-        Api.datasetServiceListBySchema(
+        datasetApi.listBySchema(
             props.uri,
             pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             pagination.perPage,
@@ -98,7 +98,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
                                         <Button
                                             onClick={() => {
                                                 setLoading(true)
-                                                Api.datasetServicePreviewLabel(d.id, props.label)
+                                                datasetApi.previewLabel(d.id, props.label)
                                                     .then(
                                                         preview => {
                                                             setResult(preview.value)

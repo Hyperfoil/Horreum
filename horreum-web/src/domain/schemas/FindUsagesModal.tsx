@@ -15,14 +15,14 @@ import {
     Title,
 } from "@patternfly/react-core"
 
-import Api, {
+import {
     LabelLocation,
     LabelInFingerprint,
     LabelInReport,
     LabelInRule,
     LabelInVariable,
     LabelInView,
-    SchemaDescriptor,
+    SchemaDescriptor, schemaApi,
 } from "../../api"
 import { SchemaDispatch } from "./reducers"
 import { dispatchError } from "../../alerts"
@@ -102,7 +102,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
     const [usages, setUsages] = useState<LabelLocation[]>()
     useEffect(() => {
         if (label) {
-            Api.schemaServiceFindUsages(label)
+            schemaApi.findUsages(label)
                 .then(setUsages)
                 .catch(e => {
                     dispatchError(dispatch, e, "FETCH USAGES", "Cannot retrieve label usages.")
@@ -114,7 +114,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
         if (!label) {
             return
         }
-        Api.schemaServiceAllLabels(label).then(
+        schemaApi.allLabels(label).then(
             ls => {
                 if (ls.length > 0 && ls[0].name === label) {
                     setSchemas(ls[0].schemas)

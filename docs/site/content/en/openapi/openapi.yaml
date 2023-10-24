@@ -5,12 +5,34 @@ info:
   description: "Horreum automated change anomaly detection. For more information,\
     \ please see [https://horreum.hyperfoil.io/](https://horreum.hyperfoil.io/)"
   version: 0.10-SNAPSHOT
+tags:
+- name: Config
+  description: Endpoint providing configuration for the Horreum System
+  x-smallrye-profile-external: ""
+- name: Dataset
+  description: Datasets are used as the basis for all change detection and reporting
+  x-smallrye-profile-external: ""
+- name: Experiment
+  description: Experiments allow users to apply change detection rules to two different
+    datasets. This allows for pass/fail of KPIS based on A/B testing
+  x-smallrye-profile-external: ""
+- name: Run
+  description: Manage test runs. Runs are instances of results of a benchmark execution
+  x-smallrye-profile-external: ""
+- name: Schema
+  description: Manage schemas
+  x-smallrye-profile-external: ""
+- name: Test
+  description: Endpoint giving access to tests defined in Horreum.
+  x-smallrye-profile-external: ""
 paths:
   /api/config/keycloak:
     get:
+      tags:
+      - Config
       description: Obtain configuration information about keycloak server securing
         Horreum instance
-      operationId: ConfigService_keycloak
+      operationId: keycloak
       responses:
         "200":
           description: OK
@@ -20,8 +42,10 @@ paths:
                 $ref: '#/components/schemas/KeycloakConfig'
   /api/config/version:
     get:
+      tags:
+      - Config
       description: Obtain version of the running Horreum instance
-      operationId: ConfigService_version
+      operationId: version
       responses:
         "200":
           description: OK
@@ -31,8 +55,10 @@ paths:
                 $ref: '#/components/schemas/VersionInfo'
   /api/dataset/bySchema:
     get:
+      tags:
+      - Dataset
       description: "Retrieve a paginated list of Datasets, with total count, by Schema"
-      operationId: DatasetService_listBySchema
+      operationId: listBySchema
       parameters:
       - name: direction
         in: query
@@ -77,8 +103,10 @@ paths:
                 $ref: '#/components/schemas/DatasetList'
   /api/dataset/list/{testId}:
     get:
+      tags:
+      - Dataset
       description: "Retrieve a paginated list of Datasets, with total count, by Test"
-      operationId: DatasetService_listByTest
+      operationId: listByTest
       parameters:
       - name: testId
         in: path
@@ -137,7 +165,9 @@ paths:
                 $ref: '#/components/schemas/DatasetList'
   /api/dataset/{datasetId}/labelValues:
     get:
-      operationId: DatasetService_labelValues
+      tags:
+      - Dataset
+      operationId: labelValues
       parameters:
       - name: datasetId
         in: path
@@ -156,7 +186,9 @@ paths:
                   $ref: '#/components/schemas/LabelValue'
   /api/dataset/{datasetId}/previewLabel:
     post:
-      operationId: DatasetService_previewLabel
+      tags:
+      - Dataset
+      operationId: previewLabel
       parameters:
       - name: datasetId
         in: path
@@ -179,7 +211,9 @@ paths:
                 $ref: '#/components/schemas/LabelPreview'
   /api/dataset/{datasetId}/summary:
     get:
-      operationId: DatasetService_getSummary
+      tags:
+      - Dataset
+      operationId: getSummary
       parameters:
       - name: datasetId
         in: path
@@ -201,8 +235,10 @@ paths:
                 $ref: '#/components/schemas/DatasetSummary'
   /api/dataset/{id}:
     get:
+      tags:
+      - Dataset
       description: Retrieve Dataset by ID
-      operationId: DatasetService_getDataSet
+      operationId: getDataset
       parameters:
       - name: id
         in: path
@@ -222,11 +258,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DataSet'
+                $ref: '#/components/schemas/Dataset'
   /api/experiment/models:
     get:
+      tags:
+      - Experiment
       description: Retrieve a list of Condition Config models
-      operationId: ExperimentService_models
+      operationId: models
       responses:
         "200":
           description: OK
@@ -238,7 +276,9 @@ paths:
                   $ref: '#/components/schemas/ConditionConfig'
   /api/experiment/run:
     get:
-      operationId: ExperimentService_runExperiments
+      tags:
+      - Experiment
+      operationId: runExperiments
       parameters:
       - name: datasetId
         in: query
@@ -256,8 +296,10 @@ paths:
                   $ref: '#/components/schemas/ExperimentResult'
   /api/experiment/{testId}/profiles:
     get:
+      tags:
+      - Experiment
       description: Retrieve Experiment Profiles by Test ID
-      operationId: ExperimentService_profiles
+      operationId: profiles
       parameters:
       - name: testId
         in: path
@@ -277,8 +319,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/ExperimentProfile'
     post:
+      tags:
+      - Experiment
       description: 'Save new or update existing Experiment Profiles for a Test '
-      operationId: ExperimentService_addOrUpdateProfile
+      operationId: addOrUpdateProfile
       parameters:
       - name: testId
         in: path
@@ -304,8 +348,10 @@ paths:
                 type: integer
   /api/experiment/{testId}/profiles/{profileId}:
     delete:
+      tags:
+      - Experiment
       description: Delete an Experiment Profiles for a Test
-      operationId: ExperimentService_deleteProfile
+      operationId: deleteProfile
       parameters:
       - name: profileId
         in: path
@@ -328,7 +374,9 @@ paths:
           description: No Content
   /api/run/autocomplete:
     get:
-      operationId: RunService_autocomplete
+      tags:
+      - Run
+      operationId: autocomplete
       parameters:
       - name: query
         in: query
@@ -346,9 +394,11 @@ paths:
                   type: string
   /api/run/bySchema:
     get:
+      tags:
+      - Run
       description: Retrieve a paginated list of Runs with available count for a given
         Schema URI
-      operationId: RunService_listBySchema
+      operationId: listBySchema
       parameters:
       - name: direction
         in: query
@@ -392,8 +442,10 @@ paths:
                 $ref: '#/components/schemas/RunsSummary'
   /api/run/count:
     get:
+      tags:
+      - Run
       description: Run count summary for given Test ID
-      operationId: RunService_runCount
+      operationId: runCount
       parameters:
       - name: testId
         in: query
@@ -412,8 +464,10 @@ paths:
                 $ref: '#/components/schemas/RunCount'
   /api/run/data:
     post:
+      tags:
+      - Run
       description: Upload a new Run
-      operationId: RunService_addRunFromData
+      operationId: addRunFromData
       parameters:
       - name: access
         in: query
@@ -523,8 +577,10 @@ paths:
             application/json: {}
   /api/run/list:
     get:
+      tags:
+      - Run
       description: Retrieve a paginated list of Runs with available count
-      operationId: RunService_listAllRuns
+      operationId: listAllRuns
       parameters:
       - name: direction
         in: query
@@ -584,9 +640,11 @@ paths:
                 $ref: '#/components/schemas/RunsSummary'
   /api/run/list/{testId}:
     get:
+      tags:
+      - Run
       description: Retrieve a paginated list of Runs with available count for a given
         Test ID
-      operationId: RunService_listTestRuns
+      operationId: listTestRuns
       parameters:
       - name: testId
         in: path
@@ -637,8 +695,10 @@ paths:
                 $ref: '#/components/schemas/RunsSummary'
   /api/run/recalculateAll:
     post:
+      tags:
+      - Run
       description: Recalculate Datasets for Runs between two dates
-      operationId: RunService_recalculateAll
+      operationId: recalculateAll
       parameters:
       - name: from
         in: query
@@ -657,8 +717,10 @@ paths:
           description: Created
   /api/run/test:
     post:
+      tags:
+      - Run
       description: Upload a new Run
-      operationId: RunService_add
+      operationId: add
       parameters:
       - name: access
         in: query
@@ -695,8 +757,10 @@ paths:
           description: OK
   /api/run/{id}:
     get:
+      tags:
+      - Run
       description: Get extended Run information by Run ID
-      operationId: RunService_getRun
+      operationId: getRun
       parameters:
       - name: id
         in: path
@@ -725,8 +789,10 @@ paths:
                 $ref: '#/components/schemas/RunExtended'
   /api/run/{id}/data:
     get:
+      tags:
+      - Run
       description: Get Run data by Run ID
-      operationId: RunService_getData
+      operationId: getData
       parameters:
       - name: id
         in: path
@@ -758,8 +824,10 @@ paths:
               example: "{ \"buildID\": 1709, ...}"
   /api/run/{id}/description:
     post:
+      tags:
+      - Run
       description: Update Run description
-      operationId: RunService_updateDescription
+      operationId: updateDescription
       parameters:
       - name: id
         in: path
@@ -780,8 +848,10 @@ paths:
           description: Created
   /api/run/{id}/dropToken:
     post:
+      tags:
+      - Run
       description: Remove access token for Run
-      operationId: RunService_dropToken
+      operationId: dropToken
       parameters:
       - name: id
         in: path
@@ -800,8 +870,10 @@ paths:
                 type: string
   /api/run/{id}/metadata:
     get:
+      tags:
+      - Run
       description: Get Run  meta data by Run ID
-      operationId: RunService_getMetadata
+      operationId: getMetadata
       parameters:
       - name: id
         in: path
@@ -833,8 +905,10 @@ paths:
               example: "{ \"metaDataID\": 1709, ...}"
   /api/run/{id}/recalculate:
     post:
+      tags:
+      - Run
       description: Recalculate Datasets for Run
-      operationId: RunService_recalculateDatasets
+      operationId: recalculateDatasets
       parameters:
       - name: id
         in: path
@@ -860,8 +934,10 @@ paths:
               - 103
   /api/run/{id}/resetToken:
     post:
+      tags:
+      - Run
       description: Regenerate access token for Run
-      operationId: RunService_resetToken
+      operationId: resetToken
       parameters:
       - name: id
         in: path
@@ -881,8 +957,10 @@ paths:
               example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
   /api/run/{id}/schema:
     post:
+      tags:
+      - Run
       description: Update Run schema for part of JSON data
-      operationId: RunService_updateSchema
+      operationId: updateSchema
       parameters:
       - name: id
         in: path
@@ -915,8 +993,10 @@ paths:
                   type: string
   /api/run/{id}/summary:
     get:
+      tags:
+      - Run
       description: Get Run Summary information by Run ID
-      operationId: RunService_getRunSummary
+      operationId: getRunSummary
       parameters:
       - name: id
         in: path
@@ -945,8 +1025,10 @@ paths:
                 $ref: '#/components/schemas/RunSummary'
   /api/run/{id}/trash:
     post:
+      tags:
+      - Run
       description: Trash a Run with a given ID
-      operationId: RunService_trash
+      operationId: trash
       parameters:
       - name: id
         in: path
@@ -967,8 +1049,10 @@ paths:
           description: Created
   /api/run/{id}/updateAccess:
     post:
+      tags:
+      - Run
       description: Update the Access configuration for a Run
-      operationId: RunService_updateAccess
+      operationId: updateAccess
       parameters:
       - name: id
         in: path
@@ -997,8 +1081,10 @@ paths:
           description: Created
   /api/run/{id}/waitforDatasets:
     get:
+      tags:
+      - Run
       description: "Blocking call, waiting for datasets to be produced"
-      operationId: RunService_waitForDatasets
+      operationId: waitForDatasets
       parameters:
       - name: id
         in: path
@@ -1013,8 +1099,10 @@ paths:
           description: No Content
   /api/schema:
     get:
+      tags:
+      - Schema
       description: Retrieve a paginated list of Schemas with available count
-      operationId: SchemaService_list
+      operationId: list
       parameters:
       - name: direction
         in: query
@@ -1050,8 +1138,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/SchemaQueryResult'
     post:
+      tags:
+      - Schema
       description: Save a new Schema
-      operationId: SchemaService_add
+      operationId: add
       requestBody:
         content:
           application/json:
@@ -1068,9 +1158,11 @@ paths:
               example: 103
   /api/schema/allLabels:
     get:
+      tags:
+      - Schema
       description: Retrieve list of Labels for ny name. Allows users to retrieve all
         Label Definitions that have the same name
-      operationId: SchemaService_allLabels
+      operationId: allLabels
       parameters:
       - name: name
         in: query
@@ -1089,8 +1181,10 @@ paths:
                   $ref: '#/components/schemas/LabelInfo'
   /api/schema/allTransformers:
     get:
+      tags:
+      - Schema
       description: Retrieve all transformers
-      operationId: SchemaService_allTransformers
+      operationId: allTransformers
       responses:
         "200":
           description: OK
@@ -1102,8 +1196,10 @@ paths:
                   $ref: '#/components/schemas/TransformerInfo'
   /api/schema/descriptors:
     get:
+      tags:
+      - Schema
       description: Retrieve a list of Schema Descriptors
-      operationId: SchemaService_descriptors
+      operationId: descriptors
       parameters:
       - name: id
         in: query
@@ -1125,8 +1221,10 @@ paths:
                   $ref: '#/components/schemas/SchemaDescriptor'
   /api/schema/findUsages:
     get:
+      tags:
+      - Schema
       description: Find all usages of a Schema by label name
-      operationId: SchemaService_findUsages
+      operationId: findUsages
       parameters:
       - name: label
         in: query
@@ -1146,8 +1244,10 @@ paths:
                   $ref: '#/components/schemas/LabelLocation'
   /api/schema/idByUri/{uri}:
     get:
+      tags:
+      - Schema
       description: Retrieve Schema ID by uri
-      operationId: SchemaService_idByUri
+      operationId: idByUri
       parameters:
       - name: uri
         in: path
@@ -1167,8 +1267,10 @@ paths:
               example: 101
   /api/schema/import:
     post:
+      tags:
+      - Schema
       description: Import an previously exported Schema
-      operationId: SchemaService_importSchema
+      operationId: importSchema
       requestBody:
         content:
           application/json:
@@ -1179,8 +1281,10 @@ paths:
           description: Created
   /api/schema/{id}:
     get:
+      tags:
+      - Schema
       description: Retrieve Schema by ID
-      operationId: SchemaService_getSchema
+      operationId: getSchema
       parameters:
       - name: id
         in: path
@@ -1208,8 +1312,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Schema'
     delete:
+      tags:
+      - Schema
       description: Delete a Schema by id
-      operationId: SchemaService_delete
+      operationId: delete
       parameters:
       - name: id
         in: path
@@ -1224,8 +1330,10 @@ paths:
           description: No Content
   /api/schema/{id}/dropToken:
     post:
+      tags:
+      - Schema
       description: Remove access token for schema
-      operationId: SchemaService_dropToken
+      operationId: dropToken
       parameters:
       - name: id
         in: path
@@ -1244,8 +1352,10 @@ paths:
                 type: string
   /api/schema/{id}/export:
     get:
+      tags:
+      - Schema
       description: Export a Schema
-      operationId: SchemaService_exportSchema
+      operationId: exportSchema
       parameters:
       - name: id
         in: path
@@ -1264,8 +1374,10 @@ paths:
                 type: string
   /api/schema/{id}/resetToken:
     post:
+      tags:
+      - Schema
       description: Regenerate access token for schema
-      operationId: SchemaService_resetToken
+      operationId: resetToken
       parameters:
       - name: id
         in: path
@@ -1285,8 +1397,10 @@ paths:
               example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
   /api/schema/{id}/updateAccess:
     post:
+      tags:
+      - Schema
       description: Update the Access configuration for a Schema
-      operationId: SchemaService_updateAccess
+      operationId: updateAccess
       parameters:
       - name: id
         in: path
@@ -1316,8 +1430,10 @@ paths:
           description: Created
   /api/schema/{schemaId}/labels:
     get:
+      tags:
+      - Schema
       description: Retrieve list of Labels for a Schema by Schema ID
-      operationId: SchemaService_labels
+      operationId: labels
       parameters:
       - name: schemaId
         in: path
@@ -1337,8 +1453,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Label'
     post:
+      tags:
+      - Schema
       description: Save new or update existing Label for a Schema
-      operationId: SchemaService_addOrUpdateLabel
+      operationId: addOrUpdateLabel
       parameters:
       - name: schemaId
         in: path
@@ -1364,8 +1482,10 @@ paths:
                 type: integer
   /api/schema/{schemaId}/labels/{labelId}:
     delete:
+      tags:
+      - Schema
       description: Delete existing Label from a Schema
-      operationId: SchemaService_deleteLabel
+      operationId: deleteLabel
       parameters:
       - name: labelId
         in: path
@@ -1388,8 +1508,10 @@ paths:
           description: No Content
   /api/schema/{schemaId}/transformers:
     get:
+      tags:
+      - Schema
       description: List all Transformers defined for a Schema
-      operationId: SchemaService_listTransformers
+      operationId: listTransformers
       parameters:
       - name: schemaId
         in: path
@@ -1409,8 +1531,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Transformer'
     post:
+      tags:
+      - Schema
       description: Save new or update existing Transformer defintion
-      operationId: SchemaService_addOrUpdateTransformer
+      operationId: addOrUpdateTransformer
       parameters:
       - name: schemaId
         in: path
@@ -1436,8 +1560,10 @@ paths:
                 type: integer
   /api/schema/{schemaId}/transformers/{transformerId}:
     delete:
+      tags:
+      - Schema
       description: Delete a Transformer defined for a Schema
-      operationId: SchemaService_deleteTransformer
+      operationId: deleteTransformer
       parameters:
       - name: schemaId
         in: path
@@ -1460,8 +1586,10 @@ paths:
           description: No Content
   /api/test:
     get:
+      tags:
+      - Test
       description: Retrieve a paginated list of Tests with available count
-      operationId: TestService_list
+      operationId: list
       parameters:
       - name: direction
         in: query
@@ -1504,8 +1632,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/TestQueryResult'
     post:
+      tags:
+      - Test
       description: Create a new test
-      operationId: TestService_add
+      operationId: add
       requestBody:
         content:
           application/json:
@@ -1521,8 +1651,10 @@ paths:
                 $ref: '#/components/schemas/Test'
   /api/test/byName/{name}:
     get:
+      tags:
+      - Test
       description: Retrieve a test by name
-      operationId: TestService_getByNameOrId
+      operationId: getByNameOrId
       parameters:
       - name: name
         in: path
@@ -1540,8 +1672,10 @@ paths:
                 $ref: '#/components/schemas/Test'
   /api/test/folders:
     get:
+      tags:
+      - Test
       description: Retrieve a list of all folders
-      operationId: TestService_folders
+      operationId: folders
       parameters:
       - name: roles
         in: query
@@ -1563,8 +1697,10 @@ paths:
               - ocp-perf-team
   /api/test/import:
     post:
+      tags:
+      - Test
       description: Import a previously exported Test
-      operationId: TestService_importTest
+      operationId: importTest
       requestBody:
         content:
           application/json:
@@ -1575,8 +1711,10 @@ paths:
           description: Import a new test
   /api/test/summary:
     get:
+      tags:
+      - Test
       description: Retrieve a summary of Tests in a folder
-      operationId: TestService_summary
+      operationId: summary
       parameters:
       - name: folder
         in: query
@@ -1599,8 +1737,10 @@ paths:
                 $ref: '#/components/schemas/TestListing'
   /api/test/{id}:
     get:
+      tags:
+      - Test
       description: Retrieve a test by id
-      operationId: TestService_get
+      operationId: get
       parameters:
       - name: id
         in: path
@@ -1620,8 +1760,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Test'
     delete:
+      tags:
+      - Test
       description: Delete a Test by id
-      operationId: TestService_delete
+      operationId: delete
       parameters:
       - name: id
         in: path
@@ -1634,9 +1776,11 @@ paths:
           description: No Content
   /api/test/{id}/addToken:
     post:
+      tags:
+      - Test
       description: "Add a Test API Token for access to provide access to a test data\
         \ for integrated tooling, e.g. reporting services"
-      operationId: TestService_addToken
+      operationId: addToken
       parameters:
       - name: id
         in: path
@@ -1661,7 +1805,9 @@ paths:
                 type: integer
   /api/test/{id}/export:
     get:
-      operationId: TestService_export
+      tags:
+      - Test
+      operationId: export
       parameters:
       - name: id
         in: path
@@ -1678,8 +1824,10 @@ paths:
                 type: string
   /api/test/{id}/fingerprint:
     get:
+      tags:
+      - Test
       description: List all Fingerprints for a Test
-      operationId: TestService_listFingerprints
+      operationId: listFingerprints
       parameters:
       - name: id
         in: path
@@ -1699,8 +1847,10 @@ paths:
                 items: {}
   /api/test/{id}/labelValues:
     get:
+      tags:
+      - Test
       description: List all Label Values for a Test
-      operationId: TestService_listLabelValues
+      operationId: listLabelValues
       parameters:
       - name: id
         in: path
@@ -1734,8 +1884,10 @@ paths:
                 items: {}
   /api/test/{id}/move:
     post:
+      tags:
+      - Test
       description: Update the folder for a Test. Tests can be moved to different folders
-      operationId: TestService_updateFolder
+      operationId: updateFolder
       parameters:
       - name: id
         in: path
@@ -1756,9 +1908,11 @@ paths:
           description: Created
   /api/test/{id}/notifications:
     post:
+      tags:
+      - Test
       description: "Update notifications for a Test. It is possible to disable notifications\
         \ for a Test, so that no notifications are sent to subscribers"
-      operationId: TestService_updateNotifications
+      operationId: updateNotifications
       parameters:
       - name: id
         in: path
@@ -1780,8 +1934,10 @@ paths:
           description: Created
   /api/test/{id}/recalculate:
     get:
+      tags:
+      - Test
       description: Get recalculation status for Test
-      operationId: TestService_getRecalculationStatus
+      operationId: getRecalculationStatus
       parameters:
       - name: id
         in: path
@@ -1799,8 +1955,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/RecalculationStatus'
     post:
+      tags:
+      - Test
       description: Recalculate Datasets for Test
-      operationId: TestService_recalculateDatasets
+      operationId: recalculateDatasets
       parameters:
       - name: id
         in: path
@@ -1815,8 +1973,10 @@ paths:
           description: Created
   /api/test/{id}/revokeToken/{tokenId}:
     post:
+      tags:
+      - Test
       description: Revoke a Token defined for a Test
-      operationId: TestService_dropToken
+      operationId: dropToken
       parameters:
       - name: id
         in: path
@@ -1839,8 +1999,10 @@ paths:
           description: Created
   /api/test/{id}/tokens:
     get:
+      tags:
+      - Test
       description: A collection of Test Tokens for a given Test
-      operationId: TestService_tokens
+      operationId: tokens
       parameters:
       - name: id
         in: path
@@ -1861,8 +2023,10 @@ paths:
                   $ref: '#/components/schemas/TestToken'
   /api/test/{id}/transformers:
     post:
+      tags:
+      - Test
       description: Update transformers for Test
-      operationId: TestService_updateTransformers
+      operationId: updateTransformers
       parameters:
       - name: id
         in: path
@@ -1886,8 +2050,10 @@ paths:
           description: Created
   /api/test/{id}/updateAccess:
     post:
+      tags:
+      - Test
       description: Update the Access configuration for a Test
-      operationId: TestService_updateAccess
+      operationId: updateAccess
       parameters:
       - name: id
         in: path
@@ -2028,7 +2194,7 @@ components:
             building the UI components
           type: object
           additionalProperties: {}
-    DataSet:
+    Dataset:
       description: A dataset is the JSON document used as the basis for all comparisons
         and reporting
       required:
@@ -2745,7 +2911,7 @@ components:
           description: Collection of Datasets derived from Run payload
           type: array
           items:
-            $ref: '#/components/schemas/DataSet'
+            $ref: '#/components/schemas/Dataset'
         validationErrors:
           description: Collection of Validation Errors in Run payload
           type: array
@@ -3129,6 +3295,41 @@ components:
       - Ascending
       - Descending
       type: string
+    TableReportData:
+      required:
+      - datasetId
+      - runId
+      - ordinal
+      - category
+      - series
+      - scale
+      - values
+      type: object
+      properties:
+        datasetId:
+          format: int32
+          type: integer
+          nullable: false
+        runId:
+          format: int32
+          type: integer
+          nullable: false
+        ordinal:
+          format: int32
+          type: integer
+          nullable: false
+        category:
+          type: string
+          nullable: false
+        series:
+          type: string
+          nullable: false
+        scale:
+          type: string
+          nullable: false
+        values:
+          type: array
+          nullable: false
     Test:
       description: Represents a Test. Tests are typically equivalent to a particular
         benchmark

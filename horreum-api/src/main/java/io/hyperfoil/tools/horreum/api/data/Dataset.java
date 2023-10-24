@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Objects;
 
-@Schema(name = "Dataset", type = SchemaType.OBJECT,
+@Schema(type = SchemaType.OBJECT,
 description = "A dataset is the JSON document used as the basis for all comparisons and reporting")
 public class Dataset {
     @Schema(description = "Dataset Unique ID", example = "101")

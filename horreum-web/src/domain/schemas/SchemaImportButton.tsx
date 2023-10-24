@@ -1,4 +1,4 @@
-import Api, { Schema } from "../../api"
+import {Schema, schemaApi} from "../../api"
 
 import ImportButton from "../../components/ImportButton"
 
@@ -22,7 +22,7 @@ export default function SchemaImportButton(props: SchemaImportButtonProps) {
                     </>
                 ) : null
             }}
-            onImport={config => Api.schemaServiceImportSchema(config)}
+            onImport={config => schemaApi.importSchema(config)}
             {...props}
         />
     )

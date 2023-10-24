@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.data.View;
-import io.hyperfoil.tools.horreum.api.services.UIService;
+import io.hyperfoil.tools.horreum.api.internal.services.UIService;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.entity.data.ViewDAO;
 import io.hyperfoil.tools.horreum.mapper.ViewMapper;

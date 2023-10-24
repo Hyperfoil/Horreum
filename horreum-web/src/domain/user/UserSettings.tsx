@@ -6,7 +6,7 @@ import { AuthDispatch, defaultTeamSelector, teamToName, useManagedTeams, userPro
 import { alertAction, dispatchError, dispatchInfo } from "../../alerts"
 import SavedTabs, { SavedTab, TabFunctions } from "../../components/SavedTabs"
 import { updateDefaultTeam, TryLoginAgain } from "../../auth"
-import Api, { NotificationSettings } from "../../api"
+import {NotificationSettings, notificationsApi} from "../../api"
 
 import {
     Alert,
@@ -62,7 +62,7 @@ export function UserSettings() {
     const [modified, setModified] = useState(false)
     const loadPersonal = () => {
         if (profile?.username) {
-            Api.notificationServiceSettings(profile.username, false).then(
+            notificationsApi.settings(profile.username, false).then(
                 response => setPersonal(response),
                 error => dispatch(alertAction("LOAD_SETTINGS", "Failed to load notification settings", error))
             )
@@ -122,7 +122,7 @@ export function UserSettings() {
                             fragment="personal-notifications"
                             onSave={() => {
                                 const username = profile?.username || "user-should-be-set"
-                                return Api.notificationServiceUpdateSettings(username, false, personal || []).catch(
+                                return notificationsApi.updateSettings(username, false, personal || []).catch(
                                     reportError
                                 )
                             }}
@@ -146,7 +146,7 @@ export function UserSettings() {
                             fragment="team-notifications"
                             onSave={() => {
                                 const teamname = selectedTeam || "team-should-be-set"
-                                return Api.notificationServiceUpdateSettings(teamname, true, team || []).catch(
+                                return notificationsApi.updateSettings(teamname, true, team || []).catch(
                                     reportError
                                 )
                             }}
@@ -164,7 +164,7 @@ export function UserSettings() {
                                         onSelect={role => {
                                             setTeam(undefined)
                                             setSelectedTeam(role.key)
-                                            Api.notificationServiceSettings(role.key, true).then(
+                                            notificationsApi.settings(role.key, true).then(
                                                 response => setTeam(response || []),
                                                 error =>
                                                     dispatch(

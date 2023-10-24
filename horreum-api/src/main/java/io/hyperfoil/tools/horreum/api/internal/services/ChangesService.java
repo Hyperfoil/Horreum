@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api.services;
+package io.hyperfoil.tools.horreum.api.internal.services;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -20,10 +20,12 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.hyperfoil.tools.horreum.api.changes.Target;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Path("/api/changes")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "changes", description = "Manage changes")
 public interface ChangesService {
 
    @POST

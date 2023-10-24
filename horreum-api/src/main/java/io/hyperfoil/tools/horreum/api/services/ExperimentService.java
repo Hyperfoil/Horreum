@@ -14,6 +14,7 @@ import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.extensions.Extension;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameters;
@@ -39,7 +40,8 @@ import java.util.Map;
 @Consumes({ MediaType.APPLICATION_JSON})
 @Produces(MediaType.APPLICATION_JSON)
 @Path("/api/experiment")
-//@Tag(name = "Experiment", description = "Experiments allow users to apply change detection rules to two different datasets. This allows for pass/fail of KPIS based on A/B testing")
+@Tag(name = "Experiment", description = "Experiments allow users to apply change detection rules to two different datasets. This allows for pass/fail of KPIS based on A/B testing")
+@Extension(name = "x-smallrye-profile-external", value = "")
 public interface ExperimentService {
    @GET
    @Path("{testId}/profiles")

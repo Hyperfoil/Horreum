@@ -14,7 +14,7 @@ import { expandable, ICell, IRow, Table, TableHeader, TableBody } from "@pattern
 import { useHistory, NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 
-import Api, { Test, View } from "../../api"
+import {datasetApi, Test, testApi, View} from "../../api"
 import { dispatchError } from "../../alerts"
 import { tokenSelector } from "../../auth"
 import { colors } from "../../charts"
@@ -41,7 +41,7 @@ export default function DatasetComparison() {
     const dispatch = useDispatch()
     const [test, setTest] = useState<Test>()
     useEffect(() => {
-        Api.testServiceGet(testId).then(
+        testApi.get(testId).then(
             test => {
                 setTest(test)
                 dispatch(fetchViews(testId))
@@ -122,7 +122,7 @@ function LabelsComparison(props: LabelsComparisonProps) {
     const dispatch = useDispatch()
     useEffect(() => {
         setLoading(true)
-        Promise.all(props.datasets.map(ds => Api.datasetServiceLabelValues(ds.id).then(values => ({ ...ds, values }))))
+        Promise.all(props.datasets.map(ds => datasetApi.labelValues(ds.id).then(values => ({ ...ds, values }))))
             .then(
                 labels => {
                     const rows: any[][] = []
@@ -219,7 +219,7 @@ function ViewComparison(props: ViewComparisonProps) {
     const token = useSelector(tokenSelector)
     useEffect(() => {
         setLoading(true)
-        Promise.all(props.datasets.map(ds => Api.datasetServiceGetSummary(ds.id, props.view.id)))
+        Promise.all(props.datasets.map(ds => datasetApi.getSummary(ds.id, props.view.id)))
             .then(
                 summaries => {
                     setRows(

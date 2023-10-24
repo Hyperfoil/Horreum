@@ -2,7 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.data.JsonpathValidation;
 import io.hyperfoil.tools.horreum.api.data.QueryResult;
-import io.hyperfoil.tools.horreum.api.services.SqlService;
+import io.hyperfoil.tools.horreum.api.internal.services.SqlService;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;

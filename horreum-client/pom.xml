@@ -24,7 +24,7 @@
 
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
-            <artifactId>horreum-ui</artifactId>
+            <artifactId>horreum-api</artifactId>
             <version>${project.version}</version>
         </dependency>
 

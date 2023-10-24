@@ -3,7 +3,7 @@ import { useDispatch } from "react-redux"
 
 import { Dropdown, DropdownItem, DropdownToggle, FormGroup, InputGroup, TextInput } from "@patternfly/react-core"
 
-import Api, { AllowedSite } from "../api"
+import {actionApi, AllowedSite} from "../api"
 
 import { alertAction } from "../alerts"
 
@@ -31,7 +31,7 @@ export default function HttpActionUrlSelector(props: HttpActionUrlSelectorProps)
     const [prefixes, setPrefixes] = useState<AllowedSite[]>([{ id: -1, prefix: "" }])
     useEffect(() => {
         if (props.active) {
-            Api.actionServiceAllowedSites().then(setPrefixes, e =>
+            actionApi.allowedSites().then(setPrefixes, e =>
                 dispatch(alertAction("FETCH_ALLOWED_SITES", "Failed to fetch allowed sites", e))
             )
         }

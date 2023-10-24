@@ -1,4 +1,4 @@
-package io.hyperfoil.tools.horreum.api.services;
+package io.hyperfoil.tools.horreum.api.internal.services;
 
 import java.util.Collection;
 import java.util.List;
@@ -14,10 +14,12 @@ import jakarta.ws.rs.core.MediaType;
 import io.hyperfoil.tools.horreum.api.alerting.NotificationSettings;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @Path("/api/notifications")
+@Tag(name = "notifications", description = "Manage reports")
 public interface NotificationService {
    @GET
    @Path("/methods")

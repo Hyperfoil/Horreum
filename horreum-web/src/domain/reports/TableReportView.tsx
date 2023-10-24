@@ -19,7 +19,7 @@ import { NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import ReactMarkdown from "react-markdown"
 
-import Api, { TableReportData, TableReport, TableReportConfig, ReportComment } from "../../api"
+import {TableReportData, TableReport, TableReportConfig, ReportComment, reportApi} from "../../api"
 import { formatDateTime } from "../../utils"
 import { colors } from "../../charts"
 import "./TableReportView.css"
@@ -364,12 +364,12 @@ function update(
             componentId,
             comment: text,
         }
-        return Api.reportServiceUpdateComment(report.id, comment).then(c => {
+        return reportApi.updateComment(report.id, comment).then(c => {
             if (c) report.comments.push(c as ReportComment)
         })
     } else {
         comment.comment = text
-        return Api.reportServiceUpdateComment(report.id, comment).then(c => {
+        return reportApi.updateComment(report.id, comment).then(c => {
             if (!c) {
                 const index = report.comments.findIndex(cmt => cmt.id === comment?.id)
                 if (index >= 0) {

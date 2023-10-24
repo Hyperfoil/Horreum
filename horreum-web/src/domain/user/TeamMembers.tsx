@@ -5,7 +5,7 @@ import { DualListSelector, TreeView } from "@patternfly/react-core"
 import { teamToName, userName } from "../../auth"
 import { dispatchError } from "../../alerts"
 import UserSearch from "../../components/UserSearch"
-import Api, { UserData } from "../../api"
+import {userApi, UserData} from "../../api"
 
 type UserPermissionsProps = {
     user: UserData
@@ -110,10 +110,10 @@ export default function TeamMembers(props: TeamMembersProps) {
         if (props.loadMembers === false) {
             return
         }
-        Api.userServiceTeamMembers(props.team).then(
+        userApi.teamMembers(props.team).then(
             userRolesMap => {
                 memberRoles.current = new Map(Object.entries(userRolesMap))
-                Api.userServiceInfo(Object.keys(userRolesMap)).then(
+                userApi.info(Object.keys(userRolesMap)).then(
                     users => {
                         const userMap = new Map()
                         users.forEach(u => userMap.set(u.username, u))
@@ -137,7 +137,7 @@ export default function TeamMembers(props: TeamMembersProps) {
         )
     }, [props.team, props.resetCounter])
     props.funcs.current = {
-        save: () => Api.userServiceUpdateTeamMembers(props.team, Object.fromEntries(memberRoles.current)),
+        save: () => userApi.updateTeamMembers(props.team, Object.fromEntries(memberRoles.current)),
         addMember: (user: UserData, roles: string[]) => {
             memberRoles.current.set(user.username, roles)
             setMembers([...members, member(user, memberRoles.current, props.onModified)])
