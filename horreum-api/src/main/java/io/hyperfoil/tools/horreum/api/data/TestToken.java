@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.function.Function;
 
@@ -12,16 +14,28 @@ public class TestToken {
     public static final int MODIFY = 2;
     public static final int UPLOAD = 4;
     @JsonProperty(required = true)
+    @Schema(description="Unique Token id",
+            example="101")
     public Integer id;
+    @Schema(description="Test ID to apply Token",
+            example="201")
     public Integer testId;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(description="Test value",
+            example="094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38")
     private String value;
     @NotNull
     @JsonProperty(required = true)
+    //TODO: this should map to an Access object
+//    @Schema( type = SchemaType.INTEGER, implementation = Access.class,
+//            description = "Access rights for the test. This defines the visibility of the Test in the UI",
+//            example = "0")
     public int permissions;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(description="Token description",
+            example="my reporting service token")
     public String description;
 
     public TestToken() {

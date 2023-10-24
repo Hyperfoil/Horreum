@@ -42,12 +42,6 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
-
     </dependencies>
     <build>
         <plugins>
@@ -62,6 +56,8 @@
                             <goal>generate-schema</goal>
                         </goals>
                         <configuration>
+                            <configProperties>${basedir}/src/main/resources/application.properties</configProperties>
+                            <infoVersion>${version}</infoVersion>
                             <scanPackages>
                                 io.hyperfoil.tools.horreum.api,
                                 io.hyperfoil.tools.horreum.api.alerting,
@@ -71,34 +67,6 @@
                             </scanPackages>
                             <scanClasses>.*</scanClasses>
                             <operationIdStrategy>CLASS_METHOD</operationIdStrategy>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.openapitools</groupId>
-                <artifactId>openapi-generator-maven-plugin</artifactId>
-                <version>7.0.1</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                        <configuration>
-                            <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
-                            <output>${project.basedir}/../horreum-web/src/generated</output>
-                            <generatorName>typescript-fetch</generatorName>
-                            <skipValidateSpec>false</skipValidateSpec>
-                            <typeMappings>Array=any</typeMappings>
-                            <globalProperties>
-                                <skipFormModel>false</skipFormModel>
-                            </globalProperties>
-                            <configOptions>
-                                <supportsES6>true</supportsES6>
-                                <useSingleRequestParameter>false</useSingleRequestParameter>
-                                <typescriptThreePlus>true</typescriptThreePlus>
-                            </configOptions>
                         </configuration>
                     </execution>
                 </executions>

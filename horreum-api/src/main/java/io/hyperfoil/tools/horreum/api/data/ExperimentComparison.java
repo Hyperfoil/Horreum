@@ -10,17 +10,20 @@ public class ExperimentComparison {
 
     @NotNull
     @JsonProperty( required = true )
+    @Schema(description = "Name of comparison model", example = "relativeDifference")
     public String model;
     @NotNull
     @JsonProperty( required = true )
-    @Schema(implementation = String.class)
+    @Schema(implementation = String.class, description = "Model JSON configuration")
     public JsonNode config;
 
     @NotNull
     @JsonProperty(value = "variableId")
+    @Schema(description = "Variable ID to run experiment against", example = "101")
     public Integer variableId;
 
     @JsonIgnore
+    @Schema(description = "Variable Name to run experiment against", example = "Throughput")
     public String variableName;
 
     public ExperimentComparison() {

@@ -10,29 +10,41 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Objects;
 
+@Schema(description = "A Label is a core component of Horreum, defining which components of the JSON document are part of a KPI and how the metric values are calculated")
 public class Label {
     @JsonProperty( required = true )
+    @Schema(description = "Unique ID for Label", example = "101")
     public Integer id;
     @NotNull
     @JsonProperty( required = true )
+    @Schema(description = "Name for label. NOTE: all Labels are considered to have the same semantic meaning throughout the entire system", example = "Throughput")
     public String name;
     @NotNull
     @JsonProperty( required = true )
+    @Schema(description = "A collection of Extractors, that will be combined in the Combination Function")
     public Collection<Extractor> extractors;
+    @Schema(description = "A Combination Function that defines how values from Extractors are combined to produce a Label Value",
+    example = "value => { return ((value.reduce((a,b) => a+b))/value.length*1000).toFixed(3); }")
     public String function;
     @NotNull
     @JsonProperty( required = true )
+    @Schema(description = "Is Label a filtering label? Filtering labels contains values that are used to filter datasets for comparison", example = "true")
     public boolean filtering = true;
     @NotNull
     @JsonProperty( required = true )
+    @Schema(description = "Is Label a metrics label? Metrics labels are contain Metrics that are used for comparison", example = "true")
     public boolean metrics = true;
     @JsonProperty( required = true )
+    @Schema(description="Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
+            example="performance-team")
     public String owner;
     @JsonProperty( required = true )
-    @Schema( type = SchemaType.INTEGER, implementation = Access.class)
-    public Access access = Access.PUBLIC;
+    @Schema( type = SchemaType.INTEGER, implementation = Access.class,
+            description = "Access rights for the test. This defines the visibility of the Test in the UI",
+            example = "0")    public Access access = Access.PUBLIC;
     @NotNull
     @JsonProperty( value = "schemaId", required = true )
+    @Schema(description = "Schema ID that the Label relates to", example = "101")
     public int schemaId;
 
     public Label() {
