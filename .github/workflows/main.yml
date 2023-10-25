@@ -51,8 +51,6 @@ jobs:
         restore-keys: ${{ runner.os }}-m2
     - name: Maven Version
       run: mvn --version
-    - name: Clean nodejs / npm
-      run: mvn -Premove-node-cache clean
     - name: Build with Maven
       run: mvn clean install -B --file pom.xml -DskipTests -DskipITs ${{ matrix.os.build-options }} -DargLine="-Dci-test=true"
     - name: Test with Maven
