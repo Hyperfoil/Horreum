@@ -15,7 +15,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -37,7 +36,6 @@ import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.common.mapper.TypeRef;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -45,7 +43,6 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 @TestProfile(HorreumTestProfile.class)
 public class SchemaServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
-   @DisabledIfEnvironmentVariable(named = "ci-test", matches = "true")
    public void testValidateRun() throws IOException, InterruptedException {
       JsonNode allowAny = load("/allow-any.json");
       Schema allowAnySchema = createSchema("any", allowAny.path("$id").asText(), allowAny);

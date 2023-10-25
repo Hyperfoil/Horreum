@@ -188,7 +188,6 @@ public class DatasetServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   @DisabledIfEnvironmentVariable(named = "ci-test", matches = "true")
    public void testDatasetLabelChanged() {
       withExampleSchemas((schemas) -> {
          int labelA = addLabel(schemas[0], "A", null, new Extractor("value", "$.value", false));
@@ -238,7 +237,6 @@ public class DatasetServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   @DisabledIfEnvironmentVariable(named = "ci-test", matches = "true")
    public void testSchemaAfterData() throws InterruptedException {
       Test test = createTest(createExampleTest("xxx"));
       BlockingQueue<Dataset.EventNew> dsQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
@@ -272,7 +270,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       assertEquals(1, ds.size());
       assertEquals(secondEvent.datasetId, ds.get(0)[0]);
       assertEquals(0, ds.get(0)[1]);
-      assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM label_values").getSingleResult()).intValue());
+      assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM label_values where dataset_id = ?1").setParameter(1, secondEvent.datasetId).getSingleResult()).intValue());
 
       addLabel(schema, "value", null, new Extractor("value", "$.value", false));
       // not empty anymore
