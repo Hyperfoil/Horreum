@@ -136,10 +136,10 @@ public class ServiceMediator {
     }
 
     @Incoming("dataset-event-in")
-    @Blocking(ordered = false, value = "horreum.dataset.pool")
+    @Blocking(ordered = true, value = "horreum.dataset.pool")
     @ActivateRequestContext
     public void processDatasetEvents(Dataset.EventNew newEvent) {
-            datasetService.onNewDatasetNoLock(newEvent);
+            datasetService.onNewDataset(newEvent);
             validateDataset(newEvent.datasetId);
     }
 
@@ -148,7 +148,7 @@ public class ServiceMediator {
         dataSetEmitter.send(event);
     }
     @Incoming("run-recalc-in")
-    @Blocking(ordered = false, value = "horreum.run.pool")
+    @Blocking(ordered = true, value = "horreum.run.pool")
     @ActivateRequestContext
     public void processRunRecalculation(int runId) {
             runService.transform(runId, true);
