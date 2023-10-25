@@ -134,6 +134,15 @@ public class Dataset {
             this.datasetId = datasetId;
             this.isRecalculation = isRecalculation;
         }
+
+        @Override
+        public String toString() {
+            return "LabelsUpdatedEvent{" +
+                    "testId=" + testId +
+                    ", datasetId=" + datasetId +
+                    ", isRecalculation=" + isRecalculation +
+                    '}';
+        }
     }
 
     public static class EventNew {

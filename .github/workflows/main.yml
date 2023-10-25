@@ -51,10 +51,8 @@ jobs:
         restore-keys: ${{ runner.os }}-m2
     - name: Maven Version
       run: mvn --version
-    - name: Build with Maven
-      run: mvn clean install -B --file pom.xml -DskipTests -DskipITs ${{ matrix.os.build-options }} -DargLine="-Dci-test=true"
-    - name: Test with Maven
-      run: mvn -B verify --file pom.xml ${{ matrix.os.build-options }}
+    - name: Build and Test
+      run: mvn clean install -B --file pom.xml ${{ matrix.os.build-options }}
     - name: Upload artifact for failed workflow
       if: failure()
       uses: actions/upload-artifact@v3

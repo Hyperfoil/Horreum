@@ -61,5 +61,13 @@ public class Schema {
             this.id = id;
             this.errors = errors;
         }
+
+        @Override
+        public String toString() {
+            return "ValidationEvent{" +
+                    "id=" + id +
+                    ", errors=" + errors +
+                    '}';
+        }
     }
 }

@@ -4169,4 +4169,15 @@
             DROP FUNCTION IF EXISTS revalidate_all();
         </sql>
     </changeSet>
+    <changeSet id="110" author="johara">
+        <sql>
+            DROP TRIGGER IF EXISTS messagebus_delete ON messagebus;
+            DROP FUNCTION IF EXISTS messagebus_delete();
+            DROP POLICY if EXISTS messagebus_insert ON messagebus;
+            DROP POLICY if EXISTS messagebus_all ON messagebus;
+            DROP POLICY if EXISTS mbs_all ON messagebus_subscriptions;
+            DROP TABLE IF EXISTS messagebus_subscriptions;
+            DROP TABLE IF EXISTS messagebus;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

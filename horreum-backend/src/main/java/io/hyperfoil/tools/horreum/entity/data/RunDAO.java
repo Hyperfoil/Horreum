@@ -68,4 +68,20 @@ public class RunDAO extends ProtectedBaseEntity {
    @CollectionTable
    @ElementCollection
    public Collection<ValidationErrorDAO> validationErrors;
+
+   @Override
+   public String toString() {
+      return "RunDAO{" +
+              "id=" + id +
+              ", start=" + start +
+              ", stop=" + stop +
+              ", description='" + description + '\'' +
+              ", testid=" + testid +
+              ", data=" + data +
+              ", metadata=" + metadata +
+              ", trashed=" + trashed +
+              ", datasets=" + datasets +
+              ", validationErrors=" + validationErrors +
+              '}';
+   }
 }

@@ -196,7 +196,6 @@ public class BaseServiceTest {
          }
          return null;
       });
-      TestUtil.eventually(() -> TestUtil.isMessageBusEmpty(tm, em));
    }
 
    public static Test createExampleTest(String testName) {
@@ -350,12 +349,16 @@ public class BaseServiceTest {
    }
 
    protected Test createTest(Test test) {
+      log.debugf("Creating new test via /api/test: %s", test.toString());
+
       test = jsonRequest()
             .body(test)
             .post("/api/test")
             .then()
             .statusCode(200)
             .extract().body().as(Test.class);
+
+      log.debugf("New test created via /api/test: %s", test.toString());
 
       return test;
    }
@@ -528,7 +531,7 @@ public class BaseServiceTest {
             if (filter.test(event)) {
                queue.add(event);
             } else {
-               log.infof("Ignoring event %s", event);
+               log.debugf("Ignoring event %s", event);
             }
          } else {
             throw new IllegalStateException("Unexpected type for event " + eventType + ": " + msg);
@@ -569,12 +572,15 @@ public class BaseServiceTest {
             run.testid = test.id;
             run.start = run.stop = Instant.now();
             run.owner = UPLOADER_ROLES[0];
+            log.debugf("Creating new Run via API: %s", run.toString());
+
             Response response = jsonRequest()
                  .auth()
                  .oauth2(getUploaderToken())
                  .body(run)
                  .post("/api/run/test");
             run.id = response.body().as(Integer.class);
+            log.debugf("Run ID: %d, for test ID: %d", run.id, run.testid);
          } finally {
             if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
                tm.commit();

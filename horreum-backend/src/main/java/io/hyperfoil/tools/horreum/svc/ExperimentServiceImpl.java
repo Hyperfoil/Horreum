@@ -19,6 +19,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -64,6 +65,9 @@ public class ExperimentServiceImpl implements ExperimentService {
    ServiceMediator mediator;
    @Inject
    MessageBus messageBus;
+
+   @Inject
+   TransactionManager tm;
 
    @WithRoles
    @PermitAll
@@ -135,7 +139,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @Transactional
    public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
-      runExperiments(event.dataset, result -> messageBus.publish(MessageBusChannels.EXPERIMENT_RESULT_NEW, event.dataset.testId, result),
+      runExperiments(event.dataset, result -> Util.registerTxSynchronization(tm, value -> messageBus.publish(MessageBusChannels.EXPERIMENT_RESULT_NEW, event.dataset.testId, result)),
             logs -> logs.forEach(log -> log.persist()), event.notify);
    }
 

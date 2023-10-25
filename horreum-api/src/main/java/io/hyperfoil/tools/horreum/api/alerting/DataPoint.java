@@ -41,6 +41,14 @@ public class DataPoint {
             this.dataset = dataset;
             this.notify = notify;
         }
+
+        @Override
+        public String toString() {
+            return "DatasetProcessedEvent{" +
+                    "dataset=" + dataset +
+                    ", notify=" + notify +
+                    '}';
+        }
     }
 
     public static class Event {

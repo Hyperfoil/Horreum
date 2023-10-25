@@ -17,24 +17,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.persistence.Query;
-import jakarta.transaction.HeuristicMixedException;
-import jakarta.transaction.HeuristicRollbackException;
-import jakarta.transaction.NotSupportedException;
-import jakarta.transaction.RollbackException;
-import jakarta.transaction.Status;
-import jakarta.transaction.Synchronization;
-import jakarta.transaction.SystemException;
-import jakarta.transaction.TransactionManager;
+import jakarta.transaction.*;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import org.eclipse.microprofile.context.ThreadContext;
@@ -667,4 +656,33 @@ public class Util {
    interface ExecutionExceptionConsumer<T> {
       void accept(T row, Throwable exception, String code);
    }
+
+   public static void registerTxSynchronization(TransactionManager tm, IntConsumer consumer){
+      try {
+         if (tm.getStatus() != Status.STATUS_NO_TRANSACTION) {
+            Transaction tx = tm.getTransaction();
+            tx.registerSynchronization(new Synchronization() {
+               @Override
+               public void beforeCompletion() {
+                  //do nothing
+               }
+
+               @Override
+               public void afterCompletion(int status) {
+                  consumer.accept(status);
+               }
+            });
+         } else {
+            consumer.accept(0);
+         }
+      } catch (SystemException | RollbackException e) {
+         log.errorf("Error occurred in transaction: %s", e.getMessage());
+//         throw new RuntimeException(e);
+         consumer.accept(0);
+      } catch (Exception e){
+         log.errorf("Error occurred processing consumer: %s", e.getMessage());
+      }
+
+   }
+
 }

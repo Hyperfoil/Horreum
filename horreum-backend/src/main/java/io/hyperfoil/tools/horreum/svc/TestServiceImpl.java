@@ -24,6 +24,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Query;
+import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.WebApplicationException;
@@ -88,6 +89,9 @@ public class TestServiceImpl implements TestService {
    @Inject
    ServiceMediator mediator;
 
+   @Inject
+   TransactionManager tm;
+
    private final ConcurrentHashMap<Integer, RecalculationStatus> recalculations = new ConcurrentHashMap<>();
 
    @RolesAllowed(Roles.TESTER)
@@ -105,7 +109,7 @@ public class TestServiceImpl implements TestService {
       mediator.deleteTest(test.id);
       test.delete();
       if(mediator.testMode())
-         messageBus.publish(MessageBusChannels.TEST_DELETED, test.id, TestMapper.from(test));
+         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.TEST_DELETED, test.id, TestMapper.from(test)));;
    }
 
    @Override
@@ -174,6 +178,7 @@ public class TestServiceImpl implements TestService {
       }
       if(dto.name == null || dto.name.isBlank())
          throw ServiceException.badRequest("Test name can not be empty");
+      log.debugf("Creating new test: %s", dto.toString());
       TestDAO test = addAuthenticated(dto);
       Hibernate.initialize(test.tokens);
       return TestMapper.from(test);
@@ -227,7 +232,7 @@ public class TestServiceImpl implements TestService {
          }
          mediator.newTest(TestMapper.from(test));
          if(mediator.testMode())
-            messageBus.publish(MessageBusChannels.TEST_NEW, test.id, TestMapper.from(test));
+            Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.TEST_NEW, test.id, TestMapper.from(test)));
       }
       return test;
    }
