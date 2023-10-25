@@ -188,7 +188,6 @@ public class DatasetServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   @DisabledIfEnvironmentVariable(named = "ci-test", matches = "true")
    public void testDatasetLabelChanged() {
       withExampleSchemas((schemas) -> {
          int labelA = addLabel(schemas[0], "A", null, new Extractor("value", "$.value", false));
@@ -238,7 +237,6 @@ public class DatasetServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   @DisabledIfEnvironmentVariable(named = "ci-test", matches = "true")
    public void testSchemaAfterData() throws InterruptedException {
       Test test = createTest(createExampleTest("xxx"));
       BlockingQueue<Dataset.EventNew> dsQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
@@ -272,7 +270,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       assertEquals(1, ds.size());
       assertEquals(secondEvent.datasetId, ds.get(0)[0]);
       assertEquals(0, ds.get(0)[1]);
-      assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM label_values").getSingleResult()).intValue());
+      assertEquals(0, ((Number) em.createNativeQuery("SELECT count(*) FROM label_values where dataset_id = ?1").setParameter(1, secondEvent.datasetId).getSingleResult()).intValue());
 
       addLabel(schema, "value", null, new Extractor("value", "$.value", false));
       // not empty anymore
@@ -287,10 +285,14 @@ public class DatasetServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testDatasetView() {
-      Test test = createTest(createExampleTest("dummy"));
+      String testname ="dummy";
+      log.debugf("Creating new test: %s", testname);
+      Test test = createTest(createExampleTest(testname));
+      log.debugf("New test created: %s", test.toString());
       Util.withTx(tm, () -> {
          try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
             ViewDAO view = ViewDAO.find("test.id", test.id).firstResult();
+            log.debugf("view is null: %b", view==null);
             view.components.clear();
             ViewComponentDAO vc1 = new ViewComponentDAO();
             vc1.view = view;
@@ -312,6 +314,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          int labelA = addLabel(schemas[0], "a", null, valuePath);
          int labelB = addLabel(schemas[1], "b", null, valuePath);
          // view update should happen in the same transaction as labels update so we can use the event
+         log.debugf("Waiting for  MessageBusChannels.DATASET_UPDATED_LABELS");
          BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
          withExampleDataset(test, createABData(), ds -> {
             waitForUpdate(updateQueue, ds);

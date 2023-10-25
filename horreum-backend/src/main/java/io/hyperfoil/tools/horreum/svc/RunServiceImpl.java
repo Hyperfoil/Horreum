@@ -198,7 +198,7 @@ public class RunServiceImpl implements RunService {
       em.createNativeQuery("DELETE FROM run_validationerrors WHERE schema_id = ?1")
               .setParameter(1, schemaId).executeUpdate();
 
-      mediator.queueRunRecalculation(runId);
+      Util.registerTxSynchronization(tm, txStatus -> mediator.queueRunRecalculation(runId));
 //      transform(runId, true);
    }
 
@@ -573,7 +573,7 @@ public class RunServiceImpl implements RunService {
       mediator.newRun(RunMapper.from(run));
       transform(run.id, false);
       if(mediator.testMode())
-         messageBus.publish(MessageBusChannels.RUN_NEW, test.id, RunMapper.from(run));
+         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.RUN_NEW, test.id, RunMapper.from(run)));
 
       return run.id;
    }
@@ -889,7 +889,7 @@ public class RunServiceImpl implements RunService {
          trashConnectedDatasets(run.id, run.testid);
          run.persist();
          if(mediator.testMode())
-            messageBus.publish(MessageBusChannels.RUN_TRASHED, run.testid, id);
+            Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.RUN_TRASHED, run.testid, id));
       }
       // if the run was trashed because of a deleted test we need to ensure that the test actually exist
       // before we try to recalculate the dataset
@@ -1017,7 +1017,7 @@ public class RunServiceImpl implements RunService {
          log.debugf("Recalculate Datasets for run %d - forcing recalculation of all between %s and %s", r.runId, from, to);
          // transform will add proper roles anyway
 //         messageBus.executeForTest(r.testId, () -> datasetService.withRecalculationLock(() -> transform(r.runId, true)));
-         mediator.queueRunRecalculation(r.runId);
+         Util.registerTxSynchronization(tm, txStatus -> mediator.queueRunRecalculation(r.runId));
       }
    }
 
@@ -1234,7 +1234,7 @@ public class RunServiceImpl implements RunService {
          mediator.newDataset(new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation));
          mediator.validateDataset(ds.id);
          if(mediator.testMode())
-            messageBus.publish(MessageBusChannels.DATASET_NEW, ds.testid, new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation));
+            Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_NEW, ds.testid, new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation)));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send Dataset event during inactive Transaction. Likely due to prior error.", tre);
       }

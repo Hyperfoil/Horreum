@@ -19,6 +19,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Query;
+import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
@@ -150,6 +151,9 @@ public class DatasetServiceImpl implements DatasetService {
 
    @Inject
    SecurityIdentity identity;
+
+   @Inject
+   TransactionManager tm;
 
    // This is a nasty hack that will serialize all run -> dataset transformations and label calculations
    // The problem is that PostgreSQL's SSI will for some (unknown) reason rollback some transactions,
@@ -411,7 +415,7 @@ public class DatasetServiceImpl implements DatasetService {
       createFingerprint(datasetId, testId);
       mediator.updateLabels(new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
       if(mediator.testMode())
-         messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
+         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation)));
    }
 
    @Transactional

@@ -28,6 +28,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.Query;
+import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 
 import java.io.ByteArrayInputStream;
@@ -105,6 +106,9 @@ public class SchemaServiceImpl implements SchemaService {
 
    @Inject
    EntityManager em;
+
+   @Inject
+   TransactionManager tm;
 
    @Inject
    SecurityIdentity identity;
@@ -308,8 +312,10 @@ public class SchemaServiceImpl implements SchemaService {
       }
       run.persist();
       if(mediator.testMode())
-         messageBus.publish(MessageBusChannels.RUN_VALIDATED, run.testid,
-                 new Schema.ValidationEvent(run.id, run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()) ));
+         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.RUN_VALIDATED, run.testid,
+                 new Schema.ValidationEvent(run.id, run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()) )));
+
+      ;
    }
 
    private void validateDatasetData(String params) {
@@ -351,7 +357,7 @@ public class SchemaServiceImpl implements SchemaService {
          dataset.persist();
       }
       if(mediator.testMode())
-         messageBus.publish(MessageBusChannels.DATASET_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DatasetMapper.from(dataset).validationErrors ));
+         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DatasetMapper.from(dataset).validationErrors )));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -726,7 +732,7 @@ public class SchemaServiceImpl implements SchemaService {
          }
 
          for(var datasetId : datasetIds) {
-            mediator.queueDatasetEvents(new Dataset.EventNew(datasetId, testId, 0, label.id, true));
+            Util.registerTxSynchronization(tm, txStatus -> mediator.queueDatasetEvents(new Dataset.EventNew(datasetId, testId, 0, label.id, true)));
          }
       }
       catch (NoResultException nre) {

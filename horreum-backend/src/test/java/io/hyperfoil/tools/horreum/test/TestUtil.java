@@ -62,7 +62,4 @@ public final class TestUtil {
       fail("Failed waiting for test to become true");
    }
 
-   public static boolean isMessageBusEmpty(TransactionManager tm, EntityManager em) {
-      return Util.withTx(tm, () -> em.createNativeQuery("SELECT id FROM messagebus").getResultList().isEmpty());
-   }
 }
