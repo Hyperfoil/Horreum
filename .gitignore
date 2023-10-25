@@ -52,9 +52,6 @@ release.properties
 # generated API
 /horreum-web/src/generated
 
-# nodejs / npm
-horreum-web/package-lock.json
-
 # misc
 .env.local
 .env.development.local
