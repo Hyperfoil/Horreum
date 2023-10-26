@@ -11,7 +11,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.security.PermitAll;
@@ -19,7 +18,6 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.report.ReportComment;
@@ -32,6 +30,7 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.hibernate.Hibernate;
+import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
@@ -98,7 +97,7 @@ public class ReportServiceImpl implements ReportService {
             .append("(SELECT COUNT(*) FROM grouped) AS total FROM grouped");
       Util.addPaging(queryBuilder, limit, page, sort, direction);
 
-      Query query = em.createNativeQuery(queryBuilder.toString()).unwrap(NativeQuery.class)
+      NativeQuery<Object[]> query = em.unwrap(Session.class).createNativeQuery(queryBuilder.toString(), Object[].class)
             .addScalar("config_id", StandardBasicTypes.INTEGER)
             .addScalar("title", StandardBasicTypes.TEXT)
             .addScalar("testname", StandardBasicTypes.TEXT)
@@ -108,10 +107,10 @@ public class ReportServiceImpl implements ReportService {
       for (var entry : params.entrySet()) {
          query.setParameter(entry.getKey(), entry.getValue());
       }
-      @SuppressWarnings("unchecked") List<Object[]> rows = query.getResultList();
+      List<Object[]> rows = query.getResultList();
 
       AllTableReports result = new AllTableReports();
-      result.count = rows.size() > 0 ? (int) rows.get(0)[5] : 0;
+      result.count = !rows.isEmpty() ? (int) rows.get(0)[5] : 0;
       result.reports = new ArrayList<>();
 
       for (Object[] row : rows) {
@@ -315,7 +314,7 @@ public class ReportServiceImpl implements ReportService {
       }
       report.config = config;
       List<Object[]> categories = Collections.emptyList(), series, scales = Collections.emptyList();
-      Query timestampQuery;
+      NativeQuery<Object[]> timestampQuery;
       if (!nullOrEmpty(config.filterLabels)) {
          List<Integer> datasetIds = filterDatasetIds(config, report);
          log.debugf("Table report %s(%d) includes datasets %s", config.title, config.id, datasetIds);
@@ -329,7 +328,9 @@ public class ReportServiceImpl implements ReportService {
             categories = selectByDatasets(config.categoryLabels, datasetIds);
             log.debugf("Categories: %s", rowsToMap(categories));
          }
-         timestampQuery = em.createNativeQuery("SELECT id, start FROM dataset WHERE id IN :datasets").setParameter("datasets", datasetIds);
+         timestampQuery = em.unwrap(Session.class)
+                 .createNativeQuery("SELECT id, start FROM dataset WHERE id IN :datasets", Object[].class)
+                 .setParameter("datasets", datasetIds);
       } else {
          log(report, PersistentLogDAO.DEBUG, "Table report %s(%d) includes all datasets for test %s(%d)", config.title, config.id, config.test.name, config.test.id);
          series = selectByTest(config.test.id, config.seriesLabels);
@@ -342,7 +343,8 @@ public class ReportServiceImpl implements ReportService {
             categories = selectByTest(config.test.id, config.categoryLabels);
             log.debugf("Categories: %s", rowsToMap(categories));
          }
-         timestampQuery = em.createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?").setParameter(1, config.test.id);
+         timestampQuery = em.unwrap(Session.class).createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?", Object[].class)
+                 .setParameter(1, config.test.id);
       }
       if (categories.isEmpty() && !series.isEmpty()) {
          assert config.categoryLabels == null;
@@ -360,8 +362,7 @@ public class ReportServiceImpl implements ReportService {
             getData(config, report, categories, series, scales);
       log.debugf("Data per dataset: %s", datasetData);
 
-      @SuppressWarnings("unchecked")
-      Map<Integer, Instant> timestamps = ((Stream<Object[]>) timestampQuery.getResultStream())
+      Map<Integer, Instant> timestamps = timestampQuery.getResultStream()
             .collect(Collectors.toMap(row -> (Integer) row[0], row -> (Instant) row[1]));
       // TODO: customizable time range
       List<Integer> datasetIds = getFinalDatasetIds(timestamps, datasetData);
@@ -549,15 +550,13 @@ public class ReportServiceImpl implements ReportService {
       if (labels.size() != 1) {
          sql.append(" GROUP BY id, runid, ordinal");
       }
-      Query query = em.createNativeQuery(sql.toString())
+      NativeQuery<Object[]> query = em.unwrap(Session.class).createNativeQuery(sql.toString(), Object[].class)
             .setParameter("testid", testId)
-            .unwrap(NativeQuery.class)
             .setParameter("labels", labels, JsonBinaryType.INSTANCE)
             .addScalar("id", StandardBasicTypes.INTEGER)
             .addScalar("runid", StandardBasicTypes.INTEGER)
             .addScalar("ordinal", StandardBasicTypes.INTEGER)
             .addScalar("value", JsonBinaryType.INSTANCE);
-      //noinspection unchecked
       return query.getResultList();
    }
 
@@ -575,16 +574,14 @@ public class ReportServiceImpl implements ReportService {
       if (labels.size() != 1) {
          sql.append(" GROUP BY dataset.id, dataset.runid, dataset.ordinal");
       }
-      Query query = em.createNativeQuery(sql.toString())
+      NativeQuery<Object[]> query = em.unwrap(Session.class).createNativeQuery(sql.toString(), Object[].class)
             .setParameter("datasets", datasets)
-            .unwrap(NativeQuery.class)
             .setParameter("labels", labels, JsonBinaryType.INSTANCE)
             .addScalar("id", StandardBasicTypes.INTEGER)
             .addScalar("runid", StandardBasicTypes.INTEGER)
             .addScalar("ordinal", StandardBasicTypes.INTEGER)
             .addScalar("value", JsonBinaryType.INSTANCE);
-      //noinspection unchecked
-      return (List<Object[]>) query.getResultList();
+      return query.getResultList();
    }
 
    public static final class Coords {
@@ -681,10 +678,9 @@ public class ReportServiceImpl implements ReportService {
    }
 
    private String buildCode(String function, String param) {
-       String jsCode = "var __obj = " + param + ";\n" +
+       return  "var __obj = " + param + ";\n" +
                "var __func = " + function + ";\n" +
                "__func(__obj)";
-      return jsCode;
    }
 
    private void executeInContext(TableReportConfigDAO config, Consumer<Context> consumer) {

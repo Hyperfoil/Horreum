@@ -2,7 +2,8 @@ import { useState, useEffect, ReactElement, ReactNode } from "react"
 
 import { Dropdown, DropdownItem, KebabToggle } from "@patternfly/react-core"
 
-import { Access, useTester } from "../auth"
+import { useTester } from "../auth"
+import { Access } from "../api"
 
 import ShareLinkModal from "./ShareLinkModal"
 import ChangeAccessModal from "./ChangeAccessModal"
@@ -40,7 +41,7 @@ export function useShareLink(config: ShareLinkConfig): MenuItem<ShareLinkConfig>
                 item: (
                     <DropdownItem
                         key="link"
-                        isDisabled={props.access === 0 || (!config.token && !isTester)}
+                        isDisabled={props.access === Access.Public || (!config.token && !isTester)}
                         onClick={() => {
                             close()
                             setShareLinkModalOpen(true)
@@ -77,7 +78,7 @@ function ChangeAccessProvider(
     config: ChangeAccessConfig
 ) {
     const [changeAccessModalOpen, setChangeAccessModalOpen] = useState(false)
-    const [newAccess, setNewAccess] = useState<Access>(0)
+    const [newAccess, setNewAccess] = useState<Access>(Access.Public)
     const [newOwner, setNewOwner] = useState<string>("")
 
     useEffect(() => {

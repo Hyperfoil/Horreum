@@ -173,6 +173,11 @@ public interface AlertingService {
       public int variable;
       @NotNull
       public Number timestamp;
+
+      public DatapointLastTimestamp(int variable, Number timestamp) {
+         this.variable = variable;
+         this.timestamp = timestamp;
+      }
    }
 
    class LastDatapointsParams {

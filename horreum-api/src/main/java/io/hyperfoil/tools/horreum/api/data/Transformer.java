@@ -7,9 +7,9 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Collection;
 
-@Schema(type = SchemaType.OBJECT,
+@Schema(type = SchemaType.OBJECT, allOf = ProtectedType.class,
 description = "A transformer extracts labals and applies a Function to convert a Run into one or more Datasets")
-public class Transformer {
+public class Transformer extends ProtectedType {
     @JsonProperty(required = true)
     @Schema(description="Unique Transformer id",
             example="101")
@@ -43,20 +43,8 @@ public class Transformer {
     @Schema(description="Schema name that the transform is registered against", example = "techempower")
     public String schemaName;
 
-    @NotNull
-    @JsonProperty(required = true)
-    @Schema(description="Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
-            example="performance-team")
-    public String owner;
-
-    @NotNull
-    @JsonProperty(required = true)
-    @Schema( type = SchemaType.INTEGER, implementation = Access.class,
-            description = "Access rights for the test. This defines the visibility of the Test in the UI",
-            example = "0")
-    public Access access = Access.PUBLIC;
-
     public Transformer() {
+        access = Access.PUBLIC;
     }
 
     public int compareTo(Transformer o) {

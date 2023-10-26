@@ -43,11 +43,11 @@ import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
 import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
 import TestImportButton from "./TestImportButton"
 
-import { Access, isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
+import { isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
 import { CellProps, Column, UseSortByColumnOptions } from "react-table"
 import { TestStorage, TestDispatch } from "./reducers"
 import { noop } from "../../utils"
-import { SortDirection, testApi, TestQueryResult } from "../../api"
+import {SortDirection, testApi, TestQueryResult, Access } from "../../api"
 
 type WatchDropdownProps = {
     id: number

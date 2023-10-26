@@ -6,8 +6,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.hyperfoil.tools.horreum.api.ApiIgnore;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.ProtectedTimeType;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
+import java.util.List;
+import java.util.Map;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
@@ -19,9 +22,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
-import java.util.List;
-import java.util.Map;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.enums.ParameterIn;
@@ -427,53 +427,37 @@ public interface RunService {
     })
     void recalculateAll(@QueryParam("from") String from, @QueryParam("to") String to);
 
-    class RunSummary {
-        @JsonProperty(required = true)
-        @Schema(required = true, description = "Run unique ID", example = "202")
-        public int id;
-        @JsonProperty(required = true)
-        @Schema(description = "Start timestamp", example = "1698013206000")
-        public long start;
-        @JsonProperty(required = true)
-        @Schema(description = "Stop timestamp", example = "1698013206000")
-        public long stop;
-        @JsonProperty(required = true)
-        @Schema(description = "test ID run relates to", example = "101")
-        public int testid;
-        @NotNull
-        @Schema(description = "Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
-                example = "performance-team")
-        public String owner;
-        @NotNull
-        @JsonProperty(required = true)
-//      TODO:: https://github.com/Hyperfoil/Horreum/issues/801
-//      @Schema( description = "Access rights for the test. This defines the visibility of the Test in the UI",
-//              example = "0")
-        @Schema(required = true, implementation = Access.class)
-        public int access;
-        @Schema(description = "Access token for Run",
-                example = "0")
-        public String token;
-        @NotNull
-        @Schema(description = "test ID run relates to", example = "My benchmark")
-        public String testname;
-        @JsonProperty(required = true)
-        @Schema(description = "has Run been trashed in the UI", example = "false")
-        public boolean trashed;
-        @JsonProperty(required = true)
-        @Schema(description = "does Run have metadata uploaded alongside Run data", example = "false")
-        public boolean hasMetadata;
-        @Schema(description = "Run description", example = "Run on AWS with m7g.large")
-        public String description;
-        @Schema(description = "List of all Schema Usages for Run")
-        public List<SchemaService.SchemaUsage> schemas;
-        @Schema(required = true, description = "Array of datasets ids", example = "[101, 102, 103]")
-        public Integer[] datasets;
-        @Schema(description = "Array of validation errors")
-        public ValidationError[] validationErrors;
-    }
+    @Schema(type = SchemaType.OBJECT, allOf = ProtectedTimeType.class)
+   class RunSummary extends ProtectedTimeType {
+      @JsonProperty(required = true)
+      @Schema(required = true, description = "Run unique ID", example = "202")
+      public int id;
+      @JsonProperty(required = true)
+      @Schema(description = "test ID run relates to", example = "101")
+      public int testid;
+
+      public String token;
+      @NotNull
+      @Schema(description = "test ID run relates to", example = "My benchmark")
+      public String testname;
+      @JsonProperty(required = true)
+      @Schema(description = "has Run been trashed in the UI", example = "false")
+      public boolean trashed;
+      @JsonProperty(required = true)
+      @Schema(description = "does Run have metadata uploaded alongside Run data", example = "false")
+      public boolean hasMetadata;
+      @Schema(description = "Run description", example = "Run on AWS with m7g.large")
+      public String description;
+      @Schema(description = "List of all Schema Usages for Run")
+      public List<SchemaService.SchemaUsage> schemas;
+      @Schema(required = true, description = "Array of datasets ids", example = "[101, 102, 103]")
+      public Integer[] datasets;
+      @Schema(description = "Array of validation errors")
+      public ValidationError[] validationErrors;
+   }
 
     @JsonIgnoreProperties({"token", "old_start"}) //ignore properties that have not been mapped
+    @Schema(type = SchemaType.OBJECT)
     class RunExtended extends Run {
         @NotNull
         @Schema(required = true, description = "List of Schema Usages")

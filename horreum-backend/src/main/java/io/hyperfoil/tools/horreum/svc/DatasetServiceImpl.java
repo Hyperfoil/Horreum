@@ -1,6 +1,8 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -9,6 +11,8 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -18,8 +22,8 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
-import jakarta.persistence.Query;
 import jakarta.transaction.TransactionManager;
+import jakarta.persistence.Tuple;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
@@ -29,8 +33,8 @@ import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import jakarta.ws.rs.DefaultValue;
 import org.hibernate.Hibernate;
+import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
-import org.hibernate.transform.AliasToBeanResultTransformer;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
@@ -129,17 +133,6 @@ public class DatasetServiceImpl implements DatasetService {
          "LEFT JOIN label ON label.id = label_id ";
 
    //@formatter:on
-   protected static final AliasToBeanResultTransformer DATASET_SUMMARY_TRANSFORMER = new AliasToBeanResultTransformer(DatasetSummary.class) {
-      @Override
-      public Object transformTuple(Object[] tuple, String[] aliases) {
-         for (int i = 0; i < aliases.length; ++i) {
-            if ("schemas".equals(aliases[i])) {
-               tuple[i] = Util.OBJECT_MAPPER.convertValue(tuple[i], new TypeReference<List<SchemaService.SchemaUsage>>() {});
-            }
-         }
-         return super.transformTuple(tuple, aliases);
-      }
-   };
    @Inject
    EntityManager em;
 
@@ -178,27 +171,18 @@ public class DatasetServiceImpl implements DatasetService {
       } else {
          sql.append(DATASET_SUMMARY_SELECT);
          addViewIdCondition(sql, viewId);
-         // The line below worked for Hib5, but it causes Hib6 to complain about the param type (which is null)
-         // sql.append(" WHERE testid = ?1 AND ?2 IS NULL");
-         // This works for Hib6
          sql.append(" WHERE testid = :testId");
       }
       addOrderAndPaging(limit, page, sort, direction, sql);
-      Query query = em.createNativeQuery(sql.toString())
-            .setParameter("testId", testId);
+      NativeQuery<DatasetSummary> query = initTypes( sql.toString());
+      query.setParameter("testId", testId);
       if (jsonFilter != null) {
-         query.unwrap(NativeQuery.class).setParameter("jsonFilter", jsonFilter, JsonBinaryType.INSTANCE);
+         query.setParameter("jsonFilter", jsonFilter, JsonBinaryType.INSTANCE);
       }
-      // It seems like setting a null value on a query param fails in Hib6
-      /*else {
-         query.setParameter("jsonFilter", null);
-      } */
       if (viewId != null) {
          query.setParameter("viewId", viewId);
       }
-      initTypes(query);
       DatasetService.DatasetList list = new DatasetService.DatasetList();
-      //noinspection unchecked
       list.datasets = query.getResultList();
       list.total = DatasetDAO.count("testid = ?1", testId);
       return list;
@@ -212,23 +196,44 @@ public class DatasetServiceImpl implements DatasetService {
       }
    }
 
-   private void initTypes(Query query) {
-      //noinspection deprecation
-      query.unwrap(NativeQuery.class)
-            .addScalar("id", StandardBasicTypes.INTEGER)
-            .addScalar("runId", StandardBasicTypes.INTEGER)
-            .addScalar("ordinal", StandardBasicTypes.INTEGER)
-            .addScalar("testId", StandardBasicTypes.INTEGER)
-            .addScalar("testname", StandardBasicTypes.TEXT)
-            .addScalar("description", StandardBasicTypes.TEXT)
-            .addScalar("start", StandardBasicTypes.LONG)
-            .addScalar("stop", StandardBasicTypes.LONG)
-            .addScalar("owner", StandardBasicTypes.TEXT)
-            .addScalar("access", StandardBasicTypes.INTEGER)
-            .addScalar("view", JsonBinaryType.INSTANCE)
-            .addScalar("schemas", JsonBinaryType.INSTANCE)
-            .addScalar("validationErrors", JsonBinaryType.INSTANCE)
-            .setResultTransformer(DATASET_SUMMARY_TRANSFORMER);
+   private NativeQuery<DatasetSummary> initTypes(String  sql) {
+      return em.unwrap(Session.class).createNativeQuery(sql.toString(), Tuple.class)
+              .addScalar("id", StandardBasicTypes.INTEGER)
+              .addScalar("runId", StandardBasicTypes.INTEGER)
+              .addScalar("ordinal", StandardBasicTypes.INTEGER)
+              .addScalar("testId", StandardBasicTypes.INTEGER)
+              .addScalar("testname", StandardBasicTypes.TEXT)
+              .addScalar("description", StandardBasicTypes.TEXT)
+              .addScalar("start", StandardBasicTypes.LONG)
+              .addScalar("stop", StandardBasicTypes.LONG)
+              .addScalar("owner", StandardBasicTypes.TEXT)
+              .addScalar("access", StandardBasicTypes.INTEGER)
+              .addScalar("view", JsonBinaryType.INSTANCE)
+              .addScalar("schemas", JsonBinaryType.INSTANCE)
+              .addScalar("validationErrors", JsonBinaryType.INSTANCE)
+              .setTupleTransformer((tuples, aliases) -> {
+                 DatasetSummary summary = new DatasetSummary();
+                 summary.id = (int) tuples[0];
+                 summary.runId = (int) tuples[1];
+                 summary.ordinal = (int) tuples[2];
+                 summary.testId = (int) tuples[3];
+                 summary.testname = (String) tuples[4];
+                 summary.description = (String) tuples[5];
+                 summary.start = Instant.ofEpochMilli((Long) tuples[6]);
+                 summary.stop = Instant.ofEpochMilli((Long) tuples[7]);
+                 summary.owner = (String) tuples[8];
+                 summary.access = Access.fromInt((int) tuples[9]);
+                 summary.view = (ObjectNode) tuples[10];
+                 summary.schemas = Util.OBJECT_MAPPER.convertValue(tuples[11], new TypeReference<>(){});
+                 if(tuples[12] != null && !((ArrayNode) tuples[12]).isEmpty()) {
+                    try {
+                       summary.validationErrors = Arrays.asList( Util.OBJECT_MAPPER.treeToValue((ArrayNode)tuples[12], ValidationError[].class));
+                    } catch (JsonProcessingException e) {
+                       throw new RuntimeException(e);
+                    };
+                 }
+                 return summary;
+              });
    }
 
    private void addOrderAndPaging(Integer limit, Integer page, String sort, SortDirection direction, StringBuilder sql) {
@@ -255,10 +260,9 @@ public class DatasetServiceImpl implements DatasetService {
       StringBuilder sql = new StringBuilder(LIST_SCHEMA_DATASETS);
       // TODO: filtering by fingerprint
       addOrderAndPaging(limit, page, sort, direction, sql);
-      Query query = em.createNativeQuery(sql.toString()).setParameter(1, uri);
-      initTypes(query);
+      NativeQuery<DatasetSummary> query = initTypes(sql.toString());
+      query.setParameter(1, uri);
       DatasetService.DatasetList list = new DatasetService.DatasetList();
-      //noinspection unchecked
       list.datasets = query.getResultList();
       list.total = ((Number) em.createNativeQuery("SELECT COUNT(dataset_id) FROM dataset_schemas WHERE uri = ?1")
             .setParameter(1, uri).getSingleResult()).longValue();
@@ -267,10 +271,9 @@ public class DatasetServiceImpl implements DatasetService {
 
    @Override
    public List<LabelValue> labelValues(int datasetId) {
-      //noinspection unchecked
-      Stream<Object[]> stream = em.createNativeQuery("SELECT label_id, label.name AS label_name, schema.id AS schema_id, schema.name AS schema_name, schema.uri, value FROM label_values " +
-            "JOIN label ON label.id = label_id JOIN schema ON label.schema_id = schema.id WHERE dataset_id = ?1")
-            .setParameter(1, datasetId).unwrap(NativeQuery.class)
+      Stream<Object[]> stream = em.unwrap(Session.class).createNativeQuery("SELECT label_id, label.name AS label_name, schema.id AS schema_id, schema.name AS schema_name, schema.uri, value FROM label_values " +
+            "JOIN label ON label.id = label_id JOIN schema ON label.schema_id = schema.id WHERE dataset_id = ?1", Object[].class)
+            .setParameter(1, datasetId)
             .addScalar("label_id", StandardBasicTypes.INTEGER)
             .addScalar("label_name", StandardBasicTypes.TEXT)
             .addScalar("schema_id", StandardBasicTypes.INTEGER)
@@ -335,11 +338,12 @@ public class DatasetServiceImpl implements DatasetService {
    @Override
    public DatasetSummary getSummary(int datasetId, int viewId) {
       try {
-         Query query = em.createNativeQuery("WITH schema_agg AS (" + SCHEMAS_SELECT + " WHERE ds.dataset_id = ?1 GROUP BY ds.dataset_id), " +
-               VALIDATION_SELECT + DATASET_SUMMARY_SELECT + "?2 WHERE ds.id = ?1")
-               .setParameter(1, datasetId).setParameter(2, viewId);
-         initTypes(query);
-         return (DatasetSummary) query.getSingleResult();
+         NativeQuery<DatasetSummary> query = initTypes(
+                 "WITH schema_agg AS (" + SCHEMAS_SELECT +
+                         " WHERE ds.dataset_id = ?1 GROUP BY ds.dataset_id), " +
+                         VALIDATION_SELECT + DATASET_SUMMARY_SELECT + "?2 WHERE ds.id = ?1");
+         query.setParameter(1, datasetId).setParameter(2, viewId);
+         return query.getSingleResult();
       } catch (NoResultException e) {
          throw ServiceException.notFound("Cannot find dataset " + datasetId);
       }
@@ -378,11 +382,9 @@ public class DatasetServiceImpl implements DatasetService {
       try {
          // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
          // to the uploading user. However, the uploader should not have rights to fetch these anyway...
-         //noinspection unchecked
-         extracted = (List<Object[]>) em.createNativeQuery(LABEL_QUERY)
+         extracted =  em.unwrap(Session.class).createNativeQuery(LABEL_QUERY, Object[].class)
                      .setParameter(1, datasetId)
                      .setParameter(2, queryLabelId)
-                     .unwrap(NativeQuery.class)
                      .addScalar("label_id", StandardBasicTypes.INTEGER)
                      .addScalar("name", StandardBasicTypes.TEXT)
                      .addScalar("function", StandardBasicTypes.TEXT)
@@ -441,11 +443,11 @@ public class DatasetServiceImpl implements DatasetService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    protected void findFailingExtractor(int datasetId) {
-      @SuppressWarnings("unchecked") List<Object[]> extractors = em.createNativeQuery(
+      List<Object[]> extractors = em.unwrap(Session.class).createNativeQuery(
             "SELECT ds.uri, label.name AS name, le.name AS extractor_name, ds.index, le.jsonpath FROM dataset_schemas ds " +
             "JOIN label ON label.schema_id = ds.schema_id " +
             "JOIN label_extractors le ON le.label_id = label.id " +
-            "WHERE ds.dataset_id = ?1").setParameter(1, datasetId).getResultList();
+            "WHERE ds.dataset_id = ?1", Object[].class).setParameter(1, datasetId).getResultList();
       for (Object[] row : extractors) {
          try {
             // actual result of query is ignored
@@ -514,9 +516,6 @@ public class DatasetServiceImpl implements DatasetService {
       withRecalculationLock(() -> calculateLabels(event.testId, event.datasetId, event.labelId, event.isRecalculation));
    }
 
-   public void onNewDataset(int testId, int datasetId, int labelId, boolean isRecalculation) {
-      withRecalculationLock(() -> calculateLabels(testId, datasetId, labelId, isRecalculation));
-   }
    public void onNewDatasetNoLock(Dataset.EventNew event) {
       calculateLabels(event.testId, event.datasetId, event.labelId , event.isRecalculation);
    }

@@ -22,10 +22,10 @@ import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.alerting.NotificationSettings;
 import io.hyperfoil.tools.horreum.mapper.NotificationSettingsMapper;
+import org.hibernate.Session;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.internal.services.NotificationService;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettingsDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
@@ -65,9 +65,6 @@ public class NotificationServiceImpl implements NotificationService {
    @Inject
    TransactionManager tm;
 
-   @Inject
-   MessageBus messageBus;
-
    @PostConstruct
    public void init() {
       notificationPlugins.forEach(plugin -> plugins.put(plugin.method(), plugin));
@@ -102,8 +99,7 @@ public class NotificationServiceImpl implements NotificationService {
    }
 
    private void notifyAll(int testId, Consumer<Notification> consumer) {
-      @SuppressWarnings("unchecked")
-      List<Object[]> results = em.createNativeQuery(GET_NOTIFICATIONS)
+      List<Object[]> results = em.unwrap(Session.class).createNativeQuery(GET_NOTIFICATIONS, Object[].class)
             .setParameter(1, testId).getResultList();
       if (results.isEmpty()) {
          log.infof("There are no subscribers for notification on test %d!", testId);

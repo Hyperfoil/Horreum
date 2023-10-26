@@ -21,7 +21,7 @@ import static java.lang.String.format;
 
 public class JsonBinaryType implements UserType<JsonNode> {
 
-    public static final CustomType INSTANCE = new CustomType<>(new JsonBinaryType(), new TypeConfiguration());
+    public static final CustomType<JsonNode> INSTANCE = new CustomType<>(new JsonBinaryType(), new TypeConfiguration());
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Override

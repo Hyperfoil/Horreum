@@ -8,8 +8,9 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Collection;
 
-@Schema(description = "Represents a Test. Tests are typically equivalent to a particular benchmark")
-public class Test {
+@Schema(type = SchemaType.OBJECT, allOf = ProtectedType.class,
+        description = "Represents a Test. Tests are typically equivalent to a particular benchmark")
+public class Test extends ProtectedType {
     @JsonProperty(required = true)
     @Schema(description="Unique Test id",
             example="101")
@@ -25,17 +26,7 @@ public class Test {
     @Schema(description="Description of the test",
             example="Comprehensive benchmark to tests the limits of any system it is run against")
     public String description;
-    @NotNull
-    @JsonProperty(required = true)
-    @Schema(description="Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
-            example="performance-team")
-    public String owner;
-    @NotNull
-    @JsonProperty(required = true)
-    @Schema( type = SchemaType.INTEGER, implementation = Access.class,
-            description = "Access rights for the test. This defines the visibility of the Test in the UI",
-            example = "0")
-    public Access access;
+
     @Schema(description = "Array of API tokens associated with test")
     public Collection<TestToken> tokens;
     @Schema(type = SchemaType.ARRAY, implementation = String.class,

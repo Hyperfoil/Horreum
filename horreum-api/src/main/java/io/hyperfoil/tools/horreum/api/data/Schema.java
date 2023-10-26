@@ -7,9 +7,9 @@ import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 
 import java.util.Collection;
 
-@org.eclipse.microprofile.openapi.annotations.media.Schema(name = "Schema",
+@org.eclipse.microprofile.openapi.annotations.media.Schema(name = "Schema", type = SchemaType.OBJECT, allOf = ProtectedType.class,
         description = "Data object that describes the schema definition for a test" )
-public class Schema {
+public class Schema extends ProtectedType {
 
     @org.eclipse.microprofile.openapi.annotations.media.Schema(required = true,
     description = "Unique Schema ID", example = "101")
@@ -37,14 +37,7 @@ public class Schema {
             "  \"type\": \"object\"" +
             "}")
     public JsonNode schema;
-    @JsonProperty(required = true)
-    @org.eclipse.microprofile.openapi.annotations.media.Schema(required = true, description="Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
-            example="performance-team")
-    public String owner;
-    @org.eclipse.microprofile.openapi.annotations.media.Schema( type = SchemaType.INTEGER, implementation = Access.class,
-            description = "Access rights for the test. This defines the visibility of the Test in the UI",
-            example = "0")
-    public Access access;
+
     @org.eclipse.microprofile.openapi.annotations.media.Schema(description = "Array of API tokens associated with test",
             example = "")
     public String token;

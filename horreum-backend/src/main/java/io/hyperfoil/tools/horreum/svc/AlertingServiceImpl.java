@@ -37,6 +37,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Query;
+import jakarta.persistence.Tuple;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
@@ -60,9 +61,8 @@ import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.mapper.*;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.hibernate.Hibernate;
+import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
-import org.hibernate.transform.AliasToBeanResultTransformer;
-import org.hibernate.transform.Transformers;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
@@ -161,9 +161,6 @@ public class AlertingServiceImpl implements AlertingService {
    @Inject
    SecurityIdentity identity;
 
-   @ConfigProperty(name = "horreum.internal.url")
-   String internalUrl;
-
    @ConfigProperty(name = "horreum.alerting.updateLabel.retries", defaultValue = "5")
    Integer labelCalcRetries;
 
@@ -181,6 +178,9 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Inject
    ServiceMediator mediator;
+
+   @Inject
+   Session session;
 
    static ConcurrentHashMap<Integer, AtomicInteger> retryCounterSet = new ConcurrentHashMap<>();
 
@@ -237,29 +237,29 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void recalculateMissingDataRules(DatasetDAO dataset) {
       MissingDataRuleResultDAO.deleteForDataset(dataset.id);
-      @SuppressWarnings("unchecked") List<Object[]> ruleValues = em.createNativeQuery(LOOKUP_RULE_LABEL_VALUES)
-            .setParameter(1, dataset.id).setParameter(2, dataset.testid)
-            .unwrap(NativeQuery.class)
-            .addScalar("rule_id", StandardBasicTypes.INTEGER)
-            .addScalar("condition", StandardBasicTypes.TEXT)
-            .addScalar("value", JsonBinaryType.INSTANCE)
-            .getResultList();
+      List<Object[]> ruleValues = session
+              .createNativeQuery(LOOKUP_RULE_LABEL_VALUES, Object[].class)
+              .setParameter(1, dataset.id).setParameter(2, dataset.testid)
+              .addScalar("rule_id", StandardBasicTypes.INTEGER)
+              .addScalar("condition", StandardBasicTypes.TEXT)
+              .addScalar("value", JsonBinaryType.INSTANCE)
+              .getResultList();
       Util.evaluateMany(ruleValues, row -> (String) row[1], row -> (JsonNode) row[2],
-            (row, result) -> {
-               int ruleId = (int) row[0];
-               if (result.isBoolean()) {
-                  if (result.asBoolean()) {
-                     createMissingDataRuleResult(dataset, ruleId);
-                  }
-               } else {
-                  logMissingDataMessage(dataset, PersistentLogDAO.ERROR,
-                        "Result for missing data rule %d, dataset %d is not a boolean: %s", ruleId, dataset.id, result);
-               }
-            },
-            // Absence of condition means that this dataset is taken into account. This happens e.g. when value == NULL
-            row -> createMissingDataRuleResult(dataset, (int) row[0]),
-            (row, exception, code) -> logMissingDataMessage(dataset, PersistentLogDAO.ERROR, "Exception evaluating missing data rule %d, dataset %d: '%s' Code: <pre>%s</pre>", row[0], dataset.id, exception.getMessage(), code),
-            output -> logMissingDataMessage(dataset, PersistentLogDAO.DEBUG, "Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output));
+              (row, result) -> {
+                 int ruleId = (int) row[0];
+                 if (result.isBoolean()) {
+                    if (result.asBoolean()) {
+                       createMissingDataRuleResult(dataset, ruleId);
+                    }
+                 } else {
+                    logMissingDataMessage(dataset, PersistentLogDAO.ERROR,
+                            "Result for missing data rule %d, dataset %d is not a boolean: %s", ruleId, dataset.id, result);
+                 }
+              },
+              // Absence of condition means that this dataset is taken into account. This happens e.g. when value == NULL
+              row -> createMissingDataRuleResult(dataset, (int) row[0]),
+              (row, exception, code) -> logMissingDataMessage(dataset, PersistentLogDAO.ERROR, "Exception evaluating missing data rule %d, dataset %d: '%s' Code: <pre>%s</pre>", row[0], dataset.id, exception.getMessage(), code),
+              output -> logMissingDataMessage(dataset, PersistentLogDAO.DEBUG, "Output while evaluating missing data rules for dataset %d: '%s'", dataset.id, output));
    }
 
    private void createMissingDataRuleResult(DatasetDAO dataset, int ruleId) {
@@ -284,12 +284,11 @@ public class AlertingServiceImpl implements AlertingService {
       if (filter == null || filter.isBlank()) {
          return true;
       }
-      @SuppressWarnings("unchecked") Optional<JsonNode> result =
-            em.createNativeQuery("SELECT fp.fingerprint FROM fingerprint fp WHERE dataset_id = ?1")
-                  .setParameter(1, dataset.id)
-                  .unwrap(NativeQuery.class)
-                  .addScalar("fingerprint", JsonBinaryType.INSTANCE)
-                  .getResultStream().findFirst();
+      Optional<JsonNode> result = session
+              .createNativeQuery("SELECT fp.fingerprint FROM fingerprint fp WHERE dataset_id = ?1")
+              .setParameter(1, dataset.id)
+              .addScalar("fingerprint", JsonBinaryType.INSTANCE)
+              .getResultStream().findFirst();
       JsonNode fingerprint;
       if (result.isPresent()) {
          fingerprint = result.get();
@@ -384,31 +383,38 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void emitDatapoints(DatasetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
       Set<String> missingValueVariables = new HashSet<>();
-      @SuppressWarnings("unchecked")
-      List<VariableData> values = em.createNativeQuery(LOOKUP_VARIABLES)
+      List<VariableData> values = session.createNativeQuery(LOOKUP_VARIABLES, Tuple.class)
             .setParameter(1, dataset.testid)
             .setParameter(2, dataset.id)
-            .unwrap(NativeQuery.class)
             .addScalar("variableId", StandardBasicTypes.INTEGER)
             .addScalar("name", StandardBasicTypes.TEXT)
             .addScalar("group", StandardBasicTypes.TEXT)
             .addScalar("calculation", StandardBasicTypes.TEXT)
             .addScalar("numLabels", StandardBasicTypes.INTEGER)
             .addScalar("value", JsonBinaryType.INSTANCE)
-            .setResultTransformer(new AliasToBeanResultTransformer(VariableData.class))
+            .setTupleTransformer((tuples, aliases) -> {
+               VariableData data = new VariableData();
+               data.variableId = (int) tuples[0];
+               data.name = (String) tuples[1];
+               data.group = (String) tuples[2];
+               data.calculation = (String) tuples[3];
+               data.numLabels = (int) tuples[4];
+               data.value = (JsonNode) tuples[5];
+               return data;
+            })
             .getResultList();
       if (debug) {
          for (VariableData data : values) {
             logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Fetched value for variable %s: <pre>%s</pre>", data.fullName(), data.value);
          }
       }
-      @SuppressWarnings("unchecked") List<Object[]> timestampList = em.createNativeQuery(LOOKUP_TIMESTAMP)
-            .setParameter(1, dataset.testid)
-            .setParameter(2, dataset.id)
-            .unwrap(NativeQuery.class)
-            .addScalar("timeline_function", StandardBasicTypes.TEXT)
-            .addScalar("value", JsonBinaryType.INSTANCE)
-            .getResultList();
+      List<Object[]> timestampList = session
+              .createNativeQuery(LOOKUP_TIMESTAMP, Object[].class)
+              .setParameter(1, dataset.testid)
+              .setParameter(2, dataset.id)
+              .addScalar("timeline_function", StandardBasicTypes.TEXT)
+              .addScalar("value", JsonBinaryType.INSTANCE)
+              .getResultList();
       Instant timestamp = dataset.start;
       if (!timestampList.isEmpty()) {
          String timestampFunction = (String) timestampList.get(0)[0];
@@ -570,10 +576,9 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void runChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean expectExists) {
       UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
-      @SuppressWarnings("unchecked") Instant nextTimestamp = (Instant) em.createNativeQuery(
+      Instant nextTimestamp = session.createNativeQuery(
             "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
-                  "WHERE dp.variable_id = ?1 AND (timestamp > ?2 OR (timestamp = ?2 AND ?3)) AND json_equals(fp.fingerprint, ?4)")
-            .unwrap(NativeQuery.class)
+                  "WHERE dp.variable_id = ?1 AND (timestamp > ?2 OR (timestamp = ?2 AND ?3)) AND json_equals(fp.fingerprint, ?4)", Instant.class)
             .setParameter(1, variable.id)
             .setParameter(2, valid != null ? valid.timestamp : LONG_TIME_AGO, StandardBasicTypes.INSTANT)
             .setParameter(3, valid == null || !valid.inclusive)
@@ -586,11 +591,10 @@ public class AlertingServiceImpl implements AlertingService {
 
       // this should happen only after reboot, let's start with last change
       if (valid != null) {
-         int numDeleted = em.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
+         int numDeleted = session.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
                "SELECT id FROM change c LEFT JOIN fingerprint fp ON c.dataset_id = fp.dataset_id " +
                "WHERE NOT c.confirmed AND c.variable_id = ?1 AND (c.timestamp > ?2 OR (c.timestamp = ?2 AND ?3)) " +
-               "AND json_equals(fp.fingerprint, ?4))")
-               .unwrap(NativeQuery.class)
+               "AND json_equals(fp.fingerprint, ?4))", int.class)
                .setParameter(1, variable.id)
                .setParameter(2, valid.timestamp, StandardBasicTypes.INSTANT)
                .setParameter(3, !valid.inclusive)
@@ -599,7 +603,7 @@ public class AlertingServiceImpl implements AlertingService {
          log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=", valid.timestamp, variable.id, fingerprint);
       }
 
-      var changeQuery = em.createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
+      var changeQuery = session.createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
             "WHERE c.variable = ?1 AND (c.timestamp < ?2 OR (c.timestamp = ?2 AND ?3 = TRUE)) AND " +
             "TRUE = function('json_equals', fp.fingerprint, ?4) " +
             "ORDER by c.timestamp DESC", ChangeDAO.class);
@@ -607,7 +611,6 @@ public class AlertingServiceImpl implements AlertingService {
             .setParameter(1, variable)
             .setParameter(2, valid != null ? valid.timestamp : VERY_DISTANT_FUTURE)
             .setParameter(3, valid == null || valid.inclusive)
-            .unwrap(org.hibernate.query.Query.class)
             .setParameter(4, fingerprint, JsonBinaryType.INSTANCE);
       ChangeDAO lastChange = changeQuery.setMaxResults(1).getResultStream().findFirst().orElse(null);
 
@@ -617,7 +620,7 @@ public class AlertingServiceImpl implements AlertingService {
          changeTimestamp = lastChange.timestamp;
       }
 
-      @SuppressWarnings("unchecked") List<DataPointDAO> dataPoints = em.createQuery(
+      List<DataPointDAO> dataPoints = session.createQuery(
             "SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
             "JOIN dp.dataset " + // ignore datapoints (that were not deleted yet) from deleted datasets
             "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 " +
@@ -626,7 +629,6 @@ public class AlertingServiceImpl implements AlertingService {
             .setParameter(1, variable)
             .setParameter(2, changeTimestamp)
             .setParameter(3, nextTimestamp)
-            .unwrap(org.hibernate.query.Query.class)
             .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
             .getResultList();
       // Last datapoint is already in the list
@@ -645,9 +647,17 @@ public class AlertingServiceImpl implements AlertingService {
             model.analyze(dataPoints, detection.config, change -> {
                logChangeDetectionMessage(variable.testId, datasetId, PersistentLogDAO.DEBUG,
                      "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
-               Query datasetQuery = em.createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id = ?1");
-               Util.setResultTransformer(datasetQuery, Transformers.aliasToBean(DatasetDAO.Info.class));
-               DatasetDAO.Info info = (DatasetDAO.Info) datasetQuery.setParameter(1, change.dataset.id).getSingleResult();
+               DatasetDAO.Info info = session
+                       .createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id = ?1", Tuple.class)
+                       .setParameter(1, change.dataset.id)
+                       .setTupleTransformer((tuples, aliases) -> {
+                          DatasetDAO.Info i = new DatasetDAO.Info();
+                          i.id = (int) tuples[0];
+                          i.runId = (int) tuples[1];
+                          i.ordinal = (int) tuples[2];
+                          i.testId = (int) tuples[3];
+                          return i;
+                       }).getSingleResult();
                em.persist(change);
                Hibernate.initialize(change.dataset.run.id);
                String testName = TestDAO.<TestDAO>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
@@ -860,10 +870,9 @@ public class AlertingServiceImpl implements AlertingService {
          List<ChangeDAO> changes = ChangeDAO.list("variable", v);
          return changes.stream().map(ChangeMapper::from).collect(Collectors.toList());
       }
-      //noinspection unchecked
-      List<ChangeDAO> changes = em.createNativeQuery("SELECT change.* FROM change JOIN fingerprint fp ON change.dataset_id = fp.dataset_id " +
+      List<ChangeDAO> changes = session.createNativeQuery("SELECT change.* FROM change JOIN fingerprint fp ON change.dataset_id = fp.dataset_id " +
             "WHERE variable_id = ?1 AND json_equals(fp.fingerprint, ?2)", ChangeDAO.class)
-            .setParameter(1, varId).unwrap(NativeQuery.class)
+            .setParameter(1, varId)
             .setParameter(2, fp, JsonBinaryType.INSTANCE)
             .getResultList();
       return changes.stream().map(ChangeMapper::from).collect(Collectors.toList());
@@ -958,15 +967,15 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    List<Integer> getDatasetsForRecalculation(Integer testId, Long from, Long to) {
-      Query query = em.createNativeQuery("SELECT id FROM dataset WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) ORDER BY start")
-            .setParameter(1, testId)
-            .setParameter(2, from == null ? Long.MIN_VALUE : from)
-            .setParameter(3, to == null ? Long.MAX_VALUE : to);
-      @SuppressWarnings("unchecked")
+      NativeQuery<Integer> query = session
+              .createNativeQuery("SELECT id FROM dataset WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) ORDER BY start", Integer.class)
+              .setParameter(1, testId)
+              .setParameter(2, from == null ? Long.MIN_VALUE : from)
+              .setParameter(3, to == null ? Long.MAX_VALUE : to);
       List<Integer> ids = query.getResultList();
       DataPointDAO.delete("dataset.id in ?1", ids);
       ChangeDAO.delete("dataset.id in ?1 AND confirmed = false", ids);
-      if (ids.size() > 0) {
+      if (!ids.isEmpty()) {
          // Due to RLS policies we cannot add a record to a dataset we don't own
          logCalculationMessage(testId, ids.get(0), PersistentLogDAO.INFO, "Starting recalculation of %d runs.", ids.size());
       }
@@ -1003,8 +1012,7 @@ public class AlertingServiceImpl implements AlertingService {
    @Transactional
    @Scheduled(every = "{horreum.alerting.missing.dataset.check}")
    public void checkMissingDataset() {
-      @SuppressWarnings("unchecked")
-      List<Object[]> results = em.createNativeQuery(LOOKUP_RECENT).getResultList();
+      List<Object[]> results = session.createNativeQuery(LOOKUP_RECENT, Object[].class).getResultList();
       for (Object[] row : results) {
          int ruleId = (int) row[0];
          int testId = (int) row[1];
@@ -1029,13 +1037,14 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles
    @PermitAll
    public List<DatapointLastTimestamp> findLastDatapoints(LastDatapointsParams params) {
-      Query query = em.createNativeQuery(FIND_LAST_DATAPOINTS)
+      //noinspection unchecked
+      return em.createNativeQuery(FIND_LAST_DATAPOINTS)
             .unwrap(NativeQuery.class)
             .setParameter(1, Util.parseFingerprint(params.fingerprint), JsonBinaryType.INSTANCE)
-            .setParameter(2, params.variables, IntArrayType.INSTANCE);
-      Util.setResultTransformer(query, Transformers.aliasToBean(DatapointLastTimestamp.class));
-      //noinspection unchecked
-      return query.getResultList();
+            .setParameter(2, params.variables, IntArrayType.INSTANCE)
+                    .setTupleTransformer((tuples, aliases) -> {
+                        return new DatapointLastTimestamp((int) tuples[0], (Number) tuples[1]);
+                    }).getResultList();
    }
 
    @Override
@@ -1160,9 +1169,9 @@ public class AlertingServiceImpl implements AlertingService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void recalculateMissingDataRules(int testId, MissingDataRuleDAO rule) {
-      @SuppressWarnings("unchecked") List<Object[]> idsAndTimestamps =
-            em.createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?1")
-                  .setParameter(1, testId).getResultList();
+      List<Object[]> idsAndTimestamps = session
+              .createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?1", Object[].class)
+              .setParameter(1, testId).getResultList();
       for (Object[] row : idsAndTimestamps) {
          recalculateMissingDataRule((int) row[0], (Instant) row[1], rule);
       }

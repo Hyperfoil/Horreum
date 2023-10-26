@@ -1,10 +1,9 @@
 import * as actionTypes from "./actionTypes"
-import { Access } from "../../auth"
 import { DeleteAction, LoadedAction, UpdateTokenAction, UpdateAccessAction } from "./reducers"
 import { Dispatch } from "redux"
 import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction, dispatchError } from "../../alerts"
-import {Schema, schemaApi} from "../../api"
+import {Schema, schemaApi, Access } from "../../api"
 
 const loaded = (schema: Schema | Schema[]): LoadedAction => ({
     type: actionTypes.LOADED,

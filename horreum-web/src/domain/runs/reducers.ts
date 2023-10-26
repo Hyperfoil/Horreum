@@ -2,10 +2,9 @@ import * as actionTypes from "./actionTypes"
 import { Map } from "immutable"
 import * as utils from "../../utils"
 import { Team } from "../../components/TeamSelect"
-import { Access } from "../../auth"
 import { ThunkDispatch } from "redux-thunk"
 import { AddAlertAction } from "../../alerts"
-import { RunExtended, RunSummary } from "../../api"
+import { RunExtended, RunSummary, Access } from "../../api"
 
 export interface RunSchemas {
     // schemaid -> uri
