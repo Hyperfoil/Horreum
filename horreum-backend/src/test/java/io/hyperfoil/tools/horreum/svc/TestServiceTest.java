@@ -59,6 +59,9 @@ public class TestServiceTest extends BaseServiceTest {
       int runId = uploadRun("{ \"foo\" : \"bar\" }", test.name);
       assertNotNull(dsQueue.poll(10, TimeUnit.SECONDS));
 
+      jsonRequest().get("/api/test/summary?roles=__my").then().statusCode(200);
+
+
       BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, MessageBusChannels.RUN_TRASHED, id -> id == runId);
       deleteTest(test);
       assertNotNull(events.poll(10, TimeUnit.SECONDS));

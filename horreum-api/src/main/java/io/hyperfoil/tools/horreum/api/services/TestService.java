@@ -290,8 +290,8 @@ public interface TestService {
 //      @Schema( type = SchemaType.INTEGER, implementation = Access.class,
 //              description = "Access rights for the test. This defines the visibility of the Test in the UI",
 //              example = "0")
-      @Schema(implementation = Access.class, required = true)
-      public Access access;
+      @Schema(type=SchemaType.INTEGER, implementation = Access.class, required = true)
+      public int access;
    }
 
    class RecalculationStatus {
