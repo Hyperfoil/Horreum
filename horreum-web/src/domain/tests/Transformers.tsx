@@ -20,7 +20,7 @@ import { dispatchError } from "../../alerts"
 import { noop } from "../../utils"
 import { useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
-import {schemaApi, Transformer, TransformerInfo} from "../../api"
+import {schemaApi, Transformer, Access, TransformerInfo} from "../../api"
 import { TestDispatch } from "./reducers"
 import { updateTransformers } from "./actions"
 import TransformationLogModal from "./TransformationLogModal"
@@ -121,7 +121,8 @@ export default function Transformers(props: TransformersProps) {
 
     useEffect(() => {
         setLoading(true)
-        schemaApi.allTransformers()
+        schemaApi
+            .allTransformers()
             .then(
                 ts => {
                     const items = transformersToTree(ts)
@@ -155,7 +156,7 @@ export default function Transformers(props: TransformersProps) {
                             description: "",
                             extractors: [],
                             owner: "",
-                            access: 0,
+                            access: Access.Public,
                         }))
                 )
             ),

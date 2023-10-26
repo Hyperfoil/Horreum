@@ -4,7 +4,7 @@ import { useHistory } from "react-router-dom"
 
 import { Button, Checkbox, Flex, FlexItem, FormGroup, FormSection, TextInput } from "@patternfly/react-core"
 
-import { Access, defaultTeamSelector, useTester } from "../../auth"
+import { defaultTeamSelector, useTester } from "../../auth"
 import { noop } from "../../utils"
 import { dispatchError } from "../../alerts"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -17,7 +17,7 @@ import JsonExtractor from "./JsonExtractor"
 import SplitForm from "../../components/SplitForm"
 import TestLabelModal from "./TestLabelModal"
 
-import {Label, schemaApi} from "../../api"
+import { Label, schemaApi, Access } from "../../api"
 
 const LABEL_FUNCTION_HELP = (
     <>
@@ -41,7 +41,7 @@ type LabelsProps = {
     funcsRef: TabFunctionsRef
 }
 
-export default function Labels({schemaId, schemaUri, funcsRef}: LabelsProps) {
+export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
     const [loading, setLoading] = useState(false)
     const [labels, setLabels] = useState<LabelEx[]>([])
     const [selected, setSelected] = useState<LabelEx>()
@@ -96,7 +96,8 @@ export default function Labels({schemaId, schemaUri, funcsRef}: LabelsProps) {
     const history = useHistory()
     useEffect(() => {
         setLoading(true)
-        schemaApi.labels(schemaId)
+        schemaApi
+            .labels(schemaId)
             .then(
                 labels => {
                     setLabels(labels)
@@ -142,7 +143,7 @@ export default function Labels({schemaId, schemaUri, funcsRef}: LabelsProps) {
                     name: "",
                     extractors: [],
                     owner: defaultTeam || "",
-                    access: 0 as Access,
+                    access: "0" as Access,
                     schemaId: schemaId,
                     filtering: true,
                     metrics: true,

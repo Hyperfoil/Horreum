@@ -28,7 +28,7 @@ import {
 } from "@patternfly/react-core"
 import { Link, NavLink } from "react-router-dom"
 
-import {TableReport, TableReportConfig, ReportComponent, reportApi} from "../../api"
+import {TableReport, TableReportConfig, ReportComponent, reportApi, Access } from "../../api"
 import TableReportView from "./TableReportView"
 import ReportLogModal from "./ReportLogModal"
 
@@ -48,7 +48,7 @@ type ReportConfigComponentProps = {
     readOnly: boolean
 }
 
-function ReportConfigComponent({component, onChange, onDelete, readOnly}: ReportConfigComponentProps) {
+function ReportConfigComponent({ component, onChange, onDelete, readOnly }: ReportConfigComponentProps) {
     return (
         <Flex style={{ marginBottom: "10px" }} key={component.id}>
             <FlexItem grow={{ default: "grow" }}>
@@ -153,7 +153,8 @@ export default function TableReportConfigPage() {
         }
         setLoading(true)
         document.title = "Loading report config ... | Horreum"
-        reportApi.getTableReportConfig(id)
+        reportApi
+            .getTableReportConfig(id)
             .then((config: TableReportConfig) => {
                 setConfig(config)
                 setTest({
@@ -193,7 +194,8 @@ export default function TableReportConfigPage() {
                 onClick={() => {
                     // TODO save locally for faster reload...
                     setSaving(true)
-                    reportApi.updateTableReportConfig(reportId, config)
+                    reportApi
+                        .updateTableReportConfig(reportId, config)
                         .then(
                             report => history.push("/reports/table/" + report.id),
                             error => dispatch(alertAction("SAVE_CONFIG", "Failed to save report configuration.", error))
@@ -270,7 +272,7 @@ export default function TableReportConfigPage() {
                                             id: test?.id || -1,
                                             name: "",
                                             owner: "",
-                                            access: 0,
+                                            access: Access.Public,
                                             notificationsEnabled: false,
                                         },
                                     })
@@ -580,7 +582,8 @@ export default function TableReportConfigPage() {
                                     isDisabled={!configValid || saving}
                                     onClick={() => {
                                         setSaving(true)
-                                        reportApi.previewTableReport(reportId, config)
+                                        reportApi
+                                            .previewTableReport(reportId, config)
                                             .then(
                                                 report => setPreview(report),
                                                 error =>

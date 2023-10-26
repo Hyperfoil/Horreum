@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { Button } from "@patternfly/react-core"
 
 import { State } from "./store"
-import {userApi, UserData} from "./api";
+import { userApi, UserData } from "./api"
 import { AddAlertAction, dispatchError } from "./alerts"
 import { Dispatch } from "redux"
 import { ThunkDispatch } from "redux-thunk"
@@ -13,8 +13,6 @@ export const UPDATE_DEFAULT_TEAM = "auth/UPDATE_DEFAULT_TEAM"
 export const UPDATE_ROLES = "auth/UPDATE_ROLES"
 export const STORE_PROFILE = "auth/STORE_PROFILE"
 const AFTER_LOGOUT = "auth/AFTER_LOGOUT"
-
-export type Access = 0 | 1 | 2
 
 export class AuthState {
     keycloak?: Keycloak.KeycloakInstance = undefined
@@ -191,18 +189,6 @@ export const LoginLogout = () => {
     }
 }
 
-export const accessName = (access: Access) => {
-    switch (access) {
-        case 0:
-            return "PUBLIC"
-        case 1:
-            return "PROTECTED"
-        case 2:
-            return "PRIVATE"
-        default:
-            return String(access)
-    }
-}
 
 export function userName(user: UserData) {
     let str = ""

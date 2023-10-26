@@ -675,7 +675,9 @@ public class BaseServiceTest {
       return Util.withTx(tm, () -> {
          try (CloseMe ignored = roleManager.withRoles(Collections.singleton(Roles.HORREUM_SYSTEM))) {
             List<?> list = em.createNativeQuery("SELECT testid FROM dataset WHERE id = ?1").setParameter(1, datasetId).getResultList();
-            assertEquals(1, list.size());
+            if ( 1 != list.size() ){
+               throw new RuntimeException("Retry TX");
+            }
             return testId == (int) list.get(0);
          }
       });

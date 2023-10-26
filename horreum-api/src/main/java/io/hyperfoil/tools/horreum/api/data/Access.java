@@ -11,21 +11,38 @@ import com.fasterxml.jackson.annotation.JsonValue;
  *
  * Do not change unless changing constants in SQL policies.
  */
-@Schema(type = SchemaType.INTEGER, required = true, description = "Resources have different visibility within the UI. 'PUBLIC', 'PROTECTED' and 'PRIVATE'. Restricted resources are not visible to users who do not have the correct permissions")
+@Schema(type = SchemaType.STRING, required = true,
+        description = "Resources have different visibility within the UI. 'PUBLIC', 'PROTECTED' and 'PRIVATE'. Restricted resources are not visible to users who do not have the correct permissions")
 public enum Access {
    /** Anyone can see */
-   PUBLIC,
+   PUBLIC ("PUBLIC"),
    /** Anyone who is authenticated (logged in) can see */
-   PROTECTED,
+   PROTECTED  ("PROTECTED"),
    /** Only the owner can see */
-   PRIVATE,
+   PRIVATE  ("PRIVATE"),
    ;
    private static final Access[] VALUES = values();
 
-   @JsonValue
-   public int serialize() {
-      return ordinal();
+   private final String name;
+
+   private Access(String s) {
+      name = s;
    }
+
+   public boolean equalsName(String otherName) {
+      // (otherName == null) check is not needed because name.equals(null) returns false
+      return name.equals(otherName);
+   }
+
+   @JsonValue
+   public String toString() {
+      return this.name;
+   }
+
+//   @JsonValue
+//   public int serialize() {
+//      return ordinal();
+//   }
 
    @JsonCreator
    public static Access fromString(String str) {
@@ -34,5 +51,8 @@ public enum Access {
       } catch (NumberFormatException e) {
          return Access.valueOf(str);
       }
+   }
+   public static Access fromInt(int a) {
+      return VALUES[a];
    }
 }

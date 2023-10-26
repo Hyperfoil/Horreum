@@ -5,7 +5,7 @@ import { useHistory } from "react-router-dom"
 import { Button, FormGroup, FormSection, Popover, TextArea, TextInput } from "@patternfly/react-core"
 import { HelpIcon } from "@patternfly/react-icons"
 
-import { Access, defaultTeamSelector, useTester } from "../../auth"
+import { defaultTeamSelector, useTester } from "../../auth"
 import { dispatchError } from "../../alerts"
 import { noop } from "../../utils"
 import OwnerAccess from "../../components/OwnerAccess"
@@ -13,7 +13,7 @@ import FunctionFormItem from "../../components/FunctionFormItem"
 import SchemaSelect from "../../components/SchemaSelect"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
-import {schemaApi, Transformer} from "../../api"
+import { schemaApi, Transformer, Access } from "../../api"
 import JsonExtractor from "./JsonExtractor"
 
 const TARGET_SCHEMA_HELP = (
@@ -115,7 +115,8 @@ export default function Transformers(props: TransformersProps) {
         }
         setLoading(true)
         setTransformers([])
-        schemaApi.listTransformers(props.schemaId)
+        schemaApi
+            .listTransformers(props.schemaId)
             .then(
                 ts => {
                     setTransformers(ts)
@@ -162,7 +163,7 @@ export default function Transformers(props: TransformersProps) {
                 description: "",
                 extractors: [],
                 owner: defaultTeam || "",
-                access: 0 as Access,
+                access: Access.Public,
                 modified: true,
             })}
             loading={loading}

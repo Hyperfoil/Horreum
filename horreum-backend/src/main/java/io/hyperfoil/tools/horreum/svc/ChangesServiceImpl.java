@@ -22,6 +22,8 @@ import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import io.hyperfoil.tools.horreum.api.changes.Target;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import org.hibernate.Session;
+import org.hibernate.query.NativeQuery;
 
 /**
  * This service is a backend for the Changes report panels
@@ -106,14 +108,13 @@ public class ChangesServiceImpl implements ChangesService {
             sql.append("LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id WHERE json_equals(fp.fingerprint, (?4)::::jsonb) ");
          }
          sql.append("ORDER BY timestamp ASC");
-         jakarta.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), DataPointDAO.class)
+         NativeQuery<DataPointDAO> nativeQuery = em.unwrap(Session.class).createNativeQuery(sql.toString(), DataPointDAO.class)
                .setParameter(1, variableId)
                .setParameter(2, query.range.from)
                .setParameter(3, query.range.to);
          if (fingerprint != null) {
             nativeQuery.setParameter(4, fingerprint.toString());
          }
-         @SuppressWarnings("unchecked")
          List<DataPointDAO> datapoints = nativeQuery.getResultList();
          for (DataPointDAO dp : datapoints) {
             tt.datapoints.add(new Number[] { dp.value, dp.timestamp.toEpochMilli(), /* non-standard! */ dp.dataset.id });
@@ -175,7 +176,7 @@ public class ChangesServiceImpl implements ChangesService {
       if (fingerprint != null) {
          sql.append("AND json_equals(fp.fingerprint, (?4)::::jsonb)");
       }
-      jakarta.persistence.Query nativeQuery = em.createNativeQuery(sql.toString(), ChangeDAO.class)
+      NativeQuery<ChangeDAO> nativeQuery = em.unwrap(Session.class).createNativeQuery(sql.toString(), ChangeDAO.class)
             .setParameter(1, variableId)
             .setParameter(2, query.range.from)
             .setParameter(3, query.range.to);
@@ -183,7 +184,6 @@ public class ChangesServiceImpl implements ChangesService {
          nativeQuery.setParameter(4, fingerprint.toString());
       }
 
-      @SuppressWarnings("unchecked")
       List<ChangeDAO> changes = nativeQuery.getResultList();
       for (ChangeDAO change : changes) {
          annotations.add(createAnnotation(change));

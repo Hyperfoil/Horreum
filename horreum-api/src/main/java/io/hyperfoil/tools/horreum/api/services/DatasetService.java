@@ -9,7 +9,11 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Label;
+import io.hyperfoil.tools.horreum.api.data.ProtectedTimeType;
+import io.hyperfoil.tools.horreum.api.data.ProtectedType;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
+import java.time.Instant;
+import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
@@ -21,8 +25,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-
-import java.util.List;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
@@ -107,7 +109,8 @@ public interface DatasetService {
    @Path("{datasetId}/summary")
    DatasetSummary getSummary(@PathParam("datasetId") int datasetId, @QueryParam("viewId") int viewId);
 
-   class DatasetSummary {
+   @Schema(type = SchemaType.OBJECT, allOf = ProtectedTimeType.class)
+   class DatasetSummary extends ProtectedTimeType {
       @JsonProperty(required = true)
       @Schema(description = "Unique Dataset ID", example = "101")
       public int id;
@@ -127,34 +130,13 @@ public interface DatasetService {
       @Schema(description="Dataset description",
               example = "Run on AWS with m7g.large")
       public String description;
-      @JsonProperty(required = true)
-      @Schema(type = SchemaType.INTEGER, implementation = Long.class,
-              description = "Dataset Start timestamp", example = "1698013206000")
-      public long start;
-      @JsonProperty(required = true)
-      @Schema(type = SchemaType.INTEGER, implementation = Long.class,
-              description = "Dataset Stop timestamp", example = "1698013206000")
-      public long stop;
-      @Schema(required = true, description="Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
-              example="performance-team")
-      public String owner;
-      @NotNull
-      @JsonProperty(required = true)
-//      TODO:: https://github.com/Hyperfoil/Horreum/issues/801
-//      @Schema( type = SchemaType.INTEGER, implementation = Access.class,
-//              description = "Access rights for the test. This defines the visibility of the Test in the UI",
-//              example = "0")
-      @Schema(required = true, implementation = Access.class)
-      public int access;
       @Schema(implementation = String.class, description = "View definition")
       public ObjectNode view;
       @JsonProperty(required = true)
       @Schema(description = "List of Schema usages")
       public List<SchemaService.SchemaUsage> schemas;
-//TODO:: https://github.com/Hyperfoil/Horreum/issues/801
-//      @Schema(type = SchemaType.ARRAY, implementation = ValidationError.class, description = "Array of validation Errors")
-      @Schema(type = SchemaType.ARRAY, implementation = ValidationError.class)
-      public ArrayNode validationErrors;
+      @Schema(description = "List of Validation Errors")
+      public List<ValidationError> validationErrors;
    }
 
    @Schema(description = "Result containing a subset of Dataset Summaries and the total count of available. Used in paginated tables")

@@ -75,7 +75,6 @@ public class BannerServiceImpl implements BannerService {
    }
 
    private BannerDAO getBanner() {
-      @SuppressWarnings("unchecked")
       List<BannerDAO> banners = BannerDAO.list("active=?1 ORDER BY created DESC",true);
       return banners != null && !banners.isEmpty() ? banners.get(0) : null;
    }

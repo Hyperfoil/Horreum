@@ -5,6 +5,11 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import io.hyperfoil.tools.horreum.api.data.Access;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -142,7 +147,7 @@ public interface SchemaService {
    })
    void updateAccess(@PathParam("id") int id,
                      @QueryParam("owner") String owner,
-                     @QueryParam("access") int access);
+                     @QueryParam("access") Access access);
 
    @DELETE
    @Path("{id}")

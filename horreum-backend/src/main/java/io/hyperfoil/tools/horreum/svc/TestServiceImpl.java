@@ -25,6 +25,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Query;
 import jakarta.transaction.TransactionManager;
+import jakarta.persistence.Tuple;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.WebApplicationException;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 import org.hibernate.Hibernate;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
+import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
@@ -299,17 +301,17 @@ public class TestServiceImpl implements TestService {
          Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
       }
       testSql.append(" ORDER BY test.name");
-      Query testQuery = em.createNativeQuery(testSql.toString());
+      org.hibernate.query.Query<TestSummary> testQuery = em.unwrap(Session.class).createNativeQuery(testSql.toString(), Tuple.class)
+              .setTupleTransformer((tuples, aliases) ->
+                      new TestSummary((int) tuples[0], (String) tuples[1], (String) tuples[2], (String) tuples[3],
+                              (Number) tuples[4], (Number) tuples[5], (String) tuples[6], Access.fromInt((int) tuples[7])));
       if (anyFolder) {
          Roles.addRolesParam(identity, testQuery, 1, roles);
       } else {
          testQuery.setParameter(1, folder);
          Roles.addRolesParam(identity, testQuery, 2, roles);
       }
-      Util.setResultTransformer(testQuery, Transformers.aliasToBean(TestSummary.class));
-
       TestListing listing = new TestListing();
-      //noinspection unchecked
       listing.tests = testQuery.getResultList();
       return listing;
    }
@@ -334,10 +336,9 @@ public class TestServiceImpl implements TestService {
    public List<String> folders(String roles) {
       StringBuilder sql = new StringBuilder("SELECT DISTINCT folder FROM test");
       Roles.addRolesSql(identity, "test", sql, roles, 1, " WHERE");
-      Query query = em.createNativeQuery(sql.toString());
+      NativeQuery<String> query = em.unwrap(Session.class).createNativeQuery(sql.toString(), String.class);
       Roles.addRolesParam(identity, query, 1, roles);
       Set<String> result = new HashSet<>();
-      @SuppressWarnings("unchecked")
       List<String> folders = query.getResultList();
       for (String folder : folders) {
          if (folder == null || folder.isEmpty()) {

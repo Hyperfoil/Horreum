@@ -620,12 +620,6 @@ public class Util {
       }
    }
 
-   public static ScrollableResults scroll(Query query) {
-      return query
-            .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
-            .scroll(ScrollMode.FORWARD_ONLY);
-   }
-
    public static Instant toInstant(JsonNode value) {
       if (value == null) {
          return null;
@@ -646,11 +640,6 @@ public class Util {
       } else {
          return null;
       }
-   }
-
-   @SuppressWarnings("deprecation")
-   public static void setResultTransformer(Query query, ResultTransformer transformer) {
-      query.unwrap(org.hibernate.query.Query.class).setResultTransformer(transformer);
    }
 
    interface ExecutionExceptionConsumer<T> {

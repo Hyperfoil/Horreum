@@ -29,6 +29,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.Query;
 import jakarta.transaction.TransactionManager;
+import jakarta.persistence.Tuple;
 import jakarta.transaction.Transactional;
 
 import java.io.ByteArrayInputStream;
@@ -52,8 +53,9 @@ import java.util.stream.StreamSupport;
 import jakarta.ws.rs.DefaultValue;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
+import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
-import org.hibernate.transform.AliasToBeanResultTransformer;
+import org.hibernate.query.SelectionQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
@@ -102,8 +104,6 @@ public class SchemaServiceImpl implements SchemaService {
    private static final String[] ALL_URNS = Stream.concat(
          URLFactory.SUPPORTED_SCHEMES.stream(), Stream.of("urn", "uri")).toArray(String[]::new);
 
-   private static final AliasToBeanResultTransformer DESCRIPTOR_TRANSFORMER = new AliasToBeanResultTransformer(SchemaDescriptor.class);
-
    @Inject
    EntityManager em;
 
@@ -121,10 +121,8 @@ public class SchemaServiceImpl implements SchemaService {
 
    @Inject
    MessageBus messageBus;
-
    @Inject
-   DatasetServiceImpl datasetService;
-
+   Session session;
    @WithToken
    @WithRoles
    @PermitAll
@@ -140,7 +138,7 @@ public class SchemaServiceImpl implements SchemaService {
    @Override
    public int idByUri(String uri) {
       try {
-         return (Integer) em.createNativeQuery("SELECT id FROM schema WHERE uri = ?").setParameter(1, uri).getSingleResult();
+         return session.createNativeQuery("SELECT id FROM schema WHERE uri = ?", int.class).setParameter(1, uri).getSingleResult();
       } catch (NoResultException e) {
          throw ServiceException.notFound("Schema with given uri not found: " + uri);
       }
@@ -216,7 +214,6 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
-   @SuppressWarnings({ "deprecation", "unchecked" })
    @WithRoles
    @Override
    public List<SchemaDescriptor> descriptors(List<Integer> ids) {
@@ -224,12 +221,11 @@ public class SchemaServiceImpl implements SchemaService {
       if (ids != null && !ids.isEmpty()) {
          sql += " WHERE id IN ?1";
       }
-      Query query = em.createNativeQuery(sql);
+      SelectionQuery<SchemaDescriptor> query = session.createNamedQuery(sql, SchemaDescriptor.class);
       if (ids != null && !ids.isEmpty()) {
          query.setParameter(1, ids);
       }
-      return query.unwrap(org.hibernate.query.Query.class)
-            .setResultTransformer(DESCRIPTOR_TRANSFORMER).getResultList();
+      return query.getResultList();
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -264,10 +260,8 @@ public class SchemaServiceImpl implements SchemaService {
    @Transactional
    @Override
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-   public void updateAccess(int id,
-                            String owner,
-                            int access) {
-      if (access < Access.PUBLIC.ordinal() || access > Access.PRIVATE.ordinal()) {
+   public void updateAccess(int id, String owner, Access access) {
+      if (access.ordinal() < Access.PUBLIC.ordinal() || access.ordinal() > Access.PRIVATE.ordinal()) {
          throw ServiceException.badRequest("Access not within bounds");
       }
       Query query = em.createNativeQuery(CHANGE_ACCESS);
@@ -282,11 +276,6 @@ public class SchemaServiceImpl implements SchemaService {
       catch (Exception e) {
          throw ServiceException.serverError("Access change failed (missing permissions?) "+e.getMessage());
       }
-   }
-
-   private void validateRunData(String params) {
-      int runId = Integer.parseInt(params);
-      mediator.executeBlocking(() -> validateRunData(runId, null));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -316,11 +305,6 @@ public class SchemaServiceImpl implements SchemaService {
                  new Schema.ValidationEvent(run.id, run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()) )));
 
       ;
-   }
-
-   private void validateDatasetData(String params) {
-      int datasetId = Integer.parseInt(params);
-      mediator.executeBlocking(() -> validateDatasetData(datasetId, null));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -382,17 +366,16 @@ public class SchemaServiceImpl implements SchemaService {
          messageBus.executeForTest(testId, () -> validateRunData(runId, schemaFilter))
       );
       // Datasets might be re-created if URI is changing, so we might work on old, non-existent ones
-      ScrollableResults<RecreateDataset> results =
-              em.createNativeQuery("SELECT id, testid FROM dataset WHERE ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')").setParameter(1, schema.uri)
-                      .unwrap(NativeQuery.class)
-                      .setTupleTransformer((tuple, aliases) -> {
-                         RecreateDataset r = new RecreateDataset();
-                         r.datasetId = (int) tuple[0];
-                         r.testId = (int) tuple[1];
-                         return r;
-                      })
-                      .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
-                      .scroll(ScrollMode.FORWARD_ONLY);
+      ScrollableResults<RecreateDataset> results = session
+              .createNativeQuery("SELECT id, testid FROM dataset WHERE ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')", Tuple.class).setParameter(1, schema.uri)
+              .setTupleTransformer((tuple, aliases) -> {
+                 RecreateDataset r = new RecreateDataset();
+                 r.datasetId = (int) tuple[0];
+                 r.testId = (int) tuple[1];
+                 return r;
+              })
+              .setReadOnly(true).setFetchSize(100)
+              .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
          RecreateDataset r = results.get();
          messageBus.executeForTest(r.testId, () -> validateDatasetData(r.datasetId, schemaFilter));
@@ -410,10 +393,9 @@ public class SchemaServiceImpl implements SchemaService {
          if (filter != null && !filter.test(schemaUri)) {
             continue;
          }
-         Query fetchSchemas = em.createNativeQuery(FETCH_SCHEMAS_RECURSIVE, SchemaDAO.class);
+         NativeQuery<SchemaDAO> fetchSchemas = session.createNativeQuery(FETCH_SCHEMAS_RECURSIVE, SchemaDAO.class);
          fetchSchemas.setParameter(1, schemaUri);
-         @SuppressWarnings("unchecked")
-         Map<String, SchemaDAO> schemas = ((Stream<SchemaDAO>) fetchSchemas.getResultStream())
+         Map<String, SchemaDAO> schemas = fetchSchemas.getResultStream()
                .collect(Collectors.toMap(s -> s.uri, Function.identity()));
 
          // this is root in the sense of JSON schema referencing other schemas, NOT Horreum first-level schema
@@ -635,8 +617,8 @@ public class SchemaServiceImpl implements SchemaService {
       if (!identity.hasRole(testerRole)) {
          throw ServiceException.forbidden("You are not an owner of transfomer " + transformerId + "(" + t.owner + "); missing role " + testerRole + ", available roles: " + identity.getRoles());
       }
-      @SuppressWarnings("unchecked") List<Object[]> testsUsingTransformer =
-            em.createNativeQuery("SELECT test.id, test.name FROM test_transformers JOIN test ON test_id = test.id WHERE transformer_id = ?1")
+      List<Object[]> testsUsingTransformer = session
+              .createNativeQuery("SELECT test.id, test.name FROM test_transformers JOIN test ON test_id = test.id WHERE transformer_id = ?1", Object[].class)
             .setParameter(1, transformerId).getResultList();
       if (!testsUsingTransformer.isEmpty()) {
          throw ServiceException.badRequest("This transformer is still referenced in some tests: " +
@@ -715,16 +697,16 @@ public class SchemaServiceImpl implements SchemaService {
 
    private void emitLabelChanged(LabelDAO label) {
       try {
-         List<Integer> datasetIds = em.createNativeQuery("SELECT dataset_id from dataset_schemas WHERE schema_id = ?1")
+         List<Integer> datasetIds = session
+                 .createNativeQuery("SELECT dataset_id from dataset_schemas WHERE schema_id = ?1")
                  .setParameter(1, label.getSchemaId())
-                 .unwrap(NativeQuery.class)
                  .addScalar("dataset_id", StandardBasicTypes.INTEGER)
                  .getResultList();
          if (datasetIds == null || datasetIds.isEmpty() || datasetIds.get(0) < 1) {
             log.debug("Could not extract datasetIds from dataset_schemas with schemaId="+label.getSchemaId());
             return;
          }
-         int testId = (int) em.createNativeQuery("SELECT testid from dataset WHERE id = ?1")
+         int testId = session.createNativeQuery("SELECT testid from dataset WHERE id = ?1", Integer.class)
                  .setParameter(1, datasetIds.get(0)).getSingleResult();
          if (testId < 1) {
             log.debug("Could not extract testId from dataset where id="+datasetIds.get(0));
@@ -773,11 +755,11 @@ public class SchemaServiceImpl implements SchemaService {
       if (filterName != null && !filterName.isBlank()) {
          sqlQuery += " WHERE label.name = ?1";
       }
-      Query query = em.createNativeQuery(sqlQuery);
+      NativeQuery<Object[]> query = session.createNativeQuery(sqlQuery, Object[].class);
       if (filterName != null) {
          query.setParameter(1, filterName.trim());
       }
-      @SuppressWarnings("unchecked") List<Object[]> rows = query.getResultList();
+      List<Object[]> rows = query.getResultList();
       Map<String, LabelInfo> labels = new TreeMap<>();
       for (Object[] row : rows) {
          String name = (String) row[0];
@@ -797,8 +779,8 @@ public class SchemaServiceImpl implements SchemaService {
    @Override
    public List<TransformerInfo> allTransformers() {
       List<TransformerInfo> transformers = new ArrayList<>();
-      @SuppressWarnings("unchecked") List<Object[]> rows = em.createNativeQuery(
-            "SELECT s.id as sid, s.uri, s.name as schemaName, t.id as tid, t.name as transformerName FROM schema s JOIN transformer t ON s.id = t.schema_id").getResultList();
+      List<Object[]> rows = session.createNativeQuery(
+            "SELECT s.id as sid, s.uri, s.name as schemaName, t.id as tid, t.name as transformerName FROM schema s JOIN transformer t ON s.id = t.schema_id", Object[].class).getResultList();
       for (Object[] row: rows) {
          TransformerInfo info = new TransformerInfo();
          info.schemaId = (int) row[0];

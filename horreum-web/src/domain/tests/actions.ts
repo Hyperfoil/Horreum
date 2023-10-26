@@ -22,14 +22,13 @@ import {
     uiApi,
     testApi,
     subscriptionsApi,
-    Access,
     Action,
     Test,
     Transformer,
     View,
     Watch,
     alertingApi,
-    actionApi
+    actionApi, Access
 } from "../../api"
 import { Dispatch } from "redux"
 import { Map } from "immutable"

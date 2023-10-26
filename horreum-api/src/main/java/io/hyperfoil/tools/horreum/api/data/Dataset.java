@@ -7,40 +7,23 @@ import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-import java.time.Instant;
-import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
-@Schema(type = SchemaType.OBJECT,
+@Schema(type = SchemaType.OBJECT, allOf = { ProtectedType.class, ProtectedTimeType.class } ,
 description = "A dataset is the JSON document used as the basis for all comparisons and reporting")
-public class Dataset {
+public class Dataset extends ProtectedTimeType {
+
     @Schema(description = "Dataset Unique ID", example = "101")
     public Integer id;
-    @NotNull
-    @Schema(type = SchemaType.STRING, implementation = Instant.class,
-            description = "Dataset Start timestamp", example = "1698013206000")
-    public Instant start;
-    @NotNull
-    @Schema(type = SchemaType.STRING, implementation = Instant.class,
-            description = "Dataset Stop timestamp", example = "1698013206000")
-    public Instant stop;
+
     @Schema(description = "Run description", example = "Run on AWS with m7g.large")
     public String description;
 
     @NotNull
     @Schema(description = "Test ID that Dataset relates to", example = "101")
     public Integer testid;
-    @NotNull
-    @JsonProperty( required = true )
-    @Schema(description="Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
-            example="performance-team")
-    public String owner;
-    @NotNull
-    @JsonProperty( required = true )
-    @Schema( type = SchemaType.INTEGER, implementation = Access.class,
-            description = "Access rights for the test. This defines the visibility of the Test in the UI",
-            example = "0")
-    public Access access;
+
     @NotNull
     @Schema(implementation = JsonNode.class, type = SchemaType.STRING,
             description = "Data payload")
@@ -49,8 +32,8 @@ public class Dataset {
     @Schema(description = "Dataset ordinal for ordered list of Datasets derived from a Run", example = "1")
     public int ordinal;
 
-    @Schema(description = "Collection of Validation Errors")
-    public Collection<ValidationError> validationErrors;
+    @Schema(description = "List of Validation Errors")
+    public List<ValidationError> validationErrors;
 
     @JsonProperty("runId")
     @Schema(description = "Run ID that Dataset relates to", example = "101")

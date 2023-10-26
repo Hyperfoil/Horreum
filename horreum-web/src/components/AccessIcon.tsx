@@ -7,19 +7,19 @@ export default function AccessIcon({ access }: { access: Access }) {
     let text
     let explanation
     switch (access) {
-        case 0: {
+        case Access.Public: {
             color = "--pf-global--success-color--200"
             text = "Public"
             explanation = "Anyone can view this."
             break
         }
-        case 1: {
+        case Access.Protected: {
             color = "--pf-global--warning-color--100"
             text = "Protected"
             explanation = "Only authenticated (logged in) users can view this."
             break
         }
-        case 2: {
+        case Access.Private: {
             color = "--pf-global--danger-color--100"
             text = "Private"
             explanation = "Only users from the owning team can view this."

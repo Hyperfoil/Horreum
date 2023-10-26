@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.ProtectedType;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestToken;
 import jakarta.validation.constraints.NotNull;
@@ -259,7 +260,8 @@ public interface TestService {
       public List<TestSummary> tests;
    }
 
-   class TestSummary {
+   @Schema(type = SchemaType.OBJECT, allOf = ProtectedType.class)
+   class TestSummary extends ProtectedType {
       @JsonProperty(required = true)
       @Schema(description = "ID of tests", example = "101")
       public int id;
@@ -280,18 +282,17 @@ public interface TestService {
       @Schema(description="Total number of Runs for the Test",
               example="101")
       public Number runs;
-      @NotNull
-      @Schema(description="Name of the team that owns the test. Users must belong to the team that owns a test to make modifications",
-              example="performance-team")
-      public String owner;
-      @NotNull
-      @JsonProperty(required = true)
-//      TODO:: https://github.com/Hyperfoil/Horreum/issues/801
-//      @Schema( type = SchemaType.INTEGER, implementation = Access.class,
-//              description = "Access rights for the test. This defines the visibility of the Test in the UI",
-//              example = "0")
-      @Schema(type=SchemaType.INTEGER, implementation = Access.class, required = true)
-      public int access;
+      public TestSummary(int id, String name, String folder, String description,
+                         Number datasets, Number runs, String owner, Access access) {
+         this.id = id;
+         this.name = name;
+         this.folder = folder;
+         this.description = description;
+         this.datasets = datasets;
+         this.runs = runs;
+         this.owner = owner;
+         this.access = access;
+      }
    }
 
    class RecalculationStatus {

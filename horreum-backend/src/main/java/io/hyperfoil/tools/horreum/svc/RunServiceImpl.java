@@ -24,7 +24,6 @@ import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
-import io.hypersistence.utils.hibernate.query.MapResultTransformer;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -33,6 +32,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Query;
 import jakarta.persistence.TransactionRequiredException;
+import jakarta.persistence.Tuple;
 import jakarta.transaction.InvalidTransactionException;
 import jakarta.transaction.SystemException;
 import jakarta.transaction.Transaction;
@@ -69,6 +69,7 @@ import io.quarkus.security.identity.SecurityIdentity;
 
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
+import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
@@ -121,26 +122,30 @@ public class RunServiceImpl implements RunService {
    TestServiceImpl testService;
 
    @Inject
-   DatasetServiceImpl datasetService;
-
-   @Inject
    ObjectMapper mapper;
 
    @Inject
    ServiceMediator mediator;
 
+   @Inject
+   Session session;
+
    @Transactional
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    void onTestDeleted(int testId) {
       log.debugf("Trashing runs for test (%d)", testId);
-      ScrollableResults results = Util.scroll(em.createNativeQuery("SELECT id FROM run WHERE testid = ?1").setParameter(1, testId));
+      ScrollableResults<Integer> results = session.createNativeQuery("SELECT id FROM run WHERE testid = ?1", Integer.class)
+              .setParameter(1, testId)
+              .setReadOnly(true)
+              .setFetchSize(100)
+              .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
-         int id = (int) results.get();
+         int id = results.get();
          trashDueToTestDeleted(id);
       }
    }
 
-   // plain trash does not have the right priviledges and @RolesAllowed would cause ContextNotActiveException
+   // plain trash does not have the right privileges and @RolesAllowed would cause ContextNotActiveException
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void trashDueToTestDeleted(int id) {
@@ -172,15 +177,14 @@ public class RunServiceImpl implements RunService {
 
    void findRunsWithUri(String uri, BiConsumer<Integer, Integer> consumer) {
       ScrollableResults<RunFromUri> results =
-             em.createNativeQuery(FIND_RUNS_WITH_URI).setParameter(1, uri)
-                     .unwrap(NativeQuery.class)
+             session.createNativeQuery(FIND_RUNS_WITH_URI, Tuple.class).setParameter(1, uri)
                      .setTupleTransformer((tuple, aliases) -> {
                         RunFromUri r = new RunFromUri();
                         r.id = (int) tuple[0];
                         r.testId = (int) tuple[1];
                         return r;
                      })
-                     .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
+                     .setFetchSize(100)
                      .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
          RunFromUri r = results.get();
@@ -628,10 +632,9 @@ public class RunServiceImpl implements RunService {
          jsonpath = "$.**." + jsonpath;
       }
       try {
-         Query findAutocomplete = em.createNativeQuery(FIND_AUTOCOMPLETE);
+         NativeQuery<String> findAutocomplete = session.createNativeQuery(FIND_AUTOCOMPLETE, String.class);
          findAutocomplete.setParameter(1, jsonpath);
          findAutocomplete.setParameter(2, incomplete);
-         @SuppressWarnings("unchecked")
          List<String> results = findAutocomplete.getResultList();
          return results.stream().map(option ->
                option.matches("^[a-zA-Z0-9_-]*$") ? option : "\"" + option + "\"")
@@ -690,7 +693,7 @@ public class RunServiceImpl implements RunService {
       }
       Util.addPaging(sql, limit, page, sort, direction);
 
-      Query sqlQuery = em.createNativeQuery(sql.toString());
+      NativeQuery<Object[]> sqlQuery = session.createNativeQuery(sql.toString(), Object[].class);
       for (int i = 0; i < queryParts.length; ++i) {
          sqlQuery.setParameter(i + 1, queryParts[i]);
       }
@@ -698,7 +701,6 @@ public class RunServiceImpl implements RunService {
       Roles.addRolesParam(identity, sqlQuery, queryParts.length + 1, roles);
 
       try {
-         @SuppressWarnings("unchecked")
          List<Object[]> runs = sqlQuery.getResultList();
 
          RunsSummary summary = new RunsSummary();
@@ -750,12 +752,12 @@ public class RunServiceImpl implements RunService {
       RunSummary run = new RunSummary();
       run.id = (int) row[0];
       if(row[1] != null)
-         run.start = ((Instant) row[1]).toEpochMilli();
+         run.start = ((Instant) row[1]);
       if(row[2] != null)
-         run.stop = ((Instant) row[2]).toEpochMilli();
+         run.stop = ((Instant) row[2]);
       run.testid = (int) row[3];
       run.owner = (String) row[4];
-      run.access = (int) row[5];
+      run.access = Access.fromInt((int) row[5]);
       run.token = (String) row[6];
       run.trashed = (boolean) row[7];
       run.description = (String) row[8];
@@ -830,10 +832,9 @@ public class RunServiceImpl implements RunService {
       if (test == null) {
          throw ServiceException.notFound("Cannot find test ID " + testId);
       }
-      Query query = em.createNativeQuery(sql.toString());
+      NativeQuery<Object[]> query = session.createNativeQuery(sql.toString(), Object[].class);
       query.setParameter(1, testId);
       initTypes(query);
-      @SuppressWarnings("unchecked")
       List<Object[]> resultList = query.getResultList();
       RunsSummary summary = new RunsSummary();
       summary.total = trashed ? RunDAO.count("testid = ?1", testId) : RunDAO.count("testid = ?1 AND trashed = false", testId);
@@ -856,11 +857,10 @@ public class RunServiceImpl implements RunService {
             .append("FROM run_schemas rs JOIN run ON rs.runid = run.id JOIN test ON rs.testid = test.id ")
             .append("WHERE uri = ? AND NOT run.trashed");
       Util.addPaging(sql, limit, page, sort, direction);
-      Query query = em.createNativeQuery(sql.toString());
+      NativeQuery<Object[]> query = session.createNativeQuery(sql.toString(), Object[].class);
       query.setParameter(1, uri);
       initTypes(query);
 
-      @SuppressWarnings("unchecked")
       List<Object[]> runs = query.getResultList();
 
       RunsSummary summary = new RunsSummary();
@@ -964,11 +964,15 @@ public class RunServiceImpl implements RunService {
       run.data = updated;
       run.persist();
       trashConnectedDatasets(run.id, run.testid);
-      Query query = em.createNativeQuery("SELECT schemaid AS key, uri AS value FROM run_schemas WHERE runid = ?");
-      query.setParameter(1, run.id);
-      //noinspection deprecation
-      query.unwrap(NativeQuery.class).setResultTransformer(new MapResultTransformer<Integer, String>());
-      @SuppressWarnings("unchecked") Map<Integer, String> schemas = (Map<Integer, String>) query.getSingleResult();
+      Map<Integer, String> schemas =
+              session.createNativeQuery("SELECT schemaid AS key, uri AS value FROM run_schemas WHERE runid = ?", Tuple.class)
+                      .setParameter(1, run.id)
+                      .getResultStream()
+                      .collect(
+                              Collectors.toMap(
+                                      tuple -> ((Integer) tuple.get("key")).intValue(),
+                                      tuple -> ((Integer) tuple.get("value")).toString()));
+
       em.flush();
       return schemas;
    }
@@ -978,8 +982,7 @@ public class RunServiceImpl implements RunService {
    @Override
    public List<Integer> recalculateDatasets(int runId) {
       transform(runId, true);
-      //noinspection unchecked
-      return em.createNativeQuery("SELECT id FROM dataset WHERE runid = ? ORDER BY ordinal")
+      return session.createNativeQuery("SELECT id FROM dataset WHERE runid = ? ORDER BY ordinal", Integer.class)
             .setParameter(1, runId).getResultList();
    }
 
@@ -1001,17 +1004,17 @@ public class RunServiceImpl implements RunService {
          log.debugf("Deleted %d datasets for trashed runs between %s and %s", deleted, from, to);
       }
 
-      ScrollableResults<Recalculate> results = em.createNativeQuery("SELECT id, testid FROM run WHERE start BETWEEN ?1 AND ?2 AND NOT trashed ORDER BY start")
-            .setParameter(1, from).setParameter(2, to)
-            .unwrap(NativeQuery.class)
-              .setTupleTransformer((tuples, aliases) -> {
-                 Recalculate r = new Recalculate();
-                 r.runId = (int) tuples[0];
-                 r.testId = (int) tuples[1];
-                 return r;
-              })
-              .setReadOnly(true).setFetchSize(100)
-            .scroll(ScrollMode.FORWARD_ONLY);
+      ScrollableResults<Recalculate> results = session
+                      .createNativeQuery("SELECT id, testid FROM run WHERE start BETWEEN ?1 AND ?2 AND NOT trashed ORDER BY start", Recalculate.class)
+                      .setParameter(1, from).setParameter(2, to)
+                      .setTupleTransformer((tuples, aliases) -> {
+                         Recalculate r = new Recalculate();
+                         r.runId = (int) tuples[0];
+                         r.testId = (int) tuples[1];
+                         return r;
+                      })
+                      .setReadOnly(true).setFetchSize(100)
+                      .scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
          Recalculate r = results.get();
          log.debugf("Recalculate Datasets for run %d - forcing recalculation of all between %s and %s", r.runId, from, to);
@@ -1250,11 +1253,11 @@ public class RunServiceImpl implements RunService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    protected void findFailingExtractor(int runId) {
-      @SuppressWarnings("unchecked") List<Object[]> extractors = em.createNativeQuery(
+      List<Object[]> extractors = session.createNativeQuery(
             "SELECT rs.uri, rs.type, rs.key, t.name, te.name AS extractor_name, te.jsonpath FROM run_schemas rs " +
             "JOIN transformer t ON t.schema_id = rs.schemaid AND t.id IN (SELECT transformer_id FROM test_transformers WHERE test_id = rs.testid) " +
             "JOIN transformer_extractors te ON te.transformer_id = t.id " +
-            "WHERE rs.runid = ?1").setParameter(1, runId).getResultList();
+            "WHERE rs.runid = ?1", Object[].class).setParameter(1, runId).getResultList();
       for (Object[] row : extractors) {
          try {
             int type = (int) row[1];

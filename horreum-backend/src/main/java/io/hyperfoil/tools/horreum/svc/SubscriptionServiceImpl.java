@@ -19,6 +19,7 @@ import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.mapper.WatchMapper;
+import org.hibernate.Session;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -70,8 +71,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
          }
          return nset;
       }));
-      @SuppressWarnings("unchecked")
-      Stream<Integer> results = em.createNativeQuery("SELECT id FROM test WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')")
+      Stream<Integer> results = em.unwrap(Session.class)
+              .createNativeQuery("SELECT id FROM test WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')", Integer.class)
             .setParameter(1, folder).getResultStream();
       results.forEach(id -> result.putIfAbsent(id, Collections.emptySet()));
       return result;

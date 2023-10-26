@@ -2,7 +2,8 @@ import React from "react"
 
 import { Button, Modal } from "@patternfly/react-core"
 
-import { teamToName, Access } from "../auth"
+import { teamToName } from "../auth"
+import { Access } from "../api"
 
 import AccessChoice from "./AccessChoice"
 import TeamSelect from "./TeamSelect"

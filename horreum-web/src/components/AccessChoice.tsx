@@ -13,23 +13,23 @@ export default function AccessChoice({ checkedValue, onChange }: AccessChoicePro
             <Radio
                 id="access-0"
                 name="PUBLIC"
-                isChecked={checkedValue === 0}
-                onChange={() => onChange(0)}
-                label={<AccessIcon access={0} />}
+                isChecked={checkedValue === Access.Public}
+                onChange={() => onChange(Access.Public)}
+                label={<AccessIcon access={Access.Public} />}
             />
             <Radio
                 id="access-1"
                 name="PROTECTED"
-                isChecked={checkedValue === 1}
-                onChange={() => onChange(1)}
-                label={<AccessIcon access={1} />}
+                isChecked={checkedValue === Access.Protected}
+                onChange={() => onChange(Access.Protected)}
+                label={<AccessIcon access={Access.Protected} />}
             />
             <Radio
                 id="access-2"
                 name="PRIVATE"
-                isChecked={checkedValue === 2}
-                onChange={() => onChange(2)}
-                label={<AccessIcon access={2} />}
+                isChecked={checkedValue === Access.Private}
+                onChange={() => onChange(Access.Private)}
+                label={<AccessIcon access={Access.Private} />}
             />
         </>
     )

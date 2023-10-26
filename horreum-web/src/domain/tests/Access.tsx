@@ -23,11 +23,11 @@ import AccessIcon from "../../components/AccessIcon"
 import TeamSelect from "../../components/TeamSelect"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
-import { useTester, teamToName, Access as authAccess, defaultTeamSelector } from "../../auth"
+import { useTester, teamToName, defaultTeamSelector } from "../../auth"
 import { noop } from "../../utils"
 import { addToken, revokeToken, updateAccess } from "./actions"
 import { TestDispatch } from "./reducers"
-import { Test } from "../../api"
+import {Test, Access as authAccess } from "../../api"
 
 type AddTokenModalProps = {
     testId: number
@@ -138,14 +138,14 @@ type AccessProps = {
 
 function Access(props: AccessProps) {
     const defaultRole = useSelector(defaultTeamSelector)
-    const [access, setAccess] = useState<authAccess>(props.test?.access || 0)
+    const [access, setAccess] = useState<authAccess>(props.test?.access || authAccess.Public)
     const [owner, setOwner] = useState(props.test?.owner || defaultRole || "")
     const [modalOpen, setModalOpen] = useState(false)
     const isTester = useTester(owner)
 
     useEffect(() => {
         setOwner(props.test?.owner || defaultRole || "")
-        setAccess(props.test?.access || 0)
+        setAccess(props.test?.access || authAccess.Public)
     }, [props.test, defaultRole])
 
     const dispatch = useDispatch<TestDispatch>()
@@ -158,7 +158,7 @@ function Access(props: AccessProps) {
         },
         reset: () => {
             setOwner(props.test?.owner || defaultRole || "")
-            setAccess(props.test?.access || 0)
+            setAccess(props.test?.access || authAccess.Public)
         },
     }
 
@@ -207,8 +207,16 @@ function Access(props: AccessProps) {
                                     <DataListCell key="description">{token.description}</DataListCell>,
                                     <DataListCell key="permissions">
                                         <Checkbox id="read" label="Read" isChecked={(token.permissions & 1) !== 0} />
-                                        <Checkbox id="modify" label="Modify" isChecked={(token.permissions & 2) !== 0} />
-                                        <Checkbox id="upload" label="Upload" isChecked={(token.permissions & 4) !== 0} />
+                                        <Checkbox
+                                            id="modify"
+                                            label="Modify"
+                                            isChecked={(token.permissions & 2) !== 0}
+                                        />
+                                        <Checkbox
+                                            id="upload"
+                                            label="Upload"
+                                            isChecked={(token.permissions & 4) !== 0}
+                                        />
                                     </DataListCell>,
                                 ]}
                             />
