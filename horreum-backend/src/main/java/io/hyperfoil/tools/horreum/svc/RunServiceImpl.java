@@ -885,8 +885,8 @@ public class RunServiceImpl implements RunService {
       if(run.trashed == trashed)
          throw ServiceException.badRequest("The run "+id+" has already been trashed, not possible to trash it again.");
       if (trashed) {
-         run.trashed = trashed;
          trashConnectedDatasets(run.id, run.testid);
+         run.trashed = trashed;
          run.persist();
          if(mediator.testMode())
             Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.RUN_TRASHED, run.testid, id));

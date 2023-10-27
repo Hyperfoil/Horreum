@@ -429,7 +429,7 @@ public class DatasetServiceImpl implements DatasetService {
       em.createNativeQuery("DELETE FROM label_values WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
       em.createNativeQuery("DELETE FROM dataset_schemas WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
       em.createNativeQuery("DELETE FROM fingerprint WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
-      DatasetDAO.deleteById(datasetId);
+      em.createNativeQuery("DELETE FROM dataset WHERE id = ?1").setParameter(1, datasetId).executeUpdate();
    }
 
    private ArrayNode flatten(ArrayNode bucket){

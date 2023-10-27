@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import org.hibernate.annotations.DynamicUpdate;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
@@ -24,7 +23,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.hibernate.annotations.Type;
 
 @Entity(name = "run")
-@DynamicUpdate // We don't want to trigger schema analysis when trashing the run
 @JsonIgnoreType
 public class RunDAO extends ProtectedBaseEntity {
 
