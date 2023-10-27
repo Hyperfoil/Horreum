@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.mapper;
 
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.api.data.Label;
+import io.hyperfoil.tools.horreum.entity.data.LabelValueDAO;
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 
 import java.util.stream.Collectors;
@@ -38,7 +39,7 @@ public class LabelMapper {
         return l;
     }
 
-    public static Label.Value fromValue(LabelDAO.Value v) {
+    public static Label.Value fromValue(LabelValueDAO v) {
         Label.Value dto = new Label.Value();
         dto.labelId = v.labelId;
         dto.value = v.value;

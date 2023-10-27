@@ -405,9 +405,9 @@ public class DatasetServiceImpl implements DatasetService {
       // before the first event is processed. The second event would then find the label_value
       // already present and would fail with a constraint violation.
       if (queryLabelId < 0) {
-         LabelDAO.Value.delete("datasetId", datasetId);
+         LabelValueDAO.delete("datasetId", datasetId);
       } else {
-         LabelDAO.Value.delete("datasetId = ?1 AND labelId = ?2", datasetId, queryLabelId);
+         LabelValueDAO.delete("datasetId = ?1 AND labelId = ?2", datasetId, queryLabelId);
       }
 
       FingerprintDAO.deleteById(datasetId);
@@ -467,7 +467,7 @@ public class DatasetServiceImpl implements DatasetService {
    }
 
    private void createLabel(int datasetId, int testId, int labelId, JsonNode value) {
-      LabelDAO.Value labelValue = new LabelDAO.Value();
+      LabelValueDAO labelValue = new LabelValueDAO();
       labelValue.datasetId = datasetId;
       labelValue.labelId = labelId;
       labelValue.value = value;
@@ -480,7 +480,7 @@ public class DatasetServiceImpl implements DatasetService {
          return;
 
       ObjectNode fpNode = JsonNodeFactory.instance.objectNode();
-      List<LabelDAO.Value> labelValues = LabelDAO.Value.find("datasetId", datasetId).list();
+      List<LabelValueDAO> labelValues = LabelValueDAO.find("datasetId", datasetId).list();
       List<String[]> labelPairs = new ArrayList<>(labelValues.size());
       for(var lv : labelValues)
          labelPairs.add(new String[]{LabelDAO.<LabelDAO>findById(lv.labelId).name, lv.value.asText()});

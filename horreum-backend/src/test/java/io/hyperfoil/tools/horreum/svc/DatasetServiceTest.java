@@ -40,16 +40,12 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(HorreumTestProfile.class)
 public class DatasetServiceTest extends BaseServiceTest {
-   @Inject
-   DatasetService datasetService;
-
    @Inject
    SqlService sqlService;
 
@@ -197,7 +193,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
          withExampleDataset(test, createABData(), ds -> {
             waitForUpdate(updateQueue, ds);
-            List<LabelDAO.Value> values = LabelDAO.Value.<LabelDAO.Value>find("datasetId", ds.id).list();
+            List<LabelValueDAO> values = LabelValueDAO.<LabelValueDAO>find("datasetId", ds.id).list();
             assertEquals(3, values.size());
             assertEquals(24, values.stream().filter(v -> v.labelId == labelA).map(v -> v.value.numberValue()).findFirst().orElse(null));
             assertEquals(43, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
@@ -216,7 +212,7 @@ public class DatasetServiceTest extends BaseServiceTest {
                throw new RuntimeException(e);
             }
 
-            values = LabelDAO.Value.<LabelDAO.Value>find("datasetId", ds.id).list();
+            values = LabelValueDAO.<LabelValueDAO>find("datasetId", ds.id).list();
             assertEquals(2, values.size());
             assertEquals(JsonNodeFactory.instance.arrayNode().add(24), values.stream().filter(v -> v.labelId == labelA).map(v -> v.value).findFirst().orElse(null));
             assertEquals(84, values.stream().filter(v -> v.labelId == labelB).map(v -> v.value.numberValue()).findFirst().orElse(null));
@@ -232,7 +228,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
       return withExampleDataset(test, data, ds -> {
          waitForUpdate(updateQueue, ds);
-         return LabelDAO.Value.<LabelDAO.Value>find("datasetId", ds.id).list().stream().map(LabelMapper::fromValue).collect(Collectors.toList());
+         return LabelValueDAO.<LabelValueDAO>find("datasetId", ds.id).list().stream().map(LabelMapper::fromValue).collect(Collectors.toList());
       });
    }
 
@@ -278,7 +274,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       assertNotNull(thirdUpdate);
       assertEquals(secondEvent.datasetId, thirdUpdate.datasetId);
 
-      List<LabelDAO.Value> values = LabelDAO.Value.list("datasetId", thirdUpdate.datasetId);
+      List<LabelValueDAO> values = LabelValueDAO.list("datasetId", thirdUpdate.datasetId);
       assertEquals(1, values.size());
       assertEquals(42, values.get(0).value.asInt());
    }
@@ -429,7 +425,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       assertNotNull(event);
 
       try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-         List<LabelDAO.Value> labels = LabelDAO.Value.<LabelDAO.Value>find("datasetId", event.datasetId).list();
+         List<LabelValueDAO> labels = LabelValueDAO.<LabelValueDAO>find("datasetId", event.datasetId).list();
          assertEquals(1, labels.size());
       }
    }
