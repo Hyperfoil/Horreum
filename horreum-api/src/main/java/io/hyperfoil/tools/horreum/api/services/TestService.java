@@ -126,7 +126,7 @@ public interface TestService {
    })
    Collection<TestToken> tokens(@PathParam("id") int testId);
 
-   @POST
+   @DELETE
    @Path("{id}/revokeToken/{tokenId}")
    @Operation(description="Revoke a Token defined for a Test")
    @Parameters(value = {
