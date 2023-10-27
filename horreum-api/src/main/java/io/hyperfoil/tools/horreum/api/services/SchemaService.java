@@ -128,13 +128,13 @@ public interface SchemaService {
    )
    String resetToken(@PathParam("id") int id);
 
-   @POST
+   @DELETE
    @Path("{id}/dropToken")
    @Operation(description="Remove access token for schema")
    @Parameters(value = {
            @Parameter(name = "id", description = "Token ID", example = "102"),
    })
-   String dropToken(@PathParam("id") int id);
+   void dropToken(@PathParam("id") int id);
 
    @POST
    @Path("{id}/updateAccess")
