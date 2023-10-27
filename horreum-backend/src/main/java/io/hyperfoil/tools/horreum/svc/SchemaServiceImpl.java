@@ -240,8 +240,8 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Transactional
    @Override
-   public String dropToken(int id) {
-      return updateToken(id, null);
+   public void dropToken(int id) {
+      updateToken(id, null);
    }
 
    public String updateToken(int id, String token) {
