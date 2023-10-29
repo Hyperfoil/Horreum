@@ -66,12 +66,13 @@ export function getSummary(id: number, token?: string) {
         )
 }
 
-export function byTest(id: number, pagination: PaginationInfo, trashed: boolean) {
+export function byTest(id: number, pagination: PaginationInfo, trashed: any) {
     return (dispatch: Dispatch<LoadingAction | TestIdAction | AddAlertAction>) => {
         dispatch({ type: actionTypes.LOADING })
+        const direction: any = pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending
         return runApi.listTestRuns(
             id,
-            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
+            direction,
             pagination.perPage,
             pagination.page,
             pagination.sort,
