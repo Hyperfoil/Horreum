@@ -87,8 +87,8 @@ public class KeycloakResource implements ResourceLifecycleManager {
             } else {
 
                 keycloakContainer = (initArgs.containsKey(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT)) ?
-                        new FixedHostPortGenericContainer<>("were-going-to-override-this").withFixedExposedPort(Integer.parseInt(initArgs.get(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT)), 8080) :
-                        new GenericContainer<>().withExposedPorts(8080);
+                        new FixedHostPortGenericContainer<>(KEYCLOAK_IMAGE).withFixedExposedPort(Integer.parseInt(initArgs.get(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT)), 8080) :
+                        new GenericContainer<>(KEYCLOAK_IMAGE).withExposedPorts(8080);
 
                 keycloakContainer.withEnv("KC_HTTP_PORT", "8080")
                         .withEnv("JAVA_OPTS", "-Xms1024m -Xmx1024m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true")
