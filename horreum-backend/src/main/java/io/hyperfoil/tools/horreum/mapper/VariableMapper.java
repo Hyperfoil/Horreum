@@ -9,7 +9,7 @@ public class VariableMapper {
 
     public static Variable from(VariableDAO variable) {
         return new Variable(variable.id, variable.testId, variable.name, variable.group,
-                variable.order, variable.labels,
+                variable.order, variable.labels, variable.calculation,
                 variable.changeDetection.stream().map(ChangeDetectionMapper::from).collect(Collectors.toSet())
         );
     }
@@ -22,6 +22,7 @@ public class VariableMapper {
         v.group = dto.group;
         v.order = dto.order;
         v.labels = dto.labels;
+        v.calculation = dto.calculation;
         if(dto.changeDetection != null)
             v.changeDetection = dto.changeDetection.stream().map(ChangeDetectionMapper::to).collect(Collectors.toSet());
 
