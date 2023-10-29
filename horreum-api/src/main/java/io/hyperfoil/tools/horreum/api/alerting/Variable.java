@@ -35,7 +35,7 @@ public class Variable {
     public Variable() {
     }
 
-    public Variable(Integer id, int testId, String name, String group, int order, JsonNode labels,
+    public Variable(Integer id, int testId, String name, String group, int order, JsonNode labels, String calculation,
                     Set<ChangeDetection> changeDetection) {
         this.id = id;
         this.testId = testId;
@@ -43,6 +43,7 @@ public class Variable {
         this.group = group;
         this.order = order;
         this.labels = labels;
+        this.calculation = calculation;
         this.changeDetection = changeDetection;
     }
 
