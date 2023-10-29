@@ -75,6 +75,7 @@ public class BaseServiceTest {
    static final String[] UPLOADER_ROLES = { "foo-team", "foo-uploader", "uploader" };
    public static final String[] TESTER_ROLES = { "foo-team", "foo-tester", "tester", "viewer" };
    static final List<String> SYSTEM_ROLES = Collections.singletonList(Roles.HORREUM_SYSTEM);
+   public static final String INFRA_EXAMPLE_DATA = "infra/horreum-dev-services/runtime/src/main/resources/example-data";
    private static String UPLOADER_TOKEN;
    private static String TESTER_TOKEN;
    private static String ADMIN_TOKEN;
@@ -841,7 +842,7 @@ public class BaseServiceTest {
          fail("Could not find resource directory, aborting test");
       }
       Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
-      p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+      p = p.getParent().getParent().getParent().resolve(INFRA_EXAMPLE_DATA);
 
       Test t = new ObjectMapper().readValue(
               readFile(p.resolve("roadrunner_test.json").toFile()), Test.class);
