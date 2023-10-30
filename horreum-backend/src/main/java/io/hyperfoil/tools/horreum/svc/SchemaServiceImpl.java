@@ -474,8 +474,10 @@ public class SchemaServiceImpl implements SchemaService {
 
    private void doUpdateLabelForDelete(LabelDAO label) {
       em.createNativeQuery("DELETE FROM label_values WHERE label_id = ?1").setParameter(1, label.id).executeUpdate();
+      int schemaId = label.getSchemaId();
+      int labelId = label.id;
       label.delete();
-      emitLabelChanged(label);
+      emitLabelChanged(labelId, schemaId);
    }
 
    @PermitAll
@@ -659,7 +661,7 @@ public class SchemaServiceImpl implements SchemaService {
          label.schema = em.getReference(SchemaDAO.class, schemaId);
          checkSameName(label);
          label.persistAndFlush();
-         emitLabelChanged(label);
+         emitLabelChanged(label.id, schemaId);
       } else {
          LabelDAO existing = LabelDAO.findById(label.id);
          if (existing == null) {
@@ -690,20 +692,20 @@ public class SchemaServiceImpl implements SchemaService {
          existing.metrics = label.metrics;
          existing.persistAndFlush();
 
-         emitLabelChanged(existing);
+         emitLabelChanged(existing.id, existing.getSchemaId());
       }
       return label.id;
    }
 
-   private void emitLabelChanged(LabelDAO label) {
+   private void emitLabelChanged(int labelId, int schemaId) {
       try {
          List<Integer> datasetIds = session
                  .createNativeQuery("SELECT dataset_id from dataset_schemas WHERE schema_id = ?1")
-                 .setParameter(1, label.getSchemaId())
+                 .setParameter(1, schemaId)
                  .addScalar("dataset_id", StandardBasicTypes.INTEGER)
                  .getResultList();
          if (datasetIds == null || datasetIds.isEmpty() || datasetIds.get(0) < 1) {
-            log.debug("Could not extract datasetIds from dataset_schemas with schemaId="+label.getSchemaId());
+            log.debug("Could not extract datasetIds from dataset_schemas with schemaId="+schemaId);
             return;
          }
          int testId = session.createNativeQuery("SELECT testid from dataset WHERE id = ?1", Integer.class)
@@ -714,7 +716,7 @@ public class SchemaServiceImpl implements SchemaService {
          }
 
          for(var datasetId : datasetIds) {
-            Util.registerTxSynchronization(tm, txStatus -> mediator.queueDatasetEvents(new Dataset.EventNew(datasetId, testId, 0, label.id, true)));
+            Util.registerTxSynchronization(tm, txStatus -> mediator.queueDatasetEvents(new Dataset.EventNew(datasetId, testId, 0, labelId, true)));
          }
       }
       catch (NoResultException nre) {
