@@ -7,6 +7,7 @@ import { userApi, UserData } from "./api"
 import { AddAlertAction, dispatchError } from "./alerts"
 import { Dispatch } from "redux"
 import { ThunkDispatch } from "redux-thunk"
+import Keycloak from "keycloak-js";
 
 export const INIT = "auth/INIT"
 export const UPDATE_DEFAULT_TEAM = "auth/UPDATE_DEFAULT_TEAM"
@@ -15,7 +16,7 @@ export const STORE_PROFILE = "auth/STORE_PROFILE"
 const AFTER_LOGOUT = "auth/AFTER_LOGOUT"
 
 export class AuthState {
-    keycloak?: Keycloak.KeycloakInstance = undefined
+    keycloak?: Keycloak
     authenticated = false
     roles: string[] = []
     teams: string[] = []
@@ -26,7 +27,7 @@ export class AuthState {
 
 interface InitAction {
     type: typeof INIT
-    keycloak: Keycloak.KeycloakInstance
+    keycloak: Keycloak
     initPromise?: Promise<boolean>
 }
 

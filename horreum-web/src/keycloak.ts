@@ -18,7 +18,7 @@ export function initKeycloak(state: State) {
         keycloakPromise = Promise.resolve(keycloak)
     }
     keycloakPromise
-        .then((keycloak: Keycloak.KeycloakInstance) => {
+        .then((keycloak: Keycloak) => {
             let initPromise: Promise<boolean> | undefined = undefined
             if (!keycloak.authenticated) {
                 // Typecast required due to https://github.com/keycloak/keycloak/pull/5858
