@@ -356,6 +356,10 @@ public class DatasetServiceImpl implements DatasetService {
       DatasetDAO dataset = DatasetDAO.findById(datasetId);
       if (dataset != null) {
          Hibernate.initialize(dataset.data);
+      } else {
+         log.warnf("Could not retrieve dataset: " + datasetId);
+         throw ServiceException.notFound("Could not find Dataset: " + datasetId + ". If you have recently started a re-tranformation, please wait until datasets are available");
+
       }
       return DatasetMapper.from(dataset);
    }
