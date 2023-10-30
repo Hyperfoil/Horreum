@@ -143,7 +143,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                     name: "",
                     extractors: [],
                     owner: defaultTeam || "",
-                    access: "0" as Access,
+                    access: Access.Public,
                     schemaId: schemaId,
                     filtering: true,
                     metrics: true,
