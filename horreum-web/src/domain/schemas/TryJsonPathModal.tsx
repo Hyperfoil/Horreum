@@ -88,7 +88,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                 setValid(result.valid)
                 if (result.valid) {
                     try {
-                        result.value = result.value ? JSON.parse(result.value) : undefined
+                        result.value = result.value ? JSON.parse(result.value) : null
                     } catch (e) {
                         // ignored
                     }
