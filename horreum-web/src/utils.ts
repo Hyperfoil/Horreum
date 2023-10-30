@@ -57,6 +57,8 @@ export function toEpochMillis(timestamp: any): number {
             return 0
         }
         return timestamp
+    } else if (timestamp instanceof Date) {
+        return DateTime.fromJSDate(timestamp).toMillis()
     } else {
         return 0
     }
