@@ -13,6 +13,7 @@ import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
@@ -22,6 +23,7 @@ import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.ViewComponent;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
+import io.restassured.common.mapper.TypeRef;
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
 
@@ -290,6 +292,9 @@ public class TestServiceTest extends BaseServiceTest {
       TestDAO test = TestDAO.<TestDAO>find("name", "quarkus-spring-boot-comparison").firstResult();
       assertEquals(1, test.transformers.size());
 
+      List<SchemaService.SchemaDescriptor> descriptors = jsonRequest().get("/api/schema/descriptors")
+              .then().statusCode(200).extract().body().as(new TypeRef<>() {});
+      assertEquals("quarkus-sb-compare", descriptors.get(0).name);
    }
 
 

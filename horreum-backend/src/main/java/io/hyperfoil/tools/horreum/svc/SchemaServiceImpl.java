@@ -221,7 +221,14 @@ public class SchemaServiceImpl implements SchemaService {
       if (ids != null && !ids.isEmpty()) {
          sql += " WHERE id IN ?1";
       }
-      SelectionQuery<SchemaDescriptor> query = session.createNamedQuery(sql, SchemaDescriptor.class);
+      SelectionQuery<SchemaDescriptor> query = session.createNativeQuery(sql, Tuple.class)
+              .setTupleTransformer((tuple, aliases) -> {
+                 SchemaDescriptor sd = new SchemaDescriptor();
+                 sd.id = (int) tuple[0];
+                 sd.name = (String) tuple[1];
+                 sd.uri = (String) tuple[2];
+                 return sd;
+              });
       if (ids != null && !ids.isEmpty()) {
          query.setParameter(1, ids);
       }
