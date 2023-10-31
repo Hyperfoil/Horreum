@@ -19,10 +19,6 @@ public abstract class PersistentLogDAO extends PanacheEntityBase {
    public static final int WARN = 2;
    public static final int ERROR = 3;
 
-   @Id
-   @GeneratedValue
-   public Long id;
-
    @NotNull
    public int level;
 
