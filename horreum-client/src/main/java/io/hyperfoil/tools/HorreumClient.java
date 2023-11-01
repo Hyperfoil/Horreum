@@ -2,7 +2,7 @@ package io.hyperfoil.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
-import io.hyperfoil.tools.horreum.api.client.RunService;
+import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.internal.services.ActionService;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.internal.services.BannerService;
@@ -53,7 +53,7 @@ public class HorreumClient implements Closeable {
     public final ExperimentService experimentService;
     public final NotificationService notificationService;
     public final ReportService reportService;
-    public final RunServiceExtension runService;
+    public final RunService runService;
     public final SchemaService schemaService;
     public final SqlService sqlService;
     public final SubscriptionService subscriptionService;
@@ -63,7 +63,7 @@ public class HorreumClient implements Closeable {
     private HorreumClient(ResteasyClient client,
                           ActionService actionService, AlertingService alertingService, BannerService bannerService, ChangesService changesService, ConfigService configService,
                           DatasetService datasetService, ExperimentService experimentService, NotificationService notificationService,
-                          ReportService reportService, RunServiceExtension runServiceExtension, SchemaService schemaService,
+                          ReportService reportService, RunService runService, SchemaService schemaService,
                           SqlService sqlService, SubscriptionService subscriptionService, TestService horreumTestService, UserService userService) {
         this.client = client;
         this.alertingService = alertingService;
@@ -75,7 +75,7 @@ public class HorreumClient implements Closeable {
         this.actionService = actionService;
         this.notificationService = notificationService;
         this.reportService = reportService;
-        this.runService = runServiceExtension;
+        this.runService = runService;
         this.schemaService = schemaService;
         this.sqlService = sqlService;
         this.subscriptionService = subscriptionService;
@@ -190,7 +190,7 @@ public class HorreumClient implements Closeable {
                   target.proxyBuilder(ExperimentService.class).build(),
                   target.proxyBuilder(NotificationService.class).build(),
                   target.proxyBuilder(ReportService.class).build(),
-                  new RunServiceExtension(target, target.proxyBuilder(RunService.class).build()),
+                  target.proxyBuilder(RunService.class).build(),
                   target.proxyBuilder(SchemaService.class).build(),
                   target.proxyBuilder(SqlService.class).build(),
                   target.proxyBuilder(SubscriptionService.class).build(),

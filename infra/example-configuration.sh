@@ -7,7 +7,7 @@
 
 set -o pipefail
 
-EX=$(dirname $0)/example-data
+EX=$(dirname $0)/horreum-dev-services/runtime/src/main/resources/example-data
 API="http://localhost:8080/api"
 KEYCLOAK_URL=$( curl -k -s $API/config/keycloak | jq -r '.url')
 TOKEN=$(curl -s -X POST $KEYCLOAK_URL/realms/horreum/protocol/openid-connect/token \

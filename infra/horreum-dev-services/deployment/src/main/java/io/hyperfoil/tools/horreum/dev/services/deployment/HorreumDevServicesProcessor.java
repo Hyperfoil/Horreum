@@ -1,17 +1,27 @@
 package io.hyperfoil.tools.horreum.dev.services.deployment;
 
 import io.hyperfoil.tools.horreum.dev.services.deployment.config.DevServicesConfig;
+import io.hyperfoil.tools.horreum.dev.services.runtime.dev.HorreumDevJsonRpcService;
 import io.hyperfoil.tools.horreum.infra.common.HorreumResources;
+import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.processor.DotNames;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.IsNormal;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.BuildSteps;
-import io.quarkus.deployment.builditem.*;
+import io.quarkus.deployment.builditem.CuratedApplicationShutdownBuildItem;
+import io.quarkus.deployment.builditem.DevServicesResultBuildItem;
+import io.quarkus.deployment.builditem.DevServicesSharedNetworkBuildItem;
+import io.quarkus.deployment.builditem.DockerStatusBuildItem;
+import io.quarkus.deployment.builditem.LaunchModeBuildItem;
 import io.quarkus.deployment.console.ConsoleInstalledBuildItem;
 import io.quarkus.deployment.console.StartupLogCompressor;
 import io.quarkus.deployment.dev.devservices.GlobalDevServicesConfig;
 import io.quarkus.deployment.logging.LoggingSetupBuildItem;
+import io.quarkus.devui.spi.JsonRPCProvidersBuildItem;
+import io.quarkus.devui.spi.page.CardPageBuildItem;
+import io.quarkus.devui.spi.page.Page;
 import org.bouncycastle.asn1.oiw.OIWObjectIdentifiers;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
@@ -192,6 +202,36 @@ public class HorreumDevServicesProcessor {
             devServicesResultBuildItemBuildProducer.produce(horreumPostgresDevService.toBuildItem());
         }
     }
+
+    @BuildStep(onlyIf = IsDevelopment.class)
+    public CardPageBuildItem pages() {
+
+        CardPageBuildItem card = new CardPageBuildItem();
+        card.addPage(Page.webComponentPageBuilder()
+                .title("Sample Data")
+                .componentLink("horreum-sample-data.js")
+                .icon("font-awesome-solid:table")
+                .dynamicLabelJsonRPCMethodName("getIsSampleDataLoaded"));
+
+        return card;
+    }
+
+
+    @BuildStep
+    JsonRPCProvidersBuildItem createJsonRPCService() {
+        return new JsonRPCProvidersBuildItem("horreum", HorreumDevJsonRpcService.class);
+    }
+
+    @BuildStep
+    AdditionalBeanBuildItem additionalBeans() {
+        return AdditionalBeanBuildItem
+                .builder()
+                .addBeanClass(HorreumDevJsonRpcService.class)
+                .setUnremovable()
+                .setDefaultScope(DotNames.APPLICATION_SCOPED)
+                .build();
+    }
+
 
     public static class IsEnabled implements BooleanSupplier {
         DevServicesConfig config;

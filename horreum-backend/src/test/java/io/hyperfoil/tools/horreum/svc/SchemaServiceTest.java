@@ -197,7 +197,7 @@ public class SchemaServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testImportWithTransformers() throws JsonProcessingException {
       Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
-      p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+      p = p.getParent().getParent().getParent().resolve(INFRA_EXAMPLE_DATA);
       String s1 = readFile(p.resolve("quarkus_sb_schema.json").toFile());
 
       jsonRequest().body(s1).post("/api/schema/import").then().statusCode(204);

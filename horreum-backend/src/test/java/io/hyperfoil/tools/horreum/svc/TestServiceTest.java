@@ -196,7 +196,7 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testImportFromFile() throws JsonProcessingException {
       Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
-      p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+      p = p.getParent().getParent().getParent().resolve(INFRA_EXAMPLE_DATA);
 
       Test t = new ObjectMapper().readValue(
               readFile(p.resolve("quarkus_quickstart_test_empty.json").toFile()), Test.class);
@@ -281,7 +281,7 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testImportWithTransformers() throws InterruptedException {
       Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
-      p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+      p = p.getParent().getParent().getParent().resolve(INFRA_EXAMPLE_DATA);
 
       String s = readFile(p.resolve("quarkus_sb_schema.json").toFile());
       jsonRequest().body(s).post("/api/schema/import").then().statusCode(204);

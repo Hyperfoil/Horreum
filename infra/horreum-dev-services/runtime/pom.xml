@@ -19,6 +19,16 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-keycloak-admin-client</artifactId>
     </dependency>
+      <dependency>
+          <groupId>io.hyperfoil.tools</groupId>
+          <artifactId>horreum-client</artifactId>
+        <exclusions>
+          <exclusion>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-cdi</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
   </dependencies>
   <build>
     <plugins>
