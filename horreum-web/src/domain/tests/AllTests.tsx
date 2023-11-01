@@ -32,7 +32,6 @@ import {
 import * as selectors from "./selectors"
 
 import Table from "../../components/Table"
-import AccessIcon from "../../components/AccessIcon"
 import { alertAction } from "../../alerts"
 import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
@@ -47,7 +46,8 @@ import { isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProf
 import { CellProps, Column, UseSortByColumnOptions } from "react-table"
 import { TestStorage, TestDispatch } from "./reducers"
 import { noop } from "../../utils"
-import {SortDirection, testApi, TestQueryResult, Access } from "../../api"
+import { SortDirection, testApi, TestQueryResult, Access } from "../../api"
+import AccessIconOnly from "../../components/AccessIconOnly"
 
 type WatchDropdownProps = {
     id: number
@@ -353,11 +353,21 @@ export default function AllTests() {
                     )
                 },
             },
-            { Header: "Owner", accessor: "owner", Cell: (arg: C) => teamToName(arg.cell.value) },
             {
-                Header: "Access",
-                accessor: "access",
-                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
+                Header: "Owner",
+                id: "owner",
+                accessor: (row: TestStorage) => ({
+                    owner: row.owner,
+                    access: row.access,
+                }),
+                Cell: (arg: C) => (
+                    <>
+                        {teamToName(arg.cell.value.owner)}
+                        <span style={{ marginLeft: '8px' }}>
+                            <AccessIconOnly access={arg.cell.value.access} />
+                        </span>
+                    </>
+                ),
             },
             {
                 Header: "Actions",

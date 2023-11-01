@@ -31,7 +31,6 @@ import { alertAction } from "../../alerts"
 import { fetchTest } from "../tests/actions"
 import { get } from "../tests/selectors"
 
-import AccessIcon from "../../components/AccessIcon"
 import Table from "../../components/Table"
 import {
     CellProps,
@@ -46,6 +45,7 @@ import { RunSummary } from "../../api"
 import { NoSchemaInRun } from "./NoSchema"
 import { Description, ExecutionTime, Menu } from "./components"
 import SchemaList from "./SchemaList"
+import AccessIconOnly from "../../components/AccessIconOnly"
 
 type C = CellProps<RunSummary> &
     UseTableOptions<RunSummary> &
@@ -125,13 +125,19 @@ const tableColumns: RunColumn[] = [
     },
     {
         Header: "Owner",
-        accessor: "owner",
-        Cell: (arg: C) => teamToName(arg.cell.value),
-    },
-    {
-        Header: "Access",
-        accessor: "access",
-        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
+        id: "owner",
+        accessor: (row: RunSummary) => ({
+            owner: row.owner,
+            access: row.access,
+        }),
+        Cell: (arg: C) => (
+            <>
+                {teamToName(arg.cell.value.owner)}
+                <span style={{ marginLeft: '8px' }}>
+                <AccessIconOnly access={arg.cell.value.access} />
+                </span>
+            </>
+        ),
     },
     {
         Header: "Actions",

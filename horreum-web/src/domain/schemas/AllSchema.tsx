@@ -9,13 +9,14 @@ import { alertAction } from "../../alerts"
 import { useTester, teamsSelector, teamToName } from "../../auth"
 import { noop } from "../../utils"
 import Table from "../../components/Table"
-import AccessIcon from "../../components/AccessIcon"
+ 
 import ActionMenu, { useShareLink, useChangeAccess, useDelete } from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
 import { CellProps, Column } from "react-table"
 import { SchemaDispatch } from "./reducers"
 import {Access, SortDirection, SchemaQueryResult, Schema, schemaApi} from "../../api"
 import SchemaImportButton from "./SchemaImportButton"
+import AccessIconOnly from "../../components/AccessIconOnly"
 
 type C = CellProps<Schema>
 
@@ -62,13 +63,19 @@ export default function AllSchema() {
             },
             {
                 Header: "Owner",
-                accessor: "owner",
-                Cell: (arg: C) => teamToName(arg.cell.value),
-            },
-            {
-                Header: "Access",
-                accessor: "access",
-                Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
+                id: "owner",
+                accessor: (row: Schema) => ({
+                    owner: row.owner,
+                    access: row.access,
+                }),
+                Cell: (arg: C) => (
+                    <>
+                        {teamToName(arg.cell.value.owner)}
+                        <span style={{ marginLeft: '8px' }}>
+                        <AccessIconOnly access={arg.cell.value.access} />
+                        </span>
+                    </>
+                ),
             },
             {
                 Header: "Actions",

@@ -33,7 +33,6 @@ import { teamsSelector, teamToName, tokenSelector } from "../../auth"
 import { fetchTest } from "../tests/actions"
 import { get } from "../tests/selectors"
 
-import AccessIcon from "../../components/AccessIcon"
 import Table from "../../components/Table"
 import {
     CellProps,
@@ -53,6 +52,7 @@ import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
 import ViewSelect from "../../components/ViewSelect"
 import {viewsSelector} from "./selectors";
 import * as actions from "../tests/actions";
+import AccessIconOnly from "../../components/AccessIconOnly"
 
 type C = CellProps<DatasetSummary> &
     UseTableOptions<DatasetSummary> &
@@ -112,13 +112,19 @@ const staticColumns: DatasetColumn[] = [
     },
     {
         Header: "Owner",
-        accessor: "owner",
-        Cell: (arg: C) => teamToName(arg.cell.value),
-    },
-    {
-        Header: "Access",
-        accessor: "access",
-        Cell: (arg: C) => <AccessIcon access={arg.cell.value} />,
+        id: "owner",
+        accessor: (row: DatasetSummary) => ({
+            owner: row.owner,
+            access: row.access,
+        }),
+        Cell: (arg: C) => (
+            <>
+                {teamToName(arg.cell.value.owner)}
+                <span style={{ marginLeft: '8px' }}>
+                <AccessIconOnly access={arg.cell.value.access} />
+                </span>
+            </>
+        ),
     },
 ]
 
