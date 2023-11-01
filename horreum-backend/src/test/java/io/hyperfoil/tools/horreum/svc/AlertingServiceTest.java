@@ -24,7 +24,10 @@ import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
+import io.hyperfoil.tools.horreum.api.data.Fingerprints;
+import io.hyperfoil.tools.horreum.api.data.LabelValues;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.restassured.common.mapper.TypeRef;
 import jakarta.inject.Inject;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
@@ -287,6 +290,13 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(1, fingerprintsAfter.size());
       assertEquals(JsonNodeFactory.instance.objectNode().put("foo", "aaa").put("bar", "bbb"), fingerprintsAfter.get(0).fingerprint);
       assertEquals(fingerprintsBefore.get(0).datasetId, fingerprintsAfter.get(0).datasetId);
+
+      //lets also test fingerprint endpoint
+      List<Fingerprints> values = jsonRequest().get("/api/test/" + test.id + "/fingerprint")
+              .then().statusCode(200).extract().body().as(new TypeRef<>() {});
+      assertEquals(1, values.size());
+      assertEquals(2, values.get(0).values.size());
+      assertEquals("aaa", values.get(0).values.get(1).value);
 
       assertEquals(1L, DataPointDAO.findAll().count());
 

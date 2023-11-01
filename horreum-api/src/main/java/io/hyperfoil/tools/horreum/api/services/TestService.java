@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.Fingerprints;
+import io.hyperfoil.tools.horreum.api.data.LabelValues;
 import io.hyperfoil.tools.horreum.api.data.ProtectedType;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestToken;
@@ -174,22 +176,12 @@ public interface TestService {
    @Parameters(value = {
            @Parameter(name = "id", description = "Test ID to retrieve Fingerprints for", example = "101"),
    })
-      //TODO:  https://github.com/Hyperfoil/Horreum/issues/802
-//   @APIResponses(
-//           value = {
-//                   @APIResponse( responseCode = "200",
-//                           content = {
-//                                   @Content (
-//                                           schema = @Schema(type = SchemaType.ARRAY, implementation = Object.class),
-//                                           example = "[\n" +
-//                                           "        \"specj2010_INJECTION_RATE\",\n" +
-//                                           "        \"specj2010_major_minor_runtime_version\"\n" +
-//                                           "    ]")
-//                           }
-//                   )
-//           }
-//   )
-   List<JsonNode> listFingerprints(@PathParam("id") int testId);
+   @APIResponses( value = {
+           @APIResponse( responseCode = "200", content = {
+                   @Content ( schema = @Schema(type = SchemaType.ARRAY, implementation = Fingerprints.class))
+           })
+   })
+   List<Fingerprints> listFingerprints(@PathParam("id") int testId);
 
    @GET
    @Path("{id}/labelValues")
@@ -199,21 +191,15 @@ public interface TestService {
            @Parameter(name = "filtering", description = "Retrieve values for Filtering Labels", example = "true"),
            @Parameter(name = "metrics", description = "Retrieve values for Metric Labels", example = "false"),
    })
-   //TODO:  https://github.com/Hyperfoil/Horreum/issues/802
-//   @APIResponses(
-//           value = {
-//                   @APIResponse( responseCode = "200",
-//                           content = {
-//                                   @Content (
-//                                           schema = @Schema(type = SchemaType.ARRAY, implementation = Object.class),
-//                                           example = "[{\"DB\":449977,\"JSON\":1136592,\"Query\":393658,\"Update\":138952,\"Fortunes\":112164,\"Framework\":\"quarkus-resteasy-reactive-hibernate-reactive\",\"Plaintext\":1495358,\"timestamp\":1666929142402}]\n")
-//                           }
-//                   )
-//           }
-//   )
-   List<JsonNode> listLabelValues(@PathParam("id") int testId,
-                                  @QueryParam("filtering") @DefaultValue("true") boolean filtering,
-                                  @QueryParam("metrics") @DefaultValue("true") boolean metrics);
+   @APIResponses(
+           value = { @APIResponse( responseCode = "200",
+                   content = {
+                           @Content ( schema = @Schema(type = SchemaType.ARRAY, implementation = LabelValues.class)) }
+           )}
+   )
+   List<LabelValues> listLabelValues(@PathParam("id") int testId,
+                                     @QueryParam("filtering") @DefaultValue("true") boolean filtering,
+                                     @QueryParam("metrics") @DefaultValue("true") boolean metrics);
 
    @POST
    @Consumes(MediaType.APPLICATION_JSON)

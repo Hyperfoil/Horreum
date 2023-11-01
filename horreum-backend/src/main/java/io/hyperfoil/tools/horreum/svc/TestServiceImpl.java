@@ -444,24 +444,24 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @SuppressWarnings("unchecked")
    @Override
-   public List<JsonNode> listFingerprints(int testId) {
-      return em.createNativeQuery(
+   public List<Fingerprints> listFingerprints(int testId) {
+      return Fingerprints.parse( em.createNativeQuery(
             "SELECT DISTINCT fingerprint FROM fingerprint fp " +
             "JOIN dataset ON dataset.id = dataset_id WHERE dataset.testid = ?1")
             .setParameter(1, testId)
             .unwrap(NativeQuery.class).addScalar("fingerprint", JsonBinaryType.INSTANCE)
-            .getResultList();
+            .getResultList());
    }
 
    @WithRoles
    @Override
-   public List<JsonNode> listLabelValues(int testId, boolean filtering, boolean metrics) {
+   public List<LabelValues> listLabelValues(int testId, boolean filtering, boolean metrics) {
       //noinspection unchecked
-      return em.createNativeQuery(LABEL_VALUES_QUERY)
+      return LabelValues.parse( em.createNativeQuery(LABEL_VALUES_QUERY)
             .setParameter(1, testId).setParameter(2, filtering).setParameter(3, metrics)
             .unwrap(NativeQuery.class)
             .addScalar("values", JsonBinaryType.INSTANCE)
-            .getResultList();
+            .getResultList());
    }
 
    @WithRoles
