@@ -63,7 +63,7 @@
 
         <!-- maven-compiler-plugin -->
         <maven.compiler.target>17</maven.compiler.target>
-        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.source>17</maven.compiler.source>
         <use.java11plus>true</use.java11plus>
 
         <version.sonatype.nexus>1.6.8</version.sonatype.nexus>
