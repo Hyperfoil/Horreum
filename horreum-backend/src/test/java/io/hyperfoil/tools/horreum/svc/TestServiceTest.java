@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -185,14 +186,12 @@ public class TestServiceTest extends BaseServiceTest {
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
 
-      String response = jsonRequest().get("/api/test/" + test.id + "/labelValues").then().statusCode(200).
-            extract().body().asString();
-      JsonNode obj = Util.toJsonNode(response);
-      assertNotNull(obj);
-      assertTrue(obj.isArray());
-      assertEquals(1, StreamSupport.stream(obj.spliterator(), false).filter(item -> item.size() == 0).count());
-      assertEquals(1, StreamSupport.stream(obj.spliterator(), false).filter(item -> item.size() == 1 && item.has("value")).count());
-      assertEquals(2, obj.size());
+      List<LabelValues> values = jsonRequest().get("/api/test/" + test.id + "/labelValues").then().statusCode(200).
+            extract().body().as(new TypeRef<>() {});
+      assertNotNull(values);
+      assertFalse(values.isEmpty());
+      assertEquals(2, values.size());
+      assertEquals("value", values.get(1).values.get(0).name);
    }
    @org.junit.jupiter.api.Test
    public void testImportFromFile() throws JsonProcessingException {
@@ -297,6 +296,52 @@ public class TestServiceTest extends BaseServiceTest {
       assertEquals("quarkus-sb-compare", descriptors.get(0).name);
    }
 
+   @org.junit.jupiter.api.Test
+   public void testListFingerprints() throws JsonProcessingException {
+      List<JsonNode> fps = new ArrayList<>();
+      fps.add(mapper.readTree("{\"Mode\" : \"library\", \"TestName\" : \"reads10\", \"ConfigName\" : \"dist\"}"));
+
+      List<Fingerprints> values = Fingerprints.parse(fps);
+      assertEquals(1, values.size());
+      assertEquals(3, values.get(0).values.size());
+      assertEquals("dist", values.get(0).values.get(2).value);
+
+      fps.add(mapper.readTree(
+              "{\"tag\": \"main\", \"params\": " +
+                      "{\"storeFirst\": \"false\", \"numberOfRules\": \"200\", " +
+                        "\"rulesProviderId\": \"RulesWithJoinsProvides\", \"useCanonicalMode\": \"true\"}," +
+                      " \"testName\": \"BaseFromContainer\"}"));
+      values = Fingerprints.parse(fps);
+      assertEquals(2, values.size());
+      assertEquals(3, values.get(0).values.size());
+      assertEquals(3, values.get(1).values.size());
+      assertEquals(4, values.get(1).values.get(1).children.size());
+      assertEquals("storeFirst", values.get(1).values.get(1).children.get(0).name);
+   }
+
+
+   @org.junit.jupiter.api.Test
+   public void testListLabelValues() throws JsonProcessingException {
+      List<JsonNode> fps = new ArrayList<>();
+      fps.add(mapper.readTree("{\"job\": \"quarkus-release-startup\", \"Max RSS\": [], \"build-id\": null, " +
+                      "\"Throughput 1 CPU\": null, \"Throughput 2 CPU\": null, \"Throughput 4 CPU\": null, " +
+                      "\"Throughput 8 CPU\": null, \"Throughput 32 CPU\": null, " +
+                      "\"Quarkus - Kafka_tags\": \"quarkus-release-startup\"}"));
+
+      List<LabelValues> values = LabelValues.parse(fps);
+      assertEquals(1, values.size());
+      assertEquals(9, values.get(0).values.size());
+      assertEquals("quarkus-release-startup", values.get(0).values.get(0).value);
+
+      fps.add(mapper.readTree("{\"job\": \"quarkus-release-startup\", \"Max RSS\": [], \"build-id\": null, " +
+              "\"Throughput 1 CPU\": \"17570.30\", \"Throughput 2 CPU\": \"43105.62\", " +
+              "\"Throughput 4 CPU\": \"84895.13\", \"Throughput 8 CPU\": \"141086.29\"}"));
+      values = LabelValues.parse(fps);
+      assertEquals(2, values.size());
+      assertEquals(9, values.get(0).values.size());
+      assertEquals(7, values.get(1).values.size());
+      assertEquals("84895.13", values.get(1).values.get(5).value);
+   }
 
    private void addSubscription(Test test) {
       Watch watch = new Watch();
