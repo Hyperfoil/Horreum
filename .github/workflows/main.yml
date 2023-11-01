@@ -26,7 +26,7 @@ jobs:
         os:
         -  {
             name: "windows-latest",
-            build-options: "\"-Dquarkus.container-image.build=false\" -pl '!horreum-client, !horreum-integration-tests' -DskipITs -DskipTests"
+            build-options: "\"-Dquarkus.container-image.build=false\" -pl '!horreum-integration-tests' -DskipITs -DskipTests"
           }
         - {
             name: "ubuntu-latest",
