@@ -128,7 +128,7 @@ export default function TestDatasets() {
 
     const test = useSelector(get(testId))
     console.log(test)
-    const [filter, setFilter] = useState<SelectedLabels>()
+    const [filter, setFilter] = useState<SelectedLabels | number>()
     const [filterExpanded, setFilterExpanded] = useState(false)
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)

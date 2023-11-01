@@ -177,7 +177,7 @@ export const dropToken = (id: number, testid: number) => (dispatch: Dispatch<Upd
     )
 }
 
-export function updateAccess(id: number, testid: number, owner: string, access: Access) {
+export function updateAccess(id: number, testid: number, owner: any, access: Access) {
     return (dispatch: Dispatch<UpdateAccessAction | AddAlertAction>) => {
         return runApi.updateAccess(id, access, owner).then(
             _ => {
