@@ -146,9 +146,9 @@ export function deepEquals(x: any, y: any) {
     } else return false
 }
 
-export function fingerprintToString(fingerprint: unknown) {
-    if (!fingerprint) {
-        return ""
+export function fingerprintToString(fingerprint: unknown) : string | undefined {
+    if (fingerprint === undefined || fingerprint === null) {
+        return undefined;
     }
     return JSON.stringify(fingerprint)
 }
