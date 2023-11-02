@@ -8,8 +8,10 @@ import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
+import io.hyperfoil.tools.horreum.api.data.SchemaExport;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
@@ -24,6 +26,7 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.hyperfoil.tools.horreum.mapper.ValidationErrorMapper;
+import io.hyperfoil.tools.horreum.mapper.VariableMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
@@ -837,66 +840,49 @@ public class SchemaServiceImpl implements SchemaService {
    @WithRoles
    @Transactional
    @Override
-   public String exportSchema(int id) {
+   public SchemaExport exportSchema(int id) {
       SchemaDAO schema = SchemaDAO.findById(id);
       if (schema == null) {
          throw ServiceException.notFound("Schema not found");
       }
-      ObjectNode exported = Util.OBJECT_MAPPER.valueToTree(schema);
-      exported.set("labels", Util.OBJECT_MAPPER.valueToTree(LabelDAO.list("schema", schema)));
-      exported.set("transformers", Util.OBJECT_MAPPER.valueToTree(TransformerDAO.list("schema", schema)));
-      return exported.toString();
+      SchemaExport export = new SchemaExport(SchemaMapper.from(schema));
+
+      export.labels = LabelDAO.<LabelDAO>list("schema.id", schema.id).stream().map(LabelMapper::from).collect(Collectors.toList());
+      export.transformers = TransformerDAO.<TransformerDAO>list("schema.id", schema.id).stream().map(TransformerMapper::from).collect(Collectors.toList());
+
+      return export;
    }
 
    @RolesAllowed({Roles.TESTER, Roles.ADMIN})
    @WithRoles
    @Transactional
    @Override
-   public void importSchema(String importSchema) {
-      JsonNode config = null;
-      try {
-         config = Util.OBJECT_MAPPER.readValue(importSchema, JsonNode.class);
-      } catch (JsonProcessingException e) {
-         throw ServiceException.badRequest("Could not map Schema to JsonNode: "+e.getMessage());
-      }
-      if (!config.isObject()) {
-         throw ServiceException.badRequest("Bad format of schema; expecting an object");
-      }
-      // deep copy if we need to retry
-      ObjectNode cfg = config.deepCopy();
-      JsonNode labels = cfg.remove("labels");
-      JsonNode transformers = cfg.remove("transformers");
-      SchemaDAO schema;
-      try {
-         schema = SchemaMapper.to(Util.OBJECT_MAPPER.treeToValue(cfg, Schema.class));
-      } catch (JsonProcessingException e) {
-         throw ServiceException.badRequest("Cannot deserialize schema: " + e.getMessage());
-      }
+   public void importSchema(ObjectNode node) {
+      SchemaExport importSchema = Util.OBJECT_MAPPER.convertValue(node, SchemaExport.class);
       boolean newSchema = true;
-      if ( schema.id != null ) {
+      SchemaDAO schema = null;
+      if ( importSchema.id != null ) {
          //first check if this schema exists
-         SchemaDAO original = SchemaDAO.findById(schema.id);
-         if(original != null) {
-            em.merge(schema);
+         schema = SchemaDAO.findById(importSchema.id);
+         if(schema != null) {
+            em.merge(SchemaMapper.to(importSchema));
             newSchema = false;
          }
          else {
-            verifyNewSchema(SchemaMapper.from(schema));
+            verifyNewSchema(importSchema);
+            schema = SchemaMapper.to(importSchema);
             schema.id = null;
             schema.persist();
          }
       }
       else {
-         verifyNewSchema(SchemaMapper.from(schema));
+         verifyNewSchema(importSchema);
+         schema = SchemaMapper.to(importSchema);
          em.persist(schema);
       }
-      if (labels == null || labels.isNull() || labels.isMissingNode()) {
-         log.debugf("Import schema %d: no labels", schema.id);
-      }
-      else if (labels.isArray()) {
-         for (JsonNode node : labels) {
-            try {
-               LabelDAO label = LabelMapper.to(Util.OBJECT_MAPPER.treeToValue(node, Label.class));
+      if (importSchema.labels != null && !importSchema.labels.isEmpty()) {
+         for (Label l : importSchema.labels) {
+                LabelDAO label = LabelMapper.to(l);
                label.schema = schema;
                if ( label.id != null && !newSchema){
                   em.merge(label);
@@ -905,19 +891,11 @@ public class SchemaServiceImpl implements SchemaService {
                   label.schema = schema;
                   em.persist(label);
                }
-            } catch (JsonProcessingException e) {
-               throw ServiceException.badRequest("Cannot deserialize label: " + e.getMessage());
-            }
          }
-      } else {
-         throw ServiceException.badRequest("Wrong node type for labels: " + labels.getNodeType());
       }
-      if (transformers == null || transformers.isNull() || transformers.isMissingNode()) {
-         log.debugf("Import schema %d: no transformers", schema.id);
-      } else if (transformers.isArray()) {
-         for (JsonNode node : transformers) {
-            try {
-               TransformerDAO transformer = TransformerMapper.to(Util.OBJECT_MAPPER.treeToValue(node, Transformer.class));
+      if (importSchema.transformers != null && !importSchema.transformers.isEmpty()) {
+         for (Transformer t : importSchema.transformers) {
+            TransformerDAO transformer = TransformerMapper.to(t);
                transformer.schema = schema;
                if(transformer.id == null || transformer.id < 1) {
                   em.persist(transformer);
@@ -933,12 +911,7 @@ public class SchemaServiceImpl implements SchemaService {
                      em.persist(transformer);
                   }
                }
-            } catch (JsonProcessingException e) {
-               throw ServiceException.badRequest("Cannot deserialize transformer: " + e.getMessage());
-            }
          }
-      } else {
-         throw ServiceException.badRequest("Wrong node type for transformers: " + transformers.getNodeType());
       }
       //let's wrap flush in a try/catch, if we get any role issues at commit we can give a sane msg
       try {

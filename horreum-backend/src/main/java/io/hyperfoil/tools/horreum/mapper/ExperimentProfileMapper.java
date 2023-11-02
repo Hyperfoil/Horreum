@@ -27,8 +27,10 @@ public class ExperimentProfileMapper {
 
     public static ExperimentComparison fromExperimentComparison(ExperimentComparisonDAO ec) {
         ExperimentComparison dto = new ExperimentComparison();
-        dto.variableId = ec.getVariableId();
-        dto.variableName = ec.variable.name;
+        if(ec.variable != null) {
+            dto.variableId = ec.variable.id;
+            dto.variableName = ec.variable.name;
+        }
         dto.config = ec.config;
         dto.model = ec.model;
 
@@ -56,7 +58,6 @@ public class ExperimentProfileMapper {
         ec.model = dto.model;
         if(dto.variableId != null && dto.variableId > 0)
             ec.setVariableId(dto.variableId);
-
         return ec;
     }
 }

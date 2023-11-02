@@ -3,10 +3,14 @@ package io.hyperfoil.tools.horreum.svc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
+import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
+import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
 import io.hyperfoil.tools.horreum.mapper.TestTokenMapper;
 import io.hyperfoil.tools.horreum.api.services.TestService;
@@ -50,8 +54,6 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class TestServiceImpl implements TestService {
@@ -586,98 +588,48 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @Transactional
    @Override
-   public String export(int testId) {
-      TestDAO test = TestDAO.findById(testId);
-      if (test == null) {
+   public TestExport export(int testId) {
+      TestDAO t = TestDAO.findById(testId);
+      if (t == null) {
          throw ServiceException.notFound("Test " + testId + " was not found");
       }
-      ObjectNode export = Util.OBJECT_MAPPER.valueToTree(TestMapper.from(test));
-      // do not export full transformers, just references - these belong to the schema
-      if (!export.path("transformers").isEmpty()) {
-         ArrayNode transformers = JsonNodeFactory.instance.arrayNode();
-         export.get("transformers").forEach(t -> {
-            ObjectNode ref = JsonNodeFactory.instance.objectNode();
-            ref.set("id", t.path("id"));
-            // only for informative purposes
-            ref.set("name", t.path("name"));
-            ref.set("schemaName", t.path("schemaName"));
-            ref.set("targetSchemaUri", t.path("targetSchemaUri"));
-            ref.set("schemaId", t.path("schemaId"));
-            transformers.add(ref);
-         });
-         export.set("transformers", transformers);
+      Test test = TestMapper.from(t);
+      if(!test.tokens.isEmpty())
+         test.tokens = null;
+      TestExport testExport = new TestExport(test);
+      //if we have non-postgres backend, we need to add the backendConfig to the export without sensitive data
+      if(t.backendConfig != null && t.backendConfig.type != DatastoreType.POSTGRES) {
+         testExport.datastore = DatasourceMapper.from(t.backendConfig);
+         testExport.datastore.pruneSecrets();
       }
-      if (!test.tokens.isEmpty()) {
-         ArrayNode tokens = (ArrayNode) export.get("tokens");
-         for (var token : test.tokens) {
-            for (int i = 0; i < tokens.size(); ++i) {
-               ObjectNode node = (ObjectNode) tokens.get(i);
-               if (node.path("id").intValue() == token.id) {
-                  node.put("value", token.getEncryptedValue(plaintext -> {
-                     try {
-                        return encryptionManager.encrypt(plaintext);
-                     } catch (GeneralSecurityException e) {
-                        throw new RuntimeException("Cannot encrypt token value: " + e.getMessage());
-                     }
-                  }));
-               }
-            }
-         }
-      }
-      mediator.exportTest(export, testId);
-      return export.toString();
+      mediator.exportTest(testExport);
+      return testExport;
    }
 
    @RolesAllowed({Roles.ADMIN, Roles.TESTER})
    @WithRoles
    @Transactional
    @Override
-   public void importTest(String newTest) {
-      JsonNode testConfig = null;
-      try {
-         testConfig = mapper.readValue(newTest, JsonNode.class);
-      }
-      catch (JsonProcessingException e) {
-         throw ServiceException.badRequest("Request object could not be mapped to JsonNode: "+ e.getMessage());
-      }
-      if (!testConfig.isObject()) {
-         throw ServiceException.badRequest("Expected Test object as request body, got " + testConfig.getNodeType());
-      }
-      JsonNode idNode = testConfig.path("id");
-      if (!idNode.isMissingNode() && !idNode.isIntegralNumber()) {
-         throw ServiceException.badRequest("Test object has invalid id: " + idNode.asText());
-      }
-      // We need to perform a deep copy before mutating because if this
-      // transaction needs a retry we would not have the subnodes we're about to remove.
-      ObjectNode config = testConfig.deepCopy();
-      JsonNode alerting = config.remove("alerting");
-      JsonNode actions = config.remove("actions");
-      JsonNode experiments = config.remove("experiments");
-      JsonNode subscriptions = config.remove("subscriptions");
-      Test dto;
-      boolean forceUseTestId = false;
-      try {
-         dto = mapper.treeToValue(config, Test.class);
-         if (dto.tokens != null && !dto.tokens.isEmpty()) {
-            dto.tokens.forEach(token -> token.decryptValue(ciphertext -> {
-               try {
-                  return encryptionManager.decrypt(ciphertext);
-               } catch (GeneralSecurityException e) {
-                  throw new RuntimeException("Cannot decrypt token value: " + e.getMessage());
-               }
-            }));
-         }
-         if (dto.transformers != null) {
-            dto.transformers.stream().filter(t -> t.id == null || t.id <= 0).findFirst().ifPresent(transformer -> {
-               throw ServiceException.badRequest("Transformer " + transformer.name + " does not have ID set; Transformers must be imported via Schema.");
-            });
+   public void importTest(ObjectNode node) {
+      TestExport newTest = Util.OBJECT_MAPPER.convertValue(node, TestExport.class);
+      //need to add logic for datastore
+      if(newTest.datastore != null) {
+         //first check if datastore already exists
+         boolean exists = DatastoreConfigDAO.findById(newTest.datastore.id) != null;
+         DatastoreConfigDAO datastore = DatasourceMapper.to(newTest.datastore);
+         datastore.persist();
+         if(!exists) {
+            newTest.datastore.id = datastore.id;
          }
 
-         dto = add(dto);
-      } catch (JsonProcessingException e) {
-         throw ServiceException.badRequest("Failed to deserialize test: " + e.getMessage());
       }
-      mediator.importTestToAll(dto.id, alerting, actions, experiments, subscriptions, forceUseTestId);
+      Test t = add(newTest);
+
+      if(!Objects.equals(t.id, newTest.id)) {
+         newTest.id = t.id;
+         newTest.updateRefs();
+         mediator.importTestToAll(newTest);
+      }
    }
 
    protected TestDAO getTestForUpdate(int testId) {

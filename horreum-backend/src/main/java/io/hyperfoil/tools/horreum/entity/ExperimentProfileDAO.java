@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.entity;
 
 import java.util.Collection;
+import java.util.List;
 
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.persistence.CollectionTable;
@@ -67,7 +68,7 @@ public class ExperimentProfileDAO extends PanacheEntityBase {
    @ElementCollection(fetch = FetchType.EAGER)
    @CollectionTable(name="experiment_comparisons", joinColumns=@JoinColumn(name="profile_id"))
    @OrderBy("variable_id, model")
-   public Collection<ExperimentComparisonDAO> comparisons;
+   public List<ExperimentComparisonDAO> comparisons;
 
    /* These labels are not used in Horreum but are added to the result event */
    @Column(name = "extra_labels", columnDefinition = "jsonb")

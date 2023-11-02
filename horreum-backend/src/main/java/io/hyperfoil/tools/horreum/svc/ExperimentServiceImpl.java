@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.security.PermitAll;
@@ -21,12 +22,10 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 import io.hyperfoil.tools.horreum.entity.*;
-import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.DatasetLogMapper;
@@ -37,7 +36,6 @@ import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
@@ -307,47 +305,24 @@ public class ExperimentServiceImpl implements ExperimentService {
       }
    }
 
-   JsonNode exportTest(int testId) {
-      List<ExperimentProfileDAO> experimentProfiles = ExperimentProfileDAO.list("test.id", testId);
-      return Util.OBJECT_MAPPER.valueToTree(experimentProfiles.stream().map(ExperimentProfileMapper::from).collect(Collectors.toList()));
+   void exportTest(TestExport test) {
+      test.experiments = ExperimentProfileDAO.<ExperimentProfileDAO>list("test.id", test.id)
+              .stream().map(ExperimentProfileMapper::from).collect(Collectors.toList());
    }
 
-   void importTest(int testId, JsonNode experiments, boolean forceUseTestId) {
-      if (experiments.isMissingNode() || experiments.isNull()) {
-         log.infof("Import test %d: no experiment profiles", testId);
-      } else if (experiments.isArray()) {
-         for (JsonNode node : experiments) {
-            ExperimentProfileDAO profile;
-            try {
-               if (node.has("comparisons") ){
-                  node.get("comparisons").forEach( (compNode) ->{
-                     VariableDAO variableDAO = VariableDAO.<VariableDAO>find("id = ?1 and testId = ?2", compNode.get("variableId").asText() , testId).firstResult();
-                     if ( variableDAO != null ) {
-                        Integer variableID = variableDAO.id;
-                        ((ObjectNode) compNode).put("variableId", variableID);
-                     } else {
-                        log.warnf("Could not import comparison for variable: %s", compNode.get("variableId").asText());
-                        ((ObjectNode) compNode).remove("variableId");
-                     }
-
-                  });
-
-               }
-
-               profile = ExperimentProfileMapper.to(Util.OBJECT_MAPPER.treeToValue(node, ExperimentProfile.class));
-            } catch (JsonProcessingException e) {
-               throw ServiceException.badRequest("Cannot deserialize experiment profile id '" + node.path("id").asText() + "': " + e.getMessage());
-            }
-            if(forceUseTestId || profile.test == null) {
-               profile.test = em.getReference(TestDAO.class, testId);
-            }
-            else if (profile.test.id != testId) {
-               throw ServiceException.badRequest("Wrong test id in experiment profile id '" + node.path("id").asText() + "'");
-            }
+   void importTest(TestExport test) {
+      for (ExperimentProfile ep : test.experiments) {
+         ExperimentProfileDAO profile = ExperimentProfileMapper.to(ep);
+         if(ExperimentProfileDAO.findById(ep.id) != null) {
             em.merge(profile);
          }
-      } else {
-         throw ServiceException.badRequest("Experiment profiles are invalid: " + experiments.getNodeType());
+         else {
+            profile.id = null;
+            if(profile.test == null) {
+               profile.test = em.getReference(TestDAO.class, test.id);
+            }
+            profile.persist();
+         }
       }
    }
 }

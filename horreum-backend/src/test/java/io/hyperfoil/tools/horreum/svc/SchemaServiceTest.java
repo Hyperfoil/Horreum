@@ -204,6 +204,8 @@ public class SchemaServiceTest extends BaseServiceTest {
       assertNotNull(s);
       assertEquals(30, LabelDAO.find("schema.id", s.id).count());
       assertEquals(1, TransformerDAO.find("schema.id", s.id).count());
+      TransformerDAO t = TransformerDAO.find("schema.id", s.id).firstResult();
+      assertEquals(12, t.extractors.size());
 
       String s2 = readFile(p.resolve("quarkus_sb_schema_empty.json").toFile());
       // this should fail since the uri is identical to an already imported test

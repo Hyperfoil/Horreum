@@ -22,10 +22,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
-import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.IntArrayType;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -43,7 +41,6 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
-import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.alerting.*;
 import io.hyperfoil.tools.horreum.api.changes.Dashboard;
 import io.hyperfoil.tools.horreum.api.changes.Target;
@@ -66,7 +63,6 @@ import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -186,8 +182,8 @@ public class AlertingServiceImpl implements AlertingService {
    private static final Instant VERY_DISTANT_FUTURE = Instant.parse("2666-06-06T06:06:06.00Z");
 
    private static final Map<String, ChangeDetectionModel> MODELS = Map.of(
-         RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel(),
-         FixedThresholdModel.NAME, new FixedThresholdModel());
+           RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel(),
+           FixedThresholdModel.NAME, new FixedThresholdModel());
 
    @Inject
    TestServiceImpl testService;
@@ -246,7 +242,7 @@ public class AlertingServiceImpl implements AlertingService {
          // Retry `horreum.alerting.updateLabel.retries` times before logging a warning
          retryCounterSet.putIfAbsent(event.datasetId, new AtomicInteger(0));
          int retryCounter = retryCounterSet.get(event.datasetId).getAndIncrement();
-         if ( retryCounter < labelCalcRetries ) {
+         if (retryCounter < labelCalcRetries) {
             log.infof("Retrying labels update for dataset %d, attempt %d/%d", event.datasetId, retryCounter, this.labelCalcRetries);
             vertx.setTimer(1000, timerId -> messageBus.executeForTest(event.datasetId, () -> Util.withTx(tm, () -> {
                        onLabelsUpdated(event);
@@ -266,7 +262,7 @@ public class AlertingServiceImpl implements AlertingService {
       } else {
          try {
             sendNotifications = (Boolean) em.createNativeQuery("SELECT notificationsenabled FROM test WHERE id = ?")
-                  .setParameter(1, dataset.testid).getSingleResult();
+                    .setParameter(1, dataset.testid).getSingleResult();
          } catch (NoResultException e) {
             sendNotifications = true;
          }
@@ -307,7 +303,7 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    private void recalculateDatapointsForDataset(DatasetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
-      log.debugf("Analyzing dataset %d (%d/%d)", (long)dataset.id, (long)dataset.run.id, dataset.ordinal);
+      log.debugf("Analyzing dataset %d (%d/%d)", (long) dataset.id, (long) dataset.run.id, dataset.ordinal);
       TestDAO test = TestDAO.findById(dataset.testid);
       if (test == null) {
          log.errorf("Cannot load test ID %d", dataset.testid);
@@ -339,72 +335,47 @@ public class AlertingServiceImpl implements AlertingService {
          fingerprint = JsonNodeFactory.instance.nullNode();
       }
       boolean testResult = Util.evaluateTest(filter, fingerprint,
-            value -> {
-               logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of fingerprint failed: '%s' is not a boolean", value);
-               return false;
-            },
-            (code, e) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of fingerprint filter failed: '%s' Code:<pre>%s</pre>", e.getMessage(), code),
-            output -> logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Output while evaluating fingerprint filter: <pre>%s</pre>", output));
+              value -> {
+                 logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of fingerprint failed: '%s' is not a boolean", value);
+                 return false;
+              },
+              (code, e) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of fingerprint filter failed: '%s' Code:<pre>%s</pre>", e.getMessage(), code),
+              output -> logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Output while evaluating fingerprint filter: <pre>%s</pre>", output));
       if (!testResult) {
          logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Fingerprint %s was filtered out.", fingerprint);
       }
       return testResult;
    }
 
-   JsonNode exportTest(int testId) {
-      ObjectNode config = JsonNodeFactory.instance.objectNode();
-      List<VariableDAO> variables = VariableDAO.list("testId", testId);
-      config.set("variables", Util.OBJECT_MAPPER.valueToTree(variables.stream().map(VariableMapper::from).collect(Collectors.toList())));
-      List<MissingDataRuleDAO> rules = MissingDataRuleDAO.list("test.id", testId);
-      config.set("missingDataRules", Util.OBJECT_MAPPER.valueToTree(rules.stream().map(MissingDataRuleMapper::from).collect(Collectors.toList())));
-      return config;
+   void exportTest(TestExport test) {
+      test.variables = VariableDAO.<VariableDAO>list("testId", test.id).stream().map(VariableMapper::from).collect(Collectors.toList());
+      test.missingDataRules = MissingDataRuleDAO.<MissingDataRuleDAO>list("test.id", test.id).stream().map(MissingDataRuleMapper::from).collect(Collectors.toList());
    }
 
-   void importTest(int testId, JsonNode config, boolean forceUseTestId) {
-      JsonNode variablesNode = config.path("variables");
-      if (variablesNode.isMissingNode() || variablesNode.isNull()) {
-         log.debugf("Importing test %d: no change detection variables", testId);
-      } else if (variablesNode.isArray()) {
-         log.debugf("Importing %d change detection variables for test %d", variablesNode.size(), testId);
-         for (var node : variablesNode) {
-            try {
-               VariableDAO variable = VariableMapper.to(Util.OBJECT_MAPPER.treeToValue(node, Variable.class));
-               variable.testId = testId;
-               variable.ensureLinked();
-               if(forceUseTestId) {
-                 variable.flushIds();
-                 variable.persist();
-               }
-               else
-                  em.merge(variable);
-            } catch (JsonProcessingException e) {
-               throw ServiceException.badRequest("Cannot deserialize change detection variable with id '" + node.path("id").asText() + "': " + e.getMessage());
+   void importVariables(TestExport test) {
+      for (var v : test.variables) {
+            VariableDAO variable = VariableMapper.to(v);
+            variable.ensureLinked();
+            if(VariableDAO.findById(variable.id) == null) {
+               int prevId = variable.id;
+               variable.flushIds();
+               variable.persist();
+               test.updateExperimentsVariableId(prevId, variable.id);
             }
-         }
-      } else {
-         throw ServiceException.badRequest("Change detection variables are invalid: " + variablesNode.getNodeType());
+            else
+               em.merge(variable);
       }
-      JsonNode rulesNode = config.path("missingDataRules");
-      if (rulesNode.isMissingNode() || rulesNode.isNull()) {
-         log.debugf("Importing test %d: no missing data rules", testId);
-      } else if (rulesNode.isArray()) {
-         log.debugf("Importing %d missing data rules for test %d", rulesNode.size(), testId);
-         for (var node : rulesNode) {
-            try {
-               if(forceUseTestId) {
-                  MissingDataRule dto = Util.OBJECT_MAPPER.treeToValue(node, MissingDataRule.class);
-                  dto.testId = testId;
-                  dto.id = null;
-                  em.persist(MissingDataRuleMapper.to(dto));
-               }
-               else
-                  em.merge(MissingDataRuleMapper.to(Util.OBJECT_MAPPER.treeToValue(node, MissingDataRule.class)));
-            } catch (JsonProcessingException e) {
-               throw ServiceException.badRequest("Cannot deserialize missing data rule with id '" + node.path("id").asText() + "': " + e.getMessage());
-            }
+   }
+
+   void importMissingDataRules(TestExport test) {
+      for (var rule : test.missingDataRules) {
+         if(MissingDataRuleDAO.findById(rule.id) != null) {
+            em.merge(MissingDataRuleMapper.to(rule));
          }
-      } else {
-         throw ServiceException.badRequest("Missing data rules are invalid: " + rulesNode.getNodeType());
+         else {
+            rule.id = null;
+            em.persist(MissingDataRuleMapper.to(rule));
+         }
       }
    }
 
@@ -759,9 +730,6 @@ public class AlertingServiceImpl implements AlertingService {
       for (Variable v : variablesDTO) {
          if (v.name == null || v.name.isBlank()) {
             throw ServiceException.badRequest("Variable name is mandatory!");
-         } else if (v.labels == null || !v.labels.isArray() ||
-               StreamSupport.stream(v.labels.spliterator(), false).anyMatch(l -> !l.isTextual())) {
-            throw ServiceException.badRequest("Variable labels must be an array of label names");
          }
       }
       try {

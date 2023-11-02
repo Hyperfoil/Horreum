@@ -8,18 +8,19 @@ import { Button, FileUpload, Flex, FlexItem, Form, FormGroup, Spinner,
 import ExportButton from "./ExportButton"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
+import { SchemaExport, TestExport } from "../generated";
 
 type ExportImportProps = {
     name: string
     export(): Promise<any>
-    import(cfg: string): Promise<void>
-    validate(cfg: string): Promise<boolean>
+    import(cfg: SchemaExport | TestExport): Promise<void>
+    validate(cfg: SchemaExport | TestExport): Promise<boolean>
 }
 
 export default function ExportImport(props: ExportImportProps) {
     const [uploadName, setUploadName] = useState<string>()
     const [loading, setLoading] = useState(false)
-    const [uploadContent, setUploadContent] = useState<string>()
+    const [uploadContent, setUploadContent] = useState<SchemaExport | TestExport>()
     const [uploading, setUploading] = useState(false)
     const [parseError, setParseError] = useState<any>(undefined)
     const { alerting } = useContext(AppContext) as AppContextType;

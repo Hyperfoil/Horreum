@@ -1,6 +1,8 @@
 package io.hyperfoil.tools.horreum.api.data;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
@@ -61,6 +63,23 @@ public class Test extends ProtectedType {
 
     public Test() {
         this.access = Access.PUBLIC;
+    }
+
+    public Test(Test t) {
+        id = t.id;
+        name = t.name;
+        folder = t.folder;
+        description = t.description;
+        tokens = t.tokens;
+        timelineLabels = t.timelineLabels;
+        timelineFunction = t.timelineFunction;
+        fingerprintLabels = t.fingerprintLabels;
+        fingerprintFilter = t.fingerprintFilter;
+        compareUrl = t.compareUrl;
+        transformers = t.transformers;
+        notificationsEnabled = t.notificationsEnabled;
+        access = t.access;
+        owner = t.owner;
     }
 
     @Override

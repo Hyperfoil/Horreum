@@ -24,6 +24,7 @@ import io.hyperfoil.tools.horreum.api.data.ViewComponent;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.restassured.common.mapper.TypeRef;
+import io.restassured.response.Response;
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
 
@@ -236,7 +237,7 @@ public class TestServiceTest extends BaseServiceTest {
       addTestGithubIssueCommentAction(test, MessageBusChannels.EXPERIMENT_RESULT_NEW,
             ExperimentResultToMarkdown.NAME, "hyperfoil", "horreum", "123", "super-secret-github-token");
 
-      addChangeDetectionVariable(test);
+      addChangeDetectionVariable(test, schema.id);
       addMissingDataRule(test, "Let me know", JsonNodeFactory.instance.arrayNode().add("foo"), null,
             (int) TimeUnit.DAYS.toMillis(1));
 
@@ -245,8 +246,15 @@ public class TestServiceTest extends BaseServiceTest {
 
       HashMap<String, List<JsonNode>> db = dumpDatabaseContents();
 
-      String testJson = jsonRequest().get("/api/test/" + test.id + "/export").then()
-            .statusCode(200).extract().body().asString();
+      Response response = jsonRequest().get("/api/test/" + test.id + "/export").then()
+            .statusCode(200).extract().response();
+
+      String export = response.asString();
+
+      TestExport testExport = response.as(TestExport.class);
+      assertEquals(testExport.id, test.id);
+      assertEquals(testExport.variables.size(), 1);
+
 
       if (wipe) {
          BlockingQueue<Test> events = eventConsumerQueue(Test.class, MessageBusChannels.TEST_DELETED, t -> (t.id == test.id));
@@ -269,7 +277,7 @@ public class TestServiceTest extends BaseServiceTest {
 
       //wipeing and inserting with the same ids just results in too much foobar
       if(!wipe) {
-         jsonRequest().body(testJson).post("/api/test/import").then().statusCode(204);
+         jsonRequest().body(testExport).post("/api/test/import").then().statusCode(204);
          //if we wipe, we actually import a new test and there is no use validating the db
          validateDatabaseContents(db);
          //clean up after us
@@ -293,6 +301,10 @@ public class TestServiceTest extends BaseServiceTest {
       List<SchemaService.SchemaDescriptor> descriptors = jsonRequest().get("/api/schema/descriptors")
               .then().statusCode(200).extract().body().as(new TypeRef<>() {});
       assertEquals("quarkus-sb-compare", descriptors.get(0).name);
+
+      List<ExperimentProfileDAO> experiments = ExperimentProfileDAO.list("test.id", test.id);
+      assertEquals(1, experiments.size());
+      assertNotNull( experiments.get(0).comparisons.get(0).variable);
    }
 
    @org.junit.jupiter.api.Test

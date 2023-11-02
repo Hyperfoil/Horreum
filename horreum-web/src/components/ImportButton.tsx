@@ -3,11 +3,12 @@ import {useContext, useState} from "react"
 import { Bullseye, Button, FileUpload, Modal, Spinner } from "@patternfly/react-core"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
+import { SchemaExport, TestExport } from "../generated";
 
 type ImportProps = {
     label?: string
     onLoad(config: Record<string, unknown>): Promise<any> | any
-    onImport(config: string): Promise<unknown>
+    onImport(config: SchemaExport | TestExport): Promise<unknown>
     onImported(): void
 }
 
@@ -18,7 +19,7 @@ export default function ImportButton({label, onLoad, onImport, onImported}: Impo
     const [filename, setFilename] = useState<string>()
     const [loading, setLoading] = useState(false)
     const [checking, setChecking] = useState(false)
-    const [config, setConfig] = useState<string>()
+    const [config, setConfig] = useState<SchemaExport | TestExport>()
     const [uploading, setUploading] = useState(false)
     const [parseError, setParseError] = useState<any>()
     const [overridden, setOverridden] = useState<any>()

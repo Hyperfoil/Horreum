@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.api.alerting.TransformationLog;
 import io.hyperfoil.tools.horreum.api.data.ActionLog;
+import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
@@ -37,7 +38,7 @@ public class LogServiceTest extends BaseServiceTest {
     public void testLogs(TestInfo info) throws JsonProcessingException, InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      setTestVariables(test, "Value", "value");
+      setTestVariables(test, "Value", new Label("value", schema.id));
 
       // This run won't contain the 'value'
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();

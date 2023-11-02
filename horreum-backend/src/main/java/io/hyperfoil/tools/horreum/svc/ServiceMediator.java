@@ -1,11 +1,10 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
@@ -186,24 +185,25 @@ public class ServiceMediator {
         actionService.merge(dao);
     }
 
-    void exportTest(ObjectNode export, int testId) {
-        export.set("alerting", alertingService.exportTest(testId));
-        export.set("actions", actionService.exportTest(testId));
-        export.set("experiments", experimentService.exportTest(testId));
-        export.set("subscriptions", subscriptionService.exportSubscriptions(testId));
+    void exportTest(TestExport test) {
+        alertingService.exportTest(test);
+        actionService.exportTest(test);
+        experimentService.exportTest(test);
+        subscriptionService.exportSubscriptions(test);
     }
 
     @Transactional
-    void importTestToAll(Integer id, JsonNode alerting, JsonNode actions, JsonNode experiments,
-                         JsonNode subscriptions, boolean forceUseTestId) {
-        if(alerting != null)
-            alertingService.importTest(id, alerting, forceUseTestId);
-        if(actions != null)
-            actionService.importTest(id, actions, forceUseTestId);
-        if(experiments != null)
-            experimentService.importTest(id, experiments, forceUseTestId);
-        if(subscriptions != null)
-            subscriptionService.importSubscriptions(id, subscriptions);
+    void importTestToAll(TestExport test) {
+        if(test.variables != null)
+            alertingService.importVariables(test);
+        if(test.missingDataRules != null)
+            alertingService.importMissingDataRules(test);
+        if(test.actions != null)
+            actionService.importTest(test);
+        if(test.experiments != null && !test.experiments.isEmpty())
+            experimentService.importTest(test);
+        if(test.subscriptions != null)
+            subscriptionService.importSubscriptions(test);
     }
 
     public void newOrUpdatedSchema(SchemaDAO schema) {
