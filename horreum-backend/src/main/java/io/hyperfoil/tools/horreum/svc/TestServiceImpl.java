@@ -50,7 +50,6 @@ import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
-import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -455,9 +454,9 @@ public class TestServiceImpl implements TestService {
 
    @WithRoles
    @Override
-   public List<LabelValues> listLabelValues(int testId, boolean filtering, boolean metrics) {
+   public List<ExportedLabelValues> listLabelValues(int testId, boolean filtering, boolean metrics) {
       //noinspection unchecked
-      return LabelValues.parse( em.createNativeQuery(LABEL_VALUES_QUERY)
+      return ExportedLabelValues.parse( em.createNativeQuery(LABEL_VALUES_QUERY)
             .setParameter(1, testId).setParameter(2, filtering).setParameter(3, metrics)
             .unwrap(NativeQuery.class)
             .addScalar("values", JsonBinaryType.INSTANCE)

@@ -1,11 +1,10 @@
 package io.hyperfoil.tools.horreum.api.services;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
-import io.hyperfoil.tools.horreum.api.data.LabelValues;
+import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
 import io.hyperfoil.tools.horreum.api.data.ProtectedType;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestToken;
@@ -194,12 +193,12 @@ public interface TestService {
    @APIResponses(
            value = { @APIResponse( responseCode = "200",
                    content = {
-                           @Content ( schema = @Schema(type = SchemaType.ARRAY, implementation = LabelValues.class)) }
+                           @Content ( schema = @Schema(type = SchemaType.ARRAY, implementation = ExportedLabelValues.class)) }
            )}
    )
-   List<LabelValues> listLabelValues(@PathParam("id") int testId,
-                                     @QueryParam("filtering") @DefaultValue("true") boolean filtering,
-                                     @QueryParam("metrics") @DefaultValue("true") boolean metrics);
+   List<ExportedLabelValues> listLabelValues(@PathParam("id") int testId,
+                                             @QueryParam("filtering") @DefaultValue("true") boolean filtering,
+                                             @QueryParam("metrics") @DefaultValue("true") boolean metrics);
 
    @POST
    @Consumes(MediaType.APPLICATION_JSON)
