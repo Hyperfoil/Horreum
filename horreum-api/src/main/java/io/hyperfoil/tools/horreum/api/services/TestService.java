@@ -1,8 +1,10 @@
 package io.hyperfoil.tools.horreum.api.services;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
 import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
 import io.hyperfoil.tools.horreum.api.data.ProtectedType;
@@ -228,18 +230,20 @@ public interface TestService {
 
    @GET
    @Path("{id}/export")
-   @APIResponseSchema(value = String.class,
-           responseDescription = "A Test defintion formatted as json",
+   @Produces(MediaType.APPLICATION_JSON)
+   @APIResponseSchema(value = TestExport.class,
+           responseDescription = "A Test definition formatted as json",
            responseCode = "200")
-   String export(@PathParam("id") int testId);
+   TestExport export(@PathParam("id") int testId);
 
    @POST
    @Path("import")
-   @APIResponse(responseCode = "204", description = "Import a new test")
-   @RequestBody(content = @Content( mediaType = MediaType.APPLICATION_JSON,
-           schema = @Schema( type = SchemaType.STRING, implementation = String.class)) )
-   @Operation(description="Import a previously exported Test")
-   void importTest( String testConfig);
+   @Consumes(MediaType.APPLICATION_JSON)
+   @APIResponse(responseCode = "201", description = "Import a new Test or update an existing Test")
+   @RequestBody(required = true, content = @Content( mediaType = MediaType.APPLICATION_JSON,
+           schema = @Schema(implementation = TestExport.class)) )
+   @Operation(description="Import a previously exported Test either as a new Test or to update an existing Test")
+   void importTest(ObjectNode test);
 
    class TestListing {
       @Schema(description = "Array of Test Summaries")

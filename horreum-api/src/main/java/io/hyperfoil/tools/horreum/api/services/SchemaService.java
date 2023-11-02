@@ -1,9 +1,11 @@
 package io.hyperfoil.tools.horreum.api.services;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
+import io.hyperfoil.tools.horreum.api.data.SchemaExport;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -239,19 +241,19 @@ public interface SchemaService {
    @Parameters(value = {
            @Parameter(name = "id", description = "Schema ID", example = "101"),
    })
-   @APIResponseSchema(value = String.class,
-           responseDescription = "A JSON representation of the Schema object",
+   @APIResponseSchema(value = SchemaExport.class,
+           responseDescription = "A JSON representation of the SchemaExport object",
            responseCode = "200")
-   String exportSchema(@PathParam("id") int id);
+   SchemaExport exportSchema(@PathParam("id") int id);
 
    @POST
    @Path("import")
    @Consumes(MediaType.APPLICATION_JSON)
-   @RequestBody(content = @Content( mediaType = MediaType.APPLICATION_JSON,
-           schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(
-                   type = SchemaType.STRING, implementation = String.class)) )
-   @Operation(description="Import an previously exported Schema")
-   void importSchema(String config);
+   @APIResponse(responseCode = "201", description = "Import a new Schema or update an existing Schema")
+   @RequestBody(required = true, content = @Content( mediaType = MediaType.APPLICATION_JSON,
+           schema = @org.eclipse.microprofile.openapi.annotations.media.Schema( implementation = SchemaExport.class)) )
+   @Operation(description="Import an previously exported Schema either as a new Schema or to update an existing Schema")
+   void importSchema(ObjectNode config);
 
    class SchemaQueryResult {
       @NotNull

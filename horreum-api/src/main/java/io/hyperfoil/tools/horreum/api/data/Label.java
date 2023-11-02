@@ -44,6 +44,11 @@ public class Label extends ProtectedType {
     public Label() {
     }
 
+    public Label(String name, int schemaId) {
+        this.name = name;
+        this.schemaId = schemaId;
+    }
+
     public static class Value implements Serializable {
         public int datasetId;
         public int labelId;

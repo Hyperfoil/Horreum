@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
@@ -37,6 +38,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -44,7 +46,6 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -307,57 +308,25 @@ public class ActionServiceImpl implements ActionService {
       executeActions(MessageBusChannels.EXPERIMENT_RESULT_NEW, result.profile.testId, result, result.notify);
    }
 
-   JsonNode exportTest(int testId) {
-      ArrayNode actions = JsonNodeFactory.instance.arrayNode();
-      for (ActionDAO action : ActionDAO.<ActionDAO>list("testId", testId)) {
-         ObjectNode node = Util.OBJECT_MAPPER.valueToTree(ActionMapper.from(action));
-         if (!action.secrets.isEmpty()) {
-            try {
-               node.put("secrets", encryptionManager.encrypt(action.secrets.toString()));
-            } catch (GeneralSecurityException e) {
-               throw ServiceException.serverError("Cannot encrypt secrets for action " + action.id);
-            }
-         }
-         actions.add(node);
+   void exportTest(TestExport test) {
+      List<Action> actions = new ArrayList<>();
+      for (ActionDAO action : ActionDAO.<ActionDAO>list("testId", test.id)) {
+         Action a = ActionMapper.from(action);
+         action.secrets = JsonNodeFactory.instance.objectNode();
+         actions.add(a);
       }
-      return actions;
+      test.actions = actions;
    }
 
-   void importTest(int testId, JsonNode actions, boolean forceUseTestId) {
-      if (actions.isMissingNode() || actions.isNull()) {
-         log.debugf("Import test %d: no actions");
-      } else if (actions.isArray()) {
-         log.debugf("Importing %d actions for test %d", actions.size(), testId);
-         for (JsonNode node : actions) {
-            if (!node.isObject()) {
-               throw ServiceException.badRequest("Test actions must be an array of objects");
-            }
-            String secretsEncrypted = ((ObjectNode) node).remove("secrets").textValue();
-            try {
-               ActionDAO action = ActionMapper.to(Util.OBJECT_MAPPER.treeToValue(node, Action.class));
-               if(forceUseTestId)
-                  action.testId = testId;
-               else {
-                  if (action.testId == null) {
-                     action.testId = testId;
-                  } else if (action.testId != testId) {
-                     throw ServiceException.badRequest("Action id '" + node.path("id") + "' belongs to a different test: " + action.testId);
-                  }
-               }
-               if (secretsEncrypted != null) {
-                  action.secrets = Util.OBJECT_MAPPER.readTree(encryptionManager.decrypt(secretsEncrypted));
-               } else {
-                  action.secrets = JsonNodeFactory.instance.objectNode();
-               }
-               em.merge(action);
-            } catch (JsonProcessingException e) {
-               throw ServiceException.badRequest("Cannot deserialize action id '" + node.path("id").asText() + "': " + e.getMessage());
-            } catch (GeneralSecurityException e) {
-               throw ServiceException.badRequest("Cannot decrypt secrets for action id '" + node.path("id").asText() + "': " + e.getMessage());
-            }
+   void importTest(TestExport test) {
+      for (Action a : test.actions) {
+         ActionDAO action = ActionMapper.to(a);
+         if(ActionDAO.findById(action.id) == null) {
+            action.id = null;
+            action.persist();
          }
-      } else {
-         throw ServiceException.badRequest("Actions are invalid: " + actions.getNodeType());
+         else
+            em.merge(action);
       }
    }
 }

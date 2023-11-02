@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 
 public class LabelMapper {
     public static Label from(LabelDAO l) {
+        if(l == null)
+            return  null;
         Label dto = new Label();
         dto.id = l.id;
         dto.name = l.name;

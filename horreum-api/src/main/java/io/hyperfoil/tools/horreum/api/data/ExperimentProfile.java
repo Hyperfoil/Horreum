@@ -1,6 +1,8 @@
 package io.hyperfoil.tools.horreum.api.data;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
@@ -8,6 +10,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Collection;
 
+@JsonIdentityInfo( property = "id", generator = ObjectIdGenerators.PropertyGenerator.class)
 @Schema(description = "An Experiment Profile defines the labels and filters for the dataset and baseline")
 public class ExperimentProfile {
     @JsonProperty(required = true )

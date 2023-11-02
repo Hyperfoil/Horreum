@@ -67,7 +67,6 @@ import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetect
 import io.hyperfoil.tools.horreum.experiment.RelativeDifferenceExperimentModel;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
-import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
@@ -81,6 +80,8 @@ public class BaseServiceTest {
    private static String UPLOADER_TOKEN;
    private static String TESTER_TOKEN;
    private static String ADMIN_TOKEN;
+
+   int lastAddedLabelId;
 
    protected final Logger log = Logger.getLogger(getClass());
 
@@ -480,7 +481,8 @@ public class BaseServiceTest {
    }
 
    protected int addLabel(Schema schema, String name, String function, Extractor... extractors) {
-      return postLabel(schema, name, function, null, extractors);
+      lastAddedLabelId = postLabel(schema, name, function, null, extractors);
+      return lastAddedLabelId;
    }
 
    protected int updateLabel(Schema schema, int labelId, String name, String function, Extractor... extractors) {
@@ -507,25 +509,21 @@ public class BaseServiceTest {
       jsonRequest().delete("/api/schema/" + schema.id + "/labels/" + labelId).then().statusCode(204);
    }
 
-   protected void setTestVariables(Test test, String name, String label, ChangeDetection... rds) {
-      setTestVariables(test, name, Collections.singletonList(label), rds);
+   protected void setTestVariables(Test test, String name, Label label, ChangeDetection... rds) {
+      label.id = lastAddedLabelId;
+      setTestVariables(test, name, Collections.singletonList(label.name), rds);
    }
 
    protected void setTestVariables(Test test, String name, List<String> labels, ChangeDetection... rds) {
-      ArrayNode variables = JsonNodeFactory.instance.arrayNode();
-      ObjectNode variable = JsonNodeFactory.instance.objectNode();
-      variable.put("testid", test.id);
-      variable.put("name", name);
-      variable.set("labels", labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll));
-      if (rds.length > 0) {
-         ArrayNode rdsArray = JsonNodeFactory.instance.arrayNode();
-         for (ChangeDetection rd : rds) {
-            rdsArray.add(JsonNodeFactory.instance.objectNode().put("model", rd.model).set("config", rd.config));
-         }
-         variable.set("changeDetection", rdsArray);
-      }
+      List<Variable> variables = new ArrayList<>();
+      Variable variable = new Variable();
+      variable.testId = test.id;
+      variable.name = name;
+      variable.labels = labels;
+      variable.changeDetection = Arrays.stream(rds).collect(Collectors.toSet());
+
       variables.add(variable);
-      jsonRequest().body(variables.toString()).post("/api/alerting/variables?test=" + test.id).then().statusCode(204);
+      jsonRequest().body(variables).post("/api/alerting/variables?test=" + test.id).then().statusCode(204);
    }
 
    protected void updateVariables(Integer testId, List<Variable> variables) {
@@ -754,15 +752,15 @@ public class BaseServiceTest {
             .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
    }
 
-   protected ChangeDetection addChangeDetectionVariable(Test test) {
-      return addChangeDetectionVariable(test, 0.1, 2);
+   protected ChangeDetection addChangeDetectionVariable(Test test, int schemaId) {
+      return addChangeDetectionVariable(test, 0.1, 2, schemaId);
    }
 
-   protected ChangeDetection addChangeDetectionVariable(Test test, double threshold, int window) {
+   protected ChangeDetection addChangeDetectionVariable(Test test, double threshold, int window, int schemaId) {
       ChangeDetection cd = new ChangeDetection();
       cd.model = RelativeDifferenceChangeDetectionModel.NAME;
       cd.config = JsonNodeFactory.instance.objectNode().put("threshold", threshold).put("minPrevious", window).put("window", window).put("filter", "mean");
-      setTestVariables(test, "Value", "value", cd);
+      setTestVariables(test, "Value", new Label("value", schemaId), cd);
       return cd;
    }
 

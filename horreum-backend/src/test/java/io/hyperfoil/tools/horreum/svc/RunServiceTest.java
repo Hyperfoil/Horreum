@@ -27,6 +27,7 @@ import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
+import io.restassured.response.Response;
 import jakarta.ws.rs.core.HttpHeaders;
 
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
@@ -122,7 +123,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
 
-      setTestVariables(test, "Value", "value");
+      setTestVariables(test, "Value", new Label("value", 1));
 
       uploadRun( "{ \"foo\":\"bar\"}", test.name);
 
@@ -860,7 +861,10 @@ public class RunServiceTest extends BaseServiceTest {
          variable.testId = test.id;
          variable.name = "throughput";
          variable.order = 0;
-         variable.labels = mapper.readTree("[ \"throughput\" ]");
+         variable.labels = new ArrayList<>();
+         Label l = new Label();
+         l.name = "throughput";
+         variable.labels.add(l.name);
          ChangeDetection changeDetection = new ChangeDetection();
          changeDetection.model = "relativeDifference";
 
@@ -895,12 +899,13 @@ public class RunServiceTest extends BaseServiceTest {
 
          ExperimentComparison experimentComparison = new ExperimentComparison();
          experimentComparison.model = "relativeDifference";
+         experimentComparison.variableName = variableList.get(0).name; //should only contain one variable
          experimentComparison.variableId = variableList.get(0).id; //should only contain one variable
-         experimentComparison.config = mapper.readValue("{" +
+         experimentComparison.config = (ObjectNode) mapper.readTree("{" +
                  "          \"maxBaselineDatasets\": 0," +
                  "          \"threshold\": 0.1," +
                  "          \"greaterBetter\": true" +
-                 "        }", ObjectNode.class);
+                 "        }");
 
 
          experimentProfile.comparisons = Collections.singletonList(experimentComparison);
@@ -941,6 +946,16 @@ public class RunServiceTest extends BaseServiceTest {
                  .post("/api/run/" + lastRunID+"/description")
                  .then()
                  .statusCode(204);
+
+         Response response = jsonRequest().get("/api/test/" + test.id + "/export").then()
+                 .statusCode(200).extract().response();
+
+         String export = response.asString();
+
+         TestExport testExport = response.as(TestExport.class);
+
+            assertNotNull(testExport);
+
 
       }
       catch (Exception e) {

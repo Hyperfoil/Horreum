@@ -81,7 +81,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testNotifications(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      setTestVariables(test, "Value", "value");
+      setTestVariables(test, "Value", new Label("value", schema.id));
 
       BlockingQueue<DataPoint.Event> dpe = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
       uploadRun(runWithValue(42, schema).toString(), test.name);
@@ -111,7 +111,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testLogging(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      setTestVariables(test, "Value", "value");
+      setTestVariables(test, "Value", new Label("value", schema.id));
 
       // This run won't contain the 'value'
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
@@ -148,7 +148,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testChangeDetection(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      ChangeDetection cd = addChangeDetectionVariable(test);
+      ChangeDetection cd = addChangeDetectionVariable(test, schema.id);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, MessageBusChannels.CHANGE_NEW, e -> e.dataset.testId == test.id);
@@ -175,7 +175,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(run4, changeEvent1.change.dataset.runId);
 
       ((ObjectNode) cd.config).put("filter", "min");
-      setTestVariables(test, "Value", "value", cd);
+      setTestVariables(test, "Value", new Label("value", schema.id), cd);
       // After changing the variable the past datapoints and changes are removed; we need to recalculate them again
       jsonRequest().post("/api/alerting/recalculate?test=" + test.id).then().statusCode(204);
 
@@ -223,7 +223,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       Schema schema = createExampleSchema(info);
       addLabel(schema, "config", null, new Extractor("config", "$.config", false));
 
-      addChangeDetectionVariable(test);
+      addChangeDetectionVariable(test, schema.id);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == testId);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, MessageBusChannels.CHANGE_NEW, e -> e.dataset.testId == testId);
@@ -266,8 +266,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       test.fingerprintLabels = jsonArray("foo");
       test = createTest(test);
       int testId = test.id;
-      addChangeDetectionVariable(test);
       Schema schema = createExampleSchema(info);
+      addChangeDetectionVariable(test, schema.id);
       addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
       addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
@@ -311,8 +311,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       test.fingerprintFilter = "value => value === 'aaa'";
       test = createTest(test);
       int testId = test.id;
-      addChangeDetectionVariable(test);
       Schema schema = createExampleSchema(info);
+      addChangeDetectionVariable(test, schema.id);
       addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
       addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
@@ -561,7 +561,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      addChangeDetectionVariable(test);
+      addChangeDetectionVariable(test, schema.id);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
 
@@ -613,7 +613,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       config.putObject("min").put("value", 3).put("enabled", true).put("inclusive", true);
       config.putObject("max").put("value", 6).put("enabled", true).put("inclusive", false);
       rd.config = config;
-      setTestVariables(test, "Value", "value", rd);
+      setTestVariables(test, "Value", new Label("value", schema.id), rd);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
       BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, MessageBusChannels.CHANGE_NEW, e -> e.dataset.testId == test.id);
@@ -644,7 +644,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
       addLabel(schema, "timestamp", null, new Extractor("ts", "$.timestamp", false));
-      addChangeDetectionVariable(test);
+      addChangeDetectionVariable(test, schema.id);
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 
       BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
@@ -693,7 +693,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testLabelsChange(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      addChangeDetectionVariable(test);
+      addChangeDetectionVariable(test, schema.id);
       LabelDAO l = LabelDAO.find("name", "value").firstResult();
       Label label = LabelMapper.from(l);
 
@@ -720,7 +720,7 @@ public class AlertingServiceTest extends BaseServiceTest {
    public void testRandomOrder(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
-      addChangeDetectionVariable(test, 0.1, 1);
+      addChangeDetectionVariable(test, 0.1, 1, schema.id);
       addLabel(schema, "timestamp", null, new Extractor("ts", "$.timestamp", false));
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 

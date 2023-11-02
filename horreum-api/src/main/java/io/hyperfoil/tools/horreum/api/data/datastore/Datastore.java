@@ -41,5 +41,10 @@ public class Datastore extends ProtectedType {
     @Schema( type = SchemaType.STRING, implementation = DatastoreType.class, example = "ELASTICSEARCH")
     public DatastoreType type;
 
-
+    public void pruneSecrets() {
+        if (config != null) {
+            config.remove("apiKey");
+            config.remove("password");
+        }
+    }
 }

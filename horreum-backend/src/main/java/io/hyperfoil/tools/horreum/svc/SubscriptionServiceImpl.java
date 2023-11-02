@@ -2,14 +2,11 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
+import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -19,11 +16,7 @@ import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.mapper.WatchMapper;
-import org.hibernate.Session;
 import org.jboss.logging.Logger;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.internal.services.SubscriptionService;
 import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
@@ -219,21 +212,19 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       }
    }
 
-   JsonNode exportSubscriptions(int testId) {
-      return Util.OBJECT_MAPPER.valueToTree(get(testId));
+   void exportSubscriptions(TestExport test) {
+      test.subscriptions = get(test.id);
    }
 
-   void importSubscriptions(int testId, JsonNode subscriptions) {
-      if (subscriptions.isMissingNode() || subscriptions.isNull()) {
-         log.infof("Import test %d: no subscriptions", testId);
-      } else {
-         try {
-            WatchDAO watch = WatchMapper.to(Util.OBJECT_MAPPER.treeToValue(subscriptions, Watch.class));
-            watch.test = em.getReference(TestDAO.class, testId);
-            em.merge(watch);
-         } catch (JsonProcessingException e) {
-            throw ServiceException.badRequest("Cannot deserialize subscription id '" + subscriptions.path("id").asText() + "': " + e.getMessage());
-         }
+   void importSubscriptions(TestExport test) {
+      WatchDAO watch = WatchMapper.to(test.subscriptions);
+      watch.test = em.getReference(TestDAO.class, test.id);
+      if(WatchDAO.findById(watch.id) == null) {
+         watch.id = null;
+         watch.persist();
+      }
+      else {
+         em.merge(watch);
       }
    }
 }

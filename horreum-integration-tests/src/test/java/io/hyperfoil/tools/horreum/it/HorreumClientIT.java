@@ -190,7 +190,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             variable.testId = dummyTest.id;
             variable.name = "throughput";
             variable.order = 0;
-            variable.labels = mapper.readTree("[ \"throughput\" ]");
+            variable.labels = Collections.singletonList("throughput");
             ChangeDetection changeDetection = new ChangeDetection();
             changeDetection.model = "relativeDifference";
 

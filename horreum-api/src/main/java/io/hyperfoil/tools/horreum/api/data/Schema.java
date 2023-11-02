@@ -46,6 +46,17 @@ public class Schema extends ProtectedType {
         access = Access.PUBLIC;
     }
 
+    public Schema(Schema s) {
+        this.id = s.id;
+        this.uri = s.uri;
+        this.name = s.name;
+        this.description = s.description;
+        this.schema = s.schema;
+        this.token = s.token;
+        this.access = s.access;
+        this.owner = s.owner;
+    }
+
     public static class ValidationEvent {
         public int id;
         public Collection<ValidationError> errors;
