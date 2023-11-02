@@ -4126,7 +4126,21 @@
                                  baseTableName="datapoint" baseColumnNames="dataset_id"
                                  referencedTableName="dataset" referencedColumnNames="id" />
     </changeSet>
-    <changeSet id="109" author="stalep">
+    <changeSet id="109" author="johara">
+        <createSequence sequenceName="actionlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="datasetlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="reportlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
+        <createSequence sequenceName="transformationlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
+        <sql>
+            select setval('actionlog_id_generator', (select max(id)+1 from actionlog), false);
+            select setval('datasetlog_id_generator', (select max(id)+1 from datasetlog), false);
+            select setval('reportlog_id_generator', (select max(id)+1 from reportlog), false);
+            select setval('transformationlog_id_generator', (select max(id)+1 from transformationlog), false);
+            GRANT ALL ON SEQUENCE actionlog_id_generator, datasetlog_id_generator, reportlog_id_generator, transformationlog_id_generator TO "${quarkus.datasource.username}";
+        </sql>
+    </changeSet>
+
+    <changeSet id="110" author="stalep">
         <sql>
             DROP TRIGGER IF EXISTS before_run_delete ON run;
             DROP FUNCTION IF EXISTS before_run_delete_func();
@@ -4169,7 +4183,7 @@
             DROP FUNCTION IF EXISTS revalidate_all();
         </sql>
     </changeSet>
-    <changeSet id="110" author="johara">
+    <changeSet id="111" author="johara">
         <sql>
             DROP TRIGGER IF EXISTS messagebus_delete ON messagebus;
             DROP FUNCTION IF EXISTS messagebus_delete();
@@ -4181,17 +4195,5 @@
         </sql>
     </changeSet>
 
-    <changeSet id="111" author="johara">
-        <createSequence sequenceName="actionlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
-        <createSequence sequenceName="datasetlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
-        <createSequence sequenceName="reportlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
-        <createSequence sequenceName="transformationlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
-        <sql>
-            select setval('actionlog_id_generator', (select max(id)+1 from actionlog), false);
-            select setval('datasetlog_id_generator', (select max(id)+1 from datasetlog), false);
-            select setval('reportlog_id_generator', (select max(id)+1 from reportlog), false);
-            select setval('transformationlog_id_generator', (select max(id)+1 from transformationlog), false);
-            GRANT ALL ON SEQUENCE actionlog_id_generator, datasetlog_id_generator, reportlog_id_generator, transformationlog_id_generator TO "${quarkus.datasource.username}";
-        </sql>
-    </changeSet>
+
 </databaseChangeLog>
