@@ -25,7 +25,6 @@ import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
-import io.hyperfoil.tools.horreum.api.data.LabelValues;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.restassured.common.mapper.TypeRef;
 import jakarta.inject.Inject;

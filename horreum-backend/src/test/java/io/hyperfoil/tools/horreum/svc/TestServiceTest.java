@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -186,7 +185,7 @@ public class TestServiceTest extends BaseServiceTest {
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
 
-      List<LabelValues> values = jsonRequest().get("/api/test/" + test.id + "/labelValues").then().statusCode(200).
+      List<ExportedLabelValues> values = jsonRequest().get("/api/test/" + test.id + "/labelValues").then().statusCode(200).
             extract().body().as(new TypeRef<>() {});
       assertNotNull(values);
       assertFalse(values.isEmpty());
@@ -328,7 +327,7 @@ public class TestServiceTest extends BaseServiceTest {
                       "\"Throughput 8 CPU\": null, \"Throughput 32 CPU\": null, " +
                       "\"Quarkus - Kafka_tags\": \"quarkus-release-startup\"}"));
 
-      List<LabelValues> values = LabelValues.parse(fps);
+      List<ExportedLabelValues> values = ExportedLabelValues.parse(fps);
       assertEquals(1, values.size());
       assertEquals(9, values.get(0).values.size());
       assertEquals("quarkus-release-startup", values.get(0).values.get(0).value);
@@ -336,7 +335,7 @@ public class TestServiceTest extends BaseServiceTest {
       fps.add(mapper.readTree("{\"job\": \"quarkus-release-startup\", \"Max RSS\": [], \"build-id\": null, " +
               "\"Throughput 1 CPU\": \"17570.30\", \"Throughput 2 CPU\": \"43105.62\", " +
               "\"Throughput 4 CPU\": \"84895.13\", \"Throughput 8 CPU\": \"141086.29\"}"));
-      values = LabelValues.parse(fps);
+      values = ExportedLabelValues.parse(fps);
       assertEquals(2, values.size());
       assertEquals(9, values.get(0).values.size());
       assertEquals(7, values.get(1).values.size());
