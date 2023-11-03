@@ -13,6 +13,7 @@
 
     <!-- Primary model -->
     <changeSet id="0" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="dbsecret">
             <column name="passphrase" type="text" />
         </createTable>
@@ -166,6 +167,7 @@
 
     <!-- Auto-updated read-only tables -->
     <changeSet id="1" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="run_schemas">
             <column name="runid" type="integer" />
             <column name="testid" type="integer" />
@@ -405,6 +407,7 @@
 
     <!-- Security constraints -->
     <changeSet id="2" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             <!-- Install pgcrypto plugin -->
             CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
@@ -464,6 +467,7 @@
     </changeSet>
 
     <changeSet id="3" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="variable">
             <column name="id" type="integer">
                 <constraints nullable="false" primaryKey="true"/>
@@ -649,6 +653,7 @@
     </changeSet>
 
     <changeSet id="4" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="grafana_dashboard">
             <column name="uid" type="text">
                 <constraints nullable="false" primaryKey="true"/>
@@ -698,6 +703,7 @@
     </changeSet>
     
     <changeSet id="5" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="userinfo">
             <column name="username" type="text">
                 <constraints primaryKey="true" nullable="false" />
@@ -727,6 +733,7 @@
     </changeSet>
 
     <changeSet id="6" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="variable">
             <column name="group" type="text" />
         </addColumn>
@@ -738,6 +745,7 @@
     </changeSet>
 
     <changeSet id="7" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropTable tableName="grafana_dashboard_variable" />
         <createTable tableName="grafana_panel">
             <column name="id" type="integer">
@@ -788,12 +796,14 @@
     </changeSet>
 
     <changeSet id="8" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             GRANT ALL ON SEQUENCE datapoint_id_seq TO "${quarkus.datasource.username}";
         </sql>
     </changeSet>
 
     <changeSet id="9" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION to_double(v_input text)
             RETURNS double precision AS $$
@@ -809,12 +819,14 @@
     </changeSet>
 
     <changeSet id="10" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="variable">
             <column name="minwindow" type="integer" defaultValue="0"></column>
         </addColumn>
     </changeSet>
 
     <changeSet id="11" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropColumn tableName="variable">
             <column name="maxwindow" />
             <column name="confidence" />
@@ -834,6 +846,7 @@
     </changeSet>
 
     <changeSet id="12" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="test">
             <column name="tags" type="text" />
         </addColumn>
@@ -977,12 +990,14 @@
     </changeSet>
 
     <changeSet id="13" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="grafana_dashboard">
             <column name="tags" type="text" />
         </addColumn>
     </changeSet>
 
     <changeSet id="14" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropColumn tableName="run_tags" columnName="extractor_ids" />
         <addColumn tableName="run_tags">
             <column name="extractor_ids" type="int[]" />
@@ -1053,6 +1068,7 @@
     </changeSet>
 
     <changeSet id="15" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             DROP TRIGGER rt_before_update ON schemaextractor;
             CREATE TRIGGER rt_before_update BEFORE UPDATE ON schemaextractor FOR EACH ROW EXECUTE FUNCTION rt_before_update_extractor_func();
@@ -1060,6 +1076,7 @@
     </changeSet>
 
     <changeSet id="16" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION rt_before_insert_extractor_func() RETURNS TRIGGER AS $$
             BEGIN
@@ -1074,6 +1091,7 @@
     </changeSet>
 
     <changeSet id="17" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION rt_before_delete_run_schemas_func() RETURNS TRIGGER AS $$
             BEGIN
@@ -1088,12 +1106,14 @@
     </changeSet>
 
     <changeSet id="18" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="grafana_panel">
             <column name="name" type="text" />
         </addColumn>
     </changeSet>
 
     <changeSet id="19" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="test_stalenesssettings">
             <column name="test_id" type="integer">
                 <constraints nullable="false"/>
@@ -1149,6 +1169,7 @@
         </sql>
     </changeSet>
     <changeSet id="20" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="calculationlog">
             <column name="id" type="bigint">
                 <constraints primaryKey="true" nullable="false" />
@@ -1179,6 +1200,7 @@
         </sql>
     </changeSet>
     <changeSet id="21" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             GRANT update ON TABLE test_stalenesssettings TO "${quarkus.datasource.username}";
             GRANT update ON TABLE lastmissingrunnotification TO "${quarkus.datasource.username}";
@@ -1186,12 +1208,14 @@
         </sql>
     </changeSet>
     <changeSet id="22" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropTable tableName="grafana_panel_variable"/>
         <dropTable tableName="grafana_panel"/>
         <dropTable tableName="grafana_dashboard"/>
     </changeSet>
 
     <changeSet id="23" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="test">
             <column name="notificationsenabled" type="boolean" defaultValue="true">
                 <constraints nullable="false" />
@@ -1213,6 +1237,7 @@
     </changeSet>
 
     <changeSet id="24" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="allowedhookprefix">
             <column name="id" type="bigint">
                 <constraints primaryKey="true" nullable="false" />
@@ -1241,6 +1266,7 @@
     </changeSet>
 
     <changeSet id="25" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="test_token">
             <column name="id" type="integer">
                 <constraints nullable="false" primaryKey="true"/>
@@ -1570,6 +1596,7 @@
     </changeSet>
 
     <changeSet id="26" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropColumn tableName="schema" columnName="testpath" />
         <dropColumn tableName="schema" columnName="startpath" />
         <dropColumn tableName="schema" columnName="stoppath" />
@@ -1577,6 +1604,7 @@
     </changeSet>
 
     <changeSet id="27" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="watch_optout">
             <column name="watch_id" type="integer"/>
             <column name="optout" type="text" />
@@ -1592,6 +1620,7 @@
     </changeSet>
 
     <changeSet id="28" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             CREATE POLICY watch_teams_owner ON watch_teams FOR ALL USING (has_role2((SELECT test.owner FROM test JOIN watch ON test.id = watch.testid WHERE watch.id = watch_id), 'tester'));
             CREATE POLICY watch_users_owner ON watch_users FOR ALL USING (has_role2((SELECT test.owner FROM test JOIN watch ON test.id = watch.testid WHERE watch.id = watch_id), 'tester'));
@@ -1600,6 +1629,7 @@
     </changeSet>
 
     <changeSet id="29" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION after_run_update_func() RETURNS TRIGGER AS $$
             BEGIN
@@ -1642,12 +1672,14 @@
     </changeSet>
 
     <changeSet id="30" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createIndex tableName="view_data" indexName="view_data_runid">
             <column name="runid" />
         </createIndex>
     </changeSet>
 
     <changeSet id="31" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="userinfo">
             <column name="defaultteam" type="text" />
         </addColumn>
@@ -1667,6 +1699,7 @@
     </changeSet>
 
     <changeSet id="32" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="test">
             <column name="tagscalculation" type="text"/>
         </addColumn>
@@ -1713,6 +1746,7 @@
     </changeSet>
 
     <changeSet id="33" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="tablereportconfig">
             <column name="id" type="integer">
                 <constraints primaryKey="true" nullable="false"/>
@@ -1835,6 +1869,7 @@
     </changeSet>
     
     <changeSet id="34" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="reportcomment">
             <column name="id" type="integer">
                 <constraints primaryKey="true" />
@@ -1871,6 +1906,7 @@
     </changeSet>
 
     <changeSet id="35" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropNotNullConstraint tableName="tablereportconfig" columnName="testid"/>
         <sql>
             CREATE POLICY tablereportconfig_update_system ON tablereportconfig FOR UPDATE
@@ -1879,6 +1915,7 @@
     </changeSet>
 
     <changeSet id="36" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="run_expectation">
             <column name="id" type="bigint">
                 <constraints primaryKey="true" />
@@ -1906,6 +1943,7 @@
 
     <!-- Even if the run does not have any schema we should attempt to calculate its tags (and find these to be null) -->
     <changeSet id="37" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION after_run_update_func() RETURNS TRIGGER AS $$
             DECLARE
@@ -1939,6 +1977,7 @@
     </changeSet>
 
     <changeSet id="38" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="tablereport_rundata">
             <column name="data" type="jsonb" defaultValue="{}">
                 <constraints nullable="false"/>
@@ -1953,6 +1992,7 @@
     </changeSet>
 
     <changeSet id="39" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="banner">
             <column name="id" type="integer">
                 <constraints primaryKey="true" />
@@ -1982,6 +2022,7 @@
     </changeSet>
 
     <changeSet id="40" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="tablereportconfig">
             <column name="labeldescription" type="text" />
         </addColumn>
@@ -1991,6 +2032,7 @@
     </changeSet>
 
     <changeSet id="41" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="calculationlog">
             <column name="source" type="text" defaultValue="variables">
                 <constraints nullable="false"/>
@@ -2012,6 +2054,7 @@
     </changeSet>
 
     <changeSet id="42" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="schemaextractor" >
             <column name="deprecatedby_id" type="integer" />
             <column name="deleted" type="boolean" defaultValue="false">
@@ -2027,12 +2070,14 @@
     </changeSet>
 
     <changeSet id="43" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="test">
             <column name="folder" type="text" />
         </addColumn>
     </changeSet>
 
     <changeSet id="44" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <comment>Duplicate the config for each report</comment>
         <sql>
             CREATE TEMPORARY TABLE tempconfig AS SELECT tr.id AS reportid, c.* FROM tablereportconfig c JOIN tablereport tr ON tr.config_id = c.id;
@@ -2050,6 +2095,7 @@
     </changeSet>
 
     <changeSet id="45" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <comment>Remove leaked watches</comment>
         <sql>
             DELETE FROM watch_users WHERE watch_id IN (SELECT id FROM watch WHERE testid NOT IN (SELECT id FROM test));
@@ -2060,12 +2106,14 @@
     </changeSet>
 
     <changeSet id="46" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             DELETE FROM calculationlog WHERE testid NOT IN (SELECT id FROM test) OR runid NOT IN (SELECT id FROM run);
         </sql>
     </changeSet>
 
     <changeSet id="47" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="regressiondetection">
             <column name="id" type="integer">
                 <constraints primaryKey="true"/>
@@ -2128,6 +2176,7 @@
     </changeSet>
 
     <changeSet id="48" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             DROP TRIGGER rt_before_update ON test;
             DROP TRIGGER rt_after_insert ON test;
@@ -2137,6 +2186,7 @@
     </changeSet>
 
     <changeSet id="49" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION json_equals(a jsonb, b jsonb) RETURNS boolean AS $$
             BEGIN
@@ -2147,10 +2197,12 @@
     </changeSet>
 
     <changeSet id="50" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <renameTable oldTableName="regressiondetection" newTableName="changedetection" />
     </changeSet>
 
     <changeSet id="51" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             DROP TRIGGER before_run_update ON run;
             DROP TRIGGER after_run_update ON run;
@@ -2160,6 +2212,7 @@
     </changeSet>
 
     <changeSet id="52" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="transformer">
             <column name="id" type="integer">
                 <constraints primaryKey="true"/>
@@ -2214,6 +2267,7 @@
     </changeSet>
 
     <changeSet id="53" author="jwhiting">
+        <validCheckSum>ANY</validCheckSum>
         <createSequence sequenceName="dataset_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
         <createTable tableName="dataset">
             <column name="id" type="integer">
@@ -2256,6 +2310,7 @@
     </changeSet>
 
     <changeSet id="54" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="test_transformers">
             <column name="test_id" type="integer">
                 <constraints foreignKeyName="fk_test_id" referencedTableName="test" referencedColumnNames="id" nullable="false"/>
@@ -2279,6 +2334,7 @@
     </changeSet>
 
     <changeSet id="55" author="jwhiting">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION after_run_update_func() RETURNS TRIGGER AS $$
             DECLARE
@@ -2336,6 +2392,7 @@
     </changeSet>
 
     <changeSet id="56" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="dataset">
             <column name="ordinal" type="integer" defaultValue="0">
                 <constraints nullable="false" />
@@ -2362,6 +2419,7 @@
     </changeSet>
 
     <changeSet id="58" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="transformer_extractors">
             <column name="isarray" type="boolean" defaultValue="false">
                 <constraints nullable="false"/>
@@ -2374,6 +2432,7 @@
     </changeSet>
 
     <changeSet id="59" author="jwhiting,rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createSequence sequenceName="label_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
         <createTable tableName="label">
             <column name="id" type="integer">
@@ -2439,6 +2498,7 @@
     </changeSet>
     
     <changeSet id="60" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="label_values">
             <column name="dataset_id" type="integer">
                 <!-- No FK constraint: the row will be removed via trigger -->
@@ -2626,6 +2686,7 @@
     </changeSet>
 
     <changeSet id="61" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             ALTER POLICY dataset_insert ON dataset
                 WITH CHECK (has_role('horreum.system') OR (has_role2(owner, 'tester') AND
@@ -2634,6 +2695,7 @@
     </changeSet>
 
     <changeSet id="62" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             WITH vca AS (
                 SELECT id, unnest(string_to_array(accessors, ';')) AS accessor, headername, render from viewcomponent
@@ -2724,10 +2786,12 @@
 
     <!-- We need a new transaction to alter the table due to triggers -->
     <changeSet id="63" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addUniqueConstraint tableName="label" columnNames="name,schema_id"/>
     </changeSet>
 
     <changeSet id="64" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="viewcomponent">
             <column name="labels" type="jsonb" />
         </addColumn>
@@ -2758,6 +2822,7 @@
     </changeSet>
 
     <changeSet id="65" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="dataset_view">
             <column name="dataset_id" type="integer" />
             <column name="view_id" type="integer" />
@@ -2858,6 +2923,7 @@
     </changeSet>
 
     <changeSet id="66" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="test">
             <column name="fingerprint_labels" type="jsonb" />
         </addColumn>
@@ -2878,6 +2944,7 @@
     </changeSet>
 
     <changeSet id="67" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <!-- We will need to recompute them all anyway -->
         <sql>
             DELETE FROM datapoint;
@@ -3028,6 +3095,7 @@
     </changeSet>
 
     <changeSet id="68" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="tablereportconfig">
             <column name="filterlabels" type="jsonb" />
             <column name="categorylabels" type="jsonb" />
@@ -3075,6 +3143,7 @@
     </changeSet>
 
     <changeSet id="69" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION ds_after_schema_update_func() RETURNS TRIGGER AS $$
             BEGIN
@@ -3104,6 +3173,7 @@
     </changeSet>
 
     <changeSet id="70" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <!-- We'll keep the old timestamp around to resolve any mess that's created by this change -->
         <renameColumn tableName="run" oldColumnName="start" newColumnName="old_start" />
         <addColumn tableName="run">
@@ -3122,6 +3192,7 @@
     </changeSet>
 
     <changeSet id="71" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropTable tableName="lastmissingrunnotification"/>
         <renameTable oldTableName="test_stalenesssettings" newTableName="missingdata_rule"/>
         <addColumn tableName="missingdata_rule">
@@ -3192,6 +3263,7 @@
     </changeSet>
 
     <changeSet id="72" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropColumn tableName="run_expectation" columnName="tags"/>
         <dropTable tableName="run_tags"/>
         <sql>
@@ -3226,10 +3298,12 @@
     </changeSet>
 
     <changeSet id="73" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropTable tableName="schemaextractor"/>
     </changeSet>
 
     <changeSet id="74" author="jwhiting">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="transformationlog">
             <column name="id" type="bigint">
                 <constraints primaryKey="true" nullable="false" />
@@ -3265,6 +3339,7 @@
     </changeSet>
 
     <changeSet id="75" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <!-- This operation can take a long time - we don't want to execute in sync with schema update -->
         <createProcedure>
             CREATE OR REPLACE FUNCTION after_schema_update_func() RETURNS TRIGGER AS $$
@@ -3328,10 +3403,12 @@
     </changeSet>
 
     <changeSet id="76" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <modifyDataType tableName="transformationlog" columnName="timestamp" newDataType="timestamptz"/>
     </changeSet>
 
     <changeSet id="77" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <!-- We have accidentally duplicated ViewComponent.render and Label.function - let's remove that from label
              as in some instances we expect to get 3 parameters to the ViewComponent.render -->
         <sql>
@@ -3379,6 +3456,7 @@
     </changeSet>
 
     <changeSet id="78" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             <!-- This is invoked as deferred trigger and horreum.userroles is already unset
                  - we can pass it to the trigger using a non-readable column -->
@@ -3400,6 +3478,7 @@
     </changeSet>
 
     <changeSet id="79" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <!-- Variable and label functions are duplicated -->
         <sql>
             UPDATE variable SET calculation = NULL WHERE id IN (
@@ -3412,6 +3491,7 @@
     </changeSet>
 
     <changeSet id="80" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             CREATE POLICY test_select_system ON test FOR SELECT USING (has_role('horreum.system'));
             CREATE POLICY test_token_select_system ON test_token FOR SELECT USING (has_role('horreum.system'));
@@ -3420,6 +3500,7 @@
     </changeSet>
 
     <changeSet id="81" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             SELECT setval('label_id_seq', (SELECT MAX(id) FROM label));
         </sql>
@@ -3428,6 +3509,7 @@
     </changeSet>
 
     <changeSet id="82" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="reportlog">
             <column name="id" type="int8">
                 <constraints primaryKey="true"/>
@@ -3472,6 +3554,7 @@
     </changeSet>
 
     <changeSet id="84" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION recalc_dataset_view() RETURNS TRIGGER AS $$
             BEGIN
@@ -3507,6 +3590,7 @@
     </changeSet>
 
     <changeSet id="85" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION dsv_after_vc_update_func() RETURNS TRIGGER AS $$
             BEGIN
@@ -3523,6 +3607,7 @@
     </changeSet>
 
     <changeSet id="86" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="run_validationerrors">
             <column name="run_id" type="integer">
                 <constraints nullable="false" foreignKeyName="validationerrors_runid" referencedTableName="run" referencedColumnNames="id" />
@@ -3631,6 +3716,7 @@
     </changeSet>
 
     <changeSet id="87" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION recalc_dataset_view() RETURNS TRIGGER AS $$
             BEGIN
@@ -3656,6 +3742,7 @@
     </changeSet>
     
     <changeSet id="88" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="experiment_profile">
             <column name="id" type="integer">
                 <constraints primaryKey="true"/>
@@ -3727,6 +3814,7 @@
     </changeSet>
 
     <changeSet id="89" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <renameTable oldTableName="allowedhookprefix" newTableName="allowedsite"/>
         <renameTable oldTableName="hook" newTableName="action"/>
         <renameColumn tableName="action" oldColumnName="type" newColumnName="event"/>
@@ -3766,6 +3854,7 @@
     </changeSet>
 
     <changeSet id="90" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="actionlog">
             <column name="id" type="bigint">
                 <constraints primaryKey="true" nullable="false" />
@@ -3799,6 +3888,7 @@
     </changeSet>
 
     <changeSet id="91" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropColumn tableName="datapoint" columnName="timestamp"/>
         <addColumn tableName="datapoint">
             <column name="timestamp" type="timestamptz" defaultValue="1970-01-01T00:00:00Z">
@@ -3812,10 +3902,12 @@
     </changeSet>
 
     <changeSet id="92" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropNotNullConstraint tableName="dataset_validationerrors" columnName="schema_id"/>
     </changeSet>
 
     <changeSet id="93" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="action">
             <column name="run_always" type="boolean" defaultValue="false">
                 <constraints nullable="false"/>
@@ -3824,6 +3916,7 @@
     </changeSet>
 
     <changeSet id="94" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="test">
             <column name="timeline_labels" type="jsonb" />
             <column name="timeline_function" type="text" />
@@ -3831,6 +3924,7 @@
     </changeSet>
 
     <changeSet id="95" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION run_exists(runid INTEGER, test_id INTEGER) RETURNS boolean AS $$
             BEGIN
@@ -3862,6 +3956,7 @@
     </changeSet>
 
     <changeSet id="96" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createTable tableName="messagebus_subscriptions">
             <column name="channel" type="text">
                 <constraints nullable="false"/>
@@ -3913,6 +4008,7 @@
     </changeSet>
 
     <changeSet id="97" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createIndex tableName="datapoint" indexName="datapoint_datasets">
             <column name="dataset_id" />
         </createIndex>
@@ -3925,6 +4021,7 @@
     </changeSet>
 
     <changeSet id="98" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             ALTER POLICY cl_all_alerting ON datasetlog USING (has_role('horreum.system'));
             ALTER POLICY notificationsettings_policies ON notificationsettings USING ((has_role('horreum.system'::text) OR has_role(name)));
@@ -3957,6 +4054,7 @@
     </changeSet>
 
     <changeSet id="99" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION recalc_label_values() RETURNS TRIGGER AS $$
             BEGIN
@@ -3976,6 +4074,7 @@
     </changeSet>
 
     <changeSet id="100" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION rs_after_run_trash() RETURNS TRIGGER AS $$
             BEGIN
@@ -3992,6 +4091,7 @@
     </changeSet>
 
     <changeSet id="101" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <addColumn tableName="run">
             <column name="metadata" type="jsonb">
                 <constraints checkConstraint="metadata IS NULL OR jsonb_typeof(metadata) = 'array'" />
@@ -4040,6 +4140,7 @@
     </changeSet>
 
     <changeSet id="102" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             DELETE FROM dataset_validationerrors WHERE error->>'type' LIKE '% not defined';
             UPDATE schema SET schema = NULL WHERE jsonb_typeof(schema) != 'object';
@@ -4047,6 +4148,7 @@
     </changeSet>
 
     <changeSet id="103" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             DELETE FROM changedetection WHERE variable_id IN (SELECT variable.id FROM variable LEFT JOIN test ON test.id = testid WHERE test.id IS NULL);
             DELETE FROM variable WHERE id IN (SELECT variable.id FROM variable LEFT JOIN test ON test.id = testid WHERE test.id IS NULL);
@@ -4054,10 +4156,12 @@
     </changeSet>
 
     <changeSet id="104" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropColumn tableName="test" columnName="defaultview_id" />
     </changeSet>
 
     <changeSet id="105" author="rvansa">
+        <validCheckSum>ANY</validCheckSum>
         <dropForeignKeyConstraint baseTableName="experiment_profile" constraintName="experiment_profile_test" />
         <sql>
             <!-- Cleanup after test delete is executed using system role -->
@@ -4075,6 +4179,7 @@
         </sql>
     </changeSet>
     <changeSet id="106" author="jwhiting">
+        <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION before_variable_delete_func() RETURNS TRIGGER AS $$
             BEGIN
@@ -4090,6 +4195,7 @@
         </sql>
     </changeSet>
     <changeSet id="107" author="stalep">
+        <validCheckSum>ANY</validCheckSum>
         <createSequence sequenceName="actionlog_seq" startValue="1" incrementBy="50" cacheSize="1" />
         <createSequence sequenceName="allowedsite_seq" startValue="1" incrementBy="50" cacheSize="1" />
         <createSequence sequenceName="banner_seq" startValue="1" incrementBy="50" cacheSize="1" />
@@ -4119,6 +4225,7 @@
     </changeSet>
 
     <changeSet id="108" author="jwhiting">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             alter table dataset drop constraint fk_dataset_run_id;
         </sql>
@@ -4127,6 +4234,7 @@
                                  referencedTableName="dataset" referencedColumnNames="id" />
     </changeSet>
     <changeSet id="109" author="johara">
+        <validCheckSum>ANY</validCheckSum>
         <createSequence sequenceName="actionlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
         <createSequence sequenceName="datasetlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
         <createSequence sequenceName="reportlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
@@ -4141,6 +4249,7 @@
     </changeSet>
 
     <changeSet id="110" author="stalep">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             DROP TRIGGER IF EXISTS before_run_delete ON run;
             DROP FUNCTION IF EXISTS before_run_delete_func();
@@ -4184,6 +4293,7 @@
         </sql>
     </changeSet>
     <changeSet id="111" author="johara">
+        <validCheckSum>ANY</validCheckSum>
         <sql>
             DROP TRIGGER IF EXISTS messagebus_delete ON messagebus;
             DROP FUNCTION IF EXISTS messagebus_delete();
