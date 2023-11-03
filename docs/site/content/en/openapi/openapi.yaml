@@ -1329,7 +1329,7 @@ paths:
         "204":
           description: No Content
   /api/schema/{id}/dropToken:
-    post:
+    delete:
       tags:
       - Schema
       description: Remove access token for schema
@@ -1344,12 +1344,8 @@ paths:
           type: integer
         example: 102
       responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: string
+        "204":
+          description: No Content
   /api/schema/{id}/export:
     get:
       tags:
@@ -1415,8 +1411,7 @@ paths:
         description: New Access level
         required: true
         schema:
-          format: int32
-          type: integer
+          $ref: '#/components/schemas/Access'
         example: 0
       - name: owner
         in: query
@@ -1844,7 +1839,8 @@ paths:
             application/json:
               schema:
                 type: array
-                items: {}
+                items:
+                  $ref: '#/components/schemas/Fingerprints'
   /api/test/{id}/labelValues:
     get:
       tags:
@@ -1881,7 +1877,8 @@ paths:
             application/json:
               schema:
                 type: array
-                items: {}
+                items:
+                  $ref: '#/components/schemas/ExportedLabelValues'
   /api/test/{id}/move:
     post:
       tags:
@@ -1972,7 +1969,7 @@ paths:
         "201":
           description: Created
   /api/test/{id}/revokeToken/{tokenId}:
-    post:
+    delete:
       tags:
       - Test
       description: Revoke a Token defined for a Test
@@ -1995,8 +1992,8 @@ paths:
           type: integer
         example: 202
       responses:
-        "201":
-          description: Created
+        "204":
+          description: No Content
   /api/test/{id}/tokens:
     get:
       tags:
@@ -2083,15 +2080,14 @@ paths:
 components:
   schemas:
     Access:
-      description: Access rights for the test. This defines the visibility of the
-        Test in the UI
+      description: "Resources have different visibility within the UI. 'PUBLIC', 'PROTECTED'\
+        \ and 'PRIVATE'. Restricted resources are not visible to users who do not\
+        \ have the correct permissions"
       enum:
-      - 0
-      - 1
-      - 2
-      type: integer
-      example: 0
-      nullable: false
+      - PUBLIC
+      - PROTECTED
+      - PRIVATE
+      type: string
     BetterOrWorse:
       enum:
       - BETTER
@@ -2198,32 +2194,19 @@ components:
       description: A dataset is the JSON document used as the basis for all comparisons
         and reporting
       required:
-      - start
-      - stop
       - testid
-      - owner
-      - access
       - data
       - ordinal
       type: object
+      allOf:
+      - $ref: '#/components/schemas/ProtectedType'
+      - $ref: '#/components/schemas/ProtectedTimeType'
       properties:
         id:
           format: int32
           description: Dataset Unique ID
           type: integer
           example: 101
-        start:
-          format: date-time
-          description: Dataset Start timestamp
-          type: string
-          example: "1698013206000"
-          nullable: false
-        stop:
-          format: date-time
-          description: Dataset Stop timestamp
-          type: string
-          example: "1698013206000"
-          nullable: false
         description:
           description: Run description
           type: string
@@ -2233,22 +2216,6 @@ components:
           description: Test ID that Dataset relates to
           type: integer
           example: 101
-          nullable: false
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-          nullable: false
-        access:
-          description: Access rights for the test. This defines the visibility of
-            the Test in the UI
-          enum:
-          - 0
-          - 1
-          - 2
-          type: integer
-          example: 0
           nullable: false
         data:
           description: Data payload
@@ -2262,7 +2229,7 @@ components:
           example: 1
           nullable: false
         validationErrors:
-          description: Collection of Validation Errors
+          description: List of Validation Errors
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
@@ -2368,12 +2335,10 @@ components:
       - ordinal
       - testId
       - testname
-      - start
-      - stop
-      - owner
-      - access
       - schemas
       type: object
+      allOf:
+      - $ref: '#/components/schemas/ProtectedTimeType'
       properties:
         id:
           format: int32
@@ -2404,23 +2369,6 @@ components:
           description: Dataset description
           type: string
           example: Run on AWS with m7g.large
-        start:
-          format: int64
-          description: Dataset Start timestamp
-          type: integer
-          example: 1698013206000
-        stop:
-          format: int64
-          description: Dataset Stop timestamp
-          type: integer
-          example: 1698013206000
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-        access:
-          $ref: '#/components/schemas/Access'
         view:
           description: View definition
           type: string
@@ -2430,6 +2378,7 @@ components:
           items:
             $ref: '#/components/schemas/SchemaUsage'
         validationErrors:
+          description: List of Validation Errors
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
@@ -2577,6 +2526,26 @@ components:
           type: string
         notify:
           type: boolean
+    ExportedLabelValue:
+      description: Representation of a LabelValue
+      type: object
+      properties:
+        name:
+          description: Fingerprint name
+          type: string
+          example: Throughput 8 CPU
+        value:
+          description: Fingerprint value
+          type: string
+          example: "141085.5"
+    ExportedLabelValues:
+      description: A list of Fingerprint values for one dataset
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedLabelValue'
     Extractor:
       description: "An Extractor defines how values are extracted from a JSON document,\
         \ for use in Labels etc."
@@ -2603,6 +2572,32 @@ components:
           type: boolean
           example: false
           nullable: false
+    FingerprintValue:
+      description: Representation of Fingerprint. If the Fingerprint has children
+        the value will be null.
+      type: object
+      properties:
+        name:
+          description: Fingerprint name
+          type: string
+          example: Mode
+        value:
+          description: Fingerprint name
+          type: string
+          example: Library
+        children:
+          description: List of Fingerprint children
+          type: array
+          items:
+            $ref: '#/components/schemas/FingerprintValue'
+    Fingerprints:
+      description: A list of Fingerprints representing one dataset
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/FingerprintValue'
     KeycloakConfig:
       type: object
       properties:
@@ -2627,10 +2622,10 @@ components:
       - extractors
       - filtering
       - metrics
-      - owner
-      - access
       - schemaId
       type: object
+      allOf:
+      - $ref: '#/components/schemas/ProtectedType'
       properties:
         id:
           format: int32
@@ -2667,21 +2662,6 @@ components:
             that are used for comparison
           type: boolean
           example: true
-          nullable: false
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-        access:
-          description: Access rights for the test. This defines the visibility of
-            the Test in the UI
-          enum:
-          - 0
-          - 1
-          - 2
-          type: integer
-          example: 0
           nullable: false
         schemaId:
           format: int32
@@ -2827,6 +2807,68 @@ components:
             \ array or JSON object"
           type: string
           example: "1724"
+    ProtectedTimeType:
+      required:
+      - access
+      - owner
+      - start
+      - stop
+      type: object
+      properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          allOf:
+          - $ref: '#/components/schemas/Access'
+          example: PUBLIC
+          nullable: false
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+          nullable: false
+        start:
+          format: date-time
+          description: Run Start timestamp
+          type: string
+          example: 2019-09-26T07:58:30.996+0200
+          nullable: false
+        stop:
+          format: date-time
+          description: Run Stop timestamp
+          type: string
+          example: 2019-09-26T07:58:30.996+0200
+          nullable: false
+    ProtectedType:
+      required:
+      - access
+      - owner
+      type: object
+      properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          allOf:
+          - $ref: '#/components/schemas/Access'
+          example: PUBLIC
+          nullable: false
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+          nullable: false
     RecalculationStatus:
       required:
       - timestamp
@@ -2856,35 +2898,52 @@ components:
           type: integer
           example: 186
     Run:
-      description: Data object that represents a test run entry
       required:
-      - id
+      - access
+      - owner
       - start
       - stop
+      - id
       - testid
       - data
       - trashed
-      - owner
-      - access
       type: object
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          allOf:
+          - $ref: '#/components/schemas/Access'
+          example: PUBLIC
+          nullable: false
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+          nullable: false
+        start:
+          format: date-time
+          description: Run Start timestamp
+          type: string
+          example: 2019-09-26T07:58:30.996+0200
+          nullable: false
+        stop:
+          format: date-time
+          description: Run Stop timestamp
+          type: string
+          example: 2019-09-26T07:58:30.996+0200
+          nullable: false
         id:
           format: int32
           description: Unique Run ID
           type: integer
           example: 101
-        start:
-          format: date-time
-          description: Run Start timestamp
-          type: number
-          example: 1698013206000
-          nullable: false
-        stop:
-          format: date-time
-          description: Run Stop timestamp
-          type: number
-          example: 1698013206000
-          nullable: false
         description:
           description: Run description
           type: string
@@ -2917,22 +2976,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-          nullable: false
-        access:
-          description: Access rights for the test. This defines the visibility of
-            the Test in the UI
-          enum:
-          - 0
-          - 1
-          - 2
-          type: integer
-          example: 0
-          nullable: false
     RunCount:
       required:
       - total
@@ -2957,36 +3000,54 @@ components:
           example: 5
     RunExtended:
       required:
-      - id
+      - access
+      - owner
       - start
       - stop
+      - id
       - testid
       - data
       - trashed
-      - owner
-      - access
       - schemas
       - testname
       - datasets
       type: object
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          allOf:
+          - $ref: '#/components/schemas/Access'
+          example: PUBLIC
+          nullable: false
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+          nullable: false
+        start:
+          format: date-time
+          description: Run Start timestamp
+          type: string
+          example: 2019-09-26T07:58:30.996+0200
+          nullable: false
+        stop:
+          format: date-time
+          description: Run Stop timestamp
+          type: string
+          example: 2019-09-26T07:58:30.996+0200
+          nullable: false
         id:
           format: int32
           description: Unique Run ID
           type: integer
           example: 101
-        start:
-          format: date-time
-          description: Run Start timestamp
-          type: number
-          example: 1698013206000
-          nullable: false
-        stop:
-          format: date-time
-          description: Run Stop timestamp
-          type: number
-          example: 1698013206000
-          nullable: false
         description:
           description: Run description
           type: string
@@ -3014,22 +3075,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-          nullable: false
-        access:
-          description: Access rights for the test. This defines the visibility of
-            the Test in the UI
-          enum:
-          - 0
-          - 1
-          - 2
-          type: integer
-          example: 0
-          nullable: false
         schemas:
           description: List of Schema Usages
           type: array
@@ -3055,49 +3100,27 @@ components:
     RunSummary:
       required:
       - id
-      - start
-      - stop
       - testid
-      - owner
-      - access
       - testname
       - trashed
       - hasMetadata
       - datasets
       type: object
+      allOf:
+      - $ref: '#/components/schemas/ProtectedTimeType'
       properties:
         id:
           format: int32
           description: Run unique ID
           type: integer
           example: 202
-        start:
-          format: int64
-          description: Start timestamp
-          type: integer
-          example: 1698013206000
-        stop:
-          format: int64
-          description: Stop timestamp
-          type: integer
-          example: 1698013206000
         testid:
           format: int32
           description: test ID run relates to
           type: integer
           example: 101
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-          nullable: false
-        access:
-          $ref: '#/components/schemas/Access'
         token:
-          description: Access token for Run
           type: string
-          example: "0"
         testname:
           description: test ID run relates to
           type: string
@@ -3158,8 +3181,9 @@ components:
       - id
       - uri
       - name
-      - owner
       type: object
+      allOf:
+      - $ref: '#/components/schemas/ProtectedType'
       properties:
         id:
           format: int32
@@ -3187,21 +3211,6 @@ components:
             ,  \"$id\": \"https://example.com/product.schema.json\",  \"title\": \"\
             Product\",  \"description\": \"A product in the catalog\",  \"type\":\
             \ \"object\"}"
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-        access:
-          description: Access rights for the test. This defines the visibility of
-            the Test in the UI
-          enum:
-          - 0
-          - 1
-          - 2
-          type: integer
-          example: 0
-          nullable: false
         token:
           description: Array of API tokens associated with test
           type: string
@@ -3336,10 +3345,10 @@ components:
       required:
       - id
       - name
-      - owner
-      - access
       - notificationsEnabled
       type: object
+      allOf:
+      - $ref: '#/components/schemas/ProtectedType'
       properties:
         id:
           format: int32
@@ -3361,22 +3370,6 @@ components:
           type: string
           example: Comprehensive benchmark to tests the limits of any system it is
             run against
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-          nullable: false
-        access:
-          description: Access rights for the test. This defines the visibility of
-            the Test in the UI
-          enum:
-          - 0
-          - 1
-          - 2
-          type: integer
-          example: 0
-          nullable: false
         tokens:
           description: Array of API tokens associated with test
           type: array
@@ -3453,9 +3446,9 @@ components:
       required:
       - id
       - name
-      - owner
-      - access
       type: object
+      allOf:
+      - $ref: '#/components/schemas/ProtectedType'
       properties:
         id:
           format: int32
@@ -3485,14 +3478,6 @@ components:
           description: Total number of Runs for the Test
           type: number
           example: 101
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-          nullable: false
-        access:
-          $ref: '#/components/schemas/Access'
     TestToken:
       required:
       - id
@@ -3535,9 +3520,9 @@ components:
       - schemaId
       - schemaUri
       - schemaName
-      - owner
-      - access
       type: object
+      allOf:
+      - $ref: '#/components/schemas/ProtectedType'
       properties:
         id:
           format: int32
@@ -3583,22 +3568,6 @@ components:
           description: Schema name that the transform is registered against
           type: string
           example: techempower
-        owner:
-          description: Name of the team that owns the test. Users must belong to the
-            team that owns a test to make modifications
-          type: string
-          example: performance-team
-          nullable: false
-        access:
-          description: Access rights for the test. This defines the visibility of
-            the Test in the UI
-          enum:
-          - 0
-          - 1
-          - 2
-          type: integer
-          example: 0
-          nullable: false
     TransformerInfo:
       required:
       - schemaId

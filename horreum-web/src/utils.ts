@@ -1,4 +1,5 @@
 import { DateTime } from "luxon"
+import {Fingerprints, FingerprintValue} from "./generated"
 
 export function noop() {
     /* noop */
@@ -150,5 +151,5 @@ export function fingerprintToString(fingerprint: unknown) {
     if (!fingerprint) {
         return ""
     }
-    return JSON.stringify(fingerprint)
+    return JSON.stringify(fingerprint);
 }
