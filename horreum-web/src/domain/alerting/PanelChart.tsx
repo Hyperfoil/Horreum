@@ -14,7 +14,7 @@ import {
 } from "recharts"
 import { Bullseye, Button, EmptyState, Spinner, Title } from "@patternfly/react-core"
 import { DateTime } from "luxon"
-import {alertingApi, AnnotationDefinition, TimeseriesTarget} from "../../api"
+import {alertingApi, AnnotationDefinition, Fingerprints, FingerprintValue, TimeseriesTarget} from "../../api"
 import { fingerprintToString } from "../../utils"
 import { fetchDatapoints, fetchAllAnnotations } from "./Changes"
 import { alertAction, dispatchInfo } from "../../alerts"
@@ -77,7 +77,7 @@ function ellipsis(str: string) {
 type PanelProps = {
     title: string
     variables: number[]
-    fingerprint: unknown
+    fingerprint: FingerprintValue | undefined
     timespan: number
     endTime: number
     setEndTime(endTime: number): void
@@ -87,7 +87,16 @@ type PanelProps = {
 
 const colors = ["#4caf50", "#FF0000", "#CC0066", "#0066FF", "#42a5f5", "#f1c40f"]
 
-export default function PanelChart({title, variables, fingerprint, timespan, endTime, setEndTime, lineType, onChangeSelected: propOnChangeSelected}: PanelProps) {
+export default function PanelChart({
+    title,
+    variables,
+    fingerprint,
+    timespan,
+    endTime,
+    setEndTime,
+    lineType,
+    onChangeSelected: propOnChangeSelected,
+}: PanelProps) {
     const [legend, setLegend] = useState<any[]>() // Payload is not exported
     const [lines, setLines] = useState<any[]>()
     const [datapoints, setDatapoints] = useState<TimeseriesTarget[]>()
@@ -200,10 +209,11 @@ export default function PanelChart({title, variables, fingerprint, timespan, end
                                 isDisabled={gettingLast}
                                 onClick={() => {
                                     setGettingLast(true)
-                                    alertingApi.findLastDatapoints({
-                                        variables: variables,
-                                        fingerprint: fingerprintToString(fingerprint),
-                                    })
+                                    alertingApi
+                                        .findLastDatapoints({
+                                            variables: variables,
+                                            fingerprint: fingerprintToString(fingerprint),
+                                        })
                                         .then(
                                             response => {
                                                 if (Array.isArray(response) && response.length > 0) {
@@ -250,10 +260,7 @@ export default function PanelChart({title, variables, fingerprint, timespan, end
                                     dataKey="timestamp"
                                     tick={{ fontSize: 12 }}
                                     tickFormatter={tsToDate}
-                                    domain={([min, _]) => [
-                                        timespan > 366 * 86400 ? min : startTime,
-                                        endTime,
-                                    ]}
+                                    domain={([min, _]) => [timespan > 366 * 86400 ? min : startTime, endTime]}
                                 />
                                 <YAxis
                                     width={80}
