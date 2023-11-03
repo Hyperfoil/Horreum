@@ -324,7 +324,7 @@ export default function Changes() {
                                         selection={selectedFingerprint}
                                         onSelect={setSelectedFingerprint}
                                         source={fingerprintSource}
-                                        forceSplit={true}
+                                        forceSplit={false}
                                     />
                                 )}
                                 {selectedTest && (
