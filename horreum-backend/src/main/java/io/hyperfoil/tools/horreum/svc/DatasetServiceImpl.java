@@ -22,8 +22,8 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
-import jakarta.transaction.TransactionManager;
 import jakarta.persistence.Tuple;
+import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
@@ -59,49 +59,72 @@ public class DatasetServiceImpl implements DatasetService {
    private static final Logger log = Logger.getLogger(DatasetServiceImpl.class);
 
    //@formatter:off
-   private static final String LABEL_QUERY =
-         "WITH used_labels AS (" +
-            "SELECT label.id AS label_id, label.name, ds.schema_id, count(le) AS count FROM dataset_schemas ds " +
-            "JOIN label ON label.schema_id = ds.schema_id " +
-            "LEFT JOIN label_extractors le ON le.label_id = label.id " +
-            "WHERE ds.dataset_id = ?1 AND (?2 < 0 OR label.id = ?2) GROUP BY label.id, label.name, ds.schema_id" +
-         "), lvalues AS (" +
-            "SELECT ul.label_id, le.name, (CASE WHEN le.isarray THEN " +
-                  "jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath::::jsonpath) " +
-               "ELSE " +
-                  "jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath::::jsonpath) " +
-               "END) AS value " +
-            "FROM dataset JOIN dataset_schemas ds ON dataset.id = ds.dataset_id " +
-            "JOIN used_labels ul ON ul.schema_id = ds.schema_id " +
-            "LEFT JOIN label_extractors le ON ul.label_id = le.label_id " +
-            "WHERE dataset.id = ?1" +
-         ") SELECT lvalues.label_id, ul.name, function, (CASE " +
-               "WHEN ul.count > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value) " +
-               "WHEN ul.count = 1 THEN jsonb_agg(lvalues.value) -> 0 " +
-               "ELSE '{}'::::jsonb END" +
-            ") AS value FROM label " +
-            "JOIN lvalues ON lvalues.label_id = label.id " +
-            "JOIN used_labels ul ON label.id = ul.label_id " +
-            "GROUP BY lvalues.label_id, ul.name, function, ul.count";
-   protected static final String LABEL_PREVIEW = "WITH le AS (" +
-            "SELECT * FROM jsonb_populate_recordset(NULL::::extractor, (?1)::::jsonb)" +
-         "), lvalues AS (" +
-            "SELECT le.name, (CASE WHEN le.isarray THEN " +
-               "jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath) " +
-            "ELSE " +
-               "jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath) " +
-            "END) AS value " +
-            "FROM le, dataset JOIN dataset_schemas ds ON dataset.id = ds.dataset_id " +
-            "WHERE dataset.id = ?2 AND ds.schema_id = ?3" +
-         ") SELECT (CASE " +
-            "WHEN jsonb_array_length((?1)::::jsonb) > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value) " +
-            "WHEN jsonb_array_length((?1)::::jsonb) = 1 THEN jsonb_agg(lvalues.value) -> 0 " +
-            "ELSE '{}'::::jsonb END" +
-         ") AS value FROM lvalues";
+   private static final String LABEL_QUERY = """
+         WITH 
+         used_labels AS (
+            SELECT label.id AS label_id, label.name, ds.schema_id, count(le) AS count 
+            FROM dataset_schemas ds 
+            JOIN label ON label.schema_id = ds.schema_id 
+            LEFT JOIN label_extractors le ON le.label_id = label.id 
+            WHERE ds.dataset_id = ?1 AND (?2 < 0 OR label.id = ?2) GROUP BY label.id, label.name, ds.schema_id
+         ), 
+         lvalues AS (
+            SELECT ul.label_id, le.name, 
+                  (CASE WHEN le.isarray THEN 
+                     jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath::::jsonpath) 
+                 ELSE 
+                     jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath::::jsonpath) 
+                  END) AS value 
+            FROM dataset 
+            JOIN dataset_schemas ds ON dataset.id = ds.dataset_id 
+            JOIN used_labels ul ON ul.schema_id = ds.schema_id 
+            LEFT JOIN label_extractors le ON ul.label_id = le.label_id 
+            WHERE dataset.id = ?1
+         ) 
+         SELECT lvalues.label_id, ul.name, function, 
+               (CASE 
+                  WHEN ul.count > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value) 
+                  WHEN ul.count = 1 THEN jsonb_agg(lvalues.value) -> 0 
+                  ELSE '{}'::::jsonb END
+               ) AS value 
+         FROM label 
+         JOIN lvalues ON lvalues.label_id = label.id 
+         JOIN used_labels ul ON label.id = ul.label_id 
+         GROUP BY lvalues.label_id, ul.name, function, ul.count
+         """;
+   protected static final String LABEL_PREVIEW = """
+         WITH
+         le AS (
+            SELECT * FROM jsonb_populate_recordset(NULL::::extractor, (?1)::::jsonb)
+         ),
+         lvalues AS (
+            SELECT le.name,
+               (CASE WHEN le.isarray THEN
+                  jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath)
+               ELSE
+                  jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath)
+               END) AS value
+            FROM le, dataset
+            JOIN dataset_schemas ds ON dataset.id = ds.dataset_id
+            WHERE dataset.id = ?2 AND ds.schema_id = ?3
+         )
+         SELECT (CASE
+               WHEN jsonb_array_length((?1)::::jsonb) > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value)
+               WHEN jsonb_array_length((?1)::::jsonb) = 1 THEN jsonb_agg(lvalues.value) -> 0
+               ELSE '{}'::::jsonb END
+            ) AS value
+         FROM lvalues
+         """;
 
-   private static final String SCHEMAS_SELECT = "SELECT dataset_id, jsonb_agg(jsonb_build_object(" +
-         "'id', schema.id, 'uri', ds.uri, 'name', schema.name, 'source', 0, 'type', 2, 'key', ds.index::::text, 'hasJsonSchema', schema.schema IS NOT NULL)) AS schemas " +
-         "FROM dataset_schemas ds JOIN dataset ON dataset.id = ds.dataset_id JOIN schema ON schema.id = ds.schema_id";
+   private static final String SCHEMAS_SELECT = """
+         SELECT dataset_id,
+               jsonb_agg(
+                  jsonb_build_object('id', schema.id, 'uri', ds.uri, 'name', schema.name, 'source', 0, 'type', 2, 'key', ds.index::::text, 'hasJsonSchema', schema.schema IS NOT NULL)
+               ) AS schemas
+         FROM dataset_schemas ds
+         JOIN dataset ON dataset.id = ds.dataset_id
+         JOIN schema ON schema.id = ds.schema_id
+         """;
    private static final String VALIDATION_SELECT = "validation AS (" +
             "SELECT dataset_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM dataset_validationerrors GROUP BY dataset_id" +
          ")";
@@ -375,13 +398,13 @@ public class DatasetServiceImpl implements DatasetService {
       int labelId = Integer.parseInt(parts[2]);
       // This is invoked when the label is added/updated. We won't send notifications
       // for that (user can check if there are any changes on his own).
-      messageBus.executeForTest(testId, () -> calculateLabels(testId, datasetId, labelId, true));
+      messageBus.executeForTest(testId, () -> calculateLabelValues(testId, datasetId, labelId, true));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void calculateLabels(int testId, int datasetId, int queryLabelId, boolean isRecalculation) {
-      log.debugf("Calculating labels for dataset %d, label %d", datasetId, queryLabelId);
+   void calculateLabelValues(int testId, int datasetId, int queryLabelId, boolean isRecalculation) {
+      log.debugf("Calculating label values for dataset %d, label %d", datasetId, queryLabelId);
       List<Object[]> extracted;
       try {
          // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
@@ -411,19 +434,25 @@ public class DatasetServiceImpl implements DatasetService {
       }
 
       FingerprintDAO.deleteById(datasetId);
-      Util.evaluateMany(extracted, row -> (String) row[2], row -> (row[3] instanceof ArrayNode ? flatten((ArrayNode) row[3]) : (JsonNode) row[3]),
-            (row, result) -> createLabel(datasetId, testId, (int) row[0], Util.convertToJson(result)),
-            row -> createLabel(datasetId, testId, (int) row[0], (JsonNode) row[3]),
-            (row, e, jsCode) -> logMessage(datasetId, PersistentLogDAO.ERROR,
-                  "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
-            out -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
+      Util.evaluateWithCombinationFunction(extracted,
+              (row)              -> (String) row[2],
+              (row)              -> (row[3] instanceof ArrayNode ? flatten((ArrayNode) row[3]) : (JsonNode) row[3]),
+              (row, result)      -> createLabelValue(datasetId, testId, (int) row[0], Util.convertToJson(result)),
+              (row)              -> createLabelValue(datasetId, testId, (int) row[0], (JsonNode) row[3]),
+              (row, e, jsCode)   -> logMessage(datasetId, PersistentLogDAO.ERROR,
+                      "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
+              (out)              -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
+
+      //Create new dataset views from the recently created label values
+      em.createNativeQuery("DELETE FROM dataset_view WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
+      em.createNativeQuery("call calc_dataset_view(?1);").setParameter(1, datasetId).executeUpdate();
 
       createFingerprint(datasetId, testId);
       mediator.updateLabels(new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
       if(mediator.testMode())
          Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation)));
    }
-
+   
    @Transactional
    public void deleteDataset(int datasetId) {
       em.createNativeQuery("DELETE FROM label_values WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
@@ -466,16 +495,21 @@ public class DatasetServiceImpl implements DatasetService {
       logMessage(datasetId, PersistentLogDAO.DEBUG, "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
    }
 
-   private void createLabel(int datasetId, int testId, int labelId, JsonNode value) {
+   private void createLabelValue(int datasetId, int testId, int labelId, JsonNode value) {
       LabelValueDAO labelValue = new LabelValueDAO();
       labelValue.datasetId = datasetId;
       labelValue.labelId = labelId;
       labelValue.value = value;
       labelValue.persist();
    }
-    private void createFingerprint(int datasetId, int testId) {
-      JsonNode json = em.createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
-              .setParameter(1, testId).getSingleResult();
+   private void createFingerprint(int datasetId, int testId) {
+      JsonNode json = null;
+      try {
+         json = em.createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
+                 .setParameter(1, testId).getSingleResult();
+      } catch (NoResultException noResultException){
+         log.infof("Could not find fingerprint for dataset: %d", datasetId);
+      }
       if(json == null)
          return;
 
@@ -517,11 +551,11 @@ public class DatasetServiceImpl implements DatasetService {
    }
 
    public void onNewDataset(Dataset.EventNew event) {
-      withRecalculationLock(() -> calculateLabels(event.testId, event.datasetId, event.labelId, event.isRecalculation));
+      withRecalculationLock(() -> calculateLabelValues(event.testId, event.datasetId, event.labelId, event.isRecalculation));
    }
 
    public void onNewDatasetNoLock(Dataset.EventNew event) {
-      calculateLabels(event.testId, event.datasetId, event.labelId , event.isRecalculation);
+      calculateLabelValues(event.testId, event.datasetId, event.labelId , event.isRecalculation);
    }
 
    @Transactional(Transactional.TxType.REQUIRES_NEW)

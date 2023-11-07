@@ -1,10 +1,19 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import com.networknt.schema.JsonMetaSchema;
-import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
+import io.hyperfoil.tools.horreum.api.data.Extractor;
+import io.hyperfoil.tools.horreum.api.data.Label;
+import io.hyperfoil.tools.horreum.api.data.Schema;
+import io.hyperfoil.tools.horreum.api.data.Transformer;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
-import io.hyperfoil.tools.horreum.entity.data.*;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
+import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
+import io.hyperfoil.tools.horreum.entity.data.RunDAO;
+import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
+import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
 import io.hyperfoil.tools.horreum.mapper.SchemaMapper;
@@ -688,6 +697,7 @@ public class SchemaServiceImpl implements SchemaService {
          existing.name = label.name;
          //When we clear extractors we should also delete label_values
          if(existing.id > 0) {
+            em.createNativeQuery("DELETE FROM dataset_view WHERE dataset_id IN (SELECT dataset_id FROM label_values WHERE label_id = ?1)").setParameter(1, existing.id).executeUpdate();
             em.createNativeQuery("DELETE FROM label_values WHERE label_id = ?1").setParameter(1, existing.id).executeUpdate();
          }
          existing.extractors.clear();
@@ -707,7 +717,7 @@ public class SchemaServiceImpl implements SchemaService {
    private void emitLabelChanged(int labelId, int schemaId) {
       try {
          List<Integer> datasetIds = session
-                 .createNativeQuery("SELECT dataset_id from dataset_schemas WHERE schema_id = ?1")
+                 .createNativeQuery("SELECT dataset_id from dataset_schemas WHERE schema_id = ?1 ORDER BY dataset_id DESC")
                  .setParameter(1, schemaId)
                  .addScalar("dataset_id", StandardBasicTypes.INTEGER)
                  .getResultList();

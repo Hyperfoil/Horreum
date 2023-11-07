@@ -18,7 +18,6 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 
@@ -178,7 +177,7 @@ public class ExperimentServiceImpl implements ExperimentService {
             .getResultList();
 
       List<Integer> matchingProfile = new ArrayList<>();
-      Util.evaluateMany(selectorRows, r -> Util.makeFilter((String) r[1]), r -> (JsonNode) r[2], (r, result) -> {
+      Util.evaluateWithCombinationFunction(selectorRows, r -> Util.makeFilter((String) r[1]), r -> (JsonNode) r[2], (r, result) -> {
          if (result.asBoolean()) {
             matchingProfile.add((Integer) r[0]);
          }
@@ -216,7 +215,7 @@ public class ExperimentServiceImpl implements ExperimentService {
 
       Map<Integer, List<Integer>> baselines = new HashMap<>();
       Map<Integer, List<DatasetLogDAO>> perProfileLogs = matchingProfile.stream().collect(Collectors.toMap(Function.identity(), id -> new ArrayList<>(logs)));
-      Util.evaluateMany(baselineRows, r -> Util.makeFilter((String) r[1]), r -> (JsonNode) r[2], (r, v) -> {
+      Util.evaluateWithCombinationFunction(baselineRows, r -> Util.makeFilter((String) r[1]), r -> (JsonNode) r[2], (r, v) -> {
          if (v.asBoolean()) {
             baselines.computeIfAbsent((Integer) r[0], profileId -> new ArrayList<>()).add((Integer) r[3]);
          }
