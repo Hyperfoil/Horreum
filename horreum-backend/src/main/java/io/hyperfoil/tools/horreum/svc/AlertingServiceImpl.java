@@ -244,7 +244,7 @@ public class AlertingServiceImpl implements AlertingService {
               .addScalar("condition", StandardBasicTypes.TEXT)
               .addScalar("value", JsonBinaryType.INSTANCE)
               .getResultList();
-      Util.evaluateMany(ruleValues, row -> (String) row[1], row -> (JsonNode) row[2],
+      Util.evaluateWithCombinationFunction(ruleValues, row -> (String) row[1], row -> (JsonNode) row[2],
               (row, result) -> {
                  int ruleId = (int) row[0];
                  if (result.isBoolean()) {
@@ -431,7 +431,7 @@ public class AlertingServiceImpl implements AlertingService {
          }
       }
       Instant finalTimestamp = timestamp;
-      Util.evaluateMany(values, data -> data.calculation, data -> data.value,
+      Util.evaluateWithCombinationFunction(values, data -> data.calculation, data -> data.value,
             (data, result) -> {
                Double value = Util.toDoubleOrNull(result,
                      error -> logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of variable %s failed: %s", data.fullName(), error),

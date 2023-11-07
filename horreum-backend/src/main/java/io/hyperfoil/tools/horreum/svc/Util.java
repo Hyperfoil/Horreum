@@ -30,10 +30,6 @@ import org.eclipse.microprofile.context.ThreadContext;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
-import org.hibernate.ScrollMode;
-import org.hibernate.ScrollableResults;
-import org.hibernate.query.NativeQuery;
-import org.hibernate.transform.ResultTransformer;
 import org.jboss.logging.Logger;
 import org.postgresql.util.PSQLException;
 
@@ -524,37 +520,41 @@ public class Util {
       return toJsonNode(URLDecoder.decode(fpString.replace("+", "%2B"), StandardCharsets.UTF_8));
    }
 
-   static <T> void evaluateMany(List<T> input,
-                                Function<T, String> function,
-                                Function<T, JsonNode> object,
-                                BiConsumer<T, Value> resultConsumer,
-                                Consumer<T> noExecConsumer,
-                                ExecutionExceptionConsumer<T> onException,
-                                Consumer<String> onOutput) {
+/*
+* Evaluates a List of Objects, executing Javascript Combination Functions, if defined.
+* Callbacks for JS evaluation exceptions and output logging allow for custom error handling
+* */
+   static <T> void evaluateWithCombinationFunction(List<T> inputData,
+                                                   Function<T, String> jsCombinationFunction,
+                                                   Function<T, JsonNode> evaluationInputObject,
+                                                   BiConsumer<T, Value> jsFuncResultConsumer,
+                                                   Consumer<T> nonFuncResultConsumer,
+                                                   ExecutionExceptionConsumer<T> onJsEvaluationException,
+                                                   Consumer<String> jsOutputConsumer) {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
          context.enter();
          try {
-            for (int i = 0; i < input.size(); i++) {
-               T row = input.get(i);
-               String func = function.apply(row);
-               if (func != null && !func.isBlank()) {
-                  StringBuilder jsCode = new StringBuilder("const __obj").append(i).append(" = ").append(object.apply(row)).append(";\n");
-                  jsCode.append("const __func").append(i).append(" = ").append(func).append(";\n");
+            for (int i = 0; i < inputData.size(); i++) {
+               T element = inputData.get(i);
+               String jsFuncBody = jsCombinationFunction.apply(element);
+               if (jsFuncBody != null && !jsFuncBody.isBlank()) {
+                  StringBuilder jsCode = new StringBuilder("const __obj").append(i).append(" = ").append(evaluationInputObject.apply(element)).append(";\n");
+                  jsCode.append("const __func").append(i).append(" = ").append(jsFuncBody).append(";\n");
                   jsCode.append("__func").append(i).append("(__obj").append(i).append(")");
                   try {
                      Value value = context.eval("js", jsCode);
-                     resultConsumer.accept(row, value);
+                     jsFuncResultConsumer.accept(element, value);
                   } catch (PolyglotException e) {
-                     onException.accept(row, e, jsCode.toString());
+                     onJsEvaluationException.accept(element, e, jsCode.toString());
                   }
                } else {
-                  noExecConsumer.accept(row);
+                  nonFuncResultConsumer.accept(element);
                }
             }
          } finally {
             if (out.size() > 0) {
-               onOutput.accept(out.toString(StandardCharsets.UTF_8));
+               jsOutputConsumer.accept(out.toString(StandardCharsets.UTF_8));
             }
             context.leave();
          }
@@ -658,7 +658,12 @@ public class Util {
 
                @Override
                public void afterCompletion(int status) {
-                  consumer.accept(status);
+
+                  try{
+                     consumer.accept(status);
+                  } catch (Exception e){
+                     log.errorf("Tx Synchronization callback failed: %s", e.getMessage());
+                  }
                }
             });
          } else {
