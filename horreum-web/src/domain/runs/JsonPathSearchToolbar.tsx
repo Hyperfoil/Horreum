@@ -1,10 +1,6 @@
-import React, { useEffect, useRef, useState } from "react"
-import { useDispatch } from "react-redux"
+import React, {useContext, useEffect, useRef, useState} from "react"
 import { useHistory } from "react-router-dom"
 import jsonpath from "jsonpath"
-
-import { RunsDispatch } from "./reducers"
-import { alertAction } from "../../alerts"
 
 import {
     Button,
@@ -22,6 +18,8 @@ import { HelpIcon } from "@patternfly/react-icons"
 import { toString } from "../../components/Editor"
 import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams } from "react-autosuggest"
 import { QueryResult } from "../../api"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type ToolbarProps = {
     originalData: any
@@ -30,7 +28,7 @@ type ToolbarProps = {
 }
 
 export default function JsonPathSearchToolbar(props: ToolbarProps) {
-    const dispatch = useDispatch<RunsDispatch>()
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [pathQuery, setPathQuery] = useState("")
     const [pathInvalid, setPathInvalid] = useState(false)
     const [pathType, setPathType] = useState("jsonb_path_query_first")
@@ -44,7 +42,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
                 setPathInvalid(!valid)
             },
             error => {
-                dispatch(alertAction("QUERY_ERROR", "Failed to execute query!", error))
+                alerting.dispatchError(error, "QUERY_ERROR", "Failed to execute query!")
             }
         )
     }

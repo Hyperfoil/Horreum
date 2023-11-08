@@ -35,6 +35,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 @Path("/api/test")
 @Consumes({ MediaType.APPLICATION_JSON})
@@ -267,6 +268,11 @@ public interface TestService {
       @Schema(description="Total number of Runs for the Test",
               example="101")
       public Number runs;
+
+      @Schema(description="Subscriptions for each test for authenticated user",
+              example="[]")
+      public Set<String> watching;
+
       public TestSummary(int id, String name, String folder, String description,
                          Number datasets, Number runs, String owner, Access access) {
          this.id = id;

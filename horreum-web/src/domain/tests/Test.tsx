@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react"
+import {useState, useEffect, useRef, useContext} from "react"
 import { useParams } from "react-router"
+
 import { useSelector } from "react-redux"
-import { useDispatch } from "react-redux"
+
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -16,16 +17,10 @@ import {
 } from "@patternfly/react-core"
 import { Link } from "react-router-dom"
 
-import * as actions from "./actions"
-import * as selectors from "./selectors"
-import { TestDispatch } from "./reducers"
-
 import ButtonLink from "../../components/ButtonLink"
 import SavedTabs, { SavedTab, TabFunctions, saveFunc, resetFunc, modifiedFunc } from "../../components/SavedTabs"
 
 import { useTester, teamsSelector } from "../../auth"
-import { dispatchInfo } from "../../alerts"
-import { noop } from "../../utils"
 import General from "./General"
 import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
@@ -36,15 +31,21 @@ import Access from "./Access"
 import Subscriptions from "./Subscriptions"
 import Transformers from "./Transformers"
 import MissingDataNotifications from "./MissingDataNotifications"
+import {fetchTest, fetchViews, Test, View} from "../../api";
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type Params = {
     testId: string
 }
 
-export default function Test() {
+
+export default function TestView() {
     const params = useParams<Params>()
     const [testId, setTestId] = useState(params.testId === "_new" ? 0 : parseInt(params.testId))
-    const test = useSelector(selectors.get(testId))
+    const [test, setTest] = useState<Test | undefined>()
+    const [views, setViews] = useState<View[]>( [])
     const [modified, setModified] = useState(false)
     const generalFuncsRef = useRef<TabFunctions>()
     const accessFuncsRef = useRef<TabFunctions>()
@@ -57,22 +58,25 @@ export default function Test() {
     const transformersFuncsRef = useRef<TabFunctions>()
     const [loaded, setLoaded] = useState(false)
 
-    const dispatch = useDispatch<TestDispatch>()
-
+    //replace redux
     const teams = useSelector(teamsSelector)
+
+    const { alerting } = useContext(AppContext) as AppContextType;
     useEffect(() => {
         if (testId !== 0) {
             setLoaded(false)
-            dispatch(actions.fetchTest(testId))
-                .then( () => dispatch(actions.fetchViews(testId)) )
-                .catch(noop)
+            fetchTest(testId, alerting)
+                .then(setTest)
+                .then( () => fetchViews(testId, alerting).then(setViews) )
                 .finally(() => setLoaded(true))
         }
-    }, [dispatch, dispatch, testId, teams])
+    }, [testId, teams])
 
     useEffect(() => {
         document.title = (testId === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
     }, [test, testId])
+
+    //TODO:: replace redux
     const isTester = useTester(test ? test.owner : undefined)
 
     return (
@@ -110,7 +114,7 @@ export default function Test() {
                         <SavedTabs
                             afterSave={() => {
                                 setModified(false)
-                                dispatchInfo(dispatch, "SAVE", "Saved!", "Test was succesfully updated!", 3000)
+                                alerting.dispatchInfo("SAVE", "Saved!", "Test was successfully updated!", 3000)
                             }}
                             afterReset={() => setModified(false)}
                             canSave={isTester}
@@ -148,7 +152,7 @@ export default function Test() {
                             >
                                 <Views
                                     testId={testId}
-                                    views={ test?.views || [] }
+                                    views={ views }
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
                                     funcsRef={viewFuncsRef}
@@ -257,7 +261,6 @@ export default function Test() {
                                 fragment="export"
                                 isHidden={testId <= 0 || !isTester}
                                 onSave={() => Promise.resolve()}
-                                onReset={noop}
                                 isModified={() => false}
                             >
                                 <TestExportImport name={test?.name || "test"} id={testId} />

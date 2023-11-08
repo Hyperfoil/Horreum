@@ -1,9 +1,9 @@
-import Keycloak, { KeycloakConfig } from "keycloak-js"
+import Keycloak, {KeycloakConfig, KeycloakInitOptions} from "keycloak-js"
 import fetchival from "fetchival"
 
 import store, { State } from "./store"
 import { userApi } from "./api"
-import { alertAction, CLEAR_ALERT } from "./alerts"
+import { CLEAR_ALERT } from "./alerts"
 import { noop } from "./utils"
 import { keycloakSelector, INIT, STORE_PROFILE, UPDATE_DEFAULT_TEAM, UPDATE_ROLES } from "./auth"
 
@@ -26,7 +26,7 @@ export function initKeycloak(state: State) {
                     onLoad: "check-sso",
                     silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
                     promiseType: "native",
-                } as Keycloak.KeycloakInitOptions)
+                } as KeycloakInitOptions)
                 initPromise?.then(authenticated => {
                     store.dispatch({ type: CLEAR_ALERT })
                     store.dispatch({
@@ -39,16 +39,20 @@ export function initKeycloak(state: State) {
                             .loadUserProfile()
                             .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
                             .catch(error =>
-                                store.dispatch(
-                                    alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error)
-                                )
+                                console.log(error)
+                                //TODO: hook into alerting state
+                                // store.dispatch(
+                                //     alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error)
+                                // )
                             )
                         userApi.defaultTeam().then(
                             response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
                             error =>
-                                store.dispatch(
-                                    alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve default role", error)
-                                )
+                                console.log(error)
+                                //TODO: hook into alerting state
+                                // store.dispatch(
+                                //     alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve default role", error)
+                                // )
                         )
                         keycloak.onTokenExpired = () =>
                             keycloak.updateToken(30).catch(e => console.log("Expired token update failed: " + e))

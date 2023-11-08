@@ -1,5 +1,4 @@
-import React, { ReactNode, RefObject, useEffect, useMemo, useRef, useState } from "react"
-import { useDispatch } from "react-redux"
+import React, {ReactNode, RefObject, useContext, useEffect, useMemo, useRef, useState} from "react"
 
 import { NavLink } from "react-router-dom"
 
@@ -8,9 +7,10 @@ import { ExclamationCircleIcon } from "@patternfly/react-icons"
 
 import {LabelInfo, schemaApi} from "../api"
 
-import { dispatchError } from "../alerts"
 import EnumSelect from "./EnumSelect"
 import NameUri from "./NameUri"
+import {AppContext} from "../context/appContext";
+import {AppContextType} from "../context/@types/appContextTypes";
 
 type LabelsProps = {
     labels: string[]
@@ -24,6 +24,7 @@ type LabelsProps = {
 const ALL_SCHEMAS = "__all__"
 
 export default function Labels({ labels, onChange, isReadOnly, error, defaultMetrics, defaultFiltering }: LabelsProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [isExpanded, setExpanded] = useState(false)
     const [options, setOptions] = useState<LabelInfo[]>([])
     const [schemaFilter, setSchemaFilter] = useState(ALL_SCHEMAS)
@@ -32,7 +33,6 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
     })
     const [metrics, setMetrics] = useState(defaultMetrics === undefined || defaultMetrics)
     const [filtering, setFiltering] = useState(defaultFiltering === undefined || defaultFiltering)
-    const dispatch = useDispatch()
     useEffect(() => {
         schemaApi.allLabels().then(
             labels => {
@@ -41,7 +41,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                 labels.flatMap(l => l.schemas).forEach(s => (sfo[s.uri] = <NameUri descriptor={s} />))
                 setSchemaFilterOptions(sfo)
             },
-            error => dispatchError(dispatch, error, "LIST_ALL_LABELS", "Failed to list available labels.")
+            error => alerting.dispatchError(error, "LIST_ALL_LABELS", "Failed to list available labels.")
         )
     }, [])
     useEffect(() => {

@@ -1,13 +1,15 @@
-import { ReactElement, useState, useEffect } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {ReactElement, useState, useEffect, useContext} from "react"
+import { useSelector } from "react-redux"
 import { Button, DualListSelector, Form, FormGroup, Modal, Spinner, TextInput } from "@patternfly/react-core"
 
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import {userApi, UserData} from "../../api"
 import UserSearch from "../../components/UserSearch"
 import { isAdminSelector, userName } from "../../auth"
-import { dispatchInfo, dispatchError } from "../../alerts"
 import { noop } from "../../utils"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 function userElement(u: UserData) {
     return (
@@ -22,9 +24,9 @@ type AdministratorsProps = {
 }
 
 export default function Administrators(props: AdministratorsProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [modified, setModified] = useState(false)
     const [resetCounter, setResetCounter] = useState(0)
-    const dispatch = useDispatch()
     const [createNewUser, setCreateNewUser] = useState(false)
     const [availableUsers, setAvailableUsers] = useState<ReactElement[]>([])
     const [admins, setAdmins] = useState<ReactElement[]>([])
@@ -33,7 +35,7 @@ export default function Administrators(props: AdministratorsProps) {
         if (isAdmin) {
             userApi.administrators().then(
                 list => setAdmins(list.map(userElement)),
-                error => dispatchError(dispatch, error, "FETCH ADMINS", "Cannot fetch administrators")
+                error => alerting.dispatchError(error, "FETCH ADMINS", "Cannot fetch administrators")
             )
         }
     }, [isAdmin, resetCounter])
@@ -46,7 +48,7 @@ export default function Administrators(props: AdministratorsProps) {
                 })
             ).then(
                 _ => setModified(false),
-                error => dispatchError(dispatch, error, "UPDATE ADMINS", "Cannot update administrators")
+                error => alerting.dispatchError(error, "UPDATE ADMINS", "Cannot update administrators")
             ),
         reset: () => {
             setAvailableUsers([])
@@ -106,15 +108,14 @@ export default function Administrators(props: AdministratorsProps) {
                 onCreate={(user, password) => {
                     return userApi.createUser({ user, password }).then(
                         () => {
-                            dispatchInfo(
-                                dispatch,
+                            alerting.dispatchInfo(
                                 "USER_CREATED",
                                 "User created",
                                 "User was successfully created",
                                 3000
                             )
                         },
-                        error => dispatchError(dispatch, error, "USER_NOT_CREATED", "Failed to create new user.")
+                        error => alerting.dispatchError(error, "USER_NOT_CREATED", "Failed to create new user.")
                     )
                 }}
             />

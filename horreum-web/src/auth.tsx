@@ -3,11 +3,9 @@ import { useDispatch, useSelector } from "react-redux"
 import { Button } from "@patternfly/react-core"
 
 import { State } from "./store"
-import { userApi, UserData } from "./api"
-import { AddAlertAction, dispatchError } from "./alerts"
-import { Dispatch } from "redux"
+import { UserData } from "./api"
 import { ThunkDispatch } from "redux-thunk"
-import Keycloak from "keycloak-js";
+import Keycloak, {KeycloakProfile} from "keycloak-js";
 
 export const INIT = "auth/INIT"
 export const UPDATE_DEFAULT_TEAM = "auth/UPDATE_DEFAULT_TEAM"
@@ -21,7 +19,7 @@ export class AuthState {
     roles: string[] = []
     teams: string[] = []
     defaultTeam?: string = undefined
-    userProfile?: Keycloak.KeycloakProfile
+    userProfile?: KeycloakProfile
     initPromise?: Promise<boolean> = undefined
 }
 
@@ -31,7 +29,7 @@ interface InitAction {
     initPromise?: Promise<boolean>
 }
 
-interface UpdateDefaultTeamAction {
+export interface UpdateDefaultTeamAction {
     type: typeof UPDATE_DEFAULT_TEAM
     team: string
 }
@@ -44,7 +42,7 @@ interface UpdateRolesAction {
 
 interface StoreProfileAction {
     type: typeof STORE_PROFILE
-    profile: Keycloak.KeycloakProfile
+    profile: KeycloakProfile
 }
 
 interface AfterLogoutAction {
@@ -53,7 +51,7 @@ interface AfterLogoutAction {
 
 type AuthAction = InitAction | UpdateDefaultTeamAction | UpdateRolesAction | StoreProfileAction | AfterLogoutAction
 
-export type AuthDispatch = ThunkDispatch<any, unknown, AuthAction | AddAlertAction>
+export type AuthDispatch = ThunkDispatch<any, unknown, AuthAction >
 
 export function reducer(state = new AuthState(), action: AuthAction) {
     // TODO: is this necessary? It seems that without that the state is not updated at times.
@@ -146,14 +144,6 @@ export const defaultTeamSelector = (state: State) => {
     return teamRoles.length > 0 ? teamRoles[0] : undefined
 }
 
-export function updateDefaultTeam(team: string) {
-    return (dispatch: Dispatch<UpdateDefaultTeamAction | AddAlertAction>) =>
-        userApi.setDefaultTeam(team).then(
-            _ => dispatch({ type: UPDATE_DEFAULT_TEAM, team }),
-            error => dispatchError(dispatch, error, "SET_DEFAULT_TEAM", "Failed to update default team.")
-        )
-}
-
 export const TryLoginAgain = () => {
     const keycloak = useSelector(keycloakSelector)
     return keycloak ? (
@@ -178,7 +168,7 @@ export const LoginLogout = () => {
         return (
             <Button
                 onClick={() => {
-                    keycloak.logout({ redirectUri: window.location.origin })
+                    keycloak?.logout({ redirectUri: window.location.origin })
                     dispatch({ type: AFTER_LOGOUT })
                 }}
             >
@@ -186,7 +176,7 @@ export const LoginLogout = () => {
             </Button>
         )
     } else {
-        return <Button onClick={() => keycloak.login()}>Log in</Button>
+        return <Button onClick={() => keycloak?.login()}>Log in</Button>
     }
 }
 

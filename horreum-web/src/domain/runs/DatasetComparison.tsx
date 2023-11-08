@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useContext, useEffect, useMemo, useRef, useState} from "react"
+import { useSelector } from "react-redux"
 import {
     ActionGroup,
     Bullseye,
@@ -14,8 +14,7 @@ import { expandable, ICell, IRow, Table, TableHeader, TableBody } from "@pattern
 import { useHistory, NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 
-import {datasetApi, Test, testApi, View} from "../../api"
-import { dispatchError } from "../../alerts"
+import {datasetApi, fetchTest, fetchViews, Test, View} from "../../api"
 import { tokenSelector } from "../../auth"
 import { colors } from "../../charts"
 
@@ -23,8 +22,9 @@ import PrintButton from "../../components/PrintButton"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
 
 import { renderValue } from "./components"
-import { fetchViews } from "../tests/actions"
-import { viewsSelector } from "./selectors"
+import {AppContext} from "../../context/appContext";
+import {AlertContextType, AppContextType} from "../../context/@types/appContextTypes";
+
 
 type Ds = {
     id: number
@@ -33,20 +33,17 @@ type Ds = {
 }
 
 export default function DatasetComparison() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     window.document.title = "Dataset comparison: Horreum"
     const history = useHistory()
     const params = new URLSearchParams(history.location.search)
     const testId = parseInt(params.get("testId") || "-1")
-    const views = useSelector(viewsSelector(testId))
-    const dispatch = useDispatch()
+    const [views, setViews] = useState<View[]>([])
     const [test, setTest] = useState<Test>()
     useEffect(() => {
-        testApi.get(testId).then(
-            test => {
-                setTest(test)
-                dispatch(fetchViews(testId))
-            },
-            e => dispatchError(dispatch, e, "FETCH_TEST", "Failed to fetch test " + testId)
+        fetchTest(testId, alerting)
+            .then(setTest)
+            .then(() => fetchViews(testId, alerting).then(setViews)
         )
     }, [testId])
     const datasets = useMemo(
@@ -91,11 +88,11 @@ export default function DatasetComparison() {
                     ) : (
                         <FragmentTabs>
                             <FragmentTab title="Labels" fragment="labels">
-                                <LabelsComparison headers={headers} datasets={datasets} />
+                                <LabelsComparison headers={headers} datasets={datasets} alerting={alerting} />
                             </FragmentTab>
                             <FragmentTab title="Default view" fragment="view_default" isHidden={!test}>
                                 {defaultView ? (
-                                    <ViewComparison headers={headers} view={defaultView} datasets={datasets} />
+                                    <ViewComparison headers={headers} view={defaultView} datasets={datasets} alerting={alerting} />
                                 ) : (
                                     <Bullseye>
                                         <Spinner size="xl" />
@@ -113,16 +110,16 @@ export default function DatasetComparison() {
 type LabelsComparisonProps = {
     headers: ICell[]
     datasets: Ds[]
+    alerting: AlertContextType
 }
 
-function LabelsComparison(props: LabelsComparisonProps) {
+function LabelsComparison({headers, datasets, alerting}: LabelsComparisonProps) {
     const [loading, setLoading] = useState(false)
     const [rows, setRows] = useState<IRow[]>([])
 
-    const dispatch = useDispatch()
     useEffect(() => {
         setLoading(true)
-        Promise.all(props.datasets.map(ds => datasetApi.labelValues(ds.id).then(values => ({ ...ds, values }))))
+        Promise.all(datasets.map(ds => datasetApi.labelValues(ds.id).then(values => ({ ...ds, values }))))
             .then(
                 labels => {
                     const rows: any[][] = []
@@ -169,10 +166,10 @@ function LabelsComparison(props: LabelsComparisonProps) {
                     })
                     setRows(renderRows)
                 },
-                e => dispatchError(dispatch, e, "LOAD_LABELS", "Failed to load labels for one of the datasets.")
+                e => alerting.dispatchError( e, "LOAD_LABELS", "Failed to load labels for one of the datasets.")
             )
             .finally(() => setLoading(false))
-    }, [props.datasets])
+    }, [datasets])
     const componentRef = useRef<HTMLDivElement>(null)
     if (loading) {
         return (
@@ -190,7 +187,7 @@ function LabelsComparison(props: LabelsComparisonProps) {
                 <Table
                     aria-label="Label comparison"
                     variant="compact"
-                    cells={props.headers}
+                    cells={headers}
                     rows={rows}
                     isExpandable={true}
                     onCollapse={(_, rowIndex, isOpen) => {
@@ -210,20 +207,20 @@ type ViewComparisonProps = {
     headers: ICell[]
     view: View
     datasets: Ds[]
+    alerting: AlertContextType
 }
 
-function ViewComparison(props: ViewComparisonProps) {
-    const dispatch = useDispatch()
+function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps) {
     const [loading, setLoading] = useState(false)
     const [rows, setRows] = useState<IRow[]>()
     const token = useSelector(tokenSelector)
     useEffect(() => {
         setLoading(true)
-        Promise.all(props.datasets.map(ds => datasetApi.getSummary(ds.id, props.view.id)))
+        Promise.all(datasets.map(ds => datasetApi.getSummary(ds.id, view.id)))
             .then(
                 summaries => {
                     setRows(
-                        props.view.components.map(vc => ({
+                        view.components.map(vc => ({
                             cells: [
                                 vc.headerName,
                                 ...summaries.map(summary => {
@@ -238,10 +235,10 @@ function ViewComparison(props: ViewComparisonProps) {
                         }))
                     )
                 },
-                e => dispatchError(dispatch, e, "FETCH_VIEW", "Failed to fetch view for one of datasets.")
+                e => alerting.dispatchError( e, "FETCH_VIEW", "Failed to fetch view for one of datasets.")
             )
             .finally(() => setLoading(false))
-    }, [props.datasets, props.view])
+    }, [datasets, view])
     const componentRef = useRef<HTMLDivElement>(null)
     if (loading) {
         return (
@@ -256,7 +253,7 @@ function ViewComparison(props: ViewComparisonProps) {
                 <PrintButton printRef={componentRef} />
             </ActionGroup>
             <div ref={componentRef}>
-                <Table aria-label="View comparison" variant="compact" cells={props.headers} rows={rows}>
+                <Table aria-label="View comparison" variant="compact" cells={headers} rows={rows}>
                     <TableHeader />
                     <TableBody />
                 </Table>

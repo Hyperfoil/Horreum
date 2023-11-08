@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useContext, useEffect, useState} from "react"
+import { useSelector } from "react-redux"
 
 import {
     Button,
@@ -25,9 +25,9 @@ import { TabFunctionsRef } from "../../components/SavedTabs"
 
 import { useTester, teamToName, defaultTeamSelector } from "../../auth"
 import { noop } from "../../utils"
-import { addToken, revokeToken, updateAccess } from "./actions"
-import { TestDispatch } from "./reducers"
-import {Test, Access as authAccess } from "../../api"
+import {Test, Access as authAccess, updateAccess, revokeTestToken, addTestToken} from "../../api"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type AddTokenModalProps = {
     testId: number
@@ -137,6 +137,7 @@ type AccessProps = {
 }
 
 function Access(props: AccessProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const defaultRole = useSelector(defaultTeamSelector)
     const [access, setAccess] = useState<authAccess>(props.test?.access || authAccess.Public)
     const [owner, setOwner] = useState(props.test?.owner || defaultRole || "")
@@ -148,13 +149,12 @@ function Access(props: AccessProps) {
         setAccess(props.test?.access || authAccess.Public)
     }, [props.test, defaultRole])
 
-    const dispatch = useDispatch<TestDispatch>()
     props.funcsRef.current = {
         save: () => {
             if (!props.test) {
                 return Promise.reject()
             }
-            return dispatch(updateAccess(props.test.id, owner, access))
+            return updateAccess(props.test.id, owner, access, alerting)
         },
         reset: () => {
             setOwner(props.test?.owner || defaultRole || "")
@@ -163,7 +163,7 @@ function Access(props: AccessProps) {
     }
 
     return (
-        <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
+        <Form isHorizontal={true} >
             <h2>Permissions</h2>
             <FormGroup label="Owner" fieldId="testOwner">
                 {isTester ? (
@@ -229,7 +229,7 @@ function Access(props: AccessProps) {
                                 <Button
                                     onClick={() => {
                                         if (props.test?.id) {
-                                            dispatch(revokeToken(props.test?.id, token.id)).catch(noop)
+                                            revokeTestToken(props.test.id, token.id, alerting).then(noop)
                                         }
                                     }}
                                 >
@@ -248,7 +248,7 @@ function Access(props: AccessProps) {
                     if (!props.test) {
                         return Promise.reject()
                     }
-                    return dispatch(addToken(props.test.id, value, description, permissions))
+                    return addTestToken(props.test.id, value, description, permissions, alerting).then(noop)
                 }}
             />
         </Form>

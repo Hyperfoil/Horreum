@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useState, useEffect, useMemo, useCallback, useContext} from "react"
+import { useSelector } from "react-redux"
 import { ChangesTabs } from "./ChangeTable"
-import { alertAction } from "../../alerts"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
 import LabelsSelect, { convertLabels } from "../../components/LabelsSelect"
 import PanelChart from "./PanelChart"
@@ -41,6 +40,8 @@ import {
     Title,
 } from "@patternfly/react-core"
 import { NavLink, useHistory } from "react-router-dom"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type TimespanSelectProps = {
     onChange(span: number): void
@@ -204,12 +205,12 @@ export const flattenNode = (arr : Array<any> | undefined) => {
 
 
 export default function Changes() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const history = useHistory()
     const params = new URLSearchParams(history.location.search)
     // eslint-disable-next-line
     const paramTest = useMemo(() => params.get("test") || undefined, [])
     const paramFingerprint = params.get("fingerprint")
-    const dispatch = useDispatch()
     const teams = useSelector(teamsSelector)
     const [selectedTest, setSelectedTest] = useState<SelectedTest>()
     const [selectedFingerprint, setSelectedFingerprint] = useState<FingerprintValue | undefined>(() => {
@@ -221,16 +222,16 @@ export default function Changes() {
             const str = convertLabels(fingerprint)
             return { ...fingerprint, toString: () => str }
         } catch (e) {
-            dispatch(
-                alertAction(
+            alerting.dispatchError("Failed to parse fingerprint <code>" + paramFingerprint + "</code>",
                     "PARSE_FINGERPRINT",
-                    "Fingerprint parsing failed",
-                    "Failed to parse fingerprint <code>" + paramFingerprint + "</code>"
-                )
-            )
+                    "Fingerprint parsing failed")
             return undefined
         }
     })
+    const [selectedChange, setSelectedChange] = useState<number>()
+    const [selectedVariable, setSelectedVariable] = useState<number>()
+
+
     const [panels, setPanels] = useState<PanelInfo[]>([])
     const [loadingPanels, setLoadingPanels] = useState(false)
     const [loadingFingerprints, setLoadingFingerprints] = useState(false)
@@ -277,20 +278,17 @@ export default function Changes() {
                     response => {
                         setPanels(response.panels)
                     },
-                    error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
+                    error => alerting.dispatchError(error, "DASHBOARD_FETCH", "Failed to fetch dashboard")
                 )
                 .finally(() => setLoadingPanels(false))
         }
-    }, [selectedTest, selectedFingerprint, teams, dispatch])
+    }, [selectedTest, selectedFingerprint, teams])
     useEffect(() => {
         const newDate = formatDate(endTime)
         if (newDate !== date) {
             setDate(newDate)
         }
     }, [endTime /* date omitted intentionally */])
-    const [selectedChange, setSelectedChange] = useState<number>()
-    const [selectedVariable, setSelectedVariable] = useState<number>()
-
     const onSelectTest = useCallback((selection, _, isInitial) => {
         if (selection === undefined) {
             setSelectedTest(undefined)
@@ -320,7 +318,7 @@ export default function Changes() {
                     return flattenedFingerprints
                 },
                 error => {
-                    dispatch(alertAction("FINGERPRINT_FETCH", "Failed to fetch test fingerprints", error))
+                    alerting.dispatchError(error, "FINGERPRINT_FETCH", "Failed to fetch test fingerprints")
                     return error
                 }
             )

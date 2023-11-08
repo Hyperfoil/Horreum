@@ -1,14 +1,13 @@
-import { useEffect } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useContext, useEffect, useState} from "react"
+import { useSelector } from "react-redux"
 
 import { TreeView, TreeViewDataItem } from "@patternfly/react-core"
 import { FolderIcon, FolderOpenIcon } from "@patternfly/react-icons"
 
 import { teamsSelector } from "../../auth"
-import { noop } from "../../utils"
-import { fetchFolders } from "./actions"
-import { TestDispatch } from "./reducers"
-import { allFolders } from "./selectors"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+import {fetchFolders} from "../../api";
 
 type FoldersTreeProps = {
     folder: string
@@ -16,11 +15,11 @@ type FoldersTreeProps = {
 }
 
 export default function FoldersTree(props: FoldersTreeProps) {
-    const folders = useSelector(allFolders())
+    const { alerting } = useContext(AppContext) as AppContextType;
+    const [folders, setFolders] = useState<string[]>([])
     const teams = useSelector(teamsSelector)
-    const dispatch = useDispatch<TestDispatch>()
     useEffect(() => {
-        dispatch(fetchFolders()).catch(noop)
+        fetchFolders(alerting).then(setFolders)
     }, [teams])
     const root: TreeViewDataItem = { name: "Horreum", children: [] }
     for (const folder of folders) {

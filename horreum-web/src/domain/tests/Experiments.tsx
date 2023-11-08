@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import {useState, useEffect, useContext} from "react"
 import { NavLink } from "react-router-dom"
 
 import {
@@ -25,11 +25,12 @@ import Labels from "../../components/Labels"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
 import { ExperimentProfile } from "../../generated/models/ExperimentProfile"
-import { dispatchError, dispatchInfo } from "../../alerts"
-import { useDispatch } from "react-redux"
 import OptionalFunction from "../../components/OptionalFunction"
 import ConditionComponent from "../../components/ConditionComponent"
 import EnumSelect from "../../components/EnumSelect"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type ExperimentsProps = {
     test?: Test
@@ -38,6 +39,7 @@ type ExperimentsProps = {
 }
 
 export default function Experiments(props: ExperimentsProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const isTester = useTester(props.test?.owner)
     const [profiles, setProfiles] = useState<ExperimentProfile[]>([])
     const [selected, setSelected] = useState<ExperimentProfile>()
@@ -48,7 +50,6 @@ export default function Experiments(props: ExperimentsProps) {
     const [activeCondition, setActiveCondition] = useState<number | string>()
     const [modelToAdd, setModelToAdd] = useState<string>()
     const [resetCounter, setResetCounter] = useState(0)
-    const dispatch = useDispatch()
 
     useEffect(() => {
         const testId = props.test?.id
@@ -65,16 +66,16 @@ export default function Experiments(props: ExperimentsProps) {
                     }
                 },
                 error =>
-                    dispatchError(dispatch, error, "FETCH_EXPERIMENT_PROFILES", "Cannot fetch experiment profiles.")
+                    alerting.dispatchError( error, "FETCH_EXPERIMENT_PROFILES", "Cannot fetch experiment profiles.")
             ),
             alertingApi.variables(testId).then(setVariables, error =>
-                dispatchError(dispatch, error, "FETCH_VARIABLES", "Cannot fetch change detection variables")
+                alerting.dispatchError( error, "FETCH_VARIABLES", "Cannot fetch change detection variables")
             ),
         ]).finally(() => setLoading(false))
     }, [props.test?.id, resetCounter])
     useEffect(() => {
         experimentApi.models().then(setModels, error =>
-            dispatchError(dispatch, error, "FETCH_EXPERIMENT_MODELS", "Cannot fetch experiment condition models")
+            alerting.dispatchError( error, "FETCH_EXPERIMENT_MODELS", "Cannot fetch experiment condition models")
         )
     }, [])
     useEffect(() => {
@@ -96,8 +97,7 @@ export default function Experiments(props: ExperimentsProps) {
                         experimentApi.addOrUpdateProfile(testId, p).then(
                             id => {
                                 p.id = id
-                                dispatchInfo(
-                                    dispatch,
+                                alerting.dispatchInfo(
                                     "EPERIMENT_PROFILE_SAVED",
                                     "Profile " + p.name + " was saved.",
                                     "",
@@ -105,8 +105,7 @@ export default function Experiments(props: ExperimentsProps) {
                                 )
                             },
                             error =>
-                                dispatchError(
-                                    dispatch,
+                                alerting.dispatchError(
                                     error,
                                     "EPERIMENT_PROFILE_SAVE",
                                     "Failed to save experiment profile " + p.name + "."
@@ -116,16 +115,14 @@ export default function Experiments(props: ExperimentsProps) {
                 ...deleted.map(id => {
                     experimentApi.deleteProfile(id, testId).then(
                         () =>
-                            dispatchInfo(
-                                dispatch,
+                            alerting.dispatchInfo(
                                 "EPERIMENT_PROFILE_DELETED",
                                 "Profile " + id + " was deleted.",
                                 "",
                                 3000
                             ),
                         error =>
-                            dispatchError(
-                                dispatch,
+                            alerting.dispatchError(
                                 error,
                                 "EPERIMENT_PROFILE_SAVE",
                                 "Failed to delete experiment profile " + id + "."

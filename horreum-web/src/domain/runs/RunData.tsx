@@ -1,11 +1,7 @@
-import { useEffect, useMemo, useState } from "react"
-import { useSelector, useDispatch } from "react-redux"
+import {useContext, useEffect, useMemo, useState} from "react"
+import { useSelector } from "react-redux"
 
-import * as actions from "./actions"
-import { RunsDispatch } from "./reducers"
-import { noop } from "../../utils"
 import { useTester, teamsSelector } from "../../auth"
-import { dispatchError } from "../../alerts"
 
 import Editor from "../../components/Editor/monaco/Editor"
 
@@ -15,6 +11,8 @@ import ChangeSchemaModal from "./ChangeSchemaModal"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInRun } from "./NoSchema"
 import SchemaValidations from "./SchemaValidations"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 function findFirstValue(o: any) {
     if (!o || Object.keys(o).length !== 1) {
@@ -36,16 +34,16 @@ function getPaths(data: any) {
 
 type RunDataProps = {
     run: RunExtended
+    updateCounter: number
     onUpdate(): void
 }
 
 export default function RunData(props: RunDataProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [data, setData] = useState()
     const [editorData, setEditorData] = useState<string>()
-    const [updateCounter, setUpdateCounter] = useState(0)
 
     const [changeSchemaModalOpen, setChangeSchemaModalOpen] = useState(false)
-    const dispatch = useDispatch<RunsDispatch>()
     const teams = useSelector(teamsSelector)
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
@@ -56,9 +54,9 @@ export default function RunData(props: RunDataProps) {
                     setData(data as any)
                     setEditorData(toString(data))
                 },
-                error => dispatchError(dispatch, error, "FETCH_RUN_DATA", "Failed to fetch run data").catch(noop)
+                error => alerting.dispatchError( error, "FETCH_RUN_DATA", "Failed to fetch run data")
             )
-    }, [dispatch, props.run.id, teams, updateCounter])
+    }, [ props.run.id, teams, props.updateCounter])
 
     const isTester = useTester(props.run.owner)
     const memoizedEditor = useMemo(() => {
@@ -91,12 +89,10 @@ export default function RunData(props: RunDataProps) {
                     paths={getPaths(data)}
                     hasRoot={typeof data === "object" && !Array.isArray(data) && data}
                     update={(path, schemaUri, _) =>
-                        dispatch(actions.updateSchema(props.run.id, props.run.testid, path, schemaUri))
-                            .catch(noop)
-                            .then(() => {
-                                props.onUpdate()
-                                setUpdateCounter(updateCounter + 1)
-                            })
+                        runApi.updateSchema(props.run.id, schemaUri, path).then(
+                            () => props.onUpdate(),
+                            error => alerting.dispatchError(error, "SCHEME_UPDATE_FAILED", "Failed to update run schema")
+                        )
                     }
                 />
             )}

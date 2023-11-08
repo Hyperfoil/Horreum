@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useEffect, useState} from "react"
 import {
     Alert,
     AlertVariant,
@@ -14,16 +13,15 @@ import {
 } from "@patternfly/react-core"
 
 import { useTester } from "../../auth"
-import { alertAction } from "../../alerts"
-import { noop } from "../../utils"
-import { TestDispatch } from "./reducers"
-import { Action, actionApi} from "../../api"
+import {Action, getTestActions, updateActions} from "../../api"
 import { TabFunctionsRef } from "../../components/SavedTabs"
-import { updateActions } from "./actions"
 import { testEventTypes } from "../actions/reducers"
 import ActionComponentForm from "../actions/ActionComponentForm"
 import ActionLogModal from "./ActionLogModal"
 import { Redirect } from "react-router-dom"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type ActionsProps = {
     testId: number
@@ -33,24 +31,21 @@ type ActionsProps = {
 }
 
 export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: ActionsProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [actions, setActions] = useState<Action[]>([])
     const [logModalOpen, setLogModalOpen] = useState(false)
     const isTester = useTester(testOwner)
     const hasDuplicates = new Set(actions.map(h => h.event + "_" + h.config.url)).size !== actions.length
 
-    const dispatch = useDispatch<TestDispatch>()
     useEffect(() => {
         if (!testId || !isTester) {
             return
         }
-        actionApi.getTestActions(testId).then(
-            response => setActions(response),
-            error => dispatch(alertAction("ACTION_FETCH", "Failed to fetch actions", error))
-        )
-    }, [testId, isTester, dispatch])
+        getTestActions(testId, alerting).then(setActions)
+    }, [testId, isTester])
 
     funcsRef.current = {
-        save: () => dispatch(updateActions(testId, actions)).catch(noop),
+        save: () => updateActions(testId, actions, alerting),
         reset: () => {
             // Perform a deep copy of the view object to prevent modifying store
             setActions(JSON.parse(JSON.stringify(actions)) as Action[])
@@ -120,12 +115,6 @@ export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: A
                                     dataListCells={[
                                         <DataListCell key="content">
                                             <ActionComponentForm
-                                                style={{
-                                                    gridGap: "2px",
-                                                    width: "100%",
-                                                    float: "left",
-                                                    marginBottom: "25px",
-                                                }}
                                                 action={action}
                                                 onUpdate={a => {
                                                     setActions(actions.map(a2 => (action === a2 ? a : a2)))

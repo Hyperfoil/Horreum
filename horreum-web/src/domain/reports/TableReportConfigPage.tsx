@@ -1,5 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
-import { useDispatch } from "react-redux"
+import {useState, useEffect, useMemo, useContext} from "react"
 import { useHistory, useParams } from "react-router"
 
 import {
@@ -39,7 +38,8 @@ import OptionalFunction from "../../components/OptionalFunction"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
 
 import { useTester } from "../../auth"
-import { alertAction } from "../../alerts"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type ReportConfigComponentProps = {
     component: ReportComponent
@@ -119,6 +119,7 @@ function ReportConfigComponent({ component, onChange, onDelete, readOnly }: Repo
 }
 
 export default function TableReportConfigPage() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const { configId: stringId } = useParams<Record<string, string>>()
     const id = parseInt(stringId)
     const history = useHistory()
@@ -145,7 +146,6 @@ export default function TableReportConfigPage() {
     const [saving, setSaving] = useState(false)
     const [previewLogOpen, setPreviewLogOpen] = useState(false)
 
-    const dispatch = useDispatch()
     useEffect(() => {
         if (!stringId || stringId === "__new") {
             document.title = "New report | Horreum"
@@ -165,11 +165,11 @@ export default function TableReportConfigPage() {
                 document.title = "Report " + config.title + " | Horreum"
             })
             .catch(error => {
-                dispatch(alertAction("FETCH_REPORT_CONFIG", "Failed to fetch report config.", error))
+                alerting.dispatchError(error, "FETCH_REPORT_CONFIG", "Failed to fetch report config.")
                 document.title = "Error | Horreum"
             })
             .finally(() => setLoading(false))
-    }, [id, stringId, dispatch])
+    }, [id, stringId])
     const addComponent = () =>
         setConfig({
             ...config,
@@ -198,7 +198,7 @@ export default function TableReportConfigPage() {
                         .updateTableReportConfig(reportId, config)
                         .then(
                             report => history.push("/reports/table/" + report.id),
-                            error => dispatch(alertAction("SAVE_CONFIG", "Failed to save report configuration.", error))
+                            error => alerting.dispatchError(error,"SAVE_CONFIG", "Failed to save report configuration.")
                         )
                         .finally(() => setSaving(false))
                 }}
@@ -240,7 +240,7 @@ export default function TableReportConfigPage() {
                     </Flex>
                 </CardHeader>
                 <CardBody>
-                    <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
+                    <Form isHorizontal={true}>
                         <FormGroup
                             label="Title"
                             isRequired={true}
@@ -587,12 +587,10 @@ export default function TableReportConfigPage() {
                                             .then(
                                                 report => setPreview(report),
                                                 error =>
-                                                    dispatch(
-                                                        alertAction(
-                                                            "PREVIEW_REPORT",
-                                                            "Failed to generate report preview.",
-                                                            error
-                                                        )
+                                                    alerting.dispatchError(
+                                                        error,
+                                                        "PREVIEW_REPORT",
+                                                        "Failed to generate report preview."
                                                     )
                                             )
                                             .finally(() => setSaving(false))

@@ -1,5 +1,4 @@
-import { ReactElement, useEffect, useMemo, useState } from "react"
-import { useDispatch } from "react-redux"
+import {ReactElement, useContext, useEffect, useMemo, useState} from "react"
 import { IRow, Table, TableHeader, TableBody } from "@patternfly/react-table"
 import {
     Button,
@@ -22,9 +21,10 @@ import {
 
 import TimeRangeSelect, { TimeRange } from "./TimeRangeSelect"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
-import { alertAction } from "../alerts"
 import "./LogModal.css"
 import EnumSelect from "./EnumSelect"
+import {AppContext} from "../context/appContext";
+import {AppContextType} from "../context/@types/appContextTypes";
 
 export type CommonLogModalProps = {
     title: string
@@ -69,6 +69,7 @@ type LogModalProps = {
 } & CommonLogModalProps
 
 export default function LogModal(props: LogModalProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [level, setLevel] = useState(1)
     const [count, setCount] = useState(0)
     const [page, setPage] = useState(0)
@@ -78,7 +79,6 @@ export default function LogModal(props: LogModalProps) {
     const [deleteRange, setDeleteRange] = useState<TimeRange>()
     const [deleteRequest, setDeleteRequest] = useState<TimeRange>()
     const [updateCounter, setUpdateCounter] = useState(0)
-    const dispatch = useDispatch()
     useEffect(() => {
         if (!props.isOpen) {
             return
@@ -86,11 +86,11 @@ export default function LogModal(props: LogModalProps) {
         props.fetchCount(level).then(
             response => setCount(typeof response === "number" ? response : parseInt(response)),
             error => {
-                dispatch(alertAction("LOG", "Cannot get logs.", error))
+                alerting.dispatchError(error,"LOG", "Cannot get logs.")
                 props.onClose()
             }
         )
-    }, [props.isOpen, props.fetchCount, dispatch, updateCounter, level])
+    }, [props.isOpen, props.fetchCount, updateCounter, level])
     useEffect(() => {
         if (!props.isOpen) {
             return
@@ -100,11 +100,11 @@ export default function LogModal(props: LogModalProps) {
             .fetchLogs(level, page, limit)
             .then(setRows)
             .catch(error => {
-                dispatch(alertAction("LOG", "Cannot get logs.", error))
+                alerting.dispatchError(error, "LOG", "Cannot get logs.")
                 props.onClose()
             })
             .finally(() => setLoading(false))
-    }, [page, limit, props.isOpen, props.fetchLogs, dispatch, updateCounter, level])
+    }, [page, limit, props.isOpen, props.fetchLogs, updateCounter, level])
     const timeRangeOptions: TimeRange[] = useMemo(
         () => [
             { toString: () => "delete all" },
@@ -171,7 +171,7 @@ export default function LogModal(props: LogModalProps) {
                                 return props.deleteLogs(deleteRequest.from, deleteRequest.to).then(
                                     () => setUpdateCounter(updateCounter + 1),
                                     error => {
-                                        dispatch(alertAction("LOGS DELETE", "Deleting logs failed", error))
+                                        alerting.dispatchError(error,"LOGS DELETE", "Deleting logs failed")
                                         props.onClose()
                                     }
                                 )

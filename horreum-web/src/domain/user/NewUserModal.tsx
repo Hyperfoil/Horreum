@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react"
-import { useDispatch } from "react-redux"
+import {useState, useEffect, useContext} from "react"
 import { Button, Checkbox, Form, FormGroup, List, ListItem, Modal, Spinner, TextInput } from "@patternfly/react-core"
 
 import {userApi, UserData} from "../../api"
-import { dispatchInfo, dispatchError } from "../../alerts"
-import { noop } from "../../utils"
 import { getRoles } from "./TeamMembers"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type NewUserModalProps = {
     team: string
@@ -15,6 +15,7 @@ type NewUserModalProps = {
 }
 
 export default function NewUserModal(props: NewUserModalProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [username, setUsername] = useState<string>()
     const [password, setPassword] = useState<string>()
     const [email, setEmail] = useState<string>()
@@ -26,7 +27,6 @@ export default function NewUserModal(props: NewUserModalProps) {
     const [uploader, setUploader] = useState(false)
     const [manager, setManager] = useState(false)
     const valid = username && password && email && /^.+@.+\..+$/.test(email)
-    const dispatch = useDispatch()
     useEffect(() => {
         setUsername(undefined)
         setPassword("")
@@ -53,8 +53,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                         userApi.createUser({ user, password, team: props.team, roles })
                             .then(() => {
                                 props.onCreate(user, roles)
-                                dispatchInfo(
-                                    dispatch,
+                                alerting.dispatchInfo(
                                     "USER_CREATED",
                                     "User created",
                                     "User was successfully created",
@@ -62,9 +61,8 @@ export default function NewUserModal(props: NewUserModalProps) {
                                 )
                             })
                             .catch(error =>
-                                dispatchError(dispatch, error, "USER_NOT_CREATED", "Failed to create new user.")
+                                alerting.dispatchError(error, "USER_NOT_CREATED", "Failed to create new user.")
                             )
-                            .catch(noop)
                             .finally(() => {
                                 setCreating(false)
                                 props.onClose()

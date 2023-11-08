@@ -1,28 +1,41 @@
-import { useEffect, useMemo, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useContext, useEffect, useMemo, useState} from "react"
+import { useSelector } from "react-redux"
 
 import { Button, Hint, HintBody, Switch, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 
-import { allActions, addAction, removeAction } from "./actions"
-import * as selectors from "./selectors"
+import { allActions, addAction, removeAction } from "../../api"
 import { isAdminSelector } from "../../auth"
-import { noop } from "../../utils"
-
-import { fetchSummary } from "../tests/actions"
 
 import Table from "../../components/Table"
 import AddActionModal from "./AddActionModal"
 import { Column } from "react-table"
-import { ActionsDispatch } from "./reducers"
-import { Action } from "../../api"
+import {Action} from "../../api"
 import ActionLogModal from "../tests/ActionLogModal"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 export default function ActionList() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [logOpen, setLogOpen] = useState(false)
-    const dispatch = useDispatch<ActionsDispatch>()
+    const [isOpen, setOpen] = useState(false)
+    const [actions, setActions] = useState<Action[]>([])
+    const isAdmin = useSelector(isAdminSelector)
+
     useEffect(() => {
-        dispatch(fetchSummary()).catch(noop)
-    }, [dispatch])
+        if (isAdmin) {
+            allActions(alerting).then(setActions)
+        }
+    }, [isAdmin])
+/*
+    const removeAction = (id: number, alerting: AlertContextType) => {
+        return (dispatch: Dispatch<DeleteAction >) =>
+            actionApi._delete(id).then(
+                _ => dispatch(removed(id)),
+                error => alerting.dispatchError(error, "REMOVE_ACTION", "Failed to remove action")
+            )
+    }
+*/
+
     const columns: Column<Action>[] = useMemo(
         () => [
             {
@@ -74,9 +87,7 @@ export default function ActionList() {
                         <div style={{ textAlign: "right" }}>
                             <Button
                                 variant="danger"
-                                onClick={() => {
-                                    dispatch(removeAction(value)).catch(noop)
-                                }}
+                                onClick={() => removeAction(value, alerting)}
                             >
                                 Delete
                             </Button>
@@ -84,17 +95,9 @@ export default function ActionList() {
                     )
                 },
             },
-        ],
-        [dispatch]
+        ], undefined
     )
-    const [isOpen, setOpen] = useState(false)
-    const list = useSelector(selectors.all)
-    const isAdmin = useSelector(isAdminSelector)
-    useEffect(() => {
-        if (isAdmin) {
-            dispatch(allActions()).catch(noop)
-        }
-    }, [dispatch, isAdmin])
+
     return (
         <>
             <Hint>
@@ -127,9 +130,9 @@ export default function ActionList() {
             <AddActionModal
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
-                onSubmit={h => dispatch(addAction(h)).catch(noop)}
+                onSubmit={action => addAction(action, alerting)}
             />
-            <Table columns={columns} data={list || []} />
+            <Table columns={columns} data={actions || []} />
         </>
     )
 }

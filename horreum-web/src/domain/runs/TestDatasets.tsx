@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import {useCallback, useContext, useEffect, useMemo, useState} from "react"
 import { useParams } from "react-router"
 import { useSelector } from "react-redux"
-import { useDispatch } from "react-redux"
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -25,13 +24,9 @@ import { ArrowRightIcon } from "@patternfly/react-icons"
 import { Link, NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
-import { toEpochMillis, noop, fingerprintToString } from "../../utils"
+import { toEpochMillis, fingerprintToString } from "../../utils"
 
-import { dispatchError } from "../../alerts"
 import { teamsSelector, teamToName, tokenSelector } from "../../auth"
-
-import { fetchTest } from "../tests/actions"
-import { get } from "../tests/selectors"
 
 import Table from "../../components/Table"
 import {
@@ -42,17 +37,25 @@ import {
     Column,
     UseSortByColumnOptions,
 } from "react-table"
-import {DatasetSummary, DatasetList, SortDirection, datasetApi, testApi, ExportedLabelValues} from "../../api"
+import {
+    DatasetSummary,
+    DatasetList,
+    SortDirection,
+    datasetApi,
+    testApi,
+    fetchTest,
+    Test,
+    View, ExportedLabelValues, fetchViews,
+} from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
-import { TestDispatch } from "../tests/reducers"
 import SchemaList from "./SchemaList"
 import { NoSchemaInDataset } from "./NoSchema"
 import ButtonLink from "../../components/ButtonLink"
 import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
 import ViewSelect from "../../components/ViewSelect"
-import {viewsSelector} from "./selectors";
-import * as actions from "../tests/actions";
 import AccessIconOnly from "../../components/AccessIconOnly"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type C = CellProps<DatasetSummary> &
     UseTableOptions<DatasetSummary> &
@@ -129,10 +132,11 @@ const staticColumns: DatasetColumn[] = [
 ]
 
 export default function TestDatasets() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const { testId: stringTestId } = useParams<any>()
     const testId = parseInt(stringTestId)
-
-    const test = useSelector(get(testId))
+    // const [tests, setTests] = useState<Test[] | undefined>(undefined)
+    const [test, setTest] = useState<Test | undefined>(undefined)
     console.log(test)
     const [filter, setFilter] = useState<SelectedLabels>()
     const [filterExpanded, setFilterExpanded] = useState(false)
@@ -143,17 +147,20 @@ export default function TestDatasets() {
     const [viewId, setViewId] = useState<number>()
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
 
-    const dispatch = useDispatch<TestDispatch>()
     const [loading, setLoading] = useState(false)
     const [datasets, setDatasets] = useState<DatasetList>()
     const [comparedDatasets, setComparedDatasets] = useState<DatasetSummary[]>()
-    const views = useSelector(viewsSelector(testId))
     const teams = useSelector(teamsSelector)
     const token = useSelector(tokenSelector)
+
+    const [views, setViews] = useState<View[]>([]);
+
     useEffect(() => {
-        dispatch(fetchTest(testId)).catch(noop)
-            .then( () => dispatch(actions.fetchViews(testId)) )
-    }, [dispatch, testId, teams, token])
+        fetchTest(testId, alerting)
+            .then(setTest)
+            .then(() => fetchViews(testId, alerting).then(setViews))
+    }, [testId, teams, token])
+
     useEffect(() => {
         setLoading(true)
         datasetApi.listByTest(
@@ -166,12 +173,10 @@ export default function TestDatasets() {
             viewId
         )
             .then(setDatasets, error =>
-                dispatchError(dispatch, error, "FETCH_DATASETS", "Failed to fetch datasets in test " + testId).catch(
-                    noop
-                )
+                alerting.dispatchError( error, "FETCH_DATASETS", "Failed to fetch datasets in test " + testId)
             )
             .finally(() => setLoading(false))
-    }, [dispatch, testId, filter, pagination, teams, viewId])
+    }, [ testId, filter, pagination, teams, viewId])
     useEffect(() => {
         document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
@@ -324,7 +329,7 @@ export default function TestDatasets() {
                 {comparedDatasets && (
                     <CardBody style={{ overflowX: "auto" }}>
                         <Title headingLevel="h3">Datasets for comparison</Title>
-                        <Table columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
+                        <Table<DatasetSummary> columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
                         <ButtonLink
                             to={
                                 `/dataset/comparison?testId=${testId}&` +
