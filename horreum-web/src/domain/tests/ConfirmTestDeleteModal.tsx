@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react"
-import { useDispatch } from "react-redux"
+import {useState, useEffect, useContext} from "react"
 import { runApi, RunCount } from "../../api"
-import { alertAction } from "../../alerts"
 import { Bullseye, Button, ButtonVariant, Modal, TextInput, Spinner } from "@patternfly/react-core"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type ConfirmTestDeleteModalProps = {
     isOpen: boolean
@@ -13,6 +13,7 @@ type ConfirmTestDeleteModalProps = {
 }
 
 function ConfirmTestDeleteModal(props: ConfirmTestDeleteModalProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [runsToDelete, setRunsToDelete] = useState("")
     const [runs, setRuns] = useState<RunCount>()
     const validationResult =
@@ -21,11 +22,10 @@ function ConfirmTestDeleteModal(props: ConfirmTestDeleteModalProps) {
             : runs?.active === 0 || runsToDelete === runs?.active.toString()
             ? "success"
             : "error"
-    const dispatch = useDispatch()
     useEffect(() => {
         if (props.testId && props.isOpen) {
             runApi.runCount(props.testId).then(setRuns, error => {
-                dispatch(alertAction("FETCH_RUN_COUNTS", "Failed to fetch run counts", error))
+                alerting.dispatchError(error,"FETCH_RUN_COUNTS", "Failed to fetch run counts")
                 setRuns({ active: -1, trashed: -1, total: -1 })
             })
         }

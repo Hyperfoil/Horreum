@@ -1,17 +1,16 @@
-import { useState, useEffect } from "react"
-import { useSelector, useDispatch } from "react-redux"
+import {useState, useEffect, useContext} from "react"
+import { useSelector } from "react-redux"
 
 import { Form, FormGroup, Switch, TextArea, TextInput } from "@patternfly/react-core"
-
-import { sendTest } from "./actions"
 
 import FolderSelect from "../../components/FolderSelect"
 import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
-import { TestDispatch } from "./reducers"
-import {Test, Access } from "../../api"
+import {Test, Access, sendTest} from "../../api"
 import { useTester, defaultTeamSelector } from "../../auth"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type GeneralProps = {
     test?: Test
@@ -21,6 +20,7 @@ type GeneralProps = {
 }
 
 export default function General({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const defaultRole = useSelector(defaultTeamSelector)
     const [name, setName] = useState("")
     const [folder, setFolder] = useState("")
@@ -43,7 +43,6 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
         updateState(test)
     }, [test])
 
-    const dispatch = useDispatch<TestDispatch>()
     funcsRef.current = {
         save: () => {
             const newTest: Test = {
@@ -60,7 +59,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 tokens: [],
                 transformers: [],
             }
-            return dispatch(sendTest(newTest)).then(response => onTestIdChange((response as Test).id))
+            return sendTest(newTest, alerting).then(response => onTestIdChange(response.id))
         },
         reset: () => updateState(test),
     }
@@ -68,7 +67,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     const isTester = useTester(test?.owner)
     return (
         <>
-            <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
+            <Form isHorizontal={true} >
                 <FormGroup
                     label="Name"
                     isRequired={true}

@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react"
+import {useContext, useEffect, useState} from "react"
 import { useParams } from "react-router"
-import { useSelector, useDispatch } from "react-redux"
+import { useSelector } from "react-redux"
 
-import * as actions from "./actions"
-import * as selectors from "./selectors"
-import { RunsDispatch } from "./reducers"
-import { formatDateTime, noop } from "../../utils"
+import { formatDateTime } from "../../utils"
 import { teamsSelector, useTester } from "../../auth"
 
 import { Bullseye, Button, Card, CardHeader, CardBody, PageSection, Spinner } from "@patternfly/react-core"
@@ -18,30 +15,53 @@ import DatasetData from "./DatasetData"
 import MetaData from "./MetaData"
 import RunData from "./RunData"
 import TransformationLogModal from "../tests/TransformationLogModal"
-import { Access } from "../../api"
+import {Access, fetchRunSummary, recalculateDatasets, RunExtended, updateAccess} from "../../api"
+import {AppContext} from "../../context/appContext";
+import { AppContextType} from "../../context/@types/appContextTypes";
 
 export default function Run() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const { id: stringId } = useParams<any>()
     const id = parseInt(stringId)
     document.title = `Run ${id} | Horreum`
 
-    const run = useSelector(selectors.get(id))
+    const [run, setRun] = useState<RunExtended | undefined>(undefined)
     const [loading, setLoading] = useState(false)
     const [recalculating, setRecalculating] = useState(false)
     const [transformationLogOpen, setTransformationLogOpen] = useState(false)
     const [updateCounter, setUpdateCounter] = useState(0)
 
-    const dispatch = useDispatch<RunsDispatch>()
     const teams = useSelector(teamsSelector)
-    useEffect(() => {
+    const isTester = useTester(run?.owner)
+
+    const retransformClick = () => {
+        if ( run !== undefined) {
+            setRecalculating(true)
+            recalculateDatasets(run.id, run.testid, alerting)
+                .then(recalcDataSets => setRun({...run,datasets: recalcDataSets}))
+                .finally(() => setRecalculating(false))
+        }
+    }
+
+    const getRunSummary = () => {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get("token")
         setLoading(true)
-        dispatch(actions.getSummary(id, token || undefined))
-            .catch(noop)
-            .finally(() => setLoading(false))
-    }, [dispatch, id, teams, updateCounter])
-    const isTester = useTester(run?.owner)
+        fetchRunSummary(id, token === null ? undefined : token, alerting).then(
+            response =>setRun({data: "",schemas: [],metadata: response.hasMetadata ? "" : undefined,...response})
+        ).finally(() => setLoading(false))
+    }
+
+    useEffect(() => {
+        getRunSummary()
+    }, [id, teams, updateCounter])
+
+    const accessUpdate = (owner : string, access : Access) => {
+        if( run !== undefined) {
+            updateAccess(run.id, owner, access, alerting).then(() => getRunSummary())
+        }
+    }
+
     return (
         <PageSection>
             {loading && (
@@ -76,9 +96,7 @@ export default function Run() {
                                                 owner={run.owner}
                                                 access={run.access as Access}
                                                 readOnly={!isTester}
-                                                onUpdate={(owner, access) =>
-                                                    dispatch(actions.updateAccess(run.id, run.testid, owner, access))
-                                                }
+                                                onUpdate={(owner, access) => accessUpdate(owner, access)}
                                             />
                                         </Td>
                                         <Td>{formatDateTime(run.start)}</Td>
@@ -89,12 +107,7 @@ export default function Run() {
                                                 <>
                                                     <Button
                                                         isDisabled={recalculating}
-                                                        onClick={() => {
-                                                            setRecalculating(true)
-                                                            dispatch(actions.recalculateDatasets(run.id, run.testid))
-                                                                .catch(noop)
-                                                                .finally(() => setRecalculating(false))
-                                                        }}
+                                                        onClick={retransformClick}
                                                     >
                                                         Re-transform datasets {recalculating && <Spinner size="md" />}
                                                     </Button>
@@ -128,7 +141,7 @@ export default function Run() {
                                         </FragmentTab>
                                     )),
                                     <FragmentTab title="Original run data" fragment="run" key="original">
-                                        <RunData run={run} onUpdate={() => setUpdateCounter(updateCounter + 1)} />
+                                        <RunData run={run} updateCounter={updateCounter} onUpdate={() => setUpdateCounter(updateCounter + 1)} />
                                     </FragmentTab>,
                                     <FragmentTab
                                         title="Metadata"

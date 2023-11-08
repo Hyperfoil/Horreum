@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
 import { Bullseye, Button, Modal, Pagination, Spinner, Title } from "@patternfly/react-core"
@@ -8,7 +7,8 @@ import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"
 import {datasetApi, DatasetSummary, Label, SortDirection} from "../../api"
-import { alertAction } from "../../alerts"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type TestLabelModalProps = {
     isOpen: boolean
@@ -18,6 +18,7 @@ type TestLabelModalProps = {
 }
 
 export default function TestLabelModal(props: TestLabelModalProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [datasets, setDatasets] = useState<DatasetSummary[]>()
     const [count, setCount] = useState(0)
     const [page, setPage] = useState(1)
@@ -27,7 +28,6 @@ export default function TestLabelModal(props: TestLabelModalProps) {
     const [output, setOutput] = useState<string>()
     const [hasResult, setHasResult] = useState(false)
     const pagination = useMemo(() => ({ page, perPage, sort: "start", direction: "Descending" }), [page, perPage])
-    const dispatch = useDispatch()
     useEffect(() => {
         if (!props.isOpen) {
             return
@@ -46,12 +46,12 @@ export default function TestLabelModal(props: TestLabelModalProps) {
                     setCount(summary.total)
                 },
                 error => {
-                    dispatch(alertAction("FETCH_DATASETS_BY_URI", "Failed to fetch datasets by Schema URI.", error))
+                    alerting.dispatchError(error,"FETCH_DATASETS_BY_URI", "Failed to fetch datasets by Schema URI.")
                     props.onClose()
                 }
             )
             .finally(() => setLoading(false))
-    }, [props.uri, pagination, dispatch, props.onClose])
+    }, [props.uri, pagination, props.onClose])
     function reset() {
         setDatasets(undefined)
         setCount(0)
@@ -106,12 +106,10 @@ export default function TestLabelModal(props: TestLabelModalProps) {
                                                             setOutput(preview.output)
                                                         },
                                                         error => {
-                                                            dispatch(
-                                                                alertAction(
-                                                                    "LABEL_PREVIEW",
-                                                                    "Failed to fetch label preview",
-                                                                    error
-                                                                )
+                                                            alerting.dispatchError(
+                                                                error,
+                                                                "LABEL_PREVIEW",
+                                                                "Failed to fetch label preview"
                                                             )
                                                             reset()
                                                             props.onClose()

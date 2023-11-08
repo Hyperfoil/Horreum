@@ -1,9 +1,6 @@
-import { useEffect, useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useEffect, useState} from "react"
 import { Button, Flex, FlexItem } from "@patternfly/react-core"
 
-import { dispatchError } from "../../alerts"
-import { noop } from "../../utils"
 import { toString } from "../../components/Editor"
 import Editor from "../../components/Editor/monaco/Editor"
 import MaybeLoading from "../../components/MaybeLoading"
@@ -15,6 +12,9 @@ import { NoSchemaInDataset } from "./NoSchema"
 import LabelValuesModal from "./LabelValuesModal"
 import ExperimentModal from "./ExperimentModal"
 import SchemaValidations from "./SchemaValidations"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type DatasetDataProps = {
     testId: number
@@ -23,7 +23,7 @@ type DatasetDataProps = {
 }
 
 export default function DatasetData(props: DatasetDataProps) {
-    const dispatch = useDispatch()
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [originalData, setOriginalData] = useState<any>()
     const [editorData, setEditorData] = useState<string>()
     const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
@@ -41,22 +41,20 @@ export default function DatasetData(props: DatasetDataProps) {
                     setValidationErrors(dataset.validationErrors || [])
                 },
                 error =>
-                    dispatchError(dispatch, error, "FETCH_DATASET", "Failed to fetch dataset " + props.datasetId).catch(
-                        noop
-                    )
+                    alerting.dispatchError( error, "FETCH_DATASET", "Failed to fetch dataset " + props.datasetId)
             )
 
     }, [props.datasetId])
     useEffect(() => {
         datasetApi.getSummary(props.datasetId).then(
             ds => setSchemas(ds.schemas),
-            e => dispatchError(dispatch, e, "FETCH_DATASET_SUMMARY", "Failed to fetch dataset schemas").catch(noop)
+            e => alerting.dispatchError( e, "FETCH_DATASET_SUMMARY", "Failed to fetch dataset schemas")
         )
     }, [props.datasetId])
     useEffect(() => {
         experimentApi.profiles(props.testId).then(
             profiles => setHasExperiments(profiles && profiles.length > 0),
-            error => dispatchError(dispatch, error, "FETCH_EXPERIMENT_PROFILES", "Cannot fetch experiment profiles")
+            error => alerting.dispatchError( error, "FETCH_EXPERIMENT_PROFILES", "Cannot fetch experiment profiles")
         )
     }, [props.testId])
 

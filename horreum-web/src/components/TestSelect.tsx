@@ -1,15 +1,12 @@
-import { CSSProperties, useEffect, useMemo, useState } from "react"
+import {CSSProperties, useContext, useEffect, useMemo, useState} from "react"
 
 import { Select, SelectGroup, SelectOption, SelectOptionObject, Split, SplitItem } from "@patternfly/react-core"
 
-import { useDispatch, useSelector, shallowEqual } from "react-redux"
-
-import { TestDispatch } from "../domain/tests/reducers"
-import { Test } from "../api"
-import { all } from "../domain/tests/selectors"
-import { fetchSummary } from "../domain/tests/actions"
-import { teamsSelector } from "../auth"
-import { noop } from "../utils"
+import {fetchTests, Test} from "../api"
+import {AppContext} from "../context/appContext";
+import {AppContextType} from "../context/@types/appContextTypes";
+import {useSelector} from "react-redux";
+import {teamsSelector} from "../auth";
 
 export interface SelectedTest extends SelectOptionObject {
     id: number
@@ -17,6 +14,7 @@ export interface SelectedTest extends SelectOptionObject {
 }
 
 type TestSelectProps = {
+    tests?: Test[]
     selection?: SelectedTest
     // always use "" for root folder here
     onSelect(test: SelectedTest | undefined, folder: string | undefined, isInitial: boolean): void
@@ -47,16 +45,17 @@ function groupByFolder(tests: Test[] | undefined | false) {
 }
 
 export default function TestSelect(props: TestSelectProps) {
-    // a new instance of test list is created in every invocation => we need shallowEqual
-    const tests = useSelector(all, shallowEqual)
-    const dispatch = useDispatch<TestDispatch>()
+    const { alerting } = useContext(AppContext) as AppContextType;
     const teams = useSelector(teamsSelector)
+    const [testList, setTestList] = useState<Test[]>()
+    useMemo(() => {
+        fetchTests(alerting, undefined, "*")
+            .then(setTestList)
+    }, [teams]   )
+    // a new instance of test list is created in every invocation => we need shallowEqual
     useEffect(() => {
-        dispatch(fetchSummary(undefined, "*")).catch(noop)
-    }, [dispatch, teams])
-    useEffect(() => {
-        if (props.initialTestName && tests) {
-            const initialTest = tests.find(t => t.name === props.initialTestName)
+        if (props.initialTestName && testList) {
+            const initialTest = testList.find(t => t.name === props.initialTestName)
             if (initialTest) {
                 props.onSelect(
                     { id: initialTest.id, owner: initialTest.owner, toString: () => initialTest.name },
@@ -65,21 +64,17 @@ export default function TestSelect(props: TestSelectProps) {
                 )
             }
         }
-    }, [props.initialTestName, tests, props.onSelect])
-    if (tests && tests.length < 16) {
-        return <FewTestsSelect tests={tests} {...props} />
+    }, [props.initialTestName, testList, props.onSelect])
+    if (testList && testList.length < 16) {
+        return <FewTestsSelect {...props} tests={testList} />
     } else {
-        return <ManyTestsSelect tests={tests} {...props} />
+        return <ManyTestsSelect {...props} tests={testList}  />
     }
 }
 
-type FewTestsSelectProps = {
-    tests: Test[] | undefined
-} & TestSelectProps
-
 const ROOT_FOLDER = "Horreum"
 
-function FewTestsSelect(props: FewTestsSelectProps) {
+function FewTestsSelect(props: TestSelectProps) {
     const [open, setOpen] = useState(false)
     const groupedTests = useMemo(() => groupByFolder(props.tests), [props.tests])
     return (
@@ -123,11 +118,7 @@ function FewTestsSelect(props: FewTestsSelectProps) {
     )
 }
 
-type ManyTestsSelectProps = {
-    tests: Test[] | undefined
-} & TestSelectProps
-
-function ManyTestsSelect(props: ManyTestsSelectProps) {
+function ManyTestsSelect(props: TestSelectProps) {
     const [foldersOpen, setFoldersOpen] = useState(false)
     const [testsOpen, setTestsOpen] = useState(false)
     const [selectedFolder, setSelectedFolder] = useState<string>()

@@ -22,9 +22,6 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 @Path("/api/subscriptions")
 @Tag(name = "subscriptions", description = "Manage subscriptions")
 public interface SubscriptionService {
-   @GET
-   @Path("/")
-   Map<Integer, Set<String>> all(@QueryParam("folder") String folder);
 
    @GET
    @Path("/{testId}")

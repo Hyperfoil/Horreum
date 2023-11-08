@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState, useRef } from "react"
-import { useDispatch, useSelector } from "react-redux"
-import { updateRunsAndDatasetsAction } from "./actions"
-import { get } from "./selectors"
-import { dispatchError } from "../../alerts"
+import {useCallback, useEffect, useState, useRef, useContext} from "react"
 import { Bullseye, Button, Modal, Progress, Spinner } from "@patternfly/react-core"
-import {RecalculationStatus, testApi} from "../../api"
+import {fetchTest, RecalculationStatus, testApi, TestStorage, updateRunsAndDatasetsAction} from "../../api"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type RecalculateDatasetsModalProps = {
     testId: number
@@ -13,11 +12,11 @@ type RecalculateDatasetsModalProps = {
 }
 
 export default function RecalculateDatasetsModal(props: RecalculateDatasetsModalProps) {
-    const test = useSelector(get(props.testId))
+    const { alerting } = useContext(AppContext) as AppContextType;
+    const [test, setTest] = useState<TestStorage | undefined>( undefined)
     const [progress, setProgress] = useState(-1)
     const [status, setStatus] = useState<RecalculationStatus>()
     const timerId = useRef<number>()
-    const dispatch = useDispatch()
     const totalRuns = status ? status.totalRuns : test?.runs
     const onClose = useCallback(() => {
         if (timerId.current) {
@@ -28,13 +27,18 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
         setStatus(undefined)
         props.onClose()
     }, [])
+
+    useEffect(() => {
+        fetchTest(props.testId, alerting).then(setTest)
+    }, [props.testId]);
+
     useEffect(() => {
         if (!props.isOpen) {
             return
         }
         if (test?.runs === undefined) {
             testApi.getRecalculationStatus(props.testId).then(status => {
-                dispatch(updateRunsAndDatasetsAction(props.testId, status.totalRuns, status.datasets))
+                updateRunsAndDatasetsAction(props.testId, status.totalRuns, status.datasets)
             })
         }
     }, [test, props.isOpen])
@@ -59,20 +63,18 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
                                                   .then(status => {
                                                       setStatus(status)
                                                       setProgress(status.finished)
-                                                      dispatch(
-                                                          updateRunsAndDatasetsAction(
-                                                              props.testId,
-                                                              status.totalRuns,
-                                                              status.datasets
-                                                          )
+                                                      updateRunsAndDatasetsAction(
+                                                          props.testId,
+                                                          status.totalRuns,
+                                                          status.datasets
                                                       )
                                                       if (status.finished === status.totalRuns) {
                                                           onClose()
                                                       }
+
                                                   })
                                                   .catch(error => {
-                                                      dispatchError(
-                                                          dispatch,
+                                                      alerting.dispatchError(
                                                           error,
                                                           "RECALC_DATASETS",
                                                           "Failed to get recalculation status"
@@ -82,8 +84,7 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
                                           }, 1000)
                                       })
                                       .catch(error => {
-                                          dispatchError(
-                                              dispatch,
+                                          alerting.dispatchError(
                                               error,
                                               "RECALC_DATASETS",
                                               "Failed to start recalculation"

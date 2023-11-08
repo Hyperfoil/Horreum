@@ -1,7 +1,6 @@
-import { useState, useMemo, useEffect } from "react"
+import {useState, useMemo, useEffect, useContext} from "react"
 import { useParams } from "react-router"
 import { useSelector } from "react-redux"
-import { useDispatch } from "react-redux"
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -23,13 +22,9 @@ import { Link, NavLink } from "react-router-dom"
 import { Duration } from "luxon"
 import { toEpochMillis, noop } from "../../utils"
 
-import { byTest } from "./actions"
-import * as selectors from "./selectors"
 import { teamsSelector, teamToName } from "../../auth"
-import { alertAction } from "../../alerts"
 
-import { fetchTest } from "../tests/actions"
-import { get } from "../tests/selectors"
+import { fetchTest } from "../../api"
 
 import Table from "../../components/Table"
 import {
@@ -40,12 +35,13 @@ import {
     Column,
     UseSortByColumnOptions,
 } from "react-table"
-import { RunsDispatch } from "./reducers"
-import { RunSummary } from "../../api"
+import {runApi, RunSummary, SortDirection, Test} from "../../api"
 import { NoSchemaInRun } from "./NoSchema"
 import { Description, ExecutionTime, Menu } from "./components"
 import SchemaList from "./SchemaList"
 import AccessIconOnly from "../../components/AccessIconOnly"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type C = CellProps<RunSummary> &
     UseTableOptions<RunSummary> &
@@ -53,106 +49,13 @@ type C = CellProps<RunSummary> &
 
 type RunColumn = Column<RunSummary> & UseSortByColumnOptions<RunSummary>
 
-const tableColumns: RunColumn[] = [
-    {
-        Header: "",
-        id: "selection",
-        disableSortBy: true,
-        Cell: ({ row }: C) => {
-            const props = row.getToggleRowSelectedProps()
-            delete props.indeterminate
-            // Note: to limit selection to 2 entries use
-            //   disabled={!row.isSelected && selectedFlatRows.length >= 2}
-            // with { row, selectedFlatRows }: C as this function's argument
-            return <input type="checkbox" {...props} />
-        },
-    },
-    {
-        Header: "Id",
-        accessor: "id",
-        Cell: (arg: C) => {
-            const {
-                cell: { value },
-            } = arg
-            return (
-                <>
-                    <NavLink to={`/run/${value}#run`}>
-                        <ArrowRightIcon />
-                        {"\u00A0"}
-                        {value}
-                    </NavLink>
-                    {arg.row.original.trashed && <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} />}
-                </>
-            )
-        },
-    },
-    {
-        Header: "Schema(s)",
-        accessor: "schemas",
-        disableSortBy: true,
-        Cell: (arg: C) => {
-            const {
-                cell: { value },
-            } = arg
-            // LEFT JOIN results in schema.id == 0
-            if (!value || Object.keys(value).length == 0) {
-                return <NoSchemaInRun />
-            } else {
-                return <SchemaList schemas={value} validationErrors={arg.row.original.validationErrors || []} />
-            }
-        },
-    },
-    {
-        Header: "Description",
-        accessor: "description",
-        Cell: (arg: C) => Description(arg.cell.value),
-    },
-    {
-        Header: "Executed",
-        accessor: "start",
-        Cell: (arg: C) => ExecutionTime(arg.row.original),
-    },
-    {
-        Header: "Duration",
-        id: "(stop - start)",
-        accessor: (run: RunSummary) =>
-            Duration.fromMillis(toEpochMillis(run.stop) - toEpochMillis(run.start)).toFormat("hh:mm:ss.SSS"),
-    },
-    {
-        Header: "Datasets",
-        accessor: "datasets",
-        Cell: (arg: C) => arg.cell.value.length,
-    },
-    {
-        Header: "Owner",
-        id: "owner",
-        accessor: (row: RunSummary) => ({
-            owner: row.owner,
-            access: row.access,
-        }),
-        Cell: (arg: C) => (
-            <>
-                {teamToName(arg.cell.value.owner)}
-                <span style={{ marginLeft: '8px' }}>
-                <AccessIconOnly access={arg.cell.value.access} />
-                </span>
-            </>
-        ),
-    },
-    {
-        Header: "Actions",
-        id: "actions",
-        accessor: "id",
-        disableSortBy: true,
-        Cell: (arg: CellProps<RunSummary, number>) => Menu(arg.row.original),
-    },
-]
 
-export default function TestRuns() {
+export default function RunList() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const { testId: stringTestId } = useParams<any>()
     const testId = parseInt(stringTestId)
 
-    const test = useSelector(get(testId))
+    const [test, setTest] = useState<Test | undefined>(undefined)
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
@@ -160,21 +63,44 @@ export default function TestRuns() {
     const [direction, setDirection] = useState("Descending")
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
 
-    const dispatch = useDispatch<RunsDispatch>()
     const [showTrashed, setShowTrashed] = useState(false)
-    const runs = useSelector(selectors.testRuns(testId, pagination, showTrashed))
-    const runCount = useSelector(selectors.count)
+    const [runs, setRuns] = useState<RunSummary[] >([])
+    const [runCount, setRunCount] =useState(0)
     const teams = useSelector(teamsSelector)
+    const [isLoading, setIsLoading] = useState(false)
+
+    const loadTestRuns = () => {
+        setIsLoading(true)
+        runApi.listTestRuns(
+            testId,
+            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
+            pagination.perPage,
+            pagination.page,
+            pagination.sort,
+            showTrashed
+        ).then(
+            runsSummary => {
+                setRuns(runsSummary.runs)
+                setRunCount(runsSummary.total)
+            },
+            error => alerting.dispatchError(error,"FETCH_RUNS", "Failed to fetch runs for test " + testId)
+        ).finally(() => setIsLoading(false))
+    }
+
     useEffect(() => {
-        dispatch(fetchTest(testId)).catch(noop)
-    }, [dispatch, testId, teams])
+        setIsLoading(true)
+        fetchTest(testId, alerting)
+            .then(test => setTest(test))
+            .catch(noop)
+        setIsLoading(false)
+    }, [testId, teams])
     useEffect(() => {
-        dispatch(byTest(testId, pagination, showTrashed)).catch(noop)
-    }, [dispatch, showTrashed, page, perPage, sort, direction, pagination, testId])
+        loadTestRuns()
+    }, [test, showTrashed, page, perPage, sort, direction, pagination, testId])
     useEffect(() => {
         document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
-    const isLoading = useSelector(selectors.isLoading)
+
 
     const compareUrl = test && new Function("return " + test.compareUrl)()
     const [actualCompareUrl, compareError] = useMemo(() => {
@@ -193,9 +119,104 @@ export default function TestRuns() {
     const hasError = !!compareError
     useEffect(() => {
         if (compareError) {
-            dispatch(alertAction("COMPARE_FAILURE", "Compare function failed", compareError))
+            alerting.dispatchError(compareError,"COMPARE_FAILURE", "Compare function failed")
         }
-    }, [hasError, compareError, dispatch])
+    }, [hasError, compareError])
+
+    const tableColumns: RunColumn[] = [
+        {
+            Header: "",
+            id: "selection",
+            disableSortBy: true,
+            Cell: ({ row }: C) => {
+                const props = row.getToggleRowSelectedProps()
+                delete props.indeterminate
+                // Note: to limit selection to 2 entries use
+                //   disabled={!row.isSelected && selectedFlatRows.length >= 2}
+                // with { row, selectedFlatRows }: C as this function's argument
+                return <input type="checkbox" {...props} />
+            },
+        },
+        {
+            Header: "Id",
+            accessor: "id",
+            Cell: (arg: C) => {
+                const {
+                    cell: { value },
+                } = arg
+                return (
+                    <>
+                        <NavLink to={`/run/${value}#run`}>
+                            <ArrowRightIcon />
+                            {"\u00A0"}
+                            {value}
+                        </NavLink>
+                        {arg.row.original.trashed && <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} />}
+                    </>
+                )
+            },
+        },
+        {
+            Header: "Schema(s)",
+            accessor: "schemas",
+            disableSortBy: true,
+            Cell: (arg: C) => {
+                const {
+                    cell: { value },
+                } = arg
+                // LEFT JOIN results in schema.id == 0
+                if (!value || Object.keys(value).length == 0) {
+                    return <NoSchemaInRun />
+                } else {
+                    return <SchemaList schemas={value} validationErrors={arg.row.original.validationErrors || []} />
+                }
+            },
+        },
+        {
+            Header: "Description",
+            accessor: "description",
+            Cell: (arg: C) => Description(arg.cell.value),
+        },
+        {
+            Header: "Executed",
+            accessor: "start",
+            Cell: (arg: C) => ExecutionTime(arg.row.original),
+        },
+        {
+            Header: "Duration",
+            id: "(stop - start)",
+            accessor: (run: RunSummary) =>
+                Duration.fromMillis(toEpochMillis(run.stop) - toEpochMillis(run.start)).toFormat("hh:mm:ss.SSS"),
+        },
+        {
+            Header: "Datasets",
+            accessor: "datasets",
+            Cell: (arg: C) => arg.cell.value.length,
+        },
+        {
+            Header: "Owner",
+            id: "owner",
+            accessor: (row: RunSummary) => ({
+                owner: row.owner,
+                access: row.access,
+            }),
+            Cell: (arg: C) => (
+                <>
+                    {teamToName(arg.cell.value.owner)}
+                    <span style={{ marginLeft: '8px' }}>
+                <AccessIconOnly access={arg.cell.value.access} />
+                </span>
+                </>
+            ),
+        },
+        {
+            Header: "Actions",
+            id: "actions",
+            accessor: "id",
+            disableSortBy: true,
+            Cell: (arg: CellProps<RunSummary, number>) => Menu(arg.row.original, loadTestRuns),
+        },
+    ]
 
     return (
         <PageSection>

@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useEffect, useState} from "react"
 import {
     Button,
     DataList,
@@ -18,11 +17,11 @@ import { useTester } from "../../auth"
 
 import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
-import { TestDispatch } from "./reducers"
-import { View, ViewComponent } from "../../api"
+import {deleteView, updateView, View, ViewComponent} from "../../api"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
-import { deleteView, updateView } from "./actions"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 function swap(array: any[], i1: number, i2: number) {
     const temp = array[i1]
@@ -49,7 +48,6 @@ const ViewComponentForm = ({ c, onChange, isTester }: ViewComponentFormProps) =>
         <Form
             id={`viewcomponent-${c.id}`}
             isHorizontal={true}
-            style={{ gridGap: "2px", width: "100%", float: "left", marginBottom: "25px" }}
         >
             <FormGroup label="Header" fieldId="header">
                 <TextInput
@@ -108,6 +106,7 @@ function deepCopy(views: View[]): ViewExtended[] {
 }
 
 export default function Views({ testId, testOwner, funcsRef, onModified, ...props }: ViewsProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const isTester = useTester(testOwner)
     const [views, setViews] = useState<ViewExtended[]>([])
     const [deleted, setDeleted] = useState<number[]>([])
@@ -122,14 +121,13 @@ export default function Views({ testId, testOwner, funcsRef, onModified, ...prop
         }
     }, [props.views])
 
-    const dispatch = useDispatch<TestDispatch>()
     funcsRef.current = {
         save: () =>
             Promise.all([
                 ...views
                     .filter(v => v.modified)
-                    .map(view => dispatch(updateView(testId, view)).then(id => (view.id = id))),
-                ...deleted.map(id => dispatch(deleteView(testId, id))),
+                    .map(view => updateView(alerting, testId, view).then(id => (view.id = id))),
+                ...deleted.map(id => deleteView(alerting, testId, id)),
             ]).then(() => {
                 setDeleted([])
                 setViews(

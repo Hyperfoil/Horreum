@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useEffect, useState} from "react"
 
 import {
     Bullseye,
@@ -24,10 +23,11 @@ import {
     LabelInView,
     SchemaDescriptor, schemaApi,
 } from "../../api"
-import { SchemaDispatch } from "./reducers"
-import { dispatchError } from "../../alerts"
 import ButtonLink from "../../components/ButtonLink"
 import NameUri from "../../components/NameUri"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 function usageToCells(u: LabelLocation) {
     switch (u.type) {
@@ -96,7 +96,7 @@ type FindUsagesModalProps = {
 }
 
 export default function FindUsagesModal(props: FindUsagesModalProps) {
-    const dispatch = useDispatch<SchemaDispatch>()
+    const { alerting } = useContext(AppContext) as AppContextType;
     const label = props.label
     const [schemas, setSchemas] = useState<SchemaDescriptor[]>()
     const [usages, setUsages] = useState<LabelLocation[]>()
@@ -105,7 +105,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
             schemaApi.findUsages(label)
                 .then(setUsages)
                 .catch(e => {
-                    dispatchError(dispatch, e, "FETCH USAGES", "Cannot retrieve label usages.")
+                    alerting.dispatchError( e, "FETCH USAGES", "Cannot retrieve label usages.")
                     props.onClose()
                 })
         }
@@ -121,7 +121,7 @@ export default function FindUsagesModal(props: FindUsagesModalProps) {
                 }
             },
             e => {
-                dispatchError(dispatch, e, "FETCH LABELS", "Cannot retrieve schemas for label " + label)
+                alerting.dispatchError( e, "FETCH LABELS", "Cannot retrieve schemas for label " + label)
                 props.onClose()
             }
         )

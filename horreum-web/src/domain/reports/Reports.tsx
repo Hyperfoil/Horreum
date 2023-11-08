@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useContext, useEffect, useMemo, useState} from "react"
+import { useSelector } from "react-redux"
 
 import { NavLink } from "react-router-dom"
 import { CellProps, Column } from "react-table"
@@ -20,7 +20,6 @@ import ImportButton from "../../components/ImportButton"
 import Table from "../../components/Table"
 import TeamSelect, { Team, SHOW_ALL } from "../../components/TeamSelect"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
-import { alertAction } from "../../alerts"
 import { formatDateTime } from "../../utils"
 
 import {AllTableReports, reportApi, SortDirection, TableReportSummary} from "../../api"
@@ -28,6 +27,8 @@ import ButtonLink from "../../components/ButtonLink"
 import { useTester, teamsSelector } from "../../auth"
 
 import ListReportsModal from "./ListReportsModal"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type C = CellProps<TableReportSummary>
 
@@ -39,7 +40,7 @@ type ReportGroup = {
 export default function Reports() {
     document.title = "Reports | Horreum"
 
-    const dispatch = useDispatch()
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [sort, setSort] = useState("title")
@@ -68,9 +69,9 @@ export default function Reports() {
             (test && test.id) || undefined
         )
             .then(setTableReports)
-            .catch(error => dispatch(alertAction("FETCH_REPORTS", "Failed to fetch reports", error)))
+            .catch(error => alerting.dispatchError(error, "FETCH_REPORTS", "Failed to fetch reports"))
             .finally(() => setLoading(false))
-    }, [pagination, roles, test, folder, dispatch, teams, tableReportsReloadCounter])
+    }, [pagination, roles, test, folder,  teams, tableReportsReloadCounter])
 
     const columns: Column<TableReportSummary>[] = useMemo(
         () => [

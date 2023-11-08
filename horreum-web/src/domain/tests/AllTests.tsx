@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react"
+import {useState, useMemo, useEffect, useContext} from "react"
 
-import { useDispatch, useSelector } from "react-redux"
+import { useSelector } from "react-redux"
 import { useHistory } from "react-router"
 
 import {
@@ -20,19 +20,7 @@ import {
 import { NavLink } from "react-router-dom"
 import { EyeIcon, EyeSlashIcon, FolderOpenIcon } from "@patternfly/react-icons"
 
-import {
-    fetchSummary,
-    updateAccess,
-    deleteTest,
-    allSubscriptions,
-    addUserOrTeam,
-    removeUserOrTeam,
-    updateFolder,
-} from "./actions"
-import * as selectors from "./selectors"
-
 import Table from "../../components/Table"
-import { alertAction } from "../../alerts"
 import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
 import TeamSelect, { Team, ONLY_MY_OWN } from "../../components/TeamSelect"
@@ -44,10 +32,24 @@ import TestImportButton from "./TestImportButton"
 
 import { isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
 import { CellProps, Column, UseSortByColumnOptions } from "react-table"
-import { TestStorage, TestDispatch } from "./reducers"
 import { noop } from "../../utils"
-import { SortDirection, testApi, TestQueryResult, Access } from "../../api"
+import {
+    SortDirection,
+    testApi,
+    TestQueryResult,
+    Access,
+    mapTestSummaryToTest,
+    updateFolder,
+    deleteTest,
+    updateAccess,
+    addUserOrTeam,
+    fetchTestsSummariesByFolder,
+    removeUserOrTeam,
+    TestStorage
+} from "../../api"
 import AccessIconOnly from "../../components/AccessIconOnly"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type WatchDropdownProps = {
     id: number
@@ -55,10 +57,10 @@ type WatchDropdownProps = {
 }
 
 const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [open, setOpen] = useState(false)
     const teams = useSelector(teamsSelector)
     const profile = useSelector(userProfileSelector)
-    const dispatch = useDispatch<TestDispatch>()
     if (watching === undefined) {
         return <Spinner size="sm" />
     }
@@ -67,26 +69,26 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
     const isOptOut = watching.some(u => u.startsWith("!"))
     if (watching.some(u => u === profile?.username)) {
         personalItems.push(
-            <DropdownItem key="__self" onClick={() => dispatch(removeUserOrTeam(id, self)).catch(noop)}>
+            <DropdownItem key="__self" onClick={() => removeUserOrTeam(id, self, alerting).catch(noop)}>
                 Stop watching personally
             </DropdownItem>
         )
     } else {
         personalItems.push(
-            <DropdownItem key="__self" onClick={() => dispatch(addUserOrTeam(id, self)).catch(noop)}>
+            <DropdownItem key="__self" onClick={() => addUserOrTeam(id, self, alerting).catch(noop)}>
                 Watch personally
             </DropdownItem>
         )
     }
     if (isOptOut) {
         personalItems.push(
-            <DropdownItem key="__optout" onClick={() => dispatch(removeUserOrTeam(id, "!" + self)).catch(noop)}>
+            <DropdownItem key="__optout" onClick={() => removeUserOrTeam(id, "!" + self, alerting).catch(noop)}>
                 Resume watching per team settings
             </DropdownItem>
         )
     } else if (watching.some(u => u.endsWith("-team"))) {
         personalItems.push(
-            <DropdownItem key="__optout" onClick={() => dispatch(addUserOrTeam(id, "!" + self)).catch(noop)}>
+            <DropdownItem key="__optout" onClick={() => addUserOrTeam(id, "!" + self, alerting).catch(noop)}>
                 Opt-out of all notifications
             </DropdownItem>
         )
@@ -112,11 +114,11 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
             {personalItems}
             {teams.map(team =>
                 watching.some(u => u === team) ? (
-                    <DropdownItem key={team} onClick={() => dispatch(removeUserOrTeam(id, team)).catch(noop)}>
+                    <DropdownItem key={team} onClick={() => removeUserOrTeam(id, team, alerting).catch(noop)}>
                         Stop watching as team {teamToName(team)}
                     </DropdownItem>
                 ) : (
-                    <DropdownItem key={team} onClick={() => dispatch(addUserOrTeam(id, team)).catch(noop)}>
+                    <DropdownItem key={team} onClick={() => addUserOrTeam(id, team, alerting).catch(noop)}>
                         Watch as team {teamToName(team)}
                     </DropdownItem>
                 )
@@ -161,11 +163,12 @@ function useRecalculate(): MenuItem<undefined> {
 
 type DeleteConfig = {
     name: string
+    afterDelete(): void
 }
 
 function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [confirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false)
-    const dispatch = useDispatch<TestDispatch>()
     return [
         (props: ActionMenuProps, isOwner: boolean, close: () => void, config: DeleteConfig) => {
             return {
@@ -187,7 +190,7 @@ function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
                         isOpen={confirmDeleteModalOpen}
                         onClose={() => setConfirmDeleteModalOpen(false)}
                         onDelete={() => {
-                            dispatch(deleteTest(props.id)).catch(noop)
+                            deleteTest(props.id, alerting).then(() => {config.afterDelete()})
                         }}
                         testId={props.id}
                         testName={config.name}
@@ -271,13 +274,12 @@ export function useMoveToFolder(config: MoveToFolderConfig): MenuItem<MoveToFold
 }
 
 export default function AllTests() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const history = useHistory()
     const params = new URLSearchParams(history.location.search)
     const [folder, setFolder] = useState(params.get("folder"))
-    const [reloadCounter, setReloadCounter] = useState(0)
 
     document.title = "Tests | Horreum"
-    const dispatch = useDispatch<TestDispatch>()
     const watchingColumn: Col = {
         Header: "Watching",
         accessor: "watching",
@@ -302,9 +304,9 @@ export default function AllTests() {
 
         )
             .then(setTets)
-            .catch(error => dispatch(alertAction("FETCH_Tests", "Failed to fetch Tests", error)))
+            .catch(error => alerting.dispatchError(error, "FETCH_Tests", "Failed to fetch Tests"))
             .finally(() => setLoading(false))
-    }, [pagination, dispatch])
+    }, [pagination])
 
     let columns: Col[] = useMemo(
         () => [
@@ -376,16 +378,17 @@ export default function AllTests() {
                 Cell: (arg: C) => {
                     const changeAccess = useChangeAccess({
                         onAccessUpdate: (id: number, owner: string, access: Access) => {
-                            dispatch(updateAccess(id, owner, access)).catch(noop)
+                            updateAccess(id, owner, access, alerting).then(() => loadTests())
                         },
                     })
                     const move = useMoveToFolder({
                         name: arg.row.original.name,
                         folder: folder || "",
-                        onMove: (id, newFolder) => dispatch(updateFolder(id, folder || "", newFolder)),
+                        onMove: (id, newFolder) => updateFolder(id, folder || "", newFolder, alerting).then(loadTests),
                     })
                     const del = useDelete({
                         name: arg.row.original.name,
+                        afterDelete: () => loadTests(),
                     })
                     const recalc = useRecalculate()
                     return (
@@ -400,29 +403,28 @@ export default function AllTests() {
                 },
             },
         ],
-        [dispatch, folder]
+        [ folder]
     )
 
-    // This selector causes re-render on any state update as the returned list is always new.
-    // We would need deepEquals for a proper comparison - the selector combines tests and watches
-    // and modifies the Test objects - that wouldn't trigger shallowEqual, though
-    const allTests = useSelector(selectors.all)
+    const [allTests, setTests] = useState<TestStorage[]>([])
     const teams = useSelector(teamsSelector)
     const isAuthenticated = useSelector(isAuthenticatedSelector)
     const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
+
+    const loadTests = () => {
+        fetchTestsSummariesByFolder(alerting, rolesFilter.key, folder || undefined)
+            .then(summary => setTests(summary.tests?.map(t => mapTestSummaryToTest(t)) || []))
+    }
+
     useEffect(() => {
-        dispatch(fetchSummary(rolesFilter.key, folder || undefined)).catch(noop)
-    }, [dispatch, teams, rolesFilter, folder, reloadCounter])
-    useEffect(() => {
-        if (isAuthenticated) {
-            dispatch(allSubscriptions(folder || undefined)).catch(noop)
-        }
-    }, [dispatch, isAuthenticated, rolesFilter, folder, reloadCounter])
+        loadTests()
+    }, [isAuthenticated, teams, rolesFilter, folder])
     if (isAuthenticated) {
         columns = [watchingColumn, ...columns]
     }
 
     const isTester = useTester()
+
     return (
         <PageSection>
             <Card>
@@ -432,7 +434,7 @@ export default function AllTests() {
                             <ButtonLink to="/test/_new">New Test</ButtonLink>
                             <TestImportButton
                                 tests={allTests || []}
-                                onImported={() => setReloadCounter(reloadCounter + 1)}
+                                onImported={() => loadTests()}
                             />
                         </>
                     )}
@@ -456,7 +458,7 @@ export default function AllTests() {
                             history.replace(f ? `/test?folder=${f}` : "/test")
                         }}
                     />
-                    <Table columns={columns}
+                    <Table<TestStorage> columns={columns}
                         data={allTests || []}
                         isLoading={loading}
                         sortBy={[{ id: "name", desc: false }]}
