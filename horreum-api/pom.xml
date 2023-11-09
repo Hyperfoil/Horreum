@@ -15,6 +15,7 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <openapi-version>0.10</openapi-version>
     </properties>
     <dependencies>
         <dependency>
@@ -59,7 +60,7 @@
                         </goals>
                         <configuration>
                             <configProperties>${basedir}/src/main/resources/application.properties</configProperties>
-                            <infoVersion>${version}</infoVersion>
+                            <infoVersion>${openapi-version}</infoVersion>
                             <scanPackages>
                                 io.hyperfoil.tools.horreum.api,
                                 io.hyperfoil.tools.horreum.api.alerting,
@@ -88,7 +89,7 @@
                         </goals>
                         <configuration>
                             <configProperties>${basedir}/src/main/resources/application.properties</configProperties>
-                            <infoVersion>${version}</infoVersion>
+                            <infoVersion>${openapi-version}</infoVersion>
                             <scanPackages>
                                 io.hyperfoil.tools.horreum.api,
                                 io.hyperfoil.tools.horreum.api.alerting,
