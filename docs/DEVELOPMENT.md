@@ -47,6 +47,75 @@ Horreum is running on [localhost:8080](http://localhost:8080)
 | User | `user` | `secret` |
 
 
+## Messaging
+
+By default [Horreum](https://github.com/Hyperfoil/Horreum/) uses [SmallRye Messaging](https://smallrye.io/smallrye-reactive-messaging/smallrye-reactive-messaging/3.3/index.html) and
+for example [Apache Artemis](https://activemq.apache.org/components/artemis/) has the messaging platform.
+
+In the case of [Apache Artemis](https://activemq.apache.org/components/artemis/) the key is to configure the setup to work against the 
+[application.properties](https://github.com/Hyperfoil/Horreum/blob/master/horreum-backend/src/main/resources/application.properties) file.
+
+So, for example:
+
+Create a user
+```
+artemis user add
+```
+
+to add the `horreum` user - default password is `secret`.
+
+So in `artemis-roles.properties`
+```
+horreum = horreum
+```
+
+In `broker.xml`
+```
+      <security-settings>
+         <security-setting match="#">
+            <permission type="createNonDurableQueue" roles="amq, horreum"/>
+            <permission type="deleteNonDurableQueue" roles="amq, horreum"/>
+            <permission type="createDurableQueue" roles="amq, horreum"/>
+            <permission type="deleteDurableQueue" roles="amq, horreum"/>
+            <permission type="createAddress" roles="amq, horreum"/>
+            <permission type="deleteAddress" roles="amq, horreum"/>
+            <permission type="consume" roles="amq, horreum"/>
+            <permission type="browse" roles="amq, horreum"/>
+            <permission type="send" roles="amq, horreum"/>
+            <permission type="manage" roles="amq, horreum"/>
+         </security-setting>
+      </security-settings>
+```
+
+and
+
+```
+      <addresses>
+         <address name="DLQ">
+            <anycast>
+               <queue name="DLQ" />
+            </anycast>
+         </address>
+         <address name="ExpiryQueue">
+            <anycast>
+               <queue name="ExpiryQueue" />
+            </anycast>
+         </address>
+         <address name="dataset-event">
+            <multicast>
+               <queue name="horreum-broker.dataset-event"/>
+            </multicast>
+         </address>
+         <address name="run-recalc">
+            <multicast>
+               <queue name="horreum-broker.run-recalc"/>
+            </multicast>
+         </address>
+      </addresses>
+```
+
+Look at the [Apache Artemis documentation](https://activemq.apache.org/components/artemis/documentation/) for more information.
+
 ## Access Keycloak
 
 You can access the Keycloak instance by using the URL provided by the
