@@ -1,5 +1,4 @@
 import { DateTime } from "luxon"
-import {Fingerprints, FingerprintValue} from "./generated"
 
 export function noop() {
     /* noop */

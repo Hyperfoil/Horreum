@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { ChangesTabs } from "./ChangeTable"
 import { alertAction } from "../../alerts"
 import TestSelect, { SelectedTest } from "../../components/TestSelect"
-import LabelsSelect, { convertLabels, SelectedLabels } from "../../components/LabelsSelect"
+import LabelsSelect, { convertLabels } from "../../components/LabelsSelect"
 import PanelChart from "./PanelChart"
 import { fingerprintToString, formatDate } from "../../utils"
 import { teamsSelector } from "../../auth"
@@ -15,7 +15,7 @@ import {
     alertingApi,
     testApi,
     changesApi,
-    Fingerprints, FingerprintValue,
+    FingerprintValue,
 } from "../../api"
 
 import {
