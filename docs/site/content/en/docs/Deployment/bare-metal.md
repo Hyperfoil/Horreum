@@ -24,6 +24,8 @@ export PGDATABASE=horreum
 psql -c "CREATE ROLE \"appuser\" noinherit login password 'SecurEpaSSw0!2D';" postgres
 ```
 
+[PostgreSQL](https://www.postgresql.org/) needs to have [pgcrypto](https://www.postgresql.org/docs/12/pgcrypto.html) installed in `shared_preload_libraries`
+
 Now you need to setup a Keycloak user and database:
 
 ```bash
