@@ -14,7 +14,7 @@ import {
 } from "recharts"
 import { Bullseye, Button, EmptyState, Spinner, Title } from "@patternfly/react-core"
 import { DateTime } from "luxon"
-import {alertingApi, AnnotationDefinition, Fingerprints, FingerprintValue, TimeseriesTarget} from "../../api"
+import {alertingApi, AnnotationDefinition, FingerprintValue, TimeseriesTarget} from "../../api"
 import { fingerprintToString } from "../../utils"
 import { fetchDatapoints, fetchAllAnnotations } from "./Changes"
 import { alertAction, dispatchInfo } from "../../alerts"

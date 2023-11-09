@@ -17,7 +17,7 @@ import {
 } from "@patternfly/react-core"
 import { CheckIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
-import {alertingApi, Change, Fingerprints, FingerprintValue, Variable} from "../../api"
+import {alertingApi, Change, FingerprintValue, Variable} from "../../api"
 import { alertAction } from "../../alerts"
 import { fingerprintToString, formatDateTime } from "../../utils"
 import { Column, UseSortByColumnOptions } from "react-table"
