@@ -3,20 +3,9 @@ name: Java CI with Maven
 on:
   push:
     branches: [ master ]
-    paths-ignore:
-      - '.gitignore'
-      - 'docs/**'
-      - '*.md'
-      - '*.txt'
     tags: [ "*" ]
   pull_request:
     branches: [ master ]
-    paths-ignore:
-      - '.gitignore'
-      - 'docs/**'
-      - '*.md'
-      - '*.txt'
-
     workflow_dispatch:
 
 jobs:
