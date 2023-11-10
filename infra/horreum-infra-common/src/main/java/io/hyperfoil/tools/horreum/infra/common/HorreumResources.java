@@ -11,6 +11,8 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.keycloak.admin.client.Keycloak;
@@ -207,21 +209,25 @@ public class HorreumResources {
             RoleRepresentation viewProfileRole = getClientRoleID.apply(accountClient.getId(), "view-profile");
 
             keycloak.realm(HORREUM_REALM).users().get(dummyUser.getId()).roles().clientLevel(accountClient.getId()).add(Collections.singletonList(viewProfileRole));
-        } else {
-            try {
-                //TODO: resolve the host and quarkus port
-
-                ClientRepresentation clientRepresentation = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum-ui").get(0);
-                clientRepresentation.getWebOrigins().add("http://localhost:8080");
-                clientRepresentation.getRedirectUris().add("http://localhost:8080/*");
-
-                envVariables.put("quarkus.oidc.credentials.secret", getClientSecret.apply("horreum"));
-
-                keycloak.realm(HORREUM_REALM).clients().get(clientRepresentation.getId()).update(clientRepresentation);
-            } catch (Exception e){
-                log.error("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
-            }
         }
+
+        //update running keycloak realm with dev services configuration
+        try {
+            Config config = ConfigProvider.getConfig();
+            String httpPort = config.getOptionalValue("quarkus.http.port", String.class).orElse("8080");
+            String httpHost = config.getOptionalValue("quarkus.http.host", String.class).orElse("localhost");
+
+            ClientRepresentation clientRepresentation = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum-ui").get(0);
+            clientRepresentation.getWebOrigins().add("http://".concat(httpHost).concat(":").concat(httpPort));
+            clientRepresentation.getRedirectUris().add("http://".concat(httpHost).concat(":").concat(httpPort).concat("/*"));
+
+            envVariables.put("quarkus.oidc.credentials.secret", getClientSecret.apply("horreum"));
+
+            keycloak.realm(HORREUM_REALM).clients().get(clientRepresentation.getId()).update(clientRepresentation);
+        } catch (Exception e){
+            log.error("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
+        }
+
         log.info("Waiting for test infrastructure to start");
 
         return envVariables;
