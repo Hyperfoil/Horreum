@@ -42,7 +42,7 @@ import {
     Column,
     UseSortByColumnOptions,
 } from "react-table"
-import {DatasetSummary, DatasetList, SortDirection, datasetApi, testApi} from "../../api"
+import {DatasetSummary, DatasetList, SortDirection, datasetApi, testApi, ExportedLabelValues} from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
 import { TestDispatch } from "../tests/reducers"
 import SchemaList from "./SchemaList"
@@ -219,7 +219,27 @@ export default function TestDatasets() {
         })
         return allColumns
     }, [test, token, comparedDatasets, viewId])
-    const labelsSource = useCallback(() => testApi.listLabelValues(testId, true, false), [testId, teams, token])
+
+    const flattenLabelValues = (labelValues: Array<ExportedLabelValues>) => {
+        const resultArr : any = [];
+        labelValues.forEach( (labelValue) => {
+            const mappedLabel : any = {};
+            labelValue.values?.forEach( (value) => {
+                if (value.name !== undefined) {
+                    mappedLabel[value.name] = value.value;
+                }
+            })
+            resultArr.push(mappedLabel)
+        })
+        return resultArr;
+    }
+
+    const labelsSource = useCallback(() => {
+        return testApi.listLabelValues(testId, true, false)
+            .then((result: Array<ExportedLabelValues>) => {
+                return flattenLabelValues(result);
+            })
+    }, [testId, teams, token])
     return (
         <PageSection>
             <Card>
