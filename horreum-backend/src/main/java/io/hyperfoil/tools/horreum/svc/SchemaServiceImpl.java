@@ -183,6 +183,7 @@ public class SchemaServiceImpl implements SchemaService {
          }
       }
       else {
+         schema.id = null;
          schema.persist();
          em.flush();
          mediator.newOrUpdatedSchema(schema);
