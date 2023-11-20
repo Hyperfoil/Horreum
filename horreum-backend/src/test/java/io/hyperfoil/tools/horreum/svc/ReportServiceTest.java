@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -246,6 +247,12 @@ public class ReportServiceTest extends BaseServiceTest {
       TableReport preview = jsonRequest().body(config).post("/api/report/table/preview?edit=" + report.id)
           .then().statusCode(200).extract().body().as(TableReport.class);
       assertNotNull(preview);
+      assertNotNull(preview.config.components);
+
+      preview = jsonRequest().body(config).post("/api/report/table/preview")
+              .then().statusCode(200).extract().body().as(TableReport.class);
+      assertNotNull(preview);
+      assertNotEquals(0, preview.config.components.size());
    }
 
 }

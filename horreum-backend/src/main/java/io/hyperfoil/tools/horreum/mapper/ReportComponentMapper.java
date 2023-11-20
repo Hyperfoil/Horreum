@@ -12,7 +12,7 @@ public class ReportComponentMapper {
         dto.unit = rc.unit;
         dto.labels = rc.labels;
         dto.order = rc.order;
-        dto.reportId = rc.report.id;
+        dto.reportId = rc.report == null ? null : rc.report.id;
 
         return dto;
     }
