@@ -42,7 +42,7 @@ public class TableReportMapper {
         dto.scaleFormatter = trc.scaleFormatter;
         dto.scaleDescription = trc.scaleDescription;
         if (trc.components != null)
-            dto.components = trc.components.stream().filter(r -> r.report != null).map(ReportComponentMapper::from).collect(Collectors.toList());
+            dto.components = trc.components.stream().map(ReportComponentMapper::from).collect(Collectors.toList());
 
         return dto;
     }
