@@ -31,6 +31,21 @@ Logout of [quay.io](https://quay.io/) using [docker](https://docker.io/)
 docker logout quay.io
 ```
 
+## Backports
+
+Backports are done off the `master` branch using `git cherry-pick` so
+
+```
+git log
+git checkout 0.10.x
+git cherry-pick <tag>
+git push origin 0.10.x
+```
+
+e.g. find the commit in question (bug fix or enhancement), checkout the latest stable branch, then cherry-pick it in and push.
+
+This should be straight forward as there are no merge commits in `master`.
+
 ## Building a release
 
 Make sure that the [nodejs](https://nodejs.org/en) installation is clean,
