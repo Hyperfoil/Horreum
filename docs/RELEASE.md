@@ -75,3 +75,13 @@ and finally push them
 docker push quay.io/hyperfoil/horreum:<release>
 docker push quay.io/hyperfoil/horreum:latest
 ```
+
+## After the release
+
+The version identifier for a release is from
+
+```
+./horreum-api/src/main/java/io/hyperfoil/tools/horreum/api/Version.java
+```
+
+so that file needs to be updated after a release.
