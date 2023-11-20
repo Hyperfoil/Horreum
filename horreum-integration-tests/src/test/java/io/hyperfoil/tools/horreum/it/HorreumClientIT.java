@@ -92,6 +92,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
     @org.junit.jupiter.api.Test
     public void testJavascriptExecution() throws InterruptedException {
         Schema schema = new Schema();
+        schema.id = -1;
         schema.uri = "urn:dummy:schema";
         schema.name = "Dummy";
         schema.owner = dummyTest.owner;
