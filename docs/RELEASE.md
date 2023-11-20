@@ -6,29 +6,29 @@ You can build a base image for the Horreum distribution with
 
 ```bash
 cd horreum-backend/
-podman build -f src/main/docker/Dockerfile.jvm.base -t quay.io/hyperfoil/horreum-base:latest .
+docker build -f src/main/docker/Dockerfile.jvm.base -t quay.io/hyperfoil/horreum-base:latest .
 ```
 
 Then it can be pushed to [quay.io](https://quay.io/) with
 
 ```bash
-podman push quay.io/hyperfoil/horreum-base:latest
+docker push quay.io/hyperfoil/horreum-base:latest
 ```
 
 if the proper credentials are in place.
 
-## quay.io and podman
+## quay.io and docker
 
-Login to [quay.io](https://quay.io/) using [podman](https://podman.io/)
+Login to [quay.io](https://quay.io/) using [docker](https://docker.io/)
 
 ```bash
-podman login quay.io
+docker login quay.io
 ```
 
-Logout of [quay.io](https://quay.io/) using [podman](https://podman.io/)
+Logout of [quay.io](https://quay.io/) using [docker](https://docker.io/)
 
 ```bash
-podman logout quay.io
+docker logout quay.io
 ```
 
 ## Building a release
@@ -59,19 +59,19 @@ mvn -DskipTests -DskipITs clean install
 and find the image using
 
 ```bash
-podman images
+docker images
 ```
 
 and tag it to the release
 
 ```bash
-podman tag quay.io/hyperfoil/horreum:<tag> quay.io/hyperfoil/horreum:<release>
-podman tag quay.io/hyperfoil/horreum:<release> quay.io/hyperfoil/horreum:latest
+docker tag quay.io/hyperfoil/horreum:<tag> quay.io/hyperfoil/horreum:<release>
+docker tag quay.io/hyperfoil/horreum:<release> quay.io/hyperfoil/horreum:latest
 ```
 
 and finally push them
 
 ```bash
-podman push quay.io/hyperfoil/horreum:<release>
-podman push quay.io/hyperfoil/horreum:latest
+docker push quay.io/hyperfoil/horreum:<release>
+docker push quay.io/hyperfoil/horreum:latest
 ```
