@@ -52,7 +52,7 @@ Make sure that the [nodejs](https://nodejs.org/en) installation is clean,
 
 ```bash
 mvn -Premove-node-cache clean
-git checkout horreum-web//package-lock.json
+git checkout horreum-web/package-lock.json
 ```
 
 Then run the [Maven](https://maven.apache.org/) release procedure
