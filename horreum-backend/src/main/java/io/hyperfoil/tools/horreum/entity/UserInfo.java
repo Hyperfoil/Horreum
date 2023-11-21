@@ -19,7 +19,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * in Keycloak. As the Keycloak API does not allow querying for users having effective
  * role (see https://issues.redhat.com/browse/KEYCLOAK-11494) we'll update these cached
  * roles as needed in UserTeamsFilter.
- * The table is actually read in {@link io.hyperfoil.tools.horreum.api.NotificationService}.
+ * The table is actually read in {@link io.hyperfoil.tools.horreum.api.internal.services.NotificationService}.
  */
 @Entity(name = "userinfo")
 public class UserInfo extends PanacheEntityBase {
