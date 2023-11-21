@@ -25,7 +25,7 @@
     <groupId>io.hyperfoil.tools</groupId>
     <artifactId>horreum</artifactId>
     <packaging>pom</packaging>
-    <version>0.10.3-SNAPSHOT</version>
+    <version>0.10.4</version>
     <modules>
         <module>infra/horreum-dev-services</module>
         <module>infra/horreum-infra-common</module>
@@ -40,7 +40,7 @@
         <connection>scm:git:git://github.com/Hyperfoil/Horreum.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/Hyperfoil/Horreum.git</developerConnection>
         <url>https://github.com/Hyperfoil/Horreum</url>
-        <tag>HEAD</tag>
+        <tag>0.10.4</tag>
     </scm>
     <url>https://horreum.hyperfoil.io</url>
 
