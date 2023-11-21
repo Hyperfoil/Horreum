@@ -58,7 +58,7 @@ git checkout horreum-web/package-lock.json
 Then run the [Maven](https://maven.apache.org/) release procedure
 
 ```bash
-mvn -DskipTests clean install
+mvn -DskipTests clean javadoc:javadoc install
 mvn -Darguments=-DskipTests release:prepare
 mvn -Darguments=-DskipTests release:perform
 ```
