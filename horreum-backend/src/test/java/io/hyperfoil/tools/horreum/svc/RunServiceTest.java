@@ -839,11 +839,11 @@ public class RunServiceTest extends BaseServiceTest {
          ExperimentComparison experimentComparison = new ExperimentComparison();
          experimentComparison.model = "relativeDifference";
          experimentComparison.variableId = variableList.get(0).id; //should only contain one variable
-         experimentComparison.config = mapper.readTree("{" +
+         experimentComparison.config = mapper.readValue("{" +
                  "          \"maxBaselineDatasets\": 0," +
                  "          \"threshold\": 0.1," +
                  "          \"greaterBetter\": true" +
-                 "        }");
+                 "        }", ObjectNode.class);
 
 
          experimentProfile.comparisons = Collections.singletonList(experimentComparison);
