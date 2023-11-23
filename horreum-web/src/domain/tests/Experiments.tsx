@@ -385,11 +385,11 @@ export default function Experiments(props: ExperimentsProps) {
                                             if (modelToAdd && variables.length > 0) {
                                                 update({
                                                     comparisons: [
-                                                        ...selected.comparisons,
+                                                        ...(selected.comparisons as any),
                                                         {
                                                             model: modelToAdd,
                                                             config:
-                                                                JSON.stringify(models.find(m => m.name === modelToAdd)?.defaults) || "",
+                                                                models.find(m => m.name === modelToAdd)?.defaults || "",
                                                             variableId: variables[0].id,
                                                         },
                                                     ],

@@ -281,8 +281,7 @@ public class ExperimentServiceImpl implements ExperimentService {
                  profileLogs.stream().map(DatasetLogMapper::from).collect(Collectors.toList()),
                  info, baseline, results, extraLabels, notify);
          mediator.newExperimentResult(result);
-         if(mediator.testMode())
-            resultConsumer.accept(result);
+         resultConsumer.accept(result);
       }
    }
 
