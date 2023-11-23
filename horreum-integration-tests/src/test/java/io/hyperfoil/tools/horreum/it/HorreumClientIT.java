@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.HorreumClient;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
@@ -129,7 +130,8 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
     }
 
 
-    public void runExperiment() throws InterruptedException {
+    @org.junit.jupiter.api.Test
+    public void runExperiment() {
 
         ObjectMapper mapper = new ObjectMapper();
 
@@ -224,11 +226,11 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             ExperimentComparison experimentComparison = new ExperimentComparison();
             experimentComparison.model = "relativeDifference";
             experimentComparison.variableId = variableList.get(0).id; //should only contain one variable
-            experimentComparison.config = mapper.readTree("{" +
+            experimentComparison.config = mapper.readValue("{" +
                     "          \"maxBaselineDatasets\": 0," +
                     "          \"threshold\": 0.1," +
                     "          \"greaterBetter\": true" +
-                    "        }");
+                    "        }", ObjectNode.class);
 
 
             experimentProfile.comparisons = Collections.singletonList(experimentComparison);
@@ -260,8 +262,6 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
             assertNotNull(experimentResults);
             assertTrue(experimentResults.size() > 0);
-
-            System.out.println(extendedRun.testname);
 
         }
         catch (Exception e) {

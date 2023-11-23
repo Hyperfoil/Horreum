@@ -8,7 +8,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import org.hibernate.annotations.Type;
@@ -26,7 +26,7 @@ public class ExperimentComparisonDAO {
    @NotNull
    @Type(JsonBinaryType.class)
    @Column(columnDefinition = "jsonb")
-   public JsonNode config;
+   public ObjectNode config;
 
    public void setVariableId(Integer id) {
       variable = VariableDAO.getEntityManager().getReference(VariableDAO.class, id);
