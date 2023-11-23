@@ -2,7 +2,7 @@ package io.hyperfoil.tools.horreum.api.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
@@ -15,7 +15,7 @@ public class ExperimentComparison {
     @NotNull
     @JsonProperty( required = true )
     @Schema(implementation = String.class, description = "Model JSON configuration")
-    public JsonNode config;
+    public ObjectNode config;
 
     @NotNull
     @JsonProperty(value = "variableId")
