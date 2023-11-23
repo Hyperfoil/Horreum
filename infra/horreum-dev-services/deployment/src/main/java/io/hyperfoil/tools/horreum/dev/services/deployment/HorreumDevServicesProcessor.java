@@ -33,10 +33,12 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.jboss.logging.Logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -112,22 +114,37 @@ public class HorreumDevServicesProcessor {
                         horreumBuildTimeConfig.keycloak.containerPort.ifPresent(keycloakPort -> containerArgs.put(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT, keycloakPort));
                         horreumBuildTimeConfig.postgres.databaseBackup.map(File::getAbsolutePath).ifPresent(backupFilename -> containerArgs.put(HORREUM_DEV_POSTGRES_BACKUP, backupFilename));
 
+                        // generate self-signed certificate(s) and return it as args to be processed by KeycloakResource / PostgresResource
                         if (horreumBuildTimeConfig.keycloak.httpsEnabled) {
-                            containerArgs.putAll(selfSignedCertificateContainerArgs());
+                            SelfSignedCert keycloakSelfSignedCert = new SelfSignedCert("RSA", "SHA256withRSA", "localhost", 123);
+                            containerArgs.put(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE, keycloakSelfSignedCert.getCertString());
+                            containerArgs.put(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY, keycloakSelfSignedCert.getKeyString());
                         }
+                        if (horreumBuildTimeConfig.postgres.sslEnabled) {
+                            SelfSignedCert postgresSelfSignedCert = new SelfSignedCert("RSA", "SHA256withRSA", "localhost", 123);
+                            containerArgs.put(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE, postgresSelfSignedCert.getCertString());
+                            containerArgs.put(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY, postgresSelfSignedCert.getKeyString());
+                        }
+
                         Map<String, String> envvars = HorreumResources.startContainers(Collections.unmodifiableMap(containerArgs));
 
-                        Map<String, String> postrgesConfig = new HashMap<>();
+                        Map<String, String> postgresConfig = new HashMap<>();
                         String jdbcUrl = HorreumResources.postgreSQLResource.getJdbcUrl();
 
-                        postrgesConfig.put("quarkus.datasource.jdbc.url", jdbcUrl);
-                        postrgesConfig.put("quarkus.datasource.migration.jdbc.url", jdbcUrl);
+                        postgresConfig.put("quarkus.datasource.jdbc.url", jdbcUrl);
+                        postgresConfig.put("quarkus.datasource.migration.jdbc.url", jdbcUrl);
+                        if (horreumBuildTimeConfig.postgres.sslEnabled) {
+                            // see https://jdbc.postgresql.org/documentation/ssl/ for details
+                            postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.ssl", "true");
+                            postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.sslmode", "verify-full");
+                            postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.sslrootcert", envvars.get("quarkus.datasource.jdbc.sslrootcert"));
+                        }
 
                         horreumPostgresDevService = new DevServicesResultBuildItem.RunningDevService(
                                 HorreumResources.postgreSQLResource.getContainer().getContainerName(),
                                 HorreumResources.postgreSQLResource.getContainer().getContainerId(),
                                 HorreumResources.postgreSQLResource.getContainer()::close,
-                                postrgesConfig);
+                                postgresConfig);
 
                         Map<String, String> keycloakConfig = new HashMap<>();
                         Integer keycloakPort = HorreumResources.keycloakResource.getContainer().getMappedPort(horreumBuildTimeConfig.keycloak.httpsEnabled ? 8443 : 8080);
@@ -138,7 +155,7 @@ public class HorreumDevServicesProcessor {
                         keycloakConfig.put("quarkus.oidc.credentials.secret", envvars.get("quarkus.oidc.credentials.secret"));
                         if (envvars.containsKey("quarkus.oidc.tls.trust-store-file")) {
                             keycloakConfig.put("quarkus.oidc.tls.trust-store-file", envvars.get("quarkus.oidc.tls.trust-store-file"));
-                            keycloakConfig.put("quarkus.oidc.tls.verification", "certificate-validation"); // could be "none" and disable TLS verification altogether
+                            keycloakConfig.put("quarkus.oidc.tls.verification", "required"); // "certificate-validation" validates the certificate chain, but not the hostname. could also be "none" and disable TLS verification altogether
                         }
 
                         horreumKeycloakDevService = new DevServicesResultBuildItem.RunningDevService(
@@ -201,30 +218,19 @@ public class HorreumDevServicesProcessor {
         }
     }
 
-    // generate self-signed certificate and return it as args to be processed by KeycloakResource
-    private Map<String, String> selfSignedCertificateContainerArgs() throws Throwable {
-        KeyPair keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
-        X509Certificate cert = SelfSignedCertGenerator.generateSelfSignedCert(keyPair, "SHA256withRSA", "testcontainer", 123);
-
-        StringWriter certWriter = new StringWriter(), keyWriter = new StringWriter();
-        try (JcaPEMWriter pemWriter = new JcaPEMWriter(certWriter)) {
-            pemWriter.writeObject(cert);
-        }
-        try (JcaPEMWriter pemWriter = new JcaPEMWriter(keyWriter)) {
-            pemWriter.writeObject(keyPair.getPrivate());
-        }
-
-        return Map.of(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE, certWriter.toString(), HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY, keyWriter.toString());
-    }
+    // --- //
     
     /**
      * Generates a self-signed certificate using the BouncyCastle lib.
      */
-    private static final class SelfSignedCertGenerator {
+    private static final class SelfSignedCert {
 
-        private SelfSignedCertGenerator() {}
+        private final X509Certificate certificate;
+        private final KeyPair keyPair;
 
-        public static X509Certificate generateSelfSignedCert(KeyPair keyPair, String hashAlgorithm, String cn, int days) throws OperatorCreationException, CertificateException, CertIOException {
+        private SelfSignedCert(String keyAlgorithm, String hashAlgorithm, String cn, int days) throws OperatorCreationException, CertificateException, CertIOException, NoSuchAlgorithmException {
+            keyPair = KeyPairGenerator.getInstance(keyAlgorithm).generateKeyPair();
+
             Instant now = Instant.now();
             X500Name x500Name = new X500Name("CN=" + cn);
 
@@ -239,10 +245,28 @@ public class HorreumDevServicesProcessor {
              .addExtension(Extension.authorityKeyIdentifier, false, createAuthorityKeyId(keyPair.getPublic()))
              .addExtension(Extension.basicConstraints, true, new BasicConstraints(true));
 
-            return new JcaX509CertificateConverter()
+            certificate = new JcaX509CertificateConverter()
                     .setProvider(new BouncyCastleProvider())
                     .getCertificate(certificateBuilder.build(new JcaContentSignerBuilder(hashAlgorithm).build(keyPair.getPrivate())));
         }
+
+        public String getCertString() throws IOException {
+            StringWriter certWriter = new StringWriter();
+            try (JcaPEMWriter pemWriter = new JcaPEMWriter(certWriter)) {
+                pemWriter.writeObject(certificate);
+            }
+            return certWriter.toString();
+        }
+
+        public String getKeyString() throws IOException {
+            StringWriter keyWriter = new StringWriter();
+            try (JcaPEMWriter pemWriter = new JcaPEMWriter(keyWriter)) {
+                pemWriter.writeObject(keyPair.getPrivate());
+            }
+            return keyWriter.toString();
+        }
+
+        // --- //
 
         /**
          * Creates the hash value of the public key.

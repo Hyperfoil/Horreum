@@ -26,6 +26,11 @@ public class HorreumDevServicesPostgresConfig {
     @ConfigItem
     public String image;
 
+    /**
+     * Setup SSL on the postgres service
+     */
+    @ConfigItem(defaultValue = "false")
+    public boolean sslEnabled;
 
     /**
      * Container name for postgres container
@@ -36,7 +41,7 @@ public class HorreumDevServicesPostgresConfig {
     /**
      * File path to production backup of database
      */
-    @ConfigItem()
+    @ConfigItem
     public Optional<File> databaseBackup;
 
 }

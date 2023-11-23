@@ -5,6 +5,9 @@ public class Const {
     public static final String HORREUM_DEV_POSTGRES_BACKUP = "horreum.dev-services.postgres.database-backup";
     public static final String HORREUM_DEV_POSTGRES_IMAGE = "horreum.dev-services.postgres.image";
     public static final String HORREUM_DEV_POSTGRES_NETWORK_ALIAS = "horreum.dev-services.postgres.network-alias";
+    public static final String HORREUM_DEV_POSTGRES_SSL_CERTIFICATE = "horreum.dev-services.postgres.ssl-certificate";
+    public static final String HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY = "horreum.dev-services.postgres.ssl-certificate-key";
+
     public static final String HORREUM_DEV_KEYCLOAK_ENABLED = "horreum.dev-services.keycloak.enabled";
     public static final String HORREUM_DEV_KEYCLOAK_IMAGE = "horreum.dev-services.keycloak.image";
     public static final String HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS = "horreum.dev-services.keycloak.network-alias";
@@ -12,7 +15,6 @@ public class Const {
     public static final String HORREUM_DEV_KEYCLOAK_CONTAINER_PORT = "horreum.dev-services.keycloak.container-port";
     public static final String HORREUM_DEV_KEYCLOAK_DB_USERNAME = "horreum.dev-services.keycloak.db-username";
     public static final String HORREUM_DEV_KEYCLOAK_DB_PASSWORD = "horreum.dev-services.keycloak.db-password";
-    public static final String HORREUM_DEV_KEYCLOAK_HTTPS_ENABLED = "horreum.dev-services.keycloak.https-enabled";
     public static final String HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE = "horreum.dev-services.keycloak.https-certificate";
     public static final String HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY = "horreum.dev-services.keycloak.https-certificate-key";
 

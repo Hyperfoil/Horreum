@@ -27,6 +27,7 @@ import org.testcontainers.containers.output.WaitingConsumer;
 import org.testcontainers.utility.LogUtils;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -150,6 +151,7 @@ public class HorreumResources {
         waitForContainerReady(postgreSQLResource.getContainer(), " database system is ready to accept connections");
 
         envVariables.putAll(postgresEnv);
+        envVariables.putAll(postgresCertificateProperties(initArgs));
 
         keycloakResource.init(envVariables);
         Map<String, String> keycloakEnv = keycloakResource.start(optionalNetwork);
@@ -253,16 +255,35 @@ public class HorreumResources {
         }
     }
 
+    // --- //
+
+    private static Map<String, String> postgresCertificateProperties(Map<String, String> initArgs) {
+        if (initArgs.containsKey(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE)) {
+            try {
+                File certFile = File.createTempFile("horreum-dev-postgres-", ".crt");
+                certFile.deleteOnExit();
+                try (OutputStream outputStream = new FileOutputStream(certFile)) {
+                    outputStream.write(initArgs.get(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE).getBytes(StandardCharsets.UTF_8));
+                }
+                return Map.of("quarkus.datasource.jdbc.sslrootcert", certFile.getAbsolutePath());
+            } catch (IOException e) {
+                throw new RuntimeException("Could not write postgres certificate file", e);
+            }
+        } else {
+            return Collections.emptyMap();
+        }
+    }
+
     private static Map<String, String> oidcTruststoreProperties(Map<String, String> initArgs) {
         if (initArgs.containsKey(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE) && initArgs.containsKey(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY)) {
-            return Map.of("quarkus.oidc.tls.trust-store-file", createPKCS12Store(initArgs));
+            return Map.of("quarkus.oidc.tls.trust-store-file", createOidcPKCS12Store(initArgs));
         } else {
             return Collections.emptyMap();
         }
     }
     
     // create a pkcs12 trust store file (for OIDC and Keycloak admin client) from the certificate and private key
-    private static String createPKCS12Store(Map<String, String> initArgs) {
+    private static String createOidcPKCS12Store(Map<String, String> initArgs) {
         try {
             File keycloakTrustStore = File.createTempFile("horreum-dev-keycloak-", ".pkcs12");
             keycloakTrustStore.deleteOnExit();
