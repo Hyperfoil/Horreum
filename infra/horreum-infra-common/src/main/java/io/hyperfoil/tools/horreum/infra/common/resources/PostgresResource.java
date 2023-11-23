@@ -1,13 +1,17 @@
 package io.hyperfoil.tools.horreum.infra.common.resources;
 
 import io.hyperfoil.tools.horreum.infra.common.ResourceLifecycleManager;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.SelinuxContext;
+import org.testcontainers.images.builder.Transferable;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -15,6 +19,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.zip.Checksum;
 
 import static io.hyperfoil.tools.horreum.infra.common.Const.*;
 
@@ -44,22 +49,30 @@ public class PostgresResource implements ResourceLifecycleManager {
                     .withPassword(initArgs.get(HORREUM_DEV_DB_PASSWORD))
             ;
 
-            if ( initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ) {
+            if (initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP)) {
                 postgresContainer.addFileSystemBind(initArgs.get(HORREUM_DEV_POSTGRES_BACKUP), "/var/lib/postgresql/data", BindMode.READ_WRITE, SelinuxContext.SHARED);
                 prodBackup = true;
             }
 
-            String resourceName = POSTGRES_CONFIG_PROPERTIES; // could also be a constant
             Properties props = new Properties();
-            try(InputStream resourceStream =  Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName)) {
+            try(InputStream resourceStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(POSTGRES_CONFIG_PROPERTIES)) {
                 props.load(resourceStream);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
 
-            props.forEach( (key, val) -> postgresContainer.withParameter(key.toString().concat("=").concat(val.toString())));
-        }
+            props.forEach((key, val) -> postgresContainer.withParameter(key.toString().concat("=").concat(val.toString())));
 
+            // SSL configuration from https://www.postgresql.org/docs/current/ssl-tcp.html
+            if (initArgs.containsKey(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE) && initArgs.containsKey(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY)) {
+                String certFile = "/var/lib/postgresql/server.crt", keyFile = "/var/lib/postgresql/server.key";
+                postgresContainer.withParameter("ssl=on");
+                postgresContainer.withParameter("ssl_cert_file=" + certFile);
+                postgresContainer.withParameter("ssl_key_file=" + keyFile);
+                postgresContainer.withCopyToContainer(postgresTransferable(initArgs.get(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE)), certFile);
+                postgresContainer.withCopyToContainer(postgresTransferable(initArgs.get(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY), 0_600), keyFile);
+            }
+        }
 
         if (initArgs.containsKey("inContainer") ) {
             inContainer = Boolean.parseBoolean(initArgs.get("inContainer"));
@@ -116,6 +129,58 @@ public class PostgresResource implements ResourceLifecycleManager {
 
     public PostgreSQLContainer getContainer(){
         return  this.postgresContainer;
+    }
+
+    // --- //
+
+    private static Transferable postgresTransferable(String string) {
+        return postgresTransferable(string, Transferable.DEFAULT_FILE_MODE);
+    }
+
+    // specialization of org.testcontainers.images.builder.Transferable.of(byte[], int) that sets the right UID and GID
+    // this is necessary as postgres verifies the permissions and ownership of the certificate and key files on boot
+    private static Transferable postgresTransferable(String string, int fileMode) {
+        byte[] content = string.getBytes(StandardCharsets.UTF_8);
+        return new Transferable() {
+            @Override public long getSize() {
+                return content.length;
+            }
+
+            @Override public byte[] getBytes() {
+                return content;
+            }
+
+            @Override public int getFileMode() {
+                return fileMode;
+            }
+
+            @Override
+            public void updateChecksum(Checksum checksum) {
+                checksum.update(content, 0, content.length);
+            }
+
+            @Override public void transferTo(TarArchiveOutputStream tarArchiveOutputStream, String destination) {
+                try {
+                    tarArchiveOutputStream.putArchiveEntry(createTarArchiveEntry(destination));
+                    tarArchiveOutputStream.write(getBytes());
+                    tarArchiveOutputStream.closeArchiveEntry();
+                } catch (IOException e) {
+                    throw new RuntimeException("Can't transfer " + getDescription(), e);
+                }
+            }
+
+            private TarArchiveEntry createTarArchiveEntry(String destination) {
+                TarArchiveEntry tarEntry = new TarArchiveEntry(destination);
+                tarEntry.setSize(getSize());
+                tarEntry.setMode(getFileMode());
+
+                // from the dockerfiles at https://github.com/docker-library/postgres (and see also https://hub.docker.com/_/postgres)
+                // 999 are the defaults for Debian based images (the standard ones), while Alpine images use 70
+                tarEntry.setIds(999, 999);
+                tarEntry.setNames("postgres", "postgres");
+                return tarEntry;
+            }
+        };
     }
 
 }
