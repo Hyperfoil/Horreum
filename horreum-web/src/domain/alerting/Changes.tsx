@@ -197,7 +197,7 @@ export const fetchAllAnnotations = (
 export const flattenNode = (arr : Array<any> | undefined) => {
     const nodeObj : any = {};
     arr?.forEach(node => {
-        nodeObj[`${node.name}`] = ((node.children == null ) ? `${node.value}` : flattenNode(node.children) )
+        nodeObj[node.name] = ((node.children == null ) ? node.value : flattenNode(node.children) )
     });
     return nodeObj;
 }
