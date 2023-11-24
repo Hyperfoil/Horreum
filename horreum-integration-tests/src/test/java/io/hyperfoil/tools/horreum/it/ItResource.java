@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.it;
 
+import io.hyperfoil.tools.horreum.infra.common.SelfSignedCert;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import org.jboss.logging.Logger;
 
@@ -19,6 +20,8 @@ import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK
 import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS;
 import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_IMAGE;
 import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_NETWORK_ALIAS;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_SSL_CERTIFICATE;
+import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY;
 import static io.hyperfoil.tools.horreum.infra.common.HorreumResources.startContainers;
 import static io.hyperfoil.tools.horreum.infra.common.HorreumResources.stopContainers;
 import static java.lang.System.getProperty;
@@ -44,12 +47,16 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
                         throw new RuntimeException("Test container images are not defined");
                     }
 
+                    SelfSignedCert postgresSelfSignedCert = new SelfSignedCert("RSA", "SHA256withRSA", "localhost", 123);
+
                     //todo: pick up from configuration
                     Map<String, String> containerArgs = Map.of(
                             HORREUM_DEV_KEYCLOAK_IMAGE, keycloakImage,
                             HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS, DEFAULT_KEYCLOAK_NETWORK_ALIAS,
                             HORREUM_DEV_POSTGRES_IMAGE, postgresImage,
                             HORREUM_DEV_POSTGRES_NETWORK_ALIAS, DEFAULT_POSTGRES_NETWORK_ALIAS,
+                            HORREUM_DEV_POSTGRES_SSL_CERTIFICATE, postgresSelfSignedCert.getCertString(),
+                            HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY, postgresSelfSignedCert.getKeyString(),
                             HORREUM_DEV_KEYCLOAK_DB_USERNAME, DEFAULT_KC_DB_USERNAME,
                             HORREUM_DEV_KEYCLOAK_DB_PASSWORD, DEFAULT_KC_DB_PASSWORD,
                             HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME, DEFAULT_KC_ADMIN_USERNAME,
@@ -60,7 +67,7 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
                 } catch (Exception e){
                     log.fatal("Could not start Horreum services", e);
                     stopContainers();
-                    throw e;
+                    throw new RuntimeException("Could not start Horreum services", e);
                 }
             }
         }

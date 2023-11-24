@@ -4352,5 +4352,36 @@
             CREATE INDEX fingerprint_fp_hash ON fingerprint (fp_hash);
         </sql>
     </changeSet>
+    <changeSet id="115" author="barreiro">
+        <validCheckSum>ANY</validCheckSum>
+        <!-- remove the encryption in `has_role` in the db procedure, and we can remove `horreum.db.secret` property and the corresponding database table -->
+        <dropTable tableName="dbsecret"/>
+        <createProcedure>
+            <!-- redefine `has_role()` to remove signing -->
+            CREATE OR REPLACE FUNCTION has_role(owner TEXT) RETURNS boolean AS $$
+            DECLARE
+                v_userroles TEXT;
+                v_role TEXT;
+            BEGIN
+                v_userroles := current_setting('horreum.userroles', true);
+
+                IF v_userroles = '' OR v_userroles IS NULL THEN
+                    RETURN 0;
+                END IF;
+
+                FOREACH v_role IN ARRAY regexp_split_to_array(v_userroles, ',')
+                LOOP
+                    IF v_role = owner THEN
+                        RETURN 1;
+                    END IF;
+                END LOOP;
+                RETURN 0;
+            END;
+            $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+        </createProcedure>
+        <sql>
+            DROP EXTENSION pgcrypto;
+        </sql>
+    </changeSet>
 
 </databaseChangeLog>

@@ -12,7 +12,11 @@ TODO: [THE CONTENT BELOW NEEDS TO BE UPDATED](https://github.com/RedHatPerf/proj
 
 ## Setup database
 
-You need PostgreSQL 12 (or later) installed; setup is out of scope of this guide. Create a new database for the application called `horreum` and limited-priviledge user `appuser` with a secure password:
+You need PostgreSQL 12 (or later) installed; setup is out of scope of this guide. 
+
+PostgreSQL must be installed with [SSL support](https://www.postgresql.org/docs/current/ssl-tcp.html). In short, you'll need to setup at least the following [SSL properties](https://www.postgresql.org/docs/current/runtime-config-connection.html#RUNTIME-CONFIG-CONNECTION-SSL): `ssl=on`, `ssl_cert_file` and `ssl_key_file`. Horreum will also use the server certificate file in order to verify the connection.
+
+Create a new database for the application called `horreum` and limited-privilege user `appuser` with a secure password:
 
 ```bash
 export PGHOST=127.0.0.1
@@ -23,8 +27,6 @@ psql -c "CREATE DATABASE horreum" postgres
 export PGDATABASE=horreum
 psql -c "CREATE ROLE \"appuser\" noinherit login password 'SecurEpaSSw0!2D';" postgres
 ```
-
-[PostgreSQL](https://www.postgresql.org/) needs to have [pgcrypto](https://www.postgresql.org/docs/12/pgcrypto.html) installed in `shared_preload_libraries`
 
 Now you need to setup a Keycloak user and database:
 
@@ -60,7 +62,7 @@ When Keycloak starts you should access its admin console and adjust URLs for cli
 
 After that create the role `__user_reader`, go to 'Role Mappings' tab, select `realm-management` in Client Roles and give this user the `view-users` role. Make sure that this user has the `offline_access` Realm Role as well.
 
-Now you can create team roles, users and [assign them appropriatelly](user_management.html). For correct integration with Grafana please remember to set email for each user (this will be used purely to match Grafana identities).
+Now you can create team roles, users and [assign them appropriately](user_management.html). For correct integration with Grafana please remember to set email for each user (this will be used purely to match Grafana identities).
 
 You should also open `horreum` client, switch to 'Credentials' tab and record the Secret (UUID identifier).
 
@@ -85,6 +87,10 @@ QUARKUS_DATASOURCE_PASSWORD=SecurEpaSSw0!2D
 # This is the user that has full control over 'horreum' database
 QUARKUS_DATASOURCE_MIGRATION_USERNAME=dbadmin
 QUARKUS_DATASOURCE_MIGRATION_PASSWORD=Curr3ntAdm!nPwd
+# The database server SSL certificate
+QUARKUS_DATASOURCE_JDBC_ADDITIONAL-JDBC-PROPERTIES_SSLROOTCERT=server.crt
+# As an alternative, certificate validation can be disabled with
+# QUARKUS_DATASOURCE_JDBC_ADDITIONAL-JDBC-PROPERTIES_SSLMODE=require
 # Secret generated during database setup: run `SELECT * FROM dbsecret` as DB admin
 HORREUM_DB_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxx
 
