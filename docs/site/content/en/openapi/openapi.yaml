@@ -2526,18 +2526,6 @@ components:
           type: string
         notify:
           type: boolean
-    ExportedLabelValue:
-      description: Representation of a LabelValue
-      type: object
-      properties:
-        name:
-          description: Fingerprint name
-          type: string
-          example: Throughput 8 CPU
-        value:
-          description: Fingerprint value
-          type: string
-          example: "141085.5"
     ExportedLabelValues:
       description: A list of Fingerprint values for one dataset
       type: object
@@ -2545,7 +2533,7 @@ components:
         values:
           type: array
           items:
-            $ref: '#/components/schemas/ExportedLabelValue'
+            $ref: '#/components/schemas/FingerprintValue'
     Extractor:
       description: "An Extractor defines how values are extracted from a JSON document,\
         \ for use in Labels etc."

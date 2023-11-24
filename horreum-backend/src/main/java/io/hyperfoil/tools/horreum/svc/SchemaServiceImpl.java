@@ -716,25 +716,26 @@ public class SchemaServiceImpl implements SchemaService {
    }
 
    private void emitLabelChanged(int labelId, int schemaId) {
+      String datasetIdQuery = """
+              SELECT ds.id, ds.testId
+              from dataset_schemas
+              LEFT JOIN dataset ds on ds.id = dataset_schemas.dataset_id
+              WHERE schema_id = ?1
+              ORDER BY dataset_id DESC;
+              """;
+
       try {
-         List<Integer> datasetIds = session
-                 .createNativeQuery("SELECT dataset_id from dataset_schemas WHERE schema_id = ?1 ORDER BY dataset_id DESC")
+         List<Object[]> datasetIds = session
+                 .createNativeQuery(datasetIdQuery)
                  .setParameter(1, schemaId)
-                 .addScalar("dataset_id", StandardBasicTypes.INTEGER)
                  .getResultList();
-         if (datasetIds == null || datasetIds.isEmpty() || datasetIds.get(0) < 1) {
+         if (datasetIds == null || datasetIds.isEmpty() ) {
             log.debug("Could not extract datasetIds from dataset_schemas with schemaId="+schemaId);
             return;
          }
-         int testId = session.createNativeQuery("SELECT testid from dataset WHERE id = ?1", Integer.class)
-                 .setParameter(1, datasetIds.get(0)).getSingleResult();
-         if (testId < 1) {
-            log.debug("Could not extract testId from dataset where id="+datasetIds.get(0));
-            return;
-         }
 
-         for(var datasetId : datasetIds) {
-            Util.registerTxSynchronization(tm, txStatus -> mediator.queueDatasetEvents(new Dataset.EventNew(datasetId, testId, 0, labelId, true)));
+         for(var dataset : datasetIds) {
+            Util.registerTxSynchronization(tm, txStatus -> mediator.queueDatasetEvents(new Dataset.EventNew((Integer) dataset[0], (Integer) dataset[1], 0, labelId, true)));
          }
       }
       catch (NoResultException nre) {
