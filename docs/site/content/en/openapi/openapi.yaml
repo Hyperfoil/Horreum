@@ -2583,13 +2583,13 @@ components:
           example: Mode
         value:
           description: Fingerprint name
-          type: string
+          type: object
           example: Library
         children:
           description: List of Fingerprint children
           type: array
           items:
-            $ref: '#/components/schemas/FingerprintValue'
+            description: Cyclic reference to io.hyperfoil.tools.horreum.api.data.FingerprintValue
     Fingerprints:
       description: A list of Fingerprints representing one dataset
       type: object

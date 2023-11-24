@@ -10,12 +10,12 @@ import java.util.List;
 @Schema(type = SchemaType.OBJECT,
         description = "A list of Fingerprint values for one dataset")
 public class ExportedLabelValues {
-    @Schema(type = SchemaType.ARRAY, implementation = ExportedLabelValue.class)
-    public List<ExportedLabelValue> values;
+    @Schema(type = SchemaType.ARRAY, implementation = FingerprintValue.class)
+    public List<FingerprintValue> values;
 
     public ExportedLabelValues() {}
 
-    public ExportedLabelValues(List<ExportedLabelValue> v) {
+    public ExportedLabelValues(List<FingerprintValue> v) {
        values = v;
     }
 
@@ -24,7 +24,7 @@ public class ExportedLabelValues {
             return new ArrayList<>();
 
         List<ExportedLabelValues> fps = new ArrayList<>();
-        nodes.forEach( n -> fps.add( new ExportedLabelValues( ExportedLabelValue.parse(n))));
+        nodes.forEach( n -> fps.add( new ExportedLabelValues( FingerprintValue.parse(n))));
         return fps;
     }
 }
