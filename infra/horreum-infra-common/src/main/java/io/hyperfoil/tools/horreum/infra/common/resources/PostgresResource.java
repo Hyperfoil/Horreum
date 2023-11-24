@@ -83,6 +83,7 @@ public class PostgresResource implements ResourceLifecycleManager {
                 conn.createStatement().executeUpdate("CREATE ROLE appuser noinherit login password 'secret';");
                 conn.createStatement().executeUpdate("CREATE ROLE keycloak noinherit login password 'secret';");
                 conn.createStatement().executeUpdate("CREATE DATABASE keycloak WITH OWNER = 'keycloak';");
+                conn.createStatement().executeUpdate("GRANT ALL ON SCHEMA public TO keycloak;");
             } catch (SQLException t) {
                 throw new RuntimeException(t);
             }
