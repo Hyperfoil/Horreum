@@ -298,48 +298,84 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testListFingerprints() throws JsonProcessingException {
       List<JsonNode> fps = new ArrayList<>();
-      fps.add(mapper.readTree("{\"Mode\" : \"library\", \"TestName\" : \"reads10\", \"ConfigName\" : \"dist\"}"));
+      fps.add(mapper.readTree("""
+         {  
+            "Mode" : "library", 
+            "TestName" : "reads10", 
+            "ConfigName" : "dist"
+         }
+         """));
 
       List<Fingerprints> values = Fingerprints.parse(fps);
       assertEquals(1, values.size());
       assertEquals(3, values.get(0).values.size());
       assertEquals("dist", values.get(0).values.get(2).value);
 
-      fps.add(mapper.readTree(
-              "{\"tag\": \"main\", \"params\": " +
-                      "{\"storeFirst\": \"false\", \"numberOfRules\": \"200\", " +
-                        "\"rulesProviderId\": \"RulesWithJoinsProvides\", \"useCanonicalMode\": \"true\"}," +
-                      " \"testName\": \"BaseFromContainer\"}"));
+      fps.add(mapper.readTree("""
+              {
+                 "tag": "main", 
+                 "params":  {
+                     "storeFirst": false, 
+                     "numberOfRules": 200, 
+                     "rulesProviderId": "RulesWithJoinsProvides", 
+                     "useCanonicalMode": true
+                  },
+                  "testName": "BaseFromContainer"
+              }
+              """));
       values = Fingerprints.parse(fps);
       assertEquals(2, values.size());
       assertEquals(3, values.get(0).values.size());
       assertEquals(3, values.get(1).values.size());
       assertEquals(4, values.get(1).values.get(1).children.size());
-      assertEquals("storeFirst", values.get(1).values.get(1).children.get(0).name);
+
+      //We need the cast on children due to Type Erasure on recursive elements
+      assertEquals("storeFirst", ((FingerprintValue<Boolean>) values.get(1).values.get(1).children.get(0)).name);
+      assertEquals(false, ((FingerprintValue<Boolean>) values.get(1).values.get(1).children.get(0)).value);
+      assertEquals("numberOfRules", ((FingerprintValue<Double>) values.get(1).values.get(1).children.get(1)).name);
+      assertEquals(200d, ((FingerprintValue<Double>) values.get(1).values.get(1).children.get(1)).value);
+      assertEquals("rulesProviderId", ((FingerprintValue<String>) values.get(1).values.get(1).children.get(2)).name);
+      assertEquals("RulesWithJoinsProvides", ((FingerprintValue<String>) values.get(1).values.get(1).children.get(2)).value);
    }
 
 
    @org.junit.jupiter.api.Test
    public void testListLabelValues() throws JsonProcessingException {
       List<JsonNode> fps = new ArrayList<>();
-      fps.add(mapper.readTree("{\"job\": \"quarkus-release-startup\", \"Max RSS\": [], \"build-id\": null, " +
-                      "\"Throughput 1 CPU\": null, \"Throughput 2 CPU\": null, \"Throughput 4 CPU\": null, " +
-                      "\"Throughput 8 CPU\": null, \"Throughput 32 CPU\": null, " +
-                      "\"Quarkus - Kafka_tags\": \"quarkus-release-startup\"}"));
+      fps.add(mapper.readTree("""
+                  {
+                      "job": "quarkus-release-startup", 
+                      "Max RSS": [], 
+                      "build-id": null,
+                      "Throughput 1 CPU": null, 
+                      "Throughput 2 CPU": null, 
+                      "Throughput 4 CPU": null,
+                      "Throughput 8 CPU": null, 
+                      "Throughput 32 CPU": null,
+                      "Quarkus - Kafka_tags": "quarkus-release-startup"}
+                  """));
 
       List<ExportedLabelValues> values = ExportedLabelValues.parse(fps);
       assertEquals(1, values.size());
       assertEquals(9, values.get(0).values.size());
       assertEquals("quarkus-release-startup", values.get(0).values.get(0).value);
 
-      fps.add(mapper.readTree("{\"job\": \"quarkus-release-startup\", \"Max RSS\": [], \"build-id\": null, " +
-              "\"Throughput 1 CPU\": \"17570.30\", \"Throughput 2 CPU\": \"43105.62\", " +
-              "\"Throughput 4 CPU\": \"84895.13\", \"Throughput 8 CPU\": \"141086.29\"}"));
+      fps.add(mapper.readTree("""
+              {
+                  "job": "quarkus-release-startup", 
+                  "Max RSS": [], 
+                  "build-id": null, 
+                  "Throughput 1 CPU": 17570.30, 
+                  "Throughput 2 CPU": 43105.62, 
+                  "Throughput 4 CPU": 84895.13, 
+                  "Throughput 8 CPU": 141086.29
+              }
+              """));
       values = ExportedLabelValues.parse(fps);
       assertEquals(2, values.size());
       assertEquals(9, values.get(0).values.size());
       assertEquals(7, values.get(1).values.size());
-      assertEquals("84895.13", values.get(1).values.get(5).value);
+      assertEquals(84895.13d, values.get(1).values.get(5).value);
    }
 
    private void addSubscription(Test test) {
