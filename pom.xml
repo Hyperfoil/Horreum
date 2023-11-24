@@ -88,7 +88,7 @@
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
 
-        <dev.images.postgres>postgres:13</dev.images.postgres>
+        <dev.images.postgres>postgres:16</dev.images.postgres>
         <dev.images.keycloak>quay.io/keycloak/keycloak:22.0.4</dev.images.keycloak>
 
     </properties>
