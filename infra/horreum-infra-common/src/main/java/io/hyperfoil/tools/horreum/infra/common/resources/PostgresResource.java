@@ -6,6 +6,7 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.SelinuxContext;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
@@ -45,6 +46,8 @@ public class PostgresResource implements ResourceLifecycleManager {
             ;
 
             if ( initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ) {
+                checkIfDirectoryIsEmtpy(initArgs.get(HORREUM_DEV_POSTGRES_BACKUP));
+
                 postgresContainer.addFileSystemBind(initArgs.get(HORREUM_DEV_POSTGRES_BACKUP), "/var/lib/postgresql/data", BindMode.READ_WRITE, SelinuxContext.SHARED);
                 prodBackup = true;
             }
@@ -63,6 +66,19 @@ public class PostgresResource implements ResourceLifecycleManager {
 
         if (initArgs.containsKey("inContainer") ) {
             inContainer = Boolean.parseBoolean(initArgs.get("inContainer"));
+        }
+    }
+
+    private void checkIfDirectoryIsEmtpy(String directoryPath) {
+        File dir = new File(directoryPath);
+        if (!dir.exists()) {
+            throw new RuntimeException("Directory " + directoryPath + " does not exist!");
+        }
+        if(!dir.isDirectory()) {
+            throw new RuntimeException("Directory " + directoryPath + " is not a directory!");
+        }
+        if (dir.list().length == 0) {
+            throw new RuntimeException("Directory " + directoryPath + " does not contain any files!");
         }
     }
 
