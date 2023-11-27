@@ -37,6 +37,9 @@ The main configuration of Horreum is in the [application.properties](https://git
 
 The database bootstrap script is in the [changeLog.xml](https://github.com/Hyperfoil/Horreum/blob/master/horreum-backend/src/main/resources/db/changeLog.xml)
 
+## Releases
+
+Horreum is pre-1.0 (0.y.z) and therefore we cannot guarantee binary compatability between patch releases (0.y.z to 0.y.z+1). We plan to increase minor versions (y values) when breaking APIs but API breaking bug fixes might appear in patch releases. [semver clause](https://semver.org/#spec-item-4)
 
 ## Credentials
 
