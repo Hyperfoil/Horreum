@@ -4336,5 +4336,11 @@
             $$ LANGUAGE plpgsql;
         </sql>
     </changeSet>
+    <changeSet id="113" author="jpederse">
+        <validCheckSum>ANY</validCheckSum>
+        <sql>
+            CREATE INDEX label_values_label_id ON label_values (label_id);
+        </sql>
+    </changeSet>
 
 </databaseChangeLog>
