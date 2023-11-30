@@ -40,7 +40,6 @@ import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.entity.UserInfo;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.security.identity.SecurityIdentity;
-import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.Vertx;
 
 @PermitAll
@@ -66,7 +65,6 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
-   @Blocking
    public List<UserData> searchUsers(String query) {
       if (identity.isAnonymous()) {
          throw ServiceException.forbidden("Please log in and try again");
@@ -76,7 +74,6 @@ public class UserServiceImpl implements UserService {
    }
 
    @RolesAllowed({Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
-   @Blocking // TODO: identity.isAnonymous() is a blocking call
    @Override
    public List<UserData> info(List<String> usernames) {
       if (identity.isAnonymous()) {
@@ -101,7 +98,6 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
-   @Blocking
    @RolesAllowed({Roles.MANAGER, Roles.ADMIN})
    public void createUser(NewUser user) {
       if (user == null) {
@@ -159,7 +155,6 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
-   @Blocking
    public List<String> getTeams() {
       if (identity.isAnonymous()) {
          throw ServiceException.forbidden("Please log in and try again");
@@ -222,7 +217,6 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
-   @Blocking
    public Map<String, List<String>> teamMembers(String team) {
       String prefix = getTeamPrefix(team);
       if (!identity.getRoles().contains(prefix + Roles.MANAGER) && !identity.getRoles().contains(Roles.ADMIN)) {
@@ -248,7 +242,6 @@ public class UserServiceImpl implements UserService {
    }
 
    @Override
-   @Blocking
    public void updateTeamMembers(String team, Map<String, List<String>> roles) {
       String prefix = getTeamPrefix(team);
       if (!identity.getRoles().contains(prefix + Roles.MANAGER) && !identity.getRoles().contains(Roles.ADMIN)) {
@@ -342,7 +335,6 @@ public class UserServiceImpl implements UserService {
 
    @RolesAllowed(Roles.ADMIN)
    @Override
-   @Blocking
    public List<String> getAllTeams() {
       List<String> teams;
       try {
@@ -356,7 +348,6 @@ public class UserServiceImpl implements UserService {
 
    @RolesAllowed(Roles.ADMIN)
    @Override
-   @Blocking
    public void addTeam(String team) {
       String prefix = getTeamPrefix(team);
          createRole(team, null);
@@ -398,7 +389,6 @@ public class UserServiceImpl implements UserService {
 
    @RolesAllowed(Roles.ADMIN)
    @Override
-   @Blocking
    public void deleteTeam(String team) {
       String prefix = getTeamPrefix(team);
       for (String type : ROLE_TYPES) {
@@ -414,7 +404,6 @@ public class UserServiceImpl implements UserService {
 
    @RolesAllowed(Roles.ADMIN)
    @Override
-   @Blocking
    public List<UserData> administrators() {
          List<UserData> admins = new ArrayList<>();
          try {
@@ -429,7 +418,6 @@ public class UserServiceImpl implements UserService {
 
    @RolesAllowed(Roles.ADMIN)
    @Override
-   @Blocking
    public void updateAdministrators(List<String> newAdmins) {
       if (!newAdmins.contains(identity.getPrincipal().getName())) {
          throw ServiceException.badRequest("Cannot remove yourselves from administrator list");
