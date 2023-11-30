@@ -30,11 +30,14 @@ public class FingerprintDAO extends PanacheEntityBase {
    @Column(columnDefinition = "jsonb")
    public JsonNode fingerprint;
 
+   public Integer fp_hash;
+
    @Override
    public String toString() {
       return "FP{" +
               "datasetId=" + datasetId +
               ", fingerprint=" + fingerprint +
+              ", fp_hash=" + fp_hash +
               '}';
    }
 }
