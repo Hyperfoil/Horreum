@@ -55,7 +55,7 @@ export default function ActionList() {
                             isChecked={arg.cell.value}
                             label="Enabled"
                             labelOff="Disabled"
-                            onChange={(_, e) => e.preventDefault()}
+                            onChange={(e, _) => e.preventDefault()}
                         />
                     )
                 },
@@ -106,7 +106,7 @@ export default function ActionList() {
                 </HintBody>
             </Hint>
             <Toolbar
-                className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
+                className="pf-v5-l-toolbar pf-v5-u-justify-content-space-between pf-v5-u-mx-xl pf-v5-u-my-md"
                 style={{ justifyContent: "space-between" }}
             >
                 <ToolbarContent>

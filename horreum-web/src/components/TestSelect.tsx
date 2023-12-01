@@ -1,6 +1,15 @@
 import {CSSProperties, useContext, useEffect, useMemo, useState} from "react"
 
-import { Select, SelectGroup, SelectOption, SelectOptionObject, Split, SplitItem } from "@patternfly/react-core"
+import {
+	Split,
+	SplitItem
+} from '@patternfly/react-core';
+import {
+	Select,
+	SelectGroup,
+	SelectOption,
+	SelectOptionObject
+} from '@patternfly/react-core/deprecated';
 
 import {fetchTests, Test} from "../api"
 import {AppContext} from "../context/appContext";
@@ -80,7 +89,7 @@ function FewTestsSelect(props: TestSelectProps) {
     return (
         <Select
             isOpen={open}
-            onToggle={setOpen}
+            onToggle={(_event, val) => setOpen(val)}
             selections={props.selection}
             menuAppendTo="parent"
             onSelect={(_, item) => {
@@ -139,7 +148,7 @@ function ManyTestsSelect(props: TestSelectProps) {
             <SplitItem>
                 <Select
                     isOpen={foldersOpen}
-                    onToggle={setFoldersOpen}
+                    onToggle={(_event, val) => setFoldersOpen(val)}
                     selections={selectedExtra || selectedFolder}
                     menuAppendTo="parent"
                     onSelect={(_, item) => {
@@ -172,7 +181,7 @@ function ManyTestsSelect(props: TestSelectProps) {
             <SplitItem>
                 <Select
                     isOpen={testsOpen}
-                    onToggle={setTestsOpen}
+                    onToggle={(_event, val) => setTestsOpen(val)}
                     selections={selectedExtra ? undefined : props.selection}
                     menuAppendTo="parent"
                     onSelect={(_, item) => {

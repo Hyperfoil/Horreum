@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useContext} from "react"
 
 import { Bullseye, Modal, Spinner, Tab, Tabs } from "@patternfly/react-core"
-import { TableComposable, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table"
+import { Table /* data-codemods */, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table"
 
 import { NavLink } from "react-router-dom"
 import {experimentApi, ExperimentResult} from "../../api"
@@ -66,7 +66,7 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                                     onSelect={(_, key) => setActiveSecondaryTab(key)}
                                 >
                                     <Tab eventKey="results" title="Results">
-                                        <TableComposable variant="compact">
+                                        <Table variant="compact">
                                             <Thead>
                                                 <Tr>
                                                     <Th>Variable</Th>
@@ -83,13 +83,13 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                                                             case "BETTER":
                                                                 style = {
                                                                     backgroundColor:
-                                                                        "var(--pf-global--palette--green-100)",
+                                                                        "var(--pf-v5-global--palette--green-100)",
                                                                 }
                                                                 break
                                                             case "WORSE":
                                                                 style = {
                                                                     backgroundColor:
-                                                                        "var(--pf-global--palette--red-50)",
+                                                                        "var(--pf-v5-global--palette--red-50)",
                                                                 }
                                                                 break
                                                             default:
@@ -105,10 +105,10 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                                                         )
                                                     })}
                                             </Tbody>
-                                        </TableComposable>
+                                        </Table>
                                     </Tab>
                                     <Tab title="Logs" eventKey="logs">
-                                        <TableComposable variant="compact">
+                                        <Table variant="compact">
                                             <Thead>
                                                 <Tr>
                                                     <Th>Level</Th>
@@ -142,7 +142,7 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                                                         </Tr>
                                                     ))}
                                             </Tbody>
-                                        </TableComposable>
+                                        </Table>
                                     </Tab>
                                 </Tabs>
                                 <h3>Baseline</h3>

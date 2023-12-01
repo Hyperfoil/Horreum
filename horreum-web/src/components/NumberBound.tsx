@@ -20,7 +20,7 @@ export default function NumberBound({enabled, inclusive, value, isDisabled, onCh
                     id={prefix + "_enabled"}
                     isChecked={enabled}
                     isDisabled={isDisabled}
-                    onChange={enabled => {
+                    onChange={(_event, enabled) => {
                     onChange(enabled, inclusive, value)
                     }}
                     label="Enabled"
@@ -32,7 +32,7 @@ export default function NumberBound({enabled, inclusive, value, isDisabled, onCh
                     id={prefix + "_value"}
                     type="number"
                     isDisabled={!enabled || isDisabled}
-                    onChange={value => onChange(enabled, inclusive, Number.parseFloat(value))}
+                    onChange={(_event, value) => onChange(enabled, inclusive, Number.parseFloat(value))}
                     value={value}
                     onKeyDown={e => {
                         if (e.key === "Enter") e.preventDefault()
@@ -44,7 +44,7 @@ export default function NumberBound({enabled, inclusive, value, isDisabled, onCh
                     id={prefix + "_inclusive"}
                     isDisabled={!enabled || isDisabled}
                     isChecked={inclusive}
-                    onChange={inclusive => onChange(enabled, inclusive, value)}
+                    onChange={(_event, inclusive) => onChange(enabled, inclusive, value)}
                     label="Inclusive"
                 />
             </FlexItem>

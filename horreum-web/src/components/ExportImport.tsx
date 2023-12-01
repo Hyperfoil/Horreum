@@ -1,6 +1,9 @@
 import {useContext, useState} from "react"
 
-import { Button, FileUpload, Flex, FlexItem, Form, FormGroup, Spinner } from "@patternfly/react-core"
+import { Button, FileUpload, Flex, FlexItem, Form, FormGroup, Spinner,
+    HelperText,
+    HelperTextItem,
+    FormHelperText } from "@patternfly/react-core"
 
 import ExportButton from "./ExportButton"
 import {AppContext} from "../context/appContext";
@@ -29,9 +32,14 @@ export default function ExportImport(props: ExportImportProps) {
             <FormGroup
                 label="Import"
                 fieldId="import"
-                validated={parseError ? "error" : "default"}
-                helperTextInvalid={parseError?.toString()}
             >
+                <FormHelperText>
+                    <HelperText>
+                        <HelperTextItem variant={parseError ? "error" : "default"}>
+                        {parseError ? parseError?.toString() : ""}
+                        </HelperTextItem>
+                    </HelperText>
+                </FormHelperText>
                 <Flex>
                     <FlexItem>
                         <FileUpload

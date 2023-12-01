@@ -1,6 +1,15 @@
 import {ReactElement, useState, useEffect, useContext} from "react"
 import { useSelector } from "react-redux"
-import { Button, DualListSelector, Form, FormGroup, Modal, Spinner, TextInput } from "@patternfly/react-core"
+import { Button, 
+    DualListSelector, 
+    Form, 
+    FormGroup,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,     
+    Modal, 
+    Spinner, 
+    TextInput } from "@patternfly/react-core"
 
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import {userApi, UserData} from "../../api"
@@ -74,7 +83,7 @@ export default function Administrators(props: AdministratorsProps) {
                     ]}
                     chosenOptions={admins}
                     chosenOptionsTitle="Administrators"
-                    onListChange={(newAvailable, newChosen) => {
+                    onListChange={(_event, newAvailable, newChosen) => {
                         setAvailableUsers(
                             (newAvailable as ReactElement[]).map(item => {
                                 if (availableUsers.includes(item)) {
@@ -178,7 +187,7 @@ function NewUserModal(props: NewUserModalProps) {
                         <TextInput
                             isRequired
                             value={username}
-                            onChange={setUsername}
+                            onChange={(_event, val) => setUsername(val)}
                             validated={username ? "default" : "error"}
                         />
                     </FormGroup>
@@ -186,29 +195,33 @@ function NewUserModal(props: NewUserModalProps) {
                         isRequired
                         label="Temporary password"
                         fieldId="password"
-                        helperText="This password is only temporary and the user will change it during first login."
                     >
                         <TextInput
                             isRequired
                             value={password}
-                            onChange={setPassword}
+                            onChange={(_event, val) => setPassword(val)}
                             validated={password ? "default" : "error"}
                         />
+                        <FormHelperText>
+                            <HelperText>
+                                <HelperTextItem variant={password ? "default" : "error"}>This password is only temporary and the user will change it during first login.</HelperTextItem>
+                            </HelperText>
+                        </FormHelperText>
                     </FormGroup>
                     <FormGroup isRequired label="Email" fieldId="email">
                         <TextInput
                             isRequired
                             type="email"
                             value={email}
-                            onChange={setEmail}
+                            onChange={(_event, val) => setEmail(val)}
                             validated={email && /^.+@.+\..+$/.test(email) ? "default" : "error"}
                         />
                     </FormGroup>
                     <FormGroup label="First name" fieldId="firstName">
-                        <TextInput value={firstName} onChange={setFirstName} />
+                        <TextInput value={firstName} onChange={(_event, val) => setFirstName(val)} />
                     </FormGroup>
                     <FormGroup label="Last name" fieldId="lastName">
-                        <TextInput value={lastName} onChange={setLastName} />
+                        <TextInput value={lastName} onChange={(_event, val) => setLastName(val)} />
                     </FormGroup>
                 </Form>
             )}

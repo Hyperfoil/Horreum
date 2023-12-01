@@ -6,6 +6,9 @@ import {
     FormGroup,
     FormSelect,
     FormSelectOption,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
     Popover,
     Radio,
     Switch,
@@ -55,7 +58,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                     id="event"
                     validated={"default"}
                     value={props.action.event}
-                    onChange={value => {
+                    onChange={(_event, value) => {
                         update({ event: value })
                     }}
                     aria-label="Event Type"
@@ -82,14 +85,18 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
             <FormGroup
                 label="Run always"
                 fieldId="runAlways"
-                helperText="Run this action even when notifications are disabled, this event is caused by a recalculation etc."
             >
                 <Switch
                     label="Enabled"
                     labelOff="Disabled"
                     isChecked={props.action.runAlways}
-                    onChange={runAlways => update({ runAlways })}
+                    onChange={(_event, runAlways) => update({ runAlways })}
                 />
+                <FormHelperText>
+                    <HelperText>
+                        <HelperTextItem>Run this action even when notifications are disabled, this event is caused by a recalculation etc.</HelperTextItem>
+                    </HelperText>
+                </FormHelperText>
             </FormGroup>
             {props.action.type === "http" && (
                 <HttpActionUrlSelector
@@ -117,7 +124,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     id="url"
                                     label="Use issue URL"
                                     isChecked={props.action.config.issueUrl !== undefined}
-                                    onChange={checked => updateConfig({ issueUrl: checked ? "" : undefined })}
+                                    onChange={(_event, checked) => updateConfig({ issueUrl: checked ? "" : undefined })}
                                 />
                             </FlexItem>
                             <FlexItem>
@@ -126,7 +133,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     id="components"
                                     label="Use owner/repo/issue"
                                     isChecked={props.action.config.issueUrl === undefined}
-                                    onChange={checked => updateConfig({ issueUrl: checked ? undefined : "" })}
+                                    onChange={(_event, checked) => updateConfig({ issueUrl: checked ? undefined : "" })}
                                 />
                             </FlexItem>
                         </Flex>
@@ -137,7 +144,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                             <TextInput
                                 id="issueUrl"
                                 value={props.action.config.issueUrl}
-                                onChange={issueUrl => update({ config: { ...props.action.config, issueUrl } })}
+                                onChange={(_event, issueUrl) => update({ config: { ...props.action.config, issueUrl } })}
                             />
                         </FormGroup>
                     ) : (
@@ -146,21 +153,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                 <TextInput
                                     id="owner"
                                     value={props.action.config.owner}
-                                    onChange={owner => updateConfig({ owner })}
+                                    onChange={(_event, owner) => updateConfig({ owner })}
                                 />
                             </FormGroup>
                             <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
                                 <TextInput
                                     id="repo"
                                     value={props.action.config.repo}
-                                    onChange={repo => updateConfig({ repo })}
+                                    onChange={(_event, repo) => updateConfig({ repo })}
                                 />
                             </FormGroup>
                             <FormGroup label="Issue" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
                                 <TextInput
                                     id="issue"
                                     value={props.action.config.issue}
-                                    onChange={issue => updateConfig({ issue })}
+                                    onChange={(_event, issue) => updateConfig({ issue })}
                                 />
                             </FormGroup>
                         </>
@@ -189,21 +196,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         <TextInput
                             id="owner"
                             value={props.action.config.owner}
-                            onChange={owner => updateConfig({ owner })}
+                            onChange={(_event, owner) => updateConfig({ owner })}
                         />
                     </FormGroup>
                     <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
                         <TextInput
                             id="repo"
                             value={props.action.config.repo}
-                            onChange={repo => updateConfig({ repo })}
+                            onChange={(_event, repo) => updateConfig({ repo })}
                         />
                     </FormGroup>
                     <FormGroup label="Title" labelIcon={<ExpressionHelp {...props} />} fieldId="title">
                         <TextInput
                             id="title"
                             value={props.action.config.title}
-                            onChange={title => updateConfig({ title })}
+                            onChange={(_event, title) => updateConfig({ title })}
                         />
                     </FormGroup>
                     <FormGroup label="Formatter" fieldId="formatter">
@@ -284,7 +291,7 @@ function GitHubTokenInput(props: GitHubTokenInputProps) {
                         props.onChange({ token: "********" })
                     }
                 }}
-                onChange={token => props.onChange({ token, modified: true })}
+                onChange={(_event, token) => props.onChange({ token, modified: true })}
             />
             See{" "}
             <a

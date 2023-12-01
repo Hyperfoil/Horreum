@@ -2,7 +2,16 @@ import {useState, useEffect, useContext} from "react"
 import { useSelector } from "react-redux"
  
 
-import { Button, Checkbox, Flex, FlexItem, FormGroup, FormSection, TextInput } from "@patternfly/react-core"
+import { Button, 
+    Checkbox, 
+    Flex, 
+    FlexItem, 
+    FormGroup, 
+    FormSection, 
+    HelperText,
+    HelperTextItem,
+    FormHelperText,    
+    TextInput } from "@patternfly/react-core"
 
 import { defaultTeamSelector, useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -163,7 +172,6 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                             label="Name"
                             isRequired={true}
                             fieldId="name"
-                            helperTextInvalid="Name must not be empty"
                         >
                             <TextInput
                                 value={selected?.name}
@@ -172,10 +180,17 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                                 id="name"
                                 aria-describedby="name-helper"
                                 name="name"
-                                isReadOnly={!isTesterForLabel}
+                                readOnlyVariant={!isTesterForLabel ? "default" : undefined}
                                 validated={selected?.name.trim() ? "default" : "error"}
-                                onChange={name => update({ name })}
+                                onChange={(_event, name) => update({ name })}
                             />
+                            <FormHelperText>
+                                <HelperText>
+                                    <HelperTextItem variant={selected?.name.trim() ? "default" : "error"}>
+                                    {selected?.name.trim() ? "" : "Name must not be empty"}
+                                    </HelperTextItem>
+                                </HelperText>
+                            </FormHelperText>
                         </FormGroup>
                         <FormGroup label="Ownership&amp;Access" fieldId="owner">
                             <OwnerAccess
@@ -195,7 +210,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                                         id="filtering"
                                         label="Filtering"
                                         isChecked={selected.filtering}
-                                        onChange={checked => update({ filtering: checked })}
+                                        onChange={(_event, checked) => update({ filtering: checked })}
                                     />
                                 </FlexItem>
                             </Flex>
@@ -208,7 +223,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                                         id="metrics"
                                         label="Metrics"
                                         isChecked={selected.metrics}
-                                        onChange={checked => update({ metrics: checked })}
+                                        onChange={(_event, checked) => update({ metrics: checked })}
                                     />
                                 </FlexItem>
                             </Flex>

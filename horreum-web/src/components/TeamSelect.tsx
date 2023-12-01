@@ -1,6 +1,12 @@
 import { useState } from "react"
 import { State } from "../store"
-import { Select, SelectGroup, SelectOption, SelectVariant, SelectOptionObject } from "@patternfly/react-core"
+import {
+	Select,
+	SelectGroup,
+	SelectOption,
+	SelectVariant,
+	SelectOptionObject
+} from '@patternfly/react-core/deprecated';
 
 import { useSelector } from "react-redux"
 
@@ -43,7 +49,7 @@ export default function TeamSelect({ includeGeneral, selection, teamsSelector, o
             variant={SelectVariant.single}
             aria-label="Select team"
             placeholderText="Select team..."
-            onToggle={setExpanded}
+            onToggle={(_event, val) => setExpanded(val)}
             onSelect={(event, selection) => {
                 setExpanded(false)
                 onSelect(selection as Team)

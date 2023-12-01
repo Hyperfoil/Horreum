@@ -3,7 +3,7 @@ import { useState } from "react"
 import { NavLink } from "react-router-dom"
 import { Bullseye, Button, Modal, Spinner } from "@patternfly/react-core"
 import { ArrowRightIcon } from "@patternfly/react-icons"
-import { TableComposable, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table"
+import { Table /* data-codemods */, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table"
 
 import { formatDateTime } from "../../utils"
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal"
@@ -32,7 +32,7 @@ export default function ListReportsModal({ isOpen, onClose, summary, onReload }:
                     </Bullseye>
                 )}
                 {summary && (
-                    <TableComposable variant="compact">
+                    <Table variant="compact">
                         <Thead>
                             <Tr>
                                 <Th>Report</Th>
@@ -59,7 +59,7 @@ export default function ListReportsModal({ isOpen, onClose, summary, onReload }:
                                 </Tr>
                             ))}
                         </Tbody>
-                    </TableComposable>
+                    </Table>
                 )}
             </div>
             <ConfirmDeleteModal

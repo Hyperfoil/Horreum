@@ -13,6 +13,9 @@ import {
     CardHeader,
     Form,
     FormGroup,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,    
     PageSection,
     Spinner,
     TextArea,
@@ -77,8 +80,6 @@ function General(props: GeneralProps) {
                 label="Name"
                 isRequired={true}
                 fieldId="schemaName"
-                helperText="names must be unique"
-                helperTextInvalid="Name must be unique and not empty"
             >
                 <TextInput
                     value={schema.name}
@@ -88,11 +89,18 @@ function General(props: GeneralProps) {
                     aria-describedby="name-helper"
                     name="schemaName"
                     validated={(schema.name && schema.name !== "") || !isTester ? "default" : "error"}
-                    isReadOnly={!isTester}
-                    onChange={value => {
+                    readOnlyVariant={!isTester ? "default" : undefined}
+                    onChange={(_event, value) => {
                         onChange({ name: value })
                     }}
                 />
+                <FormHelperText>
+                    <HelperText>
+                        <HelperTextItem variant={(schema.name && schema.name !== "") || !isTester ? "default" : "error"}>
+                        {(schema.name && schema.name !== "") || !isTester ? "names must be unique" : "Name must be unique and not empty"}
+                        </HelperTextItem>
+                    </HelperText>
+                </FormHelperText>
             </FormGroup>
             <FormGroup label="URI" isRequired={true} fieldId="schemaURI">
                 <div style={{ display: "flex" }}>
@@ -123,13 +131,13 @@ function General(props: GeneralProps) {
                         type="text"
                         id="schemaURI"
                         name="schemaURI"
-                        isReadOnly={!isTester}
+                        readOnlyVariant={!isTester ? "default" : undefined}
                         validated={
                             (schema.uri && SUPPORTED_SCHEMES.some(s => schema.uri.startsWith(s))) || !isTester
                                 ? "default"
                                 : "error"
                         }
-                        onChange={value => {
+                        onChange={(_event, value) => {
                             onChange({ uri: value })
                         }}
                         placeholder={isTester ? "Click button to import" : ""}
@@ -153,7 +161,7 @@ function General(props: GeneralProps) {
                 )}
                 {importFailed && <Alert variant="warning" title="Schema does not have $id - cannot import." />}
             </FormGroup>
-            <FormGroup label="Description" fieldId="schemaDescription" helperText="" helperTextInvalid="">
+            <FormGroup label="Description" fieldId="schemaDescription">
                 <TextArea
                     value={schema.description}
                     type="text"
@@ -161,7 +169,7 @@ function General(props: GeneralProps) {
                     aria-describedby="description-helper"
                     name="schemaDescription"
                     readOnly={!isTester}
-                    onChange={value => {
+                    onChange={(_event, value) => {
                         onChange({ description: value })
                     }}
                 />
@@ -176,7 +184,7 @@ function General(props: GeneralProps) {
                         }}
                     />
                 ) : (
-                    <TextInput id="schemaOwner" value={teamToName(schema.owner) || ""} isReadOnly />
+                    <TextInput id="schemaOwner" value={teamToName(schema.owner) || ""}  readOnlyVariant="default" />
                 )}
             </FormGroup>
             <FormGroup label="Access rights" fieldId="schemaAccess">

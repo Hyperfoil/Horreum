@@ -1,24 +1,26 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, ReactNode } from "react"
 
 import {ChangeDetection, ConditionConfig, Variable} from "../../api"
 
 import {
-    ActionList,
-    Button,
-    Flex,
-    FlexItem,
-    Form,
-    FormGroup,
-    Popover,
-    Select,
-    SelectOption,
-    Tab,
-    Tabs,
-    TabTitleIcon,
-    TabTitleText,
-    TextInput,
-    Title,
-} from "@patternfly/react-core"
+	ActionList,
+	Button,
+	Flex,
+	FlexItem,
+	Form,
+	FormGroup,
+	Popover,
+	Tab,
+	Tabs,
+	TabTitleIcon,
+	TabTitleText,
+	TextInput,
+	Title
+} from '@patternfly/react-core';
+import {
+	Select,
+	SelectOption
+} from '@patternfly/react-core/deprecated';
 
 import { AddCircleOIcon } from "@patternfly/react-icons"
 
@@ -68,22 +70,31 @@ export default function VariableForm(props: VariableFormProps) {
         props.onChange({ ...props.variable, changeDetection: newArray })
         setChangeDetection(rd)
     }
+    const tabs : any = props.variable.changeDetection.map((rd, i): ReactNode => (
+        <Tab
+            key={i}
+            eventKey={i}
+            title={(props.models.find(m => m.name === rd.model)?.title || rd.model) + ` (${i + 1})`}
+        />
+    ));
     return (
         <Form id={`variable-${props.variable.id}`} isHorizontal={true}>
             <FormGroup label="Name" fieldId="name">
                 <TextInput
                     value={props.variable.name || ""}
                     id="name"
-                    onChange={value => props.onChange({ ...props.variable, name: value })}
+                    onChange={(_event, value) => props.onChange({ ...props.variable, name: value })}
                     validated={!!props.variable.name && props.variable.name.trim() !== "" ? "default" : "error"}
-                    isReadOnly={!props.isTester}
+                    //isReadOnly={!props.isTester} this is no longe rsupport
+                    readOnlyVariant={props.isTester ? undefined : "default"}
+                    //  {"default"}
                 />
             </FormGroup>
             <FormGroup label="Group" fieldId="group">
                 <Select
                     variant="typeahead"
                     typeAheadAriaLabel="Select group"
-                    onToggle={setGroupOpen}
+                    onToggle={(_event, val) => setGroupOpen(val)}
                     onSelect={(e, group, isPlaceholder) => {
                         setGroupOpen(false)
                         props.onChange({ ...props.variable, group: isPlaceholder ? undefined : group.toString() })
@@ -140,14 +151,8 @@ export default function VariableForm(props: VariableFormProps) {
                     }
                 }}
             >
-                {props.variable.changeDetection.map((rd, i) => (
-                    <Tab
-                        key={i}
-                        eventKey={i}
-                        title={(props.models.find(m => m.name === rd.model)?.title || rd.model) + ` (${i + 1})`}
-                    />
-                ))}
-                {props.isTester && (
+                {tabs}
+                {props.isTester ? (
                     <Tab
                         eventKey="__add"
                         title={
@@ -185,7 +190,7 @@ export default function VariableForm(props: VariableFormProps) {
                             </Button>
                         </ActionList>
                     </Tab>
-                )}
+                ) : undefined}
             </Tabs>
 
             {usedModel && changeDetection && (
@@ -193,7 +198,7 @@ export default function VariableForm(props: VariableFormProps) {
                     <FormGroup label="Model" fieldId="model">
                         <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
                             <FlexItem
-                                style={{ paddingTop: "var(--pf-c-form--m-horizontal__group-label--md--PaddingTop)" }}
+                                style={{ paddingTop: "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)" }}
                             >
                                 {usedModel.title}
                                 <Popover headerContent={usedModel.title} bodyContent={usedModel.description}>

@@ -2,7 +2,11 @@ import {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
 import { Bullseye, Button, Modal, Pagination, Spinner, Title } from "@patternfly/react-core"
-import { Table, TableBody, TableHeader } from "@patternfly/react-table"
+import {
+	Table,
+	TableBody,
+	TableHeader
+} from '@patternfly/react-table/deprecated';
 
 import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"

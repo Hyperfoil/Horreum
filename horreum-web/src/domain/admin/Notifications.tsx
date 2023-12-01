@@ -17,7 +17,7 @@ export default function Notifications() {
                 <NotificationMethodSelect isDisabled={false} method={method} onChange={setMethod} />
             </FormGroup>
             <FormGroup label="Data" fieldId="data">
-                <TextInput value={data} onChange={setData} />
+                <TextInput value={data} onChange={(_event, val) => setData(val)} />
             </FormGroup>
             <ActionGroup>
                 <Button

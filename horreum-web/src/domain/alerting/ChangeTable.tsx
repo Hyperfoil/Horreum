@@ -1,19 +1,21 @@
 import {useState, useEffect, useContext} from "react"
 import {
-    ActionGroup,
-    Button,
-    Dropdown,
-    DropdownItem,
-    KebabToggle,
-    ExpandableSection,
-    Form,
-    FormGroup,
-    Modal,
-    Tab,
-    Tabs,
-    TextArea,
-    Switch,
-} from "@patternfly/react-core"
+	ActionGroup,
+	Button,
+	ExpandableSection,
+	Form,
+	FormGroup,
+	Modal,
+	Tab,
+	Tabs,
+	TextArea,
+	Switch
+} from '@patternfly/react-core';
+import {
+	Dropdown,
+	DropdownItem,
+	KebabToggle
+} from '@patternfly/react-core/deprecated';
 import { CheckIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import {alertingApi, Change, FingerprintValue, Variable} from "../../api"
@@ -104,7 +106,7 @@ const ChangeModal = ({ change, isOpen, onClose, onUpdate }: ChangeModalProps) =>
                     <Switch
                         id="confirmed"
                         isChecked={confirmed}
-                        onChange={setConfirmed}
+                        onChange={(_event, val) => setConfirmed(val)}
                         label="Confirmed"
                         labelOff="Not confirmed"
                     />
@@ -116,7 +118,7 @@ const ChangeModal = ({ change, isOpen, onClose, onUpdate }: ChangeModalProps) =>
                         id="description"
                         aria-describedby="description-helper"
                         name="description"
-                        onChange={setDescription}
+                        onChange={(_event, val) => setDescription(val)}
                     />
                 </FormGroup>
             </Form>
@@ -249,7 +251,7 @@ export const ChangesTabs = ({
     return (
         <ExpandableSection
             toggleText={isExpanded ? "Hide changes in " + name : "Show changes in " + name}
-            onToggle={setExpanded}
+            onToggle={(_event, val) => setExpanded(val)}
             isExpanded={isExpanded}
         >
             <Tabs

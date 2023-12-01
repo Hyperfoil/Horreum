@@ -3,17 +3,19 @@ import { useNavigate } from "react-router-dom"
 import jsonpath from "jsonpath"
 
 import {
-    Button,
-    ButtonVariant,
-    Dropdown,
-    DropdownToggle,
-    DropdownItem,
-    InputGroup,
-    Popover,
-    Toolbar,
-    ToolbarContent,
-    ToolbarItem,
-} from "@patternfly/react-core"
+	Button,
+	ButtonVariant,
+	InputGroup,
+	Popover,
+	Toolbar,
+	ToolbarContent,
+	ToolbarItem, InputGroupItem
+} from '@patternfly/react-core';
+import {
+	Dropdown,
+	DropdownToggle,
+	DropdownItem
+} from '@patternfly/react-core/deprecated';
 import { HelpIcon } from "@patternfly/react-icons"
 import { toString } from "../../components/Editor"
 import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams } from "react-autosuggest"
@@ -110,13 +112,13 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
 
     return (
         <Toolbar
-            className="pf-l-toolbar pf-u-justify-content-space-between pf-u-mx-xl pf-u-my-md"
+            className="pf-v5-l-toolbar pf-v5-u-justify-content-space-between pf-v5-u-mx-xl pf-v5-u-my-md"
             style={{ justifyContent: "space-between", width: "100%" }}
         >
             <ToolbarContent style={{ width: "100%" }}>
                 <ToolbarItem aria-label="search" style={{ marginTop: 0 }}>
                     <InputGroup>
-                        <Dropdown
+                        <InputGroupItem><Dropdown
                             isOpen={pathTypeOpen}
                             onSelect={(e?: React.SyntheticEvent<HTMLDivElement>) => {
                                 if (e) {
@@ -127,7 +129,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
                             }}
                             toggle={
                                 <DropdownToggle
-                                    onToggle={e => {
+                                    onToggle={(_event, e) => {
                                         setPathTypeOpen(e)
                                     }}
                                 >
@@ -145,9 +147,9 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
                                     js
                                 </DropdownItem>
                             ]}
-                        ></Dropdown>
-                        <SearchQueryHelp pathType={pathType} />
-                        <Autosuggest
+                        ></Dropdown></InputGroupItem>
+                        <InputGroupItem><SearchQueryHelp pathType={pathType} /></InputGroupItem>
+                        <InputGroupItem><Autosuggest
                             inputProps={inputProps}
                             suggestions={pathSuggestions}
                             onSuggestionsFetchRequested={delayedUpdateSuggestions}
@@ -157,19 +159,21 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
                             getSuggestionValue={value => updateSuggestionValue(value, pathQuery, pathSuggestions)}
                             renderSuggestion={v => <div>{v}</div>}
                             renderInputComponent={inputProps => (
+                                <span className="pf-v5-c-form-control">
                                 <input
                                     {...(inputProps as any)}
-                                    className="pf-c-form-control"
+                                    className="pf-v5-c-form-control"
                                     aria-label="jsonpath"
                                     aria-invalid={pathInvalid}
                                     style={{ width: "500px" }}
                                 />
+                                </span>
                             )}
-                        />
-                        <Button variant="control" onClick={() => runPathQuery()}>
+                        /></InputGroupItem>
+                        <InputGroupItem><Button variant="control" onClick={() => runPathQuery()}>
                             Find
-                        </Button>
-                        <Button
+                        </Button></InputGroupItem>
+                        <InputGroupItem><Button
                             variant="control"
                             onClick={() => {
                                 setPathQuery("")
@@ -179,7 +183,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
                             }}
                         >
                             Clear
-                        </Button>
+                        </Button></InputGroupItem>
                     </InputGroup>
                 </ToolbarItem>
             </ToolbarContent>
