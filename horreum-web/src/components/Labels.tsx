@@ -2,7 +2,16 @@ import React, {ReactNode, RefObject, useContext, useEffect, useMemo, useRef, use
 
 import { NavLink } from "react-router-dom"
 
-import { Checkbox, Flex, FlexItem, Select, SelectOption, Tooltip } from "@patternfly/react-core"
+import {
+	Checkbox,
+	Flex,
+	FlexItem,
+	Tooltip
+} from '@patternfly/react-core';
+import {
+	Select,
+	SelectOption
+} from '@patternfly/react-core/deprecated';
 import { ExclamationCircleIcon } from "@patternfly/react-icons"
 
 import {LabelInfo, schemaApi} from "../api"
@@ -91,7 +100,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                 placeholderText={isReadOnly ? "No labels" : "Select label(s)"}
                 isOpen={isExpanded}
                 maxHeight={"50vh"}
-                onToggle={expanded => {
+                onToggle={(_event, expanded) => {
                     setExpanded(expanded)
                     if (expanded) {
                         ensureFooterInView()
@@ -125,7 +134,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                             id="metrics"
                             label="Include metrics labels"
                             isChecked={metrics}
-                            onChange={checked => {
+                            onChange={(_event, checked) => {
                                 setMetrics(checked)
                                 ensureFooterInView()
                             }}
@@ -134,7 +143,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                             id="filtering"
                             label="Include filtering labels"
                             isChecked={filtering}
-                            onChange={checked => {
+                            onChange={(_event, checked) => {
                                 setFiltering(checked)
                                 ensureFooterInView()
                             }}
@@ -148,7 +157,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                 <span
                     style={{
                         display: "inline-block",
-                        color: "var(--pf-global--danger-color--100)",
+                        color: "var(--pf-v5-global--danger-color--100)",
                     }}
                 >
                     {error}
@@ -171,7 +180,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                         <Tooltip content="No schemas implement this label!">
                             <ExclamationCircleIcon
                                 style={{
-                                    fill: "var(--pf-global--danger-color--100)",
+                                    fill: "var(--pf-v5-global--danger-color--100)",
                                     marginTop: "4px",
                                 }}
                             />

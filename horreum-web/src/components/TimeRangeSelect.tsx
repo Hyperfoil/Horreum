@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react"
 
-import { Select, SelectOption, SelectOptionObject } from "@patternfly/react-core"
+import {
+	Select,
+	SelectOption,
+	SelectOptionObject
+} from '@patternfly/react-core/deprecated';
 
 type TimeRangeSelectProps = {
     selection?: TimeRange
@@ -24,7 +28,7 @@ function TimeRangeSelect(props: TimeRangeSelectProps) {
     }, [props.options, selection, onSelect])
     return (
         <Select
-            onToggle={setOpen}
+            onToggle={(_event, val) => setOpen(val)}
             onSelect={(e, selection) => {
                 setOpen(false)
                 props.onSelect(selection as TimeRange)

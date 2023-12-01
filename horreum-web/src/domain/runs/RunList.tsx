@@ -230,7 +230,7 @@ export default function RunList() {
         <PageSection>
             <Card>
                 <CardHeader>
-                    <Toolbar className="pf-u-justify-content-space-between" style={{ width: "100%" }}>
+                    <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
                         <ToolbarGroup>
                             <ToolbarItem style={{ flexGrow: 100 }}>
                                 <Breadcrumb>
@@ -249,7 +249,7 @@ export default function RunList() {
                                     aria-label="show trashed runs"
                                     label="Show trashed runs"
                                     isChecked={showTrashed}
-                                    onChange={setShowTrashed}
+                                    onChange={(_event, val) => setShowTrashed(!showTrashed)}
                                 />
                             </ToolbarItem>
                             <ToolbarItem>
@@ -263,12 +263,12 @@ export default function RunList() {
                                             Import Data
                                         </Button></SplitItem>
                                     <SplitItem>
-                                        <NavLink className="pf-c-button pf-m-primary" to={`/test/${testIdInt}`}>
+                                        <NavLink className="pf-v5-c-button pf-m-primary" to={`/test/${testIdInt}`}>
                                             Edit test
                                         </NavLink>
                                     </SplitItem>
                                     <SplitItem>
-                                        <NavLink className="pf-c-button pf-m-secondary" to={`/run/dataset/list/${testIdInt}`}>
+                                        <NavLink className="pf-v5-c-button pf-m-secondary" to={`/run/dataset/list/${testIdInt}`}>
                                             View datasets
                                         </NavLink>
                                     </SplitItem>

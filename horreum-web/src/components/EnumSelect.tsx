@@ -1,6 +1,9 @@
 import { ReactNode, useState } from "react"
 
-import { Select, SelectOption } from "@patternfly/react-core"
+import {
+	Select,
+	SelectOption
+} from '@patternfly/react-core/deprecated';
 
 type EnumSelectProps = {
     options: Record<string, ReactNode>
@@ -14,7 +17,7 @@ export default function EnumSelect({options, selected, onSelect, isDisabled}: En
     return (
         <Select
             isOpen={isOpen}
-            onToggle={setOpen}
+            onToggle={(_event, val) => setOpen(val)}
             placeholderText="Please select..."
             selections={selected}
             onSelect={(_, value) => {

@@ -1,7 +1,14 @@
 import {useContext, useEffect, useState} from "react"
 import { useHistory } from "react-router"
 
-import { Bullseye, FormGroup, Popover, Spinner, TextInput } from "@patternfly/react-core"
+import { Bullseye, 
+    FormGroup, 
+    HelperText,
+    HelperTextItem,
+    FormHelperText,    
+    Popover, 
+    Spinner, 
+    TextInput } from "@patternfly/react-core"
 
 import { durationToMillis, millisToDuration } from "../../utils"
 
@@ -35,7 +42,7 @@ function compareRules(r1: MissingDataRule, r2: MissingDataRule) {
 }
 
 function asWarning(text: string) {
-    return <span style={{ color: "var(--pf-global--warning-color--200)" }}>{text}</span>
+    return <span style={{ color: "var(--pf-v5-global--warning-color--200)" }}>{text}</span>
 }
 
 export default function MissingDataNotifications(props: MissingDataNotificationsProps) {
@@ -169,28 +176,14 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                     <FormGroup label="Name" fieldId="name">
                         <TextInput
                             id="name"
-                            isReadOnly={!isTester}
+                            readOnlyVariant={!isTester ? "default" : undefined}
                             value={selectedRule.name || ""}
-                            onChange={name => update({ name })}
+                            onChange={(_event, name) => update({ name })}
                         />
                     </FormGroup>
                     <FormGroup
                         label="Labels"
                         fieldId="labels"
-                        validated={
-                            hasLabels && !selectedRule.condition
-                                ? "warning"
-                                : !hasLabels && selectedRule.condition
-                                ? "warning"
-                                : "default"
-                        }
-                        helperText={
-                            hasLabels
-                                ? asWarning("Labels are defined but there is no condition evaulating these.")
-                                : !hasLabels && selectedRule.condition
-                                ? asWarning("Condition is used but the labels are not defined.")
-                                : undefined
-                        }
                     >
                         <Labels
                             isReadOnly={!isTester}
@@ -199,6 +192,17 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                             defaultMetrics={false}
                             defaultFiltering={true}
                         />
+                        <FormHelperText>
+                            <HelperText>
+                                <HelperTextItem variant={hasLabels || (!hasLabels && selectedRule.condition) ? "warning" : undefined}>{
+                                    hasLabels
+                                        ? asWarning("Labels are defined but there is no condition evaulating these.")
+                                        : !hasLabels && selectedRule.condition
+                                        ? asWarning("Condition is used but the labels are not defined.")
+                                        : undefined
+                                }</HelperTextItem>
+                            </HelperText>
+                        </FormHelperText>
                     </FormGroup>
                     <FormGroup
                         label={
@@ -255,7 +259,6 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                                 </Popover>
                             </>
                         }
-                        helperText="e.g. 1d 2h 3m 4s"
                         fieldId="maxStaleness"
                     >
                         <TextInput
@@ -263,12 +266,17 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                             isRequired
                             type="text"
                             id="maxStaleness"
-                            isReadOnly={!isTester}
+                            readOnlyVariant={!isTester ? "default" : undefined}
                             validated={selectedRule.maxStaleness !== undefined ? "default" : "error"}
-                            onChange={value =>
+                            onChange={(_event, value) =>
                                 update({ maxStalenessStr: value, maxStaleness: durationToMillis(value) })
                             }
                         />
+                        <FormHelperText>
+                            <HelperText>
+                                <HelperTextItem variant={selectedRule.maxStaleness !== undefined ? "default" : "error"}>e.g. 1d 2h 3m 4s</HelperTextItem>
+                            </HelperText>
+                        </FormHelperText>                        
                     </FormGroup>
                 </>
             )}

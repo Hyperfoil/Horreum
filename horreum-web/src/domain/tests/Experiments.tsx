@@ -1,22 +1,26 @@
 import {useState, useEffect, useContext} from "react"
 import { NavLink } from "react-router-dom"
-
+import {JSXElementConstructor, ReactElement } from 'react';
 import {
-    Alert,
-    Button,
-    Flex,
-    FlexItem,
-    FormGroup,
-    FormSection,
-    List,
-    ListItem,
-    Popover,
-    Select,
-    SelectOption,
-    Tab,
+	Alert,
+	Button,
+	Flex,
+	FlexItem,
+	FormGroup,
+	FormSection,
+	List,
+	ListItem,
+	Popover,
+	Tab,
+	TabProps,
     Tabs,
-    TextInput,
-} from "@patternfly/react-core"
+    TabsProps,
+	TextInput
+} from '@patternfly/react-core';
+import {
+	Select,
+	SelectOption
+} from '@patternfly/react-core/deprecated';
 
 import {alertingApi, ConditionConfig, experimentApi, Test, Variable} from "../../api"
 import { useTester } from "../../auth"
@@ -83,7 +87,68 @@ export default function Experiments(props: ExperimentsProps) {
             setActiveCondition(selected.comparisons.length > 0 ? 0 : "__add")
         }
     }, [selected])
+    const tabs : any = !selected ? undefined : selected.comparisons.map((c, i) => {
+        const usedModel = models.find(m => m.name === c.model)
+        if (!usedModel) {
+            return <Tab eventKey={i} title="<unknown>" key={i}/>
+        }
+        return (
+            <Tab eventKey={i} title={`${usedModel.title} (${i})`} key={i}>
+                <FormGroup label="model" fieldId="model">
+                    <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
+                        <FlexItem
+                            style={{
+                                paddingTop:
+                                    "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)",
+                            }}
+                        >
+                            {usedModel.title}
+                            <Popover
+                                headerContent={usedModel.title}
+                                bodyContent={usedModel.description}
+                            >
+                                <HelpButton />
+                            </Popover>
+                        </FlexItem>
+                        {isTester && (
+                            <FlexItem>
+                                <Button
+                                    variant="danger"
+                                    onClick={() => {
+                                        selected.comparisons.splice(i, 1)
+                                        update({ comparisons: selected.comparisons })
+                                    }}
+                                >
+                                    Delete condition
+                                </Button>
+                            </FlexItem>
+                        )}
+                    </Flex>
+                </FormGroup>
+                <VariableSelect
+                    variables={variables}
+                    selectedId={c.variableId}
+                    onChange={v => {
+                        c.variableId = v.id
+                        update({ comparisons: [...selected.comparisons] })
+                    }}
+                />
+                {usedModel.ui.map(comp => (
+                    <ConditionComponent
+                        {...comp}
+                        isTester={isTester}
+                        value={(c.config as any)[comp.name]}
+                        onChange={value => {
+                            (c.config as any)[comp.name] = value
+                            update({ comparisons: [...selected.comparisons] })
+                        }}
+                    />
+                ))}
+            </Tab>
+        )
+    })
 
+    //typescript really doesn't like guessing that tabs is an array of tabs and not just Element[]    
     props.funcsRef.current = {
         save: () => {
             const testId = props.test?.id
@@ -177,9 +242,9 @@ export default function Experiments(props: ExperimentsProps) {
                         <TextInput
                             id="name"
                             isRequired={true}
-                            isReadOnly={!isTester}
+                            readOnlyVariant={!isTester ? "default" : undefined}
                             value={selected.name}
-                            onChange={name => update({ name })}
+                            onChange={(_event, name) => update({ name })}
                         />
                     </FormGroup>
                     <FormSection
@@ -300,74 +365,7 @@ export default function Experiments(props: ExperimentsProps) {
                                 setActiveCondition(key)
                             }}
                         >
-                            {selected.comparisons.map((c, i) => {
-                                const usedModel = models.find(m => m.name === c.model)
-                                if (!usedModel) {
-                                    return <Tab eventKey={i} title="<unknown>" />
-                                }
-                                return (
-                                    <Tab eventKey={i} title={`${usedModel.title} (${i})`}>
-                                        <FormGroup label="model" fieldId="model">
-                                            <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
-                                                <FlexItem
-                                                    style={{
-                                                        paddingTop:
-                                                            "var(--pf-c-form--m-horizontal__group-label--md--PaddingTop)",
-                                                    }}
-                                                >
-                                                    {usedModel.title}
-                                                    <Popover
-                                                        headerContent={usedModel.title}
-                                                        bodyContent={usedModel.description}
-                                                    >
-                                                        <HelpButton />
-                                                    </Popover>
-                                                </FlexItem>
-                                                {isTester && (
-                                                    <FlexItem>
-                                                        <Button
-                                                            variant="danger"
-                                                            onClick={() => {
-                                                                selected.comparisons.splice(i, 1)
-                                                                update({ comparisons: selected.comparisons })
-                                                            }}
-                                                        >
-                                                            Delete condition
-                                                        </Button>
-                                                    </FlexItem>
-                                                )}
-                                            </Flex>
-                                        </FormGroup>
-                                        <FormGroup
-                                            label={
-                                                <>
-                                                    Variable{" "}
-                                                </>
-                                            }
-                                        >
-                                            <VariableSelect
-                                                variables={variables}
-                                                selectedId={c.variableId}
-                                                onChange={v => {
-                                                    c.variableId = v.id
-                                                    update({ comparisons: [...selected.comparisons] })
-                                                }}
-                                            />
-                                        </FormGroup>
-                                        {usedModel.ui.map(comp => (
-                                            <ConditionComponent
-                                                {...comp}
-                                                isTester={isTester}
-                                                value={(c.config as any)[comp.name]}
-                                                onChange={value => {
-                                                    (c.config as any)[comp.name] = value
-                                                    update({ comparisons: [...selected.comparisons] })
-                                                }}
-                                            />
-                                        ))}
-                                    </Tab>
-                                )
-                            })}
+                            {tabs}
                             <Tab key="__add" eventKey="__add" title="Add comparison">
                                 <FormGroup label="Model" fieldId="model">
                                     <EnumSelect
@@ -449,7 +447,7 @@ function VariableSelect(props: VariableSelectProps) {
     return (
         <Select
             isOpen={open}
-            onToggle={setOpen}
+            onToggle={(_event, val) => setOpen(val)}
             selections={props.variables.find(v => v.id === props.selectedId)?.name}
             onSelect={(_, name) => {
                 const v = props.variables.find(v => v.name === name)

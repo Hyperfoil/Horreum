@@ -9,6 +9,9 @@ import {
     DataListAction,
     Form,
     FormGroup,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,    
     Spinner,
     TextInput,
     Title,
@@ -36,12 +39,12 @@ const NotificationSettings = ({ settings, onChange }: NotificationSettingsProps)
                     }}
                 />
             </FormGroup>
-            <FormGroup label="Data" fieldId="data" helperText="e.g. email address, IRC channel...">
+            <FormGroup label="Data" fieldId="data">
                 <TextInput
                     isDisabled={settings.disabled}
                     id="data"
                     value={settings.data}
-                    onChange={value => {
+                    onChange={(_event, value) => {
                         settings.data = value
                         onChange()
                     }}
@@ -49,6 +52,11 @@ const NotificationSettings = ({ settings, onChange }: NotificationSettingsProps)
                         if (e.key === "Enter") e.preventDefault()
                     }}
                 />
+                <FormHelperText>
+                    <HelperText>
+                        <HelperTextItem>e.g. email address, IRC channel...</HelperTextItem>
+                    </HelperText>
+                </FormHelperText>
             </FormGroup>
         </Form>
     )

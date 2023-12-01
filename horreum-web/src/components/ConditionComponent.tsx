@@ -1,4 +1,7 @@
-import { Alert, FormGroup, Switch } from "@patternfly/react-core"
+import { Alert, FormGroup, Switch,
+    HelperText,
+    HelperTextItem,
+    FormHelperText } from "@patternfly/react-core"
 import { ConditionComponent as ConditionComponentDef } from "../api"
 import LogSlider from "./LogSlider"
 import EnumSelect from "./EnumSelect"
@@ -58,7 +61,7 @@ export default function ConditionComponent({ value, onChange, properties, isTest
                     labelOff="OFF"
                     isDisabled={!isTester}
                     isChecked={value}
-                    onChange={checked => onChange(checked)}
+                    onChange={(_event, checked) => onChange(checked)}
                 />
             )
             break
@@ -67,7 +70,12 @@ export default function ConditionComponent({ value, onChange, properties, isTest
             break
     }
     return (
-        <FormGroup fieldId={name} key={name} label={title} helperText={description}>
+        <FormGroup fieldId={name} key={name} label={title}>
+            <FormHelperText>
+                <HelperText>
+                    <HelperTextItem>{description}</HelperTextItem>
+                </HelperText>
+            </FormHelperText>            
             {component}
         </FormGroup>
     )

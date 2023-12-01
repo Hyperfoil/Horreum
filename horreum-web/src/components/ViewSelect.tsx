@@ -1,5 +1,8 @@
 import { useState } from "react"
-import { Select, SelectOption } from "@patternfly/react-core"
+import {
+	Select,
+	SelectOption
+} from '@patternfly/react-core/deprecated';
 
 import { View } from "../api"
 
@@ -15,7 +18,7 @@ export default function ViewSelect({views, viewId, onChange}: ViewSelectProps) {
     return (
         <Select
             isOpen={isOpen}
-            onToggle={setOpen}
+            onToggle={(_event, val) => setOpen(val)}
             selections={selected !== undefined ? { ...selected, toString: () => selected.name } : undefined}
             onSelect={(_, item) => {
             onChange((item as View).id)

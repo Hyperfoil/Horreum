@@ -80,11 +80,11 @@ function Table<D extends object>({
     }, [sortState.sortBy, onSortBy])
     if (isLoading) {
         return (
-            <table className="pf-c-table pf-m-compact pf-m-grid-md" {...getTableProps()}>
-                <thead>
+            <table className="pf-v5-c-table pf-m-compact pf-m-grid-md" {...getTableProps()}>
+                <thead className="pf-v-c-table__thead">
                     <tr>
-                        <th className={clsx("pf-c-table__sort")}>
-                            <button className="pf-c-button pf-m-plain" type="button">
+                        <th className={clsx("pf-v5-c-table__sort")}>
+                            <button className="pf-v5-c-button pf-m-plain" type="button">
                                 Loading... <Spinner size="sm" />
                             </button>
                         </th>
@@ -113,11 +113,11 @@ function Table<D extends object>({
     }
     return (
         <>
-            <table className="pf-c-table pf-m-compact pf-m-grid-md" {...getTableProps()}>
-                <thead>
+            <table className="pf-v5-c-table pf-m-compact pf-m-grid-md" {...getTableProps()}>
+                <thead className="pf-v-c-table__thead">
                     {headerGroups.map(headerGroup => {
                         return (
-                            <tr {...headerGroup.getHeaderGroupProps()}>
+                            <tr {...headerGroup.getHeaderGroupProps()} className="pf-v5-c-table__tr">
                                 {headerGroup.headers.map(column => {
                                     const columnProps = column as unknown as UseSortByColumnProps<D>
                                     return (
@@ -126,30 +126,34 @@ function Table<D extends object>({
 
                                         <th
                                             className={clsx(
-                                                "pf-c-table__sort",
+                                                "pf-v5-c-table__th",
+                                                "pf-v5-c-table__sort",
                                                 columnProps.isSorted && "pf-m-selected" || ""
                                             )}
                                             {...column.getHeaderProps(columnProps.getSortByToggleProps())}
                                         >
-                                            <button className="pf-c-button pf-m-plain" type="button">
-                                                {column.render("Header")}
-                                                {/* Add a sort direction indicator */}
-                                                {!columnProps.canSort ? (
-                                                    ""
-                                                ) : (
-                                                    <span className="pf-c-table__sort-indicator">
-                                                        <i
-                                                            className={clsx(
-                                                                "fas",
-                                                                columnProps.isSorted
-                                                                    ? columnProps.isSortedDesc
-                                                                        ? "fa-long-arrow-alt-down"
-                                                                        : "fa-long-arrow-alt-up"
-                                                                    : "fa-arrows-alt-v"
-                                                            )}
-                                                        ></i>
-                                                    </span>
-                                                )}
+                                            <button className="pf-v5-c-button pf-m-plain" type="button">
+                                                <div className="pf-v5-c-table__button-content">
+                                                    {/*removed table__text className to avoid header ellipsis*/}
+                                                    <span className="xpf-v5-c-table__text">{column.render("Header")}</span>
+                                                    {/* Add a sort direction indicator */}
+                                                    {!columnProps.canSort ? (
+                                                        ""
+                                                    ) : (
+                                                        <span className="pf-v5-c-table__sort-indicator">
+                                                            <i
+                                                                className={clsx(
+                                                                    "fas",
+                                                                    columnProps.isSorted
+                                                                        ? columnProps.isSortedDesc
+                                                                            ? "fa-long-arrow-alt-down"
+                                                                            : "fa-long-arrow-alt-up"
+                                                                        : "fa-arrows-alt-v"
+                                                                )}
+                                                            ></i>
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </button>
                                         </th>
                                     )
@@ -158,7 +162,7 @@ function Table<D extends object>({
                         )
                     })}
                 </thead>
-                <tbody {...getTableBodyProps()}>
+                <tbody {...getTableBodyProps()} className="pf-v5-c-table__tbody">
                     {rows.map(row => {
                         prepareRow(row)
                         const rowProps = row.getRowProps()
@@ -166,10 +170,10 @@ function Table<D extends object>({
                             rowProps.style = { ...rowProps.style, background: "#EEE" }
                         }
                         return (
-                            <tr {...rowProps}>
+                            <tr {...rowProps} className="pf-v5-c-table__tr">
                                 {row.cells.map(cell => {
                                     return (
-                                        <td data-label={cell.column.Header} {...cell.getCellProps()}>
+                                        <td data-label={cell.column.Header} {...cell.getCellProps()} className="pf-v5-c-table__td">
                                             {cell.render("Cell")}
                                         </td>
                                     )

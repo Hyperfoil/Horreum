@@ -1,6 +1,12 @@
 import {useContext, useEffect, useRef, useState} from "react"
 import { useSelector } from "react-redux"
-import { Button, FormGroup, Modal, TextInput } from "@patternfly/react-core"
+import { Button, 
+    FormGroup, 
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
+    Modal, 
+    TextInput } from "@patternfly/react-core"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
 import TeamMembers, { TeamMembersFunctions } from "../user/TeamMembers"
@@ -124,7 +130,7 @@ export default function Teams(props: TeamsProps) {
     }
     return (
         <>
-            <SplitForm
+            <SplitForm<Team>
                 itemType="Team"
                 newItem={id => ({ id, name: "", exists: false })}
                 canAddItem={true}
@@ -160,21 +166,31 @@ export default function Teams(props: TeamsProps) {
                         <FormGroup
                             label="Name"
                             fieldId="name"
-                            helperText="Team name must end with '-team' suffix, e.g. 'engineers-team'"
                         >
                             <TextInput
                                 id="name"
                                 value={selected.name}
-                                onChange={name => update({ name })}
-                                isReadOnly={selected.exists}
+                                onChange={(_event, name) => update({ name })}
+                                
                                 validated={
                                     selected.name === "" ||
                                     !selected.name.toLowerCase().endsWith("-team") ||
                                     selected.name.toLowerCase().startsWith("horreum.")
                                         ? "error"
                                         : "default"
-                                }
+                                } readOnlyVariant={selected.exists ? "default" : undefined}
                             />
+                            <FormHelperText>
+                                <HelperText>
+                                    <HelperTextItem variant={
+                                        selected.name === "" ||
+                                        !selected.name.toLowerCase().endsWith("-team") ||
+                                        selected.name.toLowerCase().startsWith("horreum.")
+                                            ? "error"
+                                            : "default"
+                                    }>Team name must end with '-team' suffix, e.g. 'engineers-team'</HelperTextItem>
+                                </HelperText>
+                            </FormHelperText>                            
                         </FormGroup>
                         <FormGroup label="Members" fieldId="members" onClick={e => e.preventDefault()}>
                             <TeamMembers

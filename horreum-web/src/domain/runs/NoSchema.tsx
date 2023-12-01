@@ -12,7 +12,7 @@ export function NoSchemaInRun() {
             }
         >
             <span style={{ verticalAlign: "bottom" }}>
-                <ExclamationTriangleIcon style={{ fill: "var(--pf-global--warning-color--100)" }} /> No schema
+                <ExclamationTriangleIcon style={{ fill: "var(--pf-v5-global--warning-color--100)" }} /> No schema
             </span>
         </Tooltip>
     )
@@ -30,7 +30,7 @@ export function NoSchemaInDataset() {
             }
         >
             <span style={{ verticalAlign: "bottom" }}>
-                <ExclamationTriangleIcon style={{ fill: "var(--pf-global--warning-color--100)" }} /> No schema
+                <ExclamationTriangleIcon style={{ fill: "var(--pf-v5-global--warning-color--100)" }} /> No schema
             </span>
         </Tooltip>
     )

@@ -3,7 +3,11 @@ import React, {useState} from "react"
 import {
     ActionGroup,
     Button, Form,
-    FormGroup, Modal, TextInput
+    FormGroup, Modal, TextInput,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
+
 } from "@patternfly/react-core"
 
 type ConfirmDeleteModalProps = {
@@ -17,7 +21,7 @@ type ConfirmDeleteModalProps = {
 export default function VerifyBackendModal({isOpen, onClose}: ConfirmDeleteModalProps) {
     const [name, setName] = useState('');
 
-    const handleNameChange = (name: string) => {
+    const handleNameChange = (_ : React.FormEvent<HTMLInputElement>, name: string) => {
         setName(name);
     };
 
@@ -29,7 +33,6 @@ export default function VerifyBackendModal({isOpen, onClose}: ConfirmDeleteModal
                     label="name"
                     isRequired
                     fieldId="horizontal-form-name"
-                    helperText="Please an name for the backend"
                 >
                     <TextInput
                         value={name}
@@ -40,6 +43,11 @@ export default function VerifyBackendModal({isOpen, onClose}: ConfirmDeleteModal
                         name="horizontal-form-name"
                         onChange={handleNameChange}
                     />
+                    <FormHelperText>
+                        <HelperText>
+                            <HelperTextItem>Please an name for the backend</HelperTextItem>
+                        </HelperText>
+                    </FormHelperText>
                 </FormGroup>
                 <ActionGroup>
                     <Button variant="primary">Verify</Button>

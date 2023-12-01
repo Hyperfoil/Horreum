@@ -98,7 +98,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 }
                 chosenOptions={watchingUsers}
                 chosenOptionsTitle="Watching users"
-                onListChange={(newAvailable, newChosen) => {
+                onListChange={(_event, newAvailable, newChosen) => {
                     setAvailableUsers(newAvailable as ReactElement[])
                     setWatchingUsers(newChosen as ReactElement[])
                     props.onModified(true)
@@ -115,7 +115,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 }
                 chosenOptions={optoutUsers}
                 chosenOptionsTitle="Opted out users"
-                onListChange={(newAvailable, newChosen) => {
+                onListChange={(_event, newAvailable, newChosen) => {
                     setAvailableUsers(newAvailable as ReactElement[])
                     setOptoutUsers(newChosen as ReactElement[])
                     props.onModified(true)
@@ -129,7 +129,7 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 availableOptionsTitle="Available teams"
                 chosenOptions={watchingTeams}
                 chosenOptionsTitle="Watching teams"
-                onListChange={(newAvailable, newChosen) => {
+                onListChange={(_event, newAvailable, newChosen) => {
                     setAvailableTeams(newAvailable as ReactElement[])
                     setWatchingTeams(newChosen as ReactElement[])
                     props.onModified(true)

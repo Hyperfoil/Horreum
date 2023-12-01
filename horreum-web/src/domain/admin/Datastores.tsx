@@ -7,7 +7,7 @@ import TeamSelect, {Team, SHOW_ALL} from "../../components/TeamSelect"
 
 
 import {
-    TableComposable,
+    Table,
     Thead,
     Tr,
     Th,
@@ -110,7 +110,7 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
 
         <Stack hasGutter>
             <StackItem>
-                <TableComposable aria-label="Datastores table">
+                <Table aria-label="Datastores table">
                     <Thead>
                         <Tr>
                             <Th>{columnNames.type}</Th>
@@ -135,7 +135,7 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
                                 </Tr>)
                         })}
                     </Tbody>
-                </TableComposable>
+                </Table>
             </StackItem>
             <StackItem>
                 <Button variant={"primary"} id={"newDatastpre"} onClick={newDatastore}>New Datastore</Button>

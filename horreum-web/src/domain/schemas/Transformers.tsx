@@ -2,7 +2,15 @@ import {useContext, useEffect, useState} from "react"
 import { useSelector } from "react-redux"
  
 
-import { Button, FormGroup, FormSection, Popover, TextArea, TextInput } from "@patternfly/react-core"
+import { Button, 
+    FormGroup,     
+    FormSection, 
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
+    Popover, 
+    TextArea, 
+    TextInput } from "@patternfly/react-core"
 import { HelpIcon } from "@patternfly/react-icons"
 
 import { defaultTeamSelector, useTester } from "../../auth"
@@ -176,7 +184,7 @@ export default function Transformers(props: TransformersProps) {
         >
             {selected && (
                 <>
-                    <FormGroup label="Name" isRequired={true} fieldId="name" helperTextInvalid="Name must not be empty">
+                    <FormGroup label="Name" isRequired={true} fieldId="name">
                         <TextInput
                             value={selected.name}
                             isRequired
@@ -184,16 +192,21 @@ export default function Transformers(props: TransformersProps) {
                             id="name"
                             aria-describedby="name-helper"
                             name="name"
-                            isReadOnly={!isTesterForTransformer}
+                            readOnlyVariant={!isTesterForTransformer ? "default" : undefined}
                             validated={selected?.name.trim() ? "default" : "error"}
-                            onChange={name => update({ name })}
+                            onChange={(_event, name) => update({ name })}
                         />
+                        <FormHelperText>
+                            <HelperText>
+                                <HelperTextItem variant={selected?.name.trim() ? "default" : "error"}>{selected?.name.trim() ? "" : "Name must not be empty"}</HelperTextItem>
+                            </HelperText>
+                        </FormHelperText>
                     </FormGroup>
                     <FormGroup label="Description" fieldId="description">
                         <TextArea
                             id="description"
                             isDisabled={!isTesterForTransformer}
-                            onChange={description => update({ description })}
+                            onChange={(_event, description) => update({ description })}
                             autoResize={true}
                             resizeOrientation="vertical"
                             value={selected.description}
@@ -221,7 +234,7 @@ export default function Transformers(props: TransformersProps) {
                                 isCreatable={true}
                             ></SchemaSelect>
                         ) : (
-                            <TextInput id="targetSchemaUri" value={selected.targetSchemaUri} isReadOnly={true} />
+                            <TextInput id="targetSchemaUri" value={selected.targetSchemaUri}  readOnlyVariant="default" />
                         )}
                     </FormGroup>
                     <FormGroup label="Ownership&amp;Access" fieldId="owner">

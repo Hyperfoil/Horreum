@@ -1,6 +1,10 @@
 import { useState, useEffect, ReactElement, ReactNode } from "react"
 
-import { Dropdown, DropdownItem, KebabToggle } from "@patternfly/react-core"
+import {
+	Dropdown,
+	DropdownItem,
+	KebabToggle
+} from '@patternfly/react-core/deprecated';
 
 import { useTester } from "../auth"
 import { Access } from "../api"
