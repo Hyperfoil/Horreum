@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react"
 
-import { Select, SelectOption } from "@patternfly/react-core"
+import {
+	Select,
+	SelectOption
+} from '@patternfly/react-core/deprecated';
 import {notificationsApi} from "../api"
 
 type NotificationMethodSelectProps = {
@@ -19,7 +22,7 @@ export default function NotificationMethodSelect({isDisabled, method, onChange}:
         <Select
             isDisabled={isDisabled}
             isOpen={methodOpen}
-            onToggle={open => setMethodOpen(open)}
+            onToggle={(_event, open) => setMethodOpen(open)}
             selections={method}
             onSelect={(event, selection) => {
             onChange(selection.toString())

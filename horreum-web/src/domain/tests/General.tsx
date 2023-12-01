@@ -1,8 +1,16 @@
 import React, {useState, useEffect, useContext } from "react"
 import { useSelector } from "react-redux"
 
-import {Form, FormGroup, FormSelect, FormSelectOption, Switch, TextArea, TextInput} from "@patternfly/react-core"
-
+import { Form, 
+    FormGroup, 
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
+    FormSelect,
+    FormSelectOption,
+    Switch, 
+    TextArea, 
+    TextInput } from "@patternfly/react-core"
 import FolderSelect from "../../components/FolderSelect"
 import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -45,7 +53,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
         setCompareUrl(test?.compareUrl?.toString() || undefined)
         setNotificationsEnabled(!test || test.notificationsEnabled)
     }
-    const handleOptionChange = (value: string) => {
+    const handleOptionChange = (_ : React.FormEvent<HTMLSelectElement>, value: string) => {
         setDatastoreId(parseInt(value))
         console.log('New datastore selected')
     }
@@ -87,8 +95,6 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                     label="Name"
                     isRequired={true}
                     fieldId="name"
-                    helperText="Test names must be unique"
-                    helperTextInvalid="Name must be unique and not empty"
                 >
                     <TextInput
                         value={name || ""}
@@ -97,13 +103,21 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                         id="name"
                         aria-describedby="name-helper"
                         name="name"
-                        isReadOnly={!isTester}
+                        //isReadOnly={!isTester} this is no longe rsupport
+                        readOnlyVariant={isTester ? undefined : "default"}
                         validated={name !== null && name.trim().length > 0 ? "default" : "error"}
-                        onChange={n => {
+                        onChange={(_event, n) => {
                             setName(n)
                             onModified(true)
                         }}
                     />
+                    <FormHelperText>
+                        <HelperText>
+                            <HelperTextItem variant={name !== null && name.trim().length > 0 ? "default" : "error"}>{
+                                name !== null && name.trim().length > 0 ? "Test names must be unique" : "Name must be unique and not empty"
+                            }</HelperTextItem>
+                        </HelperText>
+                    </FormHelperText>
                 </FormGroup>
                 <FormGroup label="Datastore" fieldId="datastoreId">
                     <FormSelect
@@ -122,7 +136,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 <FormGroup label="Folder" fieldId="folder">
                     <FolderSelect folder={folder} onChange={setFolder} canCreate={true} readOnly={!isTester} placeHolder={"Horreum"}/>
                 </FormGroup>
-                <FormGroup label="Description" fieldId="description" helperText="" helperTextInvalid="">
+                <FormGroup label="Description" fieldId="description">
                     <TextArea
                         value={description || ""}
                         type="text"
@@ -130,7 +144,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                         aria-describedby="description-helper"
                         name="description"
                         readOnly={!isTester}
-                        onChange={desc => {
+                        onChange={(_event, desc) => {
                             setDescription(desc)
                             onModified(true)
                         }}
@@ -143,7 +157,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                         labelOff="All notifications are disabled"
                         isDisabled={!isTester}
                         isChecked={notificationsEnabled}
-                        onChange={value => {
+                        onChange={(_event, value) => {
                             setNotificationsEnabled(value)
                             onModified(true)
                         }}
@@ -152,7 +166,6 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                 <FormGroup
                     label="Compare URL function"
                     fieldId="compareUrl"
-                    helperText="This function receives an array of ids as first argument and auth token as second. It should return URL to comparator service."
                 >
                     <OptionalFunction
                         readOnly={!isTester}
@@ -165,6 +178,11 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                             onModified(true)
                         }}
                     />
+                    <FormHelperText>
+                        <HelperText>
+                            <HelperTextItem>This function receives an array of ids as first argument and auth token as second. It should return URL to comparator service.</HelperTextItem>
+                        </HelperText>
+                    </FormHelperText>
                 </FormGroup>
             </Form>
         </>

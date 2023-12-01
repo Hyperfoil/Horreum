@@ -12,7 +12,7 @@ export default function SchemaLink({ uri }: SchemaLinkProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
     return (
         <IndirectLink
-            style={{ padding: 0, fontWeight: "var(--pf-global--link--FontWeight)" }}
+            style={{ padding: 0, fontWeight: "var(--pf-v5-global--link--FontWeight)" }}
             onNavigate={() =>
                 schemaApi.idByUri(uri).then(
                     id => `/schema/${id}`,

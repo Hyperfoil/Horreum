@@ -21,9 +21,8 @@ import {
     Form,
     FormGroup,
     PageSection,
-    Spinner,
-    Title,
-} from "@patternfly/react-core"
+    Spinner, EmptyStateHeader,
+    } from "@patternfly/react-core"
 
 import { UserIcon } from "@patternfly/react-icons"
 
@@ -202,7 +201,7 @@ export function UserSettings() {
                             )}
                             {!selectedTeam && (
                                 <EmptyState>
-                                    <Title headingLevel="h3">No team selected</Title>
+                                    <EmptyStateHeader titleText="No team selected" headingLevel="h3" />
                                 </EmptyState>
                             )}
                         </SavedTab>

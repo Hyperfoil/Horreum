@@ -80,7 +80,7 @@ function ConfirmTestDeleteModal(props: ConfirmTestDeleteModalProps) {
                         type="text"
                         id="runsToDelete"
                         validated={validationResult}
-                        onChange={setRunsToDelete}
+                        onChange={(_event, val) => setRunsToDelete(val)}
                     />
                 </>
             )}

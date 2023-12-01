@@ -87,7 +87,7 @@ function AddTokenModal(props: AddTokenModalProps) {
         >
             <Form isHorizontal={true}>
                 <FormGroup label="Description" fieldId="description">
-                    <TextInput id="description" value={description} onChange={setDescription} />
+                    <TextInput id="description" value={description} onChange={(_event, val) => setDescription(val)} />
                 </FormGroup>
                 <FormGroup label="Token" fieldId="token">
                     <ClipboardCopy id="token" isReadOnly>
@@ -104,7 +104,7 @@ function AddTokenModal(props: AddTokenModalProps) {
                         id="read"
                         label="Read"
                         isChecked={(permissions & 1) !== 0}
-                        onChange={checked => {
+                        onChange={(_event, checked) => {
                             setPermissions((permissions & ~5) | (checked ? 1 : 0))
                         }}
                     />
@@ -112,7 +112,7 @@ function AddTokenModal(props: AddTokenModalProps) {
                         id="modify"
                         label="Modify"
                         isChecked={(permissions & 2) !== 0}
-                        onChange={checked => {
+                        onChange={(_event, checked) => {
                             setPermissions((permissions & ~2) | (checked ? 2 : 0))
                         }}
                     />
@@ -120,7 +120,7 @@ function AddTokenModal(props: AddTokenModalProps) {
                         id="upload"
                         label="Upload"
                         isChecked={(permissions & 4) !== 0}
-                        onChange={checked => {
+                        onChange={(_event, checked) => {
                             setPermissions((permissions & ~4) | (checked ? 5 : 0))
                         }}
                     />
@@ -176,7 +176,7 @@ function Access(props: AccessProps) {
                         }}
                     />
                 ) : (
-                    <TextInput value={teamToName(owner) || ""} id="testOwner" isReadOnly />
+                    <TextInput value={teamToName(owner) || ""} id="testOwner"  readOnlyVariant="default" />
                 )}
             </FormGroup>
             <FormGroup label="Access rights" fieldId="testAccess">

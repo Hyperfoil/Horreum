@@ -1,5 +1,14 @@
 import {useContext, useState} from "react"
-import { Button, DropdownItem, Modal, Spinner, TextInput, Tooltip } from "@patternfly/react-core"
+import {
+	Button,
+	Modal,
+	Spinner,
+	TextInput,
+	Tooltip,
+} from '@patternfly/react-core';
+import {
+	DropdownItem
+} from '@patternfly/react-core/deprecated';
 import { WarningTriangleIcon } from "@patternfly/react-icons"
 import moment from "moment"
 import ActionMenu, {
@@ -200,8 +209,8 @@ export function UpdateDescriptionModal({ isOpen, onClose, run }: UpdateDescripti
                 type="text"
                 id="description"
                 name="description"
-                onChange={setValue}
-                isReadOnly={updating}
+                onChange={(_event, val) => setValue(val)}
+                readOnlyVariant={updating ? "default" : undefined}
             />
             <Button
                 variant="primary"

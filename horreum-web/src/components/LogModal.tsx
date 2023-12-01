@@ -1,5 +1,13 @@
 import {ReactElement, useContext, useEffect, useMemo, useState} from "react"
-import { IRow, Table, TableHeader, TableBody } from "@patternfly/react-table"
+import { useDispatch } from "react-redux"
+import {
+	IRow
+} from '@patternfly/react-table';
+import {
+	Table,
+	TableHeader,
+	TableBody
+} from '@patternfly/react-table/deprecated';
 import {
     Button,
     Bullseye,
@@ -9,9 +17,8 @@ import {
     FlexItem,
     Modal,
     Pagination,
-    Spinner,
-    Title,
-} from "@patternfly/react-core"
+    Spinner, EmptyStateHeader,
+    } from "@patternfly/react-core"
 import {
     CheckCircleIcon,
     ExclamationCircleIcon,
@@ -35,10 +42,10 @@ export type CommonLogModalProps = {
 
 export function LogLevelIcon(props: { level: number }) {
     const levels = [
-        <CheckCircleIcon style={{ fill: "var(--pf-global--success-color--100)" }} />,
-        <InfoCircleIcon style={{ fill: "var(--pf-global--info-color--100)" }} />,
-        <ExclamationTriangleIcon style={{ fill: "var(--pf-global--warning-color--100)" }} />,
-        <ExclamationCircleIcon style={{ fill: "var(--pf-global--danger-color--100)" }} />,
+        <CheckCircleIcon style={{ fill: "var(--pf-v5-global--success-color--100)" }} />,
+        <InfoCircleIcon style={{ fill: "var(--pf-v5-global--info-color--100)" }} />,
+        <ExclamationTriangleIcon style={{ fill: "var(--pf-v5-global--warning-color--100)" }} />,
+        <ExclamationCircleIcon style={{ fill: "var(--pf-v5-global--danger-color--100)" }} />,
     ]
     return levels[props.level]
 }
@@ -123,9 +130,7 @@ export default function LogModal(props: LogModalProps) {
             )}
             {!loading && count === 0 && (
                 <EmptyState>
-                    <Title headingLevel="h4" size="lg">
-                        No logs
-                    </Title>
+                    <EmptyStateHeader titleText="No logs" headingLevel="h4" />
                     <EmptyStateBody>
                         {props.emptyMessage}
                         <div style={{ marginTop: "16px" }}>

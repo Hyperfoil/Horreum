@@ -1,7 +1,20 @@
 import { useState, useEffect } from "react"
-import { Bullseye, Button, Dropdown, DropdownItem, DropdownToggle, Modal, Spinner } from "@patternfly/react-core"
+import {
+	Bullseye,
+	Button,
+	Modal,
+	Spinner
+} from '@patternfly/react-core';
+import {
+	Dropdown,
+	DropdownItem,
+	DropdownToggle
+} from '@patternfly/react-core/deprecated';
 import { QuestionCircleIcon } from "@patternfly/react-icons"
-import { Table, TableBody } from "@patternfly/react-table"
+import {
+	Table,
+	TableBody
+} from '@patternfly/react-table/deprecated';
 
 import { configApi } from "./api"
 import { formatDateTime } from "./utils"
@@ -36,7 +49,7 @@ export default function About() {
                 menuAppendTo="parent"
                 onSelect={() => setDropdownOpen(false)}
                 toggle={
-                    <DropdownToggle toggleIndicator={null} onToggle={setDropdownOpen} id="toggle-icon-only">
+                    <DropdownToggle toggleIndicator={null} onToggle={(_event, val) => setDropdownOpen(val)} id="toggle-icon-only">
                         <QuestionCircleIcon style={{ fill: "#ffffff" }} />
                     </DropdownToggle>
                 }

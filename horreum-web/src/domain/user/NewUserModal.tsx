@@ -1,6 +1,17 @@
 import {useState, useEffect, useContext} from "react"
-import { Button, Checkbox, Form, FormGroup, List, ListItem, Modal, Spinner, TextInput } from "@patternfly/react-core"
-
+import { useDispatch } from "react-redux"
+import { Button, 
+    Checkbox, 
+    Form, 
+    FormGroup,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
+    List, 
+    ListItem, 
+    Modal, 
+    Spinner, 
+    TextInput } from "@patternfly/react-core"
 import {userApi, UserData} from "../../api"
 import { getRoles } from "./TeamMembers"
 import {AppContext} from "../../context/appContext";
@@ -84,7 +95,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                         <TextInput
                             isRequired
                             value={username}
-                            onChange={setUsername}
+                            onChange={(_event, val) => setUsername(val)}
                             validated={username ? "default" : "error"}
                         />
                     </FormGroup>
@@ -92,43 +103,47 @@ export default function NewUserModal(props: NewUserModalProps) {
                         isRequired
                         label="Temporary password"
                         fieldId="password"
-                        helperText="This password is only temporary and the user will change it during first login."
                     >
                         <TextInput
                             isRequired
                             value={password}
-                            onChange={setPassword}
+                            onChange={(_event, val) => setPassword(val)}
                             validated={password ? "default" : "error"}
                         />
+                        <FormHelperText>
+                            <HelperText>
+                                <HelperTextItem>This password is only temporary and the user will change it during first login.</HelperTextItem>
+                            </HelperText>
+                        </FormHelperText>                        
                     </FormGroup>
                     <FormGroup isRequired label="Email" fieldId="email">
                         <TextInput
                             isRequired
                             type="email"
                             value={email}
-                            onChange={setEmail}
+                            onChange={(_event, val) => setEmail(val)}
                             validated={email && /^.+@.+\..+$/.test(email) ? "default" : "error"}
                         />
                     </FormGroup>
                     <FormGroup label="First name" fieldId="firstName">
-                        <TextInput value={firstName} onChange={setFirstName} />
+                        <TextInput value={firstName} onChange={(_event, val) => setFirstName(val)} />
                     </FormGroup>
                     <FormGroup label="Last name" fieldId="lastName">
-                        <TextInput value={lastName} onChange={setLastName} />
+                        <TextInput value={lastName} onChange={(_event, val) => setLastName(val)} />
                     </FormGroup>
                     <FormGroup label="Permissions" fieldId="permissions">
                         <List isPlain>
                             <ListItem>
-                                <Checkbox id="viewer" isChecked={viewer} onChange={setViewer} label="Viewer" />
+                                <Checkbox id="viewer" isChecked={viewer} onChange={(_event, val) => setViewer(val)} label="Viewer" />
                             </ListItem>
                             <ListItem>
-                                <Checkbox id="tester" isChecked={tester} onChange={setTester} label="Tester" />
+                                <Checkbox id="tester" isChecked={tester} onChange={(_event, val) => setTester(val)} label="Tester" />
                             </ListItem>
                             <ListItem>
-                                <Checkbox id="uploader" isChecked={uploader} onChange={setUploader} label="Uploader" />
+                                <Checkbox id="uploader" isChecked={uploader} onChange={(_event, val) => setUploader(val)} label="Uploader" />
                             </ListItem>
                             <ListItem>
-                                <Checkbox id="manager" isChecked={manager} onChange={setManager} label="Manager" />
+                                <Checkbox id="manager" isChecked={manager} onChange={(_event, val) => setManager(val)} label="Manager" />
                             </ListItem>
                         </List>
                     </FormGroup>

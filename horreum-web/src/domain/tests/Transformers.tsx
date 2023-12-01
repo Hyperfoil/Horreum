@@ -218,7 +218,7 @@ export default function Transformers(props: TransformersProps) {
                             isDisabled={!isTester}
                             availableOptions={options}
                             chosenOptions={chosen}
-                            onListChange={(newAvailable, newChosen) => {
+                            onListChange={(_event, newAvailable, newChosen) => {
                                 setOptions(newAvailable as SchemaItem[])
                                 setChosen(newChosen as SchemaItem[])
                             }}

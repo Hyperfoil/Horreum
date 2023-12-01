@@ -12,9 +12,8 @@ import {
     SimpleListItem,
     Spinner,
     Split,
-    SplitItem,
-    Title,
-} from "@patternfly/react-core"
+    SplitItem, EmptyStateHeader, EmptyStateFooter,
+    } from "@patternfly/react-core"
 import { PlusCircleIcon } from "@patternfly/react-icons"
 
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
@@ -62,10 +61,10 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
         return (
             <Bullseye>
                 <EmptyState>
-                    <Title headingLevel="h3">{props.noItemTitle}</Title>
-                    <EmptyStateBody>{props.noItemText}</EmptyStateBody>
+                    <EmptyStateHeader titleText={<>{props.noItemTitle}</>} headingLevel="h3" />
+                    <EmptyStateBody>{props.noItemText}</EmptyStateBody><EmptyStateFooter>
                     {props.canAddItem && <Button onClick={addItem}>{props.addItemText}</Button>}
-                </EmptyState>
+                </EmptyStateFooter></EmptyState>
             </Bullseye>
         )
     }

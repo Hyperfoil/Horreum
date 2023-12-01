@@ -251,7 +251,7 @@ export default function TestDatasets() {
         <PageSection>
             <Card>
                 <CardHeader>
-                    <Toolbar className="pf-u-justify-content-space-between" style={{ width: "100%" }}>
+                    <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
                         <ToolbarGroup>
                             <ToolbarItem style={{ flexGrow: 100 }}>
                                 <Breadcrumb>
@@ -286,10 +286,10 @@ export default function TestDatasets() {
                                 </ExpandableSectionToggle>
                             </ToolbarItem>
                             <ToolbarItem>
-                                <NavLink className="pf-c-button pf-m-primary" to={`/test/${testIdInt}`}>
+                                <NavLink className="pf-v5-c-button pf-m-primary" to={`/test/${testId}`}>
                                     Edit test
                                 </NavLink>
-                                <NavLink className="pf-c-button pf-m-secondary" to={`/run/list/${testIdInt}`}>
+                                <NavLink className="pf-v5-c-button pf-m-secondary" to={`/run/list/${testId}`}>
                                     View runs
                                 </NavLink>
                                 <Button

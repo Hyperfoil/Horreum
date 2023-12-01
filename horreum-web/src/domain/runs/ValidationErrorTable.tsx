@@ -2,7 +2,11 @@ import { useMemo } from "react"
 import { NavLink } from "react-router-dom"
 
 import { SchemaDescriptor, ValidationError } from "../../api"
-import { Table, TableBody, TableHeader } from "@patternfly/react-table"
+import {
+	Table,
+	TableBody,
+	TableHeader
+} from '@patternfly/react-table/deprecated';
 
 type ValidationErrorTableProps = {
     errors: ValidationError[]

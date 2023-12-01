@@ -5,9 +5,9 @@
   "type": "module",
   "dependencies": {
     "@monaco-editor/react": "4.6.0",
-    "@patternfly/patternfly": "4.224.4",
-    "@patternfly/react-core": "4.277.0",
-    "@patternfly/react-table": "4.113.5",
+    "@patternfly/patternfly": "5.1.0",
+    "@patternfly/react-core": "5.1.1",
+    "@patternfly/react-table": "5.1.1",
     "@types/history": "4.7.11",
     "@types/jsonpath": "0.2.4",
     "@types/luxon": "3.2.0",

@@ -5,7 +5,10 @@ import {
     Modal,
     Tab,
     Tabs,
-    TextInput
+    TextInput,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,    
 } from "@patternfly/react-core";
 import React, {useContext, useMemo, useState} from "react";
 import {noop} from "../../utils";
@@ -111,42 +114,56 @@ export const RunImportModal = (props: RunImportModalProps) => {
                                 label="owner"
                                 isRequired
                                 fieldId="horizontal-form-owner"
-                                helperText="Owner of the run data"
                             >
                                 <TextInput value={props.owner} isDisabled={true}/>
-
+                                <FormHelperText>
+                                    <HelperText>
+                                        <HelperTextItem>Owner of the run data</HelperTextItem>
+                                    </HelperText>
+                                </FormHelperText>
                             </FormGroup>
                             <FormGroup
                                 label="start"
                                 isRequired
                                 fieldId="horizontal-form-start"
-                                helperText="Please provide a timestamp for the start of the run, or a json path expression to extract it from the data.
-                                 e.g. `2023-11-15T10:11:43.896Z` or `$.start`"
                             >
-                                <TextInput value={start} onChange={setStart}/>
+                                <TextInput value={start} onChange={(_,v)=>setStart(v)}/>
+                                <FormHelperText>
+                                    <HelperText>
+                                        <HelperTextItem>Please provide a timestamp for the start of the run, or a json path expression to extract it from the data.
+                                 e.g. `2023-11-15T10:11:43.896Z` or `$.start`</HelperTextItem>
+                                    </HelperText>
+                                </FormHelperText>                                
                             </FormGroup>
                             <FormGroup
                                 label="stop"
                                 isRequired
                                 fieldId="horizontal-form-username"
-                                helperText="Please provide a timestamp for the end of the run, or a json path expression to extract it from the data.
-                                 e.g. `2023-11-15T10:11:43.896Z` or `$.stop`"
                             >
-                                <TextInput value={stop} onChange={setStop}/>
+                                <TextInput value={stop} onChange={(_,v)=>setStop(v)}/>
+                                <FormHelperText>
+                                    <HelperText>
+                                        <HelperTextItem>Please provide a timestamp for the end of the run, or a json path expression to extract it from the data.
+                                 e.g. `2023-11-15T10:11:43.896Z` or `$.stop`</HelperTextItem>
+                                    </HelperText>
+                                </FormHelperText>                                
                             </FormGroup>
                             <FormGroup
                                 label="schema"
                                 isRequired
                                 fieldId="horizontal-form-schema"
-                                helperText="schema URN for the run data"
                             >
-                                <TextInput value={schemaUrn} onChange={setSchemaUrn}/>
+                                <TextInput value={schemaUrn} onChange={(_,v)=>setSchemaUrn(v)}/>
+                                <FormHelperText>
+                                    <HelperText>
+                                        <HelperTextItem>schema URN for the run data</HelperTextItem>
+                                    </HelperText>
+                                </FormHelperText>                                
                             </FormGroup>
                             <FormGroup
                                 label="access"
                                 isRequired
                                 fieldId="horizontal-form-accerss"
-                                helperText="Visbility of run data"
                             >
                                 <AccessChoice
                                     checkedValue={access}
@@ -154,6 +171,11 @@ export const RunImportModal = (props: RunImportModalProps) => {
                                         setAccess(a)
                                     }}
                                 />
+                                <FormHelperText>
+                                    <HelperText>
+                                        <HelperTextItem>Visbility of run data</HelperTextItem>
+                                    </HelperText>
+                                </FormHelperText>                                
                             </FormGroup>
                         </Form>
                 </Tab>

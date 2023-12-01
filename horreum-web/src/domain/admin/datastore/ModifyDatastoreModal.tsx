@@ -3,6 +3,9 @@ import React, {useState} from "react"
 import {
     Button, Form,
     FormGroup, FormSelect, FormSelectOption,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
     Modal, TextInput
 } from "@patternfly/react-core"
 import {
@@ -36,7 +39,7 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
     const [enabledToken, setEnableToken] = useState(false);
 
 
-    const handleOptionChange = (value: string, _event: React.FormEvent<HTMLSelectElement>) => {
+    const handleOptionChange = (_event: React.FormEvent<HTMLSelectElement>, value: string) => {
         const option: datastoreOption | undefined = options.filter( optionvalue => optionvalue.value === value).pop()
         if ( option ){
             setEnableUrl(option.urlDisabled)
@@ -79,26 +82,29 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     label="name"
                     isRequired
                     fieldId="horizontal-form-name"
-                    helperText="Please an name for the datastore"
                 >
                     <TextInput
                         value={dataStore.name}
-                        onChange={ value => updateDatastore({...dataStore, name: value})}
+                        onChange={(_, value) => updateDatastore({...dataStore, name: value})}
                         isRequired
                         type="text"
                         id="horizontal-form-name"
                         aria-describedby="horizontal-form-name-helper"
                         name="horizontal-form-name"
                     />
+                    <FormHelperText>
+                        <HelperText>
+                            <HelperTextItem>Please an name for the datastore</HelperTextItem>
+                        </HelperText>
+                    </FormHelperText>
                 </FormGroup>
                 <FormGroup
                     label="URL"
                     fieldId="horizontal-form-name"
-                    helperText="Please provide the full host URL to for the datastore service"
                 >
                     <TextInput
                         value={"url" in dataStore.config ? dataStore.config.url : ""}
-                        onChange={ value => {
+                        onChange={(_, value) => {
                             const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
                             config.url = value
                             updateDatastore({...dataStore, config: config})
@@ -109,15 +115,19 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                         aria-describedby="horizontal-form-name-helper"
                         name="horizontal-form-url"
                     />
+                    <FormHelperText>
+                        <HelperText>
+                            <HelperTextItem>Please provide the full host URL to for the datastore service</HelperTextItem>
+                        </HelperText>
+                    </FormHelperText>
                 </FormGroup>
                 <FormGroup
                     label="Api Key"
                     fieldId="horizontal-form-token"
-                    helperText="Please provide an API token to authenticate against datastore"
                 >
                     <TextInput
                         value={"apiKey" in dataStore.config ? dataStore.config.apiKey : ""}
-                        onChange={ value => {
+                        onChange={(_, value) => {
                             const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
                             config.apiKey = value
                             updateDatastore({...dataStore, config: config})
@@ -127,6 +137,11 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                         aria-describedby="horizontal-form-token-helper"
                         name="horizontal-form-token"
                     />
+                    <FormHelperText>
+                        <HelperText>
+                            <HelperTextItem>Please provide an API token to authenticate against datastore</HelperTextItem>
+                        </HelperText>
+                    </FormHelperText>
                 </FormGroup>
             </Form>
         </Modal>

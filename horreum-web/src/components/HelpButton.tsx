@@ -1,3 +1,4 @@
+import { Icon } from '@patternfly/react-core';
 import { HelpIcon } from "@patternfly/react-icons"
 
 export default function HelpButton() {
@@ -6,9 +7,11 @@ export default function HelpButton() {
             type="button"
             aria-label="More info"
             onClick={e => e.preventDefault()}
-            className="pf-c-form__group-label-help"
+            className="pf-v5-c-form__group-label-help"
         >
-            <HelpIcon noVerticalAlign />
+            <Icon isInline={true}>
+                <HelpIcon/>
+            </Icon>
         </button>
     )
 }

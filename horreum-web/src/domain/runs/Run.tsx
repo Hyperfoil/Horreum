@@ -6,7 +6,7 @@ import { formatDateTime } from "../../utils"
 import { teamsSelector, useTester } from "../../auth"
 
 import { Bullseye, Button, Card, CardHeader, CardBody, PageSection, Spinner } from "@patternfly/react-core"
-import { TableComposable, Thead, Tr, Th, Tbody, Td } from "@patternfly/react-table"
+import { Table /* data-codemods */, Thead, Tr, Th, Tbody, Td } from "@patternfly/react-table"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
 import OwnerAccess from "../../components/OwnerAccess"
 import { NavLink } from "react-router-dom"
@@ -73,7 +73,7 @@ export default function Run() {
                 <>
                     <Card>
                         <CardHeader>
-                            <TableComposable variant="compact">
+                            <Table variant="compact">
                                 <Thead>
                                     <Tr>
                                         <Th>Id</Th>
@@ -130,7 +130,7 @@ export default function Run() {
                                         </Td>
                                     </Tr>
                                 </Tbody>
-                            </TableComposable>
+                            </Table>
                         </CardHeader>
                         <CardBody>
                             <FragmentTabs>
