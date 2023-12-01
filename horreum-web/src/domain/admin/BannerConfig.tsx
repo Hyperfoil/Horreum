@@ -8,6 +8,9 @@ import {
     FormGroup,
     FormSelect,
     FormSelectOption,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,    
     Spinner,
     TextInput,
 } from "@patternfly/react-core"
@@ -48,16 +51,16 @@ export default function BannerConfig() {
     return (
         <Form isHorizontal={true}>
             <FormGroup label="Severity" isRequired={true} fieldId="severity">
-                <FormSelect id="severity" value={severity} onChange={setSeverity}>
+                <FormSelect id="severity" value={severity} onChange={(_event, val) => setSeverity(val)}>
                     {["danger", "warning", "info"].map((option, index) => (
                         <FormSelectOption key={index} value={option} label={option} />
                     ))}
                 </FormSelect>
             </FormGroup>
             <FormGroup label="Title" isRequired={true} fieldId="title">
-                <TextInput value={title || ""} isRequired type="text" id="title" name="title" onChange={setTitle} />
+                <TextInput value={title || ""} isRequired type="text" id="title" name="title" onChange={(_event, val) => setTitle(val)} />
             </FormGroup>
-            <FormGroup label="Message" fieldId="message" helperText="Detailed message in HTML">
+            <FormGroup label="Message" fieldId="message">
                 <div style={{ height: "300px" }}>
                     <Editor
                         value={message}
@@ -68,6 +71,11 @@ export default function BannerConfig() {
                         }}
                     />
                 </div>
+                <FormHelperText>
+                    <HelperText>
+                        <HelperTextItem>Detailed message in HTML</HelperTextItem>
+                    </HelperText>
+                </FormHelperText>
             </FormGroup>
             <ActionGroup style={{ marginTop: 0 }}>
                 <Button

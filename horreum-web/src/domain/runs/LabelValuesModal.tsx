@@ -1,8 +1,12 @@
 import React, {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
-import { Bullseye, EmptyState, EmptyStateBody, Modal, Spinner, Title } from "@patternfly/react-core"
-import { Table, TableBody, TableHeader } from "@patternfly/react-table"
+import { Bullseye, EmptyState, EmptyStateBody, Modal, Spinner, EmptyStateHeader,  } from "@patternfly/react-core"
+import {
+	Table,
+	TableBody,
+	TableHeader
+} from '@patternfly/react-table/deprecated';
 
 import "../../components/LogModal.css"
 import {datasetApi, LabelValue} from "../../api"
@@ -79,9 +83,7 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
             {labelValues.length === 0 && !loading && (
                 <Bullseye>
                     <EmptyState>
-                        <Title headingLevel="h4" size="lg">
-                            No labels found.
-                        </Title>
+                        <EmptyStateHeader titleText="No labels found." headingLevel="h4" />
                         <EmptyStateBody>Check label definitions in referenced schemas.</EmptyStateBody>
                     </EmptyState>
                 </Bullseye>

@@ -2,7 +2,17 @@ import { CSSProperties, ReactElement, useEffect, useMemo, useState } from "react
 import { useSelector } from "react-redux"
 import { teamsSelector } from "../auth"
 
-import { Button, HelperText, Select, SelectOption, SelectOptionObject, Split, SplitItem } from "@patternfly/react-core"
+import {
+	Button,
+	HelperText,
+	Split,
+	SplitItem
+} from '@patternfly/react-core';
+import {
+	Select,
+	SelectOption,
+	SelectOptionObject
+} from '@patternfly/react-core/deprecated';
 
 import { deepEquals, noop } from "../utils"
 
@@ -223,7 +233,7 @@ function InnerSelect({disabled, isTypeahead, hasOnlyOneOption, selection, option
             isDisabled={disabled || hasOnlyOneOption}
             variant={isTypeahead ? "typeahead" : "single"}
             isOpen={open}
-            onToggle={expanded => {
+            onToggle={(_event, expanded) => {
                 if (expanded && onOpen) {
                     onOpen()
                 }

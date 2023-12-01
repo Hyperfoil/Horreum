@@ -17,6 +17,9 @@ import {
     Form,
     FormGroup,
     FormSection,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,    
     List,
     ListItem,
     Modal,
@@ -57,18 +60,18 @@ function ReportConfigComponent({ component, onChange, onDelete, readOnly }: Repo
                     <TextInput
                         id="name"
                         value={component.name}
-                        onChange={name => onChange({ ...component, name })}
+                        onChange={(_event, name) => onChange({ ...component, name })}
                         isRequired
-                        isReadOnly={readOnly}
+                         readOnlyVariant={readOnly ? "default" : undefined}
                     />
                 </FormGroup>
                 <FormGroup label="Unit" fieldId="unit">
                     <TextInput
                         id="unit"
                         value={component.unit}
-                        onChange={unit => onChange({ ...component, unit })}
+                        onChange={(_event, unit) => onChange({ ...component, unit })}
                         placeholder="E.g. milliseconds, requests/sec..."
-                        isReadOnly={readOnly}
+                        readOnlyVariant={readOnly ? "default" : undefined}
                     />
                 </FormGroup>
                 <FormGroup label="Labels" fieldId="labels">
@@ -246,7 +249,6 @@ export default function TableReportConfigPage() {
                             label="Title"
                             isRequired={true}
                             fieldId="test"
-                            helperTextInvalid="Name must be unique and not empty"
                         >
                             <TextInput
                                 value={config?.title || ""}
@@ -255,12 +257,19 @@ export default function TableReportConfigPage() {
                                 id="title"
                                 aria-describedby="title-helper"
                                 name="title"
-                                isReadOnly={!isTester}
+                                readOnlyVariant={!isTester ? "default" : undefined}
                                 validated={config?.title && config.title.trim().length > 0 ? "default" : "error"}
-                                onChange={value => {
+                                onChange={(_event, value) => {
                                     setConfig({ ...config, title: value })
                                 }}
                             />
+                            <FormHelperText>
+                                <HelperText>
+                                    <HelperTextItem variant={config?.title && config.title.trim().length > 0 ? "default" : "error"}>
+                                    {config?.title && config.title.trim().length > 0 ? "" : "Name must be unique and not empty"}
+                                    </HelperTextItem>
+                                </HelperText>
+                            </FormHelperText>
                         </FormGroup>
                         <FormGroup label="Test" isRequired={true} fieldId="test">
                             <TestSelect
@@ -538,7 +547,7 @@ export default function TableReportConfigPage() {
                                 <TextInput
                                     id="description"
                                     value={config?.scaleDescription}
-                                    onChange={scaleDescription => setConfig({ ...config, scaleDescription })}
+                                    onChange={(_event, scaleDescription) => setConfig({ ...config, scaleDescription })}
                                     placeholder="Name of the property that this report is scaling."
                                     readOnly={!isTester}
                                 />

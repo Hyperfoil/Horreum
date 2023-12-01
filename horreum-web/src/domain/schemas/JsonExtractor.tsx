@@ -5,6 +5,9 @@ import {
     Flex,
     FlexItem,
     FormGroup,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
     List,
     ListItem,
     Popover,
@@ -101,7 +104,7 @@ function checkName(name: string | undefined) {
 }
 
 const INVALID_NAME_HELPER = (
-    <span style={{ color: "var(--pf-global--warning-color--200)" }}>
+    <span style={{ color: "var(--pf-v5-global--warning-color--200)" }}>
         Name should match <code>[a-zA-Z_][a-zA-Z_0-9]*</code>. It shouldn't be a Javascript-reserved word either.
     </span>
 )
@@ -131,34 +134,33 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                     <FormGroup
                         label="Name"
                         fieldId="extractorname"
-                        validated={nameValid ? "default" : "warning"}
-                        helperText={
-                            nameValid
-                                ? "The name of the extractor will be used as a field in the object passed to the calculation function."
-                                : INVALID_NAME_HELPER
-                        }
                     >
                         <TextInput
                             id="extractorname"
                             value={extractor.name}
-                            onChange={name => {
+                            onChange={(_event, name) => {
                                 extractor.name = name
                                 props.onUpdate()
                             }}
-                            isReadOnly={props.readOnly}
+                            readOnlyVariant={props.readOnly ? "default" : undefined}
                         />
+                        <FormHelperText>
+                            <HelperText>
+                                <HelperTextItem variant={nameValid ? "default" : "warning"}>
+                                {nameValid ? "The name of the extractor will be used as a field in the object passed to the calculation function." : INVALID_NAME_HELPER}
+                                </HelperTextItem>
+                            </HelperText>
+                        </FormHelperText>
                     </FormGroup>
                     <FormGroup
                         label="JSONPath"
                         labelIcon={<JsonPathDocsLink />}
                         fieldId="jsonpath"
-                        validated={extractor.validationResult?.valid !== false ? "default" : "error"}
-                        helperTextInvalid={extractor.validationResult?.reason || ""}
                     >
                         <TextInput
                             id="jsonpath"
                             value={extractor.jsonpath}
-                            onChange={jsonpath => {
+                            onChange={(_event, jsonpath) => {
                                 extractor.jsonpath = jsonpath
                                 extractor.validationResult = undefined
                                 props.onUpdate()
@@ -174,8 +176,15 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                                     }
                                 }, 1000)
                             }}
-                            isReadOnly={props.readOnly}
+                            readOnlyVariant={props.readOnly ? "default" : undefined}
                         />
+                        <FormHelperText>
+                            <HelperText>
+                                <HelperTextItem variant={extractor.validationResult?.valid !== false ? "default" : "error"}>
+                                {extractor.validationResult?.valid !== false ? "" : (extractor.validationResult?.reason||"")}
+                                </HelperTextItem>
+                            </HelperText>
+                        </FormHelperText>
                     </FormGroup>
                     <FormGroup
                         label="Variant"
@@ -201,7 +210,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                         }
                         fieldId="variant"
                     >
-                        <Flex style={{ paddingTop: "var(--pf-c-form--m-horizontal__group-label--md--PaddingTop)" }}>
+                        <Flex style={{ paddingTop: "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)" }}>
                             <FlexItem>
                                 <Radio
                                     name={variantName}
@@ -209,7 +218,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                                     label="First match"
                                     isChecked={!extractor.array}
                                     isDisabled={props.readOnly}
-                                    onChange={checked => {
+                                    onChange={(_event, checked) => {
                                         extractor.array = !checked
                                         props.onUpdate()
                                     }}
@@ -222,7 +231,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                                     label="All matches"
                                     isChecked={extractor.array}
                                     isDisabled={props.readOnly}
-                                    onChange={checked => {
+                                    onChange={(_event, checked) => {
                                         extractor.array = checked
                                         props.onUpdate()
                                     }}

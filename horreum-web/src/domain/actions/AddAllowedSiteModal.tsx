@@ -1,5 +1,9 @@
 import { useState } from "react"
-import { Button, ButtonVariant, Form, FormGroup, Modal, TextInput } from "@patternfly/react-core"
+import { Button, ButtonVariant, Form, FormGroup, Modal, TextInput,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
+ } from "@patternfly/react-core"
 
 type AddAllowedSiteModalProps = {
     isOpen: boolean
@@ -41,11 +45,8 @@ export default function AddAllowedSiteModal(props: AddAllowedSiteModalProps) {
             <Form isHorizontal={true}>
                 <FormGroup
                     label="Site prefix"
-                    validated={isValid ? "default" : "warning"}
                     isRequired={true}
                     fieldId="prefix"
-                    helperText="Prefix (protocol, domain and optionally port and path) for all URLs used in HTTP Actions"
-                    helperTextInvalid="The prefix should be either empty, or start with 'http://' or 'https://'"
                 >
                     <TextInput
                         value={prefix}
@@ -55,11 +56,21 @@ export default function AddAllowedSiteModal(props: AddAllowedSiteModalProps) {
                         aria-describedby="url-helper"
                         name="url"
                         validated={isValid ? "default" : "error"}
-                        onChange={setPrefix}
+                        onChange={(_event, val) => setPrefix(val)}
                         onKeyDown={e => {
                             if (e.key === "Enter") e.preventDefault()
                         }}
                     />
+                    <FormHelperText>
+                        <HelperText>
+                            <HelperTextItem variant={isValid ? "default" : "error"}>
+                                {isValid ? 
+                                    "Prefix (protocol, domain and optionally port and path) for all URLs used in HTTP Actions" 
+                                    : "The prefix should be either empty, or start with 'http://' or 'https://'"
+                                }
+                            </HelperTextItem>
+                        </HelperText>
+                    </FormHelperText>
                 </FormGroup>
             </Form>
         </Modal>

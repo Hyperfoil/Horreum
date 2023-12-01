@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react"
 
-import { Select, SelectOption, SelectOptionObject } from "@patternfly/react-core"
+import {
+	Select,
+	SelectOption,
+	SelectOptionObject
+} from '@patternfly/react-core/deprecated';
 
 import {schemaApi} from "../api"
 
@@ -50,7 +54,7 @@ export default function SchemaSelect({value, onChange, disabled, noSchemaOption,
             variant="typeahead"
             isCreatable={isCreatable}
             createText="Use new schema URI: "
-            onToggle={setExpanded}
+            onToggle={(_event, val) => setExpanded(val)}
             selections={options.find(o => o.uri === value) || []}
             onClear={() => {
                 setExpanded(false)

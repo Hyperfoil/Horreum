@@ -4,19 +4,22 @@ import { useSelector } from "react-redux"
 import { useHistory } from "react-router"
 
 import {
-    Button,
-    Card,
-    CardHeader,
-    CardBody,
-    Dropdown,
-    DropdownToggle,
-    DropdownItem,
-    Modal,
-    PageSection,
-    Spinner,
-    CardFooter,
-    Pagination,
-} from "@patternfly/react-core"
+	Button,
+	Card,
+	CardHeader,
+	CardBody,
+    Flex, FlexItem,
+	Modal,
+	PageSection,
+	Spinner,
+	CardFooter,
+	Pagination
+} from '@patternfly/react-core';
+import {
+	Dropdown,
+	DropdownToggle,
+	DropdownItem
+} from '@patternfly/react-core/deprecated';
 import { NavLink } from "react-router-dom"
 import { EyeIcon, EyeSlashIcon, FolderOpenIcon } from "@patternfly/react-icons"
 
@@ -100,7 +103,7 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
             onSelect={_ => setOpen(false)}
             menuAppendTo={() => document.body}
             toggle={
-                <DropdownToggle toggleIndicator={null} onToggle={setOpen}>
+                <DropdownToggle toggleIndicator={null} onToggle={(_event, val) => setOpen(val)}>
                     {!isOptOut && (
                         <EyeIcon
                             className="watchIcon"
@@ -428,18 +431,21 @@ export default function AllTests() {
     return (
         <PageSection>
             <Card>
+                
                 <CardHeader>
+                    <Flex>
                     {isTester && (
-                        <>
+                        <FlexItem>
                             <ButtonLink to="/test/_new">New Test</ButtonLink>
                             <TestImportButton
                                 tests={allTests || []}
                                 onImported={() => loadTests()}
                             />
-                        </>
+                        </FlexItem>
                     )}
                     {isAuthenticated && (
-                        <div style={{ width: "200px", marginLeft: "16px" }}>
+                        <FlexItem>
+                        {/* <div style={{ width: "200px"}}> not necessary when insidie a FlexItem?*/} 
                             <TeamSelect
                                 includeGeneral={true}
                                 selection={rolesFilter}
@@ -447,8 +453,10 @@ export default function AllTests() {
                                     setRolesFilter(selection)
                                 }}
                             />
-                        </div>
+                        {/* </div> */}
+                        </FlexItem>
                     )}
+                    </Flex>
                 </CardHeader>
                 <CardBody style={{ overflowX: "auto" }}>
                     <FoldersTree

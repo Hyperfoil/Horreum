@@ -1,6 +1,15 @@
 import "@patternfly/patternfly/patternfly.css" //have to use this import to customize scss-variables.scss
 
-import {Nav, NavItem, NavList, Page, PageHeader, PageHeaderTools} from "@patternfly/react-core"
+import {
+	Nav,
+	NavItem,
+	NavList,
+	Page
+} from '@patternfly/react-core';
+import {
+	PageHeader,
+	PageHeaderTools
+} from '@patternfly/react-core/deprecated';
 
 import {NavLink, Route, Routes} from "react-router-dom"
 import {Router} from "react-router"

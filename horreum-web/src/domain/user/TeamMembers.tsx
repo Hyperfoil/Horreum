@@ -8,6 +8,8 @@ import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 
+
+
 type UserPermissionsProps = {
     user: UserData
     roles: string[]
@@ -32,6 +34,7 @@ function UserPermissions({ user, roles, onRolesUpdate }: UserPermissionsProps) {
         <TreeView
             data-user={user}
             key={user.username}
+            hasCheckboxes={true}
             onCheck={(_, item) => {
                 switch (item.id) {
                     case "viewer":
@@ -57,10 +60,10 @@ function UserPermissions({ user, roles, onRolesUpdate }: UserPermissionsProps) {
                     name: userName(user),
                     id: user.username,
                     children: [
-                        { name: "Viewer", id: "viewer", hasCheck: true, checkProps: { checked: viewer } },
-                        { name: "Tester", id: "tester", hasCheck: true, checkProps: { checked: tester } },
-                        { name: "Uploader", id: "uploader", hasCheck: true, checkProps: { checked: uploader } },
-                        { name: "Manager", id: "manager", hasCheck: true, checkProps: { checked: manager } },
+                        { name: "Viewer", id: "viewer", checkProps: { checked: viewer } },
+                        { name: "Tester", id: "tester", checkProps: { checked: tester } },
+                        { name: "Uploader", id: "uploader", checkProps: { checked: uploader } },
+                        { name: "Manager", id: "manager", checkProps: { checked: manager } },
                     ],
                 },
             ]}
@@ -166,7 +169,7 @@ export default function TeamMembers(props: TeamMembersProps) {
             ]}
             chosenOptions={members}
             chosenOptionsTitle={"Members of " + teamToName(props.team)}
-            onListChange={(newAvailable, newChosen) => {
+            onListChange={(_event, newAvailable, newChosen) => {
                 setAvailableUsers(
                     (newAvailable as ReactElement[]).map(item => {
                         if (availableUsers.includes(item)) {

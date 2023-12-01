@@ -71,7 +71,7 @@ export default function LoginModal(props: LoginModalProps) {
                     isRequired
                     value={username || ""}
                     autoComplete={"username"}
-                    onChange={setUsername}
+                    onChange={(_,v)=>setUsername(v)}
                     validated={username ? "default" : "error"}
                 />
             </FormGroup>
@@ -82,7 +82,7 @@ export default function LoginModal(props: LoginModalProps) {
                     type={"password"}
                     value={password || ""}
                     autoComplete={"current-password"}
-                    onChange={setPassword}
+                    onChange={(_,v)=>setPassword(v)}
                     validated={password ? "default" : "error"}
                 />
             </FormGroup>

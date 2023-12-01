@@ -6,26 +6,28 @@ import {ChangeDetection, ConditionConfig, Variable, alertingApi, updateChangeDet
 import { NavLink } from "react-router-dom"
 
 import {
-    Alert,
-    AlertActionCloseButton,
-    Bullseye,
-    Button,
-    EmptyState,
-    Form,
-    FormGroup,
-    Modal,
-    Popover,
-    Select,
-    SelectOption,
-    SimpleList,
-    SimpleListGroup,
-    SimpleListItem,
-    Spinner,
-    Split,
-    SplitItem,
-    TextInput,
-    Title,
-} from "@patternfly/react-core"
+	Alert,
+	AlertActionCloseButton,
+	Bullseye,
+	Button,
+	EmptyState,
+	Form,
+	FormGroup,
+	Modal,
+	Popover,
+	SimpleList,
+	SimpleListGroup,
+	SimpleListItem,
+	Spinner,
+	Split,
+	SplitItem,
+	TextInput,
+	Title
+} from '@patternfly/react-core';
+import {
+	Select,
+	SelectOption
+} from '@patternfly/react-core/deprecated';
 
 import { PlusCircleIcon } from "@patternfly/react-icons"
 
@@ -107,7 +109,7 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm  }: TestSelectModalProps) =>
                     {test && groups.length > 0 && (
                         <Select
                             isOpen={selectGroupOpen}
-                            onToggle={setSelectGroupOpen}
+                            onToggle={(_event, val) => setSelectGroupOpen(val)}
                             selections={group}
                             onSelect={(_, item) => {
                                 setGroup(item as string)
@@ -168,7 +170,7 @@ const RenameGroupModal = (props: RenameGroupModalProps) => {
                     <Select
                         placeholderText="Select group..."
                         isOpen={selectOpen}
-                        onToggle={setSelectOpen}
+                        onToggle={(_event, val) => setSelectOpen(val)}
                         selections={from}
                         onSelect={(_, item) => {
                             setFrom(item as string)
@@ -181,7 +183,7 @@ const RenameGroupModal = (props: RenameGroupModalProps) => {
                     </Select>
                 </FormGroup>
                 <FormGroup label="New group name" fieldId="to">
-                    <TextInput value={to} id="to" onChange={setTo} />
+                    <TextInput value={to} id="to" onChange={(_event, val) => setTo(val)} />
                 </FormGroup>
             </Form>
         </Modal>
@@ -207,7 +209,7 @@ type ActionsProps = {
 const Actions = (props: ActionsProps) => {
     return (
         <div>
-            <NavLink className="pf-c-button pf-m-primary" to={"/changes?test=" + props.testName}>
+            <NavLink className="pf-v5-c-button pf-m-primary" to={"/changes?test=" + props.testName}>
                 Go to changes
             </NavLink>
             {props.isTester && (

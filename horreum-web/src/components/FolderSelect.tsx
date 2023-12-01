@@ -1,7 +1,10 @@
 import {useContext, useEffect, useState} from "react"
 import { useSelector } from "react-redux"
 
-import { Select, SelectOption } from "@patternfly/react-core"
+import {
+	Select,
+	SelectOption
+} from '@patternfly/react-core/deprecated';
 
 import { teamsSelector } from "../auth"
 import {AppContext} from "../context/appContext";
@@ -30,7 +33,7 @@ type FolderSelectProps = {
             isOpen={open}
             isCreatable={canCreate}
             variant={canCreate ? "typeahead" : "single"}
-            onToggle={setOpen}
+            onToggle={(_event, val) => setOpen(val)}
             selections={folder}
             menuAppendTo="parent"
             onSelect={(_, item) => {

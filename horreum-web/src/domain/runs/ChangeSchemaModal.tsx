@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react"
 
-import { Button, Modal, Select, SelectOption, Spinner } from "@patternfly/react-core"
+import {
+	Button,
+	Modal,
+	Spinner
+} from '@patternfly/react-core';
+import {
+	Select,
+	SelectOption
+} from '@patternfly/react-core/deprecated';
 
 import SchemaSelect from "../../components/SchemaSelect"
 
@@ -33,7 +41,7 @@ function PathSelect(props: PathSelectProps) {
         <Select
             aria-label="Select path"
             isOpen={isExpanded}
-            onToggle={setExpanded}
+            onToggle={(_event, val) => setExpanded(val)}
             selections={props.value ? props.value : props.hasRoot ? ROOT_PATH : undefined}
             onClear={() => {
                 setExpanded(false)

@@ -40,7 +40,7 @@ export default function LogSlider({
             <FlexItem grow={{ default: "grow" }}>
                 <Slider
                     value={toLog(value, min, max)}
-                    onChange={value => {
+                    onChange={(_event, value) => {
                         let x = toPow(value, min, max)
                         if (isDiscrete) {
                             x = Math.round(x)

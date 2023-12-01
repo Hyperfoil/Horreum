@@ -10,7 +10,16 @@ import {
     PageSection,
     Spinner,
 } from "@patternfly/react-core"
-import { expandable, ICell, IRow, Table, TableHeader, TableBody } from "@patternfly/react-table"
+import {
+	expandable,
+	ICell,
+	IRow
+} from '@patternfly/react-table';
+import {
+	Table,
+	TableHeader,
+	TableBody
+} from '@patternfly/react-table/deprecated';
 import { NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 

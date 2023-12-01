@@ -18,27 +18,28 @@ import {
 } from "../../api"
 
 import {
-    Button,
-    Card,
-    CardBody,
-    CardHeader,
-    ClipboardCopy,
-    DataList,
-    DataListItem,
-    DataListItemRow,
-    DataListItemCells,
-    DataListCell,
-    DatePicker,
-    EmptyState,
-    EmptyStateBody,
-    Modal,
-    PageSection,
-    Select,
-    SelectOption,
-    SelectOptionObject,
-    Spinner,
-    Title,
-} from "@patternfly/react-core"
+	Button,
+	Card,
+	CardBody,
+	CardHeader,
+	ClipboardCopy,
+	DataList,
+	DataListItem,
+	DataListItemRow,
+	DataListItemCells,
+	DataListCell,
+	DatePicker,
+	EmptyState,
+	EmptyStateBody,
+	Modal,
+	PageSection,
+	Spinner, EmptyStateHeader, EmptyStateFooter,	
+} from '@patternfly/react-core';
+import {
+	Select,
+	SelectOption,
+	SelectOptionObject
+} from '@patternfly/react-core/deprecated';
 import { NavLink, useNavigate } from "react-router-dom"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
@@ -75,7 +76,7 @@ const TimespanSelect = (props: TimespanSelectProps) => {
         <Select
             isOpen={isExpanded}
             selections={selected}
-            onToggle={setExpanded}
+            onToggle={(_event, val) => setExpanded(val)}
             onSelect={(_, value) => {
                 const timespan = value as Timespan
                 setSelected(timespan)
@@ -119,7 +120,7 @@ const LineTypeSelect = (props: LineTypeSelectProps) => {
         <Select
             isOpen={isExpanded}
             selections={selected}
-            onToggle={setExpanded}
+            onToggle={(_event, val) => setExpanded(val)}
             onSelect={(_, value) => {
                 const linetype = value as LineType
                 setSelected(linetype)
@@ -351,7 +352,7 @@ export default function Changes() {
                                 {selectedTest && (
                                     <>
                                         <NavLink
-                                            className="pf-c-button pf-m-primary"
+                                            className="pf-v5-c-button pf-m-primary"
                                             to={"/test/" + selectedTest.id + "#vars"}
                                         >
                                             Variable definitions
@@ -408,7 +409,7 @@ export default function Changes() {
                 <CardBody>
                     {!selectedTest && (
                         <EmptyState>
-                            <Title headingLevel="h2">No test selected</Title>
+                            <EmptyStateHeader titleText="No test selected" headingLevel="h2" />
                             <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
                         </EmptyState>
                     )}
@@ -421,18 +422,16 @@ export default function Changes() {
                     )}
                     {selectedTest && !loadingFingerprints && requiresFingerprint && !selectedFingerprint && (
                         <EmptyState>
-                            <Title headingLevel="h2">Please select datasets fingerprint.</Title>
+                            <EmptyStateHeader titleText="Please select datasets fingerprint." headingLevel="h2" />
                         </EmptyState>
                     )}
                     {selectedTest && !loadingPanels && !requiresFingerprint && panels.length === 0 && (
                         <EmptyState>
-                            <Title headingLevel="h2">
-                                Test {selectedTest.toString()} does not define any change detection variables
-                            </Title>
-                            <NavLink className="pf-c-button pf-m-primary" to={"/test/" + selectedTest.id + "#vars"}>
+                            <EmptyStateHeader titleText={<>Test{selectedTest.toString()}does not define any change detection variables</>} headingLevel="h2" /><EmptyStateFooter>
+                            <NavLink className="pf-v5-c-button pf-m-primary" to={"/test/" + selectedTest.id + "#vars"}>
                                 Define change detection variables
                             </NavLink>
-                        </EmptyState>
+                        </EmptyStateFooter></EmptyState>
                     )}
                     {!loadingFingerprints &&
                         (!requiresFingerprint || selectedFingerprint) &&

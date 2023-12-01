@@ -21,17 +21,17 @@ code {
     display: none !important;
   }
 
-  .pf-c-page__main {
+  .pf-v5-c-page__main {
     width: 842pt
   }
 }
 
-.pf-c-modal-box__body {
+.pf-v5-c-modal-box__body {
   /* This makes selects correctly display in modals */
   overflow: visible !important
 }
 
-.pf-c-tab-content {
+.pf-v5-c-tab-content {
     margin: 20px !important;
 }
 

@@ -54,12 +54,13 @@ const ViewComponentForm = ({ c, onChange, isTester }: ViewComponentFormProps) =>
                     value={c.headerName || ""}
                     placeholder="e.g. 'Run duration'"
                     id="header"
-                    onChange={value => {
+                    onChange={(_event, value) => {
                         c.headerName = value
                         onChange()
                     }}
                     validated={!!c.headerName && c.headerName.trim() !== "" ? "default" : "error"}
-                    isReadOnly={!isTester}
+                    // isReadOnly={!isTester} no longer supported
+                    readOnlyVariant={isTester ? undefined : "default"}
                 />
             </FormGroup>
             <FormGroup label="Labels" fieldId="labels">
@@ -207,8 +208,8 @@ export default function Views({ testId, testOwner, funcsRef, onModified, ...prop
                 <TextInput
                     id="name"
                     value={selectedView?.name}
-                    isReadOnly={selectedView?.name === "Default"}
-                    onChange={name => update({ name })}
+                    
+                    onChange={(_event, name) => update({ name })} 
                 />
             </FormGroup>
             {(!selectedView?.components || selectedView?.components.length === 0) && "The view has no components."}

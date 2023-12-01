@@ -1,8 +1,23 @@
 import {useContext, useEffect, useRef, useState} from "react"
-import { Dropdown, DropdownItem, DropdownToggle, FormGroup, InputGroup, TextInput } from "@patternfly/react-core"
+import {
+	FormGroup,
+	InputGroup,
+	TextInput, InputGroupItem,
+    HelperText,
+    HelperTextItem,
+    FormHelperText,
+
+} from '@patternfly/react-core';
+import {
+	Dropdown,
+	DropdownItem,
+	DropdownToggle
+} from '@patternfly/react-core/deprecated';
+
 import { AllowedSite, getAllowedSites} from "../api"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
+
 
 function isValidUrl(url: string) {
     try {
@@ -43,17 +58,8 @@ export default function HttpActionUrlSelector({ active, value, setValue, isDisab
     return (
         <FormGroup
             label="HTTP Action URL"
-            validated={isUrlValid && isUrlAllowed && extraCheckResult === true ? "default" : "error"}
             isRequired={true}
             fieldId="url"
-            helperText="URL (with protocol) for POST callback"
-            helperTextInvalid={
-                !isUrlValid
-                    ? "URL cannot be parsed."
-                    : !isUrlAllowed
-                    ? "URL does not start with any of the allowed prefixes."
-                    : extraCheckResult
-            }
         >
             <InputGroup>
                 {!isReadOnly && (
@@ -71,7 +77,7 @@ export default function HttpActionUrlSelector({ active, value, setValue, isDisab
                             }
                         }}
                         toggle={
-                            <DropdownToggle onToggle={setDropdownOpen} isDisabled={isDisabled}>
+                            <DropdownToggle onToggle={(_event, val) => setDropdownOpen(val)} isDisabled={isDisabled}>
                                 Pick URL prefix
                             </DropdownToggle>
                         }
@@ -83,7 +89,7 @@ export default function HttpActionUrlSelector({ active, value, setValue, isDisab
                         ))}
                     />
                 )}
-                <TextInput
+                <InputGroupItem isFill ><TextInput
                     ref={ref}
                     value={value}
                     isRequired
@@ -93,7 +99,7 @@ export default function HttpActionUrlSelector({ active, value, setValue, isDisab
                     name="url"
                     validated={isUrlValid && isUrlAllowed && extraCheckResult === true ? "default" : "error"}
                     placeholder="e.g. 'http://example.com/api/action'"
-                    onChange={value => {
+                    onChange={(_event, value) => {
                         value = value.trim()
                         if (setValid) {
                             setValid(
@@ -105,9 +111,20 @@ export default function HttpActionUrlSelector({ active, value, setValue, isDisab
                         setValue(value)
                     }}
                     isDisabled={isDisabled}
-                    isReadOnly={isReadOnly}
-                />
+                     readOnlyVariant={isReadOnly ? "default" : undefined}
+                /></InputGroupItem>
             </InputGroup>
+            <FormHelperText>
+                <HelperText>
+                    <HelperTextItem variant={isUrlValid && isUrlAllowed && extraCheckResult === true ? "default" : "error"}>
+                    {isUrlValid && isUrlAllowed && extraCheckResult === true ? "URL (with protocol) for POST callback" : !isUrlValid
+                        ? "URL cannot be parsed."
+                        : !isUrlAllowed
+                        ? "URL does not start with any of the allowed prefixes."
+                        : extraCheckResult ? "URL (with protocol) for POST callback" : ""}
+                    </HelperTextItem>
+                </HelperText>
+            </FormHelperText>
         </FormGroup>
     )
 }

@@ -13,7 +13,7 @@ import {
     Title,
     Tooltip,
 } from "@patternfly/react-core"
-import { TableComposable, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table"
+import { Table /* data-codemods */, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table"
 import { EditIcon, HelpIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
@@ -65,7 +65,7 @@ function DataView(props: DataViewProps) {
                 </>
             }
             bodyContent={
-                <TableComposable variant="compact">
+                <Table variant="compact">
                     <Tbody>
                         {props.config.components.map((c, i) => (
                             <Tr key={i}>
@@ -74,7 +74,7 @@ function DataView(props: DataViewProps) {
                             </Tr>
                         ))}
                     </Tbody>
-                </TableComposable>
+                </Table>
             }
         >
             <Button variant="link">
@@ -162,7 +162,7 @@ function ComponentTable(props: ComponentTableProps) {
     return (
         <Level style={{ padding: "50px"}}>
             <LevelItem style={{ width: "100%" }}>
-                <TableComposable variant="compact">
+                <Table variant="compact">
                     <Thead>
                         <Tr>
                             <Th></Th>
@@ -180,7 +180,7 @@ function ComponentTable(props: ComponentTableProps) {
                                         <Checkbox
                                             id={sc}
                                             isChecked={sc === props.baseline}
-                                            onChange={checked => props.onBaselineChange(checked ? sc : undefined)}
+                                            onChange={(_event, checked) => props.onBaselineChange(checked ? sc : undefined)}
                                         />
                                     </Tooltip>
                                 </Td>
@@ -202,7 +202,7 @@ function ComponentTable(props: ComponentTableProps) {
                             </Tr>
                         ))}
                     </Tbody>
-                </TableComposable>
+                </Table>
             </LevelItem>
             <LevelItem style={{ width: "100%", height: "400px", position: "relative", padding: "50px 0px" }}>
                 <div className="chartSwitch nonPrintable">
@@ -210,7 +210,7 @@ function ComponentTable(props: ComponentTableProps) {
                         label="Min-max Y axis"
                         labelOff="Natural Y axis"
                         isChecked={minMaxDomain}
-                        onChange={setMinMaxDomain}
+                        onChange={(_event, val) => setMinMaxDomain(val)}
                     />
                 </div>
                 <ResponsiveContainer width="100%" height="100%">
@@ -304,7 +304,7 @@ function Comment(props: CommentProps) {
                 <TextArea
                     id="comment"
                     isDisabled={updating}
-                    onChange={setText}
+                    onChange={(_event, val) => setText(val)}
                     autoResize={true}
                     resizeOrientation="vertical"
                     value={text}

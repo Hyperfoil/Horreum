@@ -1,7 +1,10 @@
 import {useMemo, useState, useRef, useContext} from "react"
 
 import { Button, Checkbox, Form, FormGroup, Modal, Progress } from "@patternfly/react-core"
-import { Table, TableBody } from "@patternfly/react-table"
+import {
+	Table,
+	TableBody
+} from '@patternfly/react-table/deprecated';
 import { NavLink } from "react-router-dom"
 
 import {alertingApi, DatapointRecalculationStatus, DatasetInfo} from "../../api"
@@ -141,7 +144,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
                             <TimeRangeSelect selection={timeRange} onSelect={setTimeRange} options={timeRangeOptions} />
                         </FormGroup>
                         <FormGroup label="Debug logs:" fieldId="debug">
-                            <Checkbox id="debug" isChecked={debug} onChange={setDebug} label="Write debug logs" />
+                            <Checkbox id="debug" isChecked={debug} onChange={(_event, val) => setDebug(val)} label="Write debug logs" />
                         </FormGroup>
                     </Form>
                 )}
