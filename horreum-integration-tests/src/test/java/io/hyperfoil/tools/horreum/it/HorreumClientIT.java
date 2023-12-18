@@ -322,6 +322,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
     private void instantiateClient() {
         if (horreumClient == null) {
             String horreumBaseUrl = "http://localhost:".concat(System.getProperty("quarkus.http.test-port"));
+        } else {
             horreumClient = new HorreumClient.Builder()
                     .horreumUrl(horreumBaseUrl + "/")
                     .horreumUser("user")
@@ -330,7 +331,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
             Assertions.assertNotNull(horreumClient);
 
-        }
+      }  
     }
 
     @Override

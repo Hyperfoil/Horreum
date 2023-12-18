@@ -13,14 +13,14 @@ import java.util.Map;
 public class PostgresResource implements QuarkusTestResourceLifecycleManager {
    private PostgreSQLContainer<?> postgresContainer;
 
-   public static final String POSTGRES_VERSION = "postgres:13";
+   final String POSTGRES_IMAGE = initArgs.get(HORREUM_DEV_POSTGRES_IMAGE);
 
    private Boolean inContainer = false;
 
    @Override
    public void init(Map<String, String> initArgs) {
       if (ConfigProvider.getConfig().getOptionalValue("horreum.test.postgres.enabled", boolean.class).orElse(true)) {
-         postgresContainer = new PostgreSQLContainer<>(POSTGRES_VERSION)
+         postgresContainer = new PostgreSQLContainer<>(POSTGRES_IMAGE)
                .withDatabaseName("horreum")
                .withUsername("dbadmin")
                .withPassword("secret");
