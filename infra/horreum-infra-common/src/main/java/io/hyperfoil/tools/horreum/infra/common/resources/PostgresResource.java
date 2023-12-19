@@ -90,10 +90,7 @@ public class PostgresResource implements ResourceLifecycleManager {
         if(!dir.isDirectory()) {
             throw new RuntimeException("Directory " + directoryPath + " is not a directory!");
         }
-        if (!dir.canRead() && !dir.canWrite()) {
-            throw new RuntimeException("Directory " + directoryPath + " does not have sufficient permissions to operate!");
-        }
-        if (dir.list() == null || dir.list().length == 0) {
+        if (dir.list().length == 0) {
             throw new RuntimeException("Directory " + directoryPath + " does not contain any files!");
         }
     }
