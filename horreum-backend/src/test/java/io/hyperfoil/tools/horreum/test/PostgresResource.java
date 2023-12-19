@@ -3,7 +3,7 @@ package io.hyperfoil.tools.horreum.test;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.testcontainers.containers.PostgreSQLContainer;
-import static io.hyperfoil.tools.horreum.infra.common.Const.*;
+import io.hyperfoil.tools.horreum.infra.common.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
