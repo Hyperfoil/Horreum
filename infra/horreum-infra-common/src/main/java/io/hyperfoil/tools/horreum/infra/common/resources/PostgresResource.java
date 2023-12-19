@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.infra.common.resources;
 
 import io.hyperfoil.tools.horreum.infra.common.ResourceLifecycleManager;
+import org.jboss.logging.Logger;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -20,6 +21,7 @@ import java.util.Properties;
 import static io.hyperfoil.tools.horreum.infra.common.Const.*;
 
 public class PostgresResource implements ResourceLifecycleManager {
+    private static final Logger log = Logger.getLogger(PostgresResource.class);
     public static final String POSTGRES_CONFIG_PROPERTIES = "postgres.config.properties";
     private HorreumPostgreSQLContainer<?> postgresContainer;
 
@@ -77,8 +79,12 @@ public class PostgresResource implements ResourceLifecycleManager {
         if(!dir.isDirectory()) {
             throw new RuntimeException("Directory " + directoryPath + " is not a directory!");
         }
-        if (dir.list().length == 0) {
-            throw new RuntimeException("Directory " + directoryPath + " does not contain any files!");
+        try {
+            if (dir.canRead() && dir.list() == null) {
+                throw new RuntimeException("Directory " + directoryPath + " does not contain any files!");
+            }
+        } catch (SecurityException se){
+            log.warnf("Directory %s does not have correct permissions to verify!", directoryPath);
         }
     }
 
