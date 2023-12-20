@@ -1,8 +1,5 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,14 +16,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import io.hyperfoil.tools.horreum.api.data.Label;
-import io.hyperfoil.tools.horreum.api.data.Transformer;
+import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.report.TableReport;
+import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
-import io.hyperfoil.tools.horreum.api.data.Extractor;
-import io.hyperfoil.tools.horreum.api.data.Schema;
-import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
@@ -36,6 +31,9 @@ import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.common.mapper.TypeRef;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.TestInfo;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -254,4 +252,26 @@ public class SchemaServiceTest extends BaseServiceTest {
       assertEquals(2, LabelDAO.find("schema.id", s.id).count());
       assertEquals(1, TransformerDAO.find("schema.id", s.id).count());
    }
+
+   @org.junit.jupiter.api.Test
+   public void testFindUsages(TestInfo info) throws InterruptedException  {
+      Test test = createTest(createExampleTest("nofilter"));
+      createComparisonSchema();
+      uploadExampleRuns(test);
+
+      TableReportConfig config = newExampleTableReportConfig(test);
+
+      TableReport report = jsonRequest().body(config).post("/api/report/table/config")
+              .then().statusCode(200).extract().body().as(TableReport.class);
+
+      assertNotEquals(0, report.data.size());
+
+      List<SchemaService.LabelLocation> usages = jsonRequest().get("/api/schema/findUsages?label=".concat("category"))
+                .then().statusCode(200).extract().body().as(List.class);
+
+      assertNotNull(usages);
+
+   }
+
+
 }
