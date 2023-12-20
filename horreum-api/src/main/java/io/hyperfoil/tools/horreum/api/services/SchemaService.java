@@ -277,13 +277,16 @@ public interface SchemaService {
    abstract class LabelLocation {
       @org.eclipse.microprofile.openapi.annotations.media.Schema(type = SchemaType.STRING, implementation = String.class, description="Location of Label usage",
               example="VIEW")
-      public final LabelFoundLocation type;
+      public LabelFoundLocation type;
       @org.eclipse.microprofile.openapi.annotations.media.Schema(description="Unique ID for location that references Schema",
               example="101")
       public int testId;
       @org.eclipse.microprofile.openapi.annotations.media.Schema(description="Test name that references Schema",
               example="My Benchmark")
       public String testName;
+
+      public LabelLocation() {
+      }
 
       public LabelLocation(LabelFoundLocation type, int testId, String testName) {
          this.type = type;

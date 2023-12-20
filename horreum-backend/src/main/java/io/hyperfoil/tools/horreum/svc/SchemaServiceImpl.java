@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.JsonMetaSchema;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
@@ -25,6 +26,7 @@ import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.hyperfoil.tools.horreum.mapper.ValidationErrorMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
+import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -65,7 +67,9 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.query.SelectionQuery;
+import org.hibernate.type.CustomType;
 import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -92,6 +96,8 @@ public class SchemaServiceImpl implements SchemaService {
             "FROM refs INNER JOIN schema on refs.uri = schema.uri) " +
          "SELECT schema.* FROM schema INNER JOIN refs ON schema.uri = refs.uri";
    //@formatter:on
+
+   private final CustomType JSON_STRING_ARRY_TYPE = new CustomType<>(new JsonBinaryType(String[].class), new TypeConfiguration());
 
    private static final JsonSchemaFactory JSON_SCHEMA_FACTORY = new JsonSchemaFactory.Builder()
          .defaultMetaSchemaURI(JsonMetaSchema.getV4().getUri())
@@ -132,6 +138,10 @@ public class SchemaServiceImpl implements SchemaService {
    MessageBus messageBus;
    @Inject
    Session session;
+
+   @Inject
+   ObjectMapper mapper;
+
    @WithToken
    @WithRoles
    @PermitAll
@@ -536,17 +546,17 @@ public class SchemaServiceImpl implements SchemaService {
             .addScalar("testname", StandardBasicTypes.TEXT )
             .addScalar("configid", StandardBasicTypes.INTEGER)
             .addScalar("title", StandardBasicTypes.TEXT)
-            .addScalar("filterlabels", StandardBasicTypes.TEXT)
-            .addScalar("categorylabels", StandardBasicTypes.TEXT)
-            .addScalar("serieslabels", StandardBasicTypes.TEXT)
-            .addScalar("scalelabels", StandardBasicTypes.TEXT)
+            .addScalar("filterlabels", JSON_STRING_ARRY_TYPE)
+            .addScalar("categorylabels", JSON_STRING_ARRY_TYPE)
+            .addScalar("serieslabels", JSON_STRING_ARRY_TYPE)
+            .addScalar("scalelabels", JSON_STRING_ARRY_TYPE)
             .getResultList()) {
          Object[] columns = (Object[]) row;
          StringBuilder where = new StringBuilder();
-         addPart(where, (ArrayNode) columns[4], label, "filter");
-         addPart(where, (ArrayNode) columns[5], label, "series");
-         addPart(where, (ArrayNode) columns[6], label, "category");
-         addPart(where, (ArrayNode) columns[7], label, "label");
+         if ( columns[4] != null) addPart(where, (String[]) columns[4], label, "filter");
+         if ( columns[5] != null) addPart(where, (String[]) columns[5], label, "series");
+         if ( columns[6] != null) addPart(where, (String[]) columns[6], label, "category");
+         if ( columns[7] != null) addPart(where, (String[]) columns[7], label, "label");
          result.add(new LabelInReport((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], where.toString(), null));
       }
       for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, trc.id as configid, trc.title, rc.name FROM reportcomponent rc " +
@@ -930,8 +940,8 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
-   private void addPart(StringBuilder where, ArrayNode column, String label, String type) {
-      if (StreamSupport.stream(column.spliterator(), false).map(JsonNode::asText).anyMatch(label::equals)) {
+   private void addPart(StringBuilder where, String[] column, String label, String type) {
+      if (Arrays.stream(column).anyMatch(col -> col.equals(label))) {
          if (where.length() > 0) {
             where.append(", ");
          }
