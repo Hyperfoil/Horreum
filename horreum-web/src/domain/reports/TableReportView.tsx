@@ -446,7 +446,7 @@ export default function TableReportView(props: TableReportViewProps) {
                                         set.add("")
                                     }
                                 })
-                                return [...set].sort().map(key => (
+                                return [...set].sort().filter(value => value != "").map(key => (
                                     <React.Fragment key={i2 + "/" + key}>
                                         <Title headingLevel="h3">
                                             {comp.name}: {key}

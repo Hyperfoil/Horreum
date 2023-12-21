@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -18,8 +19,11 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.JsonpathValidation;
+import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -51,9 +55,6 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.api.data.Run;
-import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.api.services.RunService;
@@ -267,13 +268,14 @@ public class RunServiceImpl implements RunService {
    public JsonNode getMetadata(int id, String token, String schemaUri) {
       String result;
       if (schemaUri == null || schemaUri.isEmpty()) {
-         result = (String) Util.runQuery(em,  "SELECT metadata#>>'{}' from run where id = ?", id);
+         result = (String) Util.runQuery(em, "SELECT coalesce((metadata#>>'{}')::::jsonb, '{}'::::jsonb) from run where id = ?", id);
       } else {
          String sqlQuery = "SELECT run.metadata->(rs.key::::integer)#>>'{}' FROM run " +
                "JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?1 AND rs.source = 1 AND rs.uri = ?2";
          result = (String) Util.runQuery(em, sqlQuery, id, schemaUri);
       }
       try {
+
          return Util.OBJECT_MAPPER.readTree(result);
       } catch (JsonProcessingException e) {
          throw ServiceException.serverError(e.getMessage());
@@ -939,6 +941,11 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.notFound("Run not found: " + id);
       }
       String uri = Util.destringify(schemaUri);
+      Optional<SchemaDAO> schemaOptional = SchemaDAO.find("uri", uri).firstResultOptional();
+      if ( schemaOptional.isEmpty() ) {
+         throw ServiceException.notFound("Schema not found: " + uri);
+      }
+
       // Triggering dirty property on Run
       JsonNode updated = run.data.deepCopy();
       JsonNode item;
@@ -962,16 +969,18 @@ public class RunServiceImpl implements RunService {
          throw ServiceException.badRequest("Cannot update schema at " + (path == null ? "<root>" : path) + " as the target is not an object");
       }
       run.data = updated;
-      run.persist();
       trashConnectedDatasets(run.id, run.testid);
+      run.persist();
+      onNewOrUpdatedSchemaForRun(run.id, schemaOptional.get().id );
       Map<Integer, String> schemas =
-              session.createNativeQuery("SELECT schemaid AS key, uri AS value FROM run_schemas WHERE runid = ?", Tuple.class)
+              session.createNativeQuery("SELECT schemaid AS key, uri AS value FROM run_schemas WHERE runid = ? ORDER BY schemaid", Tuple.class)
                       .setParameter(1, run.id)
                       .getResultStream()
+                      .distinct()
                       .collect(
                               Collectors.toMap(
                                       tuple -> ((Integer) tuple.get("key")).intValue(),
-                                      tuple -> ((Integer) tuple.get("value")).toString()));
+                                      tuple -> ((String) tuple.get("value")) ));
 
       em.flush();
       return schemas;
