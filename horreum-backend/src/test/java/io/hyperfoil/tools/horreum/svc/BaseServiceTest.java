@@ -127,9 +127,13 @@ public class BaseServiceTest {
          return ADMIN_TOKEN;
       }
    }
+   protected static ObjectNode runWithValue(double value) {
+        return runWithValue(value, null);
+   }
+
    protected static ObjectNode runWithValue(double value, Schema schema) {
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
-      runJson.put("$schema", schema.uri);
+      if ( schema != null ) runJson.put("$schema", schema.uri);
       runJson.put("value", value);
       ArrayNode values = JsonNodeFactory.instance.arrayNode();
       values.add(++value);
@@ -139,7 +143,7 @@ public class BaseServiceTest {
       return runJson;
    }
 
-   protected static ObjectNode runWithValue(double value, Schema... schemas) {
+   protected static ObjectNode runWithValueSchemas(double value, Schema... schemas) {
       ObjectNode root = null;
       for (Schema s : schemas) {
          ObjectNode n = runWithValue(value, s);
