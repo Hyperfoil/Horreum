@@ -111,7 +111,7 @@ public interface RunService {
     @Parameters(value = {
             @Parameter(name = "id", in = ParameterIn.PATH, description = "Run ID", example = "202"),
             @Parameter(name = "token", in = ParameterIn.QUERY, description = "Run API token", example = "094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38"),
-            @Parameter(name = "schemaUri", in = ParameterIn.QUERY, description = "FIlter by Schmea URI", example = "uri:my-benchmark:0.1")
+            @Parameter(name = "schemaUri", in = ParameterIn.QUERY, description = "Filter by Schmea URI", example = "uri:my-benchmark:0.1")
 
     })
     @APIResponses(
