@@ -1,5 +1,5 @@
 import { HTMLProps, ReactNode } from "react"
-import { useHistory } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 
 import { noop } from "../utils"
 import { Button } from "@patternfly/react-core"
@@ -11,7 +11,7 @@ type IndirectLinkProps = {
 } & Omit<HTMLProps<HTMLButtonElement>, "ref">
 
 export default function IndirectLink({ variant = "link", onNavigate, children, ...props }: IndirectLinkProps) {
-    const history = useHistory()
+    const navigate  = useNavigate()
     return (
         <Button
             {...props}
@@ -19,7 +19,7 @@ export default function IndirectLink({ variant = "link", onNavigate, children, .
             variant={variant}
             onClick={() =>
                 onNavigate()
-                    .then(path => history.push(path))
+                    .then((path) => navigate(path))
                     .catch(noop)
             }
         >
