@@ -1,5 +1,5 @@
 import {useMemo, useState, useEffect, useContext} from "react"
-import { useHistory } from "react-router"
+ 
 
 import { useTester } from "../../auth"
 import {ChangeDetection, ConditionConfig, Variable, alertingApi, updateChangeDetection} from "../../api"
@@ -357,9 +357,8 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
     const [isLogOpen, setLogOpen] = useState(false)
     const subscriptions: string[] = [] //useSelector(subscriptionsSelector(test?.id || -1))?.filter(s => !s.startsWith("!"))
 
-    const history = useHistory()
     useEffect(() => {
-        const fragmentParts = history.location.hash.split("+")
+        const fragmentParts = window.location.hash.split("+")
         if (fragmentParts.length === 2 && fragmentParts[0] === "#vars") {
             const component = document.getElementById("variable-" + fragmentParts[1])
             if (component) {
