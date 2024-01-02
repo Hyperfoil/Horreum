@@ -192,7 +192,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.2.0</version>
+                    <version>${version.maven.resources}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -222,12 +222,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>${version.maven.jar}</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-install-plugin</artifactId>
-                <version>3.0.0-M1</version>
+                <version>${version.maven.install}</version>
             </plugin>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>

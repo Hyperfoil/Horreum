@@ -120,9 +120,9 @@
                 <artifactId>buildnumber-maven-plugin</artifactId>
             </plugin>
             <plugin>
-                <artifactId>maven-antrun-plugin</artifactId>
                 <groupId>org.apache.maven.plugins</groupId>
-                <version>3.0.0</version>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>${version.maven.antrun}</version>
                 <executions>
                     <execution>
                         <id>copy-application-properties</id>
