@@ -84,7 +84,6 @@
         <keycloak-admin-client.version>22.0.4</keycloak-admin-client.version>
         <validator.version>1.0.69</validator.version>
         <jayway.jsonpath.version>2.8.0</jayway.jsonpath.version>
-        <jackson.version>2.15.2</jackson.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
 
@@ -198,11 +197,6 @@
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
                 <version>${jayway.jsonpath.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-jsr310</artifactId>
-                <version>${jackson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
