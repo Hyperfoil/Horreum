@@ -84,7 +84,7 @@
         <quarkus.version>3.6.4</quarkus.version>
         <quarkus-plugin.version>3.4.1</quarkus-plugin.version>
         <quinoa.version>2.3.1</quinoa.version>
-        <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
+        <surefire-plugin.version>3.2.3</surefire-plugin.version>
         <failsafe-plugin.version>3.3.0</failsafe-plugin.version>
         <keycloak-admin-client.version>22.0.4</keycloak-admin-client.version>
         <validator.version>1.1.0</validator.version>
