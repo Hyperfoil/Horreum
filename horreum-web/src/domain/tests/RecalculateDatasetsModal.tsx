@@ -29,6 +29,9 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
     }, [])
 
     useEffect(() => {
+        if (!props.isOpen) {
+            return
+        }
         fetchTest(props.testId, alerting).then(setTest)
     }, [props.testId]);
 
