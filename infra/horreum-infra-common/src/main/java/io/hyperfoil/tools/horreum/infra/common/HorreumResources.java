@@ -233,7 +233,7 @@ public class HorreumResources {
         return envVariables;
     }
 
-    private static void waitForContainerReady(GenericContainer<?> container, String pattern) {
+    public static void waitForContainerReady(GenericContainer<?> container, String pattern) {
         if (container != null) {
             WaitingConsumer waitingConsumer = new WaitingConsumer();
 
@@ -287,6 +287,10 @@ public class HorreumResources {
     public static void stopContainers() {
         postgreSQLResource.stop();
         keycloakResource.stop();
+    }
+
+    public static Network getNetwork() {
+        return network;
     }
 
 }
