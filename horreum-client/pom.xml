@@ -68,6 +68,7 @@
             <version>3.2.0</version>
             <executions>
                 <execution>
+                    <phase>package</phase>
                     <goals>
                         <goal>test-jar</goal>
                     </goals>
