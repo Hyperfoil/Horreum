@@ -45,9 +45,13 @@
     <url>https://horreum.hyperfoil.io</url>
 
     <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
         <repository>
             <id>ossrh</id>
-            <url>https://s01.oss.sonatype.org/content/repositories/releases</url>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
 
@@ -164,33 +168,6 @@
                 <version>${quarkus.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.keycloak</groupId>
-                <artifactId>keycloak-admin-client</artifactId>
-                <version>${keycloak-admin-client.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.jboss.resteasy</groupId>
-                        <artifactId>resteasy-client</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.jboss.resteasy</groupId>
-                        <artifactId>resteasy-multipart-provider</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.jboss.resteasy</groupId>
-                        <artifactId>resteasy-jackson2-provider</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.jboss.resteasy</groupId>
-                        <artifactId>resteasy-jaxb-provider</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>commons-logging</groupId>
-                        <artifactId>commons-logging</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.networknt</groupId>
@@ -406,7 +383,7 @@
 
             <build>
                 <plugins>
-                    <!-- To release to Maven central -->
+                    <!-- To release to Nexus -->
                     <plugin>
                         <groupId>org.sonatype.plugins</groupId>
                         <artifactId>nexus-staging-maven-plugin</artifactId>
