@@ -9,23 +9,29 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import java.time.Instant;
 import java.util.Collection;
 
+@Schema(type = SchemaType.OBJECT, description = "Table Report", name = "TableReport")
 public class TableReport {
     @JsonProperty(required = true)
     public Integer id;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(type = SchemaType.OBJECT, implementation = TableReportConfig.class, description = "Table Report Config", allOf = TableReportConfig.class)
     public TableReportConfig config;
     @NotNull
-    @Schema(required = true, type = SchemaType.NUMBER)
+    @Schema(type = SchemaType.STRING, implementation = Instant.class,
+            description = "Created timestamp", example = "2019-09-26T07:58:30.996+0200")
     public Instant created;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(type = SchemaType.ARRAY, implementation = ReportComment.class, description = "List of ReportComments")
     public Collection<ReportComment> comments;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(type = SchemaType.ARRAY, implementation = DataDTO.class, description = "List of TableReportData")
     public Collection<DataDTO> data;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(type = SchemaType.ARRAY, implementation = ReportLog.class, description = "List of ReportLogs")
     public Collection<ReportLog> logs;
 
     public TableReport() {
@@ -43,7 +49,7 @@ public class TableReport {
                 '}';
     }
 
-    @Schema(name = "TableReportData")
+    @Schema(name = "TableReportData", type = SchemaType.OBJECT, description = "Table Report Data")
     public static class DataDTO {
         @NotNull
         @JsonProperty(required = true)
@@ -65,6 +71,7 @@ public class TableReport {
         public String scale;
         @NotNull
         @JsonProperty(required = true)
+        @Schema(type = SchemaType.ARRAY, implementation = Number.class, description = "Array of values")
         public ArrayNode values;
 
         public DataDTO() {

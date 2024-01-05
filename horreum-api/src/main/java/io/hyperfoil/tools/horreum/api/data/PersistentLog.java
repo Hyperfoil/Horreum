@@ -1,12 +1,15 @@
 package io.hyperfoil.tools.horreum.api.data;
 
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
 
+@Schema( type = SchemaType.OBJECT, description = "Persistent Log", name = "PersistentLog")
 public abstract class PersistentLog {
    public static final int DEBUG = 0;
    public static final int INFO = 1;

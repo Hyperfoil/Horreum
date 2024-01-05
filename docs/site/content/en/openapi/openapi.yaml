@@ -278,16 +278,19 @@ paths:
     get:
       tags:
       - Experiment
+      description: Run an experiment for a given dataset and experiment profile
       operationId: runExperiments
       parameters:
       - name: datasetId
         in: query
+        description: The dataset to run the experiment on
         schema:
           format: int32
           type: integer
+        example: 101
       responses:
         "200":
-          description: OK
+          description: Array of experiment results
           content:
             application/json:
               schema:
@@ -551,26 +554,15 @@ paths:
               scheduleTime: 1698020160756
               jobDisplayName: upstream-perf-bre-datastructures
               buildDisplayName: '#125'
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                data:
-                  type: object
-                metadata:
-                  type: object
       responses:
         "200":
-          description: OK
+          description: id of the newly generated run
           content:
             application/json:
               schema:
                 format: int32
                 type: integer
               example: 101
-            text/plain:
-              schema:
-                type: string
         "400":
           description: Some fields are missing or invalid
           content:
@@ -885,7 +877,7 @@ paths:
         example: 202
       - name: schemaUri
         in: query
-        description: Filter by Schmea URI
+        description: FIlter by Schmea URI
         schema:
           type: string
         example: uri:my-benchmark:0.1
@@ -2088,7 +2080,26 @@ components:
       - PROTECTED
       - PRIVATE
       type: string
+    ActionLog:
+      description: Action Log
+      required:
+      - testId
+      - event
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/PersistentLog'
+      properties:
+        testId:
+          format: int32
+          type: integer
+          nullable: false
+        event:
+          type: string
+          nullable: false
+        type:
+          type: string
     BetterOrWorse:
+      description: Result of running an Experiment
       enum:
       - BETTER
       - SAME
@@ -2099,10 +2110,15 @@ components:
       type: object
       properties:
         overall:
+          description: Was the Experiment dataset better or worse than the baseline
+            dataset
+          enum:
+          - BETTER
+          - SAME
+          - WORSE
+          type: string
           allOf:
           - $ref: '#/components/schemas/BetterOrWorse'
-          - description: Was the Experiment dataset better or worse than the baseline
-              dataset
         experimentValue:
           format: double
           description: Experiment value
@@ -2287,32 +2303,17 @@ components:
             $ref: '#/components/schemas/DatasetSummary'
           nullable: false
     DatasetLog:
+      description: Dataset Log
       required:
-      - id
-      - level
-      - timestamp
-      - message
       - source
       - testId
       - runId
       - datasetId
       - datasetOrdinal
       type: object
+      allOf:
+      - $ref: '#/components/schemas/PersistentLog'
       properties:
-        id:
-          format: int64
-          type: integer
-        level:
-          format: int32
-          type: integer
-          nullable: false
-        timestamp:
-          format: date-time
-          type: string
-          nullable: false
-        message:
-          type: string
-          nullable: false
         source:
           type: string
           nullable: false
@@ -2795,6 +2796,29 @@ components:
             \ array or JSON object"
           type: string
           example: "1724"
+    PersistentLog:
+      description: Persistent Log
+      required:
+      - id
+      - level
+      - timestamp
+      - message
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        level:
+          format: int32
+          type: integer
+          nullable: false
+        timestamp:
+          format: date-time
+          type: string
+          nullable: false
+        message:
+          type: string
+          nullable: false
     ProtectedTimeType:
       required:
       - access
@@ -2885,6 +2909,50 @@ components:
           description: Total number of generated datasets
           type: integer
           example: 186
+    ReportComponent:
+      description: Report Component
+      required:
+      - name
+      - order
+      - labels
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+          nullable: false
+        order:
+          format: int32
+          type: integer
+          nullable: false
+        labels:
+          description: Array of labels
+          type: array
+          items:
+            type: string
+          example:
+          - Framework
+          nullable: false
+        function:
+          type: string
+        unit:
+          type: string
+        reportId:
+          format: int32
+          type: integer
+    ReportLog:
+      description: Report Log
+      required:
+      - reportId
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/PersistentLog'
+      properties:
+        reportId:
+          format: int32
+          type: integer
     Run:
       required:
       - access
@@ -3292,7 +3360,296 @@ components:
       - Ascending
       - Descending
       type: string
+    TableReport:
+      description: Table Report
+      required:
+      - id
+      - config
+      - created
+      - comments
+      - data
+      - logs
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        config:
+          description: Table Report Config
+          required:
+          - id
+          - title
+          - seriesLabels
+          - components
+          type: object
+          allOf:
+          - $ref: '#/components/schemas/TableReportConfig'
+          properties:
+            id:
+              format: int32
+              type: integer
+            title:
+              type: string
+              nullable: false
+            test:
+              $ref: '#/components/schemas/Test'
+            filterLabels:
+              description: ArrayNode of filter labels
+              type: array
+              items:
+                type: string
+            filterFunction:
+              type: string
+            categoryLabels:
+              description: ArrayNode of category labels
+              type: array
+              items:
+                type: string
+            categoryFunction:
+              type: string
+            categoryFormatter:
+              type: string
+            seriesLabels:
+              description: ArrayNode of series labels
+              type: array
+              items:
+                type: string
+              nullable: false
+            seriesFunction:
+              type: string
+            seriesFormatter:
+              type: string
+            scaleLabels:
+              description: ArrayNode of filter labels
+              type: array
+              items:
+                type: string
+            scaleFunction:
+              type: string
+            scaleFormatter:
+              type: string
+            scaleDescription:
+              type: string
+            components:
+              description: List of ReportComponents
+              type: array
+              items:
+                description: Report Component
+                required:
+                - name
+                - order
+                - labels
+                type: object
+                properties:
+                  id:
+                    format: int32
+                    type: integer
+                  name:
+                    type: string
+                    nullable: false
+                  order:
+                    format: int32
+                    type: integer
+                    nullable: false
+                  labels:
+                    description: Array of labels
+                    type: array
+                    items:
+                      type: string
+                    example:
+                    - Framework
+                    nullable: false
+                  function:
+                    type: string
+                  unit:
+                    type: string
+                  reportId:
+                    format: int32
+                    type: integer
+              nullable: false
+          nullable: false
+        created:
+          format: date-time
+          description: Created timestamp
+          type: string
+          example: 2019-09-26T07:58:30.996+0200
+          nullable: false
+        comments:
+          description: List of ReportComments
+          type: array
+          items:
+            required:
+            - level
+            - comment
+            type: object
+            properties:
+              id:
+                format: int32
+                type: integer
+              level:
+                format: int32
+                type: integer
+                nullable: false
+              category:
+                type: string
+              componentId:
+                format: int32
+                type: integer
+              comment:
+                type: string
+                nullable: false
+          nullable: false
+        data:
+          description: List of TableReportData
+          type: array
+          items:
+            description: Table Report Data
+            required:
+            - datasetId
+            - runId
+            - ordinal
+            - category
+            - series
+            - scale
+            - values
+            type: object
+            properties:
+              datasetId:
+                format: int32
+                type: integer
+                nullable: false
+              runId:
+                format: int32
+                type: integer
+                nullable: false
+              ordinal:
+                format: int32
+                type: integer
+                nullable: false
+              category:
+                type: string
+                nullable: false
+              series:
+                type: string
+                nullable: false
+              scale:
+                type: string
+                nullable: false
+              values:
+                description: Array of values
+                type: array
+                items:
+                  type: number
+                nullable: false
+          nullable: false
+        logs:
+          description: List of ReportLogs
+          type: array
+          items:
+            description: Report Log
+            required:
+            - reportId
+            type: object
+            allOf:
+            - $ref: '#/components/schemas/PersistentLog'
+            properties:
+              reportId:
+                format: int32
+                type: integer
+          nullable: false
+    TableReportConfig:
+      description: Table Report Config
+      required:
+      - id
+      - title
+      - seriesLabels
+      - components
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        title:
+          type: string
+          nullable: false
+        test:
+          $ref: '#/components/schemas/Test'
+        filterLabels:
+          description: ArrayNode of filter labels
+          type: array
+          items:
+            type: string
+        filterFunction:
+          type: string
+        categoryLabels:
+          description: ArrayNode of category labels
+          type: array
+          items:
+            type: string
+        categoryFunction:
+          type: string
+        categoryFormatter:
+          type: string
+        seriesLabels:
+          description: ArrayNode of series labels
+          type: array
+          items:
+            type: string
+          nullable: false
+        seriesFunction:
+          type: string
+        seriesFormatter:
+          type: string
+        scaleLabels:
+          description: ArrayNode of filter labels
+          type: array
+          items:
+            type: string
+        scaleFunction:
+          type: string
+        scaleFormatter:
+          type: string
+        scaleDescription:
+          type: string
+        components:
+          description: List of ReportComponents
+          type: array
+          items:
+            description: Report Component
+            required:
+            - name
+            - order
+            - labels
+            type: object
+            properties:
+              id:
+                format: int32
+                type: integer
+              name:
+                type: string
+                nullable: false
+              order:
+                format: int32
+                type: integer
+                nullable: false
+              labels:
+                description: Array of labels
+                type: array
+                items:
+                  type: string
+                example:
+                - Framework
+                nullable: false
+              function:
+                type: string
+              unit:
+                type: string
+              reportId:
+                format: int32
+                type: integer
+          nullable: false
     TableReportData:
+      description: Table Report Data
       required:
       - datasetId
       - runId
@@ -3325,7 +3682,10 @@ components:
           type: string
           nullable: false
         values:
+          description: Array of values
           type: array
+          items:
+            type: number
           nullable: false
     Test:
       description: Represents a Test. Tests are typically equivalent to a particular
@@ -3466,13 +3826,6 @@ components:
           description: Total number of Runs for the Test
           type: number
           example: 101
-        watching:
-          description: Subscriptions for each test for authenticated user
-          uniqueItems: true
-          type: array
-          items:
-            type: string
-          example: []
     TestToken:
       required:
       - id
@@ -3505,6 +3858,35 @@ components:
           type: string
           example: my reporting service token
           nullable: false
+    TransformationLog:
+      description: Transformation Log
+      required:
+      - id
+      - level
+      - timestamp
+      - message
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        level:
+          format: int32
+          type: integer
+          nullable: false
+        timestamp:
+          format: date-time
+          type: string
+          nullable: false
+        message:
+          type: string
+          nullable: false
+        testId:
+          format: int32
+          type: integer
+        runId:
+          format: int32
+          type: integer
     Transformer:
       description: A transformer extracts labals and applies a Function to convert
         a Run into one or more Datasets
