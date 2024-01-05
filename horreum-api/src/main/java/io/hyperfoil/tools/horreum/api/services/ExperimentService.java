@@ -14,7 +14,9 @@ import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.extensions.Extension;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameters;
@@ -29,6 +31,8 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import java.io.IOException;
@@ -77,15 +81,45 @@ public interface ExperimentService {
 
    @GET
    @Path("run")
+   @Produces(MediaType.APPLICATION_JSON)
+   @Operation(description="Run an experiment for a given dataset and experiment profile")
+   @Parameters(value = {
+           @Parameter(name = "datasetId", description = "The dataset to run the experiment on", example = "101"),
+   })
+   @APIResponses(
+      value = { @APIResponse(responseCode = "200", description = "Array of experiment results",
+        content = { @Content(
+                schema = @Schema(type = SchemaType.ARRAY, implementation = ExperimentResult.class))
+        })
+     })
    List<ExperimentResult> runExperiments(@QueryParam("datasetId") int datasetId);
 
+   @Schema(description = "Result of running an Experiment", type = SchemaType.STRING)
    enum BetterOrWorse {
-      BETTER,
-      SAME,
-      WORSE
+      BETTER("BETTER"),
+      SAME("SAME"),
+      WORSE("WORSE");
+      private static final BetterOrWorse[] VALUES = BetterOrWorse.values();
+
+      private final String name;
+
+      BetterOrWorse(String s) { this.name = s; }
+
+      public static BetterOrWorse fromString(String s) {
+         for (BetterOrWorse v : VALUES) {
+            if (v.name.equals(s)) {
+               return v;
+            }
+         }
+         return null;
+      }
+
+      public static BetterOrWorse fromInt(int b) {
+         return VALUES[b];
+      }
    }
 
-   @Schema(description = "Result of running an Experiment")
+   @Schema(description = "Result of running an Experiment", type = SchemaType.OBJECT)
    class ExperimentResult {
 
       @Schema(description="Experiment profile that results relates to")
@@ -123,9 +157,11 @@ public interface ExperimentService {
       }
    }
 
-   @Schema(description = "Result of performing a Comparison")
+   @Schema(description = "Result of performing a Comparison",
+           type = SchemaType.OBJECT)
    class ComparisonResult {
-      @Schema(description="Was the Experiment dataset better or worse than the baseline dataset")
+      @Schema(description="Was the Experiment dataset better or worse than the baseline dataset",
+              type = SchemaType.STRING, implementation = BetterOrWorse.class, allOf = BetterOrWorse.class)
       public BetterOrWorse overall;
       @Schema(description="Experiment value")
       public double experimentValue;

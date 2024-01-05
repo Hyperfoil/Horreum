@@ -261,11 +261,11 @@ public interface RunService {
     @Path("data")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.TEXT_PLAIN) // run ID as string
+    @Operation(description = "Upload a new Run with metadata", hidden = true)
     @APIResponses(value = {
             @APIResponse(responseCode = "200",
                     content = {@Content(mediaType = MediaType.TEXT_PLAIN,
                             schema = @Schema(type = SchemaType.STRING))})})
-    @ApiIgnore
     Response addRunFromData(@Parameter(required = true) @QueryParam("start") String start,
                             @Parameter(required = true) @QueryParam("stop") String stop,
                             @Parameter(required = true) @QueryParam("test") String test,

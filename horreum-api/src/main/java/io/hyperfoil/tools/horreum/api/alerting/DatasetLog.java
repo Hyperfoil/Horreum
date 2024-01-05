@@ -3,7 +3,10 @@ package io.hyperfoil.tools.horreum.api.alerting;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.hyperfoil.tools.horreum.api.data.PersistentLog;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
+@Schema( type = SchemaType.OBJECT, description = "Dataset Log", name = "DatasetLog", allOf = PersistentLog.class)
 public class DatasetLog extends PersistentLog {
     @NotNull
     @JsonProperty( required = true )
