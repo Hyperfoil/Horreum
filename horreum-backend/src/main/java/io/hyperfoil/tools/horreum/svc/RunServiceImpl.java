@@ -33,6 +33,7 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Query;
 import jakarta.persistence.TransactionRequiredException;
@@ -253,15 +254,20 @@ public class RunServiceImpl implements RunService {
    @WithRoles
    @Override
    public RunSummary getRunSummary(int id, String token) {
-      Query query = em.createNativeQuery("SELECT run.id, run.start, run.stop, run.testid, " +
-            "run.owner, run.access, run.token, run.trashed, run.description, run.metadata IS NOT NULL as has_metadata, " +
-            "(SELECT name FROM test WHERE test.id = run.testid) as testname, " +
-            "(SELECT " + SCHEMA_USAGE + " FROM run_schemas rs JOIN schema ON schema.id = rs.schemaid WHERE rs.runid = run.id) as schemas, " +
-            "(SELECT json_agg(id ORDER BY id) FROM dataset WHERE runid = run.id) as datasets, " +
-            "(SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM run_validationerrors WHERE run_id = ?1 GROUP BY run_id) AS validationErrors " +
-            "FROM run where id = ?1").setParameter(1, id);
-      initTypes(query);
-      return createSummary((Object[]) query.getSingleResult());
+      try {
+         Query query = em.createNativeQuery("SELECT run.id, run.start, run.stop, run.testid, " +
+                 "run.owner, run.access, run.token, run.trashed, run.description, run.metadata IS NOT NULL as has_metadata, " +
+                 "(SELECT name FROM test WHERE test.id = run.testid) as testname, " +
+                 "(SELECT " + SCHEMA_USAGE + " FROM run_schemas rs JOIN schema ON schema.id = rs.schemaid WHERE rs.runid = run.id) as schemas, " +
+                 "(SELECT json_agg(id ORDER BY id) FROM dataset WHERE runid = run.id) as datasets, " +
+                 "(SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM run_validationerrors WHERE run_id = ?1 GROUP BY run_id) AS validationErrors " +
+                 "FROM run where id = ?1").setParameter(1, id);
+         initTypes(query);
+         return createSummary((Object[]) query.getSingleResult());
+      }
+      catch (NoResultException e) {
+         throw ServiceException.notFound("Run " + id + " not found");
+      }
    }
 
    @PermitAll
