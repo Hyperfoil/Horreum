@@ -935,6 +935,13 @@ public class RunServiceTest extends BaseServiceTest {
          assertNotNull(experimentResults);
          assertTrue(experimentResults.size() > 0);
 
+         jsonRequest().auth().oauth2(getTesterToken())
+                 .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN)
+                 .body("a new description")
+                 .post("/api/run/" + lastRunID+"/description")
+                 .then()
+                 .statusCode(204);
+
       }
       catch (Exception e) {
          e.printStackTrace();

@@ -4383,7 +4383,6 @@
             DROP EXTENSION pgcrypto;
         </sql>
     </changeSet>
-
     <changeSet id="116" author="johara">
         <validCheckSum>ANY</validCheckSum>
         <createSequence sequenceName="backend_id_seq" startValue="10" incrementBy="1" cacheSize="1" />
@@ -4424,6 +4423,13 @@
         </addColumn>
         <sql>
             update test set backendconfig_id = 1 WHERE backendconfig_id IS NULL;
+        </sql>
+    </changeSet>
+    <changeSet id="117" author="stalep">
+        <validCheckSum>ANY</validCheckSum>
+        <sql>
+            DROP TRIGGER IF EXISTS before_run_update ON run;
+            DROP FUNCTION IF EXISTS before_run_update_func();
         </sql>
     </changeSet>
 </databaseChangeLog>
