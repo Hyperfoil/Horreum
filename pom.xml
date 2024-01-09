@@ -51,6 +51,7 @@
         </repository>
     </distributionManagement>
 
+
     <!-- Licenses -->
     <licenses>
         <license>
@@ -66,30 +67,33 @@
         <maven.compiler.source>17</maven.compiler.source>
         <use.java11plus>true</use.java11plus>
 
-        <version.sonatype.nexus>1.6.8</version.sonatype.nexus>
-        <version.maven.compiler>3.11.0</version.maven.compiler>
-        <version.maven.source>3.2.1</version.maven.source>
-        <version.maven.javadoc>3.6.2</version.maven.javadoc>
-        <version.maven.gpg>3.0.1</version.maven.gpg>
+        <version.sonatype.nexus>1.6.13</version.sonatype.nexus>
+        <version.maven.antrun>3.1.0</version.maven.antrun>
+        <version.maven.compiler>3.12.1</version.maven.compiler>
+        <version.maven.gpg>3.1.0</version.maven.gpg>
+        <version.maven.install>3.1.1</version.maven.install>
+        <version.maven.jar>3.3.0</version.maven.jar>
+        <version.maven.javadoc>3.6.3</version.maven.javadoc>
+        <version.maven.project-info-reports>3.5.0</version.maven.project-info-reports>
+        <version.maven.resources>3.3.1</version.maven.resources>
+        <version.maven.source>3.3.0</version.maven.source>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <commons.math3.version>3.6.1</commons.math3.version>
-        <graalvm.version>22.3.3</graalvm.version>
-        <quarkus.version>3.5.3</quarkus.version>
-        <quarkus-plugin.version>3.4.1</quarkus-plugin.version>
-        <quinoa.version>2.2.1</quinoa.version>
-        <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
+        <graalvm.version>23.0.2</graalvm.version>
+        <quarkus.version>3.6.4</quarkus.version>
+        <quinoa.version>2.3.2</quinoa.version>
+        <surefire-plugin.version>3.2.3</surefire-plugin.version>
         <failsafe-plugin.version>3.3.0</failsafe-plugin.version>
-        <keycloak-admin-client.version>22.0.4</keycloak-admin-client.version>
-        <validator.version>1.0.69</validator.version>
+        <keycloak-admin-client.version>23.0.3</keycloak-admin-client.version>
+        <validator.version>1.1.0</validator.version>
         <jayway.jsonpath.version>2.8.0</jayway.jsonpath.version>
-        <jackson.version>2.15.2</jackson.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
 
-        <dev.images.postgres>quay.io/postgres/postgres:16</dev.images.postgres>
-        <dev.images.keycloak>quay.io/keycloak/keycloak:22.0.4</dev.images.keycloak>
+        <dev.images.postgres>postgres:16</dev.images.postgres>
+        <dev.images.keycloak>quay.io/keycloak/keycloak:23.0.3</dev.images.keycloak>
 
     </properties>
 
@@ -163,33 +167,6 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>org.keycloak</groupId>
-                <artifactId>keycloak-admin-client</artifactId>
-                <version>${keycloak-admin-client.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.jboss.resteasy</groupId>
-                        <artifactId>resteasy-client</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.jboss.resteasy</groupId>
-                        <artifactId>resteasy-multipart-provider</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.jboss.resteasy</groupId>
-                        <artifactId>resteasy-jackson2-provider</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.jboss.resteasy</groupId>
-                        <artifactId>resteasy-jaxb-provider</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>commons-logging</groupId>
-                        <artifactId>commons-logging</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
                 <groupId>com.networknt</groupId>
                 <artifactId>json-schema-validator</artifactId>
                 <version>${validator.version}</version>
@@ -198,11 +175,6 @@
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
                 <version>${jayway.jsonpath.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-jsr310</artifactId>
-                <version>${jackson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -213,11 +185,11 @@
                 <plugin>
                     <groupId>io.quarkus.platform</groupId>
                     <artifactId>quarkus-maven-plugin</artifactId>
-                    <version>${quarkus-plugin.version}</version>
+                    <version>${quarkus.version}</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-project-info-reports-plugin</artifactId>
-                    <version>3.0.0</version>
+                    <version>${version.maven.project-info-reports}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -258,7 +230,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.3.1</version>
+                    <version>${version.maven.resources}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.eclipse.m2e</groupId>
@@ -287,7 +259,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>buildnumber-maven-plugin</artifactId>
-                     <version>1.4</version>
+                     <version>3.2.0</version>
                     <executions>
                         <execution>
                             <id>get-scm-revision</id>
@@ -310,7 +282,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0-M3</version>
+                <version>3.4.1</version>
                 <executions>
                     <execution>
                         <id>enforce-versions</id>
@@ -334,7 +306,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>animal-sniffer-maven-plugin</artifactId>
-                <version>1.21</version>
+                <version>1.23</version>
                 <configuration>
                     <checkTestClasses>true</checkTestClasses>
                     <signature>
@@ -356,7 +328,7 @@
             </plugin>
             <plugin>
                 <artifactId>maven-clean-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.2</version>
                 <configuration>
                     <filesets>
                         <fileset>
@@ -408,7 +380,7 @@
 
             <build>
                 <plugins>
-                    <!-- To release to Maven central -->
+                    <!-- To release to Nexus -->
                     <plugin>
                         <groupId>org.sonatype.plugins</groupId>
                         <artifactId>nexus-staging-maven-plugin</artifactId>
@@ -474,7 +446,7 @@
                 <plugin>
                   <groupId>org.codehaus.mojo</groupId>
                   <artifactId>exec-maven-plugin</artifactId>
-                  <version>3.0.0</version>
+                  <version>3.1.1</version>
                   <executions>
                     <execution>
                       <id>remove-node-cache</id>

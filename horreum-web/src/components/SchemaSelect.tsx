@@ -18,7 +18,6 @@ interface Schema extends SelectOptionObject {
     uri: string
 }
 
-/* This is going to be a complex component with modal for Extractor definition */
 export default function SchemaSelect({value, onChange, disabled, noSchemaOption, isCreatable}: SchemaSelectProps) {
     const [isExpanded, setExpanded] = useState(false)
     const [options, setOptions] = useState<Schema[]>([])
@@ -74,16 +73,12 @@ export default function SchemaSelect({value, onChange, disabled, noSchemaOption,
             {[...extraOptions, ...options].map((option, index) => (
                 <SelectOption key={index} value={option} isDisabled={disabled?.includes(option.uri)}>
                     {option.name ? (
-                        option.name === option.uri ? (
-                            <code>{option.uri}</code>
-                        ) : (
-                            <>
-                                {option.name} (<code>{option.uri}</code>)
-                            </>
+                            option.name === option.uri ?
+                                (<code>{option.uri}</code>) :
+                                (<>{option.name} (<code>{option.uri}</code>)</>)
                         )
-                    ) : (
-                        option.toString()
-                    )}
+                        : (option.toString())
+                    }
                 </SelectOption>
             ))}
         </Select>

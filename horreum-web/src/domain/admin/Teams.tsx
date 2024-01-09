@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useContext, useEffect, useRef, useState} from "react"
+import { useSelector } from "react-redux"
 import { Button, FormGroup, Modal, TextInput } from "@patternfly/react-core"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
@@ -7,8 +7,10 @@ import TeamMembers, { TeamMembersFunctions } from "../user/TeamMembers"
 import NewUserModal from "../user/NewUserModal"
 import { isAdminSelector } from "../../auth"
 import {userApi} from "../../api"
-import { dispatchError, dispatchInfo } from "../../alerts"
 import { noop } from "../../utils"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type Team = {
     id: number
@@ -22,6 +24,7 @@ type TeamsProps = {
 }
 
 export default function Teams(props: TeamsProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [teams, setTeams] = useState<Team[]>([])
     const [selected, setSelected] = useState<Team>()
     const [loading, setLoading] = useState(false)
@@ -30,7 +33,6 @@ export default function Teams(props: TeamsProps) {
     const [membersModified, setMembersModified] = useState(false)
     const [nextTeam, setNextTeam] = useState<Team>()
     const [newUserModalOpen, setNewUserModalOpen] = useState(false)
-    const dispatch = useDispatch()
     const isAdmin = useSelector(isAdminSelector)
     const teamFuncsRef = useRef<TeamMembersFunctions>()
     useEffect(() => {
@@ -46,7 +48,7 @@ export default function Teams(props: TeamsProps) {
                     setSelected(loaded[0])
                 }
             })
-            .catch(error => dispatchError(dispatch, error, "FETCH ALL TEAMS", "Failed to fetch list of all teams."))
+            .catch(error => alerting.dispatchError( error, "FETCH ALL TEAMS", "Failed to fetch list of all teams."))
             .catch(noop)
             .finally(() => setLoading(false))
     }, [isAdmin, resetCounter])
@@ -63,9 +65,9 @@ export default function Teams(props: TeamsProps) {
             .then(() => {
                 // no-need to re-render
                 team.exists = true
-                dispatchInfo(dispatch, "CREATED TEAM", "Team " + team.name + " was created.", "", 3000)
+                alerting.dispatchInfo( "CREATED TEAM", "Team " + team.name + " was created.", "", 3000)
             })
-            .catch(error => dispatchError(dispatch, error, "CREATE TEAM", "Cannot create team " + team.name))
+            .catch(error => alerting.dispatchError( error, "CREATE TEAM", "Cannot create team " + team.name))
     }
     function saveMembers() {
         if (!selected) {
@@ -76,8 +78,7 @@ export default function Teams(props: TeamsProps) {
             if (teamFuncsRef.current) {
                 return teamFuncsRef.current.save().then(() => {
                     setMembersModified(false)
-                    dispatchInfo(
-                        dispatch,
+                    alerting.dispatchInfo(
                         "TEAM MEMBERS",
                         "Team members updated",
                         "All changes for team " + selected.name + " have been applied.",
@@ -105,8 +106,8 @@ export default function Teams(props: TeamsProps) {
                         ...teams.filter(team => !team.exists).map(team => createTeam(team)),
                         ...reallyDeleted.map(team =>
                             userApi.deleteTeam(team).then(
-                                _ => dispatchInfo(dispatch, "DELETED TEAM", "Team " + team + " was deleted", "", 3000),
-                                error => dispatchError(dispatch, error, "DELETE TEAM", "Cannot delete team " + team)
+                                _ => alerting.dispatchInfo( "DELETED TEAM", "Team " + team + " was deleted", "", 3000),
+                                error => alerting.dispatchError( error, "DELETE TEAM", "Cannot delete team " + team)
                             )
                         ),
                     ])

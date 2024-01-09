@@ -6,7 +6,7 @@ type ErrorBadgeProps = {
     children: string | number | ReactElement
 }
 
-export default function ErrorBadge(props: ErrorBadgeProps) {
+export default function ErrorBadge({ children }: ErrorBadgeProps) {
     return (
         <Badge
             style={{
@@ -20,7 +20,7 @@ export default function ErrorBadge(props: ErrorBadgeProps) {
                     marginTop: "4px",
                 }}
             />{" "}
-            {props.children}
+            {children}
         </Badge>
     )
 }

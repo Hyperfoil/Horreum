@@ -1,9 +1,8 @@
-import { AnyAction, Dispatch } from "redux"
-import { useDispatch, useSelector } from "react-redux"
-
 import { Alert as PatternflyAlert, AlertActionCloseButton, AlertVariant } from "@patternfly/react-core"
 
-import { State } from "./store"
+import {AppContext} from "./context/appContext";
+import React, {useContext} from "react";
+import {AppContextType} from "./context/@types/appContextTypes";
 
 export const ADD_ALERT = "alert/ADD"
 export const CLEAR_ALERT = "alert/CLEAR"
@@ -26,33 +25,6 @@ export interface ConstraintViolation {
     message: string
 }
 
-export interface AddAlertAction extends AnyAction {
-    type: typeof ADD_ALERT
-    alert: Alert
-}
-
-interface ClearAlertAction {
-    type: typeof CLEAR_ALERT
-    alert?: Alert
-}
-
-type AlertActions = AddAlertAction | ClearAlertAction
-
-export const reducer = (state: Alert[] = [], action: AlertActions) => {
-    switch (action.type) {
-        case ADD_ALERT:
-            return [...state.filter(a => a.type !== action.alert.type), action.alert]
-        case CLEAR_ALERT:
-            if (action.alert) {
-                const alert: Alert = action.alert
-                return state.filter(a => a.type !== alert.type && a.title !== alert.title)
-            } else {
-                return []
-            }
-        default:
-    }
-    return state
-}
 
 export const constraintValidationFormatter = (object: any) => (e: any) => {
     if (e && e.error && e.error === "jakarta.validation.ConstraintViolationException") {
@@ -77,81 +49,7 @@ export const constraintValidationFormatter = (object: any) => (e: any) => {
     }
 }
 
-export const alertAction = (
-    type: string,
-    title: string,
-    e: any,
-    ...errorFormatter: ((error: any) => any)[]
-): AddAlertAction => {
-    let formatted = undefined
-    for (const f of errorFormatter) {
-        formatted = f.call(null, e)
-        if (formatted) break
-    }
-    if (!formatted) {
-        formatted = defaultFormatError(e)
-    }
-    return {
-        type: ADD_ALERT,
-        alert: {
-            type,
-            title,
-            content: formatted,
-        },
-    }
-}
-
-// this method will always reject so we can type it with 'any', reason is 'any' anyway
-export function dispatchError(
-    dispatch: Dispatch<AddAlertAction>,
-    error: any,
-    type: string,
-    title: string,
-    ...errorFormatter: ((error: any) => any)[]
-): Promise<any> {
-    dispatch(alertAction(type, title, error, ...errorFormatter))
-    return Promise.reject(error)
-}
-
-export function infoActions(
-    type: string,
-    title: string,
-    message: string
-): { action: AddAlertAction; clear: ClearAlertAction } {
-    return {
-        action: {
-            type: ADD_ALERT,
-            alert: {
-                type,
-                title,
-                content: message,
-                variant: AlertVariant.info,
-            },
-        },
-        clear: {
-            type: CLEAR_ALERT,
-            alert: {
-                type,
-                title,
-                content: undefined,
-            },
-        },
-    }
-}
-
-export function dispatchInfo(
-    dispatch: Dispatch<AlertActions>,
-    type: string,
-    title: string,
-    message: string,
-    timeout: number
-) {
-    const info = infoActions(type, title, message)
-    dispatch(info.action)
-    window.setTimeout(() => dispatch(info.clear), timeout)
-}
-
-function defaultFormatError(e: any) {
+export function defaultFormatError(e: any) {
     console.log(e)
     if (!e) {
         return ""
@@ -172,26 +70,43 @@ function defaultFormatError(e: any) {
     }
 }
 
-const alertsSelector = (state: State) => state.alerts
+export const contextAlertAction = (
+    type: string,
+    title: string,
+    e: any,
+    ...errorFormatter: ((error: any) => any)[]
+): Alert => {
+    let formatted = undefined
+    for (const f of errorFormatter) {
+        formatted = f.call(null, e)
+        if (formatted) break
+    }
+    if (!formatted) {
+        formatted = defaultFormatError(e)
+    }
+    const newAlert: Alert = {
+        type,
+        title,
+        content: formatted,
+    }
+    return newAlert;
+}
 
 function Alerts() {
-    const alerts = useSelector(alertsSelector)
-    const dispatch = useDispatch()
-    if (alerts.length === 0) {
+    const { alerting } = useContext(AppContext) as AppContextType;
+    if (alerting.alerts.length === 0) {
         return <></>
     }
     return (
         <div style={{ position: "absolute", zIndex: 1000, width: "100%" }}>
-            {alerts.map((alert, i) => (
+            {alerting.alerts.map((alert, i) => (
                 <PatternflyAlert
                     key={i}
                     variant={alert.variant || "warning"}
                     title={alert.title || "Title is missing"}
                     actionClose={
                         <AlertActionCloseButton
-                            onClose={() => {
-                                dispatch({ type: CLEAR_ALERT, alert: { type: alert.type } })
-                            }}
+                            onClose={() => { alerting.clearAlert (alert)}}
                         />
                     }
                 >

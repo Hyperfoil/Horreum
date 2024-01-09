@@ -3,13 +3,14 @@ package io.hyperfoil.tools.horreum.svc;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -32,6 +33,7 @@ import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.entity.data.*;
+import jakarta.ws.rs.core.MediaType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.TestInfo;
 
@@ -190,7 +192,7 @@ public class RunServiceTest extends BaseServiceTest {
 
       BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
 
-      String data = runWithValue(42.0d, acmeSchema, roadRunnerSchema).toString();
+      String data = runWithValueSchemas(42.0d, acmeSchema, roadRunnerSchema).toString();
       int runId = uploadRun(data, test.name);
 
       Dataset.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
@@ -630,6 +632,61 @@ public class RunServiceTest extends BaseServiceTest {
       assertEquals(2, dataset.data.size());
       JsonNode qqq = getBySchema(dataset.data, "urn:q");
       assertEquals("xxx", qqq.path("qqq").asText());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testChangeUploadRunSchemas(TestInfo info) throws InterruptedException {
+      Test exampleTest = createExampleTest(getTestName(info));
+      Test test = createTest(exampleTest);
+
+      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      Schema schemaA = createExampleSchema("AcneCorp", "AcneInc", "RootSchema", false);
+      Schema schemaB = createExampleSchema("AcneCorp", "AcneInc", "", false);
+
+      Extractor path = new Extractor("foo", "$.value", false);
+      Transformer transformer = createTransformer("acme", schemaA, "", path); // blank function
+      addTransformer(test, transformer);
+
+//      1. Upload a run without a schema, then define a schema after upload
+      int runID = uploadRun(runWithValue(42.0d), test.name);
+
+      Dataset.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      assertNotNull(event);
+
+      Map<Object, Object> schemaMap = RestAssured.given().auth().oauth2(getTesterToken())
+              .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN)
+              .body(schemaA.uri)
+              .post("/api/run/" + runID + "/schema")
+              .then()
+              .statusCode(200)
+              .extract().as(Map.class);
+
+      assertNotNull(schemaMap);
+      assertNotEquals(0, schemaMap.size());
+
+
+//      2. Upload a run WITH a schema, then change the schema after upload
+
+      runID = uploadRun(runWithValue(42.0d, schemaA), test.name);
+
+      List<Object> runSchemas = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runID).getResultList();
+
+      assertNotEquals(0, runSchemas.size());
+
+      event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
+      assertNotNull(event);
+
+      schemaMap = RestAssured.given().auth().oauth2(getTesterToken())
+              .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN)
+              .body(schemaB.uri)
+              .post("/api/run/" + runID + "/schema")
+              .then()
+              .statusCode(200)
+              .extract().as(Map.class);
+
+      assertNotNull(schemaMap);
+      assertNotEquals(0, schemaMap.size());
+      
    }
 
    @org.junit.jupiter.api.Test

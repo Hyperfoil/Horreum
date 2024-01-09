@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "react"
+import {useEffect, useState, useRef, useContext} from "react"
 import { useParams } from "react-router"
-import { useSelector, useDispatch } from "react-redux"
+import { useSelector } from "react-redux"
 
 import {
     Alert,
@@ -23,10 +23,7 @@ import { ImportIcon } from "@patternfly/react-icons"
 import { Link } from "react-router-dom"
 import jsonpath from "jsonpath"
 
-import * as actions from "./actions"
-import * as selectors from "./selectors"
-import { defaultTeamSelector, teamsSelector, teamToName, useTester } from "../../auth"
-import { dispatchInfo } from "../../alerts"
+import { defaultTeamSelector,  teamToName, useTester } from "../../auth"
 import { noop } from "../../utils"
 
 import { toString } from "../../components/Editor"
@@ -35,19 +32,19 @@ import AccessIcon from "../../components/AccessIcon"
 import AccessChoice from "../../components/AccessChoice"
 import SavedTabs, { SavedTab, TabFunctions, modifiedFunc, resetFunc, saveFunc } from "../../components/SavedTabs"
 import TeamSelect from "../../components/TeamSelect"
-import { SchemaDispatch } from "./reducers"
 import Transformers from "./Transformers"
 import Labels from "./Labels"
-import { Access, Schema as SchemaDef } from "../../api"
+import {Access, getSchema, Schema as SchemaDef, schemaApi} from "../../api"
 import SchemaExportImport from "./SchemaExportImport"
-import { Json } from "../../generated"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type SchemaParams = {
     schemaId: string
 }
 
 type GeneralProps = {
-    schema: SchemaDef | Json
+    schema: SchemaDef | undefined
     onChange(partialSchema: SchemaDef): void
     getUri?(): string
 }
@@ -61,12 +58,10 @@ function General(props: GeneralProps) {
 
     const schema: SchemaDef = props.schema || {
         id: -1,
-        name: "",
-        description: "",
         uri: "",
-        schema: {},
+        name: "",
         owner: defaultTeam || "",
-        access: 2,
+        access: Access.Public,
     }
     const onChange = (override: Partial<SchemaDef>) => {
         props.onChange({
@@ -77,7 +72,7 @@ function General(props: GeneralProps) {
 
     const otherUri = props.getUri ? props.getUri() : ""
     return (
-        <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
+        <Form isHorizontal={true} >
             <FormGroup
                 label="Name"
                 isRequired={true}
@@ -201,29 +196,32 @@ function General(props: GeneralProps) {
 }
 
 export default function Schema() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const params = useParams<SchemaParams>()
     const [schemaId, setSchemaId] = useState(params.schemaId === "_new" ? -1 : Number.parseInt(params.schemaId))
-    const schema = useSelector(selectors.getById(schemaId))
+    const [schema, setSchema] = useState<SchemaDef | undefined>(undefined)
     const [loading, setLoading] = useState(true)
     const [editorSchema, setEditorSchema] = useState(schema?.schema ? toString(schema?.schema) : undefined)
-    const [currentSchema, setCurrentSchema] = useState(schema)
+    const [modifiedSchema, setModifiedSchema] = useState(schema)
     const [modified, setModified] = useState(false)
 
-    const dispatch = useDispatch<SchemaDispatch>()
-    const teams = useSelector(teamsSelector)
+    // any tester can save to add new labels/transformers
+    const isTester = useTester()
+    const isTesterForSchema = useTester(schema?.owner)
+
     useEffect(() => {
         if (schemaId >= 0) {
             setLoading(true)
-            dispatch(actions.getById(schemaId))
-                .catch(noop)
+            getSchema(schemaId, alerting)
+                .then(setSchema)
                 .finally(() => setLoading(false))
         } else {
             setLoading(false)
         }
-    }, [dispatch, dispatch, schemaId, teams])
+    }, [schemaId])
     useEffect(() => {
         document.title = (schemaId < 0 ? "New schema" : schema?.name || "(unknown schema)") + " | Horreum"
-        setCurrentSchema(schema)
+        setModifiedSchema(schema)
         setEditorSchema(schema?.schema ? toString(schema?.schema) : undefined)
     }, [schema, schemaId])
     // TODO: use this in reaction to editor change
@@ -240,9 +238,7 @@ export default function Schema() {
         return schemaUri || undefined
     }
 
-    // any tester can save to add new labels/transformers
-    const isTester = useTester()
-    const isTesterForSchema = useTester(schema?.owner)
+
 
     const save = () => {
         if (!modified) {
@@ -250,17 +246,18 @@ export default function Schema() {
         }
         const newSchema = {
             id: schemaId,
-            ...currentSchema,
+            ...modifiedSchema,
             schema: editorSchema ? JSON.parse(editorSchema) : null,
         } as SchemaDef
-        return dispatch(actions.add(newSchema))
-            .then(id => {
-                setSchemaId(id)
-            })
-            .catch(noop)
+
+        return schemaApi.add(newSchema)
+            .then(id=>  id,
+                error => alerting.dispatchError(error, "SAVE_SCHEMA", "Failed to save schema")
+            ).then(id => setSchemaId(id))
     }
     const transformersFuncsRef = useRef<TabFunctions>()
     const labelsFuncsRef = useRef<TabFunctions>()
+
     return (
         <PageSection>
             {loading && (
@@ -282,7 +279,7 @@ export default function Schema() {
                         <SavedTabs
                             afterSave={() => {
                                 setModified(false)
-                                dispatchInfo(dispatch, "SAVE_SCHEMA", "Saved!", "Schema was successfully saved", 3000)
+                                alerting.dispatchInfo("SAVE_SCHEMA", "Saved!", "Schema was successfully saved", 3000)
                             }}
                             afterReset={() => {
                                 setModified(false)
@@ -294,15 +291,15 @@ export default function Schema() {
                                 fragment="general"
                                 onSave={save}
                                 onReset={() => {
-                                    setCurrentSchema(schema)
+                                    setModifiedSchema(schema)
                                 }}
                                 isModified={() => modified}
                             >
                                 <General
-                                    schema={currentSchema}
+                                    schema={modifiedSchema}
                                     getUri={editorSchema ? () => getUri(editorSchema) : undefined}
                                     onChange={schema => {
-                                        setCurrentSchema(schema)
+                                        setModifiedSchema(schema)
                                         setModified(true)
                                     }}
                                 />
@@ -312,7 +309,7 @@ export default function Schema() {
                                 fragment="json-schema"
                                 onSave={save}
                                 onReset={() => {
-                                    setCurrentSchema(schema)
+                                    setModifiedSchema(schema)
                                     setEditorSchema(schema?.schema ? toString(schema?.schema) : undefined)
                                 }}
                                 isModified={() => modified}
@@ -342,7 +339,7 @@ export default function Schema() {
                                                     setEditorSchema(
                                                         JSON.stringify(
                                                             {
-                                                                $id: currentSchema?.uri,
+                                                                $id: modifiedSchema?.uri,
                                                                 $schema: "http://json-schema.org/draft-07/schema#",
                                                                 type: "object",
                                                             },

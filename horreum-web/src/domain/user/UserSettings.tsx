@@ -1,12 +1,16 @@
-import { useState, useEffect, useRef } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useState, useEffect, useRef, useContext} from "react"
+import {  useSelector } from "react-redux"
 import { NavLink } from "react-router-dom"
 
-import { AuthDispatch, defaultTeamSelector, teamToName, useManagedTeams, userProfileSelector } from "../../auth"
-import { alertAction, dispatchError, dispatchInfo } from "../../alerts"
+import {
+    defaultTeamSelector,
+    teamToName,
+    useManagedTeams,
+    userProfileSelector
+} from "../../auth"
 import SavedTabs, { SavedTab, TabFunctions } from "../../components/SavedTabs"
-import { updateDefaultTeam, TryLoginAgain } from "../../auth"
-import {NotificationSettings, notificationsApi} from "../../api"
+import { TryLoginAgain } from "../../auth"
+import {NotificationSettings, notificationsApi } from "../../api"
 
 import {
     Alert,
@@ -27,6 +31,9 @@ import TeamSelect, { createTeam, Team } from "../../components/TeamSelect"
 import { NotificationSettingsList } from "./NotificationSettings"
 import Profile from "./Profile"
 import ManagedTeams from "./ManagedTeams"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 export const UserProfileLink = () => {
     const profile = useSelector(userProfileSelector)
@@ -49,7 +56,7 @@ export const UserProfileLink = () => {
 
 export function UserSettings() {
     document.title = "User settings | Horreum"
-    const dispatch = useDispatch<AuthDispatch>()
+    const { alerting, auth } = useContext(AppContext) as AppContextType;
     const profile = useSelector(userProfileSelector)
     const prevDefaultTeam = useSelector(defaultTeamSelector)
     const [defaultTeam, setDefaultTeam] = useState<Team>(createTeam(prevDefaultTeam))
@@ -64,16 +71,23 @@ export function UserSettings() {
         if (profile?.username) {
             notificationsApi.settings(profile.username, false).then(
                 response => setPersonal(response),
-                error => dispatch(alertAction("LOAD_SETTINGS", "Failed to load notification settings", error))
+                error => alerting.dispatchError("LOAD_SETTINGS", "Failed to load notification settings", error)
             )
         }
     }
-    useEffect(loadPersonal, [profile, dispatch])
+    useEffect(loadPersonal, [profile])
     const managedTeams = useManagedTeams()
     const teamFuncsRef = useRef<TabFunctions>()
     function reportError(error: any) {
-        return dispatchError(dispatch, error, "UPDATE_SETTINGS", "Failed to update user settings")
+        return alerting.dispatchError(error, "UPDATE_SETTINGS", "Failed to update user settings")
     }
+
+    function updateDefaultTeam(team: string) {
+        return auth.updateDefaultTeam(team,
+            () => alerting.dispatchInfo("SAVE", "Saved!", "User Settings were successfully updated!", 3000),
+            (error) => alerting.dispatchError(error, "SET_DEFAULT_TEAM", "Failed to update default team."))
+    }
+
     if (!profile) {
         return (
             <Bullseye>
@@ -95,14 +109,14 @@ export function UserSettings() {
                     <SavedTabs
                         afterSave={() => {
                             setModified(false)
-                            dispatchInfo(dispatch, "SAVE", "Saved!", "User settings succesfully updated!", 3000)
+                            alerting.dispatchInfo("SAVE", "Saved!", "User settings succesfully updated!", 3000)
                         }}
                         afterReset={() => setModified(false)}
                     >
                         <SavedTab
                             title="My profile"
                             fragment="profile"
-                            onSave={() => dispatch(updateDefaultTeam(defaultTeam.key))}
+                            onSave={() => updateDefaultTeam(defaultTeam.key)}
                             onReset={() => {
                                 setDefaultTeam(createTeam(prevDefaultTeam))
                                 setModified(false)
@@ -166,14 +180,11 @@ export function UserSettings() {
                                             setSelectedTeam(role.key)
                                             notificationsApi.settings(role.key, true).then(
                                                 response => setTeam(response || []),
-                                                error =>
-                                                    dispatch(
-                                                        alertAction(
+                                                error => alerting.dispatchError(
                                                             "LOAD_SETTINGS",
                                                             "Failed to load notification settings",
                                                             error
                                                         )
-                                                    )
                                             )
                                         }}
                                     />

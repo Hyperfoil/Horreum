@@ -218,6 +218,9 @@ public class ReportServiceImpl implements ReportService {
    @Override
    public TableReport getTableReport(int id) {
       TableReportDAO report = TableReportDAO.findById(id);
+      if (report == null) {
+         throw ServiceException.notFound("Report " + id + " does not exist.");
+      }
       Hibernate.initialize(report.config);
       return TableReportMapper.from(report);
    }

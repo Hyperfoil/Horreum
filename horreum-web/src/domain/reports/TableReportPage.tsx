@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useEffect, useRef, useState} from "react"
 import { useParams } from "react-router"
 
 import {
@@ -17,7 +16,6 @@ import {
 } from "@patternfly/react-core"
 import { Link } from "react-router-dom"
 
-import { alertAction } from "../../alerts"
 import { useTester } from "../../auth"
 
 import {reportApi, TableReport} from "../../api"
@@ -25,14 +23,16 @@ import TableReportView from "./TableReportView"
 import ButtonLink from "../../components/ButtonLink"
 import PrintButton from "../../components/PrintButton"
 import ReportLogModal from "./ReportLogModal"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 export default function TableReportPage() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const { id: stringId } = useParams<Record<string, string>>()
     const id = parseInt(stringId)
     const [report, setReport] = useState<TableReport>()
     const [loading, setLoading] = useState(false)
     const [logOpen, setLogOpen] = useState(false)
-    const dispatch = useDispatch()
     useEffect(() => {
         if (id) {
             setLoading(true)
@@ -45,12 +45,12 @@ export default function TableReportPage() {
                     },
                     error => {
                         document.title = "Error | Horreum"
-                        dispatch(alertAction("FETCH_REPORT", "Failed to fetch table report ", error))
+                        alerting.dispatchError(error, "FETCH_REPORT", "Failed to fetch table report ")
                     }
                 )
                 .finally(() => setLoading(false))
         }
-    }, [id, dispatch])
+    }, [id])
     const componentRef = useRef<HTMLDivElement>(null)
     const isTester = useTester(report?.config?.test?.owner)
     if (loading) {

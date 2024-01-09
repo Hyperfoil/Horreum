@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
@@ -24,6 +25,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Query;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.transaction.TransactionManager;
 import jakarta.persistence.Tuple;
 import jakarta.transaction.Transactional;
@@ -33,14 +35,7 @@ import jakarta.ws.rs.core.Response;
 
 import java.security.GeneralSecurityException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -310,8 +305,38 @@ public class TestServiceImpl implements TestService {
          testQuery.setParameter(1, folder);
          Roles.addRolesParam(identity, testQuery, 2, roles);
       }
+      List<TestSummary> summaryList = testQuery.getResultList();
+
+      if ( ! identity.isAnonymous() ) {
+         List<Integer> testIdSet = new ArrayList<>();
+         Map<Integer, Set<String>> subscriptionMap = new HashMap<>();
+
+         summaryList.stream().forEach( summary -> testIdSet.add(summary.id));
+         List<WatchDAO> subscriptions = em.createNativeQuery("SELECT * FROM watch w WHERE w.testid IN (?1)", WatchDAO.class).setParameter(1, testIdSet).getResultList();
+         String username = identity.getPrincipal().getName();
+         Set<String> teams = identity.getRoles().stream().filter(role -> role.endsWith("-team")).collect(Collectors.toSet());
+
+         subscriptions.stream().forEach( subscription -> {
+             Set<String> subscriptionSet = subscriptionMap.computeIfAbsent(subscription.test.id, k -> new HashSet<>());
+             if (subscription.users.contains(username)) {
+               subscriptionSet.add(username);
+             }
+            if (subscription.optout.contains(username)) {
+               subscriptionSet.add("!" + username);
+            }
+            subscription.teams.stream().forEach( team -> {
+                 if (teams.contains(team)) {
+                      subscriptionSet.add(team);
+                 }
+             });
+         });
+
+          summaryList.forEach(summary -> summary.watching = subscriptionMap.computeIfAbsent(summary.id, k -> Collections.emptySet()));
+      }
+
+
       TestListing listing = new TestListing();
-      listing.tests = testQuery.getResultList();
+      listing.tests = summaryList;
       return listing;
    }
 

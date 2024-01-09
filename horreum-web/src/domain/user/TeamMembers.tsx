@@ -1,11 +1,12 @@
-import { ReactElement, useState, useEffect, useRef, MutableRefObject } from "react"
-import { useDispatch } from "react-redux"
+import {ReactElement, useState, useEffect, useRef, MutableRefObject, useContext} from "react"
 import { DualListSelector, TreeView } from "@patternfly/react-core"
 
 import { teamToName, userName } from "../../auth"
-import { dispatchError } from "../../alerts"
 import UserSearch from "../../components/UserSearch"
 import {userApi, UserData} from "../../api"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type UserPermissionsProps = {
     user: UserData
@@ -96,10 +97,10 @@ type TeamMembersProps = {
 }
 
 export default function TeamMembers(props: TeamMembersProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [availableUsers, setAvailableUsers] = useState<ReactElement[]>([])
     const [members, setMembers] = useState<ReactElement[]>([])
     const memberRoles = useRef<Map<string, string[]>>(new Map())
-    const dispatch = useDispatch()
     useEffect(() => {
         setAvailableUsers([])
     }, [props.resetCounter])
@@ -130,10 +131,10 @@ export default function TeamMembers(props: TeamMembersProps) {
                             })
                         )
                     },
-                    error => dispatchError(dispatch, error, "FETCH_USERS_INFO", "Failed to fetch details for users")
+                    error => alerting.dispatchError(error, "FETCH_USERS_INFO", "Failed to fetch details for users")
                 )
             },
-            error => dispatchError(dispatch, error, "FETCH_TEAM_MEMBERS", "Failed to fetch team members")
+            error => alerting.dispatchError(error, "FETCH_TEAM_MEMBERS", "Failed to fetch team members")
         )
     }, [props.team, props.resetCounter])
     props.funcs.current = {

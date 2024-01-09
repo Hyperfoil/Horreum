@@ -1,47 +1,60 @@
-import { useMemo, useEffect, useState } from "react"
-import { useSelector } from "react-redux"
-import { useDispatch } from "react-redux"
+import {useMemo, useEffect, useState, useContext} from "react"
 import { Card, CardHeader, CardFooter, CardBody, PageSection, Pagination } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
 
-import * as actions from "./actions"
-import { alertAction } from "../../alerts"
-import { useTester, teamsSelector, teamToName } from "../../auth"
+import { useTester, teamToName } from "../../auth"
 import { noop } from "../../utils"
 import Table from "../../components/Table"
  
-import ActionMenu, { useShareLink, useChangeAccess, useDelete } from "../../components/ActionMenu"
+import ActionMenu, { useChangeAccess, useDelete } from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
 import { CellProps, Column } from "react-table"
-import { SchemaDispatch } from "./reducers"
-import {Access, SortDirection, SchemaQueryResult, Schema, schemaApi} from "../../api"
+import {Access, SortDirection, Schema, schemaApi} from "../../api"
 import SchemaImportButton from "./SchemaImportButton"
 import AccessIconOnly from "../../components/AccessIconOnly"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type C = CellProps<Schema>
 
-export default function AllSchema() {
+export default function SchemaList() {
     document.title = "Schemas | Horreum"
-    const dispatch = useDispatch<SchemaDispatch>()
+    const { alerting } = useContext(AppContext) as AppContextType;
 
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [direction] = useState<SortDirection>('Ascending')
     const pagination = useMemo(() => ({ page, perPage, direction }), [page, perPage, direction])
-    const [schemas, setSchemas] = useState<SchemaQueryResult>()
+    const [schemas, setSchemas] = useState<Schema[]>([])
+    const [schemaCount, setSchemaCount] = useState(0)
     const [loading, setLoading] = useState(false)
+    const [reloadCounter, setReloadCounter] = useState(0)
+
+    const isTester = useTester()
+
+    const removeSchema = (id: number) => {
+        if ( schemaCount > 0 ){
+            setSchemas(schemas?.filter(schema => schema.id !== id) || [])
+            const newCount = (schemaCount == 0) ? 0 : schemaCount - 1
+            setSchemaCount(newCount)
+        }
+    }
+
+    const reloadSchemas = () => {
+        setLoading(true)
+        schemaApi
+            .list('Ascending', pagination.perPage, pagination.page - 1)
+            .then((result) => {
+                setSchemas(result.schemas)
+                setSchemaCount(result.count)
+            })
+            .catch(error => alerting.dispatchError(error,"FETCH_SCHEMA", "Failed to fetch schemas"))
+            .finally(() => setLoading(false))
+    }
 
     useEffect(() => {
-        setLoading(true)
-        schemaApi.list(
-             'Ascending',
-             pagination.perPage,
-             pagination.page - 1
-             )
-            .then(setSchemas)
-            .catch(error => dispatch(alertAction("FETCH_SCHEMA", "Failed to fetch schemas", error)))
-            .finally(() => setLoading(false))
-    }, [pagination,  dispatch])
+        reloadSchemas()
+    }, [pagination])
 
     const columns: Column<Schema>[] = useMemo(
         () => [
@@ -81,18 +94,21 @@ export default function AllSchema() {
                 Header: "Actions",
                 accessor: "id",
                 Cell: arg => {
-                    const shareLink = useShareLink({
-                        token: arg.row.original.token || undefined,
-                        tokenToLink: (id, token) => "/schema/" + id + "?token=" + token,
-                        onTokenReset: id => dispatch(actions.resetToken(id)).catch(noop),
-                        onTokenDrop: id => dispatch(actions.dropToken(id)).catch(noop),
-                    })
                     const changeAccess = useChangeAccess({
-                        onAccessUpdate: (id, owner, access) =>
-                            dispatch(actions.updateAccess(id, owner, access)).catch(noop),
+                        onAccessUpdate: (id, owner, access) => {
+                            return schemaApi.updateAccess(id, access, owner).then(
+                                () => noop(),
+                                error => alerting.dispatchError(error, "SCHEMA_UPDATE", "Failed to update schema access.")
+                            ).then(() => reloadSchemas)
+                        },
                     })
                     const del = useDelete({
-                        onDelete: id => dispatch(actions.deleteSchema(id)).catch(noop),
+                        onDelete: id => { return schemaApi._delete(id)
+                            .then(() => id,
+                                error => alerting.dispatchError(error, "SCHEMA_DELETE", "Failed to delete schema " + id)
+                            ).then(id => removeSchema(id))
+                            .catch(noop)
+                        },
                     })
                     return (
                         <ActionMenu
@@ -100,20 +116,15 @@ export default function AllSchema() {
                             owner={arg.row.original.owner}
                             access={arg.row.original.access as Access}
                             description={"schema " + arg.row.original.name + " (" + arg.row.original.uri + ")"}
-                            items={[shareLink, changeAccess, del]}
+                            items={[changeAccess, del]}
                         />
                     )
                 },
             },
         ],
-        [dispatch]
+        [ schemas]
     )
-    const [reloadCounter, setReloadCounter] = useState(0)
-    const teams = useSelector(teamsSelector)
-    useEffect(() => {
-        dispatch(actions.all()).catch(noop)
-    }, [dispatch, teams, reloadCounter])
-    const isTester = useTester()
+
     return (
         <PageSection>
             <Card>
@@ -121,21 +132,21 @@ export default function AllSchema() {
                     <CardHeader>
                         <ButtonLink to="/schema/_new">New Schema</ButtonLink>
                         <SchemaImportButton
-                            schemas={schemas?.schemas || []}
+                            schemas={schemas || []}
                             onImported={() => setReloadCounter(reloadCounter + 1)}
                         />
                     </CardHeader>
                 )}
                 <CardBody style={{ overflowX: "auto" }}>
-                    <Table columns={columns}
-                    data={schemas?.schemas || []}
+                    <Table<Schema> columns={columns}
+                    data={schemas || []}
                     sortBy={[{ id: "name", desc: false }]}
                     isLoading={loading}
                     />
                 </CardBody>
                 <CardFooter style={{ textAlign: "right" }}>
                     <Pagination
-                        itemCount={schemas?.count || 0}
+                        itemCount={schemaCount || 0}
                         perPage={perPage}
                         page={page}
                         onSetPage={(e, p) => setPage(p)}

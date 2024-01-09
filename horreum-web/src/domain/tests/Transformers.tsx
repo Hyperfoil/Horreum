@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useEffect, useState} from "react"
 import { NavLink } from "react-router-dom"
 
 import {
@@ -16,15 +15,14 @@ import {
     Tooltip,
 } from "@patternfly/react-core"
 
-import { dispatchError } from "../../alerts"
-import { noop } from "../../utils"
 import { useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
-import {schemaApi, Transformer, Access, TransformerInfo} from "../../api"
-import { TestDispatch } from "./reducers"
-import { updateTransformers } from "./actions"
+import {schemaApi, Transformer, Access, TransformerInfo, updateTransformers} from "../../api"
 import TransformationLogModal from "./TransformationLogModal"
 import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type TransformersProps = {
     testId: number
@@ -109,7 +107,7 @@ function excludeSelected(tree: SchemaItem[], excluded: Transformer[]) {
 }
 
 export default function Transformers(props: TransformersProps) {
-    const dispatch = useDispatch<TestDispatch>()
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [counter, setCounter] = useState(0)
     const [loading, setLoading] = useState(false)
     const [originalOptions, setOriginalOptions] = useState<SchemaItem[]>([])
@@ -131,7 +129,7 @@ export default function Transformers(props: TransformersProps) {
                     setCounter(counter + 1)
                 },
                 error =>
-                    dispatchError(dispatch, error, "FETCH_TRANSFORMERS", "Failed to fetch all transformers").catch(noop)
+                    alerting.dispatchError( error, "FETCH_TRANSFORMERS", "Failed to fetch all transformers")
             )
             .finally(() => setLoading(false))
     }, [])
@@ -141,7 +139,6 @@ export default function Transformers(props: TransformersProps) {
     }, [props.originalTransformers, originalOptions])
     props.funcsRef.current = {
         save: () =>
-            dispatch(
                 updateTransformers(
                     props.testId,
                     chosen
@@ -157,8 +154,8 @@ export default function Transformers(props: TransformersProps) {
                             extractors: [],
                             owner: "",
                             access: Access.Public,
-                        }))
-                )
+                        })),
+                    alerting
             ),
         reset: () => {
             setOptions(excludeSelected(originalOptions, props.originalTransformers))

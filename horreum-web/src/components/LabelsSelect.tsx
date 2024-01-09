@@ -4,7 +4,6 @@ import { teamsSelector } from "../auth"
 
 import { Button, HelperText, Select, SelectOption, SelectOptionObject, Split, SplitItem } from "@patternfly/react-core"
 
-import { useDispatch } from "react-redux"
 import { deepEquals, noop } from "../utils"
 
 export function convertLabels(obj: any): string {
@@ -68,7 +67,6 @@ export default function LabelsSelect({disabled, selection, onSelect, source, emp
         : {}
     const [partialSelect, setPartialSelect] = useState<any>(initialSelect)
 
-    const dispatch = useDispatch()
     const teams = useSelector(teamsSelector)
     useEffect(() => {
         source().then((response: any[]) => {
@@ -77,7 +75,7 @@ export default function LabelsSelect({disabled, selection, onSelect, source, emp
                 onSelect({ ...response[0], toString: () => convertLabels(response[0]) })
             }
         }, noop)
-    }, [source, onSelect, dispatch, teams, optionForAll])
+    }, [source, onSelect, teams, optionForAll])
     const all: SelectOptionObject = useMemo(
         () => ({
             toString: () => optionForAll || "",

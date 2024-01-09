@@ -1,13 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react"
-import { useDispatch } from "react-redux"
+import React, {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
 import { Bullseye, EmptyState, EmptyStateBody, Modal, Spinner, Title } from "@patternfly/react-core"
 import { Table, TableBody, TableHeader } from "@patternfly/react-table"
 
-import { dispatchError } from "../../alerts"
 import "../../components/LogModal.css"
 import {datasetApi, LabelValue} from "../../api"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 type LabelValuesModalProps = {
     datasetId: number
@@ -23,9 +24,9 @@ function formatValue(value: any) {
 }
 
 export default function LabelValuesModal(props: LabelValuesModalProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [labelValues, setLabelValues] = useState<LabelValue[]>([])
     const [loading, setLoading] = useState(false)
-    const dispatch = useDispatch()
     useEffect(() => {
         if (!props.isOpen) {
             return
@@ -34,7 +35,7 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
         setLabelValues([])
         datasetApi.labelValues(props.datasetId)
             .then(setLabelValues, error =>
-                dispatchError(dispatch, error, "FETCH_LABEL_VALUES", "Cannot retrieve effective values for labels.")
+                alerting.dispatchError( error, "FETCH_LABEL_VALUES", "Cannot retrieve effective values for labels.")
             )
             .finally(() => setLoading(false))
     }, [props.isOpen])

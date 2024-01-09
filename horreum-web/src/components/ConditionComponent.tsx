@@ -8,45 +8,46 @@ type ConditionComponentProps = {
     value: any
     onChange(value: any): void
     isTester: boolean
+
 } & ConditionComponentDef
 
-export default function ConditionComponent(props: ConditionComponentProps) {
+export default function ConditionComponent({ value, onChange, properties, isTester, type, title, name, description }: ConditionComponentProps) {
     let component
-    switch (props.type) {
+    switch (type) {
         case "LOG_SLIDER":
             component = (
                 <LogSlider
-                    value={props.value * ((props.properties as any).scale || 1)}
+                    value={value * ((properties as any).scale || 1)}
                     onChange={value => {
-                        const scale = (props.properties as any).scale
-                        props.onChange(scale ? value / scale : value)
+                    const scale = (properties as any).scale
+                    onChange(scale ? value / scale : value)
                     }}
-                    isDisabled={!props.isTester}
-                    isDiscrete={(props.properties as any).discrete}
-                    min={(props.properties as any).min}
-                    max={(props.properties as any).max}
-                    unit={(props.properties as any).unit}
+                    isDisabled={!isTester}
+                    isDiscrete={(properties as any).discrete}
+                    min={(properties as any).min}
+                    max={(properties as any).max}
+                    unit={(properties as any).unit}
                 />
             )
             break
         case "ENUM":
             component = (
                 <EnumSelect
-                    options={(props.properties as any).options}
-                    selected={props.value}
-                    onSelect={props.onChange}
-                    isDisabled={!props.isTester}
+                    options={(properties as any).options}
+                    selected={value}
+                    onSelect={onChange}
+                    isDisabled={!isTester}
                 />
             )
             break
         case "NUMBER_BOUND":
             component = (
                 <NumberBound
-                    {...props.value}
+                    {...value}
                     onChange={(enabled: boolean, inclusive: boolean, value: number) => {
-                        props.onChange({ enabled, inclusive, value })
+                        onChange({ enabled, inclusive, value })
                     }}
-                    isDisabled={!props.isTester}
+                    isDisabled={!isTester}
                 />
             )
             break
@@ -55,18 +56,18 @@ export default function ConditionComponent(props: ConditionComponentProps) {
                 <Switch
                     label="ON"
                     labelOff="OFF"
-                    isDisabled={!props.isTester}
-                    isChecked={props.value}
-                    onChange={checked => props.onChange(checked)}
+                    isDisabled={!isTester}
+                    isChecked={value}
+                    onChange={checked => onChange(checked)}
                 />
             )
             break
         default:
-            component = <Alert variant="danger" title={"Unsupported type " + props.type} />
+            component = <Alert variant="danger" title={"Unsupported type " + type} />
             break
     }
     return (
-        <FormGroup fieldId={props.name} key={props.name} label={props.title} helperText={props.description}>
+        <FormGroup fieldId={name} key={name} label={title} helperText={description}>
             {component}
         </FormGroup>
     )

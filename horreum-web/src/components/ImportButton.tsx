@@ -1,9 +1,8 @@
-import { useState } from "react"
-import { useDispatch } from "react-redux"
-
-import { dispatchError, dispatchInfo } from "../alerts"
+import {useContext, useState} from "react"
 
 import { Bullseye, Button, FileUpload, Modal, Spinner } from "@patternfly/react-core"
+import {AppContext} from "../context/appContext";
+import {AppContextType} from "../context/@types/appContextTypes";
 
 type ImportProps = {
     label?: string
@@ -13,6 +12,8 @@ type ImportProps = {
 }
 
 export default function ImportButton({label, onLoad, onImport, onImported}: ImportProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
+
     const [open, setOpen] = useState(false)
     const [filename, setFilename] = useState<string>()
     const [loading, setLoading] = useState(false)
@@ -21,7 +22,6 @@ export default function ImportButton({label, onLoad, onImport, onImported}: Impo
     const [uploading, setUploading] = useState(false)
     const [parseError, setParseError] = useState<any>()
     const [overridden, setOverridden] = useState<any>()
-    const dispatch = useDispatch()
     const clear = () => {
         setFilename(undefined)
         setConfig(undefined)
@@ -56,10 +56,10 @@ export default function ImportButton({label, onLoad, onImport, onImported}: Impo
                                 onImport(config)
                                 .then(
                                     () => {
-                                        dispatchInfo(dispatch, "IMPORT", "Import succeeded", "", 3000)
+                                        alerting.dispatchInfo( "IMPORT", "Import succeeded", "", 3000)
                                         onImported()
                                     },
-                                    error => dispatchError(dispatch, error, "IMPORT_FAILED", "Import failed")
+                                    error => alerting.dispatchError( error, "IMPORT_FAILED", "Import failed")
                                 )
                                 .finally(close)
                         }}

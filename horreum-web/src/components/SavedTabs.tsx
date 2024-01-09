@@ -26,7 +26,7 @@ export function modifiedFunc(ref: TabFunctionsRef) {
 
 type SavedTabProps = FragmentTabProps & {
     onSave(): Promise<any>
-    onReset(): void
+    onReset?(): void
     isModified(): boolean
 }
 
@@ -100,7 +100,9 @@ export default function SavedTabs(props: SavedTabsProps) {
                 onReset={() => {
                     const childProps = children[activeKey.current].props
                     if ("onReset" in childProps) {
-                        childProps.onReset()
+                        if( childProps.onReset ) {
+                            childProps.onReset()
+                        }
                         if (props.afterReset) {
                             props.afterReset()
                         }

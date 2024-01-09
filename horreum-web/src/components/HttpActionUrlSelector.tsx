@@ -1,11 +1,8 @@
-import { useEffect, useRef, useState } from "react"
-import { useDispatch } from "react-redux"
-
+import {useContext, useEffect, useRef, useState} from "react"
 import { Dropdown, DropdownItem, DropdownToggle, FormGroup, InputGroup, TextInput } from "@patternfly/react-core"
-
-import {actionApi, AllowedSite} from "../api"
-
-import { alertAction } from "../alerts"
+import { AllowedSite, getAllowedSites} from "../api"
+import {AppContext} from "../context/appContext";
+import {AppContextType} from "../context/@types/appContextTypes";
 
 function isValidUrl(url: string) {
     try {
@@ -26,20 +23,18 @@ type HttpActionUrlSelectorProps = {
     extraCheck?(value: string): string | boolean
 }
 
-export default function HttpActionUrlSelector(props: HttpActionUrlSelectorProps) {
-    const dispatch = useDispatch()
+export default function HttpActionUrlSelector({ active, value, setValue, isDisabled, isReadOnly, setValid, extraCheck}: HttpActionUrlSelectorProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [prefixes, setPrefixes] = useState<AllowedSite[]>([{ id: -1, prefix: "" }])
     useEffect(() => {
-        if (props.active) {
-            actionApi.allowedSites().then(setPrefixes, e =>
-                dispatch(alertAction("FETCH_ALLOWED_SITES", "Failed to fetch allowed sites", e))
-            )
+        if (active) {
+            getAllowedSites(alerting).then(setPrefixes)
         }
-    }, [dispatch, props.active])
+    }, [active])
 
-    const isUrlValid = isValidUrl(props.value)
-    const isUrlAllowed = prefixes.some(p => props.value.startsWith(p.prefix))
-    const extraCheckResult = props.extraCheck ? props.extraCheck(props.value) : true
+    const isUrlValid = isValidUrl(value)
+    const isUrlAllowed = prefixes.some(p => value.startsWith(p.prefix))
+    const extraCheckResult = extraCheck ? extraCheck(value) : true
 
     const [dropdownOpen, setDropdownOpen] = useState(false)
 
@@ -61,14 +56,14 @@ export default function HttpActionUrlSelector(props: HttpActionUrlSelectorProps)
             }
         >
             <InputGroup>
-                {!props.isReadOnly && (
+                {!isReadOnly && (
                     <Dropdown
                         onSelect={event => {
                             if (event && event.currentTarget) {
-                                if (props.setValid) {
-                                    props.setValid(true)
+                                if (setValid) {
+                                    setValid(true)
                                 }
-                                props.setValue(event.currentTarget.innerText)
+                                setValue(event.currentTarget.innerText)
                             }
                             setDropdownOpen(false)
                             if (ref.current) {
@@ -76,7 +71,7 @@ export default function HttpActionUrlSelector(props: HttpActionUrlSelectorProps)
                             }
                         }}
                         toggle={
-                            <DropdownToggle onToggle={setDropdownOpen} isDisabled={props.isDisabled}>
+                            <DropdownToggle onToggle={setDropdownOpen} isDisabled={isDisabled}>
                                 Pick URL prefix
                             </DropdownToggle>
                         }
@@ -90,7 +85,7 @@ export default function HttpActionUrlSelector(props: HttpActionUrlSelectorProps)
                 )}
                 <TextInput
                     ref={ref}
-                    value={props.value}
+                    value={value}
                     isRequired
                     type="text"
                     id="url"
@@ -100,17 +95,17 @@ export default function HttpActionUrlSelector(props: HttpActionUrlSelectorProps)
                     placeholder="e.g. 'http://example.com/api/action'"
                     onChange={value => {
                         value = value.trim()
-                        if (props.setValid) {
-                            props.setValid(
+                        if (setValid) {
+                            setValid(
                                 isValidUrl(value) &&
                                     prefixes.some(p => value.startsWith(p.prefix)) &&
-                                    (!props.extraCheck || props.extraCheck(value) === true)
+                                    (!extraCheck || extraCheck(value) === true)
                             )
                         }
-                        props.setValue(value)
+                        setValue(value)
                     }}
-                    isDisabled={props.isDisabled}
-                    isReadOnly={props.isReadOnly}
+                    isDisabled={isDisabled}
+                    isReadOnly={isReadOnly}
                 />
             </InputGroup>
         </FormGroup>

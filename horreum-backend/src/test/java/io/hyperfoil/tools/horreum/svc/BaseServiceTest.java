@@ -29,6 +29,8 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
+import io.hyperfoil.tools.horreum.api.report.ReportComponent;
+import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
@@ -72,6 +74,7 @@ import io.restassured.specification.RequestSpecification;
 import io.smallrye.jwt.build.Jwt;
 
 public class BaseServiceTest {
+   protected static final String SCHEMA = "urn:comparison";
    static final String[] UPLOADER_ROLES = { "foo-team", "foo-uploader", "uploader" };
    public static final String[] TESTER_ROLES = { "foo-team", "foo-tester", "tester", "viewer" };
    static final List<String> SYSTEM_ROLES = Collections.singletonList(Roles.HORREUM_SYSTEM);
@@ -124,9 +127,13 @@ public class BaseServiceTest {
          return ADMIN_TOKEN;
       }
    }
+   protected static ObjectNode runWithValue(double value) {
+        return runWithValue(value, null);
+   }
+
    protected static ObjectNode runWithValue(double value, Schema schema) {
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
-      runJson.put("$schema", schema.uri);
+      if ( schema != null ) runJson.put("$schema", schema.uri);
       runJson.put("value", value);
       ArrayNode values = JsonNodeFactory.instance.arrayNode();
       values.add(++value);
@@ -136,7 +143,7 @@ public class BaseServiceTest {
       return runJson;
    }
 
-   protected static ObjectNode runWithValue(double value, Schema... schemas) {
+   protected static ObjectNode runWithValueSchemas(double value, Schema... schemas) {
       ObjectNode root = null;
       for (Schema s : schemas) {
          ObjectNode n = runWithValue(value, s);
@@ -920,5 +927,81 @@ public class BaseServiceTest {
          fail("Failed to read `" + resourcePath + "`", e);
          return null;
       }
+   }
+
+   protected void createComparisonSchema() {
+      Schema schema = createSchema("comparison", ReportServiceTest.SCHEMA);
+      addLabel(schema, "variant", null, new Extractor("variant", "$.variant", false));
+      addLabel(schema, "os", null, new Extractor("os", "$.os", false));
+      addLabel(schema, "category", null, new Extractor("category", "$.category", false));
+      addLabel(schema, "clusterSize", null, new Extractor("clusterSize", "$.clusterSize", false));
+      addLabel(schema, "cpuUsage", null, new Extractor("cpuUsage", "$.cpuUsage", false));
+      addLabel(schema, "memoryUsage", null, new Extractor("memoryUsage", "$.memoryUsage", false));
+      addLabel(schema, "throughput", null, new Extractor("throughput", "$.throughput", false));
+   }
+
+   protected void uploadExampleRuns(Test test) throws InterruptedException {
+      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+
+      long ts = System.currentTimeMillis();
+      uploadRun(ts - 1, createRunData("production", "windows", "jvm", 1, 0.5, 150_000_000, 123) , test.name);
+      uploadRun(ts - 2, createRunData("debug", "windows", "jvm", 2, 0.4, 120_000_000, 256) , test.name);
+      uploadRun(ts - 3, createRunData("production", "linux", "jvm", 1, 0.4, 100_000_000, 135) , test.name);
+      uploadRun(ts - 4, createRunData("debug", "linux", "jvm", 2, 0.3, 80_000_000, 260) , test.name);
+      uploadRun(ts - 5, createRunData("production", "windows", "native", 1, 0.4, 50_000_000, 100) , test.name);
+      uploadRun(ts - 6, createRunData("production", "windows", "native", 2, 0.3, 40_000_000, 200) , test.name);
+      uploadRun(ts - 7, createRunData("production", "linux", "native", 1, 0.3, 30_000_000, 110) , test.name);
+      uploadRun(ts - 8, createRunData("debug", "linux", "native", 2, 0.28, 20_000_000, 210) , test.name);
+      // some older run that should be ignored
+      uploadRun(ts - 9, createRunData("production", "windows", "jvm", 2, 0.8, 150_000_000, 200) , test.name);
+
+      for (int i = 0; i < 9; ++i) {
+         assertNotNull(queue.poll(1, TimeUnit.SECONDS));
+      }
+   }
+
+   private JsonNode createRunData(String variant, String os, String category, int clusterSize, double cpuUsage, long memoryUsage, long throughput) {
+      ObjectNode data = JsonNodeFactory.instance.objectNode();
+      return data.put("$schema", SCHEMA)
+              .put("variant", variant)
+              .put("os", os)
+              .put("category", category)
+              .put("clusterSize", clusterSize)
+              .put("cpuUsage", cpuUsage)
+              .put("memoryUsage", memoryUsage)
+              .put("throughput", throughput);
+   }
+
+   protected TableReportConfig newExampleTableReportConfig(Test test) {
+      TableReportConfig config = new TableReportConfig();
+      config.test = test;
+      config.title = "Test no filter";
+      config.categoryLabels = arrayOf("category");
+      // category is used just for the sake of testing two labels
+      config.seriesLabels = arrayOf("os", "category");
+      config.seriesFunction = "({ os, category }) => os";
+      config.scaleLabels = arrayOf("clusterSize");
+      config.components = new ArrayList<>();
+      config.components.add(newComponent(null, "cpuUsage"));
+      config.components.add(newComponent(null, "memoryUsage"));
+      config.components.add(newComponent(null, "throughput"));
+      return config;
+   }
+
+   private ReportComponent newComponent(String function, String... labels) {
+      ReportComponent component = new ReportComponent();
+      component.name = Stream.of(labels).map(l -> Character.toUpperCase(l.charAt(0)) + l.substring(1)).collect(Collectors.joining("+"));
+      component.labels = arrayOf(labels);
+      component.function = function;
+      return component;
+   }
+
+
+   protected ArrayNode arrayOf(String... labels) {
+      ArrayNode array = JsonNodeFactory.instance.arrayNode();
+      for (String label : labels) {
+         array.add(label);
+      }
+      return array;
    }
 }

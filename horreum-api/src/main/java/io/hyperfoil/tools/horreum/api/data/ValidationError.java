@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class ValidationError {
     @Schema(description = "Schema ID that Validation Error relates to", example = "101")
-    public int schemaId;
+    public Integer schemaId;
     @JsonProperty(required = true)
     @Schema(description = "Validation Error Details")
     public ErrorDetails error;

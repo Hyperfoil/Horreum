@@ -1,17 +1,17 @@
-import { useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useState} from "react"
 import { Button, Flex, FlexItem, SearchInput } from "@patternfly/react-core"
 import { ArrowRightIcon } from "@patternfly/react-icons"
 import {userApi, UserData} from "../api"
-import { alertAction } from "../alerts"
+import {AppContext} from "../context/appContext";
+import {AppContextType} from "../context/@types/appContextTypes";
 
 type UserSearchProps = {
     onUsers(users: UserData[]): void
 }
 export default function UserSearch(props: UserSearchProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [userSearch, setUserSearch] = useState<string>()
     const [userSearchTimer, setUserSearchTimer] = useState<number>()
-    const dispatch = useDispatch()
     const fireSearch = (query: string) => {
         if (!query) {
             // do not query all users in the system
@@ -19,7 +19,7 @@ export default function UserSearch(props: UserSearchProps) {
         }
         userApi.searchUsers(query).then(
             users => props.onUsers(users),
-            error => dispatch(alertAction("USER_LOOKUP", "User lookup failed", error))
+            error => alerting.dispatchError(error,"USER_LOOKUP", "User lookup failed")
         )
     }
     return (

@@ -49,35 +49,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       set.add(item);
       return set;
    }
-
-   @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
-   @WithRoles
-   @Override
-   public Map<Integer, Set<String>> all(String folder) {
-      // TODO: do all of this in single obscure PSQL query
-      String username = identity.getPrincipal().getName();
-      List<WatchDAO> personal = WatchDAO.list("?1 IN elements(users)", username);
-      List<WatchDAO> optout = WatchDAO.list("?1 IN elements(optout)", username);
-      Set<String> teams = identity.getRoles().stream().filter(role -> role.endsWith("-team")).collect(Collectors.toSet());
-      List<WatchDAO> team = WatchDAO.list("FROM watch w LEFT JOIN w.teams teams WHERE teams IN ?1", teams);
-      Map<Integer, Set<String>> result = new HashMap<>();
-      personal.forEach(w -> result.compute(w.test.id, (i, set) -> merge(set, username)));
-      optout.forEach(w -> result.compute(w.test.id, (i, set) -> merge(set, "!" + username)));
-      team.forEach(w -> result.compute(w.test.id, (i, set) -> {
-         Set<String> nset = new HashSet<>(w.teams);
-         nset.retainAll(teams);
-         if (set != null) {
-            nset.addAll(set);
-         }
-         return nset;
-      }));
-      Stream<Integer> results = em.unwrap(Session.class)
-              .createNativeQuery("SELECT id FROM test WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')", Integer.class)
-            .setParameter(1, folder).getResultStream();
-      results.forEach(id -> result.putIfAbsent(id, Collections.emptySet()));
-      return result;
-   }
-
+   
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @WithRoles
    @Override

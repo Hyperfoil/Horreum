@@ -1,12 +1,10 @@
-import { useState, useEffect } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useState, useEffect, useContext} from "react"
+import { useSelector } from "react-redux"
 import { useHistory } from "react-router-dom"
 
 import { Button, Checkbox, Flex, FlexItem, FormGroup, FormSection, TextInput } from "@patternfly/react-core"
 
 import { defaultTeamSelector, useTester } from "../../auth"
-import { noop } from "../../utils"
-import { dispatchError } from "../../alerts"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import FindUsagesModal from "./FindUsagesModal"
 
@@ -18,6 +16,9 @@ import SplitForm from "../../components/SplitForm"
 import TestLabelModal from "./TestLabelModal"
 
 import { Label, schemaApi, Access } from "../../api"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 const LABEL_FUNCTION_HELP = (
     <>
@@ -42,6 +43,7 @@ type LabelsProps = {
 }
 
 export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [loading, setLoading] = useState(false)
     const [labels, setLabels] = useState<LabelEx[]>([])
     const [selected, setSelected] = useState<LabelEx>()
@@ -52,7 +54,6 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
     const isTester = useTester()
     const isTesterForLabel = useTester(selected?.owner || "__no_owner__")
     const defaultTeam = useSelector(defaultTeamSelector)
-    const dispatch = useDispatch()
     funcsRef.current = {
         save: () =>
             Promise.all([
@@ -72,7 +73,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                 ),
             ])
                 .catch(error => {
-                    dispatchError(dispatch, error, "LABEL_UPDATE", "Failed to update one or more labels.")
+                    alerting.dispatchError( error, "LABEL_UPDATE", "Failed to update one or more labels.")
                     return Promise.reject(error)
                 })
                 .finally(() => setDeleted([])),
@@ -115,12 +116,11 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                     }
                 },
                 error =>
-                    dispatchError(
-                        dispatch,
+                    alerting.dispatchError(
                         error,
                         "LIST_LABELS",
                         "Failed to fetch labels for schema " + schemaUri
-                    ).catch(noop)
+                    )
             )
             .finally(() => setLoading(false))
     }, [schemaId, resetCounter])

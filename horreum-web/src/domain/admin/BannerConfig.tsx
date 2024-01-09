@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import {useContext, useEffect, useState} from "react"
+import { useSelector } from "react-redux"
 
 import {
     ActionGroup,
@@ -13,21 +13,22 @@ import {
 } from "@patternfly/react-core"
 
 import Editor from "../../components/Editor/monaco/Editor"
-import { alertAction, dispatchInfo } from "../../alerts"
 import { isAdminSelector } from "../../auth"
 import {bannerApi} from "../../api"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 function setBanner(severity: string, title: string, message: string) {
     return bannerApi.set({ severity, title, message, active: true })
 }
 
 export default function BannerConfig() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [severity, setSeverity] = useState("danger")
     const [title, setTitle] = useState("")
     const [message, setMessage] = useState("")
     const [saving, setSaving] = useState(false)
     const isAdmin = useSelector(isAdminSelector)
-    const dispatch = useDispatch()
     useEffect(() => {
         bannerApi.get().then(
             banner => {
@@ -37,7 +38,7 @@ export default function BannerConfig() {
                     setMessage(banner.message || "")
                 }
             },
-            e => dispatch(alertAction("FETCH BANNER", "Failed to fetch current banner", e))
+            e => alerting.dispatchError(e,"FETCH BANNER", "Failed to fetch current banner")
         )
     }, [])
     document.title = "Banner | Horreum"
@@ -45,7 +46,7 @@ export default function BannerConfig() {
         return null
     }
     return (
-        <Form isHorizontal={true} style={{ gridGap: "2px", width: "100%", paddingRight: "8px" }}>
+        <Form isHorizontal={true}>
             <FormGroup label="Severity" isRequired={true} fieldId="severity">
                 <FormSelect id="severity" value={severity} onChange={setSeverity}>
                     {["danger", "warning", "info"].map((option, index) => (
@@ -75,8 +76,8 @@ export default function BannerConfig() {
                         setSaving(true)
                         setBanner(severity, title, message)
                             .then(
-                                () => dispatchInfo(dispatch, "SET BANNER", "Banner was saved.", "", 3000),
-                                e => dispatch(alertAction("SET BANNER", "Failed to set banner", e))
+                                () => alerting.dispatchInfo("SET BANNER", "Banner was saved.", "", 3000),
+                                e => alerting.dispatchError(e,"SET BANNER", "Failed to set banner")
                             )
                             .finally(() => setSaving(false))
                     }}
@@ -96,8 +97,8 @@ export default function BannerConfig() {
                         setSaving(true)
                         setBanner("none", "", "")
                             .then(
-                                () => dispatchInfo(dispatch, "SET BANNER", "Banner was removed.", "", 3000),
-                                e => dispatch(alertAction("SET BANNER", "Failed to set banner", e))
+                                () => alerting.dispatchInfo( "SET BANNER", "Banner was removed.", "", 3000),
+                                e => alerting.dispatchError(e,"SET BANNER", "Failed to set banner")
                             )
                             .finally(() => setSaving(false))
                     }}

@@ -1,14 +1,13 @@
-import { useMemo, useState, useRef } from "react"
-
-import { useDispatch } from "react-redux"
+import {useMemo, useState, useRef, useContext} from "react"
 
 import { Button, Checkbox, Form, FormGroup, Modal, Progress } from "@patternfly/react-core"
 import { Table, TableBody } from "@patternfly/react-table"
 import { NavLink } from "react-router-dom"
 
 import {alertingApi, DatapointRecalculationStatus, DatasetInfo} from "../../api"
-import { alertAction } from "../../alerts"
 import TimeRangeSelect, { TimeRange } from "../../components/TimeRangeSelect"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type RecalculateModalProps = {
     title: string
@@ -49,8 +48,8 @@ function datasetsToLinks(datasets: DatasetInfo[] | undefined | null) {
 }
 
 export default function RecalculateModal({ title, recalculate, cancel, message, isOpen, onClose, testId, showLog } : RecalculateModalProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [progress, setProgress] = useState(-1)
-    const dispatch = useDispatch()
     const [debug, setDebug] = useState(false)
     const [timeRange, setTimeRange] = useState<TimeRange>()
     const timer = useRef<number>()
@@ -76,7 +75,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
             },
             error => {
                 close()
-                dispatch(alertAction("RECALC_PROGRESS", "Cannot query recalculation progress", error))
+                alerting.dispatchError(error,"RECALC_PROGRESS", "Cannot query recalculation progress")
             }
         )
     }
@@ -117,9 +116,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
                                           error => {
                                               setProgress(-1)
                                               onClose()
-                                              dispatch(
-                                                  alertAction("RECALCULATION", "Failed to start recalculation", error)
-                                              )
+                                              alerting.dispatchError(error,"RECALCULATION", "Failed to start recalculation")
                                           }
                                       )
                                   }}

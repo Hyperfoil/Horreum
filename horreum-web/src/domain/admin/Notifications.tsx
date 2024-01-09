@@ -1,15 +1,16 @@
-import { useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useState} from "react"
 
 import { ActionGroup, Button, Form, FormGroup, TextInput } from "@patternfly/react-core"
 import NotificationMethodSelect from "../../components/NotificationMethodSelect"
 import { notificationsApi } from "../../api"
-import { dispatchInfo, dispatchError } from "../../alerts"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
+
 
 export default function Notifications() {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [method, setMethod] = useState<string>()
     const [data, setData] = useState<string>("")
-    const dispatch = useDispatch()
     return (
         <Form isHorizontal>
             <FormGroup label="Method" fieldId="method">
@@ -23,14 +24,13 @@ export default function Notifications() {
                     onClick={() =>
                         notificationsApi.testNotifications(data, method).then(
                             () =>
-                                dispatchInfo(
-                                    dispatch,
+                                alerting.dispatchInfo(
                                     "NOTIFICATION_TEST",
                                     "Notification test succeeded",
                                     "Please check if the notification worked.",
                                     3000
                                 ),
-                            error => dispatchError(dispatch, error, "NOTIFICATION_TEST", "Notification test failed")
+                            error => alerting.dispatchError(error, "NOTIFICATION_TEST", "Notification test failed")
                         )
                     }
                 >

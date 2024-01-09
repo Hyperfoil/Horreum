@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
-import { useDispatch } from "react-redux"
+import {useContext, useEffect, useMemo, useState} from "react"
 
 import { Bullseye, Button, Flex, FlexItem, Modal, Pagination, Radio, Spinner, TextInput } from "@patternfly/react-core"
 import { Table, TableBody, TableHeader } from "@patternfly/react-table"
@@ -7,8 +6,9 @@ import { NavLink } from "react-router-dom"
 
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
 import Editor from "../../components/Editor/monaco/Editor"
-import { alertAction } from "../../alerts"
 import {datasetApi, DatasetSummary, QueryResult, runApi, RunSummary, SortDirection, sqlApi} from "../../api"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 export type JsonPathTarget = "run" | "dataset"
 
@@ -22,6 +22,7 @@ type TryJsonPathModalProps = {
 }
 
 export default function TryJsonPathModal(props: TryJsonPathModalProps) {
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [runs, setRuns] = useState<RunSummary[]>()
     const [datasets, setDatasets] = useState<DatasetSummary[]>()
     const [count, setCount] = useState(0) // total runs/datasets, not runs.length
@@ -31,7 +32,6 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
     const [result, setResult] = useState<string>()
     const [target, setTarget] = useState<RunSummary | DatasetSummary>()
     const pagination = useMemo(() => ({ page, perPage, sort: "start", direction: "Descending" }), [page, perPage])
-    const dispatch = useDispatch()
     useEffect(() => {
         if (!props.jsonpath) {
             return
@@ -49,7 +49,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     setCount(summary.total)
                 },
                 error => {
-                    dispatch(alertAction("FETCH_RUNS_BY_URI", "Failed to fetch runs by Schema URI.", error))
+                    alerting.dispatchError(error,"FETCH_RUNS_BY_URI", "Failed to fetch runs by Schema URI.")
                     props.onClose()
                 }
             )
@@ -67,12 +67,12 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     setCount(response.total)
                 },
                 error => {
-                    dispatch(alertAction("FETCH_DATASETS_BY_URI", "Failed to fetch datasets by Schema URI.", error))
+                    alerting.dispatchError(error,"FETCH_DATASETS_BY_URI", "Failed to fetch datasets by Schema URI.")
                     props.onClose()
                 }
             )
         }
-    }, [props.uri, props.jsonpath, pagination, dispatch, props.onClose])
+    }, [props.uri, props.jsonpath, pagination, props.onClose])
     const executeQuery = (id: number) => {
         if (!props.jsonpath) {
             return ""

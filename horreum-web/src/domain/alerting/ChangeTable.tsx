@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react"
-import { useDispatch } from "react-redux"
+import {useState, useEffect, useContext} from "react"
 import {
     ActionGroup,
     Button,
@@ -18,11 +17,12 @@ import {
 import { CheckIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import {alertingApi, Change, FingerprintValue, Variable} from "../../api"
-import { alertAction } from "../../alerts"
 import { fingerprintToString, formatDateTime } from "../../utils"
 import { Column, UseSortByColumnOptions } from "react-table"
 import Table from "../../components/Table"
 import { useTester } from "../../auth"
+import {AppContext} from "../../context/appContext";
+import {AppContextType} from "../../context/@types/appContextTypes";
 
 type ChangeMenuProps = {
     change: Change
@@ -148,14 +148,14 @@ type ChangesProps = {
 }
 
 export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }: ChangesProps) => {
-    const dispatch = useDispatch()
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [changes, setChanges] = useState<Change[]>([])
     useEffect(() => {
         alertingApi.changes(varId, fingerprintToString(fingerprint)).then(
             response => setChanges(response),
-            error => dispatch(alertAction("DASHBOARD_FETCH", "Failed to fetch dashboard", error))
+            error => alerting.dispatchError(error, "DASHBOARD_FETCH", "Failed to fetch dashboard")
         )
-    }, [varId, dispatch])
+    }, [varId])
     const isTester = useTester(testOwner)
     const columns: C[] = [
         {
@@ -201,16 +201,14 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
                             alertingApi.deleteChange(changeId).then(
                                 _ => setChanges(changes.filter(c => c.id !== changeId)),
                                 error =>
-                                    dispatch(alertAction("CHANGE_DELETE", "Failed to delete change " + changeId, error))
+                                    alerting.dispatchError(error,"CHANGE_DELETE", "Failed to delete change " + changeId)
                             )
                         }
                         onUpdate={change =>
                             alertingApi.updateChange(change.id, change).then(
                                 _ => setChanges(changes.map(c => (c.id === change.id ? change : c))),
                                 error =>
-                                    dispatch(
-                                        alertAction("CHANGE_UPDATE", "Failed to update change " + change.id, error)
-                                    )
+                                    alerting.dispatchError(error,"CHANGE_UPDATE", "Failed to update change " + change.id)
                             )
                         }
                     />
