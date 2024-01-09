@@ -13,8 +13,7 @@ import java.util.Map;
 
 public class PostgresResource implements QuarkusTestResourceLifecycleManager {
    private PostgreSQLContainer<?> postgresContainer;
-
-   final String POSTGRES_IMAGE = initArgs.get(HORREUM_DEV_POSTGRES_IMAGE);
+   public static final PostgresImage POSTGRES_IMAGE = PostgresImage.parse("postgres:16");
 
    private Boolean inContainer = false;
 
