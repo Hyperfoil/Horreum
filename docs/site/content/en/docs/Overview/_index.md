@@ -26,6 +26,5 @@ Horreum integrates into reporting tools to provide detailed analysis of key metr
 
 Give your users next steps from the Overview. For example:
 
-* [Getting Started](/docs/getting-started/): Get started with $project
-* [Examples](/docs/examples/): Check out some example code!
+* [Getting Started](/docs/tutorials/get-started/): Get started with $project
 
