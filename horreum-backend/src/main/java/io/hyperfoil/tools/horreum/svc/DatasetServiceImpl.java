@@ -60,36 +60,36 @@ public class DatasetServiceImpl implements DatasetService {
 
    //@formatter:off
    private static final String LABEL_QUERY = """
-         WITH 
+         WITH
          used_labels AS (
-            SELECT label.id AS label_id, label.name, ds.schema_id, count(le) AS count 
-            FROM dataset_schemas ds 
-            JOIN label ON label.schema_id = ds.schema_id 
-            LEFT JOIN label_extractors le ON le.label_id = label.id 
+            SELECT label.id AS label_id, label.name, ds.schema_id, count(le) AS count
+            FROM dataset_schemas ds
+            JOIN label ON label.schema_id = ds.schema_id
+            LEFT JOIN label_extractors le ON le.label_id = label.id
             WHERE ds.dataset_id = ?1 AND (?2 < 0 OR label.id = ?2) GROUP BY label.id, label.name, ds.schema_id
-         ), 
+         ),
          lvalues AS (
-            SELECT ul.label_id, le.name, 
-                  (CASE WHEN le.isarray THEN 
-                     jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath::::jsonpath) 
-                 ELSE 
-                     jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath::::jsonpath) 
-                  END) AS value 
-            FROM dataset 
-            JOIN dataset_schemas ds ON dataset.id = ds.dataset_id 
-            JOIN used_labels ul ON ul.schema_id = ds.schema_id 
-            LEFT JOIN label_extractors le ON ul.label_id = le.label_id 
+            SELECT ul.label_id, le.name,
+                  (CASE WHEN le.isarray THEN
+                     jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath::::jsonpath)
+                 ELSE
+                     jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath::::jsonpath)
+                  END) AS value
+            FROM dataset
+            JOIN dataset_schemas ds ON dataset.id = ds.dataset_id
+            JOIN used_labels ul ON ul.schema_id = ds.schema_id
+            LEFT JOIN label_extractors le ON ul.label_id = le.label_id
             WHERE dataset.id = ?1
-         ) 
-         SELECT lvalues.label_id, ul.name, function, 
-               (CASE 
-                  WHEN ul.count > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value) 
-                  WHEN ul.count = 1 THEN jsonb_agg(lvalues.value) -> 0 
+         )
+         SELECT lvalues.label_id, ul.name, function,
+               (CASE
+                  WHEN ul.count > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value)
+                  WHEN ul.count = 1 THEN jsonb_agg(lvalues.value) -> 0
                   ELSE '{}'::::jsonb END
-               ) AS value 
-         FROM label 
-         JOIN lvalues ON lvalues.label_id = label.id 
-         JOIN used_labels ul ON label.id = ul.label_id 
+               ) AS value
+         FROM label
+         JOIN lvalues ON lvalues.label_id = label.id
+         JOIN used_labels ul ON label.id = ul.label_id
          GROUP BY lvalues.label_id, ul.name, function, ul.count
          """;
    protected static final String LABEL_PREVIEW = """
@@ -125,35 +125,56 @@ public class DatasetServiceImpl implements DatasetService {
          JOIN dataset ON dataset.id = ds.dataset_id
          JOIN schema ON schema.id = ds.schema_id
          """;
-   private static final String VALIDATION_SELECT = "validation AS (" +
-            "SELECT dataset_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM dataset_validationerrors GROUP BY dataset_id" +
-         ")";
-   private static final String DATASET_SUMMARY_SELECT = " SELECT ds.id, ds.runid AS runId, ds.ordinal, " +
-         "ds.testid AS testId, test.name AS testname, ds.description, " +
-         "EXTRACT(EPOCH FROM ds.start) * 1000 AS start, EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop, " +
-         "ds.owner, ds.access, dv.value AS view, " +
-         "COALESCE(schema_agg.schemas, '[]') AS schemas, " +
-         "COALESCE(validation.errors, '[]') AS validationErrors " +
-         "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
-         "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
-         "LEFT JOIN validation ON validation.dataset_id = ds.id " +
-         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id = ";
-   private static final String LIST_SCHEMA_DATASETS =
-         "WITH ids AS (" +
-            "SELECT dataset_id AS id FROM dataset_schemas WHERE uri = ?1" +
-         "), schema_agg AS (" +
-            SCHEMAS_SELECT + " WHERE dataset_id IN (SELECT id FROM ids) GROUP BY dataset_id" +
-         ") SELECT ds.id, ds.runid AS runId, ds.ordinal, " +
-         "ds.testid AS testId, test.name AS testname, ds.description, " +
-         "EXTRACT(EPOCH FROM ds.start) * 1000 AS start, EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop, " +
-         "ds.owner, ds.access, dv.value AS view, schema_agg.schemas AS schemas, '[]'::::jsonb AS validationErrors " +
-         "FROM dataset ds LEFT JOIN test ON test.id = ds.testid " +
-         "LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id " +
-         "LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id WHERE ds.id IN (SELECT id FROM ids)";
-   private static final String ALL_LABELS_SELECT = "SELECT dataset.id as dataset_id, " +
-         "COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values FROM dataset " +
-         "LEFT JOIN label_values lv ON dataset.id = lv.dataset_id " +
-         "LEFT JOIN label ON label.id = label_id ";
+   private static final String VALIDATION_SELECT = """
+          validation AS (
+            SELECT dataset_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors
+            FROM dataset_validationerrors GROUP BY dataset_id
+          )
+         """;
+   private static final String DATASET_SUMMARY_SELECT = """
+         SELECT ds.id, ds.runid AS runId,
+            ds.ordinal, ds.testid AS testId,
+            test.name AS testname, ds.description,
+            EXTRACT(EPOCH FROM ds.start) * 1000 AS start,
+            EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop,
+            ds.owner, ds.access, dv.value AS view,
+            COALESCE(schema_agg.schemas, '[]') AS schemas,
+            COALESCE(validation.errors, '[]') AS validationErrors
+         FROM dataset ds
+         LEFT JOIN test ON test.id = ds.testid
+         LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id
+         LEFT JOIN validation ON validation.dataset_id = ds.id
+         LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id =
+         """;
+   private static final String LIST_SCHEMA_DATASETS = """
+         WITH ids AS (
+            SELECT dataset_id AS id FROM dataset_schemas WHERE uri = ?1
+         ),
+         schema_agg AS (
+         """ +
+            SCHEMAS_SELECT +
+         """
+            WHERE dataset_id IN (SELECT id FROM ids) GROUP BY dataset_id
+         )
+         SELECT ds.id, ds.runid AS runId, ds.ordinal,
+            ds.testid AS testId, test.name AS testname, ds.description,
+            EXTRACT(EPOCH FROM ds.start) * 1000 AS start,
+            EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop,
+            ds.owner, ds.access, dv.value AS view,
+            schema_agg.schemas AS schemas, '[]'::::jsonb AS validationErrors
+         FROM dataset ds
+         LEFT JOIN test ON test.id = ds.testid
+         LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id
+         LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id
+         WHERE ds.id IN (SELECT id FROM ids)
+         """;
+   private static final String ALL_LABELS_SELECT = """
+         SELECT dataset.id as dataset_id,
+            COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values
+         FROM dataset
+         LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
+         LEFT JOIN label ON label.id = label_id
+         """;
 
    //@formatter:on
    @Inject
@@ -294,8 +315,13 @@ public class DatasetServiceImpl implements DatasetService {
 
    @Override
    public List<LabelValue> labelValues(int datasetId) {
-      Stream<Object[]> stream = em.unwrap(Session.class).createNativeQuery("SELECT label_id, label.name AS label_name, schema.id AS schema_id, schema.name AS schema_name, schema.uri, value FROM label_values " +
-            "JOIN label ON label.id = label_id JOIN schema ON label.schema_id = schema.id WHERE dataset_id = ?1", Object[].class)
+      Stream<Object[]> stream = em.unwrap(Session.class).createNativeQuery("""
+            SELECT label_id, label.name AS label_name, schema.id AS schema_id, schema.name AS schema_name, schema.uri, value
+            FROM label_values
+            JOIN label ON label.id = label_id
+            JOIN schema ON label.schema_id = schema.id
+            WHERE dataset_id = ?1
+            """, Object[].class)
             .setParameter(1, datasetId)
             .addScalar("label_id", StandardBasicTypes.INTEGER)
             .addScalar("label_name", StandardBasicTypes.TEXT)
@@ -452,7 +478,7 @@ public class DatasetServiceImpl implements DatasetService {
       if(mediator.testMode())
          Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation)));
    }
-   
+
    @Transactional
    public void deleteDataset(int datasetId) {
       em.createNativeQuery("DELETE FROM label_values WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
@@ -476,11 +502,15 @@ public class DatasetServiceImpl implements DatasetService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional(Transactional.TxType.REQUIRES_NEW)
    protected void findFailingExtractor(int datasetId) {
-      List<Object[]> extractors = em.unwrap(Session.class).createNativeQuery(
-            "SELECT ds.uri, label.name AS name, le.name AS extractor_name, ds.index, le.jsonpath FROM dataset_schemas ds " +
-            "JOIN label ON label.schema_id = ds.schema_id " +
-            "JOIN label_extractors le ON le.label_id = label.id " +
-            "WHERE ds.dataset_id = ?1", Object[].class).setParameter(1, datasetId).getResultList();
+      List<Object[]> extractors = em.unwrap(Session.class).createNativeQuery("""
+            SELECT ds.uri, label.name AS name, le.name AS extractor_name, ds.index, le.jsonpath
+            FROM dataset_schemas ds
+            JOIN label ON label.schema_id = ds.schema_id
+            JOIN label_extractors le ON le.label_id = label.id
+            WHERE ds.dataset_id = ?1
+            """, Object[].class)
+              .setParameter(1, datasetId)
+              .getResultList();
       for (Object[] row : extractors) {
          try {
             // actual result of query is ignored

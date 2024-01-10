@@ -877,7 +877,7 @@ paths:
         example: 202
       - name: schemaUri
         in: query
-        description: FIlter by Schmea URI
+        description: Filter by Schmea URI
         schema:
           type: string
         example: uri:my-benchmark:0.1
@@ -3826,6 +3826,13 @@ components:
           description: Total number of Runs for the Test
           type: number
           example: 101
+        watching:
+          description: Subscriptions for each test for authenticated user
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+          example: []
     TestToken:
       required:
       - id

@@ -49,7 +49,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
       set.add(item);
       return set;
    }
-   
+
    @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN})
    @WithRoles
    @Override
