@@ -40,19 +40,25 @@ import io.quarkus.runtime.Startup;
 public class NotificationServiceImpl implements NotificationService {
    private static final Logger log = Logger.getLogger(NotificationServiceImpl.class);
    //@formatter:off
-   private static final String GET_NOTIFICATIONS =
-         "WITH ens AS (" +
-            "SELECT ns.*, watch_id FROM notificationsettings ns " +
-            "JOIN watch_users wu ON NOT ns.isteam AND ns.name = wu.users " +
-            "UNION " +
-            "SELECT ns.*, watch_id FROM notificationsettings ns " +
-            "JOIN watch_teams wt ON ns.isteam AND ns.name = wt.teams " +
-            "UNION " +
-            "SELECT ns.*, watch_id FROM notificationsettings ns " +
-            "JOIN userinfo_teams ut ON NOT ns.isteam AND ns.name = ut.username " +
-            "JOIN watch_teams wt ON wt.teams = ut.team " +
-         ") SELECT method, data, name FROM ens JOIN watch ON ens.watch_id = watch.id WHERE testid = ?" +
-         " AND name NOT IN (SELECT optout FROM watch_optout WHERE ens.watch_id  = watch_optout.watch_id)";
+   private static final String GET_NOTIFICATIONS = """
+         WITH ens AS (
+            SELECT ns.*, watch_id FROM notificationsettings ns
+               JOIN watch_users wu ON NOT ns.isteam AND ns.name = wu.users
+            UNION
+            SELECT ns.*, watch_id FROM notificationsettings ns
+               JOIN watch_teams wt ON ns.isteam AND ns.name = wt.teams
+            UNION
+            SELECT ns.*, watch_id FROM notificationsettings ns
+               JOIN userinfo_teams ut ON NOT ns.isteam
+                  AND ns.name = ut.username
+               JOIN watch_teams wt ON wt.teams = ut.team
+         )
+         SELECT method, data, name
+         FROM ens
+         JOIN watch ON ens.watch_id = watch.id
+         WHERE testid = ?
+          AND name NOT IN (SELECT optout FROM watch_optout WHERE ens.watch_id  = watch_optout.watch_id)
+         """;
    //@formatter:on
    public final Map<String, NotificationPlugin> plugins = new HashMap<>();
 

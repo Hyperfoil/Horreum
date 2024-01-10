@@ -161,15 +161,24 @@ public class ExperimentServiceImpl implements ExperimentService {
    private void runExperiments(Dataset.Info info, Consumer<ExperimentResult> resultConsumer, Consumer<List<DatasetLogDAO>> noProfileConsumer, boolean notify) {
       List<DatasetLogDAO> logs = new ArrayList<>();
 
-      NativeQuery<Object[]> selectorQuery = em.unwrap(Session.class).createNativeQuery("WITH lvalues AS (" +
-            "SELECT ep.id AS profile_id, selector_filter, jsonb_array_length(selector_labels) as count, label.name, lv.value " +
-            "FROM experiment_profile ep JOIN label ON json_contains(ep.selector_labels, label.name) " +
-            "LEFT JOIN label_values lv ON label.id = lv.label_id WHERE ep.test_id = ?1 AND lv.dataset_id = ?2" +
-            ") SELECT profile_id, selector_filter, (CASE " +
-            "WHEN count > 1 THEN jsonb_object_agg(COALESCE(name, ''), lvalues.value) " +
-            "WHEN count = 1 THEN jsonb_agg(lvalues.value) -> 0 " +
-            "ELSE '{}'::::jsonb END " +
-            ") AS value FROM lvalues GROUP BY profile_id, selector_filter, count", Object[].class);
+      NativeQuery<Object[]> selectorQuery = em.unwrap(Session.class).createNativeQuery("""
+            WITH lvalues AS (
+               SELECT ep.id AS profile_id, selector_filter, jsonb_array_length(selector_labels) as count, label.name, lv.value
+               FROM experiment_profile ep
+               JOIN label ON json_contains(ep.selector_labels, label.name)
+               LEFT JOIN label_values lv ON label.id = lv.label_id
+               WHERE ep.test_id = ?1
+                  AND lv.dataset_id = ?2
+            )
+            SELECT profile_id, selector_filter, (
+               CASE
+                  WHEN count > 1 THEN jsonb_object_agg(COALESCE(name, ''), lvalues.value)
+                  WHEN count = 1 THEN jsonb_agg(lvalues.value) -> 0
+                  ELSE '{}'::::jsonb END
+            ) AS value
+            FROM lvalues
+            GROUP BY profile_id, selector_filter, count
+            """, Object[].class);
       List<Object[]> selectorRows = selectorQuery.setParameter(1, info.testId).setParameter(2, info.id)
             .addScalar("profile_id", StandardBasicTypes.INTEGER)
             .addScalar("selector_filter", StandardBasicTypes.TEXT)
@@ -195,17 +204,26 @@ public class ExperimentServiceImpl implements ExperimentService {
          return;
       }
 
-      NativeQuery<Object[]> baselineQuery = em.unwrap(Session.class).createNativeQuery("WITH lvalues AS (" +
-            "SELECT ep.id AS profile_id, baseline_filter, jsonb_array_length(baseline_labels) as count, label.name, lv.value, lv.dataset_id " +
-            "FROM experiment_profile ep JOIN label ON json_contains(ep.baseline_labels, label.name) " +
-            "LEFT JOIN label_values lv ON label.id = lv.label_id " +
-            "JOIN dataset ON dataset.id = lv.dataset_id " +
-            "WHERE ep.id IN ?1 AND dataset.testid = ?2 " +
-            ") SELECT profile_id, baseline_filter, (CASE " +
-            "WHEN count > 1 THEN jsonb_object_agg(COALESCE(name, ''), lvalues.value) " +
-            "WHEN count = 1 THEN jsonb_agg(lvalues.value) -> 0 " +
-            "ELSE '{}'::::jsonb END " +
-            ") AS value, dataset_id FROM lvalues GROUP BY profile_id, baseline_filter, dataset_id, count", Object[].class);
+      NativeQuery<Object[]> baselineQuery = em.unwrap(Session.class).createNativeQuery("""
+            WITH lvalues AS (
+               SELECT ep.id AS profile_id, baseline_filter, jsonb_array_length(baseline_labels) as count, label.name, lv.value, lv.dataset_id
+               FROM experiment_profile ep
+               JOIN label ON json_contains(ep.baseline_labels, label.name)
+               LEFT JOIN label_values lv ON label.id = lv.label_id
+               JOIN dataset ON dataset.id = lv.dataset_id
+               WHERE ep.id IN ?1
+               AND dataset.testid = ?2
+            )
+            SELECT profile_id, baseline_filter,
+               (CASE
+                  WHEN count > 1 THEN jsonb_object_agg(COALESCE(name, ''), lvalues.value)
+                  WHEN count = 1 THEN jsonb_agg(lvalues.value) -> 0
+                  ELSE '{}'::::jsonb END
+               ) AS value,
+               dataset_id
+            FROM lvalues
+            GROUP BY profile_id, baseline_filter, dataset_id, count
+            """, Object[].class);
       List<Object[]> baselineRows = baselineQuery.setParameter(1, matchingProfile).setParameter(2, info.testId)
             .addScalar("profile_id", StandardBasicTypes.INTEGER)
             .addScalar("baseline_filter", StandardBasicTypes.TEXT)
@@ -269,10 +287,14 @@ public class ExperimentServiceImpl implements ExperimentService {
                                  new Dataset.Info((int) tuples[0],(int) tuples[1],(int) tuples[2],(int) tuples[3]));
          List<Dataset.Info> baseline = datasetQuery.setParameter(1, entry.getValue()).getResultList();
 
-         JsonNode extraLabels = (JsonNode) em.createNativeQuery("SELECT COALESCE(jsonb_object_agg(COALESCE(label.name, ''), lv.value), '{}'::::jsonb) AS value " +
-               "FROM experiment_profile ep JOIN label ON json_contains(ep.extra_labels, label.name) " +
-               "LEFT JOIN label_values lv ON label.id = lv.label_id WHERE ep.id = ?1 AND lv.dataset_id = ?2")
-               .setParameter(1, profile.id).setParameter(2, info.id)
+         JsonNode extraLabels = (JsonNode) em.createNativeQuery("""
+               SELECT COALESCE(jsonb_object_agg(COALESCE(label.name, ''), lv.value), '{}'::::jsonb) AS value
+               FROM experiment_profile ep
+               JOIN label ON json_contains(ep.extra_labels, label.name)
+               LEFT JOIN label_values lv ON label.id = lv.label_id
+               WHERE ep.id = ?1
+                  AND lv.dataset_id = ?2
+               """).setParameter(1, profile.id).setParameter(2, info.id)
                .unwrap(NativeQuery.class)
                .addScalar("value", JsonBinaryType.INSTANCE)
                .getSingleResult();

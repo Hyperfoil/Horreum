@@ -90,11 +90,20 @@ public class SchemaServiceImpl implements SchemaService {
    //@formatter:off
    private static final String UPDATE_TOKEN = "UPDATE schema SET token = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE schema SET owner = ?, access = ? WHERE id = ?";
-   private static final String FETCH_SCHEMAS_RECURSIVE = "WITH RECURSIVE refs(uri) AS (" +
-         "SELECT ? UNION ALL " +
-         "SELECT substring(jsonb_path_query(schema, '$.**.\"$ref\" ? (! (@ starts with \"#\"))')#>>'{}' from '[^#]*') as uri " +
-            "FROM refs INNER JOIN schema on refs.uri = schema.uri) " +
-         "SELECT schema.* FROM schema INNER JOIN refs ON schema.uri = refs.uri";
+   private static final String FETCH_SCHEMAS_RECURSIVE =
+         """
+         WITH RECURSIVE refs(uri) AS
+               (
+                  SELECT ?
+                  UNION ALL
+                  SELECT substring(jsonb_path_query(schema, '$.**.\"$ref\" ? (! (@ starts with \"#\"))')#>>'{}' from '[^#]*'
+               ) as uri
+            FROM refs
+            INNER JOIN schema on refs.uri = schema.uri)
+         SELECT schema.*
+         FROM schema
+         INNER JOIN refs ON schema.uri = refs.uri
+         """;
    //@formatter:on
 
    private final CustomType JSON_STRING_ARRY_TYPE = new CustomType<>(new JsonBinaryType(String[].class), new TypeConfiguration());

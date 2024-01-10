@@ -655,7 +655,7 @@ public class ReportServiceImpl implements ReportService {
                      } else {
                         debugList.append("(filtered)");
                         log.debugf("Dataset %d/%d (%d) filtered out, value: %s", runId, ordinal, datasetId, row[3]);
-                         
+
                      }
                   } else {
                      debugList.append("(filtered: not boolean)");

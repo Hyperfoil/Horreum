@@ -86,16 +86,26 @@ import static io.hyperfoil.tools.horreum.entity.data.SchemaDAO.QUERY_TRANSFORMER
 public class RunServiceImpl implements RunService {
    private static final Logger log = Logger.getLogger(RunServiceImpl.class);
    //@formatter:off
-   private static final String FIND_AUTOCOMPLETE =
-         "SELECT * FROM (" +
-            "SELECT DISTINCT jsonb_object_keys(q) AS key " +
-            "FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q " +
-            "WHERE jsonb_typeof(q) = 'object') AS keys " +
-         "WHERE keys.key LIKE CONCAT(?, '%');";
-   protected static final String FIND_RUNS_WITH_URI = "SELECT id, testid FROM run WHERE NOT trashed AND (data->>'$schema' = ?1 OR (" +
-         "CASE WHEN jsonb_typeof(data) = 'object' THEN ?1 IN (SELECT values.value->>'$schema' FROM jsonb_each(data) as values) " +
-         "WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema') ELSE false END) OR " +
-         "(metadata IS NOT NULL AND ?1 IN (SELECT jsonb_array_elements(metadata)->>'$schema')))";
+   private static final String FIND_AUTOCOMPLETE = """
+         SELECT * FROM (
+            SELECT DISTINCT jsonb_object_keys(q) AS key
+            FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q
+            WHERE jsonb_typeof(q) = 'object') AS keys
+         WHERE keys.key LIKE CONCAT(?, '%');
+         """;
+   protected static final String FIND_RUNS_WITH_URI = """
+         SELECT id, testid
+         FROM run
+         WHERE NOT trashed
+            AND (data->>'$schema' = ?1
+            OR (CASE
+               WHEN jsonb_typeof(data) = 'object' THEN ?1 IN (SELECT values.value->>'$schema' FROM jsonb_each(data) as values)
+               WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')
+               ELSE false
+               END)
+            OR (metadata IS NOT NULL AND ?1 IN (SELECT jsonb_array_elements(metadata)->>'$schema'))
+         )
+         """;
    //@formatter:on
    private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
