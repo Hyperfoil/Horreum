@@ -126,7 +126,13 @@ public class UserServiceImpl implements UserService {
       Response response = keycloak.realm(realm).users().create(rep);
       if (response.getStatusInfo().getFamily() != Response.Status.Family.SUCCESSFUL) {
          log.errorf("Failed to create new user %s: %s", rep, response);
-         throw ServiceException.badRequest("Failed to create new user.");
+         if (!keycloak.realm(realm).users().search(rep.getUsername(), true).isEmpty()) {
+            throw ServiceException.badRequest("User exists with same username.");
+         } else if (!keycloak.realm(realm).users().searchByEmail(rep.getEmail(), true).isEmpty()) {
+            throw ServiceException.badRequest("User exists with same email.");
+         } else {
+            throw ServiceException.badRequest("Failed to create new user: " + response.getStatusInfo().getReasonPhrase());
+         }
       }
       List<UserRepresentation> matchingUsers = keycloak.realm(realm).users().search(rep.getUsername(), true);
       if (matchingUsers == null || matchingUsers.isEmpty()) {
