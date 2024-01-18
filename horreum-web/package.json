@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@monaco-editor/react": "4.5.2",
+    "@monaco-editor/react": "4.6.0",
     "@patternfly/patternfly": "4.224.4",
     "@patternfly/react-core": "4.277.0",
     "@patternfly/react-table": "4.113.5",
