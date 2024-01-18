@@ -358,8 +358,7 @@ public class UserServiceImpl implements UserService {
    public void addTeam(String team) {
       String prefix = getTeamPrefix(team);
          createRole(team, null);
-         createRole(prefix + Roles.MANAGER, Set.of(team));
-         for (String type : Arrays.asList(Roles.TESTER, Roles.VIEWER, Roles.UPLOADER)) {
+         for (String type : Arrays.asList(Roles.MANAGER, Roles.TESTER, Roles.VIEWER, Roles.UPLOADER)) {
             createRole(prefix + type, Set.of(type, team));
          }
    }
