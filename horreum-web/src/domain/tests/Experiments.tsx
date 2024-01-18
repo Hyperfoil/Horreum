@@ -338,14 +338,22 @@ export default function Experiments(props: ExperimentsProps) {
                                                 )}
                                             </Flex>
                                         </FormGroup>
-                                        <VariableSelect
-                                            variables={variables}
-                                            selectedId={c.variableId}
-                                            onChange={v => {
-                                                c.variableId = v.id
-                                                update({ comparisons: [...selected.comparisons] })
-                                            }}
-                                        />
+                                        <FormGroup
+                                            label={
+                                                <>
+                                                    Variable{" "}
+                                                </>
+                                            }
+                                        >
+                                            <VariableSelect
+                                                variables={variables}
+                                                selectedId={c.variableId}
+                                                onChange={v => {
+                                                    c.variableId = v.id
+                                                    update({ comparisons: [...selected.comparisons] })
+                                                }}
+                                            />
+                                        </FormGroup>
                                         {usedModel.ui.map(comp => (
                                             <ConditionComponent
                                                 {...comp}
