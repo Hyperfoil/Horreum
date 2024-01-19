@@ -19,10 +19,10 @@ import org.jboss.resteasy.reactive.server.spi.ResteasyReactiveContainerRequestCo
 @Singleton
 public class HorreumAuthorizationFilter {
 
-   private final String authServerUrl;
+   private final Optional<String> authServerUrl;
    private final Optional<String> issuer;
 
-   public HorreumAuthorizationFilter(@ConfigProperty(name = "quarkus.oidc.auth-server-url") String authServerUrl,
+   public HorreumAuthorizationFilter(@ConfigProperty(name = "quarkus.oidc.auth-server-url") Optional<String> authServerUrl,
                                      @ConfigProperty(name = "quarkus.oidc.token.issuer") Optional<String> issuer) {
       this.authServerUrl = authServerUrl;
       this.issuer = issuer;
@@ -51,8 +51,10 @@ public class HorreumAuthorizationFilter {
                } else if (!issuer.get().equals(iss)) {
                   return replyWrongIss(iss, issuer.get());
                }
-            } else if (!authServerUrl.equals(iss)) {
-               return replyWrongIss(iss, authServerUrl);
+            } else if (authServerUrl.isEmpty()) {
+               return Response.status(Response.Status.FORBIDDEN).entity("Missing URL to validate authorization token. Set OIDC authentication server URL (or OIDC token issuer) in Horreum config.").build();
+            } else if (!authServerUrl.get().equals(iss)) {
+               return replyWrongIss(iss, authServerUrl.get());
             }
             return null;
          }
