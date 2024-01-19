@@ -5,29 +5,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import io.hyperfoil.tools.horreum.api.data.ActionConfig.GithubIssueCommentActionConfig;
+import io.hyperfoil.tools.horreum.api.data.ActionConfig.GithubIssueCreateActionConfig;
+import io.hyperfoil.tools.horreum.api.data.ActionConfig.HttpActionConfig;
+import io.hyperfoil.tools.horreum.api.data.ActionConfig.SlackChannelMessageActionConfig;
 import jakarta.validation.constraints.NotNull;
+
+import org.eclipse.microprofile.openapi.annotations.media.DiscriminatorMapping;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 
-
 public class Action {
 
-    public static class HttpAction {
-        public String url;
-    }
-    public static class GithubIssueCommentAction {
-        public String issueUrl;
-        public String owner;
-        public String repo;
-        public String issue;
-        public String formatter;
-    }
-    public static class GithubIssueCreateAction {
-        public String owner;
-        public String repo;
-        public String title;
-        public String formatter;
-    }
     public static class Secret {
         public String token;
         public boolean modified;
@@ -43,14 +33,18 @@ public class Action {
     public String type;
 
     @NotNull
-    @JsonProperty( required = true )
-    @Schema(type = SchemaType.OBJECT,
-            oneOf = {
-                    Action.HttpAction.class,
-                    Action.GithubIssueCommentAction.class,
-                    Action.GithubIssueCreateAction.class
-            }
-    )
+    @JsonProperty(required = true)
+    @Schema(type = SchemaType.OBJECT, discriminatorProperty = "type", discriminatorMapping = {
+            @DiscriminatorMapping(schema = GithubIssueCommentActionConfig.class, value = "github-issue-comment"),
+            @DiscriminatorMapping(schema = GithubIssueCreateActionConfig.class, value = "github-issue-create"),
+            @DiscriminatorMapping(schema = HttpActionConfig.class, value = "http"),
+            @DiscriminatorMapping(schema = SlackChannelMessageActionConfig.class, value = "slack-channel-message"),
+    }, oneOf = {
+            GithubIssueCommentActionConfig.class,
+            GithubIssueCreateActionConfig.class,
+            HttpActionConfig.class,
+            SlackChannelMessageActionConfig.class,
+    })
     public ObjectNode config;
 
     @NotNull

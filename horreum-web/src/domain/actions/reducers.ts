@@ -1,10 +1,11 @@
-
+export const TEST_NEW = "test/new"
+export const RUN_NEW = "run/new"
 export const EXPERIMENT_RESULT_NEW = "experiment_result/new"
 export const CHANGE_NEW = "change/new"
 export const testEventTypes = [
-    [
-        "run/new",
-        `{
+  [
+    RUN_NEW,
+    `{
   "id": 123,
   "data": ...,
   "start": "2022-08-29T12:28:14+02:00",
@@ -18,10 +19,10 @@ export const testEventTypes = [
   "testname": "My test",
   "description": null,
 }`,
-    ],
-    [
-        CHANGE_NEW,
-        `{
+  ],
+  [
+    CHANGE_NEW,
+    `{
   "change": {
     "id": 123,
     "variable": {
@@ -45,10 +46,10 @@ export const testEventTypes = [
   "dataset": ...,
   "notify": true
 }`,
-    ],
-    [
-        EXPERIMENT_RESULT_NEW,
-        `{
+  ],
+  [
+    EXPERIMENT_RESULT_NEW,
+    `{
   "profile": {
     "id": 123,
     "name": "pull-request",
@@ -83,13 +84,13 @@ export const testEventTypes = [
       "another-variable": ...
   }
 }`,
-    ],
+  ],
 ]
 export const globalEventTypes = [
-    ...testEventTypes,
-    [
-        "test/new",
-        `{
+  ...testEventTypes,
+  [
+    TEST_NEW,
+    `{
   "id": 10,
   "name": "My test",
   "folder": null,
@@ -97,5 +98,5 @@ export const globalEventTypes = [
   "owner": "dev-team",
   "access": 0
 }`,
-    ],
+  ],
 ]

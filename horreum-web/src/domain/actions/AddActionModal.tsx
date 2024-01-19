@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Button, ButtonVariant, Modal } from "@patternfly/react-core"
-import { Action as Action } from "../../api"
+import { Action, ActionConfig, HttpActionConfigFromJSON } from "../../api"
 import { globalEventTypes } from "./reducers"
 import ActionComponentForm from "./ActionComponentForm"
 
@@ -10,12 +10,12 @@ type AddActionModalProps = {
     onSubmit(action: Action): Promise<any>
 }
 
-const DEFAULT_ACTION = {
+const DEFAULT_ACTION : Action = {
     id: -1,
     event: globalEventTypes[0][0],
     type: "http",
     testId: -1,
-    config: { url: "" },
+    config: { url: "", type: "http" } as ActionConfig,
     secrets: {},
     active: true,
     runAlways: false,

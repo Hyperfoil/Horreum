@@ -6,23 +6,34 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
+import io.hyperfoil.tools.horreum.action.SlackChannelMessageAction;
 import io.hyperfoil.tools.horreum.api.data.Action;
+import io.hyperfoil.tools.horreum.api.data.ActionLog;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.core.HttpHeaders;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.TestInfo;
+
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+import io.restassured.http.ContentType;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -32,6 +43,9 @@ public class ActionServiceTest extends BaseServiceTest {
 
    @ConfigProperty(name = "quarkus.http.port")
    String port;
+
+   @Inject
+   private ActionServiceImpl actionService;
 
    @org.junit.jupiter.api.Test
    public void testFailingHttp(TestInfo testInfo) {
@@ -54,7 +68,8 @@ public class ActionServiceTest extends BaseServiceTest {
    public void testAddGlobalAction() {
       String responseType = addGlobalAction(AsyncEventChannels.TEST_NEW, "https://attacker.com")
             .then().statusCode(400).extract().header(HttpHeaders.CONTENT_TYPE);
-      // constraint violations are mapped to 400 + JSON response, we want explicit error
+      // constraint violations are mapped to 400 + JSON response, we want explicit
+      // error
       assertTrue(responseType.startsWith("text/plain")); // text/plain;charset=UTF-8
 
       addAllowedSite("https://example.com");
@@ -63,5 +78,78 @@ public class ActionServiceTest extends BaseServiceTest {
       assertNotNull(action.id);
       assertTrue(action.active);
       given().auth().oauth2(getAdminToken()).delete("/api/action/" + action.id);
+   }
+
+   /**
+    * @param testInfo
+    */
+   @org.junit.jupiter.api.Test
+   public void testSlackAction(TestInfo testInfo) {
+      Test test = createTest(createExampleTest(getTestName(testInfo)));
+
+      /*
+       * Define test case "CHANNEL IDs", which match the mock slack service.
+       * The value is true if we expect the POST to succeed, or false if we
+       * expect failure.
+       */
+      Map<String, Boolean> channels = Map.of(
+            "GOODCHANNEL", true,
+            "BADCHANNEL", false,
+            "BUSYCHANNEL", true,
+            "ERRORCHANNEL", false);
+      String token = "FAKETOKEN";
+
+      /*
+       * Build an Action JSON directly because Action DTO serialization will
+       * mask the secrets.
+       */
+      ObjectNode config = Util.OBJECT_MAPPER.createObjectNode().put("formatter", "testToSlack");
+      ObjectNode secrets = Util.OBJECT_MAPPER.createObjectNode().put("token", token);
+      ObjectNode action_json = Util.OBJECT_MAPPER.createObjectNode()
+            .put("id", -1)
+            .put("event", AsyncEventChannels.TEST_NEW.name())
+            .put("type", SlackChannelMessageAction.TYPE_SLACK_MESSAGE)
+            .put("testId", test.id)
+            .put("active", true)
+            .put("runAlways", true);
+      action_json.set("config", config);
+      action_json.set("secrets", secrets);
+
+      // Iterate through the set of test cases.
+      for (Map.Entry<String, Boolean> test_case : channels.entrySet()) {
+         config.put("channel", test_case.getKey());
+         Action action = jsonRequest().auth().oauth2(getAdminToken())
+               .contentType(ContentType.JSON).body(action_json)
+               .post("/api/action")
+               .then().statusCode(200)
+               .contentType(ContentType.JSON).extract().body().as(Action.class);
+
+         // Dispatch the action manually
+         actionService.onNewTest(test);
+         int errors = 0;
+
+         // Look for Action log messages corresponding to this test case.
+         List<ActionLog> logs = jsonRequest().auth().oauth2(getTesterToken())
+               .queryParam("level", PersistentLogDAO.ERROR).get("/api/log/action/" + test.id)
+               .then().statusCode(200)
+               .contentType(ContentType.JSON).extract().body().jsonPath().getList(".", ActionLog.class);
+         for (ActionLog l : logs) {
+            if (l.type.equals(SlackChannelMessageAction.TYPE_SLACK_MESSAGE)
+                  && l.message.contains(test_case.getKey()) && l.level == 3) {
+               errors++;
+            }
+         }
+
+         /*
+          * Assert that we received 0 or 1 action error logs, depending on the
+          * expected status. This is imperfect, as the "BUSY" (413) case is
+          * retried asynchronously and we won't necessarily catch an error, but
+          * it's sufficient for the other test cases.
+          */
+         Assertions.assertEquals(test_case.getValue() ? 0 : 1, errors, "Test case " + test_case.getKey() + " failed");
+
+         // Remove the action. (The test framework will remove the test.)
+         given().auth().oauth2(getAdminToken()).delete("/api/action/" + action.id);
+      }
    }
 }
