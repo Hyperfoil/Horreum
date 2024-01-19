@@ -675,6 +675,7 @@ paths:
         description: query string to filter runs
         schema:
           type: string
+        example: $.*
       - name: matchAll
         in: query
         description: match all Runs?
@@ -2388,9 +2389,17 @@ components:
         config:
           type: object
           oneOf:
-          - $ref: '#/components/schemas/HttpAction'
-          - $ref: '#/components/schemas/GithubIssueCommentAction'
-          - $ref: '#/components/schemas/GithubIssueCreateAction'
+          - $ref: '#/components/schemas/GithubIssueCommentActionConfig'
+          - $ref: '#/components/schemas/GithubIssueCreateActionConfig'
+          - $ref: '#/components/schemas/HttpActionConfig'
+          - $ref: '#/components/schemas/SlackChannelMessageActionConfig'
+          discriminator:
+            propertyName: type
+            mapping:
+              github-issue-comment: '#/components/schemas/GithubIssueCommentActionConfig'
+              github-issue-create: '#/components/schemas/GithubIssueCreateActionConfig'
+              http: '#/components/schemas/HttpActionConfig'
+              slack-channel-message: '#/components/schemas/SlackChannelMessageActionConfig'
         secrets:
           type: object
           allOf:
@@ -2418,6 +2427,14 @@ components:
           type: string
         type:
           type: string
+    ActionType:
+      description: Type of Action
+      enum:
+      - HTTP
+      - GITHUB_ISSUE_COMMENT
+      - GITHUB_ISSUE_CREATE
+      - SLACK_MESSAGE
+      type: string
     BetterOrWorse:
       description: Result of running an Experiment
       enum:
@@ -3079,34 +3096,69 @@ components:
           type: object
           allOf:
           - $ref: '#/components/schemas/FixThresholdConfig'
-    GithubIssueCommentAction:
+    GithubIssueCommentActionConfig:
+      required:
+      - type
+      - issueUrl
+      - owner
+      - repo
+      - issue
+      - formatter
       type: object
       properties:
+        type:
+          description: Action type
+          type: string
         issueUrl:
+          description: GitHub issue URL
           type: string
         owner:
+          description: GitHub repo owner
           type: string
         repo:
+          description: GitHub repo name
           type: string
         issue:
+          description: GitHub issue number
           type: string
         formatter:
+          description: Object markdown formatter
           type: string
-    GithubIssueCreateAction:
+    GithubIssueCreateActionConfig:
+      required:
+      - type
+      - owner
+      - repo
+      - title
+      - formatter
       type: object
       properties:
+        type:
+          description: Action type
+          type: string
         owner:
+          description: GitHub repo owner
           type: string
         repo:
+          description: GitHub repo name
           type: string
         title:
+          description: GitHub issue title
           type: string
         formatter:
+          description: Object markdown formatter
           type: string
-    HttpAction:
+    HttpActionConfig:
+      required:
+      - type
+      - url
       type: object
       properties:
+        type:
+          description: Action type
+          type: string
         url:
+          description: HTTP address
           type: string
     IndexedLabelValueMap:
       type: object
@@ -3934,6 +3986,22 @@ components:
           type: string
         modified:
           type: boolean
+    SlackChannelMessageActionConfig:
+      required:
+      - type
+      - channel
+      - formatter
+      type: object
+      properties:
+        type:
+          description: Action type
+          type: string
+        channel:
+          description: Slack channel
+          type: string
+        formatter:
+          description: Object markdown formatter
+          type: string
     SortDirection:
       enum:
       - Ascending

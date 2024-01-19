@@ -26,6 +26,7 @@ import io.quarkus.security.identity.SecurityIdentity;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.*;
 import jakarta.transaction.TransactionManager;
@@ -51,6 +52,8 @@ import org.jboss.logging.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+
+@ApplicationScoped
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
 
