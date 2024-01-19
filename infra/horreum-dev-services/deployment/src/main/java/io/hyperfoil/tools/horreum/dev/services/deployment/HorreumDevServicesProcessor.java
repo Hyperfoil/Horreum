@@ -99,51 +99,45 @@ public class HorreumDevServicesProcessor {
 
                         Map<String, String> envvars = HorreumResources.startContainers(Collections.unmodifiableMap(containerArgs));
 
-                        Map<String, String> postgresConfig = new HashMap<>();
-                        String jdbcUrl = HorreumResources.postgreSQLResource.getJdbcUrl();
+                        if (horreumBuildTimeConfig.postgres.enabled) {
+                            Map<String, String> postgresConfig = new HashMap<>();
+                            String jdbcUrl = HorreumResources.postgreSQLResource.getJdbcUrl();
 
-                        postgresConfig.put("quarkus.datasource.jdbc.url", jdbcUrl);
-                        postgresConfig.put("quarkus.datasource.migration.jdbc.url", jdbcUrl);
-                        if (horreumBuildTimeConfig.postgres.sslEnabled) {
-                            // see https://jdbc.postgresql.org/documentation/ssl/ for details
-                            postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.ssl", "true");
-                            postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.sslmode", "verify-full");
-                            postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.sslrootcert", envvars.get("quarkus.datasource.jdbc.sslrootcert"));
+                            postgresConfig.put("quarkus.datasource.jdbc.url", jdbcUrl);
+                            postgresConfig.put("quarkus.datasource.migration.jdbc.url", jdbcUrl);
+                            if (horreumBuildTimeConfig.postgres.sslEnabled) {
+                                // see https://jdbc.postgresql.org/documentation/ssl/ for details
+                                postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.ssl", "true");
+                                postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.sslmode", "verify-full");
+                                postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.sslrootcert", envvars.get("quarkus.datasource.jdbc.sslrootcert"));
+                            }
+
+                            horreumPostgresDevService = new DevServicesResultBuildItem.RunningDevService(
+                                    HorreumResources.postgreSQLResource.getContainer().getContainerName(),
+                                    HorreumResources.postgreSQLResource.getContainer().getContainerId(),
+                                    HorreumResources.postgreSQLResource.getContainer()::close,
+                                    postgresConfig);
                         }
+                        if (horreumBuildTimeConfig.keycloak.enabled) {
+                            Map<String, String> keycloakConfig = new HashMap<>();
+                            Integer keycloakPort = HorreumResources.keycloakResource.getContainer().getMappedPort(horreumBuildTimeConfig.keycloak.httpsEnabled ? 8443 : 8080);
+                            String keycloakURL = (horreumBuildTimeConfig.keycloak.httpsEnabled ? "https" : "http") + "://localhost:" + keycloakPort;
 
-                        horreumPostgresDevService = new DevServicesResultBuildItem.RunningDevService(
-                                HorreumResources.postgreSQLResource.getContainer().getContainerName(),
-                                HorreumResources.postgreSQLResource.getContainer().getContainerId(),
-                                HorreumResources.postgreSQLResource.getContainer()::close,
-                                postgresConfig);
+                            keycloakConfig.put("horreum.keycloak.url", keycloakURL);
+                            keycloakConfig.put("quarkus.oidc.auth-server-url", keycloakURL + "/realms/horreum");
+                            keycloakConfig.put("quarkus.oidc.credentials.secret", envvars.get("quarkus.oidc.credentials.secret"));
+                            if (envvars.containsKey("quarkus.oidc.tls.trust-store-file")) {
+                                keycloakConfig.put("quarkus.oidc.tls.trust-store-file", envvars.get("quarkus.oidc.tls.trust-store-file"));
+                                keycloakConfig.put("quarkus.oidc.tls.verification", "required"); // "certificate-validation" validates the certificate chain, but not the hostname. could also be "none" and disable TLS verification altogether
+                            }
 
-                        Map<String, String> keycloakConfig = new HashMap<>();
-                        Integer keycloakPort = HorreumResources.keycloakResource.getContainer().getMappedPort(horreumBuildTimeConfig.keycloak.httpsEnabled ? 8443 : 8080);
-                        String keycloakURL = (horreumBuildTimeConfig.keycloak.httpsEnabled ? "https" : "http") + "://localhost:" + keycloakPort;
-
-                        keycloakConfig.put("horreum.keycloak.url", keycloakURL);
-                        keycloakConfig.put("quarkus.oidc.auth-server-url", keycloakURL + "/realms/horreum");
-                        keycloakConfig.put("quarkus.oidc.credentials.secret", envvars.get("quarkus.oidc.credentials.secret"));
-                        if (envvars.containsKey("quarkus.oidc.tls.trust-store-file")) {
-                            keycloakConfig.put("quarkus.oidc.tls.trust-store-file", envvars.get("quarkus.oidc.tls.trust-store-file"));
-                            keycloakConfig.put("quarkus.oidc.tls.verification", "required"); // "certificate-validation" validates the certificate chain, but not the hostname. could also be "none" and disable TLS verification altogether
+                            horreumKeycloakDevService = new DevServicesResultBuildItem.RunningDevService(
+                                    HorreumResources.keycloakResource.getContainer().getContainerName(),
+                                    HorreumResources.keycloakResource.getContainer().getContainerId(),
+                                    HorreumResources.keycloakResource.getContainer()::close,
+                                    keycloakConfig);
                         }
-
-                        horreumKeycloakDevService = new DevServicesResultBuildItem.RunningDevService(
-                                HorreumResources.keycloakResource.getContainer().getContainerName(),
-                                HorreumResources.keycloakResource.getContainer().getContainerId(),
-                                HorreumResources.keycloakResource.getContainer()::close,
-                                keycloakConfig);
                     }
-                }
-
-                if (horreumKeycloakDevService == null || horreumPostgresDevService == null) {
-                    if (!errors) {
-                        compressor.close();
-                    } else {
-                        compressor.closeAndDumpCaptured();
-                    }
-                    return;
                 }
 
                 Runnable closeTask = () -> {
@@ -176,8 +170,12 @@ public class HorreumDevServicesProcessor {
                 throw new RuntimeException(t);
             }
 
-            devServicesResultBuildItemBuildProducer.produce(horreumKeycloakDevService.toBuildItem());
-            devServicesResultBuildItemBuildProducer.produce(horreumPostgresDevService.toBuildItem());
+            if (horreumPostgresDevService != null) {
+                devServicesResultBuildItemBuildProducer.produce(horreumPostgresDevService.toBuildItem());
+            }
+            if (horreumKeycloakDevService != null) {
+                devServicesResultBuildItemBuildProducer.produce(horreumKeycloakDevService.toBuildItem());
+            }
         }
     }
 

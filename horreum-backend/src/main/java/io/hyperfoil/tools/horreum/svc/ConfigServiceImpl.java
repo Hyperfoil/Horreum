@@ -142,7 +142,7 @@ public class ConfigServiceImpl implements ConfigService {
     }
 
     private String getString(String propertyName) {
-        return ConfigProvider.getConfig().getValue(propertyName, String.class);
+        return ConfigProvider.getConfig().getOptionalValue(propertyName, String.class).orElse("");
     }
 
 }
