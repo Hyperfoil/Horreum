@@ -343,7 +343,7 @@ export function updateRunsAndDatasetsAction(
 
 ///Runs
 export function fetchRunSummary(id: number, token: string | undefined, alerting: AlertContextType): Promise<RunSummary> {
-    return apiCall(runApi.getRunSummary(id, token), alerting, "FETCH_RUN_SUMMARY", "Failed to fetch data for run " + id);
+    return apiCall(runApi.getRunSummary(id, token), alerting, "FETCH_RUN_SUMMARY", "Failed to fetch data for run " + id + ", try uploading a Run and use new Run id instead.");
 
 }
 
