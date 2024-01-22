@@ -2,7 +2,7 @@
 title: Integrations
 description: Horreum Integrations
 categories: [Integration]
-weight: 5
+weight: 6
 ---
 
 ### Details of Integrations with Horreum

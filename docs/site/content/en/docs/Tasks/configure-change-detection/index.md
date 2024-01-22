@@ -5,9 +5,24 @@ date: 2023-10-15
 weight: 6
 ---
 
-One of the most important features of Horreum is change detection - checking if the new results significantly differ from previous data. Horreum uses **Change Detection Variables** to extract and calculate **Datapoints** - for each dataset and each variable it creates one datapoint. Horreum compares recent datapoint(s) to older ones and if it spots a significant difference it emits a **Change**, and sends a notification to subscribed users or teams. User can later confirm that there was a change (restarting the history from this point for the purpose of change detection) or dismiss it.
+> **Prerequisites**: You have already 
 
-We assume that you've already [created a Test](./create_test.html), [uploaded](./upload.html) some data and [defined the Schema](./define_schema.html) with some labels. Let's go to the test and switch to the 'Change Detection' tab:
+> 1. [created a Test](/docs/tasks/create-new-test/)
+
+> 2. [uploaded](/docs/tasks/upload-run/) some data
+
+> 3. [defined the Schema](/docs/tasks/define-schema-and-views/) with some labels.
+
+
+One of the most important features of Horreum is **Change Detection** - checking if the new results significantly differ from previous data. 
+
+Horreum uses **Change Detection Variables** to extract and calculate **Datapoints** - for each dataset and each variable it creates one datapoint. 
+
+Horreum compares recent datapoint(s) to older ones and if it spots a significant difference it emits a **Change**, and sends a notification to subscribed users or teams. 
+
+User can later confirm that there was a change (restarting the history from this point for the purpose of change detection) or dismiss it.
+
+Let's go to the test and switch to the 'Change Detection' tab:
 
 {{% imgproc variables Fit "1200x300" %}}
 User logged in

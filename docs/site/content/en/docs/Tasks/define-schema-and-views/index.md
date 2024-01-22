@@ -4,10 +4,16 @@ description: Define a Horreum schema to provide the meta-data to allow Horreum t
 date: 2023-10-15
 weight: 4
 ---
+> **Prerequisites**: You have already
+
+> 1. [created a Test](/docs/tasks/create-new-test/)
+
+> 2. [uploaded](/docs/tasks/upload-run/) some data
+
 
 In order to extract data from the Run JSON document we need to annotate it with `$schema` and tell Horreum how to query it.
 
-Let's assume you've [already uploaded](./upload.html) some data. Make sure that you're logged in, on the upper bar go to Schemas and click 'New Schema' button:
+Make sure that you're logged in, on the upper bar go to Schemas and click 'New Schema' button:
 
 {{% imgproc schemas Fit "1200x300" %}}
 User logged in
