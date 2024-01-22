@@ -5,7 +5,7 @@ date: 2023-10-15
 weight: 2
 ---
 
-After [starting Horreum](/docs/tutorial/start.html) and logging in you'll find a blank table with **New Test** button above:
+After [starting Horreum](/docs/tutorials/get-started/) and logging in you'll find a blank table with **New Test** button above:
 
 {{% imgproc logged_in Fit "1200x500" %}}
 Manage Teams
