@@ -91,3 +91,35 @@ A `Fingerprint` is combination of [`Filtering labels`](#label) that unique ident
 ## Datasource
 
 A `Datasource` is a **required** top-level organizational construct that defines the source of the data to be stored or retrieved by Horreum. Currently, Horreum supports 2 types of `Datasource`: Postgres and Elasticsearch
+
+## Baseline
+
+The *initial* sample for an `Experiment` comparison. Configured in an `Experiment Profile`.
+
+## Change Detection Variable
+
+Change detection tracks `Schema` `Label`s that have been configured as a Change Detection Variable.
+
+## Experiment
+
+This enables running a comparison between `Runs` for a particular `Test`. There can be multiple `Profile`s configured for an `Experiment` to check for a variety of desired conditions. The outcome status for each `Profile` condition will be one of the following:
+- SAME
+- WORSE
+- BETTER
+
+## Experiment Profile
+
+A `Profile` consists of:
+- `Experiment` selector
+- `Baseline`
+- 0, 1 or many Comparison conditions
+
+## JSON validation schema
+An *optional* schema added to a `Test` to validate uploaded `Run` JSON data.
+
+
+
+
+
+
+
