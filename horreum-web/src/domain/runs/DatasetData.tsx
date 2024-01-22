@@ -94,18 +94,16 @@ export default function DatasetData(props: DatasetDataProps) {
                         isOpen={labelsLogOpen}
                         onClose={() => setLabelsLogOpen(false)}
                     />
-                    {hasExperiments && (
-                        <>
-                            <Button variant="primary" onClick={() => setExperimentsOpen(true)}>
-                                Evaluate experiment
-                            </Button>
-                            <ExperimentModal
-                                datasetId={props.datasetId}
-                                isOpen={experimentsOpen}
-                                onClose={() => setExperimentsOpen(false)}
-                            />
-                        </>
-                    )}
+                    <>
+                        <Button variant="primary" onClick={() => setExperimentsOpen(true)} isDisabled={!hasExperiments}>
+                            Evaluate experiment
+                        </Button>
+                        <ExperimentModal
+                            datasetId={props.datasetId}
+                            isOpen={experimentsOpen}
+                            onClose={() => setExperimentsOpen(false)}
+                        />
+                    </>
                 </FlexItem>
             </Flex>
                 <Editor
