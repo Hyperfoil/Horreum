@@ -1,5 +1,5 @@
 import {useState, useEffect, useRef, useContext} from "react"
-import { useParams } from "react-router"
+import { useParams } from "react-router-dom"
 
 import { useSelector } from "react-redux"
 
@@ -42,8 +42,8 @@ type Params = {
 
 
 export default function TestView() {
-    const params = useParams<Params>()
-    const [testId, setTestId] = useState(params.testId === "_new" ? 0 : parseInt(params.testId))
+    const {testId} = useParams<any>()
+    const [testIdVal, setTestIdVal] = useState(testId === "_new" ? 0 : parseInt(testId ?? "-1"))
     const [test, setTest] = useState<Test | undefined>()
     const [views, setViews] = useState<View[]>( [])
     const [modified, setModified] = useState(false)
@@ -63,18 +63,18 @@ export default function TestView() {
 
     const { alerting } = useContext(AppContext) as AppContextType;
     useEffect(() => {
-        if (testId !== 0) {
+        if (testIdVal !== 0) {
             setLoaded(false)
-            fetchTest(testId, alerting)
+            fetchTest(testIdVal, alerting)
                 .then(setTest)
-                .then( () => fetchViews(testId, alerting).then(setViews) )
+                .then( () => fetchViews(testIdVal, alerting).then(setViews) )
                 .finally(() => setLoaded(true))
         }
-    }, [testId, teams])
+    }, [testIdVal, teams])
 
     useEffect(() => {
-        document.title = (testId === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
-    }, [test, testId])
+        document.title = (testIdVal === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
+    }, [test, testIdVal])
 
     //TODO:: replace redux
     const isTester = useTester(test ? test.owner : undefined)
@@ -97,19 +97,19 @@ export default function TestView() {
                             </Breadcrumb>
                         </FlexItem>
                         <FlexItem>
-                            <ButtonLink to={`/run/dataset/list/${testId}`}>Dataset list</ButtonLink>
-                            <ButtonLink to={`/run/list/${testId}`} variant="secondary">
+                            <ButtonLink to={`/run/dataset/list/${testIdVal}`}>Dataset list</ButtonLink>
+                            <ButtonLink to={`/run/list/${testIdVal}`} variant="secondary">
                                 Run list
                             </ButtonLink>
                         </FlexItem>
                     </Flex>
                 </CardHeader>
-                {!loaded && testId !== 0 && (
+                {!loaded && testIdVal !== 0 && (
                     <Bullseye>
                         <Spinner />
                     </Bullseye>
                 )}
-                {((loaded && test) || testId === 0) && (
+                {((loaded && test) || testIdVal === 0) && (
                     <CardBody>
                         <SavedTabs
                             afterSave={() => {
@@ -128,7 +128,7 @@ export default function TestView() {
                             >
                                 <General
                                     test={test || undefined}
-                                    onTestIdChange={setTestId}
+                                    onTestIdChange={setTestIdVal}
                                     onModified={setModified}
                                     funcsRef={generalFuncsRef}
                                 />
@@ -145,13 +145,13 @@ export default function TestView() {
                             <SavedTab
                                 title="Views"
                                 fragment="views"
-                                isHidden={testId <= 0}
+                                isHidden={testIdVal <= 0}
                                 onSave={saveFunc(viewFuncsRef)}
                                 onReset={resetFunc(viewFuncsRef)}
                                 isModified={() => modified}
                             >
                                 <Views
-                                    testId={testId}
+                                    testId={testIdVal}
                                     views={ views }
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
@@ -161,7 +161,7 @@ export default function TestView() {
                             <SavedTab
                                 title="Change detection"
                                 fragment="vars"
-                                isHidden={testId <= 0}
+                                isHidden={testIdVal <= 0}
                                 onSave={saveFunc(variablesFuncsRef)}
                                 onReset={resetFunc(variablesFuncsRef)}
                                 isModified={() => modified}
@@ -188,7 +188,7 @@ export default function TestView() {
                             <SavedTab
                                 title="Missing data notifications"
                                 fragment="missingdata"
-                                isHidden={testId <= 0}
+                                isHidden={testIdVal <= 0}
                                 onSave={saveFunc(missingDataFuncsRef)}
                                 onReset={resetFunc(missingDataFuncsRef)}
                                 isModified={() => modified}
@@ -211,13 +211,13 @@ export default function TestView() {
                             <SavedTab
                                 title="Actions"
                                 fragment="actions"
-                                isHidden={testId <= 0 || !isTester}
+                                isHidden={testIdVal <= 0 || !isTester}
                                 onSave={saveFunc(actionsFuncsRef)}
                                 onReset={resetFunc(actionsFuncsRef)}
                                 isModified={() => modified}
                             >
                                 <ActionsUI
-                                    testId={testId}
+                                    testId={testIdVal}
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
                                     funcsRef={actionsFuncsRef}
@@ -226,13 +226,13 @@ export default function TestView() {
                             <SavedTab
                                 title="Subscriptions"
                                 fragment="subscriptions"
-                                isHidden={testId <= 0 || !isTester}
+                                isHidden={testIdVal <= 0 || !isTester}
                                 onSave={saveFunc(subscriptionsFuncsRef)}
                                 onReset={resetFunc(subscriptionsFuncsRef)}
                                 isModified={() => modified}
                             >
                                 <Subscriptions
-                                    testId={testId}
+                                    testId={testIdVal}
                                     testOwner={test ? test.owner : undefined}
                                     onModified={setModified}
                                     funcsRef={subscriptionsFuncsRef}
@@ -241,13 +241,13 @@ export default function TestView() {
                             <SavedTab
                                 title="Transformers"
                                 fragment="transformers"
-                                isHidden={testId <= 0}
+                                isHidden={testIdVal <= 0}
                                 onSave={saveFunc(transformersFuncsRef)}
                                 onReset={resetFunc(transformersFuncsRef)}
                                 isModified={modifiedFunc(transformersFuncsRef)}
                             >
                                 <Transformers
-                                    testId={testId}
+                                    testId={testIdVal}
                                     owner={test?.owner}
                                     originalTransformers={(test && test.transformers) || []}
                                     updateTransformers={ts => {
@@ -259,11 +259,11 @@ export default function TestView() {
                             <SavedTab
                                 title="Export"
                                 fragment="export"
-                                isHidden={testId <= 0 || !isTester}
+                                isHidden={testIdVal <= 0 || !isTester}
                                 onSave={() => Promise.resolve()}
                                 isModified={() => false}
                             >
-                                <TestExportImport name={test?.name || "test"} id={testId} />
+                                <TestExportImport name={test?.name || "test"} id={testIdVal} />
                             </SavedTab>
                         </SavedTabs>
                     </CardBody>
