@@ -1,5 +1,5 @@
 import {useEffect, useState, useRef, useContext} from "react"
-import { useParams } from "react-router"
+import { useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 
 import {
@@ -197,8 +197,8 @@ function General(props: GeneralProps) {
 
 export default function Schema() {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const params = useParams<SchemaParams>()
-    const [schemaId, setSchemaId] = useState(params.schemaId === "_new" ? -1 : Number.parseInt(params.schemaId))
+    const { schemaId } = useParams<any>()
+    const [schemaIdVal, setSchemaIdVal] = useState(schemaId === "_new" ? -1 : Number.parseInt(schemaId ?? "-1"))
     const [schema, setSchema] = useState<SchemaDef | undefined>(undefined)
     const [loading, setLoading] = useState(true)
     const [editorSchema, setEditorSchema] = useState(schema?.schema ? toString(schema?.schema) : undefined)
@@ -210,20 +210,20 @@ export default function Schema() {
     const isTesterForSchema = useTester(schema?.owner)
 
     useEffect(() => {
-        if (schemaId >= 0) {
+        if (schemaIdVal >= 0) {
             setLoading(true)
-            getSchema(schemaId, alerting)
+            getSchema(schemaIdVal, alerting)
                 .then(setSchema)
                 .finally(() => setLoading(false))
         } else {
             setLoading(false)
         }
-    }, [schemaId])
+    }, [schemaIdVal])
     useEffect(() => {
-        document.title = (schemaId < 0 ? "New schema" : schema?.name || "(unknown schema)") + " | Horreum"
+        document.title = (schemaIdVal < 0 ? "New schema" : schema?.name || "(unknown schema)") + " | Horreum"
         setModifiedSchema(schema)
         setEditorSchema(schema?.schema ? toString(schema?.schema) : undefined)
-    }, [schema, schemaId])
+    }, [schema, schemaIdVal])
     // TODO: use this in reaction to editor change
     const getUri = (content?: string) => {
         if (!content) {
@@ -242,10 +242,10 @@ export default function Schema() {
 
     const save = () => {
         if (!modified) {
-            return Promise.resolve(schemaId)
+            return Promise.resolve(schemaIdVal)
         }
         const newSchema = {
-            id: schemaId,
+            id: schemaIdVal,
             ...modifiedSchema,
             schema: editorSchema ? JSON.parse(editorSchema) : null,
         } as SchemaDef
@@ -253,7 +253,7 @@ export default function Schema() {
         return schemaApi.add(newSchema)
             .then(id=>  id,
                 error => alerting.dispatchError(error, "SAVE_SCHEMA", "Failed to save schema")
-            ).then(id => setSchemaId(id))
+            ).then(id => setSchemaIdVal(id))
     }
     const transformersFuncsRef = useRef<TabFunctions>()
     const labelsFuncsRef = useRef<TabFunctions>()
@@ -364,7 +364,7 @@ export default function Schema() {
                                 isModified={modifiedFunc(transformersFuncsRef)}
                             >
                                 <Transformers
-                                    schemaId={schemaId}
+                                    schemaId={schemaIdVal}
                                     schemaUri={schema?.uri || ""}
                                     funcsRef={transformersFuncsRef}
                                 />
@@ -376,7 +376,7 @@ export default function Schema() {
                                 onReset={resetFunc(labelsFuncsRef)}
                                 isModified={modifiedFunc(labelsFuncsRef)}
                             >
-                                <Labels schemaId={schemaId} schemaUri={schema?.uri || ""} funcsRef={labelsFuncsRef} />
+                                <Labels schemaId={schemaIdVal} schemaUri={schema?.uri || ""} funcsRef={labelsFuncsRef} />
                             </SavedTab>
                             <SavedTab
                                 title="Export"
@@ -386,7 +386,7 @@ export default function Schema() {
                                 isHidden={!isTester}
                                 isModified={() => false}
                             >
-                                <SchemaExportImport id={schemaId} name={schema?.name || "schema"} />
+                                <SchemaExportImport id={schemaIdVal} name={schema?.name || "schema"} />
                             </SavedTab>
                         </SavedTabs>
                     </CardBody>

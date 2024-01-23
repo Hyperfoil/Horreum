@@ -1,5 +1,5 @@
 import {useContext, useEffect, useRef, useState} from "react"
-import { useParams } from "react-router"
+import { useParams } from "react-router-dom"
 
 import {
     ActionGroup,
@@ -28,16 +28,16 @@ import {AppContextType} from "../../context/@types/appContextTypes";
 
 export default function TableReportPage() {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const { id: stringId } = useParams<Record<string, string>>()
-    const id = parseInt(stringId)
+    const { id } = useParams<any>()
+    const idVal = parseInt(id ?? "-1")
     const [report, setReport] = useState<TableReport>()
     const [loading, setLoading] = useState(false)
     const [logOpen, setLogOpen] = useState(false)
     useEffect(() => {
-        if (id) {
+        if (idVal) {
             setLoading(true)
             document.title = "Loading report... | Horreum"
-            reportApi.getTableReport(id)
+            reportApi.getTableReport(idVal)
                 .then(
                     report => {
                         document.title = report.config.title + " | Horreum"
@@ -50,7 +50,7 @@ export default function TableReportPage() {
                 )
                 .finally(() => setLoading(false))
         }
-    }, [id])
+    }, [idVal])
     const componentRef = useRef<HTMLDivElement>(null)
     const isTester = useTester(report?.config?.test?.owner)
     if (loading) {
@@ -84,7 +84,7 @@ export default function TableReportPage() {
                             <>
                                 <ButtonLink
                                     variant="secondary"
-                                    to={"/reports/table/config/" + report.config.id + "?edit=" + id}
+                                    to={"/reports/table/config/" + report.config.id + "?edit=" + idVal}
                                 >
                                     Edit
                                 </ButtonLink>
