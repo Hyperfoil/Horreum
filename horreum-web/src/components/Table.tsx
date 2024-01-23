@@ -18,6 +18,7 @@ import { noop } from "../utils"
 
 // We need to pass the same empty list to prevent re-renders
 const NO_DATA: Record<string, unknown>[] = []
+const NO_SELECTED: Record<string, boolean>[] = []
 const NO_SORT: SortingRule<any>[] = []
 
 // eslint-disable-next-line @typescript-eslint/ban-types
@@ -26,7 +27,7 @@ type TableProps<D extends object> = {
     data: D[]
     sortBy: SortingRule<D>[]
     isLoading: boolean
-    selected: Record<string, boolean>
+    selected: Record<string, boolean>[]
     onSelected(ids: Record<string, boolean>): void
     onSortBy?(order: SortingRule<D>[]): void
     showNumberOfRows?: boolean
@@ -36,7 +37,7 @@ type TableProps<D extends object> = {
 const defaultProps = {
     sortBy: NO_SORT,
     isLoading: false,
-    selected: NO_DATA,
+    selected: NO_SELECTED,
     onSelected: noop,
 }
 
