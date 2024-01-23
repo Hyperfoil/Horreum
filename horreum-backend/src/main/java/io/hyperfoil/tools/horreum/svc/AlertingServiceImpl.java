@@ -546,11 +546,10 @@ public class AlertingServiceImpl implements AlertingService {
             log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
                 dataPoint.datasetId, dataPoint.timestamp,
                 variable.id, variable.name, dataPoint.value);
-            FingerprintDAO fingerprint = FingerprintDAO.<FingerprintDAO>findByIdOptional(dataPoint.datasetId).orElse(null);
-            Integer fpHash = fingerprint != null ? fingerprint.fp_hash : null;
+            JsonNode fingerprint = FingerprintDAO.<FingerprintDAO>findByIdOptional(dataPoint.datasetId).map(fp -> fp.fingerprint).orElse(null);
 
-            VarAndFingerprint key = new VarAndFingerprint(variable.id, fpHash);
-            log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint == null ? null : fingerprint.fingerprint, dataPoint.timestamp, validUpTo.get(key));
+            VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
+            log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint, dataPoint.timestamp, validUpTo.get(key));
             validUpTo.compute(key, (ignored, current) -> {
                if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
                   return new UpTo(dataPoint.timestamp, false);
@@ -558,7 +557,7 @@ public class AlertingServiceImpl implements AlertingService {
                   return current;
                }
             });
-            runChangeDetection(VariableDAO.findById(variable.id), fpHash, event.notify, true);
+            runChangeDetection(VariableDAO.findById(variable.id), fingerprint, event.notify, true);
          } else {
             log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
                 dataPoint.datasetId, dataPoint.timestamp, dataPoint.variable == null ? -1 : dataPoint.variable.id);
@@ -571,19 +570,19 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void tryRunChangeDetection(VariableDAO variable, Integer fpHash, boolean notify) {
-      runChangeDetection(variable, fpHash, notify, false);
+   void tryRunChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify) {
+      runChangeDetection(variable, fingerprint, notify, false);
    }
 
-   private void runChangeDetection(VariableDAO variable, Integer fpHash, boolean notify, boolean expectExists) {
-      UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fpHash));
+   private void runChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean expectExists) {
+      UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
       Instant nextTimestamp = session.createNativeQuery(
             "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
-                  "WHERE dp.variable_id = ?1 AND (timestamp > ?2 OR (timestamp = ?2 AND ?3)) AND fp_hash = ?4", Instant.class)
+                  "WHERE dp.variable_id = ?1 AND (timestamp > ?2 OR (timestamp = ?2 AND ?3)) AND json_equals(fp.fingerprint, ?4)", Instant.class)
             .setParameter(1, variable.id)
             .setParameter(2, valid != null ? valid.timestamp : LONG_TIME_AGO, StandardBasicTypes.INSTANT)
             .setParameter(3, valid == null || !valid.inclusive)
-            .setParameter(4, fpHash)
+            .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
             .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
       if (nextTimestamp == null) {
          log.debugf("No further datapoints for change detection");
@@ -595,24 +594,24 @@ public class AlertingServiceImpl implements AlertingService {
          int numDeleted = session.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
                "SELECT id FROM change c LEFT JOIN fingerprint fp ON c.dataset_id = fp.dataset_id " +
                "WHERE NOT c.confirmed AND c.variable_id = ?1 AND (c.timestamp > ?2 OR (c.timestamp = ?2 AND ?3)) " +
-               "AND fp.fp_hash = ?4)", int.class)
+               "AND json_equals(fp.fingerprint, ?4))", int.class)
                .setParameter(1, variable.id)
                .setParameter(2, valid.timestamp, StandardBasicTypes.INSTANT)
                .setParameter(3, !valid.inclusive)
-               .setParameter(4, fpHash)
+               .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
                .executeUpdate();
-         log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=", valid.timestamp, variable.id, fpHash);
+         log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=", valid.timestamp, variable.id, fingerprint);
       }
 
       var changeQuery = session.createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
             "WHERE c.variable = ?1 AND (c.timestamp < ?2 OR (c.timestamp = ?2 AND ?3 = TRUE)) AND " +
-            "fp.fp_hash = ?4 " +
+            "TRUE = function('json_equals', fp.fingerprint, ?4) " +
             "ORDER by c.timestamp DESC", ChangeDAO.class);
       changeQuery
             .setParameter(1, variable)
             .setParameter(2, valid != null ? valid.timestamp : VERY_DISTANT_FUTURE)
             .setParameter(3, valid == null || valid.inclusive)
-            .setParameter(4, fpHash);
+            .setParameter(4, fingerprint, JsonBinaryType.INSTANCE);
       ChangeDAO lastChange = changeQuery.setMaxResults(1).getResultStream().findFirst().orElse(null);
 
       Instant changeTimestamp = LONG_TIME_AGO;
@@ -625,12 +624,12 @@ public class AlertingServiceImpl implements AlertingService {
             "SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
             "JOIN dp.dataset " + // ignore datapoints (that were not deleted yet) from deleted datasets
             "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 " +
-            "AND fp.fp_hash = ?4 " +
+            "AND TRUE = function('json_equals', fp.fingerprint, ?4) " +
             "ORDER BY dp.timestamp DESC, dp.dataset.id DESC", DataPointDAO.class)
             .setParameter(1, variable)
             .setParameter(2, changeTimestamp)
             .setParameter(3, nextTimestamp)
-            .setParameter(4, fpHash)
+            .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
             .getResultList();
       // Last datapoint is already in the list
       if (dataPoints.isEmpty()) {
@@ -670,13 +669,13 @@ public class AlertingServiceImpl implements AlertingService {
          }
       }
       Util.doAfterCommit(tm, () -> {
-         validateUpTo(variable, fpHash, nextTimestamp);
-         messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fpHash, notify));
+         validateUpTo(variable, fingerprint, nextTimestamp);
+         messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, notify));
       });
    }
 
-   private void validateUpTo(VariableDAO variable, Integer fpHash, Instant timestamp) {
-      validUpTo.compute(new VarAndFingerprint(variable.id, fpHash), (ignored, current) -> {
+   private void validateUpTo(VariableDAO variable, JsonNode fingerprint, Instant timestamp) {
+      validUpTo.compute(new VarAndFingerprint(variable.id, fingerprint), (ignored, current) -> {
          log.debugf("Attempt %s, valid up to %s, ", timestamp, current);
          if (current == null || !current.timestamp.isAfter(timestamp)) {
             return new UpTo(timestamp, true);
@@ -1278,25 +1277,24 @@ public class AlertingServiceImpl implements AlertingService {
 
    static final class VarAndFingerprint {
       final int varId;
-      final Integer fp_hash;
+      final JsonNode fingerprint;
 
-      VarAndFingerprint(int varId, Integer fp_hash) {
+      VarAndFingerprint(int varId, JsonNode fingerprint) {
          this.varId = varId;
-         this.fp_hash = fp_hash;
+         this.fingerprint = fingerprint;
       }
-
 
       @Override
       public boolean equals(Object o) {
          if (this == o) return true;
          if (o == null || getClass() != o.getClass()) return false;
          VarAndFingerprint that = (VarAndFingerprint) o;
-         return varId == that.varId && Objects.equals(fp_hash, that.fp_hash);
+         return varId == that.varId && Objects.equals(fingerprint, that.fingerprint);
       }
 
       @Override
       public int hashCode() {
-         return Objects.hash(varId, fp_hash);
+         return Objects.hash(varId, fingerprint);
       }
    }
 

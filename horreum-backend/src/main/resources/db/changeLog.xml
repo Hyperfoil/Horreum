@@ -4342,15 +4342,5 @@
             CREATE INDEX label_values_label_id ON label_values (label_id);
         </sql>
     </changeSet>
-    <changeSet id="114" author="johara">
-        <validCheckSum>ANY</validCheckSum>
-        <addColumn tableName="fingerprint">
-            <column name="fp_hash"
-                    type="integer"/>
-        </addColumn>
-        <sql>
-            CREATE INDEX fingerprint_fp_hash ON fingerprint (fp_hash);
-        </sql>
-    </changeSet>
 
 </databaseChangeLog>
