@@ -1,6 +1,6 @@
 import {useState, useEffect, useContext} from "react"
 import { useSelector } from "react-redux"
- 
+import { useHistory } from "react-router-dom"
 
 import { Button, Checkbox, Flex, FlexItem, FormGroup, FormSection, TextInput } from "@patternfly/react-core"
 
@@ -94,6 +94,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
         setLabels(labels.map(l => (l.id == label.id ? label : l)))
     }
 
+    const history = useHistory()
     useEffect(() => {
         setLoading(true)
         schemaApi
@@ -101,7 +102,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
             .then(
                 labels => {
                     setLabels(labels)
-                    const fragmentParts = window.location.hash.split("+")
+                    const fragmentParts = history.location.hash.split("+")
                     if (fragmentParts.length === 2 && fragmentParts[0] === "#labels") {
                         const decoded = decodeURIComponent(fragmentParts[1])
                         const label = labels.find(l => l.name === decoded)

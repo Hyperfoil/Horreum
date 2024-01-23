@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useHistory } from "react-router-dom"
 
 import {
     ActionGroup,
@@ -395,12 +395,12 @@ export default function TableReportView(props: TableReportViewProps) {
     const categoryFormatter = formatter(config.categoryFormatter)
     const comment0 = props.report.comments.find(c => c.level === 0)
 
-    const navigate = useNavigate()
-    const queryParams = new URLSearchParams(location.search)
+    const history = useHistory()
+    const queryParams = new URLSearchParams(history.location.search)
     const [baseline, setBaseline] = useState<string | undefined>(queryParams.get("baseline") || undefined)
     const onBaselineChange = (scale: string | undefined) => {
         setBaseline(scale)
-        navigate(location.pathname + (scale ? "?baseline=" + scale : ""))
+        history.replace(history.location.pathname + (scale ? "?baseline=" + scale : ""))
     }
 
     return (

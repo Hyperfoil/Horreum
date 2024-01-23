@@ -39,7 +39,7 @@ import {
     Spinner,
     Title,
 } from "@patternfly/react-core"
-import { NavLink, useNavigate } from "react-router-dom"
+import { NavLink, useHistory } from "react-router-dom"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
@@ -206,8 +206,8 @@ export const flattenNode = (arr : Array<any> | undefined) => {
 
 export default function Changes() {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const navigate = useNavigate()
-    const params = new URLSearchParams(location.search)
+    const history = useHistory()
+    const params = new URLSearchParams(history.location.search)
     // eslint-disable-next-line
     const paramTest = useMemo(() => params.get("test") || undefined, [])
     const paramFingerprint = params.get("fingerprint")
@@ -265,7 +265,7 @@ export default function Changes() {
             return
         }
         document.title = `${selectedTest} | Horreum`
-        navigate(location.pathname + createQuery(false))
+        history.replace(history.location.pathname + createQuery(false))
     }, [selectedTest, selectedFingerprint, endTime, timespan, lineType, firstNow, history])
     useEffect(() => {
         setPanels([])

@@ -11,7 +11,7 @@ import {
     Spinner,
 } from "@patternfly/react-core"
 import { expandable, ICell, IRow, Table, TableHeader, TableBody } from "@patternfly/react-table"
-import { NavLink } from "react-router-dom"
+import { useHistory, NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 
 import {datasetApi, fetchTest, fetchViews, Test, View} from "../../api"
@@ -35,9 +35,8 @@ type Ds = {
 export default function DatasetComparison() {
     const { alerting } = useContext(AppContext) as AppContextType;
     window.document.title = "Dataset comparison: Horreum"
-    
-    
-    const params = new URLSearchParams(window.location.search)
+    const history = useHistory()
+    const params = new URLSearchParams(history.location.search)
     const testId = parseInt(params.get("testId") || "-1")
     const [views, setViews] = useState<View[]>([])
     const [test, setTest] = useState<Test>()
