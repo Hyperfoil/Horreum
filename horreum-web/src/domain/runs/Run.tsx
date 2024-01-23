@@ -1,5 +1,5 @@
 import {useContext, useEffect, useState} from "react"
-import { useParams } from "react-router"
+import { useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 
 import { formatDateTime } from "../../utils"
@@ -21,9 +21,9 @@ import { AppContextType} from "../../context/@types/appContextTypes";
 
 export default function Run() {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const { id: stringId } = useParams<any>()
-    const id = parseInt(stringId)
-    document.title = `Run ${id} | Horreum`
+    const { id } = useParams<any>()
+    const idVal = parseInt(id ?? "-1")
+    document.title = `Run ${idVal} | Horreum`
 
     const [run, setRun] = useState<RunExtended | undefined>(undefined)
     const [loading, setLoading] = useState(false)
@@ -47,14 +47,14 @@ export default function Run() {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get("token")
         setLoading(true)
-        fetchRunSummary(id, token === null ? undefined : token, alerting).then(
+        fetchRunSummary(idVal, token === null ? undefined : token, alerting).then(
             response =>setRun({data: "",schemas: [],metadata: response.hasMetadata ? "" : undefined,...response})
         ).finally(() => setLoading(false))
     }
 
     useEffect(() => {
         getRunSummary()
-    }, [id, teams, updateCounter])
+    }, [idVal, teams, updateCounter])
 
     const accessUpdate = (owner : string, access : Access) => {
         if( run !== undefined) {

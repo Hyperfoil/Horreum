@@ -1,5 +1,5 @@
 import {useCallback, useContext, useEffect, useMemo, useState} from "react"
-import { useParams } from "react-router"
+import { useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 import {
     Breadcrumb,
@@ -135,8 +135,8 @@ const staticColumns: DatasetColumn[] = [
 
 export default function TestDatasets() {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const { testId: stringTestId } = useParams<any>()
-    const testId = parseInt(stringTestId)
+    const { testId } = useParams();
+    const testIdInt = parseInt(testId ?? "-1")
     // const [tests, setTests] = useState<Test[] | undefined>(undefined)
     const [test, setTest] = useState<Test | undefined>(undefined)
     console.log(test)
@@ -158,15 +158,15 @@ export default function TestDatasets() {
     const [views, setViews] = useState<View[]>([])
 
     useEffect(() => {
-        fetchTest(testId, alerting)
+        fetchTest(testIdInt, alerting)
             .then(setTest)
-            .then(() => fetchViews(testId, alerting).then(setViews))
-    }, [testId, teams, token])
+            .then(() => fetchViews(testIdInt, alerting).then(setViews))
+    }, [testIdInt, teams, token])
 
     useEffect(() => {
         setLoading(true)
         datasetApi.listByTest(
-            testId,
+            testIdInt,
             pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             fingerprintToString(filter),
             pagination.perPage,
@@ -175,10 +175,10 @@ export default function TestDatasets() {
             viewId
         )
             .then(setDatasets, error =>
-                alerting.dispatchError( error, "FETCH_DATASETS", "Failed to fetch datasets in test " + testId)
+                alerting.dispatchError( error, "FETCH_DATASETS", "Failed to fetch datasets in test " + testIdInt)
             )
             .finally(() => setLoading(false))
-    }, [ testId, filter, pagination, teams, viewId])
+    }, [ testIdInt, filter, pagination, teams, viewId])
     useEffect(() => {
         document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
@@ -242,11 +242,11 @@ export default function TestDatasets() {
     }
 
     const labelsSource = useCallback(() => {
-        return testApi.listLabelValues(testId, true, false)
+        return testApi.listLabelValues(testIdInt, true, false)
             .then((result: Array<ExportedLabelValues>) => {
                 return flattenLabelValues(result);
             })
-    }, [testId, teams, token])
+    }, [testIdInt, teams, token])
     return (
         <PageSection>
             <Card>
@@ -286,10 +286,10 @@ export default function TestDatasets() {
                                 </ExpandableSectionToggle>
                             </ToolbarItem>
                             <ToolbarItem>
-                                <NavLink className="pf-c-button pf-m-primary" to={`/test/${testId}`}>
+                                <NavLink className="pf-c-button pf-m-primary" to={`/test/${testIdInt}`}>
                                     Edit test
                                 </NavLink>
-                                <NavLink className="pf-c-button pf-m-secondary" to={`/run/list/${testId}`}>
+                                <NavLink className="pf-c-button pf-m-secondary" to={`/run/list/${testIdInt}`}>
                                     View runs
                                 </NavLink>
                                 <Button
@@ -334,7 +334,7 @@ export default function TestDatasets() {
                         <Table<DatasetSummary> columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
                         <ButtonLink
                             to={
-                                `/dataset/comparison?testId=${testId}&` +
+                                `/dataset/comparison?testId=${testIdInt}&` +
                                 comparedDatasets.map(ds => `ds=${ds.id}_${ds.runId}_${ds.ordinal}`).join("&") +
                                 "#labels"
                             }

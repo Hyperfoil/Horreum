@@ -1,5 +1,6 @@
 import {useState, useEffect, useMemo, useContext} from "react"
-import { useHistory, useParams } from "react-router"
+import { useHistory } from "react-router"
+import { useParams } from "react-router-dom"
 
 import {
     ActionGroup,
@@ -120,8 +121,8 @@ function ReportConfigComponent({ component, onChange, onDelete, readOnly }: Repo
 
 export default function TableReportConfigPage() {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const { configId: stringId } = useParams<Record<string, string>>()
-    const id = parseInt(stringId)
+    const { configId } = useParams<string>()
+    const id = parseInt(configId ?? "-1")
     const history = useHistory()
     const queryParams = new URLSearchParams(history.location.search)
     const reportId = useMemo(() => {
@@ -147,7 +148,7 @@ export default function TableReportConfigPage() {
     const [previewLogOpen, setPreviewLogOpen] = useState(false)
 
     useEffect(() => {
-        if (!stringId || stringId === "__new") {
+        if (!configId || configId === "__new") {
             document.title = "New report | Horreum"
             return
         }
@@ -169,7 +170,7 @@ export default function TableReportConfigPage() {
                 document.title = "Error | Horreum"
             })
             .finally(() => setLoading(false))
-    }, [id, stringId])
+    }, [id, configId])
     const addComponent = () =>
         setConfig({
             ...config,
