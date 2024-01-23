@@ -1,5 +1,5 @@
 import React, {useContext, useEffect, useRef, useState} from "react"
-import { useNavigate } from "react-router-dom"
+import { useHistory } from "react-router-dom"
 import jsonpath from "jsonpath"
 
 import {
@@ -62,7 +62,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
         }
     }, [props.originalData])
 
-    const navigate = useNavigate()
+    const history = useHistory()
     function onQueryUpdate(type: string, query: string) {
         const loc = window.location
         const urlParams = new URLSearchParams(window.location.search)
@@ -72,7 +72,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
         } else {
             urlParams.delete("query")
         }
-        navigate(`${loc.pathname}?${urlParams.toString()}${loc.hash}`)
+        history.replace(`${loc.pathname}?${urlParams.toString()}${loc.hash}`)
     }
 
     const inputProps: InputProps<string> = {

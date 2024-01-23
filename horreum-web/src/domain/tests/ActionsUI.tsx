@@ -18,7 +18,7 @@ import { TabFunctionsRef } from "../../components/SavedTabs"
 import { testEventTypes } from "../actions/reducers"
 import ActionComponentForm from "../actions/ActionComponentForm"
 import ActionLogModal from "./ActionLogModal"
-import { useNavigate } from "react-router-dom"
+import { Redirect } from "react-router-dom"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
@@ -52,11 +52,8 @@ export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: A
         },
     }
 
-    const navigate = useNavigate()
-
     if (!isTester) {
-        navigate('/')
-        return  null
+        return <Redirect to="/" />
     }
     return (
         <>
