@@ -6,14 +6,18 @@ import { State } from "./store"
 import { UserData } from "./api"
 import { ThunkDispatch } from "redux-thunk"
 import Keycloak, {KeycloakProfile} from "keycloak-js";
+import {useState} from "react";
+import LoginModal from "./Login";
 
 export const INIT = "auth/INIT"
 export const UPDATE_DEFAULT_TEAM = "auth/UPDATE_DEFAULT_TEAM"
 export const UPDATE_ROLES = "auth/UPDATE_ROLES"
 export const STORE_PROFILE = "auth/STORE_PROFILE"
-const AFTER_LOGOUT = "auth/AFTER_LOGOUT"
+export const BASIC_AUTH = "auth/BASIC_AUTH"
+export const AFTER_LOGOUT = "auth/AFTER_LOGOUT"
 
 export class AuthState {
+    basicAuthToken? : string = undefined
     keycloak?: Keycloak
     authenticated = false
     roles: string[] = []
@@ -45,11 +49,17 @@ interface StoreProfileAction {
     profile: KeycloakProfile
 }
 
+interface BasicAuthAction {
+    type: typeof BASIC_AUTH
+    username: string
+    password: string
+}
+
 interface AfterLogoutAction {
     type: typeof AFTER_LOGOUT
 }
 
-type AuthAction = InitAction | UpdateDefaultTeamAction | UpdateRolesAction | StoreProfileAction | AfterLogoutAction
+type AuthAction = InitAction | UpdateDefaultTeamAction | UpdateRolesAction | StoreProfileAction | BasicAuthAction | AfterLogoutAction
 
 export type AuthDispatch = ThunkDispatch<any, unknown, AuthAction >
 
@@ -74,7 +84,11 @@ export function reducer(state = new AuthState(), action: AuthAction) {
         case STORE_PROFILE:
             state.userProfile = action.profile
             break
+        case BASIC_AUTH:
+            state.basicAuthToken = window.btoa(action.username + ':' + action.password)
+            break
         case AFTER_LOGOUT:
+            state.basicAuthToken = undefined
             state.userProfile = undefined
             state.initPromise = undefined
             state.authenticated = false
@@ -89,6 +103,10 @@ export function reducer(state = new AuthState(), action: AuthAction) {
 
 export const keycloakSelector = (state: State) => {
     return state.auth.keycloak
+}
+
+export const oidcSelector = (state: State) => {
+    return state.auth.keycloak?.authServerUrl
 }
 
 export const tokenSelector = (state: State) => {
@@ -157,18 +175,24 @@ export const TryLoginAgain = () => {
 }
 
 export const LoginLogout = () => {
+    const oidc = useSelector(oidcSelector)
     const keycloak = useSelector(keycloakSelector)
     // for some reason isAuthenticatedSelector would not return correct value at times (Redux bug?)
     const authenticated = useSelector(isAuthenticatedSelector)
+    const [loginModalOpen, setLoginModalOpen] = useState(false)
     const dispatch = useDispatch()
-    if (!keycloak) {
+    if (oidc && !keycloak) {
         return <Button isDisabled>Cannot log in</Button>
     }
     if (authenticated) {
         return (
             <Button
                 onClick={() => {
-                    keycloak?.logout({ redirectUri: window.location.origin })
+                    if (oidc) {
+                        keycloak?.logout({ redirectUri: window.location.origin })
+                    } else {
+                        window.location.replace(window.location.origin)
+                    }
                     dispatch({ type: AFTER_LOGOUT })
                 }}
             >
@@ -176,7 +200,15 @@ export const LoginLogout = () => {
             </Button>
         )
     } else {
-        return <Button onClick={() => keycloak?.login()}>Log in</Button>
+        return <>
+            <Button onClick={() => {oidc ? keycloak?.login() : setLoginModalOpen(true)}}>Log in</Button>
+            <LoginModal
+                isOpen={loginModalOpen}
+                username={""}
+                password={""}
+                onClose={() => setLoginModalOpen(false)}
+            />
+        </>
     }
 }
 

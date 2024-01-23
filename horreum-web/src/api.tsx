@@ -36,6 +36,7 @@ export * from "./generated/models"
 const authMiddleware: Middleware = {
     pre: ctx => {
         const keycloak = store.getState().auth.keycloak
+        const basicAuthToken = store.getState().auth.basicAuthToken
         if (keycloak != null && keycloak.authenticated) {
             return keycloak.updateToken(30).then(
                 () => {
@@ -61,6 +62,14 @@ const authMiddleware: Middleware = {
                     return Promise.reject(e)
                 }
             )
+        } else if (basicAuthToken) {
+            return Promise.resolve({
+                url: ctx.url,
+                init: {
+                    ...ctx.init,
+                    headers: {...ctx.init.headers, Authorization: "Basic " + basicAuthToken},
+                },
+            })
         } else {
             return Promise.resolve()
         }

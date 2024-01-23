@@ -9,18 +9,23 @@ import { keycloakSelector, INIT, STORE_PROFILE, UPDATE_DEFAULT_TEAM, UPDATE_ROLE
 
 export function initKeycloak(state: State) {
     const keycloak = keycloakSelector(state)
+    let oidc: boolean
     let keycloakPromise
     if (!keycloak) {
         keycloakPromise = fetchival("/api/config/keycloak", { responseAs: "json" })
             .get()
-            .then((response: any) => new Keycloak(response as KeycloakConfig))
+            .then((response: any) => {
+                // response.url = "" // Basic auth is used when the URL value is absent
+                oidc = (response.url?.trim() || "").length > 0
+                return new Keycloak(response as KeycloakConfig)
+            })
     } else {
         keycloakPromise = Promise.resolve(keycloak)
     }
     keycloakPromise
         .then((keycloak: Keycloak) => {
             let initPromise: Promise<boolean> | undefined = undefined
-            if (!keycloak.authenticated) {
+            if (oidc && !keycloak.authenticated) {
                 // Typecast required due to https://github.com/keycloak/keycloak/pull/5858
                 initPromise = keycloak.init({
                     onLoad: "check-sso",
