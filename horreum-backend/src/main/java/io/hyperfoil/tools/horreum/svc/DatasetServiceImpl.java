@@ -559,7 +559,6 @@ public class DatasetServiceImpl implements DatasetService {
       fp.datasetId = datasetId;
       fp.dataset = DatasetDAO.findById(datasetId);
       fp.fingerprint = fpNode;
-      fp.fp_hash = fpNode.hashCode();
       if(fp.datasetId > 0 && fp.dataset != null)
          fp.persist();
    }
