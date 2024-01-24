@@ -12,7 +12,7 @@ import io.vertx.ext.web.Router;
  */
 @ApplicationScoped
 public class RouteFilter {
-   private static final String[] PATH_PREFIXES = { "/api/", "/connect", "/dev" };
+   private static final String[] PATH_PREFIXES = { "/q/", "/api/", "/@" };
    private static final Pattern FILE_NAME_PATTERN = Pattern.compile(".*[.][a-zA-Z\\d]+");
 
    public void init(@Observes Router router) {

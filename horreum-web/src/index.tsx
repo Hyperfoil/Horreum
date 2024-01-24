@@ -23,4 +23,4 @@ serviceWorker.unregister()
 //public API for and user Js
 // global.Duration = Duration;
 // global.DateTime = DateTime;
-global.jsonpath = jsonpath
+globalThis.jsonpath = jsonpath
