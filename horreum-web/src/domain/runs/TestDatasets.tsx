@@ -309,7 +309,7 @@ export default function TestDatasets() {
                         </ToolbarGroup>
                     </Toolbar>
                 </CardHeader>
-                <CardHeader style={{ margin: 0 }}>
+                <CardHeader style={{ margin: 0, overflowX: "auto" }}>
                     <ExpandableSection
                         isDetached
                         isExpanded={filterExpanded}
