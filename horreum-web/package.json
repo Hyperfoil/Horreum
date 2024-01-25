@@ -17,7 +17,7 @@
     "@types/react-router-dom": "5.3.3",
     "@types/react-table": "7.7.14",
     "@types/uuid": "9.0.1",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "4.2.1",
     "ajv": "6.12.6",
     "clsx": "1.2.1",
     "fetchival": "0.3.3",
@@ -45,7 +45,7 @@
     "redux-thunk": "2.4.1",
     "typescript": "4.9.5",
     "uuid": "9.0.0",
-    "vite": "^5.0.11",
+    "vite": "5.0.11",
     "vite-tsconfig-paths": "^4.2.3"
   },
   "scripts": {
