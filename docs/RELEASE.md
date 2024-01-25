@@ -33,18 +33,13 @@ docker logout quay.io
 
 ## Backports
 
-Backports are done off the `master` branch using `git cherry-pick` so
+Backports are automatically applied from the master branch to the stable branche.
 
-```
-git log
-git checkout 0.11.x
-git cherry-pick <tag>
-git push origin 0.11.x
-```
+To bakport a change, add the `backport` label to the PR that you want to backport.
 
-e.g. find the commit in question (bug fix or enhancement), checkout the latest stable branch, then cherry-pick it in and push.
+After the PR is merged, the backport will be created automatically.
 
-This should be straight forward as there are no merge commits in `master`.
+Backport PRs will be tested by the CI and need to be merged manually.
 
 ## Building a release
 
