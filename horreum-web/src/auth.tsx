@@ -29,7 +29,7 @@ export class AuthState {
 
 interface InitAction {
     type: typeof INIT
-    keycloak: Keycloak
+    keycloak?: Keycloak
     initPromise?: Promise<boolean>
 }
 
@@ -46,7 +46,7 @@ interface UpdateRolesAction {
 
 interface StoreProfileAction {
     type: typeof STORE_PROFILE
-    profile: KeycloakProfile
+    profile?: KeycloakProfile
 }
 
 interface BasicAuthAction {
