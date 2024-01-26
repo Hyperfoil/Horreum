@@ -17,6 +17,7 @@ import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
+import io.quarkus.security.UnauthorizedException;
 import io.quarkus.security.identity.SecurityIdentity;
 
 import jakarta.annotation.security.PermitAll;
@@ -437,8 +438,12 @@ public class TestServiceImpl implements TestService {
       query.setParameter(1, owner);
       query.setParameter(2, access.ordinal());
       query.setParameter(3, id);
-      if (query.executeUpdate() != 1) {
-         throw ServiceException.serverError("Access change failed (missing permissions?)");
+      try {
+         if (query.executeUpdate() != 1) {
+            throw ServiceException.serverError("Access change failed (missing permissions?)");
+         }
+      } catch ( UnauthorizedException ue) {
+         throw ServiceException.forbidden("Changing access of Test " + id + " is not permitted. You are not defined as a `tester` for the `"+ owner + "` team. Please update your permissions and try again.");
       }
    }
 
