@@ -15,7 +15,7 @@ import DatasetData from "./DatasetData"
 import MetaData from "./MetaData"
 import RunData from "./RunData"
 import TransformationLogModal from "../tests/TransformationLogModal"
-import {Access, fetchRunSummary, recalculateDatasets, RunExtended, updateAccess} from "../../api"
+import {Access, fetchRunSummary, recalculateDatasets, RunExtended, updateAccess, updateRunAccess} from "../../api"
 import {AppContext} from "../../context/appContext";
 import { AppContextType} from "../../context/@types/appContextTypes";
 
@@ -58,7 +58,7 @@ export default function Run() {
 
     const accessUpdate = (owner : string, access : Access) => {
         if( run !== undefined) {
-            updateAccess(run.id, owner, access, alerting).then(() => getRunSummary())
+            updateRunAccess(run.id, run.testid, owner, access, alerting).then(() => getRunSummary())
         }
     }
 
