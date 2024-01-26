@@ -64,7 +64,7 @@ export function initKeycloak(state: State) {
                     }
                 })
             }
-            store.dispatch({ type: INIT, keycloak: keycloak, initPromise: initPromise })
+            store.dispatch({ type: INIT, keycloak: oidc ? keycloak : undefined, initPromise: initPromise })
         })
         .catch(noop)
 }
