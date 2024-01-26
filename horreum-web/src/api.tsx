@@ -67,6 +67,7 @@ const authMiddleware: Middleware = {
                 url: ctx.url,
                 init: {
                     ...ctx.init,
+                    credentials: "omit", // this prevents the browser from showing the native auth dialog
                     headers: {...ctx.init.headers, Authorization: "Basic " + basicAuthToken},
                 },
             })
