@@ -5,12 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.OPTIONS;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -28,6 +23,12 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 @Tag(name = "changes", description = "Manage changes")
 public interface ChangesService {
 
+
+   @GET
+   @Path("/")
+   default Response healthcheck() {
+      return Response.ok().build();
+   }
    @POST
    @Path("/search")
    String[] search(@RequestBody(required = true) Target query);
