@@ -33,11 +33,11 @@ docker logout quay.io
 
 ## Backports
 
-Backports are automatically applied from the master branch to the stable branche.
+Backports are automatically created from PRs against the master branch to the stable branch.
 
-To bakport a change, add the `backport` label to the PR that you want to backport.
+To backport a change, add the `backport` label to the PR that you opened against the master branch.
 
-After the PR is merged, the backport will be created automatically.
+After the PR is merged, the backport PR will be automatically created.
 
 Backport PRs will be tested by the CI and need to be merged manually.
 
