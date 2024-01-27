@@ -2,6 +2,7 @@
   "name": "horreum-web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@monaco-editor/react": "4.6.0",
     "@patternfly/patternfly": "4.224.4",
