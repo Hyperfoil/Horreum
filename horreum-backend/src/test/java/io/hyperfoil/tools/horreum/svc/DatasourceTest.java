@@ -52,10 +52,6 @@ public class DatasourceTest extends BaseServiceTest{
     @Inject
     RestClient elasticRestClient;
 
-    @Inject
-    ConfigService configService;
-
-
     @org.junit.jupiter.api.Test
     public void testRetrieveDataFromElastic(TestInfo info) throws InterruptedException {
 
@@ -69,7 +65,7 @@ public class DatasourceTest extends BaseServiceTest{
                     "type": "DOC",
                     "query": "{docID}"
                  }
-                """.replace("{docID}", "1047");
+                """.replace("{docID}", "f4a0c0ea-a3cc-4c2e-bb28-00d1a25b0135");
 
         String runID = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
 
@@ -88,8 +84,6 @@ public class DatasourceTest extends BaseServiceTest{
     @org.junit.jupiter.api.Test
     public void multidocPayload(TestInfo info) throws InterruptedException {
         TestConfig testConfig = createNewTestAndDatastores(info);
-
-        BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == testConfig.test.id);
 
         String payload = """
                 { 
@@ -111,10 +105,48 @@ public class DatasourceTest extends BaseServiceTest{
         String runID = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
 
         assertNotNull(runID);
-//        Assert.assertNotEquals(runID, "");
+        Assert.assertEquals(4, runID.split(",").length);
+
 
     }
 
+    @org.junit.jupiter.api.Test
+    public void multiQueryPayload(TestInfo info) throws InterruptedException {
+        TestConfig testConfig = createNewTestAndDatastores(info);
+
+
+        String payload = """
+                {
+                    "index": "meta",
+                    "type": "MULTI_INDEX",
+                    "query": {
+                      "targetIndex": "tfb",
+                      "docField": "uid",
+                      "metaQuery": {
+                        "from": 0,
+                        "size": 100,
+                        "query": {
+                          "bool": {
+                            "must": [
+                              {
+                                "term": {
+                                  "env": "aws"
+                                }
+                              }
+                            ],
+                            "boost": 1.0
+                          }
+                        }
+                      }
+                    }
+                }                
+                """;
+        String runID = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
+
+        assertNotNull(runID);
+        Assert.assertEquals(2, runID.split(",").length);
+
+    }
 
     @org.junit.jupiter.api.Test
     public void testDeleteDatasource(TestInfo info) throws InterruptedException {
@@ -198,19 +230,30 @@ public class DatasourceTest extends BaseServiceTest{
     @BeforeAll
     public void configureElasticDatasets(){
 
-        uploadDoc("data/experiment-ds1.json");
-        uploadDoc("data/experiment-ds2.json");
-        uploadDoc("data/experiment-ds3.json");
-        uploadDoc("data/config-quickstart.jvm.json");
+        uploadDoc("meta", "uid", "data/experiment-meta-data-d1.json");
+        uploadDoc("meta", "uid", "data/experiment-meta-data-d2.json");
+        uploadDoc("meta", "uid", "data/experiment-meta-data-d3.json");
+
+        uploadDoc("tfb", "uid", "data/experiment-ds1.json");
+        uploadDoc("tfb", "uid", "data/experiment-ds2.json");
+        uploadDoc("tfb", "uid", "data/experiment-ds3.json");
+        uploadDoc("tfb", "uid", "data/config-quickstart.jvm.json");
+
+        //nasty hack; sleep for 10 seconds to "ensure" that the uploaded test data is indexed by ES
+        try {
+            Thread.currentThread().sleep(10_000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
     }
 
-    private void uploadDoc(String resourcepath){
+    private void uploadDoc(String index, String idField,  String resourcepath){
         try {
             JsonNode payload = new ObjectMapper().readTree(resourceToString(resourcepath));
             Request request = new Request(
                     "PUT",
-                    "/tfb/_doc/" + payload.get("build-id").toString());
+                    "/" + index + "/_doc/" + payload.get(idField).textValue());
             request.setJsonEntity(payload.toString());
             Response response = elasticRestClient.performRequest(request);
             assertNotNull(response);
