@@ -1,5 +1,5 @@
 import {useState, useMemo, useEffect, useContext} from "react"
-import { useParams } from "react-router"
+import { useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 import {
     Breadcrumb,
@@ -55,8 +55,8 @@ type RunColumn = Column<RunSummary> & UseSortByColumnOptions<RunSummary>
 
 export default function RunList() {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const { testId: stringTestId } = useParams<any>()
-    const testId = parseInt(stringTestId)
+    const { testId } = useParams()
+    const testIdInt = parseInt(testId ?? "-1")
 
     const [test, setTest] = useState<Test | undefined>(undefined)
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
@@ -76,7 +76,7 @@ export default function RunList() {
     const loadTestRuns = () => {
         setIsLoading(true)
         runApi.listTestRuns(
-            testId,
+            testIdInt,
             pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             pagination.perPage,
             pagination.page,
@@ -87,20 +87,20 @@ export default function RunList() {
                 setRuns(runsSummary.runs)
                 setRunCount(runsSummary.total)
             },
-            error => alerting.dispatchError(error,"FETCH_RUNS", "Failed to fetch runs for test " + testId)
+            error => alerting.dispatchError(error,"FETCH_RUNS", "Failed to fetch runs for test " + testIdInt)
         ).finally(() => setIsLoading(false))
     }
 
     useEffect(() => {
         setIsLoading(true)
-        fetchTest(testId, alerting)
+        fetchTest(testIdInt, alerting)
             .then(test => setTest(test))
             .catch(noop)
         setIsLoading(false)
-    }, [testId, teams])
+    }, [testIdInt, teams])
     useEffect(() => {
         loadTestRuns()
-    }, [test, showTrashed, page, perPage, sort, direction, pagination, testId])
+    }, [test, showTrashed, page, perPage, sort, direction, pagination, testIdInt])
     useEffect(() => {
         document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
@@ -263,12 +263,12 @@ export default function RunList() {
                                             Import Data
                                         </Button></SplitItem>
                                     <SplitItem>
-                                        <NavLink className="pf-c-button pf-m-primary" to={`/test/${testId}`}>
+                                        <NavLink className="pf-c-button pf-m-primary" to={`/test/${testIdInt}`}>
                                             Edit test
                                         </NavLink>
                                     </SplitItem>
                                     <SplitItem>
-                                        <NavLink className="pf-c-button pf-m-secondary" to={`/run/dataset/list/${testId}`}>
+                                        <NavLink className="pf-c-button pf-m-secondary" to={`/run/dataset/list/${testIdInt}`}>
                                             View datasets
                                         </NavLink>
                                     </SplitItem>
