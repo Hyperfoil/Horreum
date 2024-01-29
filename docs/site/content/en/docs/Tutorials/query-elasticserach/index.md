@@ -37,7 +37,7 @@ The `json` payload for a single Elasticsearch document is as follows:
 ```json
 {
   "index": ".ds-kibana_sample_data_logs-2024.01.11-000001",
-  "type": "DOC",
+  "type": "doc",
   "query": "RUO1-IwBIG0DwQQtm-ea"
 }
 ```
@@ -58,14 +58,14 @@ $ curl 'http://localhost:8080/api/run/data?test='$TEST'&start='$START'&stop='$ST
 
 The api will return the `RunID` for the document retrieved and analyzed from Elasticsearch. 
 
-### Query Multiple documents from Elasticsearch datastore
+### Query Multiple documents from single index in Elasticsearch datastore
 
 It is also possible to query multiple documents from Elasticsearch with a single call to the Horreum API.
 
 ```json
 { 
     "index": ".ds-kibana_sample_data_logs-2023.12.13-000001",
-    "type": "SEARCH",
+    "type": "search",
     "query": {
         "from" : 0, "size" : 100,
         "query": {
@@ -104,6 +104,58 @@ $ curl 'http://localhost:8080/api/run/data?test='$TEST'&start='$START'&stop='$ST
     -s -H 'content-type: application/json' -H 'Authorization: Bearer '$TOKEN \
     -d @/tmp/elastic_query.json
 ```
+
+The query will return a list of `RunID`'s for each document retrieved and analyzed from Elasticsearch.
+
+### Query Multiple Index for documents in Elasticsearch datastore
+
+If your ElasticSearch instance contains meta-data and the associated documents in separate indexes, it is possible to query the meta-data index to retrive a list of documents to analyse with Horreum using a "MULTI_INDEX" query
+
+```json
+{ 
+    "index": ".ds-elastic_meta-data-index",
+    "type": "multi-index",
+    "query": {
+      "targetIndex": ".ds-elastic_secondary-index",
+      "docField": "remoteDocField",
+      "metaQuery": {
+        "from": 0,
+        "size": 100,
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "term": {
+                  "host": "artifacts.elastic.co"
+                }
+              }
+            ],
+            "filter": {
+              "range": {
+                "utc_time": {
+                  "gte": "2023-12-01T09:28:48+00:00",
+                  "lte": "2023-12-14T09:28:48+00:00"
+                }
+              }
+            },
+            "boost": 1.0
+          }
+        }
+      }
+    }
+}
+```
+
+where;
+
+- **index**: name of the Elasticsearch index storing the **meta-data**
+- **type**: "mult-index" for a multi-index query
+- **query**: 
+  - **targetIndex**: the name of the index containing the documents to analyze
+  - **docField**: the field in the meta-data index that contains the document id of the document to analyze
+  - **metaQuery**: the Elasticsearch query to execute on the meta-data index
+
+Horreum will query the **meta-data** index, retrieve all matching documents. The meta-data and document contents can be used in any Horreum analysis. 
 
 The query will return a list of `RunID`'s for each document retrieved and analyzed from Elasticsearch.
 
