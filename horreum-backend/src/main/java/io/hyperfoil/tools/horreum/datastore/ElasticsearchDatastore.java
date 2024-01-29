@@ -12,10 +12,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.BadRequestException;
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.message.BasicHeader;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
@@ -79,6 +75,10 @@ public class ElasticsearchDatastore implements Datastore {
 
                 Request request;
                 String finalString;
+                String schemaUri;
+                ArrayNode elasticResults;
+                ArrayNode extractedResults;
+
                 switch (apiRequest.type){
                     case DOC:
                         request = new Request(
@@ -95,7 +95,7 @@ public class ElasticsearchDatastore implements Datastore {
 
                         return new DatastoreResponse(mapper.readTree(finalString).get("_source"), payload);
                     case SEARCH:
-                        String schemaUri = schemaUriOptional.orElse(null);
+                        schemaUri = schemaUriOptional.orElse(null);
                         if( schemaUri == null){
                             throw new BadRequestException("Schema is required for search requests");
                         }
@@ -106,12 +106,72 @@ public class ElasticsearchDatastore implements Datastore {
                         request.setJsonEntity(mapper.writeValueAsString(apiRequest.query));
                         finalString = extracted(restClient, request);
 
-                        ArrayNode elasticResults = (ArrayNode) mapper.readTree(finalString).get("hits").get("hits");
-                        ArrayNode extractedResults = mapper.createArrayNode();
+                        elasticResults = (ArrayNode) mapper.readTree(finalString).get("hits").get("hits");
+                        extractedResults = mapper.createArrayNode();
 
                         elasticResults.forEach(jsonNode -> extractedResults.add(((ObjectNode) jsonNode.get("_source")).put("$schema", schemaUri)));
 
                         return  new DatastoreResponse(extractedResults, payload);
+
+                    case MULTI_INDEX:
+                        schemaUri = schemaUriOptional.orElse(null);
+                        if( schemaUri == null){
+                            throw new BadRequestException("Schema is required for search requests");
+                        }
+
+                        //TODO: error handling
+                        final MultiIndexQuery multiIndexQuery = mapper.treeToValue(apiRequest.query, MultiIndexQuery.class);
+
+                        //1st retrieve the list of docs from 1st Index
+                        request = new Request(
+                                "GET",
+                                "/" + apiRequest.index  + "/_search");
+
+                        request.setJsonEntity(mapper.writeValueAsString(multiIndexQuery.metaQuery));
+                        finalString = extracted(restClient, request);
+
+                        elasticResults = (ArrayNode) mapper.readTree(finalString).get("hits").get("hits");
+                        extractedResults = mapper.createArrayNode();
+
+                        //2nd retrieve the docs from 2nd Index and combine into a single result with metadata and doc contents
+                        elasticResults.forEach(jsonNode -> {
+
+                            ObjectNode result = ((ObjectNode) jsonNode.get("_source")).put("$schema", schemaUri);
+                            String docString = """
+                                    {
+                                        "error": "Could not retrieve doc from secondary index"
+                                        "msg": "ERR_MSG"
+                                    }
+                                    """;
+
+                            var subRequest = new Request(
+                                    "GET",
+                                    "/" + multiIndexQuery.targetIndex  + "/_doc/" + jsonNode.get("_source").get(multiIndexQuery.docField).textValue());
+
+                            try {
+                                docString = extracted(restClient, subRequest);
+
+                            } catch (IOException e) {
+
+                                docString.replaceAll("ERR_MSG", e.getMessage());
+                                String msg = String.format("Could not query doc request: index: %s; docID: %s (%s)", multiIndexQuery.targetIndex, multiIndexQuery.docField, e.getMessage());
+                                log.error(msg);
+                            }
+
+                            try {
+                                result.put("$doc", mapper.readTree(docString));
+                            } catch (JsonProcessingException e) {
+                                docString.replaceAll("ERR_MSG", e.getMessage());
+                                String msg = String.format("Could not parse doc result: %s, %s", docString, e.getMessage());
+                                log.error(msg);
+                            }
+
+                            extractedResults.add(result);
+
+                        });
+
+                        return  new DatastoreResponse(extractedResults, payload);
+
                     default:
                         throw new BadRequestException("Invalid request type: " + apiRequest.type);
                 }
@@ -146,15 +206,29 @@ public class ElasticsearchDatastore implements Datastore {
     }
 
     private static class ElasticRequest {
+        public ElasticRequest() {
+        }
+
         public String index;
         public RequestType type;
         public JsonNode query;
 
     }
 
+    static class MultiIndexQuery {
+        public MultiIndexQuery() {
+        }
+
+        public String docField;
+        public String targetIndex;
+        public JsonNode metaQuery;
+    }
+
+
     private enum RequestType {
         DOC ("doc"),
-        SEARCH ("search");
+        SEARCH ("search"),
+        MULTI_INDEX ("multi-index");
         private final String type;
 
         RequestType(String s) {
