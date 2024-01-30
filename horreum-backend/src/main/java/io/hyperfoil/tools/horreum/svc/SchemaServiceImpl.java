@@ -1,10 +1,13 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.networknt.schema.AbsoluteIri;
 import com.networknt.schema.JsonMetaSchema;
+import com.networknt.schema.SchemaLocation;
+import com.networknt.schema.resource.InputStreamSource;
+import com.networknt.schema.resource.SchemaLoader;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
@@ -47,7 +50,7 @@ import jakarta.persistence.Tuple;
 import jakarta.transaction.Transactional;
 
 import java.io.ByteArrayInputStream;
-import java.net.URI;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,7 +65,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import jakarta.ws.rs.DefaultValue;
 import org.hibernate.ScrollMode;
@@ -77,14 +79,10 @@ import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.uri.URIFactory;
-import com.networknt.schema.uri.URIFetcher;
-import com.networknt.schema.uri.URLFactory;
 
 @ApplicationScoped
 public class SchemaServiceImpl implements SchemaService {
@@ -117,19 +115,7 @@ public class SchemaServiceImpl implements SchemaService {
          .addMetaSchema(JsonMetaSchema.getV6())
          .addMetaSchema(JsonMetaSchema.getV7())
          .addMetaSchema(JsonMetaSchema.getV201909()).build();
-   private static final URIFactory URN_FACTORY = new URIFactory() {
-      @Override
-      public URI create(String uri) {
-         return URI.create(uri);
-      }
-
-      @Override
-      public URI create(URI baseURI, String segment) {
-         throw new UnsupportedOperationException();
-      }
-   };
-   private static final String[] ALL_URNS = Stream.concat(
-         URLFactory.SUPPORTED_SCHEMES.stream(), Stream.of("urn", "uri")).toArray(String[]::new);
+   private static final String[] ALL_URNS = new String[] {"urn", "uri", "http", "https", "ftp", "file", "jar"};
 
    @Inject
    EntityManager em;
@@ -442,15 +428,14 @@ public class SchemaServiceImpl implements SchemaService {
          if (rootSchema == null || rootSchema.schema == null) {
             continue;
          }
+
          try {
-            URIFetcher uriFetcher = uri -> {
-               byte[] jsonSchema = schemas.get(uri.toString()).schema.toString().getBytes(StandardCharsets.UTF_8);
-               return new ByteArrayInputStream(jsonSchema);
-            };
+            HorreumURIFetcher fetcher = new HorreumURIFetcher();
+            fetcher.addResource(SchemaLocation.of(schemaUri).getAbsoluteIri(), rootSchema.schema.toString());
 
             JsonSchemaFactory factory = JsonSchemaFactory.builder(JSON_SCHEMA_FACTORY)
-                  .uriFactory(URN_FACTORY, "urn", "uri")
-                  .uriFetcher(uriFetcher, ALL_URNS).build();
+                    .schemaLoaders( schemaLoaders -> schemaLoaders.add(fetcher))
+                    .build();
 
             for (JsonNode node : toCheck.get(schemaUri)) {
                factory.getSchema(rootSchema.schema).validate(node).forEach(msg -> {
@@ -934,5 +919,23 @@ public class SchemaServiceImpl implements SchemaService {
    class RecreateDataset {
       private int datasetId;
       private int testId;
+   }
+
+   private class HorreumURIFetcher implements SchemaLoader {
+
+      private Map<AbsoluteIri, InputStream> uriToResource = new HashMap<>();
+
+      void addResource(AbsoluteIri uri, String schema) {
+         addResource(uri, new ByteArrayInputStream(schema.getBytes(StandardCharsets.UTF_8)));
+      }
+
+      void addResource(AbsoluteIri uri, InputStream is) {
+         uriToResource.put(uri, is);
+      }
+
+      @Override
+      public InputStreamSource getSchema(AbsoluteIri absoluteIri) {
+         return () -> uriToResource.get(absoluteIri);
+      }
    }
 }

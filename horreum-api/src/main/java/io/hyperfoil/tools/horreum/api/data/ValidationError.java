@@ -1,6 +1,8 @@
 package io.hyperfoil.tools.horreum.api.data;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
@@ -33,9 +35,15 @@ public class ValidationError {
         public String type;
         public String code;
         public String path;
-        public String schemaPath;
+
+        public String evaluationPath;
+        public String schemaLocation;
+        public String instanceLocation;
+        public String property;
         public String[] arguments;
-        public Map<String, Object> details;
+        public String details;
+        public String messageKey;
+        public Boolean valid;
         @NotNull
         @JsonProperty(required = true)
         public String message;

@@ -28,7 +28,7 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
                     ),
                     e.error.type,
                     <code>{e.error.path}</code>,
-                    <code>{e.error.schemaPath}</code>,
+                    <code>{e.error.schemaLocation}</code>,
                     <code>{e.error.arguments}</code>,
                     e.error.message,
                 ],
