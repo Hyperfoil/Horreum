@@ -2605,15 +2605,24 @@ components:
           type: string
         path:
           type: string
-        schemaPath:
+        evaluationPath:
+          type: string
+        schemaLocation:
+          type: string
+        instanceLocation:
+          type: string
+        property:
           type: string
         arguments:
           type: array
           items:
             type: string
         details:
-          type: object
-          additionalProperties: {}
+          type: string
+        messageKey:
+          type: string
+        valid:
+          type: boolean
         message:
           type: string
     ExperimentComparison:
