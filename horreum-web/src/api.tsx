@@ -227,21 +227,20 @@ export function deleteTest(id: number, alerting: AlertContextType) : Promise<voi
     return apiCall(testApi._delete(id), alerting, "DELETE_TEST", "Failed to delete test " + id);
 }
 export function fetchTestsSummariesByFolder(alertingContext: AlertContextType, roles?: string, folder?: string): Promise<TestListing> {
-    return apiCall(testApi.summary(folder, roles), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
+    return apiCall(testApi.summary(roles, folder), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
 }
 export function fetchFolders(alerting: AlertContextType): Promise<string[]> {
     return apiCall(testApi.folders(), alerting, "FETCH_FOLDERS", "Failed to fetch folders.");
 }
 
 export function fetchTestsSummary(alertingContext: AlertContextType,roles?: string, folder?: string) : Promise<TestListing> {
-    return apiCall(testApi.summary(folder, roles), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
+    return apiCall(testApi.summary(roles, folder), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
 }
 
 export function fetchTests(alertingContext: AlertContextType,roles?: string, folder?: string) : Promise<Test[]> {
-    return apiCall(testApi.summary(folder, roles), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
+    return apiCall(testApi.summary(roles, folder), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
         .then(summary => summary.tests?.map(t => mapTestSummaryToTest(t)) || [])
 }
-
 
 
 export function fetchTest(id: number, alerting: AlertContextType): Promise<Test> {
@@ -266,7 +265,7 @@ export function fetchViews(testId: number, alerting: AlertContextType): Promise<
 }
 
 export function updateAccess(id: number, owner: string, access: Access, alerting: AlertContextType) : Promise<void> {
-    return apiCall(testApi.updateAccess(id, access, owner), alerting, "UPDATE_ACCESS", "Failed to update test access");
+    return apiCall(testApi.updateAccess(id, owner, access), alerting, "UPDATE_ACCESS", "Failed to update test access");
 }
 export function updateView(alerting: AlertContextType, testId: number, view: View): Promise<number> {
     for (const c of view.components) {
@@ -365,7 +364,7 @@ export function trash(alerting: AlertContextType, id: number, testid: number, is
 }
 
 export function updateRunAccess (id: number, testid: number, owner: string, access: Access, alerting: AlertContextType) : Promise<void> {
-    return apiCall(runApi.updateAccess(id, access, owner), alerting, "UPDATE_RUN_ACCESS", "Failed to update run access");
+    return apiCall(runApi.updateAccess(id, owner, access), alerting, "UPDATE_RUN_ACCESS", "Failed to update run access");
 }
 export function updateDescription(id: number, testid: number, description: string, alerting: AlertContextType) : Promise<void> {
     return apiCall(runApi.updateDescription(id, description), alerting, "RUN_UPDATE", "Failed to update description for run ID " + id);

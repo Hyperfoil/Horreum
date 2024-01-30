@@ -77,11 +77,11 @@ export default function RunList() {
         setIsLoading(true)
         runApi.listTestRuns(
             testIdInt,
-            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
+            showTrashed,
             pagination.perPage,
             pagination.page,
             pagination.sort,
-            showTrashed
+            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending
         ).then(
             runsSummary => {
                 setRuns(runsSummary.runs)

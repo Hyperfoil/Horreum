@@ -154,12 +154,13 @@ paths:
       description: "Retrieve a paginated list of Datasets, with total count, by Schema"
       operationId: listBySchema
       parameters:
-      - name: direction
+      - name: uri
         in: query
-        description: Sort direction
+        description: Schema URI
+        required: true
         schema:
-          $ref: '#/components/schemas/SortDirection'
-        example: Ascending
+          type: string
+        example: uri:techempower:0.1
       - name: limit
         in: query
         description: limit the number of results
@@ -181,13 +182,12 @@ paths:
           default: start
           type: string
         example: name
-      - name: uri
+      - name: direction
         in: query
-        description: Schema URI
-        required: true
+        description: Sort direction
         schema:
-          type: string
-        example: uri:techempower:0.1
+          $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       responses:
         "200":
           description: OK
@@ -210,12 +210,6 @@ paths:
           format: int32
           type: integer
         example: 101
-      - name: direction
-        in: query
-        description: Sort direction
-        schema:
-          $ref: '#/components/schemas/SortDirection'
-        example: Ascending
       - name: filter
         in: query
         description: JOSN Filter expression to apply to query
@@ -243,6 +237,12 @@ paths:
         schema:
           type: string
         example: name
+      - name: direction
+        in: query
+        description: Sort direction
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       - name: viewId
         in: query
         description: Optional View ID to filter datasets by view
@@ -450,14 +450,6 @@ paths:
       description: Delete an Experiment Profiles for a Test
       operationId: deleteProfile
       parameters:
-      - name: profileId
-        in: path
-        description: Experiment Profile ID
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 202
       - name: testId
         in: path
         description: Test ID
@@ -466,6 +458,14 @@ paths:
           format: int32
           type: integer
         example: 101
+      - name: profileId
+        in: path
+        description: Experiment Profile ID
+        required: true
+        schema:
+          format: int32
+          type: integer
+        example: 202
       responses:
         "204":
           description: No Content
@@ -497,12 +497,13 @@ paths:
         Schema URI
       operationId: listBySchema
       parameters:
-      - name: direction
+      - name: uri
         in: query
-        description: Sort direction
+        description: Schema URI
+        required: true
         schema:
-          $ref: '#/components/schemas/SortDirection'
-        example: Ascending
+          type: string
+        example: uri:my-schema:0.1
       - name: limit
         in: query
         description: limit the number of results
@@ -523,13 +524,12 @@ paths:
         schema:
           type: string
         example: name
-      - name: uri
+      - name: direction
         in: query
-        description: Schema URI
-        required: true
+        description: Sort direction
         schema:
-          type: string
-        example: uri:my-schema:0.1
+          $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       responses:
         "200":
           description: OK
@@ -566,30 +566,6 @@ paths:
       description: Upload a new Run
       operationId: addRunFromData
       parameters:
-      - name: access
-        in: query
-        description: New Access level
-        schema:
-          $ref: '#/components/schemas/Access'
-        example: 0
-      - name: description
-        in: query
-        description: Run description
-        schema:
-          type: string
-        example: AWS runs
-      - name: owner
-        in: query
-        description: Name of the new owner
-        schema:
-          type: string
-        example: perf-team
-      - name: schema
-        in: query
-        description: Schema URI
-        schema:
-          type: string
-        example: uri:my-benchmark:0.2
       - name: start
         in: query
         description: "start timestamp of run, or json path expression"
@@ -619,12 +595,36 @@ paths:
         schema:
           type: string
         example: my-benchmark
+      - name: owner
+        in: query
+        description: Name of the new owner
+        schema:
+          type: string
+        example: perf-team
+      - name: access
+        in: query
+        description: New Access level
+        schema:
+          $ref: '#/components/schemas/Access'
+        example: 0
       - name: token
         in: query
         description: Horreum internal token. Incompatible with Keycloak
         schema:
           type: string
         example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
+      - name: schema
+        in: query
+        description: Schema URI
+        schema:
+          type: string
+        example: uri:my-benchmark:0.2
+      - name: description
+        in: query
+        description: Run description
+        schema:
+          type: string
+        example: AWS runs
       requestBody:
         content:
           application/json:
@@ -668,12 +668,29 @@ paths:
       description: Retrieve a paginated list of Runs with available count
       operationId: listAllRuns
       parameters:
-      - name: direction
+      - name: query
         in: query
-        description: Sort direction
+        description: query string to filter runs
         schema:
-          $ref: '#/components/schemas/SortDirection'
-        example: Ascending
+          type: string
+      - name: matchAll
+        in: query
+        description: match all Runs?
+        schema:
+          type: boolean
+        example: false
+      - name: roles
+        in: query
+        description: "__my, __all or a comma delimited  list of roles"
+        schema:
+          type: string
+        example: __my
+      - name: trashed
+        in: query
+        description: show trashed runs
+        schema:
+          type: boolean
+        example: false
       - name: limit
         in: query
         description: limit the number of results
@@ -681,12 +698,6 @@ paths:
           format: int32
           type: integer
         example: 20
-      - name: matchAll
-        in: query
-        description: match all Runs?
-        schema:
-          type: boolean
-        example: false
       - name: page
         in: query
         description: filter by page number of a paginated list of Tests
@@ -694,29 +705,18 @@ paths:
           format: int32
           type: integer
         example: 2
-      - name: query
-        in: query
-        description: query string to filter runs
-        schema:
-          type: string
-      - name: roles
-        in: query
-        description: "__my, __all or a comma delimited  list of roles"
-        schema:
-          type: string
-        example: __my
       - name: sort
         in: query
         description: Field name to sort results
         schema:
           type: string
         example: name
-      - name: trashed
+      - name: direction
         in: query
-        description: show trashed runs
+        description: Sort direction
         schema:
-          type: boolean
-        example: false
+          $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       responses:
         "200":
           description: OK
@@ -740,12 +740,12 @@ paths:
           format: int32
           type: integer
         example: 101
-      - name: direction
+      - name: trashed
         in: query
-        description: Sort direction
+        description: include trashed runs
         schema:
-          $ref: '#/components/schemas/SortDirection'
-        example: Ascending
+          type: boolean
+        example: false
       - name: limit
         in: query
         description: limit the number of results
@@ -766,12 +766,12 @@ paths:
         schema:
           type: string
         example: name
-      - name: trashed
+      - name: direction
         in: query
-        description: include trashed runs
+        description: Sort direction
         schema:
-          type: boolean
-        example: false
+          $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       responses:
         "200":
           description: OK
@@ -808,24 +808,24 @@ paths:
       description: Upload a new Run
       operationId: add
       parameters:
-      - name: access
-        in: query
-        description: New Access level
-        schema:
-          $ref: '#/components/schemas/Access'
-        example: 0
-      - name: owner
-        in: query
-        description: Name of the new owner
-        schema:
-          type: string
-        example: perf-team
       - name: test
         in: query
         description: test name of ID
         schema:
           type: string
         example: my-benchmark
+      - name: owner
+        in: query
+        description: Name of the new owner
+        schema:
+          type: string
+        example: perf-team
+      - name: access
+        in: query
+        description: New Access level
+        schema:
+          $ref: '#/components/schemas/Access'
+        example: 0
       - name: token
         in: query
         description: API token
@@ -888,18 +888,18 @@ paths:
           format: int32
           type: integer
         example: 202
-      - name: schemaUri
-        in: query
-        description: FIlter by Schmea URI
-        schema:
-          type: string
-        example: uri:my-benchmark:0.1
       - name: token
         in: query
         description: Run API token
         schema:
           type: string
         example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
+      - name: schemaUri
+        in: query
+        description: FIlter by Schmea URI
+        schema:
+          type: string
+        example: uri:my-benchmark:0.1
       responses:
         "200":
           description: Run payload
@@ -969,18 +969,18 @@ paths:
           format: int32
           type: integer
         example: 202
-      - name: schemaUri
-        in: query
-        description: Filter by Schmea URI
-        schema:
-          type: string
-        example: uri:my-benchmark:0.1
       - name: token
         in: query
         description: Run API token
         schema:
           type: string
         example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
+      - name: schemaUri
+        in: query
+        description: Filter by Schmea URI
+        schema:
+          type: string
+        example: uri:my-benchmark:0.1
       responses:
         "200":
           description: Run payload
@@ -1067,7 +1067,6 @@ paths:
           text/plain:
             schema:
               type: string
-        required: true
       responses:
         "200":
           description: OK
@@ -1148,13 +1147,6 @@ paths:
           format: int32
           type: integer
         example: 101
-      - name: access
-        in: query
-        description: New Access level
-        required: true
-        schema:
-          $ref: '#/components/schemas/Access'
-        example: 0
       - name: owner
         in: query
         description: Name of the new owner
@@ -1162,6 +1154,13 @@ paths:
         schema:
           type: string
         example: perf-team
+      - name: access
+        in: query
+        description: New Access level
+        required: true
+        schema:
+          $ref: '#/components/schemas/Access'
+        example: 0
       responses:
         "201":
           description: Created
@@ -1190,12 +1189,6 @@ paths:
       description: Retrieve a paginated list of Schemas with available count
       operationId: list
       parameters:
-      - name: direction
-        in: query
-        description: Sort direction
-        schema:
-          $ref: '#/components/schemas/SortDirection'
-        example: Ascending
       - name: limit
         in: query
         description: limit the number of results
@@ -1216,6 +1209,12 @@ paths:
         schema:
           type: string
         example: name
+      - name: direction
+        in: query
+        description: Sort direction
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       responses:
         "200":
           description: OK
@@ -1494,13 +1493,6 @@ paths:
           format: int32
           type: integer
         example: 101
-      - name: access
-        in: query
-        description: New Access level
-        required: true
-        schema:
-          $ref: '#/components/schemas/Access'
-        example: 0
       - name: owner
         in: query
         description: Name of the new owner
@@ -1508,6 +1500,13 @@ paths:
         schema:
           type: string
         example: perf-team
+      - name: access
+        in: query
+        description: New Access level
+        required: true
+        schema:
+          $ref: '#/components/schemas/Access'
+        example: 0
       responses:
         "201":
           description: Created
@@ -1570,14 +1569,6 @@ paths:
       description: Delete existing Label from a Schema
       operationId: deleteLabel
       parameters:
-      - name: labelId
-        in: path
-        description: Label ID
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 202
       - name: schemaId
         in: path
         description: Schema ID
@@ -1586,6 +1577,14 @@ paths:
           format: int32
           type: integer
         example: 101
+      - name: labelId
+        in: path
+        description: Label ID
+        required: true
+        schema:
+          format: int32
+          type: integer
+        example: 202
       responses:
         "204":
           description: No Content
@@ -1674,12 +1673,12 @@ paths:
       description: Retrieve a paginated list of Tests with available count
       operationId: list
       parameters:
-      - name: direction
+      - name: roles
         in: query
-        description: Sort direction
+        description: "__my, __all or a comma delimited  list of roles"
         schema:
-          $ref: '#/components/schemas/SortDirection'
-        example: Ascending
+          type: string
+        example: __my
       - name: limit
         in: query
         description: limit the number of results
@@ -1694,12 +1693,6 @@ paths:
           format: int32
           type: integer
         example: 2
-      - name: roles
-        in: query
-        description: "__my, __all or a comma delimited  list of roles"
-        schema:
-          type: string
-        example: __my
       - name: sort
         in: query
         description: Field name to sort results
@@ -1707,6 +1700,12 @@ paths:
           default: name
           type: string
         example: name
+      - name: direction
+        in: query
+        description: Sort direction
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+        example: Ascending
       responses:
         "200":
           description: OK
@@ -1801,18 +1800,18 @@ paths:
       description: Retrieve a summary of Tests in a folder
       operationId: summary
       parameters:
-      - name: folder
-        in: query
-        description: name of the Folder containing the Tests
-        schema:
-          type: string
-        example: My Team Folder
       - name: roles
         in: query
         description: "\"__my\", \"__all\" or a comma delimited  list of roles"
         schema:
           type: string
         example: __my
+      - name: folder
+        in: query
+        description: name of the Folder containing the Tests
+        schema:
+          type: string
+        example: My Team Folder
       responses:
         "200":
           description: OK
@@ -2150,13 +2149,6 @@ paths:
           format: int32
           type: integer
         example: 101
-      - name: access
-        in: query
-        description: New Access level for the Test
-        required: true
-        schema:
-          $ref: '#/components/schemas/Access'
-        example: 0
       - name: owner
         in: query
         description: Name of the new owner
@@ -2164,6 +2156,13 @@ paths:
         schema:
           type: string
         example: perf-team
+      - name: access
+        in: query
+        description: New Access level for the Test
+        required: true
+        schema:
+          $ref: '#/components/schemas/Access'
+        example: 0
       responses:
         "201":
           description: Created
@@ -2194,23 +2193,17 @@ components:
           type: integer
         event:
           type: string
-          nullable: false
         type:
           type: string
-          nullable: false
         config:
           type: array
-          nullable: false
         testId:
           format: int32
           type: integer
-          nullable: false
         active:
           type: boolean
-          nullable: false
         runAlways:
           type: boolean
-          nullable: false
         secrets:
           type: array
     ActionLog:
@@ -2225,10 +2218,8 @@ components:
         testId:
           format: int32
           type: integer
-          nullable: false
         event:
           type: string
-          nullable: false
         type:
           type: string
     BetterOrWorse:
@@ -2252,7 +2243,6 @@ components:
           type: string
         config:
           type: array
-          nullable: false
     ComparisonResult:
       description: Result of performing a Comparison
       type: object
@@ -2292,17 +2282,14 @@ components:
           description: Change detection model component name
           type: string
           example: min
-          nullable: false
         title:
           description: Change detection model component title
           type: string
           example: Minimum
-          nullable: false
         description:
           description: Change detection model component description
           type: string
           example: Lower bound for acceptable datapoint values.
-          nullable: false
         type:
           description: UI Component type
           enum:
@@ -2312,13 +2299,11 @@ components:
           - SWITCH
           type: object
           example: '"LOG_SLIDER"'
-          nullable: false
         properties:
           description: Map of properties for component
           type: object
-          additionalProperties:
-            type: object
-          nullable: false
+          additionalProperties: {}
+          example: ""
     ConditionConfig:
       description: A configuration object for Change detection models
       required:
@@ -2332,23 +2317,19 @@ components:
           description: Name of Change detection model
           type: string
           example: fixedThreshold
-          nullable: false
         title:
           description: UI name for change detection model
           type: string
           example: Fixed Threshold
-          nullable: false
         description:
           description: Change detection model description
           type: string
           example: This model checks that the datapoint value is within fixed bounds.
-          nullable: false
         ui:
           description: A list of UI components for dynamically building the UI components
           type: array
           items:
             $ref: '#/components/schemas/ConditionComponent'
-          nullable: false
         defaults:
           description: A dictionary of UI default configuration items for dynamically
             building the UI components
@@ -2380,18 +2361,15 @@ components:
           description: Test ID that Dataset relates to
           type: integer
           example: 101
-          nullable: false
         data:
           description: Data payload
           type: string
-          nullable: false
         ordinal:
           format: int32
           description: Dataset ordinal for ordered list of Datasets derived from a
             Run
           type: integer
           example: 1
-          nullable: false
         validationErrors:
           description: List of Validation Errors
           type: array
@@ -2449,7 +2427,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DatasetSummary'
-          nullable: false
     DatasetLog:
       description: Dataset Log
       required:
@@ -2464,7 +2441,6 @@ components:
       properties:
         source:
           type: string
-          nullable: false
         testId:
           format: int32
           type: integer
@@ -2513,7 +2489,6 @@ components:
           description: Test name that the Dataset relates to
           type: string
           example: my-comprehensive-benchmark
-          nullable: false
         description:
           description: Dataset description
           type: string
@@ -2554,13 +2529,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/Access'
           example: PUBLIC
-          nullable: false
         owner:
           description: Name of the team that owns the test. Users must belong to the
             team that owns a test to make modifications
           type: string
           example: performance-team
-          nullable: false
         id:
           format: int32
           description: Unique Datastore id
@@ -2571,19 +2544,16 @@ components:
             \ Test definition"
           type: string
           example: Perf Elasticsearch
-          nullable: false
         builtIn:
           description: Is this a built-in datastore? Built-in datastores cannot be
             deleted or modified
           type: boolean
           example: false
-          nullable: false
         config:
           type: object
           oneOf:
           - $ref: '#/components/schemas/ElasticsearchDatastoreConfig'
           - $ref: '#/components/schemas/PostgresDatastoreConfig'
-          nullable: false
         type:
           description: Type of backend datastore
           enum:
@@ -2591,7 +2561,6 @@ components:
           - ELASTICSEARCH
           type: string
           example: ELASTICSEARCH
-          nullable: false
     DatastoreTestResponse:
       type: object
       properties:
@@ -2606,7 +2575,6 @@ components:
       - ELASTICSEARCH
       type: string
       example: ELASTICSEARCH
-      nullable: false
     ElasticsearchDatastoreConfig:
       description: Type of backend datastore
       required:
@@ -2633,7 +2601,6 @@ components:
         type:
           description: Validation Error type
           type: string
-          nullable: false
         code:
           type: string
         path:
@@ -2646,11 +2613,9 @@ components:
             type: string
         details:
           type: object
-          additionalProperties:
-            type: object
+          additionalProperties: {}
         message:
           type: string
-          nullable: false
     ExperimentComparison:
       required:
       - model
@@ -2662,17 +2627,14 @@ components:
           description: Name of comparison model
           type: string
           example: relativeDifference
-          nullable: false
         config:
           description: Model JSON configuration
           type: string
-          nullable: false
         variableId:
           format: int32
           description: Variable ID to run experiment against
           type: integer
           example: 101
-          nullable: false
         variableName:
           description: Variable Name to run experiment against
           type: string
@@ -2697,7 +2659,6 @@ components:
           description: Name of Experiment Profile
           type: string
           example: Techempower comparison
-          nullable: false
         testId:
           format: int32
           description: Test ID that Experiment Profile relates to
@@ -2742,18 +2703,20 @@ components:
       type: object
       properties:
         profile:
+          description: Experiment profile that results relates to
+          type: object
           allOf:
           - $ref: '#/components/schemas/ExperimentProfile'
-          - description: Experiment profile that results relates to
         logs:
           description: A list of log statements recorded while Experiment was evaluated
           type: array
           items:
             $ref: '#/components/schemas/DatasetLog'
         datasetInfo:
+          description: Dataset Info about dataset used for experiment
+          type: object
           allOf:
           - $ref: '#/components/schemas/DatasetInfo'
-          - description: Dataset Info about dataset used for experiment
         baseline:
           description: A list of Dataset Info for experiment baseline(s)
           type: array
@@ -2790,18 +2753,15 @@ components:
             to refer to values by name
           type: string
           example: buildID
-          nullable: false
         jsonpath:
           description: JSON path expression defining the location of the extractor
             value in the JSON document. This is a pSQL json path expression
           type: string
           example: $.buildInfo.buildID
-          nullable: false
         array:
           description: Does the JSON path expression reference an Array?
           type: boolean
           example: false
-          nullable: false
     FingerprintValue:
       description: Representation of Fingerprint. If the Fingerprint has children
         the value will be null.
@@ -2813,7 +2773,6 @@ components:
           example: Mode
         value:
           description: Fingerprint name
-          type: object
           example: Library
         children:
           description: List of Fingerprint children
@@ -2867,14 +2826,12 @@ components:
             \ same semantic meaning throughout the entire system"
           type: string
           example: Throughput
-          nullable: false
         extractors:
           description: "A collection of Extractors, that will be combined in the Combination\
             \ Function"
           type: array
           items:
             $ref: '#/components/schemas/Extractor'
-          nullable: false
         function:
           description: A Combination Function that defines how values from Extractors
             are combined to produce a Label Value
@@ -2886,19 +2843,16 @@ components:
             that are used to filter datasets for comparison
           type: boolean
           example: true
-          nullable: false
         metrics:
           description: Is Label a metrics label? Metrics labels are contain Metrics
             that are used for comparison
           type: boolean
           example: true
-          nullable: false
         schemaId:
           format: int32
           description: Schema ID that the Label relates to
           type: integer
           example: 101
-          nullable: false
     LabelInFingerprint:
       type: object
       allOf:
@@ -2964,7 +2918,6 @@ components:
           description: Label name
           type: string
           example: buildID
-          nullable: false
         metrics:
           description: Is label a metrics label?
           type: boolean
@@ -2978,7 +2931,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SchemaDescriptor'
-          nullable: false
     LabelLocation:
       type: object
       properties:
@@ -3026,12 +2978,11 @@ components:
           description: Label name
           type: string
           example: buildID
-          nullable: false
         schema:
+          description: Summary description of Schema
+          type: object
           allOf:
           - $ref: '#/components/schemas/SchemaDescriptor'
-          - description: Summary description of Schema
-            nullable: false
         value:
           description: "Value value extracted from Dataset. This can be a scalar,\
             \ array or JSON object"
@@ -3058,10 +3009,10 @@ components:
         maxStaleness:
           format: int64
           type: integer
-          nullable: false
         lastNotification:
           format: date-time
           type: string
+          example: 2022-03-10T16:15:50Z
         testId:
           format: int32
           type: integer
@@ -3080,14 +3031,12 @@ components:
         level:
           format: int32
           type: integer
-          nullable: false
         timestamp:
           format: date-time
           type: string
-          nullable: false
+          example: 2022-03-10T16:15:50Z
         message:
           type: string
-          nullable: false
     PostgresDatastoreConfig:
       description: Built in backend datastore
       required:
@@ -3116,25 +3065,21 @@ components:
           allOf:
           - $ref: '#/components/schemas/Access'
           example: PUBLIC
-          nullable: false
         owner:
           description: Name of the team that owns the test. Users must belong to the
             team that owns a test to make modifications
           type: string
           example: performance-team
-          nullable: false
         start:
           format: date-time
           description: Run Start timestamp
           type: string
           example: 2019-09-26T07:58:30.996+0200
-          nullable: false
         stop:
           format: date-time
           description: Run Stop timestamp
           type: string
           example: 2019-09-26T07:58:30.996+0200
-          nullable: false
     ProtectedType:
       required:
       - access
@@ -3152,13 +3097,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/Access'
           example: PUBLIC
-          nullable: false
         owner:
           description: Name of the team that owns the test. Users must belong to the
             team that owns a test to make modifications
           type: string
           example: performance-team
-          nullable: false
     RecalculationStatus:
       required:
       - timestamp
@@ -3200,11 +3143,9 @@ components:
           type: integer
         name:
           type: string
-          nullable: false
         order:
           format: int32
           type: integer
-          nullable: false
         labels:
           description: Array of labels
           type: array
@@ -3212,7 +3153,6 @@ components:
             type: string
           example:
           - Framework
-          nullable: false
         function:
           type: string
         unit:
@@ -3254,25 +3194,21 @@ components:
           allOf:
           - $ref: '#/components/schemas/Access'
           example: PUBLIC
-          nullable: false
         owner:
           description: Name of the team that owns the test. Users must belong to the
             team that owns a test to make modifications
           type: string
           example: performance-team
-          nullable: false
         start:
           format: date-time
           description: Run Start timestamp
           type: string
           example: 2019-09-26T07:58:30.996+0200
-          nullable: false
         stop:
           format: date-time
           description: Run Stop timestamp
           type: string
           example: 2019-09-26T07:58:30.996+0200
-          nullable: false
         id:
           format: int32
           description: Unique Run ID
@@ -3287,11 +3223,9 @@ components:
           description: Test ID run relates to
           type: integer
           example: 101
-          nullable: false
         data:
           description: Run result payload
           type: string
-          nullable: false
         metadata:
           description: "JSON metadata related to run, can be tool configuration etc"
           type: string
@@ -3299,7 +3233,6 @@ components:
           description: Has Run been deleted from UI
           type: boolean
           example: false
-          nullable: false
         datasets:
           description: Collection of Datasets derived from Run payload
           type: array
@@ -3358,25 +3291,21 @@ components:
           allOf:
           - $ref: '#/components/schemas/Access'
           example: PUBLIC
-          nullable: false
         owner:
           description: Name of the team that owns the test. Users must belong to the
             team that owns a test to make modifications
           type: string
           example: performance-team
-          nullable: false
         start:
           format: date-time
           description: Run Start timestamp
           type: string
           example: 2019-09-26T07:58:30.996+0200
-          nullable: false
         stop:
           format: date-time
           description: Run Stop timestamp
           type: string
           example: 2019-09-26T07:58:30.996+0200
-          nullable: false
         id:
           format: int32
           description: Unique Run ID
@@ -3391,11 +3320,9 @@ components:
           description: Test ID run relates to
           type: integer
           example: 101
-          nullable: false
         data:
           description: Run result payload
           type: string
-          nullable: false
         metadata:
           description: "JSON metadata related to run, can be tool configuration etc"
           type: string
@@ -3403,7 +3330,6 @@ components:
           description: Has Run been deleted from UI
           type: boolean
           example: false
-          nullable: false
         validationErrors:
           description: Collection of Validation Errors in Run payload
           type: array
@@ -3414,12 +3340,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SchemaUsage'
-          nullable: false
         testname:
           description: Test name run references
           type: string
           example: My benchmark
-          nullable: false
         datasets:
           description: List of DatasetIDs
           type: array
@@ -3459,7 +3383,6 @@ components:
           description: test ID run relates to
           type: string
           example: My benchmark
-          nullable: false
         trashed:
           description: has Run been trashed in the UI
           type: boolean
@@ -3508,7 +3431,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RunSummary'
-          nullable: false
     Schema:
       description: Data object that describes the schema definition for a test
       required:
@@ -3528,12 +3450,10 @@ components:
           description: "Unique, versioned schema URI"
           type: string
           example: uri:my-schema:0.1
-          nullable: false
         name:
           description: Schema name
           type: string
           example: My benchmark schema
-          nullable: false
         description:
           description: Schema Description
           type: string
@@ -3565,12 +3485,10 @@ components:
           description: Schema name
           type: string
           example: my-benchmark-schema
-          nullable: false
         uri:
           description: Schema name
           type: string
           example: uri:my-schmea:0.1
-          nullable: false
     SchemaExport:
       description: Represents a Schema with all associated data used for export/import
         operations.
@@ -3599,7 +3517,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Schema'
-          nullable: false
         count:
           format: int64
           description: Count of available Schemas. This is a count of Schemas that
@@ -3625,12 +3542,10 @@ components:
           description: Schema name
           type: string
           example: my-benchmark-schema
-          nullable: false
         uri:
           description: Schema name
           type: string
           example: uri:my-schmea:0.1
-          nullable: false
         source:
           format: int32
           description: "Source of schema usage, 0 is data, 1 is metadata. DataSets\
@@ -3685,7 +3600,6 @@ components:
               type: integer
             title:
               type: string
-              nullable: false
             test:
               $ref: '#/components/schemas/Test'
             filterLabels:
@@ -3709,7 +3623,6 @@ components:
               type: array
               items:
                 type: string
-              nullable: false
             seriesFunction:
               type: string
             seriesFormatter:
@@ -3741,11 +3654,9 @@ components:
                     type: integer
                   name:
                     type: string
-                    nullable: false
                   order:
                     format: int32
                     type: integer
-                    nullable: false
                   labels:
                     description: Array of labels
                     type: array
@@ -3753,7 +3664,6 @@ components:
                       type: string
                     example:
                     - Framework
-                    nullable: false
                   function:
                     type: string
                   unit:
@@ -3761,14 +3671,11 @@ components:
                   reportId:
                     format: int32
                     type: integer
-              nullable: false
-          nullable: false
         created:
           format: date-time
           description: Created timestamp
           type: string
           example: 2019-09-26T07:58:30.996+0200
-          nullable: false
         comments:
           description: List of ReportComments
           type: array
@@ -3784,7 +3691,6 @@ components:
               level:
                 format: int32
                 type: integer
-                nullable: false
               category:
                 type: string
               componentId:
@@ -3792,8 +3698,6 @@ components:
                 type: integer
               comment:
                 type: string
-                nullable: false
-          nullable: false
         data:
           description: List of TableReportData
           type: array
@@ -3812,31 +3716,23 @@ components:
               datasetId:
                 format: int32
                 type: integer
-                nullable: false
               runId:
                 format: int32
                 type: integer
-                nullable: false
               ordinal:
                 format: int32
                 type: integer
-                nullable: false
               category:
                 type: string
-                nullable: false
               series:
                 type: string
-                nullable: false
               scale:
                 type: string
-                nullable: false
               values:
                 description: Array of values
                 type: array
                 items:
                   type: number
-                nullable: false
-          nullable: false
         logs:
           description: List of ReportLogs
           type: array
@@ -3851,7 +3747,6 @@ components:
               reportId:
                 format: int32
                 type: integer
-          nullable: false
     TableReportConfig:
       description: Table Report Config
       required:
@@ -3866,7 +3761,6 @@ components:
           type: integer
         title:
           type: string
-          nullable: false
         test:
           $ref: '#/components/schemas/Test'
         filterLabels:
@@ -3890,7 +3784,6 @@ components:
           type: array
           items:
             type: string
-          nullable: false
         seriesFunction:
           type: string
         seriesFormatter:
@@ -3922,11 +3815,9 @@ components:
                 type: integer
               name:
                 type: string
-                nullable: false
               order:
                 format: int32
                 type: integer
-                nullable: false
               labels:
                 description: Array of labels
                 type: array
@@ -3934,7 +3825,6 @@ components:
                   type: string
                 example:
                 - Framework
-                nullable: false
               function:
                 type: string
               unit:
@@ -3942,7 +3832,6 @@ components:
               reportId:
                 format: int32
                 type: integer
-          nullable: false
     TableReportData:
       description: Table Report Data
       required:
@@ -3958,30 +3847,23 @@ components:
         datasetId:
           format: int32
           type: integer
-          nullable: false
         runId:
           format: int32
           type: integer
-          nullable: false
         ordinal:
           format: int32
           type: integer
-          nullable: false
         category:
           type: string
-          nullable: false
         series:
           type: string
-          nullable: false
         scale:
           type: string
-          nullable: false
         values:
           description: Array of values
           type: array
           items:
             type: number
-          nullable: false
     Test:
       description: Represents a Test. Tests are typically equivalent to a particular
         benchmark
@@ -4003,7 +3885,6 @@ components:
           description: Test name
           type: string
           example: my-comprehensive-benchmark
-          nullable: false
         folder:
           description: Name of folder that the test is stored in. Folders allow tests
             to be organised in the UI
@@ -4018,7 +3899,6 @@ components:
           format: int32
           description: backend ID for backing datastore
           type: integer
-          nullable: false
         tokens:
           description: Array of API tokens associated with test
           type: array
@@ -4064,7 +3944,6 @@ components:
           description: Are notifications enabled for the test
           type: boolean
           example: true
-          nullable: false
     TestExport:
       description: Represents a Test with all associated data used for export/import
         operations.
@@ -4093,13 +3972,15 @@ components:
           items:
             $ref: '#/components/schemas/Action'
         subscriptions:
+          description: Watcher object associated with test
+          type: object
           allOf:
           - $ref: '#/components/schemas/Watch'
-          - description: Watcher object associated with test
         datastore:
+          description: Datastore associated with test
+          type: object
           allOf:
           - $ref: '#/components/schemas/Datastore'
-          - description: Datastore associated with test
     TestListing:
       type: object
       properties:
@@ -4119,7 +4000,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Test'
-          nullable: false
         count:
           format: int64
           description: Count of available tests. This is a count of tests that the
@@ -4144,7 +4024,6 @@ components:
           description: Test name
           type: string
           example: my-comprehensive-benchmark
-          nullable: false
         folder:
           description: Name of folder that the test is stored in. Folders allow tests
             to be organised in the UI
@@ -4197,16 +4076,13 @@ components:
           description: Test value
           type: string
           example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
-          nullable: false
         permissions:
           format: int32
           type: integer
-          nullable: false
         description:
           description: Token description
           type: string
           example: my reporting service token
-          nullable: false
     TransformationLog:
       description: Transformation Log
       required:
@@ -4222,14 +4098,12 @@ components:
         level:
           format: int32
           type: integer
-          nullable: false
         timestamp:
           format: date-time
           type: string
-          nullable: false
+          example: 2022-03-10T16:15:50Z
         message:
           type: string
-          nullable: false
         testId:
           format: int32
           type: integer
@@ -4259,7 +4133,6 @@ components:
           description: Transformer name
           type: string
           example: normalize-techempower-result
-          nullable: false
         description:
           description: Transformer description
           type: string
@@ -4277,7 +4150,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Extractor'
-          nullable: false
         function:
           type: string
         schemaId:
@@ -4285,7 +4157,6 @@ components:
           description: Schema ID that the transform is registered against
           type: integer
           example: 101
-          nullable: false
         schemaUri:
           description: Schema Uri that the transform is registered against
           type: string
@@ -4312,12 +4183,10 @@ components:
           description: Schema uri
           type: string
           example: uri:my-schema:0.1
-          nullable: false
         schemaName:
           description: Schema name
           type: string
           example: my-benchmark-schema
-          nullable: false
         transformerId:
           format: int32
           description: Transformer ID
@@ -4327,7 +4196,6 @@ components:
           description: Transformer name
           type: string
           example: my-dataset-transformer
-          nullable: false
     ValidationError:
       required:
       - schemaId
@@ -4340,9 +4208,10 @@ components:
           type: integer
           example: 101
         error:
+          description: Validation Error Details
+          type: object
           allOf:
           - $ref: '#/components/schemas/ErrorDetails'
-          - description: Validation Error Details
     Variable:
       required:
       - id
@@ -4359,21 +4228,17 @@ components:
         testId:
           format: int32
           type: integer
-          nullable: false
         name:
           type: string
-          nullable: false
         group:
           type: string
         order:
           format: int32
           type: integer
-          nullable: false
         labels:
           type: array
           items:
             type: string
-          nullable: false
         calculation:
           type: string
         changeDetection:
@@ -4390,7 +4255,6 @@ components:
           description: Version of Horreum
           type: string
           example: 0.9.4
-          nullable: false
         startTimestamp:
           format: int64
           description: Timestamp of server startup
@@ -4411,17 +4275,14 @@ components:
           type: array
           items:
             type: string
-          nullable: false
         optout:
           type: array
           items:
             type: string
-          nullable: false
         teams:
           type: array
           items:
             type: string
-          nullable: false
         testId:
           format: int32
           type: integer
