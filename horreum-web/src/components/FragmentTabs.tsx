@@ -1,7 +1,7 @@
 import { ReactElement, ReactNode, useMemo, useState, MutableRefObject } from "react"
-import { useHistory } from "react-router"
 import { Tab, Tabs } from "@patternfly/react-core"
 import { noop } from "../utils"
+import {useLocation, useNavigate} from "react-router-dom";
 
 export type FragmentTabProps = {
     title: string
@@ -19,13 +19,14 @@ type FragmentTabsProps = {
 }
 
 export default function FragmentTabs(props: FragmentTabsProps) {
-    const history = useHistory()
+    const navigate = useNavigate()
+    const location = useLocation()
     const children = useMemo(
         () => (Array.isArray(props.children) ? props.children : [props.children]),
         [props.children]
     )
     const [activeKey, setActiveKey] = useState(() => {
-        const hash = history.location.hash
+        const hash = location.hash
         let endOfTab = hash.length
         for (const symbol of ["+", "&"]) {
             const pos = hash.indexOf(symbol)
@@ -48,7 +49,7 @@ export default function FragmentTabs(props: FragmentTabsProps) {
         if (props.tabIndexRef) {
             props.tabIndexRef.current = index
         }
-        history.replace(history.location.pathname + history.location.search + "#" + children[index].props.fragment)
+        navigate(location.pathname + location.search + "#" + children[index].props.fragment, {replace: true})
     }
     return (
         <Tabs

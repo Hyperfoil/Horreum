@@ -1,13 +1,11 @@
 import * as React from 'react';
 import {Alert, contextAlertAction} from "../alerts";
-import {createBrowserHistory} from "history";
 import {useState} from "react";
 import {AlertVariant} from "@patternfly/react-core";
 import {userApi} from "../api";
 import {AlertContextType, AppContextType, AuthContextType} from "./@types/appContextTypes";
 
 export const AppContext = React.createContext<AppContextType | null>(null);
-export const history = createBrowserHistory()
 
 const ContextProvider: React.FC<React.ReactNode> = ({ children }) => {
     const [alerts, setAlerts] = useState<Alert[]>([]);

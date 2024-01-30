@@ -1,7 +1,6 @@
 import {useState, useMemo, useEffect, useContext} from "react"
 
 import { useSelector } from "react-redux"
-import { useHistory } from "react-router"
 
 import {
 	Button,
@@ -20,7 +19,7 @@ import {
 	DropdownToggle,
 	DropdownItem
 } from '@patternfly/react-core/deprecated';
-import { NavLink } from "react-router-dom"
+import {NavLink, useLocation, useNavigate} from "react-router-dom"
 import { EyeIcon, EyeSlashIcon, FolderOpenIcon } from "@patternfly/react-icons"
 
 import Table from "../../components/Table"
@@ -278,8 +277,9 @@ export function useMoveToFolder(config: MoveToFolderConfig): MenuItem<MoveToFold
 
 export default function AllTests() {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const history = useHistory()
-    const params = new URLSearchParams(history.location.search)
+    const navigate = useNavigate()
+    const location = useLocation()
+    const params = new URLSearchParams(location.search)
     const [folder, setFolder] = useState(params.get("folder"))
 
     document.title = "Tests | Horreum"
@@ -463,7 +463,7 @@ export default function AllTests() {
                         folder={folder || ""}
                         onChange={f => {
                             setFolder(f)
-                            history.replace(f ? `/test?folder=${f}` : "/test")
+                            navigate(f ? `/test?folder=${f}` : "/test", { replace: true })
                         }}
                     />
                     <Table<TestStorage> columns={columns}
