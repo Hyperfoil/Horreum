@@ -43,7 +43,7 @@ export default function SchemaList() {
     const reloadSchemas = () => {
         setLoading(true)
         schemaApi
-            .list('Ascending', pagination.perPage, pagination.page - 1)
+            .list(pagination.perPage, pagination.page - 1, "", SortDirection.Ascending)
             .then((result) => {
                 setSchemas(result.schemas)
                 setSchemaCount(result.count)
@@ -96,7 +96,7 @@ export default function SchemaList() {
                 Cell: arg => {
                     const changeAccess = useChangeAccess({
                         onAccessUpdate: (id, owner, access) => {
-                            return schemaApi.updateAccess(id, access, owner).then(
+                            return schemaApi.updateAccess(id, owner, access).then(
                                 () => noop(),
                                 error => alerting.dispatchError(error, "SCHEMA_UPDATE", "Failed to update schema access.")
                             ).then(() => reloadSchemas)

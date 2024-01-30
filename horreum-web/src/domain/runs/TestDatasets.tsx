@@ -167,11 +167,11 @@ export default function TestDatasets() {
         setLoading(true)
         datasetApi.listByTest(
             testIdInt,
-            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             fingerprintToString(filter),
             pagination.perPage,
             pagination.page,
             pagination.sort,
+            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             viewId
         )
             .then(setDatasets, error =>

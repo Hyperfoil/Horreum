@@ -43,10 +43,10 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
         if (props.target === "run") {
             runApi.listBySchema(
                 props.uri,
-                pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
                 pagination.perPage,
                 pagination.page,
-                pagination.sort
+                pagination.sort,
+                pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending
             ).then(
                 summary => {
                     setRuns(summary.runs)
@@ -61,10 +61,10 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
             // target === dataset
             datasetApi.listBySchema(
                 props.uri,
-                pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
                 pagination.perPage,
                 pagination.page,
-                pagination.sort
+                pagination.sort,
+                pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending
             ).then(
                 response => {
                     setDatasets(response.datasets)

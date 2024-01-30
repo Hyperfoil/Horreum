@@ -301,10 +301,11 @@ export default function AllTests() {
     useEffect(() => {
         setLoading(true)
         testApi.list(
-            SortDirection.Ascending,
+            "_my",
             pagination.perPage,
-            pagination.page - 1
-
+            pagination.page - 1,
+            "name",
+            SortDirection.Ascending,
         )
             .then(setTets)
             .catch(error => alerting.dispatchError(error, "FETCH_Tests", "Failed to fetch Tests"))

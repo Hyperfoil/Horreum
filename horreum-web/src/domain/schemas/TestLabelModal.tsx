@@ -39,10 +39,10 @@ export default function TestLabelModal(props: TestLabelModalProps) {
         setLoading(true)
         datasetApi.listBySchema(
             props.uri,
-            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
             pagination.perPage,
             pagination.page,
-            pagination.sort
+            pagination.sort,
+            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending
         )
             .then(
                 summary => {
