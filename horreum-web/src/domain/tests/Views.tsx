@@ -11,7 +11,6 @@ import {
     FormGroup,
     TextInput,
 } from "@patternfly/react-core"
-import { useHistory } from "react-router"
 
 import { useTester } from "../../auth"
 
@@ -22,6 +21,7 @@ import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {useLocation, useNavigate} from "react-router-dom";
 
 function swap(array: any[], i1: number, i2: number) {
     const temp = array[i1]
@@ -143,9 +143,10 @@ export default function Views({ testId, testOwner, funcsRef, onModified, ...prop
             setViews(deepCopy(props.views))
         },
     }
-    const history = useHistory()
+    const navigate = useNavigate()
+    const location = useLocation()
     useEffect(() => {
-        const fragmentParts = history.location.hash.split("+")
+        const fragmentParts = location.hash.split("+")
         if (fragmentParts.length === 3 && fragmentParts[0] === "#views") {
             const component = document.getElementById("viewcomponent-" + fragmentParts[2])
             if (component) {

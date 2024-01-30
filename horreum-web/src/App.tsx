@@ -1,18 +1,23 @@
 import "@patternfly/patternfly/patternfly.css" //have to use this import to customize scss-variables.scss
 
 import {
-	Nav,
-	NavItem,
-	NavList,
-	Page
+    Nav,
+    NavItem,
+    NavList,
+    Page
 } from '@patternfly/react-core';
 import {
-	PageHeader,
-	PageHeaderTools
+    PageHeader,
+    PageHeaderTools
 } from '@patternfly/react-core/deprecated';
 
-import {NavLink, Route, Routes} from "react-router-dom"
-import {Router} from "react-router"
+import {
+    createBrowserRouter,
+    createRoutesFromElements,
+    NavLink, Outlet,
+    Route,
+    RouterProvider,
+} from "react-router-dom"
 
 import {Provider, useSelector} from "react-redux"
 
@@ -43,96 +48,99 @@ import TableReportConfigPage from "./domain/reports/TableReportConfigPage"
 import NotFound from "./404"
 
 import About from "./About"
-import ContextProvider, {history} from "./context/appContext";
+import ContextProvider from "./context/appContext";
+
+const router = createBrowserRouter(
+    createRoutesFromElements(
+        <Route element={<Main/>} >
+            <Route index element={<AllTests/>}/>
+            <Route path="/test" element={<AllTests/>}/>
+            <Route path="/test/:testId" element={<Test/>}/>
+
+            <Route path="/run/list/:testId" element={<RunList/>}/>
+            <Route path="/run/dataset/list/:testId" element={<TestDatasets/>}/>
+            <Route path="/run/:id" element={<Run/>}/>
+            <Route path="/dataset/comparison" element={<DatasetComparison/>}/>
+
+            <Route path="/schema" element={<SchemaList/>}/>
+            <Route path="/schema/:schemaId" element={<Schema/>}/>
+
+            <Route path="/changes" element={<Changes/>}/>
+
+            <Route path="/reports" element={<Reports/>}/>
+            <Route path="/reports/table/config/:configId" element={<TableReportConfigPage/>}/>
+            <Route path="/reports/table/:id" element={<TableReportPage/>}/>
+
+            <Route path="/admin" element={<Admin/>}/>
+            <Route path="/usersettings" element={<UserSettings/>}/>
+            <Route element={<NotFound/>}/>
+        </Route>
+    )
+);
 
 export default function App() {
     initKeycloak(store.getState())
 
     return (
         <Provider store={store}>
-            <Main/>
+            <ContextProvider>
+                <RouterProvider router={router}/>
+            </ContextProvider>
         </Provider>
     )
 }
 
 function Main() {
     const isAdmin = useSelector(isAdminSelector)
+
+
     return (
-        <Provider store={store}>
-            <ContextProvider>
-                <Router history={history}>
-                    <Banner />
-                    <Page
-                        header={
-                            <PageHeader
-                                topNav={
-                                    <Nav aria-label="Nav" variant="horizontal">
-                                        <NavList>
-                                            <NavItem itemId={-1}>
-                                                <NavLink to="/">
-                                                    <img width="24" height="24" src="/logo.png" alt="Horreum Logo" />
-                                                </NavLink>
-                                            </NavItem>
-                                            <NavItem itemId={0}>
-                                                <NavLink to="/test">Tests</NavLink>
-                                            </NavItem>
-                                            <NavItem itemId={1}>
-                                                <NavLink to="/schema">Schema</NavLink>
-                                            </NavItem>
-                                            <NavItem itemId={2}>
-                                                <NavLink to="/changes">Changes</NavLink>
-                                            </NavItem>
-                                            <NavItem itemId={3}>
-                                                <NavLink to="/reports">Reports</NavLink>
-                                            </NavItem>
-                                            {isAdmin && (
-                                                <NavItem itemId={4}>
-                                                    <NavLink to="/admin">Administration</NavLink>
-                                                </NavItem>
-                                            )}
-                                        </NavList>
-                                    </Nav>
-                                }
+        <div>
+            <Banner/>
+            <Page
+                header={
+                    <PageHeader
+                        topNav={
+                            <Nav aria-label="Nav" variant="horizontal">
+                                <NavList>
+                                    <NavItem itemId={-1}>
+                                        <NavLink to="/">
+                                            <img width="24" height="24" src="/logo.png" alt="Horreum Logo"/>
+                                        </NavLink>
+                                    </NavItem>
+                                    <NavItem itemId={0}>
+                                        <NavLink to="/test">Tests</NavLink>
+                                    </NavItem>
+                                    <NavItem itemId={1}>
+                                        <NavLink to="/schema">Schema</NavLink>
+                                    </NavItem>
+                                    <NavItem itemId={2}>
+                                        <NavLink to="/changes">Changes</NavLink>
+                                    </NavItem>
+                                    <NavItem itemId={3}>
+                                        <NavLink to="/reports">Reports</NavLink>
+                                    </NavItem>
+                                    {isAdmin && (
+                                        <NavItem itemId={4}>
+                                            <NavLink to="/admin">Administration</NavLink>
+                                        </NavItem>
+                                    )}
+                                </NavList>
+                            </Nav>
+                        }
                         headerTools={
                             <PageHeaderTools>
-                                <UserProfileLink />
-                                <LoginLogout />
-                                <About />
+                                <UserProfileLink/>
+                                <LoginLogout/>
+                                <About/>
                             </PageHeaderTools>
                         }
                     />
-                }
-            >
+                }>
                 <Alerts/>
-             
-                <Routes>
-                    <Route  path="/" element={<AllTests />} />
-                    <Route  path="/test" element={<AllTests />} />
-                    <Route  path="/test/:testId" element={<Test />} />
 
-                    <Route  path="/run/list/:testId" element={<RunList />} />
-                    <Route  path="/run/dataset/list/:testId" element={<TestDatasets />} />
-                    <Route  path="/run/:id" element={<Run />} />
-                    <Route  path="/dataset/comparison"element={<DatasetComparison />} />
-
-                    <Route  path="/schema" element={<SchemaList />} />
-                    <Route path="/schema/:schemaId" element={<Schema />} />
-
-                    <Route  path="/changes" element={<Changes />} />
-
-                    <Route  path="/reports" element={<Reports />} />
-                    <Route  path="/reports/table/config/:configId" element={<TableReportConfigPage />} />
-                    <Route  path="/reports/table/:id" element={<TableReportPage />} />
-
-                    <Route  path="/admin" element={<Admin />} />
-                    <Route  path="/usersettings" element={<UserSettings />} />
-                    <Route element={<NotFound />} />
-                </Routes>
-              
+                <Outlet />
             </Page>
-            {/* <ContextHelp /> */}
-        </Router>
-        </ContextProvider>
-        </Provider>
+        </div>
     )
 }
