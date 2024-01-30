@@ -1,10 +1,9 @@
-import { MutableRefObject, ReactElement, useEffect, useMemo, useState, useRef } from "react"
-import { useHistory } from "react-router"
-import { Location, UnregisterCallback } from "history"
+import { MutableRefObject, ReactElement, useMemo, useState, useRef } from "react"
 import { ActionGroup, Button, Spinner } from "@patternfly/react-core"
 import SaveChangesModal from "./SaveChangesModal"
 import FragmentTabs, { FragmentTab, FragmentTabProps } from "./FragmentTabs"
 import { noop } from "../utils"
+import {useBlocker, useNavigate} from 'react-router-dom';
 
 export type TabFunctions = {
     save(): Promise<any>
@@ -15,7 +14,7 @@ export type TabFunctions = {
 export type TabFunctionsRef = MutableRefObject<TabFunctions | undefined>
 
 export function saveFunc(ref: TabFunctionsRef) {
-    return () => (ref.current ? ref.current.save() : Promise.resolve())
+    return () => (ref.current ? ref.current?.save() : Promise.resolve())
 }
 export function resetFunc(ref: TabFunctionsRef) {
     return () => ref.current?.reset()
@@ -40,55 +39,32 @@ type SavedTabsProps = {
 }
 
 export default function SavedTabs(props: SavedTabsProps) {
-    const history = useHistory()
+    const navigate = useNavigate()
     const children = useMemo(
         () => (Array.isArray(props.children) ? props.children : [props.children]),
         [props.children]
     )
     const activeKey = useRef(0)
-    const [requestedNavigation, setRequestedNavigation] = useState<() => void>()
     const [saving, setSaving] = useState(false)
-    const [requestedLocation, setRequestedLocation] = useState<Location<any>>()
-    const historyUnblock = useRef<UnregisterCallback>()
-    useEffect(() => {
-        const unblock = history.block(location => {
-            const childProps = children[activeKey.current].props
-            if ("isModified" in childProps && childProps.isModified()) {
-                setRequestedLocation(location)
-                return false
-            }
-        })
-        historyUnblock.current = unblock
-        return () => {
-            unblock()
+
+    let blocker = useBlocker(
+        ({ currentLocation, nextLocation }) => {
+            const childProps = children[activeKey.current].props;
+            return ("isModified" in childProps && childProps.isModified()) &&
+            currentLocation.pathname !== nextLocation.pathname
         }
-    }, [activeKey.current, children, history])
-    const navigate = () => {
-        if (requestedNavigation !== undefined) {
-            requestedNavigation()
-        }
-        if (requestedLocation !== undefined) {
-            if (historyUnblock.current) {
-                historyUnblock.current()
-            }
-            history.push(requestedLocation)
-        }
-        setRequestedNavigation(undefined)
-        setRequestedLocation(undefined)
-    }
+    );
+
     return (
         <>
             <SaveChangesModal
-                isOpen={requestedNavigation !== undefined || requestedLocation !== undefined}
-                onClose={() => {
-                    setRequestedNavigation(undefined)
-                    setRequestedLocation(undefined)
-                }}
+                isOpen={blocker.state === "blocked"}
+                onClose={ () => blocker.reset?.()}
                 onSave={() => {
                     const childProps = children[activeKey.current].props
                     if ("onSave" in childProps) {
                         return childProps.onSave().then(_ => {
-                            navigate()
+                            blocker.proceed?.()
                             if (props.afterSave) {
                                 return props.afterSave()
                             }
@@ -107,22 +83,10 @@ export default function SavedTabs(props: SavedTabsProps) {
                             props.afterReset()
                         }
                     }
-                    navigate()
+                    blocker.proceed?.()
                 }}
             />
-            <FragmentTabs
-                tabIndexRef={activeKey}
-                navigate={_ => {
-                    const childProps = children[activeKey.current].props
-                    if ("isModified" in childProps && childProps.isModified()) {
-                        return new Promise((resolve, _) => {
-                            setRequestedNavigation(() => resolve)
-                        })
-                    } else {
-                        return Promise.resolve()
-                    }
-                }}
-            >
+            <FragmentTabs tabIndexRef={activeKey} >
                 {children.map((c, i) => (
                     <FragmentTab key={i} {...c.props} />
                 ))}

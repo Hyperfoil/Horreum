@@ -1,5 +1,4 @@
 import {useContext, useEffect, useState} from "react"
-import { useHistory } from "react-router"
 
 import { Bullseye, 
     FormGroup, 
@@ -22,6 +21,7 @@ import {alertingApi, MissingDataRule, Test} from "../../api"
 import { useTester } from "../../auth"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {useLocation} from "react-router-dom";
 
 
 type MissingDataRuleExtended = MissingDataRule & {
@@ -52,7 +52,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
     const [selectedRule, setSelectedRule] = useState<MissingDataRuleExtended>()
     const [resetCounter, setResetCounter] = useState(0)
 
-    const history = useHistory()
+    const location = useLocation()
     useEffect(() => {
         if (!props.test) {
             return
@@ -63,7 +63,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
                     rules = rules.map(r => ({ ...r, maxStalenessStr: millisToDuration(r.maxStaleness) }))
                     setRules(rules.sort(compareRules))
                     if (rules.length > 0) {
-                        const fragmentParts = history.location.hash.split("+")
+                        const fragmentParts = location.hash.split("+")
                         let index = 0
                         if (fragmentParts.length === 2 && fragmentParts[0] === "#missingdata") {
                             const ruleId = parseInt(fragmentParts[1])

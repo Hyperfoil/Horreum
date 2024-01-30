@@ -56,8 +56,8 @@ export default function SaveChangesModal({isOpen, onClose, onSave, onReset}: Sav
                         isDisabled={saving}
                         variant="danger"
                         onClick={() => {
-                            onClose()
                             onReset()
+                            onClose()
                         }}
                     >
                         Discard
