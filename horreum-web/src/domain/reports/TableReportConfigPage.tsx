@@ -1,6 +1,6 @@
 import {useState, useEffect, useMemo, useContext} from "react"
-import { useHistory } from "react-router"
-import { useParams } from "react-router-dom"
+import {useLocation, useParams} from "react-router-dom"
+import { useNavigate } from "react-router-dom";
 
 import {
     ActionGroup,
@@ -126,8 +126,9 @@ export default function TableReportConfigPage() {
     const { alerting } = useContext(AppContext) as AppContextType;
     const { configId } = useParams<string>()
     const id = parseInt(configId ?? "-1")
-    const history = useHistory()
-    const queryParams = new URLSearchParams(history.location.search)
+    const history = useNavigate()
+    const location = useLocation()
+    const queryParams = new URLSearchParams(location.search)
     const reportId = useMemo(() => {
         const edit = queryParams.get("edit")
         return edit ? parseInt(edit) : undefined
@@ -201,7 +202,7 @@ export default function TableReportConfigPage() {
                     reportApi
                         .updateTableReportConfig(reportId, config)
                         .then(
-                            report => history.push("/reports/table/" + report.id),
+                            report => history("/reports/table/" + report.id),
                             error => alerting.dispatchError(error,"SAVE_CONFIG", "Failed to save report configuration.")
                         )
                         .finally(() => setSaving(false))
