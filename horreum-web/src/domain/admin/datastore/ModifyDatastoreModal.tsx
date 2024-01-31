@@ -1,4 +1,4 @@
-import React, {useState} from "react"
+import React, {useContext, useState} from "react"
 
 import {
     Button, Form,
@@ -12,6 +12,8 @@ import {
     Datastore,
     DatastoreTypeEnum, ElasticsearchDatastoreConfig,
 } from "../../../api";
+import {AppContext} from "../../../context/appContext";
+import {AppContextType} from "../../../context/@types/appContextTypes";
 
 type ConfirmDeleteModalProps = {
     isOpen: boolean
@@ -35,6 +37,7 @@ interface datastoreOption {
 
 export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore, dataStore, updateDatastore}: ConfirmDeleteModalProps) {
 
+    const { alerting } = useContext(AppContext) as AppContextType;
     const [enabledURL, setEnableUrl] = useState(false);
     const [enabledToken, setEnableToken] = useState(false);
 
@@ -44,14 +47,22 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
         if ( option ){
             setEnableUrl(option.urlDisabled)
             setEnableToken(option.tokenDisbaled)
+
+            updateDatastore({...dataStore, type: option.value})
         }
     };
 
     const saveBackend = () => {
-        persistDatastore(dataStore).then( () => onClose())
+        persistDatastore(dataStore)
+            .then( () => {
+                onClose();
+                alerting.dispatchInfo("SAVE", "Saved!", "Datastore was successfully updated!", 3000)
+            })
+            .catch(reason => alerting.dispatchError("SAVE", "Saved!", "Failed to save changes to Datastore"))
     }
 
     const options : datastoreOption[] = [
+        { value:  DatastoreTypeEnum.Postgres, label: 'Please select...', disabled: true, urlDisabled: true, usernameDisable: true, tokenDisbaled: true },
         { value:  DatastoreTypeEnum.Elasticsearch, label: 'Elasticsearch', disabled: false, urlDisabled: false, usernameDisable: false, tokenDisbaled: false },
     ];
 
