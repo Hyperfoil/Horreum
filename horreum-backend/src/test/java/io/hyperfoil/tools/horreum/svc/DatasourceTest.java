@@ -8,6 +8,7 @@ import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
+import io.hyperfoil.tools.horreum.api.services.ConfigService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
@@ -15,6 +16,7 @@ import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
@@ -28,8 +30,7 @@ import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -51,10 +52,14 @@ public class DatasourceTest extends BaseServiceTest{
     @Inject
     RestClient elasticRestClient;
 
+    @Inject
+    ConfigService configService;
+
+
     @org.junit.jupiter.api.Test
     public void testRetrieveDataFromElastic(TestInfo info) throws InterruptedException {
 
-        TestConfig testConfig = createNewTestAndDatastore(info);
+        TestConfig testConfig = createNewTestAndDatastores(info);
 
         BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == testConfig.test.id);
 
@@ -82,7 +87,7 @@ public class DatasourceTest extends BaseServiceTest{
     }
     @org.junit.jupiter.api.Test
     public void multidocPayload(TestInfo info) throws InterruptedException {
-        TestConfig testConfig = createNewTestAndDatastore(info);
+        TestConfig testConfig = createNewTestAndDatastores(info);
 
         BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == testConfig.test.id);
 
@@ -113,7 +118,7 @@ public class DatasourceTest extends BaseServiceTest{
 
     @org.junit.jupiter.api.Test
     public void testDeleteDatasource(TestInfo info) throws InterruptedException {
-        TestConfig testConfig = createNewTestAndDatastore(info);
+        TestConfig testConfig = createNewTestAndDatastores(info);
         DatastoreConfigDAO newDatastore = DatastoreConfigDAO.findById(testConfig.datastore.id);
         assertNotNull(newDatastore);
 
@@ -122,7 +127,32 @@ public class DatasourceTest extends BaseServiceTest{
 
     }
 
-    private TestConfig createNewTestAndDatastore(TestInfo info){
+    @org.junit.jupiter.api.Test
+    public void testDatastorePermissions(TestInfo info) throws InterruptedException {
+
+        DatastoreConfigDAO.<DatastoreConfigDAO>list("owner = ?1 and type = ?2", TESTER_ROLES[0], DatastoreType.ELASTICSEARCH)
+                .stream()
+                .forEach(store -> jsonRequest().delete("/api/config/datastore/".concat(store.id.toString())));
+
+        TestConfig testConfig = createNewTestAndDatastores(info);
+        DatastoreConfigDAO newDatastore = DatastoreConfigDAO.findById(testConfig.datastore.id);
+        assertNotNull(newDatastore);
+
+        List<Object> datastores = unauthenticatedJsonRequest().get("/api/config/datastore/".concat(TESTER_ROLES[0]))
+                .then().statusCode(200).extract().body().as(List.class);
+
+        assertNotNull(datastores);
+        assertSame(1, datastores.size());
+
+        datastores = jsonRequest().get("/api/config/datastore/".concat(TESTER_ROLES[0]))
+                .then().statusCode(200).extract().body().as(List.class);
+
+        assertNotNull(datastores);
+        assertSame(2, datastores.size());
+
+    }
+
+    private TestConfig createNewTestAndDatastores(TestInfo info){
         Datastore newDatastore = new Datastore();
         newDatastore.name = info.getDisplayName();
         newDatastore.type = DatastoreType.ELASTICSEARCH;
