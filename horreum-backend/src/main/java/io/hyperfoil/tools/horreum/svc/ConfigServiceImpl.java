@@ -10,6 +10,7 @@ import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -18,6 +19,7 @@ import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,18 +54,21 @@ public class ConfigServiceImpl implements ConfigService {
     }
 
     @Override
-    @RolesAllowed(Roles.TESTER)
+    @PermitAll
     @Transactional
     public List<Datastore> datastores(String team) {
+        String queryWhere = "where access = 0";
         Set<String> roles = identity.getRoles();
         long rolesCount = roles.stream().filter(role -> role.endsWith("-team")).count();
-        if (rolesCount == 0) {
-            throw ServiceException.forbidden(String.format("User does not have permission to view backends for team: %s", team));
+        if (rolesCount != 0) { //user has access to team, retrieve the team datastores as well
+            queryWhere = queryWhere.concat(" or owner in ('" + team + "')");
         }
-        String queryWhere = "where access = 0 or owner in ('" + team + "')";
         List<DatastoreConfigDAO> backends = DatastoreConfigDAO.list(queryWhere);
-        List<Datastore> backendList = backends.stream().map(DatasourceMapper::from).collect(Collectors.toList());
-        return backendList;
+        if ( backends.size() != 0 ) {
+            return backends.stream().map(DatasourceMapper::from).collect(Collectors.toList());
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     @Override
