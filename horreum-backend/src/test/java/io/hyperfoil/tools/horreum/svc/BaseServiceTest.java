@@ -408,6 +408,11 @@ public class BaseServiceTest {
             .statusCode(204);
    }
 
+   protected RequestSpecification unauthenticatedJsonRequest() {
+      return RestAssured.given()
+              .header(HttpHeaders.CONTENT_TYPE, "application/json");
+   }
+
    protected RequestSpecification jsonRequest() {
       return RestAssured.given().auth().oauth2(getTesterToken())
             .header(HttpHeaders.CONTENT_TYPE, "application/json");
