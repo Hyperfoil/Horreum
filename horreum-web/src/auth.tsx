@@ -31,7 +31,7 @@ interface InitAction {
 
 export interface UpdateDefaultTeamAction {
     type: typeof UPDATE_DEFAULT_TEAM
-    team: string
+    team?: string
 }
 
 interface UpdateRolesAction {
@@ -43,6 +43,12 @@ interface UpdateRolesAction {
 interface StoreProfileAction {
     type: typeof STORE_PROFILE
     profile: KeycloakProfile
+}
+
+interface BasicAuthAction {
+    type: typeof BASIC_AUTH
+    username?: string
+    password?: string
 }
 
 interface AfterLogoutAction {
