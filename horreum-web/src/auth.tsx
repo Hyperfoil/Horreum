@@ -35,7 +35,7 @@ interface InitAction {
 
 export interface UpdateDefaultTeamAction {
     type: typeof UPDATE_DEFAULT_TEAM
-    team: string
+    team?: string
 }
 
 interface UpdateRolesAction {
@@ -51,8 +51,8 @@ interface StoreProfileAction {
 
 interface BasicAuthAction {
     type: typeof BASIC_AUTH
-    username: string
-    password: string
+    username?: string
+    password?: string
 }
 
 interface AfterLogoutAction {

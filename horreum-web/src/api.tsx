@@ -28,8 +28,6 @@ import {
     TestListing, TestSummary, TestToken, Transformer, View, Watch,
 } from "./generated"
 import store from "./store"
-import {ADD_ALERT} from "./alerts"
-import {TryLoginAgain} from "./auth"
 import {AlertContextType} from "./context/@types/appContextTypes";
 export * from "./generated/models"
 
@@ -50,7 +48,7 @@ const authMiddleware: Middleware = {
                         }
                     }
                 },
-                e => {
+            /* e => {
                     store.dispatch({
                         type: ADD_ALERT,
                         alert: {
@@ -60,7 +58,7 @@ const authMiddleware: Middleware = {
                         },
                     })
                     return Promise.reject(e)
-                }
+                } */
             )
         } else if (basicAuthToken) {
             return Promise.resolve({
@@ -78,6 +76,7 @@ const authMiddleware: Middleware = {
         if (ctx.response.ok) {
             return Promise.resolve(ctx.response)
         } else if (ctx.response.status === 401 || ctx.response.status === 403) {
+/*
             store.dispatch({
                 type: ADD_ALERT,
                 alert: {
@@ -86,7 +85,7 @@ const authMiddleware: Middleware = {
                     content: <TryLoginAgain/>,
                 },
             })
-
+*/
             const contentType = ctx.response.headers.get("content-type")
             if (contentType === "application/json") {
                 return ctx.response.json().then((body: any) => Promise.reject(body))
