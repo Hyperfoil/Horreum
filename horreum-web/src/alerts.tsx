@@ -4,49 +4,11 @@ import {AppContext} from "./context/appContext";
 import React, {useContext} from "react";
 import {AppContextType} from "./context/@types/appContextTypes";
 
-export const ADD_ALERT = "alert/ADD"
-export const CLEAR_ALERT = "alert/CLEAR"
-
 export interface Alert {
     title: string
     type: string
     variant?: AlertVariant
     content: Element | string | undefined
-}
-
-export interface ConstraintValidationException {
-    error: string
-    violations: ConstraintViolation[]
-}
-
-export interface ConstraintViolation {
-    class: string
-    path: string
-    message: string
-}
-
-
-export const constraintValidationFormatter = (object: any) => (e: any) => {
-    if (e && e.error && e.error === "jakarta.validation.ConstraintViolationException") {
-        return (
-            <>
-                <span>Some constraints on {object} have failed:</span>
-                <br />
-                <ul>
-                    {(e as ConstraintValidationException).violations.map((v, i) => (
-                        <li key={i}>
-                            <code>
-                                {v.class}/{v.path}
-                            </code>
-                            : {v.message}
-                        </li>
-                    ))}
-                </ul>
-            </>
-        )
-    } else {
-        return false
-    }
 }
 
 export function defaultFormatError(e: any) {

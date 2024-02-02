@@ -3,7 +3,6 @@ import fetchival from "fetchival"
 
 import store, { State } from "./store"
 import { userApi } from "./api"
-import { CLEAR_ALERT } from "./alerts"
 import { noop } from "./utils"
 import { keycloakSelector, INIT, STORE_PROFILE, UPDATE_DEFAULT_TEAM, UPDATE_ROLES } from "./auth"
 
@@ -28,7 +27,6 @@ export function initKeycloak(state: State) {
                     promiseType: "native",
                 } as KeycloakInitOptions)
                 initPromise?.then(authenticated => {
-                    store.dispatch({ type: CLEAR_ALERT })
                     store.dispatch({
                         type: UPDATE_ROLES,
                         authenticated,

@@ -31,7 +31,7 @@ interface InitAction {
 
 export interface UpdateDefaultTeamAction {
     type: typeof UPDATE_DEFAULT_TEAM
-    team: string
+    team?: string
 }
 
 interface UpdateRolesAction {
