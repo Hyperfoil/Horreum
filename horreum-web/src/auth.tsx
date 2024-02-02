@@ -45,12 +45,6 @@ interface StoreProfileAction {
     profile: KeycloakProfile
 }
 
-interface BasicAuthAction {
-    type: typeof BASIC_AUTH
-    username?: string
-    password?: string
-}
-
 interface AfterLogoutAction {
     type: typeof AFTER_LOGOUT
 }
