@@ -4,7 +4,7 @@ import {AppContextType} from "./context/@types/appContextTypes";
 import {Button, Form, FormGroup, Modal, Spinner, TextInput} from "@patternfly/react-core";
 import {userApi} from "./api";
 import store from "./store";
-import {BASIC_AUTH, UPDATE_ROLES, AFTER_LOGOUT, STORE_PROFILE, UPDATE_DEFAULT_TEAM} from "./auth";
+import {BASIC_AUTH, UPDATE_ROLES, AFTER_LOGOUT} from "./auth";
 
 type LoginModalProps = {
     username: string
@@ -38,18 +38,12 @@ export default function LoginModal(props: LoginModalProps) {
                 onClick={() => {
                     setCreating(true)
                     store.dispatch({type: BASIC_AUTH, username, password});
-                    
-                    userApi.getRoles()
-                        .then(roles => {
-                                alerting.dispatchInfo("LOGIN", "Log in successful", "Successful log in of user " + username, 3000)
-                                store.dispatch({type: UPDATE_ROLES, authenticated: true, roles: roles});
-                                userApi.searchUsers(username!).then(
-                                    userData => store.dispatch({type: STORE_PROFILE, profile: userData.filter(u => u.username == username).at(0)}),
-                                    error => alerting.dispatchInfo("LOGIN", "Unable to get user profile", error, 30000))
-                                userApi.defaultTeam().then(
-                                    response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response }),
-                                    error => alerting.dispatchInfo("LOGIN", "Cannot retrieve default team", error, 30000)
-                                )
+
+                    // TODO: instead of fetching userdata, should be fetching the user roles instead
+                    userApi.info([username || ''])
+                        .then(userdata => {
+                                alerting.dispatchInfo("LOGIN", "Log in successful", "Successful log in of user " + userdata[0].username, 3000)
+                                store.dispatch({type: UPDATE_ROLES, authenticated: true, roles: [/* TODO: the roles fetched */]});
                             },
                             error => {
                                 alerting.dispatchInfo("LOGIN", "Failed to authenticate", error, 30000)

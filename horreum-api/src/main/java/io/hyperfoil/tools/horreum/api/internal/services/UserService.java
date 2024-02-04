@@ -24,12 +24,6 @@ import io.smallrye.common.annotation.Blocking;
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "user", description = "Manage users")
 public interface UserService {
-
-   @GET
-   @Path("roles")
-   @Blocking
-   List<String> getRoles();
-
    @GET
    @Path("search")
    @Blocking
