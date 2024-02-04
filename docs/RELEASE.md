@@ -99,3 +99,58 @@ The version identifier for a release is from
 ```
 
 so that file needs to be updated after a release.
+
+## Creating a new Stable Branch
+
+To create a new stable branch, for example creating a `0.11.x` branch, first create the branch locally:
+
+```bash
+git checkout origin/master
+git checkout -b 0.11.x
+git checkout origin/master
+```
+
+Update the new main branch to the next snapshot version:
+
+```bash
+mvn versions:set -DnewVersion=0.12-SNAPSHOT
+```
+
+Update the openapi version in the `horreum-api/pom.xml` file:
+
+```xml
+	<openapi-version>0.12</openapi-version>
+```
+
+Update the `horreum-api/src/main/java/io/hyperfoil/tools/horreum/api/Version.java` file
+
+```java
+public class Version {
+   public static final String VERSION = "0.12.0";
+}
+```
+
+Update the Github actions to build the new stable branch for each push:
+
+```yaml
+on:
+  push:
+    branches: [ master, 0.12.x ]
+    tags: [ "*" ]
+  pull_request:
+  workflow_dispatch:
+```
+
+Commit the changes:
+
+```bash
+git add .
+git commit -m "Next is 0.12"
+```
+
+Push the new branch and main branch to github:
+    
+```bash
+git push origin 0.12.x
+git push origin master
+```
