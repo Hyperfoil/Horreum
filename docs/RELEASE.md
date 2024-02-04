@@ -125,6 +125,17 @@ public class Version {
 }
 ```
 
+Update the Github actions to build the new stable branch for each push:
+
+```yaml
+on:
+  push:
+    branches: [ master, 0.12.x ]
+    tags: [ "*" ]
+  pull_request:
+  workflow_dispatch:
+```
+
 Commit the changes:
 
 ```bash
@@ -135,7 +146,7 @@ git commit -m "Next is 0.12"
 Push the new branch and main branch to github:
     
 ```bash
-git push origin 0.11.x
+git push origin 0.12.x
 git push origin master
 ```
 
