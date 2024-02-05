@@ -32,33 +32,28 @@ export function initKeycloak(state: State) {
                     promiseType: "native",
                 } as KeycloakInitOptions)
                 initPromise?.then(authenticated => {
-                    store.dispatch({
-                        type: UPDATE_ROLES,
-                        authenticated,
-                        roles: keycloak?.realmAccess?.roles || [],
-                    })
                     if (authenticated) {
-                        keycloak
-                            .loadUserProfile()
-                            .then(profile => store.dispatch({ type: STORE_PROFILE, profile }))
-                            .catch(error =>
-                                console.log(error)
-                                //TODO: hook into alerting state
-                                // store.dispatch(
-                                //     alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error)
-                                // )
-                            )
-                        userApi.defaultTeam().then(
-                            response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
-                            error =>
-                                console.log(error)
-                                //TODO: hook into alerting state
-                                // store.dispatch(
-                                //     alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve default role", error)
-                                // )
+                        userApi.getRoles().then(
+                            roles => {
+                                store.dispatch({ type: UPDATE_ROLES, authenticated, roles });
+                                keycloak.loadUserProfile().then(
+                                    profile => store.dispatch({ type: STORE_PROFILE, profile }),
+                                    error => console.log(error)
+                                            // TODO: hook into alerting state
+                                            // store.dispatch(alertAction("PROFILE_FETCH_FAILURE", "Failed to fetch user profile", error))
+                                )
+                                userApi.defaultTeam().then(
+                                    response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response || undefined }),
+                                    error => console.log(error)
+                                            // TODO: hook into alerting state
+                                            // store.dispatch(alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve default role", error))
+                                )
+                            },
+                            error => console.log(error)
+                                    // TODO: hook into alerting state
+                                    // store.dispatch(alertAction("DEFAULT_ROLE_FETCH_FAILURE", "Cannot retrieve user roles. Please contact an Horreum administrator.", error))
                         )
-                        keycloak.onTokenExpired = () =>
-                            keycloak.updateToken(30).catch(e => console.log("Expired token update failed: " + e))
+                        keycloak.onTokenExpired = () => keycloak.updateToken(30).catch(e => console.log("Expired token update failed: " + e))
                     } else {
                         store.dispatch({ type: STORE_PROFILE, profile: {} })
                     }

@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -64,16 +65,9 @@ public class UserServiceImpl implements UserService {
       return new UserData(rep.getId(), rep.getUsername(), rep.getFirstName(), rep.getLastName(), rep.getEmail());
    }
 
+   @Authenticated
    @Override public List<String> getRoles() {
-      if (identity.isAnonymous()) {
-         throw ServiceException.forbidden("Please log in and try again");
-      }
-      var representations = keycloak.realm(realm).users().search(identity.getPrincipal().getName(), true);
-      if (representations.isEmpty()) {
-         throw ServiceException.notFound("Username not found");
-      }
-      var roles = keycloak.realm(realm).users().get(representations.get(0).getId()).roles().getAll().getRealmMappings();
-      return roles.stream().map(RoleRepresentation::getName).collect(Collectors.toList());
+      return identity.getRoles().stream().toList();
    }
 
    @Override
