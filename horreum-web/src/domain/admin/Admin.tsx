@@ -1,8 +1,8 @@
-import { useRef } from "react"
-import { Card, CardBody, PageSection } from "@patternfly/react-core"
+import {useRef} from "react"
+import {Card, CardBody, NavItem, PageSection} from "@patternfly/react-core"
 
-import SavedTabs, { SavedTab, TabFunctions, saveFunc, resetFunc, modifiedFunc } from "../../components/SavedTabs"
-import { FragmentTab } from "../../components/FragmentTabs"
+import SavedTabs, {SavedTab, TabFunctions, saveFunc, resetFunc, modifiedFunc} from "../../components/SavedTabs"
+import FragmentTabs, {FragmentTab} from "../../components/FragmentTabs"
 import AllowedSiteList from "../actions/AllowedSiteList"
 import ActionList from "../actions/ActionList"
 import BannerConfig from "./BannerConfig"
@@ -10,13 +10,19 @@ import Notifications from "./Notifications"
 import Teams from "./Teams"
 import Administrators from "./Administrators"
 import {useSelector} from "react-redux";
-import {isAdminSelector} from "../../auth";
+import {isAdminSelector, isManagerSelector} from "../../auth";
 import Datastores from "./Datastores";
+import {NavLink} from "react-router-dom";
+import DatasetData from "../runs/DatasetData";
+import RunData from "../runs/RunData";
+import MetaData from "../runs/MetaData";
 
 export default function Admin() {
     const adminFuncsRef = useRef<TabFunctions>()
     const teamsFuncsRef = useRef<TabFunctions>()
     const isAdmin = useSelector(isAdminSelector)
+    const isManager = useSelector(isManagerSelector)
+
     if (isAdmin) {
         return (
             <PageSection>
@@ -60,6 +66,21 @@ export default function Admin() {
                 </Card>
             </PageSection>
         )
+    } else if (isManager) {
+        return (
+            <PageSection>
+                <Card>
+                    <CardBody>
+                        <FragmentTabs>
+                            <FragmentTab title="Datastores" fragment="datastores">
+                                <Datastores/>
+                            </FragmentTab>
+                        </FragmentTabs>
+                    </CardBody>
+                </Card>
+            </PageSection>
+        )
+
     } else {
         return (
             <PageSection>
