@@ -22,7 +22,7 @@ import {
 import {Provider, useSelector} from "react-redux"
 
 import store from "./store"
-import {isAdminSelector, LoginLogout} from "./auth"
+import {isAdminSelector, isManagerSelector, LoginLogout} from "./auth"
 import {initKeycloak} from "./keycloak"
 import {UserProfileLink, UserSettings} from "./domain/user/UserSettings"
 
@@ -92,6 +92,7 @@ export default function App() {
 
 function Main() {
     const isAdmin = useSelector(isAdminSelector)
+    const isManager = useSelector(isManagerSelector)
 
 
     return (
@@ -120,7 +121,7 @@ function Main() {
                                     <NavItem itemId={3}>
                                         <NavLink to="/reports">Reports</NavLink>
                                     </NavItem>
-                                    {isAdmin && (
+                                    { (isAdmin || isManager) && (
                                         <NavItem itemId={4}>
                                             <NavLink to="/admin">Administration</NavLink>
                                         </NavItem>
