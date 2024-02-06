@@ -1,10 +1,12 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
+import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
@@ -27,12 +29,8 @@ import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceException;
-import jakarta.persistence.Query;
-import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.*;
 import jakarta.transaction.TransactionManager;
-import jakarta.persistence.Tuple;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.WebApplicationException;
@@ -61,18 +59,35 @@ public class TestServiceImpl implements TestService {
 
    private static final String UPDATE_NOTIFICATIONS = "UPDATE test SET notificationsenabled = ? WHERE id = ?";
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
+   //using find and replace because  ASC or DESC cannot be set with a parameter
    //@formatter:off
+   protected static final String LABEL_VALUES_FILTER_CONTAINS_JSON = "where combined.values @> :filter";
+   //a solution does exist! https://github.com/spring-projects/spring-data-jpa/issues/2551
+   //use @\\?\\? to turn into a @? in the query
+   protected static final String LABEL_VALUES_FILTER_MATCHES_NOT_NULL = "where combined.values @\\?\\? CAST( :filter as jsonpath)"; //"jsonb_path_match(combined.values,CAST( :filter as jsonpath))";
+   //unused atm because we need to either try both PREDICATE and matching jsonpath or differentiate before sending to the DB
+   protected static final String LABEL_VALUES_FILTER_MATCHES_PREDICATE = "where combined.values @@ CAST( :filter as jsonpath)";
+   protected static final String LABEL_VALUES_SORT = "";//""jsonb_path_query(combined.values,CAST( :orderBy as jsonpath))";
    protected static final String LABEL_VALUES_QUERY = """
-         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values
-         FROM dataset
-         LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
-         LEFT JOIN label ON label.id = lv.label_id
-         WHERE dataset.testid = ?1
-            AND (label.id IS NULL OR (?2 AND label.filtering) OR (?3 AND label.metrics))
-         GROUP BY dataset_id
+         WITH
+         combined as (
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values, runId, dataset.id AS datasetId
+                  FROM dataset
+                  LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
+                  LEFT JOIN label ON label.id = lv.label_id
+                  WHERE dataset.testid = :testId
+                     AND (label.id IS NULL OR (:filteringLabels AND label.filtering) OR (:metricLabels AND label.metrics))
+                  GROUP BY dataset.id, runId
+         ) select * from combined FILTER_PLACEHOLDER order by jsonb_path_query(combined.values,CAST( :orderBy as jsonpath)) ASC, combined.runId ASC limit :limit offset :offset
          """;
-   //@formatter:on
+   /**
+    * used to check if an input can be cast to a target type in the db and return any error messages
+    * Will return a row of all nulls if the input can be cast to the target type.
+    */
+   //tried pg_input_is_valid but it just returns boolean, no messages
+   protected static final String CHECK_CAST = "select * from pg_input_error_info(:input,:target)";
 
+   //@formatter:on
    @Inject
    ObjectMapper mapper;
 
@@ -121,30 +136,30 @@ public class TestServiceImpl implements TestService {
    public Test get(int id, String token){
       TestDAO test = TestDAO.find("id", id).firstResult();
       if (test == null) {
-         throw ServiceException.notFound("No test with id " + id);
+         throw ServiceException.notFound("No test with name " + id);
       }
-      Hibernate.initialize(test.tokens);
       return TestMapper.from(test);
    }
 
    @Override
    public Test getByNameOrId(String input){
-      TestDAO test;
+      TestDAO test = null;
       if (input.matches("-?\\d+")) {
          int id = Integer.parseInt(input);
          test =  TestDAO.find("name = ?1 or id = ?2", input, id).firstResult();
-      } else {
+      }
+      if (test == null) {//intellij is wrong, test is not always null here
          test =  TestDAO.find("name", input).firstResult();
       }
       if (test == null) {
-         throw ServiceException.notFound("No test with name " + input);
+         throw ServiceException.notFound("No test with name or id " + input);
       }
       return TestMapper.from(test);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    public TestDAO ensureTestExists(String input, String token){
-      TestDAO test;
+      TestDAO test;// = TestMapper.to(getByNameOrId(input)); //why does getByNameOrId not work to create the DAO?
       if (input.matches("-?\\d+")) {
          int id = Integer.parseInt(input);
          test = TestDAO.find("name = ?1 or id = ?2", input, id).firstResult();
@@ -480,26 +495,159 @@ public class TestServiceImpl implements TestService {
    @SuppressWarnings("unchecked")
    @Override
    public List<Fingerprints> listFingerprints(int testId) {
+      Test test = get(testId,null);
+      if(test == null){
+         throw ServiceException.serverError("Cannot find test "+testId);
+      }
       return Fingerprints.parse( em.createNativeQuery("""
             SELECT DISTINCT fingerprint
             FROM fingerprint fp
             JOIN dataset ON dataset.id = dataset_id
             WHERE dataset.testid = ?1
             """)
-            .setParameter(1, testId)
+            .setParameter(1, test.id)
             .unwrap(NativeQuery.class).addScalar("fingerprint", JsonBinaryType.INSTANCE)
             .getResultList());
    }
 
+
+   /**
+    * returns null if no filtering, otherwise returns an object for filtering
+    * @param input
+    * @return
+    */
+   private Object getFilterObject(String input){
+      if (input == null || input.isBlank()){//not a valid filter
+         return null;
+      }
+      JsonNode filterJson = null;
+      try {
+          filterJson = new ObjectMapper().readTree(input);
+      } catch (JsonProcessingException e) {
+          //TODO what to do with this error
+      }
+      if(filterJson!=null && filterJson.getNodeType() == JsonNodeType.OBJECT) {
+         return filterJson;
+      }else{
+         //TODO validate the jsonpath?
+         return input;
+      }
+   }
+
+   //TODO filter should be a json object not a string but that probably requires lots of work for the api
+
+   /**
+    * Wrapper around the result from checking the cast attempt in postgres
+    * @param ok true of no errors were found
+    * @param message the error message or an empty string if it does not exist
+    * @param detail the error details or an empty string if it does not exist
+    * @param hint the error hint or an empty string if it does not exist
+    */
+
+   public record CheckResult (boolean ok, String message, String detail, String hint) {}
+   /**
+    * returns true (in the CheckResult) if the input can be cast to the target type in psql, otherwise it is false and details are included
+    * @param input
+    * @param target
+    * @param em
+    * @return
+    */
+   private CheckResult castCheck(String input, String target, EntityManager em){
+      List<Object[]> results = em.createNativeQuery(CHECK_CAST).setParameter("input",input).setParameter("target",target)
+              .unwrap(NativeQuery.class)
+              .addScalar("message",String.class)
+              .addScalar("detail",String.class)
+             .addScalar("hint",String.class)
+               .addScalar("sql_error_code",String.class)
+              .getResultList();
+      //no results or null result row or no message means it passed. no result and 0 lengh result should not happen but being defensive
+      return results.isEmpty() || results.get(0).length == 0 || results.get(0)[0] == null?
+              new CheckResult(true,"","","") :
+              new CheckResult(
+                      false,
+                      results.get(0)[0] == null ? "" : results.get(0)[0].toString(),
+                      results.get(0)[1] == null ? "" : results.get(0)[1].toString(),
+                      results.get(0)[2] == null ? "" : results.get(0)[2].toString()
+              );
+   }
+
+   /**
+    * returns true if the jsonpath input appears to be a predicate jsonpath (always returns true or false) versus a filtering path (returns null or a value)
+    * @param input
+    * @return
+    */
+   private boolean isPredicate(String input){
+      if(input==null || input.isEmpty()){
+         return false;
+      }
+      if(input.matches("\\?.*?@.*?[><]|==")){// ? (@ [comp]
+         return true;
+      }
+      return false;
+   }
+
    @WithRoles
    @Override
-   public List<ExportedLabelValues> listLabelValues(int testId, boolean filtering, boolean metrics) {
-      //noinspection unchecked
-      return ExportedLabelValues.parse( em.createNativeQuery(LABEL_VALUES_QUERY)
-            .setParameter(1, testId).setParameter(2, filtering).setParameter(3, metrics)
-            .unwrap(NativeQuery.class)
-            .addScalar("values", JsonBinaryType.INSTANCE)
-            .getResultList());
+   public List<ExportedLabelValues> listLabelValues(int testId, String filter, boolean filtering, boolean metrics, String sort, String direction, int limit, int page) {
+      Test test = get(testId,null);
+      if(test == null){
+         throw ServiceException.serverError("Cannot find test "+testId);
+      }
+
+      Object filterObject = getFilterObject(filter);
+
+      String filterSql = "";
+      if(filterObject instanceof JsonNode && ((JsonNode)filterObject).getNodeType() == JsonNodeType.OBJECT){
+         filterSql = LABEL_VALUES_FILTER_CONTAINS_JSON;
+      }else {
+         CheckResult jsonpathResult = castCheck(filter,"jsonpath",em);
+         if(jsonpathResult.ok()){
+            filterSql = LABEL_VALUES_FILTER_MATCHES_NOT_NULL;
+         }else{
+            //an attempt to see if the user was trying to provide json
+            if(filter!=null && filter.startsWith("{") || filter.endsWith("}")){
+               CheckResult jsonbResult = castCheck(filter,"jsonb",em);
+               if(!jsonbResult.ok()){
+                  //we expect this error, what do we do with it?
+               }else{
+                  //this would be a surprise and quite a problem :)
+               }
+            }else{
+               //what do we do about the invalid jsonpath?
+            }
+         }
+      }
+      if(filterSql.isBlank() && filter != null && !filter.isBlank()){
+         //TODO there was an error with the filter, do we return that info to the user?
+      }
+
+          String sql = LABEL_VALUES_QUERY
+                 .replaceAll("ASC", direction.equalsIgnoreCase("ascending") ? "ASC" : "DESC")
+                  .replace("FILTER_PLACEHOLDER",filterSql);
+           NativeQuery query =  ((NativeQuery) em.createNativeQuery(sql))
+             .setParameter("testId", test.id)
+             .setParameter("filteringLabels", filtering)
+             .setParameter("metricLabels", metrics)
+             ;
+           if(!filterSql.isEmpty()){
+              if(LABEL_VALUES_FILTER_CONTAINS_JSON.equals(filterSql)){
+                 query.setParameter("filter",filterObject,JsonBinaryType.INSTANCE);
+              }else{
+                 query.setParameter("filter",filter);
+              }
+           }
+             query
+                     .setParameter("orderBy", "$")//order
+                     .setParameter("limit",Integer.MAX_VALUE)//limit
+                     .setParameter("offset",0)//offset
+                     .unwrap(NativeQuery.class)
+              .addScalar("values", JsonBinaryType.INSTANCE)
+              .addScalar("runId",Integer.class)
+              .addScalar("datasetId",Integer.class);
+           return ExportedLabelValues.parse( query.getResultList() );
+
+
+
    }
 
    @WithRoles
@@ -575,11 +723,15 @@ public class TestServiceImpl implements TestService {
    @Override
    @WithRoles
    public RecalculationStatus getRecalculationStatus(int testId) {
-      RecalculationStatus status = recalculations.get(testId);
+      Test test = get(testId,null);
+      if(test == null){
+         throw ServiceException.serverError("Cannot find test "+testId);
+      }
+      RecalculationStatus status = recalculations.get(test.id);
       if (status == null) {
-         status = new RecalculationStatus(RunDAO.count("testid = ?1 AND trashed = false", testId));
+         status = new RecalculationStatus(RunDAO.count("testid = ?1 AND trashed = false", test.id));
          status.finished = status.totalRuns;
-         status.datasets = DatasetDAO.count("testid", testId);
+         status.datasets = DatasetDAO.count("testid", test.id);
       }
       return status;
    }

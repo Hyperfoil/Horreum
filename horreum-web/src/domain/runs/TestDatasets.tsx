@@ -230,19 +230,13 @@ export default function TestDatasets() {
     const flattenLabelValues = (labelValues: Array<ExportedLabelValues>) => {
         const resultArr : any = [];
         labelValues.forEach( (labelValue) => {
-            const mappedLabel : any = {};
-            labelValue.values?.forEach( (value) => {
-                if (value.name !== undefined) {
-                    mappedLabel[value.name] = value.value;
-                }
-            })
-            resultArr.push(mappedLabel)
+            resultArr.push(labelValue.values)
         })
         return resultArr;
     }
 
     const labelsSource = useCallback(() => {
-        return testApi.listLabelValues(testIdInt, true, false)
+        return testApi.listLabelValues(testIdInt)
             .then((result: Array<ExportedLabelValues>) => {
                 return flattenLabelValues(result);
             })

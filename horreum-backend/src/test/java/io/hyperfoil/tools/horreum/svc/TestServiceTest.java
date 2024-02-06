@@ -191,7 +191,7 @@ public class TestServiceTest extends BaseServiceTest {
       assertNotNull(values);
       assertFalse(values.isEmpty());
       assertEquals(2, values.size());
-      assertEquals("value", values.get(1).values.get(0).name);
+      assertTrue(values.get(1).values.has("value"));
    }
    @org.junit.jupiter.api.Test
    public void testImportFromFile() throws JsonProcessingException {
@@ -353,8 +353,8 @@ public class TestServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testListLabelValues() throws JsonProcessingException {
-      List<JsonNode> fps = new ArrayList<>();
-      fps.add(mapper.readTree("""
+      List<Object[]> toParse = new ArrayList<>();
+      toParse.add(new Object[]{mapper.readTree("""
                   {
                       "job": "quarkus-release-startup", 
                       "Max RSS": [], 
@@ -365,14 +365,13 @@ public class TestServiceTest extends BaseServiceTest {
                       "Throughput 8 CPU": null, 
                       "Throughput 32 CPU": null,
                       "Quarkus - Kafka_tags": "quarkus-release-startup"}
-                  """));
-
-      List<ExportedLabelValues> values = ExportedLabelValues.parse(fps);
+                  """),10,10});
+      List<ExportedLabelValues> values = ExportedLabelValues.parse(toParse);
       assertEquals(1, values.size());
       assertEquals(9, values.get(0).values.size());
-      assertEquals("quarkus-release-startup", values.get(0).values.get(0).value);
+      assertEquals("quarkus-release-startup", values.get(0).values.get("job").asText());
 
-      fps.add(mapper.readTree("""
+      toParse.add(new Object[]{mapper.readTree("""
               {
                   "job": "quarkus-release-startup", 
                   "Max RSS": [], 
@@ -382,12 +381,12 @@ public class TestServiceTest extends BaseServiceTest {
                   "Throughput 4 CPU": 84895.13, 
                   "Throughput 8 CPU": 141086.29
               }
-              """));
-      values = ExportedLabelValues.parse(fps);
+              """),10,10});
+      values = ExportedLabelValues.parse(toParse);
       assertEquals(2, values.size());
       assertEquals(9, values.get(0).values.size());
       assertEquals(7, values.get(1).values.size());
-      assertEquals(84895.13d, values.get(1).values.get(5).value);
+      assertEquals(84895.13d, values.get(1).values.get("Throughput 4 CPU").asDouble());
    }
 
    private void addSubscription(Test test) {
