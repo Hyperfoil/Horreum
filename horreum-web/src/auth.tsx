@@ -129,6 +129,10 @@ export const isAdminSelector = (state: State) => {
     return state.auth.roles.includes("admin")
 }
 
+export const isManagerSelector = (state: State) => {
+    return managedTeamsSelector(state).length > 0
+}
+
 export const teamsSelector = (state: State): string[] => {
     return state.auth.teams
 }
