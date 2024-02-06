@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.changes;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Target {
+   //concatenated simicolons varibleID;{fingeprintJson}
    public String target;
    public String type;
    public String refId;

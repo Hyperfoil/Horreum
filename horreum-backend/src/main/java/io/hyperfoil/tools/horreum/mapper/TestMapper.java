@@ -46,6 +46,9 @@ public class TestMapper {
     }
 
     public static TestDAO to(Test dto) {
+        if(dto == null){
+            return null;
+        }
         TestDAO t = new TestDAO();
         t.id = dto.id;
         t.name = dto.name;

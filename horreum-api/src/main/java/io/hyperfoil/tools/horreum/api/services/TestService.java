@@ -34,9 +34,11 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.jboss.resteasy.annotations.Query;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Path("/api/test")
@@ -54,6 +56,7 @@ public interface TestService {
    @Path("{id}")
    @Operation(description="Retrieve a test by id")
    Test get(@PathParam("id") int id, @QueryParam("token") String token);
+
 
    @GET
    @Path("byName/{name}")
@@ -192,6 +195,11 @@ public interface TestService {
            @Parameter(name = "id", description = "Test ID to retrieve Label Values for", example = "101"),
            @Parameter(name = "filtering", description = "Retrieve values for Filtering Labels", example = "true"),
            @Parameter(name = "metrics", description = "Retrieve values for Metric Labels", example = "false"),
+           @Parameter(name = "filter", description = "either a required json sub-document or path expression", example = "{\"key\":\"requiredValue\"} or $.count ? (@ < 20 && @ > 10)"),
+           @Parameter(name = "sort", description = "label name for sorting"),
+           @Parameter(name = "direction",description = "either Ascending or Descending",example="count"),
+           @Parameter(name = "limit",description = "the maximum number of results to include",example="10"),
+           @Parameter(name = "page",description = "which page to skip to when using a limit",example="2")
    })
    @APIResponses(
            value = { @APIResponse( responseCode = "200",
@@ -199,9 +207,15 @@ public interface TestService {
                            @Content ( schema = @Schema(type = SchemaType.ARRAY, implementation = ExportedLabelValues.class)) }
            )}
    )
-   List<ExportedLabelValues> listLabelValues(@PathParam("id") int testId,
-                                             @QueryParam("filtering") @DefaultValue("true") boolean filtering,
-                                             @QueryParam("metrics") @DefaultValue("true") boolean metrics);
+   List<ExportedLabelValues> listLabelValues(
+           @PathParam("id") int testId,
+           @QueryParam("filter") @DefaultValue("{}") String filter,
+           @QueryParam("filtering") @DefaultValue("true") boolean filtering,
+           @QueryParam("metrics") @DefaultValue("true") boolean metrics,
+           @QueryParam("sort") @DefaultValue("") String sort,
+           @QueryParam("direction") @DefaultValue("Ascending") String direction,
+           @QueryParam("limit") @DefaultValue(""+Integer.MAX_VALUE) int limit,
+           @QueryParam("page") @DefaultValue("0") int page);
 
    @POST
    @Consumes(MediaType.APPLICATION_JSON)

@@ -1945,6 +1945,21 @@ paths:
           format: int32
           type: integer
         example: 101
+      - name: direction
+        in: query
+        description: either Ascending or Descending
+        schema:
+          default: Ascending
+          type: string
+        example: count
+      - name: filter
+        in: query
+        description: either a required json sub-document or path expression
+        schema:
+          default: "{}"
+          type: string
+        example:
+          key: requiredValue
       - name: filtering
         in: query
         description: Retrieve values for Filtering Labels
@@ -1952,6 +1967,14 @@ paths:
           default: true
           type: boolean
         example: true
+      - name: limit
+        in: query
+        description: the maximum number of results to include
+        schema:
+          format: int32
+          default: 2147483647
+          type: integer
+        example: 10
       - name: metrics
         in: query
         description: Retrieve values for Metric Labels
@@ -1959,6 +1982,20 @@ paths:
           default: true
           type: boolean
         example: false
+      - name: page
+        in: query
+        description: which page to skip to when using a limit
+        schema:
+          format: int32
+          default: 0
+          type: integer
+        example: 2
+      - name: sort
+        in: query
+        description: label name for sorting
+        schema:
+          default: ""
+          type: string
       responses:
         "200":
           description: OK
@@ -2732,13 +2769,27 @@ components:
         notify:
           type: boolean
     ExportedLabelValues:
-      description: A list of Fingerprint values for one dataset
+      description: A map of label names to label values with the associated datasetId
+        and runId
       type: object
       properties:
         values:
-          type: array
-          items:
-            $ref: '#/components/schemas/FingerprintValue'
+          description: a map of label name to label value for each label from the
+            dataset
+          type: object
+          example:
+            name: test
+            score: 200
+        runId:
+          format: int32
+          description: the run id that created the dataset
+          type: integer
+          example: 101
+        datasetId:
+          format: int32
+          description: the unique dataset id
+          type: integer
+          example: 101
     Extractor:
       description: "An Extractor defines how values are extracted from a JSON document,\
         \ for use in Labels etc."
