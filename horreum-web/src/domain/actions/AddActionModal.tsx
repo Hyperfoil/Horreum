@@ -15,8 +15,8 @@ const DEFAULT_ACTION = {
     event: globalEventTypes[0][0],
     type: "http",
     testId: -1,
-    config: { url: "" },
-    secrets: {},
+    config: JSON.stringify({ url: "" }) as string,
+    secrets: JSON.stringify({}),
     active: true,
     runAlways: false,
 }

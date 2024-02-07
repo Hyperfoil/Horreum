@@ -35,7 +35,7 @@ export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: A
     const [actions, setActions] = useState<Action[]>([])
     const [logModalOpen, setLogModalOpen] = useState(false)
     const isTester = useTester(testOwner)
-    const hasDuplicates = new Set(actions.map(h => h.event + "_" + h.config.url)).size !== actions.length
+    const hasDuplicates = new Set(actions.map(h => h.event + "_" + JSON.parse(h.config).url)).size !== actions.length
 
     useEffect(() => {
         if (!testId || !isTester) {
@@ -82,8 +82,8 @@ export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: A
                             id: -1,
                             event: testEventTypes[0][0],
                             type: "http",
-                            config: { url: "" },
-                            secrets: {},
+                            config: JSON.stringify({ url: "" }),
+                            secrets: JSON.stringify({}),
                             testId,
                             active: true,
                             runAlways: false,

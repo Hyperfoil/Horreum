@@ -28,11 +28,11 @@ import { CHANGE_NEW, EXPERIMENT_RESULT_NEW } from "./reducers"
 function defaultConfig(type: string) {
     switch (type) {
         case "http":
-            return { url: "" }
+            return JSON.stringify({ url: "" })
         case "github":
-            return { issueUrl: "${$.path.to.issue.url}" }
+            return JSON.stringify({ issueUrl: "${$.path.to.issue.url}" })
         default:
-            return {}
+            return JSON.stringify({})
     }
 }
 
@@ -49,7 +49,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
         props.onUpdate({ ...props.action, ...patch })
     }
     function updateConfig(patch: any) {
-        update({ config: { ...props.action.config, ...patch } })
+        update({ config: { ...JSON.parse(props.action.config), ...patch } })
     }
     return (
         <Form isHorizontal={true}>
@@ -101,9 +101,9 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
             {props.action.type === "http" && (
                 <HttpActionUrlSelector
                     active={props.isTester}
-                    value={props.action.config?.url || ""}
+                    value={JSON.parse(props.action.config)?.url || ""}
                     setValue={value => {
-                        update({ config: { url: value } })
+                        update({ config: { url: value } } as any)
                     }}
                     isReadOnly={!props.isTester}
                     setValid={props.setValid}
@@ -123,7 +123,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     name="issue"
                                     id="url"
                                     label="Use issue URL"
-                                    isChecked={props.action.config.issueUrl !== undefined}
+                                    isChecked={JSON.parse(props.action.config).issueUrl !== undefined}
                                     onChange={(_event, checked) => updateConfig({ issueUrl: checked ? "" : undefined })}
                                 />
                             </FlexItem>
@@ -132,19 +132,19 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     name="issue"
                                     id="components"
                                     label="Use owner/repo/issue"
-                                    isChecked={props.action.config.issueUrl === undefined}
+                                    isChecked={JSON.parse(props.action.config).issueUrl === undefined}
                                     onChange={(_event, checked) => updateConfig({ issueUrl: checked ? undefined : "" })}
                                 />
                             </FlexItem>
                         </Flex>
                     </FormGroup>
 
-                    {props.action.config.issueUrl !== undefined ? (
+                    {JSON.parse(props.action.config).issueUrl !== undefined ? (
                         <FormGroup label="Issue URL" labelIcon={<ExpressionHelp {...props} />} fieldId="issueUrl">
                             <TextInput
                                 id="issueUrl"
-                                value={props.action.config.issueUrl}
-                                onChange={(_event, issueUrl) => update({ config: { ...props.action.config, issueUrl } })}
+                                value={JSON.parse(props.action.config).issueUrl}
+                                onChange={(_event, issueUrl) => update({ config: { ...props.action.config as any, issueUrl } })}
                             />
                         </FormGroup>
                     ) : (
@@ -152,21 +152,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                             <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
                                 <TextInput
                                     id="owner"
-                                    value={props.action.config.owner}
+                                    value={JSON.parse(props.action.config).owner}
                                     onChange={(_event, owner) => updateConfig({ owner })}
                                 />
                             </FormGroup>
                             <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
                                 <TextInput
                                     id="repo"
-                                    value={props.action.config.repo}
+                                    value={JSON.parse(props.action.config).repo}
                                     onChange={(_event, repo) => updateConfig({ repo })}
                                 />
                             </FormGroup>
                             <FormGroup label="Issue" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
                                 <TextInput
                                     id="issue"
-                                    value={props.action.config.issue}
+                                    value={JSON.parse(props.action.config).issue}
                                     onChange={(_event, issue) => updateConfig({ issue })}
                                 />
                             </FormGroup>
@@ -179,7 +179,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     ? { experimentResultToMarkdown: "Experiment result to Markdown" }
                                     : {}
                             }
-                            selected={props.action.config.formatter}
+                            selected={JSON.parse(props.action.config).formatter}
                             onSelect={formatter => updateConfig({ formatter })}
                         />
                     </FormGroup>
@@ -195,21 +195,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                     <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
                         <TextInput
                             id="owner"
-                            value={props.action.config.owner}
+                            value={JSON.parse(props.action.config).owner}
                             onChange={(_event, owner) => updateConfig({ owner })}
                         />
                     </FormGroup>
                     <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
                         <TextInput
                             id="repo"
-                            value={props.action.config.repo}
+                            value={JSON.parse(props.action.config).repo}
                             onChange={(_event, repo) => updateConfig({ repo })}
                         />
                     </FormGroup>
                     <FormGroup label="Title" labelIcon={<ExpressionHelp {...props} />} fieldId="title">
                         <TextInput
                             id="title"
-                            value={props.action.config.title}
+                            value={JSON.parse(props.action.config).title}
                             onChange={(_event, title) => updateConfig({ title })}
                         />
                     </FormGroup>
@@ -218,7 +218,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                             options={
                                 props.action.event === CHANGE_NEW ? { changeToMarkdown: "Change to Markdown" } : {}
                             }
-                            selected={props.action.config.formatter}
+                            selected={JSON.parse(props.action.config).formatter}
                             onSelect={formatter => updateConfig({ formatter })}
                         />
                     </FormGroup>

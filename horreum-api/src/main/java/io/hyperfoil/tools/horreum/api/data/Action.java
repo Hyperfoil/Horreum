@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 public class Action {
@@ -19,9 +20,11 @@ public class Action {
     public String type;
     @NotNull
     @JsonProperty( required = true )
+    @Schema(implementation = JsonNode.class, type = SchemaType.STRING)
     public JsonNode config;
     @NotNull
     @JsonIgnore
+    @Schema(implementation = JsonNode.class, type = SchemaType.STRING)
     public JsonNode secrets;
     @NotNull
     @JsonProperty( required = true )

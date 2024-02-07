@@ -227,10 +227,10 @@ export default function VariableForm(props: VariableFormProps) {
                         <ConditionComponent
                             {...comp}
                             isTester={props.isTester}
-                            value={changeDetection.config[comp.name]}
+                            value={JSON.parse(changeDetection.config)[comp.name]}
                             onChange={value => {
                                 const copy = { ...changeDetection }
-                                copy.config[comp.name] = value
+                                JSON.parse(copy.config)[comp.name] = value
                                 update(copy)
                             }}
                         />
