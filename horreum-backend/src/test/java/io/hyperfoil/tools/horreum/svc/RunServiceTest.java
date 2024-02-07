@@ -636,61 +636,6 @@ public class RunServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testChangeUploadRunSchemas(TestInfo info) throws InterruptedException {
-      Test exampleTest = createExampleTest(getTestName(info));
-      Test test = createTest(exampleTest);
-
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
-      Schema schemaA = createExampleSchema("AcneCorp", "AcneInc", "RootSchema", false);
-      Schema schemaB = createExampleSchema("AcneCorp", "AcneInc", "", false);
-
-      Extractor path = new Extractor("foo", "$.value", false);
-      Transformer transformer = createTransformer("acme", schemaA, "", path); // blank function
-      addTransformer(test, transformer);
-
-//      1. Upload a run without a schema, then define a schema after upload
-      int runID = uploadRun(runWithValue(42.0d), test.name);
-
-      Dataset.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
-      assertNotNull(event);
-
-      Map<Object, Object> schemaMap = RestAssured.given().auth().oauth2(getTesterToken())
-              .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN)
-              .body(schemaA.uri)
-              .post("/api/run/" + runID + "/schema")
-              .then()
-              .statusCode(200)
-              .extract().as(Map.class);
-
-      assertNotNull(schemaMap);
-      assertNotEquals(0, schemaMap.size());
-
-
-//      2. Upload a run WITH a schema, then change the schema after upload
-
-      runID = uploadRun(runWithValue(42.0d, schemaA), test.name);
-
-      List<Object> runSchemas = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runID).getResultList();
-
-      assertNotEquals(0, runSchemas.size());
-
-      event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
-      assertNotNull(event);
-
-      schemaMap = RestAssured.given().auth().oauth2(getTesterToken())
-              .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN)
-              .body(schemaB.uri)
-              .post("/api/run/" + runID + "/schema")
-              .then()
-              .statusCode(200)
-              .extract().as(Map.class);
-
-      assertNotNull(schemaMap);
-      assertNotEquals(0, schemaMap.size());
-      
-   }
-
-   @org.junit.jupiter.api.Test
    public void testListAllRuns() throws IOException {
       Test test = createTest(createExampleTest("with_meta"));
       createSchema("Foo", "urn:foo");
@@ -940,10 +885,12 @@ public class RunServiceTest extends BaseServiceTest {
          assertNotNull(experimentResults);
          assertTrue(experimentResults.size() > 0);
 
+         Run newRun = new Run();
+         newRun.description = "a new description";
          jsonRequest().auth().oauth2(getTesterToken())
-                 .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN)
-                 .body("a new description")
-                 .post("/api/run/" + lastRunID+"/description")
+                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+                 .body(newRun)
+                 .put("/api/run/" + lastRunID)
                  .then()
                  .statusCode(204);
 

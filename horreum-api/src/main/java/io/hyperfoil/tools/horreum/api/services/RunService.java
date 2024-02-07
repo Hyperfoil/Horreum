@@ -8,14 +8,15 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.ProtectedTimeType;
 import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import java.util.List;
-import java.util.Map;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -366,37 +367,14 @@ public interface RunService {
     })
     void trash(@PathParam("id") int id, @QueryParam("isTrashed") Boolean isTrashed);
 
-    @POST
-    @Path("{id}/description")
-    @Consumes(MediaType.TEXT_PLAIN)
-    @Operation(description = "Update Run description")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "Run ID", example = "101"),
-    })
-    void updateDescription(@PathParam("id") int id, @RequestBody(required = true) String description);
-
-    @POST
-    @Path("{id}/schema")
-    @Consumes(MediaType.TEXT_PLAIN)
-    @Operation(description = "Update Run schema for part of JSON data")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "Run ID", example = "101"),
-            @Parameter(name = "path", description = "JSON path expression to update schema", example = "$.schemaURI"),
-    })
-//   TODO:: I can not find a way of defining a Map response type correctly via smallrye annotations
-//   @APIResponses(
-//           value = {
-//                   @APIResponse( responseCode = "200",
-//                           description = "Map of schema by ID",
-//                           content = {
-//                                   @Content ( example = "")
-//                           }
-//                   )
-//           }
-//   )
-    Map<Integer, String> updateSchema(@PathParam("id") int id,
-                                      @QueryParam("path") String path,
-                                      @RequestBody(required = true) String schemaUri);
+    @PUT
+    @Path("{id}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(description = "Update Run with a given id, currently only description is supported")
+    @APIResponse(responseCode = "201", description = "Run updated successfully")
+    @RequestBody(required = true, content = @Content( mediaType = MediaType.APPLICATION_JSON,
+            schema = @Schema(implementation = Run.class)) )
+    void update(@PathParam("id") int id, @RequestBody(required = true) Run run);
 
     @POST
     @Path("{id}/recalculate")

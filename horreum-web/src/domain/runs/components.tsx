@@ -1,27 +1,14 @@
-import {useContext, useState} from "react"
-import {
-	Button,
-	Modal,
-	Spinner,
-	TextInput,
-	Tooltip,
-} from '@patternfly/react-core';
-import {
-	DropdownItem
-} from '@patternfly/react-core/deprecated';
+import { useContext, useState } from "react"
+import { Button, Modal, Spinner, TextInput, Tooltip } from "@patternfly/react-core"
+import { DropdownItem } from "@patternfly/react-core/deprecated"
 import { WarningTriangleIcon } from "@patternfly/react-icons"
 import moment from "moment"
-import ActionMenu, {
-    ActionMenuProps,
-    MenuItem,
-    useChangeAccess,
-    useDelete,
-} from "../../components/ActionMenu"
+import ActionMenu, { ActionMenuProps, MenuItem, useChangeAccess, useDelete } from "../../components/ActionMenu"
 import { formatDateTime, toEpochMillis } from "../../utils"
 import { useTester } from "../../auth"
-import {Access, recalculateDatasets, RunSummary, trash, updateDescription, updateRunAccess} from "../../api"
-import {AppContext} from "../../context/appContext";
-import {AppContextType} from "../../context/@types/appContextTypes";
+import { Access, recalculateDatasets, RunSummary, trash, updateDescription, updateRunAccess } from "../../api"
+import { AppContext } from "../../context/appContext"
+import { AppContextType } from "../../context/@types/appContextTypes"
 
 export function Description(description: string) {
     const truncated = (
@@ -79,7 +66,7 @@ export const ExecutionTime = (timestamps: StartStop) => (
 )
 
 function useRestore(run: RunSummary): MenuItem<RunSummary> {
-    const { alerting } = useContext(AppContext) as AppContextType;
+    const { alerting } = useContext(AppContext) as AppContextType
     return [
         (props: ActionMenuProps, isTester: boolean, close: () => void, run: RunSummary) => {
             return {
@@ -102,7 +89,7 @@ function useRestore(run: RunSummary): MenuItem<RunSummary> {
 }
 
 function useRecalculateDatasets(run: RunSummary): MenuItem<RunSummary> {
-    const { alerting } = useContext(AppContext) as AppContextType;
+    const { alerting } = useContext(AppContext) as AppContextType
     const [recalculating, setRecalculating] = useState(false)
     return [
         (props: ActionMenuProps, isTester: boolean, close: () => void) => {
@@ -113,11 +100,10 @@ function useRecalculateDatasets(run: RunSummary): MenuItem<RunSummary> {
                         isDisabled={!isTester || recalculating}
                         onClick={() => {
                             setRecalculating(true)
-                            recalculateDatasets(props.id, run.testid, alerting)
-                                .finally(() => {
-                                    setRecalculating(false)
-                                    close()
-                                })
+                            recalculateDatasets(props.id, run.testid, alerting).finally(() => {
+                                setRecalculating(false)
+                                close()
+                            })
                         }}
                     >
                         Recalculate datasets {recalculating && <Spinner size="md" />}
@@ -161,10 +147,11 @@ function useUpdateDescription(run: RunSummary): MenuItem<RunSummary> {
 }
 
 export function Menu(run: RunSummary, refreshCallback: () => void) {
-    const { alerting } = useContext(AppContext) as AppContextType;
+    const { alerting } = useContext(AppContext) as AppContextType
 
     const changeAccess = useChangeAccess({
-        onAccessUpdate: (id, owner, access) => updateRunAccess(id, run.testid, owner, access, alerting).then(refreshCallback),
+        onAccessUpdate: (id, owner, access) =>
+            updateRunAccess(id, run.testid, owner, access, alerting).then(refreshCallback),
     })
     const del = useDelete({
         onDelete: id => trash(alerting, id, run.testid).then(refreshCallback),
@@ -198,7 +185,7 @@ type UpdateDescriptionModalProps = {
 }
 
 export function UpdateDescriptionModal({ isOpen, onClose, run }: UpdateDescriptionModalProps) {
-    const { alerting } = useContext(AppContext) as AppContextType;
+    const { alerting } = useContext(AppContext) as AppContextType
     const [value, setValue] = useState(run.description)
     const [updating, setUpdating] = useState(false)
 

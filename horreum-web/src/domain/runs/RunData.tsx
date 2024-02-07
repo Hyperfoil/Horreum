@@ -82,27 +82,6 @@ export default function RunData(props: RunDataProps) {
                 onEdit={isTester ? () => setChangeSchemaModalOpen(true) : undefined}
                 noSchema={<NoSchemaInRun />}
             />
-            {isTester && (
-                <ChangeSchemaModal
-                    isOpen={changeSchemaModalOpen}
-                    onClose={() => setChangeSchemaModalOpen(false)}
-                    initialSchema={findFirstValue(schemas)}
-                    paths={getPaths(data)}
-                    hasRoot={typeof data === "object" && !Array.isArray(data) && data}
-                    update={(path, schemaUri, _) =>
-                        runApi.updateSchema(props.run.id, schemaUri, path).then(
-                            () => props.onUpdate(),
-                            error => alerting.dispatchError(error, "SCHEME_UPDATE_FAILED", "Failed to update run schema")
-                        )
-                    }
-                />
-            )}
-            <JsonPathSearchToolbar
-                originalData={data}
-                onRemoteQuery={(query, array) => sqlApi.queryRunData(props.run.id, query, array)}
-                onDataUpdate={setEditorData}
-            />
-            {memoizedEditor}
         </>
     )
 }

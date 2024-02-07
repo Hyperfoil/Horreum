@@ -22,7 +22,7 @@ import {
     Access,
     Action, AllowedSite,
     Configuration,
-    Middleware, RunSummary,
+    Middleware, Run, RunSummary,
     Schema,
     Test,
     TestListing, TestSummary, TestToken, Transformer, View, Watch,
@@ -366,8 +366,8 @@ export function trash(alerting: AlertContextType, id: number, testid: number, is
 export function updateRunAccess (id: number, testid: number, owner: string, access: Access, alerting: AlertContextType) : Promise<void> {
     return apiCall(runApi.updateAccess(id, owner, access), alerting, "UPDATE_RUN_ACCESS", "Failed to update run access");
 }
-export function updateDescription(id: number, testid: number, description: string, alerting: AlertContextType) : Promise<void> {
-    return apiCall(runApi.updateDescription(id, description), alerting, "RUN_UPDATE", "Failed to update description for run ID " + id);
+export function updateDescription(id: number, testid: number, run: Run, alerting: AlertContextType) : Promise<void> {
+    return apiCall(runApi.update(id, run), alerting, "RUN_UPDATE", "Failed to update description for run ID " + id);
 }
 
 
