@@ -163,14 +163,11 @@ public class HorreumResources {
             envVariables.put("quarkus.oidc.auth-server-url", keycloakEnv.get("keycloak.host").concat("/realms/").concat(HORREUM_REALM));
             envVariables.putAll(oidcTruststoreProperties(initArgs));
 
-            String keycloakAdminUser = initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME);
-            String keycloakAdminPassword = initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD);
-
             keycloak = KeycloakBuilder.builder()
                                       .serverUrl(keycloakEnv.get("keycloak.host"))
                                       .realm(KEYCLOAK_REALM)
-                                      .username(keycloakAdminUser)
-                                      .password(keycloakAdminPassword)
+                                      .username(initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME))
+                                      .password(initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD))
                                       .clientId("admin-cli")
                                       .resteasyClient(((ResteasyClientBuilder) ClientBuilder.newBuilder()).disableTrustManager().build())
                                       .build();
