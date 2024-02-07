@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.alerting;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.List;
@@ -26,7 +27,7 @@ public class Variable {
     public List<String> labels;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public String calculation;
-    @Schema(required = true, implementation = ChangeDetection[].class)
+    @Schema(required = true, type = SchemaType.ARRAY, implementation = ChangeDetection.class)
     public Set<ChangeDetection> changeDetection;
 
     public Variable() {
