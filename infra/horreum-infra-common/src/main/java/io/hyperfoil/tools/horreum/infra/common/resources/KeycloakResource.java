@@ -39,9 +39,6 @@ public class KeycloakResource implements ResourceLifecycleManager {
                 throw new RuntimeException("Arguments did not contain Keycloak image");
             }
 
-            final String JDBC_URL = initArgs.get("quarkus.datasource.jdbc.url.internal");
-            final String DB_PORT = initArgs.get("postgres.container.port");
-
             final String KEYCLOAK_IMAGE = initArgs.get(HORREUM_DEV_KEYCLOAK_IMAGE);
 
             networkAlias = initArgs.get(HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS);
@@ -73,7 +70,7 @@ public class KeycloakResource implements ResourceLifecycleManager {
                                 .env("KC_HTTP_ENABLED", "true")
                                 .env("KC_HOSTNAME_STRICT", "false")
                                 .env("DB_DATABASE", "keycloak")
-                                .env("KC_DB_URL", JDBC_URL)
+                                .env("KC_DB_URL", initArgs.get("quarkus.datasource.jdbc.url.internal"))
                                 .run("/opt/keycloak/bin/kc.sh build")
                                 .entryPoint("/opt/keycloak/bin/kc.sh ${KEYCLOAK_COMMAND:-start-dev} --import-realm $EXTRA_OPTIONS")
                                 .build()).withFileFromFile("/tmp/keycloak-horreum.json", tempKeycloakRealmFile);
@@ -100,7 +97,7 @@ public class KeycloakResource implements ResourceLifecycleManager {
                         .withEnv("KC_DB_URL_HOST", "")
                         .withEnv("KC_HOSTNAME_STRICT", "false")
                         .withEnv("KC_HOSTNAME", "localhost")
-                        .withEnv("KC_DB_URL", "jdbc:postgresql://172.17.0.1:" + DB_PORT + "/keycloak")
+                        .withEnv("KC_DB_URL", "jdbc:postgresql://" + initArgs.get(HORREUM_DEV_POSTGRES_NETWORK_ALIAS) + ":5432/keycloak")
                         .withCommand("-Dquarkus.http.http2=false", "start-dev");
             }
 
