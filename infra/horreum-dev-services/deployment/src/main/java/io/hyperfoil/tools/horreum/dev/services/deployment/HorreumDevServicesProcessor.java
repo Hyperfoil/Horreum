@@ -126,6 +126,8 @@ public class HorreumDevServicesProcessor {
                             keycloakConfig.put("horreum.keycloak.url", keycloakURL);
                             keycloakConfig.put("quarkus.oidc.auth-server-url", keycloakURL + "/realms/horreum");
                             keycloakConfig.put("quarkus.oidc.credentials.secret", envvars.get("quarkus.oidc.credentials.secret"));
+                            keycloakConfig.put("quarkus.keycloak.admin-client.username", horreumBuildTimeConfig.keycloak.adminUsername);
+                            keycloakConfig.put("quarkus.keycloak.admin-client.password", horreumBuildTimeConfig.keycloak.adminPassword);
                             if (envvars.containsKey("quarkus.oidc.tls.trust-store-file")) {
                                 keycloakConfig.put("quarkus.oidc.tls.trust-store-file", envvars.get("quarkus.oidc.tls.trust-store-file"));
                                 keycloakConfig.put("quarkus.oidc.tls.verification", "required"); // "certificate-validation" validates the certificate chain, but not the hostname. could also be "none" and disable TLS verification altogether
