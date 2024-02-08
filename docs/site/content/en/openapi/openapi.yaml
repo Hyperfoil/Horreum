@@ -2557,7 +2557,6 @@ components:
       description: Type of backend datastore
       required:
       - builtIn
-      - apiKey
       - url
       type: object
       properties:
@@ -2569,6 +2568,12 @@ components:
           type: string
         url:
           description: Elasticsearch url
+          type: string
+        username:
+          description: Elasticsearch username
+          type: string
+        password:
+          description: Elasticsearch password
           type: string
     ErrorDetails:
       required:
