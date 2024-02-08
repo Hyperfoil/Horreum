@@ -4432,4 +4432,56 @@
             DROP FUNCTION IF EXISTS before_run_update_func();
         </sql>
     </changeSet>
+    <changeSet id="118" author="barreiro">
+        <validCheckSum>ANY</validCheckSum>
+        <!-- Extend userinfo for support of internal security -->
+        <addColumn tableName="userinfo">
+            <column name="password" type="text"/>
+            <column name="email" type="text"/>
+            <column name="first_name" type="text"/>
+            <column name="last_name" type="text"/>
+        </addColumn>
+        <createSequence sequenceName="team_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
+        <createTable tableName="team">
+            <column name="id" type="integer">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="team_name" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <delete tableName="userinfo_teams"/>
+        <dropColumn tableName="userinfo_teams" columnName="team"/>
+        <addColumn tableName="userinfo_teams">
+            <column name="team_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="team_role" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addForeignKeyConstraint constraintName="fk_userinfo_teams"
+                                 baseTableName="userinfo_teams" baseColumnNames="team_id"
+                                 referencedTableName="team" referencedColumnNames="id"/>
+        <addUniqueConstraint tableName="userinfo_teams" columnNames="username,team_id,team_role"/>
+        <createTable tableName="userinfo_roles">
+            <column name="username" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_userinfo_roles"
+                                 baseTableName="userinfo_roles" baseColumnNames="username"
+                                 referencedTableName="userinfo" referencedColumnNames="username"/>
+        <addUniqueConstraint tableName="userinfo_roles" columnNames="username,role"/>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE team, userinfo_roles TO "${quarkus.datasource.username}";
+            GRANT ALL ON SEQUENCE team_id_seq TO "${quarkus.datasource.username}";
+            ALTER TABLE userinfo_roles ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY userinfo_roles_read ON userinfo_roles USING (has_role('horreum.system'));
+            CREATE POLICY userinfo_roles_rw ON userinfo_roles FOR ALL USING (has_role(username));
+        </sql>
+    </changeSet>
 </databaseChangeLog>

@@ -17,8 +17,6 @@ import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.NotFoundException;
@@ -26,7 +24,6 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.hibernate.exception.ConstraintViolationException;
 import org.jboss.logging.Logger;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RoleMappingResource;
@@ -38,7 +35,7 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 
 import io.hyperfoil.tools.horreum.api.internal.services.UserService;
-import io.hyperfoil.tools.horreum.entity.UserInfo;
+import io.hyperfoil.tools.horreum.entity.user.UserInfo;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.vertx.core.Vertx;
@@ -173,31 +170,6 @@ public class UserServiceImpl implements UserService {
       }
       return keycloak.realm(realm).roles().list().stream().map(RoleRepresentation::getName)
                      .filter(n -> n.endsWith("-team")).collect(Collectors.toList());
-   }
-
-   @WithRoles(addUsername = true)
-   @Transactional
-   public void cacheUserTeams(String username, Set<String> teams) {
-      try {
-         // Running this without pessimistic lock leads to duplicate inserts at the same time
-         UserInfo userInfo = UserInfo.findById(username, LockModeType.PESSIMISTIC_WRITE);
-         if (userInfo == null) {
-            userInfo = new UserInfo();
-            userInfo.username = username;
-            userInfo.teams = teams;
-         } else if (!teams.equals(userInfo.teams)) {
-            userInfo.teams = teams;
-         }
-         userInfo.persistAndFlush();
-      } catch (PersistenceException e) {
-         if (e instanceof ConstraintViolationException) {
-            // silently ignore
-            // note: alternative would be to define @SQLInsert with INSERT ... ON CONFLICT DO NOTHING
-            log.tracef(e, "Concurrent insertion of %s", username);
-         } else {
-            throw e;
-         }
-      }
    }
 
    @WithRoles(addUsername = true)
