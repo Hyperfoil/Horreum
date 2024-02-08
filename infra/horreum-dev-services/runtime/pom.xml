@@ -4,7 +4,7 @@
   <parent>
     <groupId>io.hyperfoil.tools</groupId>
     <artifactId>horreum-dev-services-parent</artifactId>
-    <version>0.11.5-SNAPSHOT</version>
+    <version>0.11.5</version>
   </parent>
   <artifactId>horreum-dev-services</artifactId>
   <name>Horreum Dev Services - Runtime</name>
