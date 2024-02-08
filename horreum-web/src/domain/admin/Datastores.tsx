@@ -58,7 +58,7 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
         },
 
     ];
-    const newBackendConfig : ElasticsearchDatastoreConfig = {
+    const newBackendConfig: ElasticsearchDatastoreConfig = {
         url: "",
         apiKey: "",
         builtIn: false
@@ -75,7 +75,7 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
     }
 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
     const [verifyModalOpen, setVerifyModalOpen] = useState(false);
     const [datastore, setDatastore] = useState<Datastore >(newDataStore)
 
@@ -138,7 +138,7 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
                 </Table>
             </StackItem>
             <StackItem>
-                <Button variant={"primary"} id={"newDatastpre"} onClick={newDatastore}>New Datastore</Button>
+                <Button variant={"primary"} id={"newDatastore"} onClick={newDatastore}>New Datastore</Button>
             </StackItem>
             <StackItem>
                 <ConfirmDeleteModal
@@ -147,7 +147,7 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
                     isOpen={deleteModalOpen}
                     onClose={() => deleteModalToggle(0)}
                     onDelete={() => {
-                        props.deleteDatastore(datastore?.id?.toString() || "").then(noop)
+                        props.deleteDatastore(datastore?.id?.toString() || "")
                         deleteModalToggle(0)
                         return Promise.resolve()
                     }
@@ -164,9 +164,9 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
                     dataStore={datastore}
                     updateDatastore={updateDatastore}
                     onDelete={() => {
-                            editModalToggle(0)
-                            return Promise.resolve()
-                        }
+                        editModalToggle(0)
+                        return Promise.resolve()
+                    }
                     }
                 />
             </StackItem>
@@ -177,9 +177,9 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
                     isOpen={verifyModalOpen}
                     onClose={() => verifyModalToggle(0)}
                     onDelete={() => {
-                            verifyModalToggle(0)
-                            return Promise.resolve()
-                        }
+                        verifyModalToggle(0)
+                        return Promise.resolve()
+                    }
                     }
                 />
             </StackItem>

@@ -58,7 +58,7 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                 onClose();
                 alerting.dispatchInfo("SAVE", "Saved!", "Datastore was successfully updated!", 3000)
             })
-            .catch(reason => alerting.dispatchError("SAVE", "Saved!", "Failed to save changes to Datastore"))
+            .catch(reason => alerting.dispatchError(reason, "Saved!", "Failed to save changes to Datastore"))
     }
 
     const options : datastoreOption[] = [
@@ -151,6 +151,51 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     <FormHelperText>
                         <HelperText>
                             <HelperTextItem>Please provide an API token to authenticate against datastore</HelperTextItem>
+                        </HelperText>
+                    </FormHelperText>
+                </FormGroup>
+
+                <FormGroup
+                    label="Username"
+                    fieldId="horizontal-form-token"
+                >
+                    <TextInput
+                        value={"username" in dataStore.config ? dataStore.config.username : ""}
+                        onChange={(_, value) => {
+                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
+                            config.username = value
+                            updateDatastore({...dataStore, config: config})
+                        }}isDisabled={enabledToken}
+                        type="text"
+                        id="horizontal-form-username"
+                        aria-describedby="horizontal-form-token-helper"
+                        name="horizontal-form-token"
+                    />
+                    <FormHelperText>
+                        <HelperText>
+                            <HelperTextItem>Please provide a Username to authenticate against datastore</HelperTextItem>
+                        </HelperText>
+                    </FormHelperText>
+                </FormGroup>
+                <FormGroup
+                    label="Password"
+                    fieldId="horizontal-form-token"
+                >
+                    <TextInput
+                        value={"password" in dataStore.config ? dataStore.config.password : ""}
+                        onChange={(_, value) => {
+                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
+                            config.password = value
+                            updateDatastore({...dataStore, config: config})
+                        }}isDisabled={enabledToken}
+                        type="text"
+                        id="horizontal-form-password"
+                        aria-describedby="horizontal-form-token-helper"
+                        name="horizontal-form-token"
+                    />
+                    <FormHelperText>
+                        <HelperText>
+                            <HelperTextItem>Please provide a Password to authenticate against datastore</HelperTextItem>
                         </HelperText>
                     </FormHelperText>
                 </FormGroup>
