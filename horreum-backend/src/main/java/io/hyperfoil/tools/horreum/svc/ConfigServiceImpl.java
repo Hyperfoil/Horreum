@@ -5,6 +5,8 @@ import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.services.ConfigService;
+import io.hyperfoil.tools.horreum.datastore.BackendResolver;
+import io.hyperfoil.tools.horreum.datastore.DatastoreResponse;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
@@ -16,13 +18,17 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.keycloak.util.JsonSerialization.mapper;
 
 @ApplicationScoped
 public class ConfigServiceImpl implements ConfigService {
@@ -34,6 +40,9 @@ public class ConfigServiceImpl implements ConfigService {
 
     @Inject
     EntityManager em;
+
+    @Inject
+    BackendResolver backendResolver;
 
 
     @Override
@@ -60,7 +69,7 @@ public class ConfigServiceImpl implements ConfigService {
         String queryWhere = "where access = 0";
         Set<String> roles = identity.getRoles();
         long rolesCount = roles.stream().filter(role -> role.endsWith("-team")).count();
-        if (rolesCount != 0) { //user has access to team, retrieve the team datastores as well
+        if (rolesCount != 0) { //user has access to team, retrieve the team datastore as well
             queryWhere = queryWhere.concat(" or owner in ('" + team + "')");
         }
         List<DatastoreConfigDAO> backends = DatastoreConfigDAO.list(queryWhere);
@@ -82,19 +91,37 @@ public class ConfigServiceImpl implements ConfigService {
         if (dao.owner == null) {
             List<String> uploaders = identity.getRoles().stream().filter(role -> role.endsWith("-uploader")).collect(Collectors.toList());
             if (uploaders.size() != 1) {
-                log.debugf("Failed to create new backend %s: no owner, available uploaders: %s", dao.name, uploaders);
+                log.debugf("Failed to create datastore %s: no owner, available uploaders: %s", dao.name, uploaders);
                 throw ServiceException.badRequest("Missing owner and cannot select single default owners; this user has these uploader roles: " + uploaders);
             }
             String uploader = uploaders.get(0);
             dao.owner = uploader.substring(0, uploader.length() - 9) + "-team";
         } else if (!identity.getRoles().contains(dao.owner)) {
-            log.debugf("Failed to create backend configuration %s: requested owner %s, available roles: %s", dao.name, dao.owner, identity.getRoles());
-            throw ServiceException.badRequest("This user does not have permissions to upload backend configuration for owner=" + dao.owner);
+            log.debugf("Failed to create datastore %s: requested owner %s, available roles: %s", dao.name, dao.owner, identity.getRoles());
+            throw ServiceException.badRequest("This user does not have permissions to upload datastore for owner=" + dao.owner);
         }
         if (dao.access == null) {
             dao.access = Access.PRIVATE;
         }
-        log.debugf("Uploading with owner=%s and access=%s", dao.owner, dao.access);
+
+        io.hyperfoil.tools.horreum.datastore.Datastore datastoreImpl;
+        try {
+            datastoreImpl = backendResolver.getBackend(datastore.type);
+        } catch (IllegalStateException e) {
+            throw ServiceException.badRequest("Unknown datastore type: " + datastore.type + ". Please try again, if the problem persists please contact the system administrator.");
+        }
+
+        if ( datastoreImpl == null ){
+            throw ServiceException.badRequest("Unknown datastore type: " + datastore.type);
+        }
+
+        String error = datastoreImpl.validateConfig(datastore.config);
+
+        if ( error != null ) {
+            throw ServiceException.badRequest(error);
+        }
+
+        log.debugf("Creating new Datastore with owner=%s and access=%s", dao.owner, dao.access);
 
         try {
             em.persist(dao);
