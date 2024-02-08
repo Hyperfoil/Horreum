@@ -8,8 +8,13 @@ import { keycloakSelector, INIT, STORE_PROFILE, UPDATE_DEFAULT_TEAM, UPDATE_ROLE
 
 export function initKeycloak(state: State) {
     const keycloak = keycloakSelector(state)
-    let oidc: boolean
+    let oidc: boolean = false //defaulting to a value
     let keycloakPromise
+
+    if (keycloak && keycloak.authenticated){
+        return;//don't need to setup keycloak again
+    }
+
     if (!keycloak) {
         keycloakPromise = fetchival("/api/config/keycloak", { responseAs: "json" })
             .get()
@@ -59,7 +64,7 @@ export function initKeycloak(state: State) {
                     }
                 })
             }
-            store.dispatch({ type: INIT, keycloak: oidc ? keycloak : undefined, initPromise: initPromise })
+            store.dispatch({ type: INIT, keycloak: oidc || keycloak ? keycloak : undefined, initPromise: initPromise })
         })
         .catch(noop)
 }
