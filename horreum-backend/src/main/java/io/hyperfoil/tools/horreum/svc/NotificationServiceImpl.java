@@ -49,9 +49,9 @@ public class NotificationServiceImpl implements NotificationService {
                JOIN watch_teams wt ON ns.isteam AND ns.name = wt.teams
             UNION
             SELECT ns.*, watch_id FROM notificationsettings ns
-               JOIN userinfo_teams ut ON NOT ns.isteam
-                  AND ns.name = ut.username
-               JOIN watch_teams wt ON wt.teams = ut.team
+               JOIN team t ON NOT ns.isteam
+                  AND ns.name = t.team_name
+               JOIN watch_teams wt ON wt.teams = t.team_name
          )
          SELECT method, data, name
          FROM ens
