@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.datastore;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import jakarta.ws.rs.BadRequestException;
@@ -21,6 +22,8 @@ public interface Datastore{
     DatastoreType type();
 
     UploadType uploadType();
+
+    String validateConfig(Object config);
 
     enum UploadType {
         SINGLE, MUILTI

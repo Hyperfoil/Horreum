@@ -8,4 +8,8 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
         description = "Built in backend datastore")
 public class PostgresDatastoreConfig extends BaseDatastoreConfig {
 
+    @Override
+    public String validateConfig() {
+        return null;
+    }
 }

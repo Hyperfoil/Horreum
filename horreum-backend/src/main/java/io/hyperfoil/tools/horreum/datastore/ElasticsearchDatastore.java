@@ -9,9 +9,15 @@ import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
@@ -30,6 +36,9 @@ public class ElasticsearchDatastore implements Datastore {
 
     protected static final Logger log = Logger.getLogger(ElasticsearchDatastore.class);
 
+    @Inject
+    ObjectMapper mapper;
+
     Map<String, RestClient> hostCache = new ConcurrentHashMap<>();
 
     @Override
@@ -39,6 +48,8 @@ public class ElasticsearchDatastore implements Datastore {
                               Optional<String> schemaUriOptional,
                               ObjectMapper mapper)
             throws BadRequestException{
+
+        RestClient restClient = null;
 
         try {
 
@@ -52,12 +63,21 @@ public class ElasticsearchDatastore implements Datastore {
 
             if ( elasticsearchDatastoreConfig != null ){
 
-                RestClientBuilder builder = RestClient.builder(HttpHost.create(elasticsearchDatastoreConfig.url))
-                            .setDefaultHeaders(new Header[]{
-                                    new BasicHeader("Authorization", "ApiKey " + elasticsearchDatastoreConfig.apiKey)
-                            });
+                RestClientBuilder builder = RestClient.builder(HttpHost.create(elasticsearchDatastoreConfig.url));
+                if( elasticsearchDatastoreConfig.apiKey != null) {
+                    builder.setDefaultHeaders(new Header[]{
+                            new BasicHeader("Authorization", "ApiKey " + elasticsearchDatastoreConfig.apiKey)
+                    });
+                } else {
+                    final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+                    credentialsProvider.setCredentials(AuthScope.ANY,
+                            new UsernamePasswordCredentials(elasticsearchDatastoreConfig.username, elasticsearchDatastoreConfig.password));
 
-                RestClient restClient = builder.build();
+                    builder.setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder
+                            .setDefaultCredentialsProvider(credentialsProvider));
+                }
+
+                restClient = builder.build();
 
                 if ( restClient == null ) {
                     log.warn("Could not find elasticsearch datastore: " + configuration.name);
@@ -134,6 +154,8 @@ public class ElasticsearchDatastore implements Datastore {
                         extractedResults = mapper.createArrayNode();
 
                         //2nd retrieve the docs from 2nd Index and combine into a single result with metadata and doc contents
+                        final RestClient finalRestClient = restClient; //copy of restClient for use in lambda
+
                         elasticResults.forEach(jsonNode -> {
 
                             ObjectNode result = ((ObjectNode) jsonNode.get("_source")).put("$schema", schemaUri);
@@ -149,7 +171,7 @@ public class ElasticsearchDatastore implements Datastore {
                                     "/" + multiIndexQuery.targetIndex  + "/_doc/" + jsonNode.get("_source").get(multiIndexQuery.docField).textValue());
 
                             try {
-                                docString = extracted(restClient, subRequest);
+                                docString = extracted(finalRestClient, subRequest);
 
                             } catch (IOException e) {
 
@@ -184,6 +206,15 @@ public class ElasticsearchDatastore implements Datastore {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        finally {
+            if ( restClient != null ) {
+                try {
+                    restClient.close();
+                } catch (IOException e) {
+                    log.errorf("Error closing rest client: %s", e.getMessage());
+                }
+            }
+        }
     }
 
     private static String extracted(RestClient restClient, Request request) throws IOException {
@@ -203,6 +234,15 @@ public class ElasticsearchDatastore implements Datastore {
     @Override
     public UploadType uploadType() {
         return UploadType.MUILTI;
+    }
+
+    @Override
+    public String validateConfig(Object config) {
+        try {
+            return mapper.treeToValue((ObjectNode) config, ElasticsearchDatastoreConfig.class).validateConfig();
+        } catch (JsonProcessingException e) {
+            return "Unable to read configuration. if the problem persists, please contact a system administrator";
+        }
     }
 
     private static class ElasticRequest {

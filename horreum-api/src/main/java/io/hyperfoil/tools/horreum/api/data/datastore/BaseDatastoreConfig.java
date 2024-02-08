@@ -15,4 +15,6 @@ public abstract class BaseDatastoreConfig {
     public BaseDatastoreConfig(Boolean builtIn) {
         this.builtIn = builtIn;
     }
+
+    public abstract String validateConfig();
 }

@@ -54,7 +54,7 @@ public interface ConfigService {
    @APIResponseSchema(value = Integer.class,
            responseDescription = "The ID for the new Datastore",
            responseCode = "200")
-   Integer newDatastore(Datastore datastore);
+   Integer newDatastore(@NotNull Datastore datastore);
 
    @PUT
    @Path("datastore")
