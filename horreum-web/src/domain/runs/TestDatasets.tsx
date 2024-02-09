@@ -139,7 +139,6 @@ export default function TestDatasets() {
     const testIdInt = parseInt(testId ?? "-1")
     // const [tests, setTests] = useState<Test[] | undefined>(undefined)
     const [test, setTest] = useState<Test | undefined>(undefined)
-    console.log(test)
     const [filter, setFilter] = useState<SelectedLabels>()
     const [filterExpanded, setFilterExpanded] = useState(false)
     const [page, setPage] = useState(1)
