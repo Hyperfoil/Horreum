@@ -167,10 +167,10 @@ public class TestServiceTest extends BaseServiceTest {
    }
 
    private void updateView(View view) {
-      Integer viewId = jsonRequest().body(view).post("/api/ui/view")
-            .then().statusCode(200).extract().body().as(Integer.class);
+      View newView = jsonRequest().body(view).post("/api/ui/view")
+            .then().statusCode(200).extract().body().as(View.class);
       if (view.id != null) {
-         assertEquals(view.id, viewId);
+         assertEquals(view.id, newView.id);
       }
    }
 
