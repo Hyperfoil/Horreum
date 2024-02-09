@@ -112,7 +112,6 @@ export default function Views({ testId, testOwner, funcsRef, onModified, ...prop
     const [views, setViews] = useState<ViewExtended[]>([])
     const [deleted, setDeleted] = useState<number[]>([])
     const [selectedView, setSelectedView] = useState<ViewExtended>()
-
     useEffect(() => {
         // Perform a deep copy of the view object to prevent modifying store
         const copy = deepCopy(props.views)
@@ -123,21 +122,39 @@ export default function Views({ testId, testOwner, funcsRef, onModified, ...prop
     }, [props.views])
 
     funcsRef.current = {
-        save: () =>
-            Promise.all([
+        save: () =>{
+            return Promise.all([
                 ...views
                     .filter(v => v.modified)
-                    .map(view => updateView(alerting, testId, view).then(id => (view.id = id))),
-                ...deleted.map(id => deleteView(alerting, testId, id)),
-            ]).then(() => {
+                    .map(async view => {
+                        return updateView(alerting, testId, view)
+                    }),
+                ...deleted.map(id => { deleteView(alerting, testId, id); return null})
+            ])
+            //removes the output of the ...deleted.map to satisfy TypeScript type check
+            .then(hasNulls => hasNulls.filter(v => v !=null) as View[])
+            .then((updatedViews) => {
+                //A better solution is for the parent to provide updated views props whenever views change
+                const newViews = [...updatedViews]
+                //add any existing views that were not updated and have valid ids
+                views
+                    .filter(oldView => oldView.id >= 0)//exclude any local temporary views
+                    .forEach(oldView => ( 
+                        newViews.some((newView : ViewExtended) => oldView.id == newView.id)
+                            ? null : newViews.unshift(oldView) //use unshift to preserve view order
+                        ) 
+                    ) 
                 setDeleted([])
-                setViews(
-                    views.map(v => {
-                        delete v.modified
-                        return v
-                    })
-                )
-            }),
+                //have to update selectedView because if it was a new view (id < 0) it will no longer be in views
+                if(selectedView && 'id' in selectedView){
+                    const found = newViews.filter(v => v.id === selectedView.id)
+                    if(found && found.length === 1){
+                        setSelectedView(found[0]);
+                    }
+                }
+                setViews(newViews);
+            })
+        },
         reset: () => {
             setDeleted([])
             setViews(deepCopy(props.views))
