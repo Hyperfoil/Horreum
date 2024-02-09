@@ -390,12 +390,12 @@ public class BaseServiceTest {
               .statusCode(204);
    }
 
-   protected int createView(View view) {
+   protected View createView(View view) {
       return jsonRequest()
               .body(view)
               .post("/api/ui/view")
               .then()
-              .statusCode(200).extract().body().as(Integer.class);
+              .statusCode(200).extract().body().as(View.class);
    }
 
    protected List<View> getViews(int testId) {
@@ -874,7 +874,7 @@ public class BaseServiceTest {
               readFile(p.resolve("roadrunner_view.json").toFile()), View.class);
       assertEquals("Default", view.name);
       view.testId = t.id;
-      view.id = createView(view);
+      view = createView(view);
 
       Schema s = new ObjectMapper().readValue(
               readFile(p.resolve("acme_benchmark_schema.json").toFile()), Schema.class);
