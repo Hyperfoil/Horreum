@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -947,6 +948,46 @@ public class RunServiceTest extends BaseServiceTest {
          e.printStackTrace();
          fail(e.getMessage());
       }
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testAllRunsOrdering() throws IOException {
+      String name = "with_meta";
+      Test test = createTest(createExampleTest(name));
+      createSchema("Foo", "urn:foo");
+      createSchema("Bar", "urn:bar");
+      createSchema("Q", "urn:q");
+      Schema gooSchema = createSchema("Goo", "urn:goo");
+      Schema postSchema = createSchema("Post", "uri:Goo-post-function");
+
+      long now = System.currentTimeMillis();
+      ObjectNode data = simpleObject("urn:foo", "foo", "xxx");
+      ArrayNode metadata = JsonNodeFactory.instance.arrayNode();
+      metadata.add(simpleObject("urn:bar", "bar", "yyy"));
+
+      uploadRun(now, data, metadata, test.name);
+      now = System.currentTimeMillis();
+      uploadRun(now, data, metadata, test.name);
+
+      RunService.RunsSummary runs = jsonRequest()
+          .get("/api/run/list?limit=10&page=1&query=$.*")
+             .then()
+             .statusCode(200)
+             .extract()
+             .as(RunService.RunsSummary.class);
+
+      assertEquals(2, runs.runs.size());
+      assertEquals(name, runs.runs.get(0).testname);
+      assertTrue(runs.runs.get(0).start.isAfter(runs.runs.get(1).start) );
+
+      runs = jsonRequest()
+          .get("/api/run/list?limit=10&page=1&query=$.*&direction=Ascending" )
+          .then()
+          .statusCode(200)
+          .extract()
+          .as(RunService.RunsSummary.class);
+      assertEquals( 2, runs.runs.size());
+      assertTrue(runs.runs.get(0).start.isBefore(runs.runs.get(1).start) );
    }
 
    private JsonNode getBySchema(JsonNode data, String schema) {

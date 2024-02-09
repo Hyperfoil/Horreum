@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.internal.services.SqlService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import jakarta.inject.Inject;
@@ -430,4 +431,30 @@ public class DatasetServiceTest extends BaseServiceTest {
       }
    }
 
+   @org.junit.jupiter.api.Test
+   public void testDatasetListOrdering(){
+      String testname = "road-runner";
+      Test test = createTest(createExampleTest(testname));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      long timestamp = System.currentTimeMillis();
+      int initialRunID = uploadRun(timestamp, timestamp,
+          JsonNodeFactory.instance.objectNode(),
+          test.name);
+      waitForDatasets(initialRunID);
+      timestamp = System.currentTimeMillis();
+      int latterRunID = uploadRun(timestamp, timestamp,
+          JsonNodeFactory.instance.objectNode(),
+          test.name);
+      waitForDatasets(latterRunID);
+      DatasetService.DatasetList datasetsList = listTestDatasets(test.id, null);
+      assertEquals(2, datasetsList.datasets.size());
+      assertEquals(0, datasetsList.datasets.get(0).ordinal);
+      assertEquals(initialRunID, datasetsList.datasets.get(1).runId);
+      assertEquals(latterRunID, datasetsList.datasets.get(0).runId);
+      datasetsList = null;
+      datasetsList = listTestDatasets(test.id, SortDirection.Ascending);
+      assertEquals(2, datasetsList.datasets.size());
+      assertEquals(initialRunID, datasetsList.datasets.get(0).runId);
+      assertEquals(latterRunID, datasetsList.datasets.get(1).runId);
+   }
 }
