@@ -144,7 +144,7 @@ public class Util {
 
    static void addOrderBy(StringBuilder sql, String sort, SortDirection direction) {
       sort = sort == null || sort.trim().isEmpty() ? "start" : sort;
-      direction = direction == null ? SortDirection.Ascending : direction;
+      direction = direction == null ? SortDirection.Descending : direction;
       sql.append(" ORDER BY ").append(sort);
       addDirection(sql, direction);
    }

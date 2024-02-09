@@ -31,6 +31,7 @@ import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.report.ReportComponent;
 import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
+import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
@@ -1016,5 +1017,18 @@ public class BaseServiceTest {
          array.add(label);
       }
       return array;
+   }
+
+   protected DatasetService.DatasetList listTestDatasets(long id, SortDirection direction){
+      StringBuilder url = new StringBuilder("/api/dataset/list/" + id);
+      if (direction != null) {
+         url.append("?direction=" + direction);
+      }
+      return jsonRequest()
+          .get(url.toString())
+          .then()
+          .statusCode(200)
+          .extract()
+          .as(DatasetService.DatasetList.class);
    }
 }
