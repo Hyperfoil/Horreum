@@ -12,7 +12,6 @@ export interface Alert {
 }
 
 export function defaultFormatError(e: any) {
-    console.log(e)
     if (!e) {
         return ""
     }
