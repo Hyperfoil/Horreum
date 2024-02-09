@@ -28,7 +28,7 @@ public class UIServiceImpl implements UIService {
     @RolesAllowed("tester")
     @WithRoles
     @Transactional
-    public int updateView(View dto) {
+    public View updateView(View dto) {
         if (dto.testId <= 0) {
             throw ServiceException.badRequest("Missing test id on view");
         }
@@ -49,7 +49,7 @@ public class UIServiceImpl implements UIService {
         }
     }
 
-    private int doUpdate(TestDAO test, ViewDAO view) {
+    private View doUpdate(TestDAO test, ViewDAO view) {
         view.ensureLinked();
         view.test = test;
         if (view.id == null || view.id < 0) {
@@ -63,7 +63,7 @@ public class UIServiceImpl implements UIService {
         test.views.add(view);
         test.persist();
         em.flush();
-        return view.id;
+        return ViewMapper.from(view);
     }
 
     @Override

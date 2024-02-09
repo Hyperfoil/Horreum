@@ -267,7 +267,7 @@ export function fetchViews(testId: number, alerting: AlertContextType): Promise<
 export function updateAccess(id: number, owner: string, access: Access, alerting: AlertContextType) : Promise<void> {
     return apiCall(testApi.updateAccess(id, owner, access), alerting, "UPDATE_ACCESS", "Failed to update test access");
 }
-export function updateView(alerting: AlertContextType, testId: number, view: View): Promise<number> {
+export function updateView(alerting: AlertContextType, testId: number, view: View): Promise<View> {
     for (const c of view.components) {
         if (c.labels.length === 0) {
             alerting.dispatchError(

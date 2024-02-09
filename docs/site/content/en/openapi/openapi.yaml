@@ -1945,13 +1945,20 @@ paths:
           format: int32
           type: integer
         example: 101
-      - name: direction
+      - name: filtering
         in: query
-        description: either Ascending or Descending
+        description: Retrieve values for Filtering Labels
         schema:
-          default: Ascending
-          type: string
-        example: count
+          default: true
+          type: boolean
+        example: true
+      - name: metrics
+        in: query
+        description: Retrieve values for Metric Labels
+        schema:
+          default: true
+          type: boolean
+        example: false
       - name: filter
         in: query
         description: either a required json sub-document or path expression
@@ -1960,13 +1967,19 @@ paths:
           type: string
         example:
           key: requiredValue
-      - name: filtering
+      - name: sort
         in: query
-        description: Retrieve values for Filtering Labels
+        description: label name for sorting
         schema:
-          default: true
-          type: boolean
-        example: true
+          default: ""
+          type: string
+      - name: direction
+        in: query
+        description: either Ascending or Descending
+        schema:
+          default: Ascending
+          type: string
+        example: count
       - name: limit
         in: query
         description: the maximum number of results to include
@@ -1975,13 +1988,6 @@ paths:
           default: 2147483647
           type: integer
         example: 10
-      - name: metrics
-        in: query
-        description: Retrieve values for Metric Labels
-        schema:
-          default: true
-          type: boolean
-        example: false
       - name: page
         in: query
         description: which page to skip to when using a limit
@@ -1990,12 +1996,6 @@ paths:
           default: 0
           type: integer
         example: 2
-      - name: sort
-        in: query
-        description: label name for sorting
-        schema:
-          default: ""
-          type: string
       responses:
         "200":
           description: OK
