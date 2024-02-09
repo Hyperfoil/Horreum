@@ -55,7 +55,6 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     }
     const handleOptionChange = (_ : React.FormEvent<HTMLSelectElement>, value: string) => {
         setDatastoreId(parseInt(value))
-        console.log('New datastore selected')
     }
 
     useEffect(() => {

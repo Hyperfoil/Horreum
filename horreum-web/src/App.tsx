@@ -80,7 +80,6 @@ const router = createBrowserRouter(
 
 export default function App() {
     initKeycloak(store.getState())
-    console.trace();
 
     return (
         <Provider store={store}>
