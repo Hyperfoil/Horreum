@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
@@ -10,13 +11,7 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.*;
 
 import com.fasterxml.jackson.databind.node.*;
@@ -28,9 +23,10 @@ import jakarta.transaction.*;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import org.eclipse.microprofile.context.ThreadContext;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.*;
+import org.graalvm.polyglot.io.IOAccess;
+import org.graalvm.polyglot.proxy.Proxy;
+import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.hibernate.query.NativeQuery;
 import org.jboss.logging.Logger;
 import org.postgresql.util.PSQLException;
@@ -271,6 +267,33 @@ public class Util {
       }
    }
 
+   public static Object convertFromJson(JsonNode node){
+         switch (node.getNodeType()) {
+            case BINARY:
+            case STRING:
+               return node.asText();
+            case BOOLEAN:
+               return node.asBoolean();
+            case MISSING:
+            case NULL:
+               return null;
+            case NUMBER:
+               double value = node.asDouble();
+               if (value == Math.rint(value)) {
+                  return (long) value;
+               } else {
+                  return value;
+               }
+            case OBJECT:
+               return (ObjectNode)node;
+            case ARRAY:
+               return (ArrayNode)node;
+            default:
+               return node;
+         }
+      }
+
+
    public static Object convert(Value value) {
       if (value == null) {
          return null;
@@ -282,7 +305,14 @@ public class Util {
             return null;
          }
       } else if (value.isProxyObject()) {
-         return value.asProxyObject();
+         Proxy p = value.asProxyObject();
+         if (p instanceof ProxyJacksonArray){
+            return ((ProxyJacksonArray)p).getJsonNode();
+         } else if (p instanceof ProxyJacksonObject){
+            return ((ProxyJacksonObject)p).getJsonNode();
+         } else {
+            return p;
+         }
       } else if (value.isBoolean()) {
          return value.asBoolean();
       } else if (value.isNumber()) {
@@ -334,7 +364,7 @@ public class Util {
       return json;
    }
 
-   public static JsonNode convertMapping(Value value){
+   public static ObjectNode convertMapping(Value value){
       ObjectNode json = JsonNodeFactory.instance.objectNode();
       for (String key : value.getMemberKeys()){
          Value element = value.getMember(key);
@@ -530,9 +560,10 @@ public class Util {
                                                    ExecutionExceptionConsumer<T> onJsEvaluationException,
                                                    Consumer<String> jsOutputConsumer) {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
-      try (org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context.newBuilder("js").out(out).err(out).build()) {
+      try (org.graalvm.polyglot.Context context = createContext(out)) {
          context.enter();
          try {
+            setupContext(context);
             for (int i = 0; i < inputData.size(); i++) {
                T element = inputData.get(i);
                String jsFuncBody = jsCombinationFunction.apply(element);
@@ -542,6 +573,7 @@ public class Util {
                   jsCode.append("__func").append(i).append("(__obj").append(i).append(")");
                   try {
                      Value value = context.eval("js", jsCode);
+                     value = resolvePromise(value);
                      jsFuncResultConsumer.accept(element, value);
                   } catch (PolyglotException e) {
                      onJsEvaluationException.accept(element, e, jsCode.toString());
@@ -550,6 +582,8 @@ public class Util {
                   nonFuncResultConsumer.accept(element);
                }
             }
+         } catch (IOException e) {
+            onJsEvaluationException.accept(null, e, "<init>");
          } finally {
             if (out.size() > 0) {
                jsOutputConsumer.accept(out.toString(StandardCharsets.UTF_8));
@@ -559,19 +593,76 @@ public class Util {
       }
    }
 
+   private static Context createContext(OutputStream out){
+      return Context.newBuilder("js")
+              .engine(Engine.newBuilder()
+                      .option("engine.WarnInterpreterOnly", "false")
+                      .build()
+              )
+              .allowExperimentalOptions(true)
+              .option("js.foreign-object-prototype", "true")
+              .option("js.global-property","true")
+              .out(out)
+              .err(out)
+              .build();
+   }
+   private static void setupContext(Context context) throws IOException {
+      context.getBindings("js").putMember("isInstanceLike", new ProxyJacksonObject.InstanceCheck());
+      context.eval("js",
+              "Object.defineProperty(Object,Symbol.hasInstance, {\n" +
+                      "  value: function myinstanceof(obj) {\n" +
+                      "    return isInstanceLike(obj);\n" +
+                      "  }\n" +
+                      "});");
+   }
+
+   public static Value resolvePromise(Value value){
+      if(value.getMetaObject().getMetaSimpleName().equals("Promise") && value.hasMember("then") && value.canInvokeMember("then")){
+         List<Value> resolved = new ArrayList<>();
+         List<Value> rejected = new ArrayList<>();
+         Object invokeRtrn = value.invokeMember("then", new ProxyExecutable() {
+            @Override
+            public Object execute(Value... arguments) {
+               resolved.addAll(Arrays.asList(arguments));
+               return arguments;
+            }
+         }, new ProxyExecutable() {
+            @Override
+            public Object execute(Value... arguments) {
+               rejected.addAll(Arrays.asList(arguments));
+               return arguments;
+            }
+         });
+         if(!rejected.isEmpty()){
+            value = rejected.get(0);
+         }else if(resolved.size() == 1){
+            value = resolved.get(0);
+         }else{ //resolve.size() > 1, this doesn't happen
+            log.error("resolved promise size="+resolved.size()+", expected 1 for promise = "+value);
+         }
+      }
+      return value;
+   }
+
+   //I SWEAR IF I FIND ANOTHER PLACE THAT PERFORMS THE SAME CALCULATION I WILL BUY MORE SCREWDRIVERS
    static <T> T evaluateOnce(String function, JsonNode input, Function<Value, T> processResult, BiConsumer<String, Throwable> onException, Consumer<String> onOutput) {
       StringBuilder jsCode = new StringBuilder("const __obj = ").append(input).append(";\n");
       jsCode.append("const __func = ").append(function).append(";\n");
       jsCode.append("__func(__obj)");
       ByteArrayOutputStream out = new ByteArrayOutputStream();
-      try (Context context = Context.newBuilder("js").out(out).err(out).build()) {
+      try (Context context = createContext(out)) {
          context.enter();
          try {
+            setupContext(context);
             Value value = context.eval("js", jsCode);
+            value = resolvePromise(value);
+            //end of the sin
             return processResult.apply(value);
          } catch (PolyglotException e) {
             onException.accept(jsCode.toString(), e);
             return null;
+         } catch (IOException e) {
+            onException.accept(jsCode.toString(), e);
          } finally {
             if (out.size() > 0) {
                onOutput.accept(out.toString());
@@ -579,6 +670,7 @@ public class Util {
             context.leave();
          }
       }
+      return null;
    }
 
    static boolean evaluateTest(String function, JsonNode input,

@@ -43,6 +43,11 @@
             <type>pom</type>
         </dependency>
         <dependency>
+            <groupId>org.graalvm.regex</groupId>
+            <artifactId>regex</artifactId>
+            <version>${graalvm.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.networknt</groupId>
             <artifactId>json-schema-validator</artifactId>
             <version>${validator.version}</version>
