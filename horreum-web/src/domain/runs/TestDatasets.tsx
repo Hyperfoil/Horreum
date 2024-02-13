@@ -147,7 +147,6 @@ export default function TestDatasets() {
     const [direction, setDirection] = useState("Descending")
     const [viewId, setViewId] = useState<number>()
     const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
-
     const [loading, setLoading] = useState(false)
     const [datasets, setDatasets] = useState<DatasetList>()
     const [comparedDatasets, setComparedDatasets] = useState<DatasetSummary[]>()
@@ -155,7 +154,6 @@ export default function TestDatasets() {
     const token = useSelector(tokenSelector)
 
     const [views, setViews] = useState<View[]>([])
-
     useEffect(() => {
         fetchTest(testIdInt, alerting)
             .then(setTest)
@@ -224,8 +222,7 @@ export default function TestDatasets() {
             })
         })
         return allColumns
-    }, [test, token, comparedDatasets, viewId])
-
+    }, [test, token, comparedDatasets, viewId, views])
     const flattenLabelValues = (labelValues: Array<ExportedLabelValues>) => {
         const resultArr : any = [];
         labelValues.forEach( (labelValue) => {
