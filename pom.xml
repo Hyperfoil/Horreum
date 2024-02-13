@@ -165,6 +165,16 @@
                 <version>${quarkus.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.graalvm.js</groupId>
+                        <artifactId>js</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.graalvm.sdk</groupId>
+                        <artifactId>graal-sdk</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.networknt</groupId>
