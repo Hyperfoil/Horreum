@@ -48,6 +48,7 @@ import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
+import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -61,24 +62,34 @@ public class TestServiceImpl implements TestService {
    private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
    //using find and replace because  ASC or DESC cannot be set with a parameter
    //@formatter:off
-   protected static final String LABEL_VALUES_FILTER_CONTAINS_JSON = "where combined.values @> :filter";
+   protected static final String FILTER_PREFIX = "WHERE ";
+   protected static final String FILTER_SEPARATOR = " AND ";
+   protected static final String FILTER_BEFORE = " combined.stop < :before";
+   protected static final String FILTER_AFTER = " combined.start > :after";
+   protected static final String LABEL_VALUES_FILTER_CONTAINS_JSON = "combined.values @> :filter";
    //a solution does exist! https://github.com/spring-projects/spring-data-jpa/issues/2551
    //use @\\?\\? to turn into a @? in the query
-   protected static final String LABEL_VALUES_FILTER_MATCHES_NOT_NULL = "where combined.values @\\?\\? CAST( :filter as jsonpath)"; //"jsonb_path_match(combined.values,CAST( :filter as jsonpath))";
+   protected static final String LABEL_VALUES_FILTER_MATCHES_NOT_NULL = "combined.values @\\?\\? CAST( :filter as jsonpath)"; //"jsonb_path_match(combined.values,CAST( :filter as jsonpath))";
    //unused atm because we need to either try both PREDICATE and matching jsonpath or differentiate before sending to the DB
-   protected static final String LABEL_VALUES_FILTER_MATCHES_PREDICATE = "where combined.values @@ CAST( :filter as jsonpath)";
+   protected static final String LABEL_VALUES_FILTER_MATCHES_PREDICATE = "combined.values @@ CAST( :filter as jsonpath)";
    protected static final String LABEL_VALUES_SORT = "";//""jsonb_path_query(combined.values,CAST( :orderBy as jsonpath))";
+
+   protected static final String LABEL_ORDER_PREFIX = "order by ";
+   protected static final String LABEL_ORDER_START= "combined.start";
+   protected static final String LABEL_ORDER_STOP= "combined.stop";
+   protected static final String LABEL_ORDER_JSONPATH = "jsonb_path_query(combined.values,CAST( :orderBy as jsonpath))";
+
    protected static final String LABEL_VALUES_QUERY = """
          WITH
          combined as (
-         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values, runId, dataset.id AS datasetId
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
                   FROM dataset
                   LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
                   LEFT JOIN label ON label.id = lv.label_id
                   WHERE dataset.testid = :testId
                      AND (label.id IS NULL OR (:filteringLabels AND label.filtering) OR (:metricLabels AND label.metrics))
                   GROUP BY dataset.id, runId
-         ) select * from combined FILTER_PLACEHOLDER order by jsonb_path_query(combined.values,CAST( :orderBy as jsonpath)) ASC, combined.runId ASC limit :limit offset :offset
+         ) select * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER limit :limit offset :offset
          """;
    /**
     * used to check if an input can be cast to a target type in the db and return any error messages
@@ -588,7 +599,7 @@ public class TestServiceImpl implements TestService {
 
    @WithRoles
    @Override
-   public List<ExportedLabelValues> listLabelValues(int testId, String filter, boolean filtering, boolean metrics, String sort, String direction, int limit, int page) {
+   public List<ExportedLabelValues> listLabelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, int limit, int page) {
       Test test = get(testId,null);
       if(test == null){
          throw ServiceException.serverError("Cannot find test "+testId);
@@ -597,18 +608,23 @@ public class TestServiceImpl implements TestService {
       Object filterObject = getFilterObject(filter);
 
       String filterSql = "";
+      String orderSql = "";
+
+      Instant beforeInstant = Util.toInstant(before);
+      Instant afterInstant = Util.toInstant(after);
+
       if(filterObject instanceof JsonNode && ((JsonNode)filterObject).getNodeType() == JsonNodeType.OBJECT){
-         filterSql = LABEL_VALUES_FILTER_CONTAINS_JSON;
+         filterSql = FILTER_PREFIX+LABEL_VALUES_FILTER_CONTAINS_JSON;
       }else {
          CheckResult jsonpathResult = castCheck(filter,"jsonpath",em);
          if(jsonpathResult.ok()){
-            filterSql = LABEL_VALUES_FILTER_MATCHES_NOT_NULL;
+            filterSql = FILTER_PREFIX+LABEL_VALUES_FILTER_MATCHES_NOT_NULL;
          }else{
             //an attempt to see if the user was trying to provide json
             if(filter!=null && filter.startsWith("{") || filter.endsWith("}")){
                CheckResult jsonbResult = castCheck(filter,"jsonb",em);
                if(!jsonbResult.ok()){
-                  //we expect this error, what do we do with it?
+                  //we expect this error (because filterObject was not a JsonNode), what do we do with it?
                }else{
                   //this would be a surprise and quite a problem :)
                }
@@ -617,33 +633,76 @@ public class TestServiceImpl implements TestService {
             }
          }
       }
+      if(beforeInstant!=null){
+         if(filterSql.isEmpty()){
+            filterSql=FILTER_PREFIX+FILTER_BEFORE;
+         }else{
+            filterSql+=FILTER_SEPARATOR+FILTER_BEFORE;
+         }
+      }
+      if(afterInstant!=null){
+         if(filterSql.isEmpty()){
+            filterSql=FILTER_PREFIX+FILTER_AFTER;
+         }else{
+            filterSql+=FILTER_SEPARATOR+FILTER_AFTER;
+         }
+      }
       if(filterSql.isBlank() && filter != null && !filter.isBlank()){
          //TODO there was an error with the filter, do we return that info to the user?
       }
 
+      String orderDirection = direction.equalsIgnoreCase("ascending") ? "ASC" : "DESC";
+      if("start".equalsIgnoreCase(sort)){
+         orderSql=LABEL_ORDER_PREFIX+LABEL_ORDER_START+" "+orderDirection+", combined.runId DESC";
+      }else if ("stop".equalsIgnoreCase(sort)){
+         orderSql=LABEL_ORDER_PREFIX+LABEL_ORDER_STOP+" "+orderDirection+", combined.runId DESC";
+      }else {
+         if(!sort.isBlank()) {
+            CheckResult jsonpathResult = castCheck(sort, "jsonpath", em);
+            if (jsonpathResult.ok()) {
+               orderSql = LABEL_ORDER_PREFIX + LABEL_ORDER_JSONPATH + " " + orderDirection + ", combined.runId DESC";
+            }else{
+               orderSql = LABEL_ORDER_PREFIX + "combined.runId DESC";
+            }
+         } else {
+               orderSql = LABEL_ORDER_PREFIX + "combined.runId DESC";
+         }
+
+      }
+
           String sql = LABEL_VALUES_QUERY
-                 .replaceAll("ASC", direction.equalsIgnoreCase("ascending") ? "ASC" : "DESC")
-                  .replace("FILTER_PLACEHOLDER",filterSql);
+                  .replace("FILTER_PLACEHOLDER",filterSql)
+                  .replace("ORDER_PLACEHOLDER",orderSql);
            NativeQuery query =  ((NativeQuery) em.createNativeQuery(sql))
              .setParameter("testId", test.id)
              .setParameter("filteringLabels", filtering)
              .setParameter("metricLabels", metrics)
              ;
            if(!filterSql.isEmpty()){
-              if(LABEL_VALUES_FILTER_CONTAINS_JSON.equals(filterSql)){
+              if(filterSql.contains(LABEL_VALUES_FILTER_CONTAINS_JSON)){
                  query.setParameter("filter",filterObject,JsonBinaryType.INSTANCE);
               }else{
                  query.setParameter("filter",filter);
               }
+              if(beforeInstant!=null){
+                 query.setParameter("before",beforeInstant, StandardBasicTypes.INSTANT);
+              }
+              if(afterInstant!=null){
+                 query.setParameter("after",afterInstant, StandardBasicTypes.INSTANT);
+              }
+           }
+           if(orderSql.contains(LABEL_ORDER_JSONPATH)){
+               query.setParameter("orderBy", sort);
            }
              query
-                     .setParameter("orderBy", "$")//order
-                     .setParameter("limit",Integer.MAX_VALUE)//limit
-                     .setParameter("offset",0)//offset
-                     .unwrap(NativeQuery.class)
-              .addScalar("values", JsonBinaryType.INSTANCE)
-              .addScalar("runId",Integer.class)
-              .addScalar("datasetId",Integer.class);
+                .setParameter("limit",limit)//limit
+                .setParameter("offset",limit * page)//offset
+                .unwrap(NativeQuery.class)
+                .addScalar("values", JsonBinaryType.INSTANCE)
+                .addScalar("runId",Integer.class)
+                .addScalar("datasetId",Integer.class)
+                .addScalar("start", StandardBasicTypes.INSTANT)
+                .addScalar("stop", StandardBasicTypes.INSTANT);
            return ExportedLabelValues.parse( query.getResultList() );
 
 

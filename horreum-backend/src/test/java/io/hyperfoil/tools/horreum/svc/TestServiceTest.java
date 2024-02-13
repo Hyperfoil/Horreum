@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -365,7 +366,7 @@ public class TestServiceTest extends BaseServiceTest {
                       "Throughput 8 CPU": null, 
                       "Throughput 32 CPU": null,
                       "Quarkus - Kafka_tags": "quarkus-release-startup"}
-                  """),10,10});
+                  """),10,10, Instant.now(),Instant.now()});
       List<ExportedLabelValues> values = ExportedLabelValues.parse(toParse);
       assertEquals(1, values.size());
       assertEquals(9, values.get(0).values.size());
@@ -381,7 +382,7 @@ public class TestServiceTest extends BaseServiceTest {
                   "Throughput 4 CPU": 84895.13, 
                   "Throughput 8 CPU": 141086.29
               }
-              """),10,10});
+              """),10,10, Instant.now(),Instant.now()});
       values = ExportedLabelValues.parse(toParse);
       assertEquals(2, values.size());
       assertEquals(9, values.get(0).values.size());

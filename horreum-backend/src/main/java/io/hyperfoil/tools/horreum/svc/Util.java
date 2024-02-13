@@ -619,29 +619,49 @@ public class Util {
          throw t;
       }
    }
-
-   public static Instant toInstant(JsonNode value) {
-      if (value == null) {
+   public static Instant toInstant(Object time) {
+      if (time == null) {
          return null;
-      } else if (value.isNumber()) {
-         return Instant.ofEpochMilli(value.longValue());
-      } else if (value.isTextual()) {
-         String str = value.asText();
-         //noinspection CatchMayIgnoreException
-         try {
-            return Instant.ofEpochMilli(Long.parseLong(str));
-         } catch (NumberFormatException e) {
+      } else if (time instanceof Instant){
+         return (Instant) time; //crazier things happen
+      } else if( time instanceof JsonNode) {
+         JsonNode value = (JsonNode) time;
+         if (value.isNumber()) {
+            return Instant.ofEpochMilli(value.longValue());
+         } else if (value.isTextual()) {
+            time = value.asText(); //allow next set of ifs to check the value
          }
-         try {
-            return ZonedDateTime.parse(str.trim(), DateTimeFormatter.ISO_DATE_TIME).toInstant();
-         } catch (DateTimeParseException e) {
-            return null;
-         }
-      } else {
-         return null;
       }
+      if (time instanceof Number) {
+         return Instant.ofEpochMilli(((Number) time).longValue());
+      } else {
+         String str = time.toString().trim();
+         if(str.matches("\\d+")){
+            try {
+               return Instant.ofEpochMilli(Long.parseLong((String) time));
+            } catch (NumberFormatException e) {
+               // noop
+            }
+         }
+         //ISO_DATE we add midnight zulu offset
+         if (str.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            str=str+"T00:00:00Z";
+         }
+         //ISO_LOCAL_DATE_TIME add zulu offset
+         if (str.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}")){
+            str=str+"Z";
+         }
+         //ISO_DATE_TIME
+         if(str.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:Z|[+\\-]\\d{2}:\\d{2})")){
+            try {
+               return ZonedDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME).toInstant();
+            } catch (DateTimeParseException e) {
+               e.printStackTrace();
+            }
+         }
+      }
+      return null;//nothing matched
    }
-
    interface ExecutionExceptionConsumer<T> {
       void accept(T row, Throwable exception, String code);
    }

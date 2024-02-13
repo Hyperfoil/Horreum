@@ -303,7 +303,7 @@ public class BaseServiceTest {
       int runId = Integer.parseInt(runIdString);
       return runId;
    }
-   protected int uploadRun(String start, String stop, JsonNode data, JsonNode metadata, String testName, String owner, Access access) {
+      protected int uploadRun(String start, String stop, JsonNode data, JsonNode metadata, String testName, String owner, Access access) {
       String runIdString = given().auth().oauth2(getUploaderToken())
               .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA)
               // the .toString().getBytes(...) is required because RestAssured otherwise won't send the filename

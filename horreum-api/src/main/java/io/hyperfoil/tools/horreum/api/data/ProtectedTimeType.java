@@ -21,4 +21,8 @@ public class ProtectedTimeType extends ProtectedType{
     public Instant stop;
 
     public ProtectedTimeType() {}
+
+
 }
+
+
