@@ -29,6 +29,7 @@
             <artifactId>graal-sdk</artifactId>
             <version>${graalvm.version}</version>
         </dependency>
+        <!-- commented out for 23.1.1 -->
         <dependency>
             <groupId>org.graalvm.js</groupId>
             <artifactId>js</artifactId>
@@ -39,6 +40,24 @@
                     <artifactId>graal-sdk</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <!-- commented out until 23.1.1 -->
+<!--        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>polyglot</artifactId>
+            <version>${graalvm.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>js-community</artifactId>
+            <version>${graalvm.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>-->
+        <dependency>
+            <groupId>org.graalvm.regex</groupId>
+            <artifactId>regex</artifactId>
+            <version>${graalvm.version}</version>
         </dependency>
         <dependency>
             <groupId>io.hypersistence</groupId>

@@ -111,6 +111,14 @@ public class DatasetServiceTest extends BaseServiceTest {
          assertEquals(30, values.stream().filter(v -> v.labelId == labelReduce).map(v -> v.value.numberValue()).findFirst().orElse(null));
       }, "urn:A");
    }
+   @org.junit.jupiter.api.Test
+   public void testDatasetLabelAsyncSingleWithReduceFunctionArray() {
+      withExampleSchemas((schemas) -> {
+         int labelReduce = addLabel(schemas[0], "sum", "async (value) => { return value.reduce((a,b) => a+b); }", new Extractor("value", "$.samplesArray", true));
+         List<Label.Value> values = withLabelValues(createSampleArray());
+         assertEquals(30, values.stream().filter(v -> v.labelId == labelReduce).map(v -> v.value.numberValue()).findFirst().orElse(null));
+      }, "urn:A");
+   }
 
    private ArrayNode createXYData() {
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
