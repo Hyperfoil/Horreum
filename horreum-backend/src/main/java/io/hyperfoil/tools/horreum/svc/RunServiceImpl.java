@@ -507,8 +507,9 @@ public class RunServiceImpl implements RunService {
       Object foundStop = findIfNotSet(stop, data);
       Object foundDescription = findIfNotSet(description, data);
 
-      Instant startInstant = toInstant(foundStart);
-      Instant stopInstant = toInstant(foundStop);
+      Instant startInstant = Util.toInstant(foundStart);
+      Instant stopInstant = Util.toInstant(foundStop);
+
       if (startInstant == null) {
          log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description, foundStart, start);
          throw ServiceException.badRequest("Cannot parse start time from " + foundStart + " (" + start + ")");
@@ -563,24 +564,7 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   private Instant toInstant(Object time) {
-      if (time == null) {
-         return null;
-      } else if (time instanceof Number) {
-         return Instant.ofEpochMilli(((Number) time).longValue());
-      } else {
-         try {
-            return Instant.ofEpochMilli(Long.parseLong((String) time));
-         } catch (NumberFormatException e) {
-            // noop
-         }
-         try {
-            return ZonedDateTime.parse(time.toString().trim(), DateTimeFormatter.ISO_DATE_TIME).toInstant();
-         } catch (DateTimeParseException e) {
-            return null;
-         }
-      }
-   }
+
 
    private Integer addAuthenticated(RunDAO run, TestDAO test) {
       // Id will be always generated anew
@@ -1044,8 +1028,9 @@ public class RunServiceImpl implements RunService {
    @Transactional
    @Override
    public void recalculateAll(String fromStr, String toStr) {
-      Instant from = toInstant(fromStr);
-      Instant to = toInstant(toStr);
+      Instant from = Util.toInstant(fromStr);
+      Instant to = Util.toInstant(toStr);
+
       if (from == null || to == null) {
          throw ServiceException.badRequest("Time range is required");
       } else if (to.isBefore(from)) {

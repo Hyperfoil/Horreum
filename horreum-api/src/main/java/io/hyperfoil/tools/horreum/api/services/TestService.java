@@ -196,7 +196,9 @@ public interface TestService {
            @Parameter(name = "filtering", description = "Retrieve values for Filtering Labels", example = "true"),
            @Parameter(name = "metrics", description = "Retrieve values for Metric Labels", example = "false"),
            @Parameter(name = "filter", description = "either a required json sub-document or path expression", example = "{\"key\":\"requiredValue\"} or $.count ? (@ < 20 && @ > 10)"),
-           @Parameter(name = "sort", description = "label name for sorting"),
+           @Parameter(name = "before", description = "ISO-like date time string or epoch millis", example = "1970-01-01T00:00:00+00:00 or an integer"),
+           @Parameter(name = "after", description = "ISO-like date time string or epoch millis", example = "1970-01-01T00:00:00+00:00 or an integer"),
+           @Parameter(name = "sort", description = "json path to sortable value or start or stop for sorting by time",example = "$.label or start or stop"),
            @Parameter(name = "direction",description = "either Ascending or Descending",example="count"),
            @Parameter(name = "limit",description = "the maximum number of results to include",example="10"),
            @Parameter(name = "page",description = "which page to skip to when using a limit",example="2")
@@ -210,6 +212,8 @@ public interface TestService {
    List<ExportedLabelValues> listLabelValues(
            @PathParam("id") int testId,
            @QueryParam("filter") @DefaultValue("{}") String filter,
+           @QueryParam("before") @DefaultValue("") String before,
+           @QueryParam("after") @DefaultValue("") String after,
            @QueryParam("filtering") @DefaultValue("true") boolean filtering,
            @QueryParam("metrics") @DefaultValue("true") boolean metrics,
            @QueryParam("sort") @DefaultValue("") String sort,
