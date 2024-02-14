@@ -3,23 +3,16 @@ package io.hyperfoil.tools.horreum.api.services;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.ApiIgnore;
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.api.data.ProtectedTimeType;
-import io.hyperfoil.tools.horreum.api.data.Run;
-import io.hyperfoil.tools.horreum.api.data.ValidationError;
+import io.hyperfoil.tools.horreum.api.data.*;
+
 import java.util.List;
 import java.util.Map;
 
 import jakarta.validation.constraints.NotNull;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -104,6 +97,42 @@ public interface RunService {
     Object getData(@PathParam("id") int id,
                    @QueryParam("token") String token,
                    @QueryParam("schemaUri") String schemaUri);
+
+    @GET
+    @Path("{id}/labelValues")
+    @Operation(description = "Get all the label values for the run")
+    @Parameters(value = {
+            @Parameter(name = "id", in =ParameterIn.PATH, description = "Run Id", example = "101"),
+            @Parameter(name = "filter", description = "either a required json sub-document or path expression", examples = {
+                    @ExampleObject(name="object", value="{\"key\":\"requiredValue\"}", description = "json object that must exist in the values object"),
+                    @ExampleObject(name="string", value="$.count ? (@ < 20 && @ > 10)",description = "valid jsonpath that returns null of not found (not predicates)")
+            }),
+            @Parameter(name = "sort", description = "label name for sorting"),
+            @Parameter(name = "direction",description = "either Ascending or Descending",example="count"),
+            @Parameter(name = "limit",description = "the maximum number of results to include",example="10"),
+            @Parameter(name = "page",description = "which page to skip to when using a limit",example="2")
+    })
+    @APIResponses(
+            value = {
+                    @APIResponse(responseCode = "200",
+                        description = "label Values",
+                        content = {
+                            @Content(
+                                schema = @Schema(type = SchemaType.ARRAY, implementation = ExportedLabelValues.class),
+                                example = "[ { \"datasetId\" : 101, \"runId\": 201, \"values\" : { [labelName] : labelValue } },...]"
+                            )
+                        }
+                    )
+            }
+    )
+
+    List<ExportedLabelValues> labelValues(
+            @PathParam("id") int runId,
+            @QueryParam("filter") @DefaultValue("{}") String filter,
+            @QueryParam("sort") @DefaultValue("") String sort,
+            @QueryParam("direction") @DefaultValue("Ascending") String direction,
+            @QueryParam("limit") @DefaultValue(""+Integer.MAX_VALUE) int limit,
+            @QueryParam("page") @DefaultValue("0") int page);
 
     @GET
     @Path("{id}/metadata")

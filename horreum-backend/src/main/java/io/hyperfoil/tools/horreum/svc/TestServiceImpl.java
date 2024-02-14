@@ -91,12 +91,7 @@ public class TestServiceImpl implements TestService {
                   GROUP BY dataset.id, runId
          ) select * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER limit :limit offset :offset
          """;
-   /**
-    * used to check if an input can be cast to a target type in the db and return any error messages
-    * Will return a row of all nulls if the input can be cast to the target type.
-    */
-   //tried pg_input_is_valid but it just returns boolean, no messages
-   protected static final String CHECK_CAST = "select * from pg_input_error_info(:input,:target)";
+
 
    //@formatter:on
    @Inject
@@ -522,29 +517,6 @@ public class TestServiceImpl implements TestService {
    }
 
 
-   /**
-    * returns null if no filtering, otherwise returns an object for filtering
-    * @param input
-    * @return
-    */
-   private Object getFilterObject(String input){
-      if (input == null || input.isBlank()){//not a valid filter
-         return null;
-      }
-      JsonNode filterJson = null;
-      try {
-          filterJson = new ObjectMapper().readTree(input);
-      } catch (JsonProcessingException e) {
-          //TODO what to do with this error
-      }
-      if(filterJson!=null && filterJson.getNodeType() == JsonNodeType.OBJECT) {
-         return filterJson;
-      }else{
-         //TODO validate the jsonpath?
-         return input;
-      }
-   }
-
    //TODO filter should be a json object not a string but that probably requires lots of work for the api
 
    /**
@@ -555,32 +527,7 @@ public class TestServiceImpl implements TestService {
     * @param hint the error hint or an empty string if it does not exist
     */
 
-   public record CheckResult (boolean ok, String message, String detail, String hint) {}
-   /**
-    * returns true (in the CheckResult) if the input can be cast to the target type in psql, otherwise it is false and details are included
-    * @param input
-    * @param target
-    * @param em
-    * @return
-    */
-   private CheckResult castCheck(String input, String target, EntityManager em){
-      List<Object[]> results = em.createNativeQuery(CHECK_CAST).setParameter("input",input).setParameter("target",target)
-              .unwrap(NativeQuery.class)
-              .addScalar("message",String.class)
-              .addScalar("detail",String.class)
-             .addScalar("hint",String.class)
-               .addScalar("sql_error_code",String.class)
-              .getResultList();
-      //no results or null result row or no message means it passed. no result and 0 lengh result should not happen but being defensive
-      return results.isEmpty() || results.get(0).length == 0 || results.get(0)[0] == null?
-              new CheckResult(true,"","","") :
-              new CheckResult(
-                      false,
-                      results.get(0)[0] == null ? "" : results.get(0)[0].toString(),
-                      results.get(0)[1] == null ? "" : results.get(0)[1].toString(),
-                      results.get(0)[2] == null ? "" : results.get(0)[2].toString()
-              );
-   }
+
 
    /**
     * returns true if the jsonpath input appears to be a predicate jsonpath (always returns true or false) versus a filtering path (returns null or a value)
@@ -605,7 +552,7 @@ public class TestServiceImpl implements TestService {
          throw ServiceException.serverError("Cannot find test "+testId);
       }
 
-      Object filterObject = getFilterObject(filter);
+      Object filterObject = Util.getFilterObject(filter);
 
       String filterSql = "";
       String orderSql = "";
@@ -616,13 +563,13 @@ public class TestServiceImpl implements TestService {
       if(filterObject instanceof JsonNode && ((JsonNode)filterObject).getNodeType() == JsonNodeType.OBJECT){
          filterSql = FILTER_PREFIX+LABEL_VALUES_FILTER_CONTAINS_JSON;
       }else {
-         CheckResult jsonpathResult = castCheck(filter,"jsonpath",em);
+         Util.CheckResult jsonpathResult = Util.castCheck(filter,"jsonpath",em);
          if(jsonpathResult.ok()){
             filterSql = FILTER_PREFIX+LABEL_VALUES_FILTER_MATCHES_NOT_NULL;
          }else{
             //an attempt to see if the user was trying to provide json
-            if(filter!=null && filter.startsWith("{") || filter.endsWith("}")){
-               CheckResult jsonbResult = castCheck(filter,"jsonb",em);
+            if(filter!=null && filter.startsWith("{") && filter.endsWith("}")){
+               Util.CheckResult jsonbResult = Util.castCheck(filter,"jsonb",em);
                if(!jsonbResult.ok()){
                   //we expect this error (because filterObject was not a JsonNode), what do we do with it?
                }else{
@@ -658,7 +605,7 @@ public class TestServiceImpl implements TestService {
          orderSql=LABEL_ORDER_PREFIX+LABEL_ORDER_STOP+" "+orderDirection+", combined.runId DESC";
       }else {
          if(!sort.isBlank()) {
-            CheckResult jsonpathResult = castCheck(sort, "jsonpath", em);
+            Util.CheckResult jsonpathResult = Util.castCheck(sort, "jsonpath", em);
             if (jsonpathResult.ok()) {
                orderSql = LABEL_ORDER_PREFIX + LABEL_ORDER_JSONPATH + " " + orderDirection + ", combined.runId DESC";
             }else{

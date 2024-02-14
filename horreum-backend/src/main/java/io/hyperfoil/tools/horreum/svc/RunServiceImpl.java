@@ -19,11 +19,8 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.JsonpathValidation;
-import io.hyperfoil.tools.horreum.api.data.Run;
-import io.hyperfoil.tools.horreum.api.data.ValidationError;
+import com.fasterxml.jackson.databind.node.*;
+import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -43,6 +40,9 @@ import jakarta.transaction.SystemException;
 import jakarta.transaction.Transaction;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
@@ -51,10 +51,6 @@ import jakarta.ws.rs.core.Response;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.api.services.RunService;
@@ -285,6 +281,109 @@ public class RunServiceImpl implements RunService {
                "END)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?1 AND rs.source = 0 AND rs.uri = ?2";
          return Util.runQuery(em, sqlQuery, id, schemaUri);
       }
+   }
+
+   //this is nearly identical to TestServiceImpl.listLabelValues (except the return object)
+   //this reads from the dataset table but provides data specific to the run...
+   @Override
+   public List<ExportedLabelValues> labelValues(int runId, String filter, String sort, String direction, int limit, int page){
+      List<ExportedLabelValues> rtrn = new ArrayList<>();
+      Run run = getRun(runId,null);
+      if(run == null){
+         throw ServiceException.serverError("Cannot find run "+runId);
+      }
+      Object filterObject = Util.getFilterObject(filter);
+      String filterSql = "";
+      if(filterObject instanceof JsonNode && ((JsonNode)filterObject).getNodeType() == JsonNodeType.OBJECT){
+         filterSql = "WHERE "+TestServiceImpl.LABEL_VALUES_FILTER_CONTAINS_JSON;
+      }else {
+         Util.CheckResult jsonpathResult = Util.castCheck(filter,"jsonpath",em);
+         if(jsonpathResult.ok()) {
+            filterSql = "WHERE "+TestServiceImpl.LABEL_VALUES_FILTER_MATCHES_NOT_NULL;
+         } else {
+            if(filter!=null && filter.startsWith("{") && filter.endsWith("}")) {
+               Util.CheckResult jsonbResult = Util.castCheck(filter, "jsonb", em);
+               if (!jsonbResult.ok()) {
+                  //we expect this error (because filterObject is not JsonNode
+               } else {
+                  //this would be a surprise and quite a problem
+               }
+            } else {
+               //how do we report back invalid jsonpath
+            }
+         }
+      }
+      if(filterSql.isBlank() && filter != null && !filter.isBlank()){
+         //TODO there was an error with the filter, do we return that info to the user?
+      }
+      String orderSql = "";
+      String orderDirection = direction.equalsIgnoreCase("ascending") ? "ASC" : "DESC";
+      if(!sort.isBlank()){
+         Util.CheckResult jsonpathResult = Util.castCheck(sort, "jsonpath", em);
+         if(jsonpathResult.ok()){
+            orderSql="order by jsonb_path_query(combined.values,CAST( :orderBy as jsonpath)) "+orderDirection+", combined.datasetId DESC";
+         }else{
+            orderSql="order by combined.datasetId DESC";
+         }
+      }
+      String sql = """
+         WITH
+         combined as (
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
+                  FROM dataset
+                  LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
+                  LEFT JOIN label ON label.id = lv.label_id
+                  WHERE runId = :runId
+                  GROUP BY dataset.id
+         ) select * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER limit :limit offset :offset
+         """
+              .replace("FILTER_PLACEHOLDER",filterSql)
+              .replace("ORDER_PLACEHOLDER",orderSql);
+
+
+      System.out.println(sql.substring(397));
+      NativeQuery query = ((NativeQuery) em.createNativeQuery(sql))
+              .setParameter("runId",runId);
+      if(!filterSql.isEmpty()) {
+         if (filterSql.contains(TestServiceImpl.LABEL_VALUES_FILTER_CONTAINS_JSON)) {
+            query.setParameter("filter", filterObject, JsonBinaryType.INSTANCE);
+         } else {
+            query.setParameter("filter", filter);
+         }
+      }
+      if(orderSql.contains(":orderBy")){
+         query.setParameter("orderBy",sort);
+      }
+      query
+         .setParameter("limit",limit)
+         .setParameter("offset",limit * page)
+         .unwrap(NativeQuery.class)
+              .addScalar("values", JsonBinaryType.INSTANCE)
+              .addScalar("datasetId",Integer.class)
+              .addScalar("start", StandardBasicTypes.INSTANT)
+              .addScalar("stop", StandardBasicTypes.INSTANT);
+
+      //casting because type inference cannot detect there will be two scalars in the result
+      //TODO replace this with strictly typed entries
+      ((List<Object[]>) query.getResultList()).forEach(objects->{
+         JsonNode node = (JsonNode)objects[0];
+         Integer datasetId = Integer.parseInt(objects[1]==null?"-1":objects[1].toString());
+         Instant start = (Instant)objects[2];
+         Instant stop = (Instant)objects[3];
+
+         if(node.isObject()){
+            rtrn.add(new ExportedLabelValues(
+                    LabelValueMap.fromObjectNode((ObjectNode)node),
+                    runId,
+                    datasetId,
+                    start,
+                    stop
+            ));
+         }else{
+            //TODO alert that something is wrong in the db response
+         }
+      });
+      return rtrn;
    }
 
    @PermitAll

@@ -21,9 +21,8 @@ import java.util.stream.StreamSupport;
 @Schema(type = SchemaType.OBJECT,
         description = "A map of label names to label values with the associated datasetId and runId")
 public class ExportedLabelValues {
-    @Schema(type = SchemaType.OBJECT, description = "a map of label name to label value for each label from the dataset",example = "{\"name" +
-            "\":\"test\",\"score\":200}")
-    public ObjectNode values;
+    @Schema
+    public LabelValueMap values;
     @Schema(type = SchemaType.INTEGER,description = "the run id that created the dataset",example = "101")
     public Integer runId;
     @Schema(type = SchemaType.INTEGER,description = "the unique dataset id",example = "101")
@@ -40,7 +39,7 @@ public class ExportedLabelValues {
 
     public ExportedLabelValues() {}
 
-    public ExportedLabelValues(ObjectNode v, Integer runId, Integer datasetId,Instant start,Instant stop) {
+    public ExportedLabelValues(LabelValueMap v, Integer runId, Integer datasetId,Instant start,Instant stop) {
        this.values = v;
        this.runId = runId;
        this.datasetId = datasetId;
@@ -54,13 +53,13 @@ public class ExportedLabelValues {
             return new ArrayList<>();
         List<ExportedLabelValues> fps = new ArrayList<>();
         nodes.forEach(objects->{
-            JsonNode node = (JsonNode)objects[0];
+            ObjectNode node = (ObjectNode)objects[0];
             Integer runId = Integer.parseInt(objects[1]==null?"-1":objects[1].toString());
             Integer datasetId = Integer.parseInt(objects[2]==null?"-1":objects[2].toString());
             Instant start = (Instant)objects[3];
             Instant stop = (Instant)objects[4];
             if(node.isObject()){
-                fps.add(new ExportedLabelValues((ObjectNode) node,runId,datasetId,start,stop));
+                fps.add(new ExportedLabelValues(LabelValueMap.fromObjectNode(node),runId,datasetId,start,stop));
             }else{
                 //TODO alert that something is wrong in the db response
             }

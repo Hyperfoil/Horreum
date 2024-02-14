@@ -192,7 +192,7 @@ public class TestServiceTest extends BaseServiceTest {
       assertNotNull(values);
       assertFalse(values.isEmpty());
       assertEquals(2, values.size());
-      assertTrue(values.get(1).values.has("value"));
+      assertTrue(values.get(1).values.containsKey("value"));
    }
    @org.junit.jupiter.api.Test
    public void testImportFromFile() throws JsonProcessingException {
