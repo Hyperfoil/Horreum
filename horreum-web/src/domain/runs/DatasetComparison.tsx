@@ -8,7 +8,7 @@ import {
     EmptyState,
     EmptyStateBody,
     PageSection,
-    Spinner,
+    Spinner, Tooltip,
 } from "@patternfly/react-core"
 import { expandable, ICell, IRow, Table, TableHeader, TableBody } from "@patternfly/react-table"
 import { NavLink } from "react-router-dom"
@@ -35,8 +35,8 @@ type Ds = {
 export default function DatasetComparison() {
     const { alerting } = useContext(AppContext) as AppContextType;
     window.document.title = "Dataset comparison: Horreum"
-    
-    
+
+
     const params = new URLSearchParams(window.location.search)
     const testId = parseInt(params.get("testId") || "-1")
     const [views, setViews] = useState<View[]>([])
@@ -186,6 +186,7 @@ function LabelsComparison({headers, datasets, alerting}: LabelsComparisonProps) 
             </ActionGroup>
             <div ref={componentRef}>
                 <Table
+                    caption="Label(s) Comparison"
                     aria-label="Label comparison"
                     variant="compact"
                     cells={headers}
@@ -213,28 +214,53 @@ type ViewComparisonProps = {
 
 function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps) {
     const [loading, setLoading] = useState(false)
-    const [rows, setRows] = useState<IRow[]>()
+    const [rows, setRows] = useState<IRow[]>([])
     const token = useSelector(tokenSelector)
+
     useEffect(() => {
         setLoading(true)
         Promise.all(datasets.map(ds => datasetApi.getSummary(ds.id, view.id)))
             .then(
                 summaries => {
-                    setRows(
-                        view.components.map(vc => ({
-                            cells: [
-                                vc.headerName,
-                                ...summaries.map(summary => {
-                                    const render = renderValue(
-                                        vc.render,
-                                        vc.labels.length == 1 ? vc.labels[0] : undefined,
-                                        token
-                                    )
-                                    return render(summary.view?.[vc.id], summary)
-                                }),
-                            ],
-                        }))
-                    )
+                    const rowsData: any[][] = view.components.map(vc => [
+                        vc.headerName,
+                        ...summaries.map(summary => {
+                            const render = renderValue(vc.render, vc.labels.length === 1 ? vc.labels[0] : undefined, token);
+                            return render(summary.view?.[vc.id], summary)
+                        })
+                    ])
+                    const allRows: IRow[] = []
+
+                    rowsData.forEach((rd, index) => {
+                        const isNum = rd.every((data, rdIndex ) => rdIndex === 0 || typeof rd[rdIndex] === 'number' )
+                        allRows.push({
+                            isOpen: isNum ? false: undefined,
+                            cells:  rd.map( (r, index) => ({
+                                    title: typeof r === "object" ? JSON.stringify(r) : r
+                                })
+                            )
+                        })
+                        if (isNum){
+                            allRows.push({
+                                parent: allRows.length - 1,
+                                cells: [
+                                    "",
+                                    {
+                                        title: (
+                                            <BarValuesChart
+                                                values={rd.slice(1)}
+                                                legend={summaries.map(summary => `${summary.runId}/${summary.ordinal + 1}`)}
+                                            />
+                                        ) ,
+                                        props: {
+                                            colSpan: summaries.length
+                                        }
+                                    },
+                                ]
+                            })
+                        }
+                    })
+                    setRows(allRows);
                 },
                 e => alerting.dispatchError( e, "FETCH_VIEW", "Failed to fetch view for one of datasets.")
             )
@@ -254,7 +280,15 @@ function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps
                 <PrintButton printRef={componentRef} />
             </ActionGroup>
             <div ref={componentRef}>
-                <Table aria-label="View comparison" variant="compact" cells={headers} rows={rows}>
+                <Table
+                    caption="View Component(s) Comparison"
+                    aria-label="View comparison" variant="compact" cells={headers} rows={rows}
+                    isExpandable={true}
+                    onCollapse={(_, rowIndex, isOpen) => {
+                        rows[rowIndex].isOpen = isOpen
+                        setRows([...rows])
+                    }}
+                >
                     <TableHeader />
                     <TableBody />
                 </Table>
