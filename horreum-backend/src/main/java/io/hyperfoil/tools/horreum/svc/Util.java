@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.*;
 
+import com.fasterxml.jackson.databind.node.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.OptimisticLockException;
@@ -30,16 +31,13 @@ import org.eclipse.microprofile.context.ThreadContext;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
+import org.hibernate.query.NativeQuery;
 import org.jboss.logging.Logger;
 import org.postgresql.util.PSQLException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.ValueNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.InvalidPathException;
@@ -662,6 +660,63 @@ public class Util {
       }
       return null;//nothing matched
    }
+
+   /**
+    * used to check if an input can be cast to a target type in the db and return any error messages
+    * Will return a row of all nulls if the input can be cast to the target type.
+    */
+   //tried pg_input_is_valid but it just returns boolean, no messages
+   private static final String CHECK_CAST = "select * from pg_input_error_info(:input,:target)";
+   public static record CheckResult (boolean ok, String message, String detail, String hint) {}
+   /**
+    * returns true (in the CheckResult) if the input can be cast to the target type in psql, otherwise it is false and details are included
+    * @param input
+    * @param target
+    * @param em
+    * @return
+    */
+   public static CheckResult castCheck(String input, String target, EntityManager em){
+      List<Object[]> results = em.createNativeQuery(CHECK_CAST).setParameter("input",input).setParameter("target",target)
+              .unwrap(NativeQuery.class)
+              .addScalar("message",String.class)
+              .addScalar("detail",String.class)
+              .addScalar("hint",String.class)
+              .addScalar("sql_error_code",String.class)
+              .getResultList();
+      //no results or null result row or no message means it passed. no result and 0 lengh result should not happen but being defensive
+      return results.isEmpty() || results.get(0).length == 0 || results.get(0)[0] == null?
+              new CheckResult(true,"","","") :
+              new CheckResult(
+                      false,
+                      results.get(0)[0] == null ? "" : results.get(0)[0].toString(),
+                      results.get(0)[1] == null ? "" : results.get(0)[1].toString(),
+                      results.get(0)[2] == null ? "" : results.get(0)[2].toString()
+              );
+   }
+
+   /**
+    * returns null if no filtering, otherwise returns an object for filtering
+    * @param input
+    * @return
+    */
+   public static Object getFilterObject(String input){
+      if (input == null || input.isBlank()){//not a valid filter
+         return null;
+      }
+      JsonNode filterJson = null;
+      try {
+         filterJson = new ObjectMapper().readTree(input);
+      } catch (JsonProcessingException e) {
+         //TODO what to do with this error
+      }
+      if(filterJson!=null && filterJson.getNodeType() == JsonNodeType.OBJECT) {
+         return filterJson;
+      }else{
+         //TODO validate the jsonpath?
+         return input;
+      }
+   }
+
    interface ExecutionExceptionConsumer<T> {
       void accept(T row, Throwable exception, String code);
    }

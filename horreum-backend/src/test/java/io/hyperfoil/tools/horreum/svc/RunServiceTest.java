@@ -53,6 +53,7 @@ import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.RestAssured;
 import io.restassured.specification.RequestSpecification;
+import org.testcontainers.shaded.org.checkerframework.checker.units.qual.A;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -107,6 +108,34 @@ public class RunServiceTest extends BaseServiceTest {
       run = RunDAO.findById(runId);
       assertFalse(run.trashed);
       assertNewDataset(dataSetQueue, runId);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void labelValues_publicTest_publicRun(TestInfo info) throws InterruptedException {
+      Test test = createExampleTest(getTestName(info));
+      test.access= Access.PUBLIC;
+      Test persistedTest = createTest(test);
+
+      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == persistedTest.id);
+      Schema schema = createExampleSchema(info);
+
+      int runId = uploadRun(runWithValue(42, schema).toString(), test.name);
+      assertNewDataset(dataSetQueue, runId);
+
+      List<ExportedLabelValues> rtrn = jsonRequest()
+              .get("/api/run/" + runId + "/labelValues")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .jsonPath().getList(".", ExportedLabelValues.class);
+
+      assertEquals(1,rtrn.size(),"expected number of label values");
+      ExportedLabelValues elv = rtrn.get(0);
+      assertEquals(1,elv.values.size(),"expected number of LabelValues");
+      assertEquals(runId,elv.runId,"expected runId");
+      assertTrue(elv.values.containsKey("value"));
+      assertEquals(42,elv.values.get("value").asInt());
    }
 
    private void assertNewDataset(BlockingQueue<Dataset.EventNew> dataSetQueue, int runId) throws InterruptedException {
