@@ -2531,8 +2531,12 @@ components:
           type: string
           example: Run on AWS with m7g.large
         view:
-          description: View definition
-          type: string
+          description: map of view component ids to the LabelValueMap to render the
+            component for this dataset
+          type: object
+          allOf:
+          - $ref: '#/components/schemas/IndexedLabelValueMap'
+          example: "{ \"[view_component_id]\": { \"[labelName]\": labelValue} }"
         schemas:
           description: List of Schema usages
           type: array
@@ -2852,6 +2856,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FingerprintValue'
+    IndexedLabelValueMap:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/LabelValueMap'
     KeycloakConfig:
       type: object
       properties:
@@ -3053,6 +3061,10 @@ components:
             \ array or JSON object"
           type: string
           example: "1724"
+    LabelValueMap:
+      description: a map of label name to value
+      type: object
+      example: "{ \"[labelName]\": labelValue}"
     MissingDataRule:
       required:
       - id

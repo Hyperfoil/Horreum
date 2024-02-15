@@ -1,9 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -11,8 +9,7 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.api.data.ValidationError;
+import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -27,8 +24,6 @@ import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import jakarta.ws.rs.DefaultValue;
@@ -267,7 +262,7 @@ public class DatasetServiceImpl implements DatasetService {
                  summary.stop = Instant.ofEpochMilli((Long) tuples[7]);
                  summary.owner = (String) tuples[8];
                  summary.access = Access.fromInt((int) tuples[9]);
-                 summary.view = (ObjectNode) tuples[10];
+                 summary.view = IndexedLabelValueMap.fromObjectNode((ObjectNode) tuples[10]);
                  summary.schemas = Util.OBJECT_MAPPER.convertValue(tuples[11], new TypeReference<>(){});
                  if(tuples[12] != null && !((ArrayNode) tuples[12]).isEmpty()) {
                     try {
@@ -279,6 +274,7 @@ public class DatasetServiceImpl implements DatasetService {
                  return summary;
               });
    }
+
 
    private void addOrderAndPaging(Integer limit, Integer page, String sort, SortDirection direction, StringBuilder sql) {
       if (sort != null && sort.startsWith("view_data:")) {
