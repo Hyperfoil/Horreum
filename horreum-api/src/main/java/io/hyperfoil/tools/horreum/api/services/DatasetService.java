@@ -2,17 +2,10 @@ package io.hyperfoil.tools.horreum.api.services;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.Label;
-import io.hyperfoil.tools.horreum.api.data.ProtectedTimeType;
-import io.hyperfoil.tools.horreum.api.data.ProtectedType;
-import io.hyperfoil.tools.horreum.api.data.ValidationError;
-import java.time.Instant;
+import io.hyperfoil.tools.horreum.api.data.*;
+
 import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
@@ -130,8 +123,10 @@ public interface DatasetService {
       @Schema(description="Dataset description",
               example = "Run on AWS with m7g.large")
       public String description;
-      @Schema(implementation = String.class, description = "View definition")
-      public ObjectNode view;
+
+      @Schema(type = SchemaType.OBJECT, description = "map of view component ids to the LabelValueMap to render the component for this dataset", example = "{ \"[view_component_id]\": { \"[labelName]\": labelValue} }")
+      public IndexedLabelValueMap view;
+
       @JsonProperty(required = true)
       @Schema(description = "List of Schema usages")
       public List<SchemaService.SchemaUsage> schemas;
