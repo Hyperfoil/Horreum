@@ -106,20 +106,26 @@ export default function RunList() {
     }, [test])
 
 
-    const compareUrl = test && new Function("return " + test.compareUrl)()
     const [actualCompareUrl, compareError] = useMemo(() => {
-        if (compareUrl && typeof compareUrl === "function") {
-            try {
-                const rows = Object.keys(selectedRows).map(id => (runs ? runs[parseInt(id)].id : []))
-                if (rows.length >= 2) {
-                    return [compareUrl(rows), undefined]
-                }
-            } catch (e) {
-                return [undefined, e]
-            }
+        if(!test || !test.compareUrl || !runs || !selectedRows){
+            return [undefined,undefined]
         }
-        return [undefined, undefined]
-    }, [compareUrl, runs, selectedRows])
+        try{
+            //need || "" because test.compareUrl could be undefined
+            let compareUrl = !test.compareUrl.startsWith("http") ? `http://${test.compareUrl||""}` : test.compareUrl
+            const url = new URL(compareUrl) 
+            const params = url.searchParams;
+            const rows = Object.keys(selectedRows).map(id => (runs ? runs[parseInt(id)].id : []))
+            if(rows && rows.length > 0){
+                rows.forEach(row=>params.append("id",`${row}`))
+                return [url.toString(),undefined]
+            }else{
+                return [undefined,undefined]
+            }
+        }catch(e){
+            return [undefined,e]
+        }
+    }, [runs, selectedRows, test?.compareUrl])
     const hasError = !!compareError
     useEffect(() => {
         if (compareError) {
