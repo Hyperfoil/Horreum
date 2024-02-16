@@ -27,6 +27,21 @@ type GeneralProps = {
     funcsRef: TabFunctionsRef
 }
 
+const isUrlOrBlank = (input:string|undefined):boolean=>{
+    if(!input || input.trim().length == 0){
+        return true;
+    }
+    if(!input.startsWith("http")){
+        input=`http://${input}`
+    }
+    try{
+        new URL(input)
+    }catch(e){
+        return false;
+    }
+    return true;
+}
+
 export default function General({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
     const defaultRole = useSelector(defaultTeamSelector)
@@ -87,6 +102,7 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
     }
 
     const isTester = useTester(test?.owner)
+    const isUrlValid = isUrlOrBlank(compareUrl)
     return (
         <>
             <Form isHorizontal={true}>
@@ -163,10 +179,25 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                     />
                 </FormGroup>
                 <FormGroup
-                    label="Compare URL function"
+                    label="Compare URL"
                     fieldId="compareUrl"
                 >
-                    <OptionalFunction
+                    <TextInput
+                        value={compareUrl || ""}
+                        isRequired={false}
+                        type="text"
+                        id="compareUrl"
+                        aria-describedby="compareUrl-helper"
+                        name="compareUrl"
+                        //isReadOnly={!isTester} this is no longe rsupport
+                        readOnlyVariant={isTester ? undefined : "default"}
+                        validated={isUrlValid ? "default" : "error"}
+                        onChange={(_event, n) => {
+                            setCompareUrl(n)
+                            onModified(true)
+                        }}
+                    />
+                    {/* <OptionalFunction
                         readOnly={!isTester}
                         func={compareUrl}
                         defaultFunc="(ids, token) => 'http://example.com/compare?ids=' + ids.join(',')"
@@ -176,10 +207,11 @@ export default function General({ test, onTestIdChange, onModified, funcsRef }: 
                             setCompareUrl(value)
                             onModified(true)
                         }}
-                    />
+                    /> */}
                     <FormHelperText>
                         <HelperText>
-                            <HelperTextItem>This function receives an array of ids as first argument and auth token as second. It should return URL to comparator service.</HelperTextItem>
+                            <HelperTextItem>Horreum will append the selected run ids as id=runId&id=otherRunId to the provided url</HelperTextItem>
+                            {isUrlValid ? undefined : <HelperTextItem variant="error">Cannot create a valid URL from the provided compare URL</HelperTextItem>}
                         </HelperText>
                     </FormHelperText>
                 </FormGroup>
