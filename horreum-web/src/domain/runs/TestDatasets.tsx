@@ -208,7 +208,7 @@ export default function TestDatasets() {
                 },
             })
         }
-        const view = views?.find(v => v.id === viewId) || views?.find(v => v.name === "Default")
+        const view = views?.find(v => v.id === viewId) || views?.at(0)
         const components = view?.components || []
         components.forEach(vc => {
             allColumns.push({
