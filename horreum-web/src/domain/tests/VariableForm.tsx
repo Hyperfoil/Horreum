@@ -1,6 +1,6 @@
 import { useState, useEffect, ReactNode } from "react"
 
-import {ChangeDetection, ConditionConfig, Variable} from "../../api"
+import {ChangeDetection, ConditionConfig, Variable, } from "../../api"
 
 import {
 	ActionList,
@@ -227,9 +227,12 @@ export default function VariableForm(props: VariableFormProps) {
                         <ConditionComponent
                             {...comp}
                             isTester={props.isTester}
+                            //we are using ignore because we don't know the model type to cast or declare the type info
+                            // @ts-ignore
                             value={changeDetection.config[comp.name]}
                             onChange={value => {
                                 const copy = { ...changeDetection }
+                                // @ts-ignore
                                 copy.config[comp.name] = value
                                 update(copy)
                             }}

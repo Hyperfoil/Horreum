@@ -19,8 +19,7 @@ import {
 } from "@patternfly/react-core"
 import { HelpIcon } from "@patternfly/react-icons"
 import { ReactElement, useState } from "react"
-
-import { Action } from "../../api"
+import { Action, HttpAction as Http, GithubIssueCommentAction as GithubIssueComment, GithubIssueCreateAction as GithubIssueCreate} from "../../api"
 import EnumSelect from "../../components/EnumSelect"
 import HttpActionUrlSelector from "../../components/HttpActionUrlSelector"
 import { CHANGE_NEW, EXPERIMENT_RESULT_NEW } from "./reducers"
@@ -101,7 +100,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
             {props.action.type === "http" && (
                 <HttpActionUrlSelector
                     active={props.isTester}
-                    value={props.action.config?.url || ""}
+                    value={(props.action.config as Http).url || ""}
                     setValue={value => {
                         update({ config: { url: value } })
                     }}
@@ -123,7 +122,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     name="issue"
                                     id="url"
                                     label="Use issue URL"
-                                    isChecked={props.action.config.issueUrl !== undefined}
+                                    isChecked={(props.action.config as GithubIssueComment).issueUrl !== undefined}
                                     onChange={(_event, checked) => updateConfig({ issueUrl: checked ? "" : undefined })}
                                 />
                             </FlexItem>
@@ -132,18 +131,18 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     name="issue"
                                     id="components"
                                     label="Use owner/repo/issue"
-                                    isChecked={props.action.config.issueUrl === undefined}
+                                    isChecked={(props.action.config as GithubIssueComment).issueUrl === undefined}
                                     onChange={(_event, checked) => updateConfig({ issueUrl: checked ? undefined : "" })}
                                 />
                             </FlexItem>
                         </Flex>
                     </FormGroup>
 
-                    {props.action.config.issueUrl !== undefined ? (
+                    {(props.action.config as GithubIssueComment).issueUrl !== undefined ? (
                         <FormGroup label="Issue URL" labelIcon={<ExpressionHelp {...props} />} fieldId="issueUrl">
                             <TextInput
                                 id="issueUrl"
-                                value={props.action.config.issueUrl}
+                                value={(props.action.config as GithubIssueComment).issueUrl}
                                 onChange={(_event, issueUrl) => update({ config: { ...props.action.config, issueUrl } })}
                             />
                         </FormGroup>
@@ -152,21 +151,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                             <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
                                 <TextInput
                                     id="owner"
-                                    value={props.action.config.owner}
+                                    value={(props.action.config as GithubIssueComment).owner}
                                     onChange={(_event, owner) => updateConfig({ owner })}
                                 />
                             </FormGroup>
                             <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
                                 <TextInput
                                     id="repo"
-                                    value={props.action.config.repo}
+                                    value={(props.action.config as GithubIssueComment).repo}
                                     onChange={(_event, repo) => updateConfig({ repo })}
                                 />
                             </FormGroup>
                             <FormGroup label="Issue" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
                                 <TextInput
                                     id="issue"
-                                    value={props.action.config.issue}
+                                    value={(props.action.config as GithubIssueComment).issue}
                                     onChange={(_event, issue) => updateConfig({ issue })}
                                 />
                             </FormGroup>
@@ -179,7 +178,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                     ? { experimentResultToMarkdown: "Experiment result to Markdown" }
                                     : {}
                             }
-                            selected={props.action.config.formatter}
+                            selected={(props.action.config as GithubIssueComment).formatter}
                             onSelect={formatter => updateConfig({ formatter })}
                         />
                     </FormGroup>
@@ -195,21 +194,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                     <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
                         <TextInput
                             id="owner"
-                            value={props.action.config.owner}
+                            value={(props.action.config as GithubIssueCreate).owner}
                             onChange={(_event, owner) => updateConfig({ owner })}
                         />
                     </FormGroup>
                     <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
                         <TextInput
                             id="repo"
-                            value={props.action.config.repo}
+                            value={(props.action.config as GithubIssueCreate).repo}
                             onChange={(_event, repo) => updateConfig({ repo })}
                         />
                     </FormGroup>
                     <FormGroup label="Title" labelIcon={<ExpressionHelp {...props} />} fieldId="title">
                         <TextInput
                             id="title"
-                            value={props.action.config.title}
+                            value={(props.action.config as GithubIssueCreate).title}
                             onChange={(_event, title) => updateConfig({ title })}
                         />
                     </FormGroup>
@@ -218,7 +217,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                             options={
                                 props.action.event === CHANGE_NEW ? { changeToMarkdown: "Change to Markdown" } : {}
                             }
-                            selected={props.action.config.formatter}
+                            selected={(props.action.config as GithubIssueCreate).formatter}
                             onSelect={formatter => updateConfig({ formatter })}
                         />
                     </FormGroup>

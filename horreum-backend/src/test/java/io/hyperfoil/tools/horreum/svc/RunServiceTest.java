@@ -898,7 +898,7 @@ public class RunServiceTest extends BaseServiceTest {
          ChangeDetection changeDetection = new ChangeDetection();
          changeDetection.model = "relativeDifference";
 
-         changeDetection.config = mapper.readTree("{" +
+         changeDetection.config = (ObjectNode) mapper.readTree("{" +
                  "          \"window\": 1," +
                  "          \"filter\": \"mean\"," +
                  "          \"threshold\": 0.2," +

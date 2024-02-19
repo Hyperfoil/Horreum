@@ -7,8 +7,32 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+
 
 public class Action {
+
+    public static class HttpAction {
+        public String url;
+    }
+    public static class GithubIssueCommentAction {
+        public String issueUrl;
+        public String owner;
+        public String repo;
+        public String issue;
+        public String formatter;
+    }
+    public static class GithubIssueCreateAction {
+        public String owner;
+        public String repo;
+        public String title;
+        public String formatter;
+    }
+    public static class Secret {
+        public String token;
+        public boolean modified;
+    }
+
     @JsonProperty( required = true )
     public Integer id;
     @NotNull
@@ -17,12 +41,26 @@ public class Action {
     @NotNull
     @JsonProperty( required = true )
     public String type;
+
     @NotNull
     @JsonProperty( required = true )
-    public JsonNode config;
+    @Schema(type = SchemaType.OBJECT,
+            oneOf = {
+                    Action.HttpAction.class,
+                    Action.GithubIssueCommentAction.class,
+                    Action.GithubIssueCreateAction.class
+            }
+    )
+    public ObjectNode config;
+
     @NotNull
     @JsonIgnore
-    public JsonNode secrets;
+    @Schema(type = SchemaType.OBJECT,
+            allOf = {
+                    Action.Secret.class
+            }
+    )
+    public ObjectNode secrets;
     @NotNull
     @JsonProperty( required = true )
     public Integer testId;
@@ -36,7 +74,7 @@ public class Action {
     public Action() {
     }
 
-    public Action(Integer id, String event, String type, JsonNode config, JsonNode secrets,
+    public Action(Integer id, String event, String type, ObjectNode config, ObjectNode secrets,
                   Integer testId, boolean active, boolean runAlways) {
         this.id = id;
         this.event = event;
@@ -49,7 +87,7 @@ public class Action {
     }
 
     @JsonProperty("secrets")
-    public void setSecrets(JsonNode secrets) {
+    public void setSecrets(ObjectNode secrets) {
         this.secrets = secrets;
     }
 

@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -31,19 +32,34 @@ public class ActionDAO extends PanacheEntityBase {
    @Column(name = "event")
    public String event;
 
+   /* The type options were found in horreum-web/src/domain/actions/ActionComponentForm.tsx#L73
+    * http, github-issue-comment, github-issue-create
+    *
+    */
    @NotNull
    @Column(name = "type")
    public String type;
 
+
+   /*
+    * Notes on where I found the config options
+    * type=http: HttpActionUrlSelector.tsx : {url: string }
+    * type=github-issue-comment: { issueUrl: string|undefined, owner: string, repo: string, issue: string, formatter: string }
+    * type=github-issue-create: {owner: string, repo: string, title: string, formatter: string }
+    */
    @NotNull
    @Column(name = "config", columnDefinition = "jsonb")
    @Type(JsonBinaryType.class)
-   public JsonNode config;
+   public ObjectNode config;
 
+   /*
+    * horreum-web/src/domain/actions/ActionComponentForm.tsx#L278
+    * { token: string, modified: boolean } are the possible values of secret but I don't think modified gets persisted
+    */
    @NotNull
    @Column(name = "secrets", columnDefinition = "jsonb")
    @Type(JsonBinaryType.class)
-   public JsonNode secrets;
+   public ObjectNode secrets;
 
    @NotNull
    @Column(name = "test_id")
@@ -59,7 +75,7 @@ public class ActionDAO extends PanacheEntityBase {
 
    public ActionDAO() {
    }
-    public ActionDAO(Integer id, String event, String type, JsonNode config, JsonNode secrets,
+    public ActionDAO(Integer id, String event, String type, ObjectNode config, ObjectNode secrets,
                      Integer testId, boolean active, boolean runAlways) {
        this.id = id;
        this.event = event;

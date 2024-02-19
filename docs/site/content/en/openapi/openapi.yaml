@@ -2304,6 +2304,7 @@ components:
       - event
       - type
       - config
+      - secrets
       - testId
       - active
       - runAlways
@@ -2317,7 +2318,15 @@ components:
         type:
           type: string
         config:
-          type: array
+          type: object
+          oneOf:
+          - $ref: '#/components/schemas/HttpAction'
+          - $ref: '#/components/schemas/GithubIssueCommentAction'
+          - $ref: '#/components/schemas/GithubIssueCreateAction'
+        secrets:
+          type: object
+          allOf:
+          - $ref: '#/components/schemas/Secret'
         testId:
           format: int32
           type: integer
@@ -2325,8 +2334,6 @@ components:
           type: boolean
         runAlways:
           type: boolean
-        secrets:
-          type: array
     ActionLog:
       description: Action Log
       required:
@@ -2363,7 +2370,10 @@ components:
         model:
           type: string
         config:
-          type: array
+          type: object
+          oneOf:
+          - $ref: '#/components/schemas/RelativeDifferenceDetection'
+          - $ref: '#/components/schemas/FixedThresholdDetection'
     ComparisonResult:
       description: Result of performing a Comparison
       type: object
@@ -2948,6 +2958,42 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FingerprintValue'
+    FixedThresholdDetection:
+      type: object
+      properties:
+        min:
+          $ref: '#/components/schemas/Threshold'
+        max:
+          $ref: '#/components/schemas/Threshold'
+    GithubIssueCommentAction:
+      type: object
+      properties:
+        issueUrl:
+          type: string
+        owner:
+          type: string
+        repo:
+          type: string
+        issue:
+          type: string
+        formatter:
+          type: string
+    GithubIssueCreateAction:
+      type: object
+      properties:
+        owner:
+          type: string
+        repo:
+          type: string
+        title:
+          type: string
+        formatter:
+          type: string
+    HttpAction:
+      type: object
+      properties:
+        url:
+          type: string
     IndexedLabelValueMap:
       type: object
       additionalProperties:
@@ -3299,6 +3345,20 @@ components:
           description: Total number of generated datasets
           type: integer
           example: 186
+    RelativeDifferenceDetection:
+      type: object
+      properties:
+        filter:
+          type: string
+        window:
+          format: int32
+          type: integer
+        threshold:
+          format: double
+          type: number
+        minPrevious:
+          format: int32
+          type: integer
     ReportComponent:
       description: Report Component
       required:
@@ -3734,6 +3794,13 @@ components:
           description: Does schema have a JSON validation schema defined?
           type: boolean
           example: false
+    Secret:
+      type: object
+      properties:
+        token:
+          type: string
+        modified:
+          type: boolean
     SortDirection:
       enum:
       - Ascending
@@ -4252,6 +4319,16 @@ components:
           description: Token description
           type: string
           example: my reporting service token
+    Threshold:
+      type: object
+      properties:
+        value:
+          format: int32
+          type: integer
+        enabled:
+          type: boolean
+        inclusive:
+          type: boolean
     TransformationLog:
       description: Transformation Log
       required:

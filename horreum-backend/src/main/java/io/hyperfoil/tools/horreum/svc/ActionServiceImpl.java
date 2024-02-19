@@ -187,7 +187,7 @@ public class ActionServiceImpl implements ActionService {
       return action;
    }
 
-   public JsonNode ensureNotNull(JsonNode node) {
+   ObjectNode ensureNotNull(ObjectNode node) {
       return node == null || node.isNull() || node.isMissingNode() ? JsonNodeFactory.instance.objectNode() : node;
    }
 
