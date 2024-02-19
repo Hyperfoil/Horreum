@@ -13,7 +13,7 @@ import {
 } from "@patternfly/react-core"
 
 import { useTester } from "../../auth"
-import {Action, getTestActions, updateActions} from "../../api"
+import {Action, getTestActions, updateActions, HttpAction as Http} from "../../api"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { testEventTypes } from "../actions/reducers"
 import ActionComponentForm from "../actions/ActionComponentForm"
@@ -35,7 +35,7 @@ export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: A
     const [actions, setActions] = useState<Action[]>([])
     const [logModalOpen, setLogModalOpen] = useState(false)
     const isTester = useTester(testOwner)
-    const hasDuplicates = new Set(actions.map(h => h.event + "_" + h.config.url)).size !== actions.length
+    const hasDuplicates = new Set(actions.map(h => h.event + "_" + (h.config as Http).url)).size !== actions.length
 
     useEffect(() => {
         if (!testId || !isTester) {
