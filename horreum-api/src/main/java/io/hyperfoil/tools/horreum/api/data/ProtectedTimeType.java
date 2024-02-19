@@ -11,13 +11,13 @@ import java.time.Instant;
 public class ProtectedTimeType extends ProtectedType{
     @NotNull
     @JsonProperty(required = true)
-    @Schema(type = SchemaType.STRING, implementation = Instant.class,
-            description = "Run Start timestamp", example = "2019-09-26T07:58:30.996+0200")
+    @Schema(implementation = Instant.class, type = SchemaType.INTEGER, format = "int64",
+            description = "Run Start timestamp", example = "1704965908267")
     public Instant start;
     @NotNull
     @JsonProperty(required = true)
-    @Schema(type = SchemaType.STRING, implementation = Instant.class,
-            description = "Run Stop timestamp", example = "2019-09-26T07:58:30.996+0200")
+    @Schema(implementation = Instant.class, type = SchemaType.INTEGER, format = "int64",
+            description = "Run Stop timestamp", example = "1704965908267")
     public Instant stop;
 
     public ProtectedTimeType() {}
