@@ -53,9 +53,9 @@ export const RunImportModal = (props: RunImportModalProps) => {
                  start,
                  stop,
                  props.test?.name || "",
+                 props.owner,
                  access,
                  undefined,
-                 props.owner,
                  schemaUrn,
                  undefined,
                   JSON.parse(payloadData || "")
@@ -131,7 +131,7 @@ export const RunImportModal = (props: RunImportModalProps) => {
                                 <FormHelperText>
                                     <HelperText>
                                         <HelperTextItem>Please provide a timestamp for the start of the run, or a json path expression to extract it from the data.
-                                 e.g. `2023-11-15T10:11:43.896Z` or `$.start`</HelperTextItem>
+                                 e.g. `2023-11-15T10:11:43+00:00` or `$.start`</HelperTextItem>
                                     </HelperText>
                                 </FormHelperText>                                
                             </FormGroup>
@@ -144,7 +144,7 @@ export const RunImportModal = (props: RunImportModalProps) => {
                                 <FormHelperText>
                                     <HelperText>
                                         <HelperTextItem>Please provide a timestamp for the end of the run, or a json path expression to extract it from the data.
-                                 e.g. `2023-11-15T10:11:43.896Z` or `$.stop`</HelperTextItem>
+                                 e.g. `2023-11-15T10:11:44+00:00` or `$.stop`</HelperTextItem>
                                     </HelperText>
                                 </FormHelperText>                                
                             </FormGroup>
