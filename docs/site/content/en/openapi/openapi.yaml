@@ -3286,15 +3286,15 @@ components:
           type: string
           example: performance-team
         start:
-          format: date-time
+          format: int64
           description: Run Start timestamp
-          type: string
-          example: 2019-09-26T07:58:30.996+0200
+          type: integer
+          example: 1704965908267
         stop:
-          format: date-time
+          format: int64
           description: Run Stop timestamp
-          type: string
-          example: 2019-09-26T07:58:30.996+0200
+          type: integer
+          example: 1704965908267
     ProtectedType:
       required:
       - access
@@ -3429,15 +3429,15 @@ components:
           type: string
           example: performance-team
         start:
-          format: date-time
+          format: int64
           description: Run Start timestamp
-          type: string
-          example: 2019-09-26T07:58:30.996+0200
+          type: integer
+          example: 1704965908267
         stop:
-          format: date-time
+          format: int64
           description: Run Stop timestamp
-          type: string
-          example: 2019-09-26T07:58:30.996+0200
+          type: integer
+          example: 1704965908267
         id:
           format: int32
           description: Unique Run ID
@@ -3526,15 +3526,15 @@ components:
           type: string
           example: performance-team
         start:
-          format: date-time
+          format: int64
           description: Run Start timestamp
-          type: string
-          example: 2019-09-26T07:58:30.996+0200
+          type: integer
+          example: 1704965908267
         stop:
-          format: date-time
+          format: int64
           description: Run Stop timestamp
-          type: string
-          example: 2019-09-26T07:58:30.996+0200
+          type: integer
+          example: 1704965908267
         id:
           format: int32
           description: Unique Run ID
