@@ -127,6 +127,9 @@ export default function RunList() {
         }
     }, [hasError, compareError])
 
+    const clearCallback = () => {
+        setSelectedRows({})
+    }
     const tableColumns: RunColumn[] = [
         {
             Header: "",
@@ -218,7 +221,7 @@ export default function RunList() {
             id: "actions",
             accessor: "id",
             disableSortBy: true,
-            Cell: (arg: CellProps<RunSummary, number>) => Menu(arg.row.original, loadTestRuns),
+            Cell: (arg: CellProps<RunSummary, number>) => Menu(arg.row.original, loadTestRuns, clearCallback),
         },
     ]
 

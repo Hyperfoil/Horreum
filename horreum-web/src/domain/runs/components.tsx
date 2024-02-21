@@ -160,14 +160,15 @@ function useUpdateDescription(run: RunSummary): MenuItem<RunSummary> {
     ]
 }
 
-export function Menu(run: RunSummary, refreshCallback: () => void) {
+export function Menu(run: RunSummary, refreshCallback: () => void, clearSelected: () => void) {
     const { alerting } = useContext(AppContext) as AppContextType;
 
     const changeAccess = useChangeAccess({
         onAccessUpdate: (id, owner, access) => updateRunAccess(id, run.testid, owner, access, alerting).then(refreshCallback),
     })
     const del = useDelete({
-        onDelete: id => trash(alerting, id, run.testid).then(refreshCallback),
+        onDelete: id => trash(alerting, id, run.testid).then(refreshCallback)
+            .then(clearSelected),
     })
     const recalculate = useRecalculateDatasets(run)
     const restore = useRestore(run)
