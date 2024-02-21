@@ -117,6 +117,7 @@
                 <version>7.2.0</version>
                 <executions>
                     <execution>
+                        <id>typescript</id>
                         <phase>prepare-package</phase>
                         <goals>
                             <goal>generate</goal>
@@ -139,6 +140,45 @@
                                 <typescriptThreePlus>true</typescriptThreePlus>
                                 <prefixParameterInterfaces>true</prefixParameterInterfaces>
                             </configOptions>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>python</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
+                            <output>${project.build.directory}/generated/python</output>
+                            <generatorName>python</generatorName>
+                            <skipValidateSpec>true</skipValidateSpec>
+                            <globalProperties>
+                                <skipFormModel>false</skipFormModel>
+                            </globalProperties>
+                            <modelNameMappings>
+                                <modelNameMapping>Tag=Label</modelNameMapping>
+                            </modelNameMappings>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>go</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
+                            <output>${project.build.directory}/generated/go</output>
+                            <generatorName>go</generatorName>
+                            <skipValidateSpec>true</skipValidateSpec>
+                            <typeMappings>Array=any</typeMappings>
+                            <globalProperties>
+                                <skipFormModel>false</skipFormModel>
+                            </globalProperties>
+                            <modelNameMappings>
+                                <modelNameMapping>Tag=Label</modelNameMapping>
+                            </modelNameMappings>
                         </configuration>
                     </execution>
                 </executions>
@@ -167,7 +207,6 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
 
