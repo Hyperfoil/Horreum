@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.entity.user;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -33,7 +34,7 @@ public class Team extends PanacheEntityBase {
     @Column(name = "team_name")
     public String teamName;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "team")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     public Set<TeamMembership> teams;
 
     public Team(){}

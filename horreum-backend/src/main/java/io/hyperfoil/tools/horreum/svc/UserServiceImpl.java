@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -42,6 +43,7 @@ import io.vertx.core.Vertx;
 
 @PermitAll
 @ApplicationScoped
+@IfBuildProperty(name = "horreum.roles.provider", stringValue = "keycloak", enableIfMissing = true)
 public class UserServiceImpl implements UserService {
    private static final Logger log = Logger.getLogger(UserServiceImpl.class);
    private static final String[] ROLE_TYPES = new String[] { "team", Roles.VIEWER, Roles.TESTER, Roles.UPLOADER, Roles.MANAGER };

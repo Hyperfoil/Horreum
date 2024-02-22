@@ -35,4 +35,38 @@ public class TeamMembership extends PanacheEntityBase {
         this.team = team;
         this.roles = roles;
     }
+
+    public TeamMembership(UserInfo user, Team team, String uiRole) {
+        this.user = user;
+        this.team = team;
+        this.roles = switch (uiRole) {
+            case "viewer" -> TeamRole.TEAM_VIEWER;
+            case "tester" -> TeamRole.TEAM_TESTER;
+            case "uploader" -> TeamRole.TEAM_UPLOADER;
+            case "manager" -> TeamRole.TEAM_MANAGER;
+            default -> throw new IllegalStateException("Unexpected legacy role value: " + uiRole);
+        };
+    }
+
+    public String asUIRole() {
+        return switch (roles) {
+            case TEAM_VIEWER -> "viewer";
+            case TEAM_TESTER -> "tester";
+            case TEAM_UPLOADER -> "uploader";
+            case TEAM_MANAGER -> "manager";
+        };
+    }
+
+    public String asTeam() {
+        return team.teamName + "-team";
+    }
+    
+    public String asRole() {
+        return team.teamName + "-" + switch (roles) {
+            case TEAM_VIEWER -> "viewer";
+            case TEAM_TESTER -> "tester";
+            case TEAM_UPLOADER -> "uploader";
+            case TEAM_MANAGER -> "manager";
+        };
+    }
 }
