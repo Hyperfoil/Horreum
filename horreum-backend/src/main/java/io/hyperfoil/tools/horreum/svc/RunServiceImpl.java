@@ -287,6 +287,107 @@ public class RunServiceImpl implements RunService {
       }
    }
 
+   //this is nearly identical to TestServiceImpl.listLabelValues (except the return object)
+   //this reads from the dataset table but provides data specific to the run...
+   @Override
+   public List<ExportedLabelValues> labelValues(int runId, String filter, String sort, String direction, int limit, int page){
+      List<ExportedLabelValues> rtrn = new ArrayList<>();
+      Run run = getRun(runId,null);
+      if(run == null){
+         throw ServiceException.serverError("Cannot find run "+runId);
+      }
+      Object filterObject = Util.getFilterObject(filter);
+      String filterSql = "";
+      if(filterObject instanceof JsonNode && ((JsonNode)filterObject).getNodeType() == JsonNodeType.OBJECT){
+         filterSql = "WHERE "+TestServiceImpl.LABEL_VALUES_FILTER_CONTAINS_JSON;
+      }else {
+         Util.CheckResult jsonpathResult = Util.castCheck(filter,"jsonpath",em);
+         if(jsonpathResult.ok()) {
+            filterSql = "WHERE "+TestServiceImpl.LABEL_VALUES_FILTER_MATCHES_NOT_NULL;
+         } else {
+            if(filter!=null && filter.startsWith("{") && filter.endsWith("}")) {
+               Util.CheckResult jsonbResult = Util.castCheck(filter, "jsonb", em);
+               if (!jsonbResult.ok()) {
+                  //we expect this error (because filterObject is not JsonNode
+               } else {
+                  //this would be a surprise and quite a problem
+               }
+            } else {
+               //how do we report back invalid jsonpath
+            }
+         }
+      }
+      if(filterSql.isBlank() && filter != null && !filter.isBlank()){
+         //TODO there was an error with the filter, do we return that info to the user?
+      }
+      String orderSql = "";
+      String orderDirection = direction.equalsIgnoreCase("ascending") ? "ASC" : "DESC";
+      if(!sort.isBlank()){
+         Util.CheckResult jsonpathResult = Util.castCheck(sort, "jsonpath", em);
+         if(jsonpathResult.ok()){
+            orderSql="order by jsonb_path_query(combined.values,CAST( :orderBy as jsonpath)) "+orderDirection+", combined.datasetId DESC";
+         }else{
+            orderSql="order by combined.datasetId DESC";
+         }
+      }
+      String sql = """
+         WITH
+         combined as (
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
+                  FROM dataset
+                  LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
+                  LEFT JOIN label ON label.id = lv.label_id
+                  WHERE runId = :runId
+                  GROUP BY dataset.id
+         ) select * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER limit :limit offset :offset
+         """
+              .replace("FILTER_PLACEHOLDER",filterSql)
+              .replace("ORDER_PLACEHOLDER",orderSql);
+
+      NativeQuery query = ((NativeQuery) em.createNativeQuery(sql))
+              .setParameter("runId",runId);
+      if(!filterSql.isEmpty()) {
+         if (filterSql.contains(TestServiceImpl.LABEL_VALUES_FILTER_CONTAINS_JSON)) {
+            query.setParameter("filter", filterObject, JsonBinaryType.INSTANCE);
+         } else {
+            query.setParameter("filter", filter);
+         }
+      }
+      if(orderSql.contains(":orderBy")){
+         query.setParameter("orderBy",sort);
+      }
+      query
+         .setParameter("limit",limit)
+         .setParameter("offset",limit * page)
+         .unwrap(NativeQuery.class)
+              .addScalar("values", JsonBinaryType.INSTANCE)
+              .addScalar("datasetId",Integer.class)
+              .addScalar("start", StandardBasicTypes.INSTANT)
+              .addScalar("stop", StandardBasicTypes.INSTANT);
+
+      //casting because type inference cannot detect there will be two scalars in the result
+      //TODO replace this with strictly typed entries
+      ((List<Object[]>) query.getResultList()).forEach(objects->{
+         JsonNode node = (JsonNode)objects[0];
+         Integer datasetId = Integer.parseInt(objects[1]==null?"-1":objects[1].toString());
+         Instant start = (Instant)objects[2];
+         Instant stop = (Instant)objects[3];
+
+         if(node.isObject()){
+            rtrn.add(new ExportedLabelValues(
+                    LabelValueMap.fromObjectNode((ObjectNode)node),
+                    runId,
+                    datasetId,
+                    start,
+                    stop
+            ));
+         }else{
+            //TODO alert that something is wrong in the db response
+         }
+      });
+      return rtrn;
+   }
+
    @PermitAll
    @WithRoles
    @WithToken
