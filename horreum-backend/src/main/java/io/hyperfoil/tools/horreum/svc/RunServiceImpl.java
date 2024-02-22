@@ -340,8 +340,6 @@ public class RunServiceImpl implements RunService {
               .replace("FILTER_PLACEHOLDER",filterSql)
               .replace("ORDER_PLACEHOLDER",orderSql);
 
-
-      System.out.println(sql.substring(397));
       NativeQuery query = ((NativeQuery) em.createNativeQuery(sql))
               .setParameter("runId",runId);
       if(!filterSql.isEmpty()) {
