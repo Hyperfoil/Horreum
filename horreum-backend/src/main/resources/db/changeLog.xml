@@ -4484,4 +4484,13 @@
             CREATE POLICY userinfo_roles_rw ON userinfo_roles FOR ALL USING (has_role(username));
         </sql>
     </changeSet>
+    <changeSet id="119" author="johara">
+        <validCheckSum>ANY</validCheckSum>
+        <sql>
+            UPDATE changedetection
+            SET config=subquery.newConfig
+                FROM (select id as newID,  jsonb_set(config, '{model}', to_jsonb(changedetection.model::text), true) as newConfig from changedetection) AS subquery
+            WHERE changedetection.id=subquery.newID;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
