@@ -24,7 +24,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModelResolver;
 import io.hyperfoil.tools.horreum.hibernate.IntArrayType;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.security.PermitAll;
@@ -46,7 +48,6 @@ import io.hyperfoil.tools.horreum.api.changes.Dashboard;
 import io.hyperfoil.tools.horreum.api.changes.Target;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.changedetection.FixedThresholdModel;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
@@ -181,10 +182,6 @@ public class AlertingServiceImpl implements AlertingService {
    private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
    private static final Instant VERY_DISTANT_FUTURE = Instant.parse("2666-06-06T06:06:06.00Z");
 
-   private static final Map<String, ChangeDetectionModel> MODELS = Map.of(
-           RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel(),
-           FixedThresholdModel.NAME, new FixedThresholdModel());
-
    @Inject
    TestServiceImpl testService;
 
@@ -217,6 +214,9 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Inject
    Session session;
+
+   @Inject
+   ChangeDetectionModelResolver modelResolver;
 
    static ConcurrentHashMap<Integer, AtomicInteger> retryCounterSet = new ConcurrentHashMap<>();
 
@@ -650,7 +650,7 @@ public class AlertingServiceImpl implements AlertingService {
       } else {
          int datasetId = dataPoints.get(0).getDatasetId();
          for (ChangeDetectionDAO detection : ChangeDetectionDAO.<ChangeDetectionDAO>find("variable", variable).list()) {
-            ChangeDetectionModel model = MODELS.get(detection.model);
+            ChangeDetectionModel model = modelResolver.getModel(ChangeDetectionModelType.fromString(detection.model));
             if (model == null) {
                logChangeDetectionMessage(variable.testId, datasetId, PersistentLogDAO.ERROR, "Cannot find change detection model %s", detection.model);
                continue;
@@ -781,7 +781,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void ensureDefaults(Set<ChangeDetectionDAO> rds) {
       rds.forEach(rd -> {
-         ChangeDetectionModel model = MODELS.get(rd.model);
+         ChangeDetectionModel model = modelResolver.getModel(ChangeDetectionModelType.fromString(rd.model));
          if (model == null) {
             throw ServiceException.badRequest("Unknown model " + rd.model);
          }
@@ -1108,11 +1108,10 @@ public class AlertingServiceImpl implements AlertingService {
       }
       return labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll);
    }
-
    @PermitAll
    @Override
    public List<ConditionConfig> changeDetectionModels() {
-      return MODELS.values().stream().map(ChangeDetectionModel::config).collect(Collectors.toList());
+      return modelResolver.getModels().values().stream().map(ChangeDetectionModel::config).collect(Collectors.toList());
    }
 
    @PermitAll
@@ -1121,11 +1120,11 @@ public class AlertingServiceImpl implements AlertingService {
       ChangeDetectionDAO lastDatapoint = new ChangeDetectionDAO();
       lastDatapoint.model = RelativeDifferenceChangeDetectionModel.NAME;
       lastDatapoint.config = JsonNodeFactory.instance.objectNode()
-            .put("window", 1).put("filter", "mean").put("threshold", 0.2).put("minPrevious", 5);
+            .put("window", 1).put("model", RelativeDifferenceChangeDetectionModel.NAME).put("filter", "mean").put("threshold", 0.2).put("minPrevious", 5);
       ChangeDetectionDAO floatingWindow = new ChangeDetectionDAO();
       floatingWindow.model = RelativeDifferenceChangeDetectionModel.NAME;
       floatingWindow.config = JsonNodeFactory.instance.objectNode()
-            .put("window", 5).put("filter", "mean").put("threshold", 0.1).put("minPrevious", 5);
+            .put("window", 5).put("model", RelativeDifferenceChangeDetectionModel.NAME).put("filter", "mean").put("threshold", 0.1).put("minPrevious", 5);
       return Arrays.asList(lastDatapoint, floatingWindow).stream().map(ChangeDetectionMapper::from).collect(Collectors.toList());
    }
 
