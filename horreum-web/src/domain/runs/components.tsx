@@ -10,14 +10,14 @@ import {
 	DropdownItem
 } from '@patternfly/react-core/deprecated';
 import { WarningTriangleIcon } from "@patternfly/react-icons"
-import moment from "moment"
+ 
 import ActionMenu, {
     ActionMenuProps,
     MenuItem,
     useChangeAccess,
     useDelete,
 } from "../../components/ActionMenu"
-import { formatDateTime, toEpochMillis } from "../../utils"
+import { formatDateTime, toEpochMillis, timeFromNow } from "../../utils"
 import { useTester } from "../../auth"
 import {Access, recalculateDatasets, RunSummary, trash, updateDescription, updateRunAccess} from "../../api"
 import {AppContext} from "../../context/appContext";
@@ -74,7 +74,7 @@ export const ExecutionTime = (timestamps: StartStop) => (
             </table>
         }
     >
-        <span>{moment(toEpochMillis(timestamps.stop)).fromNow()}</span>
+        <span>{timeFromNow(toEpochMillis(timestamps.stop))}</span>
     </Tooltip>
 )
 
