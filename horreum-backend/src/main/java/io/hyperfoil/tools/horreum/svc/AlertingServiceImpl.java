@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,9 +27,12 @@ import java.util.stream.Collectors;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
+import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModel;
 import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModelResolver;
+import io.hyperfoil.tools.horreum.changedetection.ModelType;
 import io.hyperfoil.tools.horreum.hibernate.IntArrayType;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.panache.common.Parameters;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -51,8 +55,6 @@ import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
-import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModel;
-import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
@@ -267,7 +269,11 @@ public class AlertingServiceImpl implements AlertingService {
             sendNotifications = true;
          }
       }
-      recalculateDatapointsForDataset(dataset, sendNotifications, false, null);
+      Recalculation recalculation = new Recalculation();
+      recalculation.clearDatapoints = true;
+      recalculation.lastDatapoint = true;
+
+      recalculateDatapointsForDataset(dataset, sendNotifications, false, recalculation);
       recalculateMissingDataRules(dataset);
    }
 
@@ -448,7 +454,7 @@ public class AlertingServiceImpl implements AlertingService {
                      error -> logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of variable %s failed: %s", data.fullName(), error),
                      info -> logCalculationMessage(dataset, PersistentLogDAO.INFO, "Evaluation of variable %s: %s", data.fullName(), info));
                if (value != null) {
-                  createDataPoint(dataset, finalTimestamp, data.variableId, value, notify);
+                  createDataPoint(dataset, finalTimestamp, data.variableId, value, notify, recalculation);
                } else {
                   if (recalculation != null) {
                      recalculation.datasetsWithoutValue.put(dataset.id, dataset.getInfo());
@@ -486,7 +492,7 @@ public class AlertingServiceImpl implements AlertingService {
                   }
                   missingValueVariables.add(data.fullName());
                } else {
-                  createDataPoint(dataset, finalTimestamp, data.variableId, value, notify);
+                  createDataPoint(dataset, finalTimestamp, data.variableId, value, notify, recalculation);
                }
             },
             (data, exception, code) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR, "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", data.fullName(), exception.getMessage(), code),
@@ -505,17 +511,28 @@ public class AlertingServiceImpl implements AlertingService {
    }
 
    @Transactional
-   void createDataPoint(DatasetDAO dataset, Instant timestamp, int variableId, double value, boolean notify) {
-      DataPointDAO dataPoint = new DataPointDAO();
-      dataPoint.variable = VariableDAO.findById(variableId);
-      dataPoint.dataset = dataset;
-      dataPoint.timestamp = timestamp;
-      dataPoint.value = value;
-      dataPoint.persistAndFlush();
-      DataPoint.Event event = new DataPoint.Event(DataPointMapper.from( dataPoint), dataset.testid, notify);
-      onNewDataPoint(event); //Test failure if we do not start a new thread and new tx
-      if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_NEW, dataset.testid, event));
+   void createDataPoint(DatasetDAO dataset, Instant timestamp, int variableId, double value, boolean notify, Recalculation recalculation) {
+      DataPointDAO dataPoint = null;
+      VariableDAO variableDAO = VariableDAO.findById(variableId);
+      if ( recalculation.clearDatapoints ) {
+         dataPoint = new DataPointDAO();
+         dataPoint.variable = variableDAO;
+         dataPoint.dataset = dataset;
+         dataPoint.timestamp = timestamp;
+         dataPoint.value = value;
+         dataPoint.persistAndFlush();
+      } else {
+         dataPoint = DataPointDAO.find("dataset = :dataset and variable = :variable", Parameters.with("dataset", dataset).and("variable", variableDAO)).firstResult();
+      }
+      if ( dataPoint != null  ) {
+         DataPoint.Event event = new DataPoint.Event(DataPointMapper.from(dataPoint), dataset.testid, notify);
+         onNewDataPoint(event, recalculation.lastDatapoint); //Test failure if we do not start a new thread and new tx
+
+         if (mediator.testMode())
+            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_NEW, dataset.testid, event));
+      } else {
+            log.debugf("DataPoint for dataset %d, variable %d, timestamp %s, value %f not found", dataset.id, variableId, timestamp, value);
+      }
    }
 
    private void logCalculationMessage(DatasetDAO dataSet, int level, String format, Object... args) {
@@ -549,7 +566,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void onNewDataPoint(DataPoint.Event event) {
+   void onNewDataPoint(DataPoint.Event event, boolean lastDatapoint) {
       DataPoint dataPoint = event.dataPoint;
       if (dataPoint.variable != null && dataPoint.variable.id != null) {
          VariableDAO variable = VariableDAO.findById(dataPoint.variable.id);
@@ -568,7 +585,7 @@ public class AlertingServiceImpl implements AlertingService {
                   return current;
                }
             });
-            runChangeDetection(VariableDAO.findById(variable.id), fingerprint, event.notify, true);
+            runChangeDetection(VariableDAO.findById(variable.id), fingerprint, event.notify, true, lastDatapoint);
          } else {
             log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
                 dataPoint.datasetId, dataPoint.timestamp, dataPoint.variable == null ? -1 : dataPoint.variable.id);
@@ -581,11 +598,11 @@ public class AlertingServiceImpl implements AlertingService {
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   void tryRunChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify) {
-      runChangeDetection(variable, fingerprint, notify, false);
+   void tryRunChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean lastDatapoint) {
+      runChangeDetection(variable, fingerprint, notify, false, lastDatapoint);
    }
 
-   private void runChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean expectExists) {
+   private void runChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean expectExists, boolean lastDatapoint) {
       UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
       Instant nextTimestamp = session.createNativeQuery(
             "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
@@ -655,33 +672,37 @@ public class AlertingServiceImpl implements AlertingService {
                logChangeDetectionMessage(variable.testId, datasetId, PersistentLogDAO.ERROR, "Cannot find change detection model %s", detection.model);
                continue;
             }
-            model.analyze(dataPoints, detection.config, change -> {
-               logChangeDetectionMessage(variable.testId, datasetId, PersistentLogDAO.DEBUG,
-                     "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
-               DatasetDAO.Info info = session
-                       .createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id = ?1", Tuple.class)
-                       .setParameter(1, change.dataset.id)
-                       .setTupleTransformer((tuples, aliases) -> {
-                          DatasetDAO.Info i = new DatasetDAO.Info();
-                          i.id = (int) tuples[0];
-                          i.runId = (int) tuples[1];
-                          i.ordinal = (int) tuples[2];
-                          i.testId = (int) tuples[3];
-                          return i;
-                       }).getSingleResult();
-               em.persist(change);
-               Hibernate.initialize(change.dataset.run.id);
-               String testName = TestDAO.<TestDAO>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
-               Change.Event event = new Change.Event(ChangeMapper.from(change), testName, DatasetMapper.fromInfo(info), notify);
-               if(mediator.testMode())
-                  Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.CHANGE_NEW, change.dataset.testid, event));
-               mediator.executeBlocking(() -> mediator.newChange(event)) ;
-            });
+            //Only run bulk models on the last datapoint, otherwise run on every datapoint
+            if (model.getType() == ModelType.CONTINOUS || (model.getType() == ModelType.BULK && lastDatapoint)) {
+               model.analyze(dataPoints, detection.config, change -> {
+                  logChangeDetectionMessage(variable.testId, datasetId, PersistentLogDAO.DEBUG,
+                          "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
+                  DatasetDAO.Info info = session
+                          .createNativeQuery("SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id = ?1", Tuple.class)
+                          .setParameter(1, change.dataset.id)
+                          .setTupleTransformer((tuples, aliases) -> {
+                             DatasetDAO.Info i = new DatasetDAO.Info();
+                             i.id = (int) tuples[0];
+                             i.runId = (int) tuples[1];
+                             i.ordinal = (int) tuples[2];
+                             i.testId = (int) tuples[3];
+                             return i;
+                          }).getSingleResult();
+                  em.persist(change);
+                  Hibernate.initialize(change.dataset.run.id);
+                  String testName = TestDAO.<TestDAO>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
+                  Change.Event event = new Change.Event(ChangeMapper.from(change), testName, DatasetMapper.fromInfo(info), notify);
+                  if (mediator.testMode())
+                     Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.CHANGE_NEW, change.dataset.testid, event));
+                  mediator.executeBlocking(() -> mediator.newChange(event));
+               });
+            }
          }
       }
       Util.doAfterCommit(tm, () -> {
          validateUpTo(variable, fingerprint, nextTimestamp);
-         messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, notify));
+         //assume not last datapoint if we have found more
+         messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, notify, false));
       });
    }
 
@@ -928,19 +949,20 @@ public class AlertingServiceImpl implements AlertingService {
    @RolesAllowed(Roles.TESTER)
    @WithRoles
    public void recalculateDatapoints(int testId, boolean notify,
-                                     boolean debug, Long from, Long to) {
+                                     boolean debug, Boolean clearDatapoints, Long from, Long to) {
       TestDAO test = TestDAO.findById(testId);
       if (test == null) {
          throw ServiceException.notFound("Test " + testId + " does not exist or is not available.");
       } else if (!Roles.hasRoleWithSuffix(identity, test.owner, "-tester")) {
          throw ServiceException.forbidden("This user cannot trigger the recalculation");
       }
+
       messageBus.executeForTest(testId, () -> {
-         startRecalculation(testId, notify, debug, from, to);
+         startRecalculation(testId, notify, debug, clearDatapoints == null ? true : clearDatapoints, from, to);
       });
    }
 
-   void startRecalculation(int testId, boolean notify, boolean debug, Long from, Long to) {
+   void startRecalculation(int testId, boolean notify, boolean debug, boolean clearDatapoints, Long from, Long to) {
       Recalculation recalculation = new Recalculation();
       Recalculation previous = recalcProgress.putIfAbsent(testId, recalculation);
       while (previous != null) {
@@ -953,16 +975,28 @@ public class AlertingServiceImpl implements AlertingService {
          }
          previous = recalcProgress.putIfAbsent(testId, recalculation);
       }
+      recalculation.clearDatapoints = clearDatapoints;
+
       try {
          log.debugf("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
-         recalculation.datasets = getDatasetsForRecalculation(testId, from, to);
+         //TODO:: determine if we should clear datapoints
+         recalculation.datasets = getDatasetsForRecalculation(testId, from, to, clearDatapoints);
          int numRuns = recalculation.datasets.size();
          log.debugf("Starting recalculation of test %d, %d runs", testId, numRuns);
          int completed = 0;
          recalcProgress.put(testId, recalculation);
-         for (int datasetId : recalculation.datasets) {
+         //TODO:: this could be more streamlined
+         Map<String, Integer> lastDatapoints = new HashMap<>();
+         recalculation.datasets.entrySet().forEach( entry -> lastDatapoints.put(entry.getValue(), entry.getKey()));
+         Set<Integer> lastDatapointSet = lastDatapoints.values().stream().collect(Collectors.toSet());
+         for (int datasetId : recalculation.datasets.keySet()) {
             // Since the evaluation might take few moments and we're dealing potentially with thousands
             // of runs we'll process each run in a separate transaction
+            if ( lastDatapointSet.contains(datasetId) ) {
+               recalculation.lastDatapoint = true;
+            } else {
+               recalculation.lastDatapoint = false;
+            }
             recalculateForDataset(datasetId, notify, debug, recalculation);
             recalculation.progress = 100 * ++completed / numRuns;
          }
@@ -980,18 +1014,28 @@ public class AlertingServiceImpl implements AlertingService {
    // normally the calculation happens with system privileges anyway.
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
-   List<Integer> getDatasetsForRecalculation(Integer testId, Long from, Long to) {
-      NativeQuery<Integer> query = session
-              .createNativeQuery("SELECT id FROM dataset WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) ORDER BY start", Integer.class)
+   Map<Integer, String> getDatasetsForRecalculation(Integer testId, Long from, Long to, boolean clearDatapoints) {
+      Query query = session
+              .createNativeQuery("SELECT id, fingerprint FROM dataset LEFT JOIN fingerprint ON dataset.id = fingerprint.dataset_id WHERE testid = ?1 AND (EXTRACT(EPOCH FROM start) * 1000 BETWEEN ?2 AND ?3) ORDER BY start", Tuple.class)
               .setParameter(1, testId)
               .setParameter(2, from == null ? Long.MIN_VALUE : from)
               .setParameter(3, to == null ? Long.MAX_VALUE : to);
-      List<Integer> ids = query.getResultList();
-      DataPointDAO.delete("dataset.id in ?1", ids);
-      ChangeDAO.delete("dataset.id in ?1 AND confirmed = false", ids);
+      //use LinkedHashMap to preserve ordering of ID insertion - query is ordered on start
+      Map<Integer, String> ids = new LinkedHashMap();
+              query.getResultList().forEach(tuple ->
+                      ids.put(
+                              ((Integer) ((Tuple)tuple).get("id")).intValue(),
+                              ((Tuple)tuple).get("fingerprint") == null ? "" :  ((String) ((Tuple)tuple).get("fingerprint")).toString()
+                      )
+              );
+      List<Integer> datasetIDs = ids.keySet().stream().collect(Collectors.toList());
+      if( clearDatapoints ) {
+         DataPointDAO.delete("dataset.id in ?1", datasetIDs);
+      }
+      ChangeDAO.delete("dataset.id in ?1 AND confirmed = false", datasetIDs);
       if (!ids.isEmpty()) {
          // Due to RLS policies we cannot add a record to a dataset we don't own
-         logCalculationMessage(testId, ids.get(0), PersistentLogDAO.INFO, "Starting recalculation of %d runs.", ids.size());
+         logCalculationMessage(testId, datasetIDs.get(0) , PersistentLogDAO.INFO, "Starting recalculation of %d runs.", ids.size());
       }
       return ids;
    }
@@ -1119,13 +1163,13 @@ public class AlertingServiceImpl implements AlertingService {
    @Override
    public List<ChangeDetection> defaultChangeDetectionConfigs() {
       ChangeDetectionDAO lastDatapoint = new ChangeDetectionDAO();
-      lastDatapoint.model = RelativeDifferenceChangeDetectionModel.NAME;
+      lastDatapoint.model = ChangeDetectionModelType.names.RELATIVE_DIFFERENCE;
       lastDatapoint.config = JsonNodeFactory.instance.objectNode()
-            .put("window", 1).put("model", RelativeDifferenceChangeDetectionModel.NAME).put("filter", "mean").put("threshold", 0.2).put("minPrevious", 5);
+            .put("window", 1).put("model", ChangeDetectionModelType.names.RELATIVE_DIFFERENCE).put("filter", "mean").put("threshold", 0.2).put("minPrevious", 5);
       ChangeDetectionDAO floatingWindow = new ChangeDetectionDAO();
-      floatingWindow.model = RelativeDifferenceChangeDetectionModel.NAME;
+      floatingWindow.model = ChangeDetectionModelType.names.RELATIVE_DIFFERENCE;
       floatingWindow.config = JsonNodeFactory.instance.objectNode()
-            .put("window", 5).put("model", RelativeDifferenceChangeDetectionModel.NAME).put("filter", "mean").put("threshold", 0.1).put("minPrevious", 5);
+            .put("window", 5).put("model", ChangeDetectionModelType.names.RELATIVE_DIFFERENCE).put("filter", "mean").put("threshold", 0.1).put("minPrevious", 5);
       return Arrays.asList(lastDatapoint, floatingWindow).stream().map(ChangeDetectionMapper::from).collect(Collectors.toList());
    }
 
@@ -1292,10 +1336,14 @@ public class AlertingServiceImpl implements AlertingService {
    // Note: this class must be public - otherwise when this is used as a parameter to
    // a method in AlertingServiceImpl the interceptors would not be invoked.
    public static class Recalculation {
-      List<Integer> datasets = Collections.emptyList();
+      Map<Integer, String> datasets = Collections.emptyMap();
       int progress;
       boolean done;
       public int errors;
+
+      boolean lastDatapoint;
+      boolean clearDatapoints;
+
       Map<Integer, DatasetDAO.Info> datasetsWithoutValue = new HashMap<>();
    }
 

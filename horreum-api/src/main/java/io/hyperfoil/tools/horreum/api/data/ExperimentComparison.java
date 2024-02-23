@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.data;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
@@ -10,7 +11,7 @@ public class ExperimentComparison {
 
     @NotNull
     @JsonProperty( required = true )
-    @Schema(description = "Name of comparison model", example = "relativeDifference")
+    @Schema(description = "Name of comparison model", example = ChangeDetectionModelType.names.RELATIVE_DIFFERENCE)
     public String model;
     @NotNull
     @JsonProperty( required = true )

@@ -20,7 +20,6 @@ import java.util.function.Consumer;
 @ApplicationScoped
 public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionModel {
 
-    public static final String NAME = "relativeDifference";
     private static final Logger log = Logger.getLogger(RelativeDifferenceChangeDetectionModel.class);
 
     @Inject
@@ -28,7 +27,7 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
 
     @Override
     public ConditionConfig config() {
-        ConditionConfig conditionConfig = new ConditionConfig(NAME, "Relative difference of means",
+        ConditionConfig conditionConfig = new ConditionConfig(ChangeDetectionModelType.names.RELATIVE_DIFFERENCE, "Relative difference of means",
                 "This is a generic filter that splits the dataset into two subsets: the 'floating window' " +
                         "and preceding datapoints. It calculates the mean of preceding datapoints and applies " +
                         "the 'filter' function on the window of last datapoints; it compares these two values and " +
@@ -48,7 +47,7 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
                 .addComponent("filter", new ConditionConfig.EnumComponent("mean").add("mean", "Mean value").add("min", "Minimum value").add("max", "Maximum value"),
                         "Aggregation function for the floating window",
                         "Function used to aggregate datapoints from the floating window.");
-        conditionConfig.defaults.put("model", new TextNode(NAME));
+        conditionConfig.defaults.put("model", new TextNode(ChangeDetectionModelType.names.RELATIVE_DIFFERENCE));
         return conditionConfig;
     }
 
@@ -128,5 +127,10 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
         }
 
 
+    }
+
+    @Override
+    public ModelType getType() {
+        return ModelType.CONTINOUS;
     }
 }

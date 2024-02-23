@@ -62,6 +62,7 @@ public interface AlertingService {
    void recalculateDatapoints(@Parameter(required = true) @QueryParam("test") int testId,
                               @QueryParam("notify") boolean notify,
                               @QueryParam("debug") boolean debug,
+                              @QueryParam("clear") Boolean clearDatapoints,
                               @QueryParam("from") Long from, @QueryParam("to") Long to);
 
    @GET

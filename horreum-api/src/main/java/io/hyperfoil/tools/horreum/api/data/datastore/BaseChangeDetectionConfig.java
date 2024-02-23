@@ -16,5 +16,4 @@ public abstract class BaseChangeDetectionConfig {
         this.builtIn = builtIn;
     }
 
-    public abstract String validateConfig();
 }

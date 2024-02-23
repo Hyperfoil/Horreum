@@ -5,6 +5,8 @@ import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 public class FixedThresholdDetectionConfig extends BaseChangeDetectionConfig {
+    @Schema(type = SchemaType.STRING, required = true, enumeration = { ChangeDetectionModelType.names.FIXED_THRESHOLD })
+    public String model;
     @Schema(type = SchemaType.OBJECT, required = true,
             description = "Lower bound for acceptable datapoint values")
     public FixThresholdConfig min;
@@ -12,8 +14,4 @@ public class FixedThresholdDetectionConfig extends BaseChangeDetectionConfig {
             description = "Upper bound for acceptable datapoint values")
     public FixThresholdConfig max;
 
-    @Override
-    public String validateConfig() {
-        return null;
-    }
 }

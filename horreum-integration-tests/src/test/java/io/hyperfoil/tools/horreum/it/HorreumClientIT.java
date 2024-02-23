@@ -18,6 +18,7 @@ import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
@@ -238,7 +239,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             variable.order = 0;
             variable.labels = Collections.singletonList("throughput");
             ChangeDetection changeDetection = new ChangeDetection();
-            changeDetection.model = "relativeDifference";
+            changeDetection.model = ChangeDetectionModelType.names.RELATIVE_DIFFERENCE;
 
             changeDetection.config = (ObjectNode) mapper.readTree("{" +
                     "          \"window\": 1," +

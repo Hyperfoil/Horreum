@@ -19,19 +19,18 @@ import java.util.function.Consumer;
 @ApplicationScoped
 public class FixedThresholdModel implements ChangeDetectionModel {
    private static final Logger log = Logger.getLogger(FixedThresholdModel.class);
-   public static final String NAME = "fixedThreshold";
 
    @Inject
    ObjectMapper mapper;
 
    @Override
    public ConditionConfig config() {
-      ConditionConfig conditionConfig = new ConditionConfig(NAME, "Fixed Threshold", "This model checks that the datapoint value is within fixed bounds.")
+      ConditionConfig conditionConfig = new ConditionConfig(ChangeDetectionModelType.names.FIXED_THRESHOLD, "Fixed Threshold", "This model checks that the datapoint value is within fixed bounds.")
               .addComponent("min", new ConditionConfig.NumberBound(), "Minimum", "Lower bound for acceptable datapoint values.")
               .addComponent("max", new ConditionConfig.NumberBound(), "Maximum", "Upper bound for acceptable datapoint values.");
-      conditionConfig.defaults.put("model", new TextNode(NAME));
-
+      conditionConfig.defaults.put("model", new TextNode(ChangeDetectionModelType.names.FIXED_THRESHOLD));
       return conditionConfig;
+
    }
 
    @Override
@@ -71,5 +70,8 @@ public class FixedThresholdModel implements ChangeDetectionModel {
 
    }
 
-
+   @Override
+   public ModelType getType() {
+      return ModelType.CONTINOUS;
+   }
 }

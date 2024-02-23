@@ -7,9 +7,6 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
  * Concrete configuration type for io.hyperfoil.tools.horreum.changedetection.FixedThresholdModel
  */
 public class FixThresholdConfig {
-    @Schema(type = SchemaType.STRING, required = true, example = "fixedThreshold",
-            description = "model descriminator")
-    public static final String model = "fixedThreshold";
     @Schema(type = SchemaType.INTEGER, required = true, example = "95",
             description = "Threshold Value")
     public Double value;

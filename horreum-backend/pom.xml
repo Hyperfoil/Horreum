@@ -11,6 +11,12 @@
     <packaging>jar</packaging>
     <name>Horreum Backend</name>
 
+    <properties>
+        <excludeTags>CiTests</excludeTags>
+    </properties>
+
+
+
     <dependencies>
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
@@ -253,6 +259,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
                 <configuration>
+                    <excludedGroups>${excludeTags}</excludedGroups>
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
@@ -276,6 +283,14 @@
     </build>
 
     <profiles>
+
+       <profile>
+            <id>ci</id>
+            <properties>
+                <excludeTags></excludeTags>
+            </properties>
+        </profile>
+
         <profile>
             <id>do-release</id>
             <properties>

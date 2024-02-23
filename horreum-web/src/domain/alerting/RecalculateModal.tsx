@@ -54,6 +54,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
     const { alerting } = useContext(AppContext) as AppContextType;
     const [progress, setProgress] = useState(-1)
     const [debug, setDebug] = useState(false)
+    const [clearDatapoints, setClearDatapoints] = useState(true)
     const [timeRange, setTimeRange] = useState<TimeRange>()
     const timer = useRef<number>()
     const [result, setResult] = useState<DatapointRecalculationStatus>()
@@ -85,9 +86,11 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
     const timeRangeOptions: TimeRange[] = useMemo(
         () => [
             { toString: () => "all" },
+            { from: Date.now() -  15_811_200_000, to: undefined, toString: () => "last 6 months" },
+            { from: Date.now() -   7_948_800_000, to: undefined, toString: () => "last 3 months" },
             { from: Date.now() - 31 * 86_400_000, to: undefined, toString: () => "last month" },
-            { from: Date.now() - 7 * 86_400_000, to: undefined, toString: () => "last week" },
-            { from: Date.now() - 86_400_000, to: undefined, toString: () => "last 24 hours" },
+            { from: Date.now() -  7 * 86_400_000, to: undefined, toString: () => "last week" },
+            { from: Date.now() -      86_400_000, to: undefined, toString: () => "last 24 hours" },
         ],
         []
     )
@@ -105,9 +108,9 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
                                   key={1}
                                   variant="primary"
                                   onClick={() => {
-                                      setProgress(0)
                                       alertingApi.recalculateDatapoints(
                                           testId,
+                                          clearDatapoints,
                                           debug,
                                           timeRange?.from,
                                           false,
@@ -122,6 +125,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
                                               alerting.dispatchError(error,"RECALCULATION", "Failed to start recalculation")
                                           }
                                       )
+                                      setProgress(0)
                                   }}
                               >
                                   {recalculate}
@@ -143,8 +147,11 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
                         <FormGroup label="Runs from:" fieldId="timeRange">
                             <TimeRangeSelect selection={timeRange} onSelect={setTimeRange} options={timeRangeOptions} />
                         </FormGroup>
-                        <FormGroup label="Debug logs:" fieldId="debug">
-                            <Checkbox id="debug" isChecked={debug} onChange={(_event, val) => setDebug(val)} label="Write debug logs" />
+                        <FormGroup label="Recalculate Datpoints:" fieldId="recalcDatapoints">
+                            <Checkbox id="recalcDatapoints" isChecked={clearDatapoints} onChange={(_event, val) => setClearDatapoints(val)} />
+                        </FormGroup>
+                        <FormGroup label="Save Debug logs:" fieldId="debug">
+                            <Checkbox id="debug" isChecked={debug} onChange={(_event, val) => setDebug(val)}/>
                         </FormGroup>
                     </Form>
                 )}

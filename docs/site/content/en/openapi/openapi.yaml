@@ -2465,16 +2465,19 @@ components:
           oneOf:
           - $ref: '#/components/schemas/RelativeDifferenceDetectionConfig'
           - $ref: '#/components/schemas/FixedThresholdDetectionConfig'
+          - $ref: '#/components/schemas/EDivisiveDetectionConfig'
           discriminator:
             propertyName: model
             mapping:
               relativeDifference: '#/components/schemas/RelativeDifferenceDetectionConfig'
               fixedThreshold: '#/components/schemas/FixedThresholdDetectionConfig'
+              eDivisive: '#/components/schemas/EDivisiveDetectionConfig'
     ChangeDetectionModelType:
       description: Type of Change Detection Model
       enum:
       - FIXED_THRESHOLD
       - RELATIVE_DIFFERENCE
+      - EDIVISIVE
       type: string
     ComparisonResult:
       description: Result of performing a Comparison
@@ -2812,6 +2815,19 @@ components:
       - ELASTICSEARCH
       type: string
       example: ELASTICSEARCH
+    EDivisiveDetectionConfig:
+      required:
+      - builtIn
+      - model
+      type: object
+      properties:
+        builtIn:
+          description: Built In
+          type: boolean
+        model:
+          enum:
+          - eDivisive
+          type: string
     ElasticsearchDatastoreConfig:
       description: Type of backend datastore
       required:
@@ -3085,6 +3101,7 @@ components:
     FixedThresholdDetectionConfig:
       required:
       - builtIn
+      - model
       - min
       - max
       type: object
@@ -3092,6 +3109,10 @@ components:
         builtIn:
           description: Built In
           type: boolean
+        model:
+          enum:
+          - fixedThreshold
+          type: string
         min:
           description: Lower bound for acceptable datapoint values
           type: object
@@ -3520,6 +3541,7 @@ components:
     RelativeDifferenceDetectionConfig:
       required:
       - builtIn
+      - model
       - filter
       - window
       - threshold
@@ -3529,6 +3551,10 @@ components:
         builtIn:
           description: Built In
           type: boolean
+        model:
+          enum:
+          - relativeDifference
+          type: string
         filter:
           description: Relative Difference Detection filter
           type: string
