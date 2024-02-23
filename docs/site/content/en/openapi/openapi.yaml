@@ -2747,6 +2747,9 @@ components:
           type: string
         evaluationPath:
           type: string
+        schemaPath:
+          type: string
+          deprecated: true
         schemaLocation:
           type: string
         instanceLocation:

@@ -28,7 +28,7 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
                     ),
                     e.error.type,
                     <code>{e.error.path}</code>,
-                    <code>{e.error.schemaLocation}</code>,
+                    <code>{e.error.schemaLocation ?? e.error.schemaPath }</code>,
                     <code>{e.error.arguments}</code>,
                     e.error.message,
                 ],
@@ -39,7 +39,7 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
         <Table
             aria-label="validation-errors"
             variant="compact"
-            cells={["Schema", "Type", "Path", "SchemaPath", "Arguments", "Message"]}
+            cells={["Schema", "Type", "Path", "Schema Location", "Arguments", "Message"]}
             rows={rows}
         >
             <TableHeader />
