@@ -2958,13 +2958,42 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FingerprintValue'
+    FixThreshold:
+      required:
+      - value
+      - enabled
+      - inclusive
+      type: object
+      properties:
+        value:
+          format: int32
+          description: Threshold Value
+          type: integer
+          example: 95
+        enabled:
+          description: Threshold enabled/disabled
+          type: boolean
+          example: true
+        inclusive:
+          description: Is threshold inclusive of defined value?
+          type: boolean
+          example: false
     FixedThresholdDetection:
+      required:
+      - min
+      - max
       type: object
       properties:
         min:
-          $ref: '#/components/schemas/Threshold'
+          description: Lower bound for acceptable datapoint values
+          type: object
+          allOf:
+          - $ref: '#/components/schemas/FixThreshold'
         max:
-          $ref: '#/components/schemas/Threshold'
+          description: Upper bound for acceptable datapoint values
+          type: object
+          allOf:
+          - $ref: '#/components/schemas/FixThreshold'
     GithubIssueCommentAction:
       type: object
       properties:
@@ -3346,19 +3375,34 @@ components:
           type: integer
           example: 186
     RelativeDifferenceDetection:
+      required:
+      - filter
+      - window
+      - threshold
+      - minPrevious
       type: object
       properties:
         filter:
+          description: Relative Difference Detection filter
           type: string
+          example: mean
         window:
           format: int32
+          description: Number of most recent datapoints used for aggregating the value
+            for comparison.
           type: integer
+          example: 5
         threshold:
           format: double
+          description: Maximum difference between the aggregated value of last <window>
+            datapoints and the mean of preceding values.
           type: number
+          example: 0.2
         minPrevious:
           format: int32
+          description: Minimal number of preceding datapoints
           type: integer
+          example: 5
     ReportComponent:
       description: Report Component
       required:
@@ -4319,16 +4363,6 @@ components:
           description: Token description
           type: string
           example: my reporting service token
-    Threshold:
-      type: object
-      properties:
-        value:
-          format: int32
-          type: integer
-        enabled:
-          type: boolean
-        inclusive:
-          type: boolean
     TransformationLog:
       description: Transformation Log
       required:

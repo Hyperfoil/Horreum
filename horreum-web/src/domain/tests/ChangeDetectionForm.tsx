@@ -267,6 +267,10 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                     // convert nulls to undefined
                     if (!v.group) v.group = undefined
                 })
+                //hack to remove undefined properties from the object, the openapi generator creates a changeDetection.config that contains *ALL* keys
+                //from *ALL* models.
+                // THIS IS DEPENDENT ON THE JSON STRUCTURE RETURNED BY THE API `variable.changeDetection.config`
+                response.forEach(variable => variable.changeDetection.forEach(changeDetection => {Object.keys(changeDetection.config).forEach(key => changeDetection.config[key] === undefined && delete changeDetection.config[key])} ))
                 setVariables(response)
                 if (response.length > 0) {
                     setSelectedVariable(response[0])
@@ -280,8 +284,15 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
         alertingApi.changeDetectionModels().then(setChangeDetectionModels, error =>
             alerting.dispatchError(error, "FETCH_MODELS", "Failed to fetch available change detection models.")
         )
-        alertingApi.defaultChangeDetectionConfigs().then(setDefaultChangeDetectionConfigs, error =>
-            alerting.dispatchError(error, "FETCH_MODELS", "Failed to fetch available change detection models.")
+        alertingApi.defaultChangeDetectionConfigs().then(configs => {
+                //hack to remove undefined properties from the object, the openapi generator creates a changeDetection.config that contains *ALL* keys
+                //from *ALL* models.
+                // THIS IS DEPENDENT ON THE JSON STRUCTURE RETURNED BY THE API `variable.changeDetection.config`
+                configs.forEach(changeDetection => {Object.keys(changeDetection.config).forEach(key => changeDetection.config[key] === undefined && delete changeDetection.config[key])} );
+
+                setDefaultChangeDetectionConfigs(configs)
+            }, error =>
+                alerting.dispatchError(error, "FETCH_MODELS", "Failed to fetch available change detection models.")
         )
     }, [])
     const isTester = useTester(test?.owner || "__no_owner__")
