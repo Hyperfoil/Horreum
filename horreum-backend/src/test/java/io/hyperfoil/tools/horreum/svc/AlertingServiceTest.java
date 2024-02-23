@@ -12,6 +12,7 @@ import java.util.stream.IntStream;
 import io.hyperfoil.tools.horreum.api.alerting.*;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
+import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 import io.restassured.common.mapper.TypeRef;
@@ -202,15 +203,6 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(run6, changeEvent3.change.dataset.runId);
    }
 
-   private <T> void testSerialization(T event, Class<T> eventClass) {
-      // test serialization and deserialization
-      JsonNode changeJson = Util.OBJECT_MAPPER.valueToTree(event);
-      try {
-         Util.OBJECT_MAPPER.treeToValue(changeJson, eventClass);
-      } catch (JsonProcessingException e) {
-         throw new AssertionError("Cannot deserialize " + event + " from " + changeJson.toPrettyString(), e);
-      }
-   }
 
    @org.junit.jupiter.api.Test
    public void testChangeDetectionWithFingerprint(TestInfo info) throws InterruptedException {
@@ -248,14 +240,6 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertNotNull(changeEvent2);
       assertEquals(run14, changeEvent2.change.dataset.runId);
       assertEquals(run14, changeEvent2.dataset.runId);
-   }
-
-   private DataPoint assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
-      DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
-      assertNotNull(dpe);
-      assertEquals(value, dpe.dataPoint.value);
-      testSerialization(dpe, DataPoint.Event.class);
-      return dpe.dataPoint;
    }
 
    @org.junit.jupiter.api.Test
@@ -606,7 +590,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
       ChangeDetection rd = new ChangeDetection();
-      rd.model = FixedThresholdModel.NAME;
+      rd.model = ChangeDetectionModelType.names.FIXED_THRESHOLD;
       ObjectNode config = JsonNodeFactory.instance.objectNode();
       config.putObject("min").put("value", 3).put("enabled", true).put("inclusive", true);
       config.putObject("max").put("value", 6).put("enabled", true).put("inclusive", false);
@@ -664,10 +648,13 @@ public class AlertingServiceTest extends BaseServiceTest {
       // The DataSets will be recalculated based on DataSet.start, not DataPoint.timestamp
       recalculateDatapoints(test.id);
       DataPoint.Event dp22 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(dp22);
       assertEquals(Instant.ofEpochSecond(1662023777), dp22.dataPoint.timestamp);
       DataPoint.Event dp21 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(dp21);
       assertEquals(Instant.ofEpochSecond(1662023776), dp21.dataPoint.timestamp);
       DataPoint.Event dp23 = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(dp23);
       assertEquals(Instant.ofEpochSecond(1662023778), dp23.dataPoint.timestamp);
 
       setChangeDetectionTimeline(test, Arrays.asList("timestamp", "value"), "({ timestamp, value }) => timestamp");
@@ -780,7 +767,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       ChangeDetection problematicChangeDetection = new ChangeDetection();
       problematicChangeDetection.id = -1; //UI typically sets this value
-      problematicChangeDetection.model = RelativeDifferenceChangeDetectionModel.NAME;
+      problematicChangeDetection.model = ChangeDetectionModelType.names.RELATIVE_DIFFERENCE;
       problematicChangeDetection.config = JsonNodeFactory.instance.objectNode().put("threshold", 0.2).put("minPrevious", 2).put("window", 2).put("filter", "mean");
       List<String> labels = Collections.singletonList("foobar");
       Set<ChangeDetection> cdSet = Collections.singleton(problematicChangeDetection);

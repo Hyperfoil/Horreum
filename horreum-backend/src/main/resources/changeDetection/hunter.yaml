@@ -1,0 +1,10 @@
+tests:
+  horreum:
+    type: csv
+    file: tests/resources/horreum.csv
+    time_column: timestamp
+    metrics: [kpi]
+    attributes: [datasetid]
+    csv_options:
+      delimiter: ","
+      quote_char: "\""

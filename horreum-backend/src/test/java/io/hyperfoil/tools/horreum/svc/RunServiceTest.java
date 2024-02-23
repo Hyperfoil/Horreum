@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
+import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
@@ -29,6 +30,7 @@ import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.restassured.response.Response;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.core.HttpHeaders;
 
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
@@ -1025,7 +1027,7 @@ public class RunServiceTest extends BaseServiceTest {
          l.name = "throughput";
          variable.labels.add(l.name);
          ChangeDetection changeDetection = new ChangeDetection();
-         changeDetection.model = "relativeDifference";
+         changeDetection.model = ChangeDetectionModelType.names.RELATIVE_DIFFERENCE;
 
          changeDetection.config = (ObjectNode) mapper.readTree("{" +
                  "          \"window\": 1," +

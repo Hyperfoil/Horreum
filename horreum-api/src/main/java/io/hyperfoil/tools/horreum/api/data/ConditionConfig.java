@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import jakarta.validation.constraints.NotNull;
 
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
@@ -16,7 +17,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 @Schema(type = SchemaType.OBJECT, description = "A configuration object for Change detection models")
 public class ConditionConfig {
    @NotNull
-   @Schema(description = "Name of Change detection model", example = "fixedThreshold")
+   @Schema(description = "Name of Change detection model", example = ChangeDetectionModelType.names.FIXED_THRESHOLD)
    public String name;
    @NotNull
    @Schema(description = "UI name for change detection model", example = "Fixed Threshold")

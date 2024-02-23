@@ -20,11 +20,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
+import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
+import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.report.ReportComponent;
 import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
@@ -748,7 +751,7 @@ public class BaseServiceTest {
 
    protected ChangeDetection addChangeDetectionVariable(Test test, double threshold, int window, int schemaId) {
       ChangeDetection cd = new ChangeDetection();
-      cd.model = RelativeDifferenceChangeDetectionModel.NAME;
+      cd.model = ChangeDetectionModelType.names.RELATIVE_DIFFERENCE;
       cd.config = JsonNodeFactory.instance.objectNode().put("threshold", threshold).put("minPrevious", window).put("window", window).put("filter", "mean");
       setTestVariables(test, "Value", new Label("value", schemaId), cd);
       return cd;
@@ -1042,5 +1045,23 @@ public class BaseServiceTest {
           .extract()
           .body()
           .as(TestService.TestListing.class);
+   }
+
+   protected DataPoint assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
+      DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
+      assertNotNull(dpe);
+      assertEquals(value, dpe.dataPoint.value);
+      testSerialization(dpe, DataPoint.Event.class);
+      return dpe.dataPoint;
+   }
+
+   protected <T> void testSerialization(T event, Class<T> eventClass) {
+      // test serialization and deserialization
+      JsonNode changeJson = Util.OBJECT_MAPPER.valueToTree(event);
+      try {
+         Util.OBJECT_MAPPER.treeToValue(changeJson, eventClass);
+      } catch (JsonProcessingException e) {
+         throw new AssertionError("Cannot deserialize " + event + " from " + changeJson.toPrettyString(), e);
+      }
    }
 }
