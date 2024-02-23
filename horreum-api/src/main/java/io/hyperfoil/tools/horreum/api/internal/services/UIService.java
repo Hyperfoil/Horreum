@@ -22,7 +22,7 @@ public interface UIService {
 
     @POST
     @Path("view")
-    View updateView(@RequestBody(required = true) View view);
+    int updateView(@RequestBody(required = true) View view);
 
     @POST
     @Path("views")
