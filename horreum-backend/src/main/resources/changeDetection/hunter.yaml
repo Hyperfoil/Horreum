@@ -1,0 +1,32 @@
+# Please place this file in `~/.hunter/hunter.yaml` and provide the missing config values:
+fallout:
+  url: https://fallout.sjc.dsinternal.org/
+  user: ${FALLOUT_USER}
+  token: ${FALLOUT_OAUTH_TOKEN}
+
+graphite:
+  url: http://history.sjc.dsinternal.org/
+  suffixes:
+    - ebdse_read.result
+    - ebdse_write.result
+    - Real_select_trade.ok
+    - Real_insert_trade.ok
+    - nb_bench.main.result-success
+    - stress-insert_standard.st
+    - stress-read_standard-800.st
+
+grafana:
+  url: http://history.datastax.lan:3000/
+  user: ${GRAFANA_USER}
+  password: ${GRAFANA_PASSWORD}
+
+tests:
+  horreum:
+    type: csv
+    file: tests/resources/horreum.csv
+    time_column: timestamp
+    metrics: [kpi]
+    attributes: [datasetid]
+    csv_options:
+      delimiter: ","
+      quote_char: "\""

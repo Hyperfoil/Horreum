@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.api.alerting;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.hyperfoil.tools.horreum.api.data.changeDetection.EDivisiveDetectionConfig;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.FixedThresholdDetectionConfig;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.RelativeDifferenceDetectionConfig;
 import jakarta.validation.constraints.NotNull;
@@ -21,11 +22,13 @@ public class ChangeDetection {
     @Schema(type = SchemaType.OBJECT, discriminatorProperty = "model",
             discriminatorMapping = {
                     @DiscriminatorMapping(schema = RelativeDifferenceDetectionConfig.class, value = "relativeDifference"),
-                    @DiscriminatorMapping(schema = FixedThresholdDetectionConfig.class, value = "fixedThreshold")
+                    @DiscriminatorMapping(schema = FixedThresholdDetectionConfig.class, value = "fixedThreshold"),
+                    @DiscriminatorMapping(schema = EDivisiveDetectionConfig.class, value = "hunterEDivisive")
             },
         oneOf = {
                 RelativeDifferenceDetectionConfig.class,
-                FixedThresholdDetectionConfig.class
+                FixedThresholdDetectionConfig.class,
+                EDivisiveDetectionConfig.class
         }
     )
     public ObjectNode config;

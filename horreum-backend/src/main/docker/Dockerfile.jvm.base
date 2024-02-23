@@ -1,3 +1,4 @@
 FROM registry.access.redhat.com/ubi9/openjdk-17
 COPY src/main/resources/horreum.sh /deployments/
 COPY src/main/resources/k8s-setup.sh /deployments/
+RUN pipx install git+ssh://git@github.com/datastax-labs/hunter

@@ -204,15 +204,6 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertEquals(run6, changeEvent3.change.dataset.runId);
    }
 
-   private <T> void testSerialization(T event, Class<T> eventClass) {
-      // test serialization and deserialization
-      JsonNode changeJson = Util.OBJECT_MAPPER.valueToTree(event);
-      try {
-         Util.OBJECT_MAPPER.treeToValue(changeJson, eventClass);
-      } catch (JsonProcessingException e) {
-         throw new AssertionError("Cannot deserialize " + event + " from " + changeJson.toPrettyString(), e);
-      }
-   }
 
    @org.junit.jupiter.api.Test
    public void testChangeDetectionWithFingerprint(TestInfo info) throws InterruptedException {
@@ -250,14 +241,6 @@ public class AlertingServiceTest extends BaseServiceTest {
       assertNotNull(changeEvent2);
       assertEquals(run14, changeEvent2.change.dataset.runId);
       assertEquals(run14, changeEvent2.dataset.runId);
-   }
-
-   private DataPoint assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
-      DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
-      assertNotNull(dpe);
-      assertEquals(value, dpe.dataPoint.value);
-      testSerialization(dpe, DataPoint.Event.class);
-      return dpe.dataPoint;
    }
 
    @org.junit.jupiter.api.Test
