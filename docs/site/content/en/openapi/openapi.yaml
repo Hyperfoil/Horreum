@@ -1956,43 +1956,6 @@ paths:
           default: true
           type: boolean
         example: false
-      - name: filter
-        in: query
-        description: either a required json sub-document or path expression
-        schema:
-          default: "{}"
-          type: string
-        example:
-          key: requiredValue
-      - name: sort
-        in: query
-        description: label name for sorting
-        schema:
-          default: ""
-          type: string
-      - name: direction
-        in: query
-        description: either Ascending or Descending
-        schema:
-          default: Ascending
-          type: string
-        example: count
-      - name: limit
-        in: query
-        description: the maximum number of results to include
-        schema:
-          format: int32
-          default: 2147483647
-          type: integer
-        example: 10
-      - name: page
-        in: query
-        description: which page to skip to when using a limit
-        schema:
-          format: int32
-          default: 0
-          type: integer
-        example: 2
       responses:
         "200":
           description: OK
