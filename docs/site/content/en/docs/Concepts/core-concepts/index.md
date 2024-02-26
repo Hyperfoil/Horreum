@@ -117,9 +117,8 @@ A `Profile` consists of:
 ## JSON validation schema
 An *optional* schema added to a `Test` to validate uploaded `Run` JSON data.
 
+## Report Configuration
+In Horreum a `Report Configuration` is used for compiling a summary of information to be displayed using tables.
 
-
-
-
-
-
+## Report
+A `Report` is an instance of a `Report Configuration`. Creation date and time is used for differentiating each `Report`.
