@@ -56,7 +56,8 @@ export default function FoldersTree(props: FoldersTreeProps) {
             data={[root]}
             activeItems={activeItem ? [activeItem] : []}
             onSelect={(_, item) => {
-                props.onChange(item.id || "")
+                if (item.id)
+                    props.onChange(item.id)
             }}
             icon={<FolderIcon />}
             expandedIcon={<FolderOpenIcon />}

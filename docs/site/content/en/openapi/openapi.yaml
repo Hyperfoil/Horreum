@@ -1881,6 +1881,28 @@ paths:
         schema:
           type: string
         example: My Team Folder
+      - name: limit
+        in: query
+        description: limit the result count
+        schema:
+          default: 20
+          type: integer
+        example: 20
+      - name: page
+        in: query
+        description: 'filter by page number of a paginated list of '
+        schema:
+          default: 1
+          type: integer
+        example: 1
+      - name: direction
+        in: query
+        description: Sort direction
+        schema:
+          allOf:
+          - $ref: '#/components/schemas/SortDirection'
+          - default: Ascending
+        example: Ascending
       responses:
         "200":
           description: OK
@@ -4283,6 +4305,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/Datastore'
     TestListing:
+      required:
+      - tests
+      - count
       type: object
       properties:
         tests:
@@ -4290,6 +4315,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TestSummary'
+        count:
+          format: int64
+          description: Number of tests when pagination is ignored
+          type: integer
     TestQueryResult:
       required:
       - tests
