@@ -34,11 +34,9 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
-import org.jboss.resteasy.annotations.Query;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Path("/api/test")
@@ -87,15 +85,24 @@ public interface TestService {
                    @QueryParam("sort") @DefaultValue("name") String sort,
                    @QueryParam("direction") SortDirection direction);
 
+   public static final String DEFAULT_LIMIT = "20";
+   public static final String DEFAULT_PAGE = "1";
+
    @Path("summary")
    @GET
    @Operation(description="Retrieve a summary of Tests in a folder")
    @Parameters(value = {
            @Parameter(name = "roles", description = "\"__my\", \"__all\" or a comma delimited  list of roles", example = "__my"),
            @Parameter(name = "folder", description = "name of the Folder containing the Tests", example = "My Team Folder"),
+           @Parameter(name = "limit", description = "limit the result count", example = DEFAULT_LIMIT, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_LIMIT)),
+           @Parameter(name = "page", description = "filter by page number of a paginated list of ", example = DEFAULT_PAGE, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_PAGE)),
+           @Parameter(name = "direction", description = "Sort direction", example ="Ascending")
    }
    )
-   TestListing summary(@QueryParam("roles") String roles, @QueryParam("folder") String folder);
+   TestListing summary(@QueryParam("roles") String roles, @QueryParam("folder") String folder,
+                  @DefaultValue(DEFAULT_LIMIT) @QueryParam("limit") Integer limit,
+                  @DefaultValue(DEFAULT_PAGE) @QueryParam("page") Integer page,
+                  @DefaultValue("Ascending") @QueryParam("direction") SortDirection direction);
 
    @Path("folders")
    @GET
@@ -260,8 +267,15 @@ public interface TestService {
    void importTest(ObjectNode test);
 
    class TestListing {
+      public TestListing(){}
+
+      @JsonProperty(required = true)
       @Schema(description = "Array of Test Summaries")
       public List<TestSummary> tests;
+
+      @JsonProperty(required = true)
+      @Schema(description = "Number of tests when pagination is ignored")
+      public Long count;
    }
 
    @Schema(type = SchemaType.OBJECT, allOf = ProtectedType.class)
@@ -293,6 +307,8 @@ public interface TestService {
       @Schema(description="Datastore id",
               example = "1", required = true)
       public Integer datastoreId;
+
+      public TestSummary(){}
 
       public TestSummary(int id, String name, String folder, String description,
                          Number datasets, Number runs, String owner, Access access) {

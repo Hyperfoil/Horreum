@@ -23,7 +23,7 @@ import {
     Action, AllowedSite,
     Configuration,
     Middleware, RunSummary,
-    Schema,
+    Schema, type SortDirection,
     Test,
     TestListing, TestSummary, TestToken, Transformer, View, Watch,
 } from "./generated"
@@ -226,19 +226,20 @@ export function addUserOrTeam(id: number, userOrTeam: string, alerting: AlertCon
 export function deleteTest(id: number, alerting: AlertContextType) : Promise<void>{
     return apiCall(testApi._delete(id), alerting, "DELETE_TEST", "Failed to delete test " + id);
 }
-export function fetchTestsSummariesByFolder(alertingContext: AlertContextType, roles?: string, folder?: string): Promise<TestListing> {
-    return apiCall(testApi.summary(roles, folder), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
+export function fetchTestsSummariesByFolder(alertingContext: AlertContextType, direction?: SortDirection, folder?: string, limit?: number, page?: number, roles?: string): Promise<TestListing> {
+    return apiCall(testApi.summary(roles, folder, limit, page, direction), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
 }
 export function fetchFolders(alerting: AlertContextType): Promise<string[]> {
     return apiCall(testApi.folders(), alerting, "FETCH_FOLDERS", "Failed to fetch folders.");
 }
 
-export function fetchTestsSummary(alertingContext: AlertContextType,roles?: string, folder?: string) : Promise<TestListing> {
-    return apiCall(testApi.summary(roles, folder), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
+export function fetchTestsSummary(alertingContext: AlertContextType, roles?: string, folder?: string,
+                                  limit?: number, page?: number, direction?: SortDirection) : Promise<TestListing> {
+    return apiCall(testApi.summary(roles, folder, limit, page, direction), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
 }
 
 export function fetchTests(alertingContext: AlertContextType,roles?: string, folder?: string) : Promise<Test[]> {
-    return apiCall(testApi.summary(roles, folder), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
+    return apiCall(testApi.summary( roles, folder, undefined, undefined, undefined), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
         .then(summary => summary.tests?.map(t => mapTestSummaryToTest(t)) || [])
 }
 

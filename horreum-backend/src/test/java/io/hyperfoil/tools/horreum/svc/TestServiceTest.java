@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -23,8 +24,12 @@ import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.ViewComponent;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.restassured.common.mapper.TypeRef;
 import io.restassured.response.Response;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import org.apache.commons.collections4.functors.ComparatorPredicate;
+import org.hibernate.persister.collection.mutation.RowMutationOperations;
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
 
@@ -257,9 +262,11 @@ public class TestServiceTest extends BaseServiceTest {
 
 
       if (wipe) {
-         BlockingQueue<Test> events = eventConsumerQueue(Test.class, MessageBusChannels.TEST_DELETED, t -> (t.id == test.id));
+         BlockingQueue<Test> events = eventConsumerQueue(Test.class, MessageBusChannels.TEST_DELETED, t -> (true));
          deleteTest(test);
-         assertNotNull(events.poll(10, TimeUnit.SECONDS));
+         Test deleted = events.poll(10, TimeUnit.SECONDS);
+         assertNotNull(deleted);
+         assertEquals(test.id, deleted.id);
 
          TestUtil.eventually(() -> {
             em.clear();
@@ -387,6 +394,52 @@ public class TestServiceTest extends BaseServiceTest {
       assertEquals(9, values.get(0).values.size());
       assertEquals(7, values.get(1).values.size());
       assertEquals(84895.13d, values.get(1).values.get("Throughput 4 CPU").asDouble());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testPagination() {
+      int count = 50;
+      createTests(count, "acme");
+      try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
+         assertEquals(count, TestDAO.count());
+      }
+      int limit = 20;
+      TestService.TestListing listing = listTestSummary("__my", "", limit, 1, SortDirection.Ascending);
+      assertEquals(count, listing.count);
+      assertEquals(limit, listing.tests.size());
+      assertEquals("acme_00", listing.tests.get(0).name);
+      assertEquals("acme_19", listing.tests.get(19).name);
+      listing = listTestSummary(null, "*", limit, 1, SortDirection.Ascending);
+      assertEquals(count, listing.count);
+      assertEquals(limit, listing.tests.size());
+      assertEquals("acme_00", listing.tests.get(0).name);
+      assertEquals("acme_19", listing.tests.get(19).name);
+      listing = listTestSummary(null, "*", limit, 1, SortDirection.Ascending);
+      assertEquals(count, listing.count);
+      assertEquals(limit, listing.tests.size());
+      assertEquals("acme_00", listing.tests.get(0).name);
+      assertEquals("acme_19", listing.tests.get(19).name);
+      listing = listTestSummary("__all", "*", limit, 1, SortDirection.Ascending);
+      assertEquals(count, listing.count);
+      assertEquals(limit, listing.tests.size());
+      assertEquals("acme_00", listing.tests.get(0).name);
+      assertEquals("acme_19", listing.tests.get(19).name);
+
+      listing = listTestSummary("__my", "*", limit, 2, SortDirection.Ascending);
+      assertEquals(count, listing.count);
+      assertEquals(limit, listing.tests.size());
+      assertEquals("acme_20", listing.tests.get(0).name);
+      assertEquals("acme_39", listing.tests.get(19).name);
+
+      listing = listTestSummary("__my", "*", limit, 3, SortDirection.Ascending);
+      assertEquals(count, listing.count);
+      assertEquals(10, listing.tests.size());
+      assertEquals("acme_40", listing.tests.get(0).name);
+      assertEquals("acme_49", listing.tests.get(9).name);
+
+      listing = listTestSummary("__my", "foo", limit, 1, SortDirection.Ascending);
+      assertEquals(0, listing.count);
+      assertEquals(0, listing.tests.size());
    }
 
    private void addSubscription(Test test) {

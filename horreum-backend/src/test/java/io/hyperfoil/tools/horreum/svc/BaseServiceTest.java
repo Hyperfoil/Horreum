@@ -34,6 +34,7 @@ import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
+import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
@@ -218,6 +219,7 @@ public class BaseServiceTest {
       test.owner = TESTER_ROLES[0];
       test.transformers = new ArrayList<>();
       test.datastoreId = datastoreID;
+      test.folder = "";
       return test;
    }
 
@@ -1019,6 +1021,12 @@ public class BaseServiceTest {
       return array;
    }
 
+   protected void createTests(int count, String prefix) {
+      for (int i = 0; i < count; i += 1) {
+         createTest(new Test(createExampleTest(String.format( "%1$s_%2$02d",prefix, i))));
+      }
+   }
+
    protected DatasetService.DatasetList listTestDatasets(long id, SortDirection direction){
       StringBuilder url = new StringBuilder("/api/dataset/list/" + id);
       if (direction != null) {
@@ -1030,5 +1038,22 @@ public class BaseServiceTest {
           .statusCode(200)
           .extract()
           .as(DatasetService.DatasetList.class);
+   }
+
+   protected TestService.TestListing listTestSummary(String roles, String folder, int limit, int page, SortDirection direction){
+      StringBuilder url = new StringBuilder("/api/test/summary");
+      url.append( "?limit=").append(limit).append("&page=").append(page).append("&direction=").append(SortDirection.Ascending);
+      if (roles != null && !"".equals(roles))
+         url.append("&roles=").append(roles);
+      if (folder != null && !"".equals(folder))
+         url.append("&folder=").append(folder);
+
+      return jsonRequest()
+          .get(url.toString())
+          .then()
+          .statusCode(200)
+          .extract()
+          .body()
+          .as(TestService.TestListing.class);
    }
 }

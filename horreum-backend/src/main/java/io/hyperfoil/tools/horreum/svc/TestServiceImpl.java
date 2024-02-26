@@ -301,10 +301,9 @@ public class TestServiceImpl implements TestService {
    @Override
    @PermitAll
    @WithRoles
-   public TestListing summary(String roles, String folder) {
+   public TestListing summary(String roles, String folder, Integer limit, Integer page, SortDirection direction) {
       folder = normalizeFolderName(folder);
       StringBuilder testSql = new StringBuilder();
-      // TODO: materialize the counts in a table for quicker lookup
       testSql.append("WITH runs AS (SELECT testid, count(id) as count FROM run WHERE run.trashed = false OR run.trashed IS NULL GROUP BY testid), ");
       testSql.append("datasets AS (SELECT testid, count(id) as count FROM dataset GROUP BY testid) ");
       testSql.append("SELECT test.id,test.name,test.folder,test.description, COALESCE(datasets.count, 0) AS datasets, COALESCE(runs.count, 0) AS runs,test.owner,test.access ");
@@ -316,7 +315,8 @@ public class TestServiceImpl implements TestService {
          testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')");
          Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
       }
-      testSql.append(" ORDER BY test.name");
+      Util.addPaging(testSql, limit, page, "test.name", direction);
+
       org.hibernate.query.Query<TestSummary> testQuery = em.unwrap(Session.class).createNativeQuery(testSql.toString(), Tuple.class)
               .setTupleTransformer((tuples, aliases) ->
                       new TestSummary((int) tuples[0], (String) tuples[1], (String) tuples[2], (String) tuples[3],
@@ -328,7 +328,6 @@ public class TestServiceImpl implements TestService {
          Roles.addRolesParam(identity, testQuery, 2, roles);
       }
       List<TestSummary> summaryList = testQuery.getResultList();
-
       if ( ! identity.isAnonymous() ) {
          List<Integer> testIdSet = new ArrayList<>();
          Map<Integer, Set<String>> subscriptionMap = new HashMap<>();
@@ -356,9 +355,21 @@ public class TestServiceImpl implements TestService {
           summaryList.forEach(summary -> summary.watching = subscriptionMap.computeIfAbsent(summary.id, k -> Collections.emptySet()));
       }
 
-
+      if (folder == null){
+         folder = "";
+      }
       TestListing listing = new TestListing();
       listing.tests = summaryList;
+      StringBuilder countQuery = new StringBuilder();
+      List<String> ordinals = new ArrayList<>();
+      if (anyFolder) {
+         Roles.addRoles(identity, countQuery, roles, false, ordinals);
+      } else  {
+         ordinals.add(folder);
+         countQuery.append(" COALESCE(folder, '') IN (?1) ");
+         Roles.addRoles(identity, countQuery, roles, true, ordinals);
+      }
+      listing.count = TestDAO.count(countQuery.toString(), ordinals.toArray(new Object[]{}));
       return listing;
    }
 
