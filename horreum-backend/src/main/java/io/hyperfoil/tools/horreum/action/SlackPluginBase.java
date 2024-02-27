@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.action;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.concurrent.TimeUnit;
 
 import jakarta.enterprise.inject.Instance;
@@ -47,11 +49,17 @@ public abstract class SlackPluginBase {
          throw new IllegalArgumentException("Missing access token!");
       }
       log.infof("POST %s (%s): %s", path, token, payload.toString());
+      URL url;
+      try {
+         url = new URL(path);
+      } catch (MalformedURLException e) {
+         throw new IllegalArgumentException("URL cannot be parsed: " + path);
+      }
       RequestOptions options = new RequestOptions()
-            .setHost("slack.com")
-            .setPort(443)
-            .setURI("/api/chat.postMessage")
-            .setSsl(true);
+            .setHost(url.getHost())
+            .setPort(url.getPort())
+            .setURI(url.getPath())
+            .setSsl("https".equalsIgnoreCase(url.getProtocol()));
       return client.httpClient().request(HttpMethod.POST, options)
             .putHeader("Content-Type",
                   "application/json; charset=utf-8")

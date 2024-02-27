@@ -2,13 +2,12 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static io.hyperfoil.tools.horreum.test.TestUtil.eventually;
 import static io.restassured.RestAssured.given;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import io.hyperfoil.tools.horreum.action.SlackChannelMessageAction;
 import io.hyperfoil.tools.horreum.api.data.Action;
@@ -21,12 +20,8 @@ import jakarta.ws.rs.core.HttpHeaders;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import org.jboss.logging.Logger;
-import org.junit.Assert;
 import org.junit.jupiter.api.TestInfo;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -39,9 +34,6 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.http.ContentType;
-import io.restassured.response.Response;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -54,7 +46,7 @@ public class ActionServiceTest extends BaseServiceTest {
    Logger log = Logger.getLogger(ActionServiceTest.class);
 
    @Inject
-   ActionServiceImpl actionService;
+   private ActionServiceImpl actionService;
 
    @org.junit.jupiter.api.Test
    public void testFailingHttp(TestInfo testInfo) {
@@ -77,7 +69,8 @@ public class ActionServiceTest extends BaseServiceTest {
    public void testAddGlobalAction() {
       String responseType = addGlobalAction(AsyncEventChannels.TEST_NEW, "https://attacker.com")
             .then().statusCode(400).extract().header(HttpHeaders.CONTENT_TYPE);
-      // constraint violations are mapped to 400 + JSON response, we want explicit error
+      // constraint violations are mapped to 400 + JSON response, we want explicit
+      // error
       assertTrue(responseType.startsWith("text/plain")); // text/plain;charset=UTF-8
 
       addAllowedSite("https://example.com");
@@ -92,70 +85,72 @@ public class ActionServiceTest extends BaseServiceTest {
     * @param testInfo
     */
    @org.junit.jupiter.api.Test
-   public void testMessageBusAction(TestInfo testInfo) {
+   public void testSlackAction(TestInfo testInfo) {
       Test test = createTest(createExampleTest(getTestName(testInfo)));
 
-      String channel = "NOTACHANNEL";
+      Map<String, Integer> channels = Map.of(
+            "BADCHANNEL", 0,
+            "GOODCHANNEL", 1,
+            "BUSYCHANNEL", 429,
+            "ERRORCHANNEL", 403);
       String token = "BADTOKEN";
 
       // Build an Action JSON directly because Action DTO serialization will
-      // mask the secrets. (Arguably, since we want to provoke an error here,
-      // the masked "****" value would work just as well, but this code runs
-      // successfully if the channel and token are real.)
-      ObjectMapper mapper = new ObjectMapper();
-      ObjectNode config = mapper.createObjectNode()
-            .put("channel", channel).put("formatter", "testToSlack");
-      ObjectNode secrets = mapper.createObjectNode().put("token", token);
-      ObjectNode action = mapper.createObjectNode()
+      // mask the secrets.
+      ObjectNode config = Util.OBJECT_MAPPER.createObjectNode().put("formatter", "testToSlack");
+      ObjectNode secrets = Util.OBJECT_MAPPER.createObjectNode().put("token", token);
+      ObjectNode action_json = Util.OBJECT_MAPPER.createObjectNode()
             .put("id", -1)
-            .put("event", MessageBusChannels.TEST_NEW.name())
+            .put("event", AsyncEventChannels.TEST_NEW.name())
             .put("type", SlackChannelMessageAction.TYPE_SLACK_MESSAGE)
             .put("testId", test.id)
             .put("active", true)
             .put("runAlways", true);
+      action_json.set("config", config);
+      action_json.set("secrets", secrets);
+      for (Map.Entry<String, Integer> test_case : channels.entrySet()) {
+         config.put("channel", test_case.getKey());
+         Action action = jsonRequest().auth().oauth2(getAdminToken())
+               .contentType(ContentType.JSON).body(action_json)
+               .post("/api/action")
+               .then().statusCode(200)
+               .contentType(ContentType.JSON).extract().body().as(Action.class);
 
-      // `set` returns a JsonNode, which can't be `set` or `put`, so we do
-      // these outside the chain.
-      action.set("config", config);
-      action.set("secrets", secrets);
-      Action r = jsonRequest().auth().oauth2(getAdminToken())
-            .contentType(ContentType.JSON).body(action)
-            .post("/api/action")
-            .then().statusCode(200)
-            .contentType(ContentType.JSON).extract().body().as(Action.class);
+         // Send the new test to action service
+         actionService.onNewTest(test);
 
-      // send new test to action service
-      actionService.onNewTest(test);
-
-      log.infof("Waiting for action to run");
-      int errors = 0;
-      for (int i = 0; i < 10; i++) {
-         try {
-            Thread.sleep(1000);
-         } catch (InterruptedException e) {
+         // If we asking for a retry, wait for it to happen
+         if (test_case.getValue() == 413) {
+            log.infof("Expecting retry: wait for it ...");
+            try {
+               Thread.sleep(3);
+            } catch (InterruptedException e) {
+               log.infof("Beauty sleep interrupted");
+            }
          }
 
-         // Should these action errors be logged under dummyTest.id? The
-         // ActionServiceImpl handler seems to always log under its argument
-         // value, -1: but I still can't find them.
+         log.infof("Checking action %d results for %s", action.id, test_case.getKey());
+         int errors = 0;
+
          List<ActionLog> logs = jsonRequest().auth().oauth2(getTesterToken())
                .queryParam("level", PersistentLogDAO.ERROR).get("/api/log/action/-1")
                .then().statusCode(200)
                .contentType(ContentType.JSON).extract().body().jsonPath().getList(".", ActionLog.class);
-         log.infof("[%d] Retrieved %d log entries", i, logs.size());
+         log.infof("Retrieved %d log entries", logs.size());
          for (ActionLog l : logs) {
             if (l.type == SlackChannelMessageAction.TYPE_SLACK_MESSAGE) {
                log.infof("Found log for %d: %d, %s, %s: %s", l.testId, l.level, l.event, l.type, l.message);
                errors++;
             }
          }
+
+         // If only ...
+         // Assert.assertTrue("No slack action errors found", errors > 0);
+         log.infof("%s: found %d errors for %s on test %d", test_case.getKey(), errors,
+               SlackChannelMessageAction.TYPE_SLACK_MESSAGE, -1);
+
+         // Remove the action. (The test framework will remove the test.)
+         given().auth().oauth2(getAdminToken()).delete("/api/action/" + action.id);
       }
-      log.infof("Found %d errors for %s on test %d", errors, SlackChannelMessageAction.TYPE_SLACK_MESSAGE, -1);
-
-      // If only ...
-      // Assert.assertTrue("No slack action errors found", errors > 0);
-
-      // Remove the action. (The test framework will remove the test.)
-      given().auth().oauth2(getAdminToken()).delete("/api/action/" + r.id);
    }
 }

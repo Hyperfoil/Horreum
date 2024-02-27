@@ -2,12 +2,13 @@ package io.hyperfoil.tools.horreum.action;
 
 import static io.hyperfoil.tools.horreum.action.ActionUtil.replaceExpressions;
 
+import org.apache.http.HttpStatus;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -19,7 +20,6 @@ import io.vertx.core.json.JsonObject;
 public class SlackChannelMessageAction extends SlackPluginBase implements ActionPlugin {
    private static final Logger log = Logger.getLogger(SlackChannelMessageAction.class);
    public static final String TYPE_SLACK_MESSAGE = "slack-channel-message";
-   public static final String SLACK_PATH = "/api/chat.postMessage";
 
    @Override
    public String type() {
@@ -46,26 +46,26 @@ public class SlackChannelMessageAction extends SlackPluginBase implements Action
       // Channel and formatter selections can be expressions
       String formatter = replaceExpressions(config.path("formatter").asText(), json);
       String channel = replaceExpressions(config.path("channel").asText(), json);
+      String url = ConfigProvider.getConfig().getValue("horreum.action.slack.url", String.class);
 
       // Convert the payload object into markdown text based on formatter
       String comment = getFormatter(formatter).format(config, payload);
 
       // Construct the Slack message: a single text block with markdown formatting
-      ObjectMapper mapper = new ObjectMapper();
-      ObjectNode body = mapper.createObjectNode();
+      ObjectNode body = Util.OBJECT_MAPPER.createObjectNode();
       body.put("channel", channel);
-      ArrayNode blocks = mapper.createArrayNode();
+      ArrayNode blocks = Util.OBJECT_MAPPER.createArrayNode();
       body.set("blocks", blocks);
-      ObjectNode section = mapper.createObjectNode();
+      ObjectNode section = Util.OBJECT_MAPPER.createObjectNode();
       section.put("type", "section");
-      ObjectNode text = mapper.createObjectNode();
+      ObjectNode text = Util.OBJECT_MAPPER.createObjectNode();
       section.set("text", text);
       text.put("type", "mrkdwn");
       text.put("text", comment);
       blocks.add(section);
 
-      log.infof("Slack path %s, token %s, body %s", SLACK_PATH, token, body);
-      return post(SLACK_PATH, secrets, body)
+      log.infof("Slack URL %s, token %s, body %s", url, token, body);
+      return post(url, secrets, body)
             .onItem().transformToUni(response -> {
                if (response.statusCode() < 400) {
                   JsonObject status = response.bodyAsJsonObject();
@@ -77,12 +77,13 @@ public class SlackChannelMessageAction extends SlackPluginBase implements Action
                   }
                   return Uni.createFrom()
                         .item(String.format("Successfully(%d) posted to channel %s", response.statusCode(), channel));
-               } else if (response.statusCode() == 403 && response.getHeader("Retry-After") != null) {
+               } else if (response.statusCode() == HttpStatus.SC_TOO_MANY_REQUESTS
+                     && response.getHeader("Retry-After") != null) {
                   log.infof("Slack POST needs retry: %s (%s)", response.toString(), response.bodyAsString());
                   return retry(response, config, secrets, payload);
 
                } else {
-                  log.errorf("Slack POST failed: %s (%s)", response.toString(), response.bodyAsString());
+                  log.errorf("Slack POST failed: %s (%s)", response.statusCode(), response.bodyAsString());
                   return Uni.createFrom().failure(new RuntimeException(
                         String.format("Failed to post to channel %s, response %d: %s",
                               channel, response.statusCode(), response.bodyAsString())));
