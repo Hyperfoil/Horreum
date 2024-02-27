@@ -71,7 +71,7 @@
   "devDependencies": {
     "@types/node": "20.10.7",
     "@typescript-eslint/eslint-plugin": "5.62.0",
-    "@typescript-eslint/parser": "5.62.0",
+    "@typescript-eslint/parser": "6.21.0",
     "eslint": "8.49.0",
     "prettier": "3.1.1",
     "react-error-overlay": "6.0.11"
