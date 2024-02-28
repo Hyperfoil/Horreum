@@ -978,10 +978,10 @@ paths:
         examples:
           object:
             description: json object that must exist in the values object
-            value:
-              key: requiredValue
+            value: "{labelName:necessaryValue,...}"
           string:
-            description: valid jsonpath that returns null of not found (not predicates)
+            description: valid filtering jsonpath that returns null if not found (not
+              predicates)
             value: $.count ? (@ < 20 && @ > 10)
       - name: sort
         in: query
@@ -2056,8 +2056,14 @@ paths:
         schema:
           default: "{}"
           type: string
-        example:
-          key: requiredValue
+        examples:
+          object:
+            description: json object that must exist in the values object
+            value: "{labelName:necessaryValue,...}"
+          string:
+            description: valid filtering jsonpath that returns null if not found (not
+              predicates)
+            value: $.count ? (@ < 20 && @ > 10)
       - name: before
         in: query
         description: ISO-like date time string or epoch millis

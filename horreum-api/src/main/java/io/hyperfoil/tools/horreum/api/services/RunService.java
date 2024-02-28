@@ -104,8 +104,8 @@ public interface RunService {
     @Parameters(value = {
             @Parameter(name = "id", in =ParameterIn.PATH, description = "Run Id", example = "101"),
             @Parameter(name = "filter", description = "either a required json sub-document or path expression", examples = {
-                    @ExampleObject(name="object", value="{\"key\":\"requiredValue\"}", description = "json object that must exist in the values object"),
-                    @ExampleObject(name="string", value="$.count ? (@ < 20 && @ > 10)",description = "valid jsonpath that returns null of not found (not predicates)")
+                    @ExampleObject(name="object", value="{labelName:necessaryValue,...}", description = "json object that must exist in the values object"),
+                    @ExampleObject(name="string", value="$.count ? (@ < 20 && @ > 10)",description = "valid filtering jsonpath that returns null if not found (not predicates)")
             }),
             @Parameter(name = "sort", description = "label name for sorting"),
             @Parameter(name = "direction",description = "either Ascending or Descending",example="count"),

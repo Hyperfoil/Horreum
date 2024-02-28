@@ -85,31 +85,21 @@ The `/labelValues` endpoint supports a `filter` query parameter to filter out da
 There are 2 ways to filter:
 1. provide a json object that must exist in the label values.
    
-   For example, if `version` is a label we can pass in `{"version":"1.2.3"}` to only include datasets where the version value is `1.2.3` 
+   For example, if `version` and `txRate` are label names then `{"version":"1.2.3"}` will only include labelValues where `version=1.2.3` 
+   and `{"version":"1.2.3","txRate":2000}` will add the `txRate=2000` requirement.
+
+> curl --query-param "filter={\"version\":\"1.2.3\",\"txRate\":2000}" <horreum>:/api/test/{id}/labelValues
+ 
 
 2. provide a json path (an extractor path from labels) that needs to evaluate to true  
 
    For example, if `count` is a label we can pass in `$.count ? (@ > 10 && @ < 20)` to only include datasets where count is between 10 and 20.
 
-We set the `filter` parameter by editing the Query for the grafana panel.
+> curl --query-param "filter=\"$.count ? (@ > 10 && @ < 20)\"" <horreum>:/api/test/{id}/labelValues
+
+We set the `filter` parameter by editing the Query for the grafana panel but it will depend .
 
 {{% imgproc json_api_panel_filter Fit "865x331" %}}
 Define filter for query
 {{% /imgproc %}}
 
-
-> docker run -d --name=grafana -p 3030:3000 grafana/grafana
-> docker exec -it grafana /bin/bash
-> e7ff10503ffb:/usr/share/grafana$ grafana cli plugins install marcusolsson-json-datasource
->> ✔ Downloaded and extracted marcusolsson-json-datasource v1.3.10 zip successfully to /var/lib/grafana/plugins/marcusolsson-json-datasource
->> Please restart Grafana after installing or removing plugins. Refer to Grafana documentation for instructions if necessary.
-
-
-> docker run -d --name=grafana --env --network="host" grafana/grafana
-
-if you need to access horreum running on localhost (dev mode). Then grafana needs to run on host network so that localhost references
-will also need to set a port other than 3000 becuase local dev mode uses 3000
-
-> docker run -d --name=grafana --env GF_SERVER_HTTP_PORT=3030 --network="host" grafana/grafana
-
-infinity datasource
