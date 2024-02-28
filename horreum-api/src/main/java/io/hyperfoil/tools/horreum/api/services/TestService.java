@@ -26,6 +26,7 @@ import org.eclipse.microprofile.openapi.annotations.enums.ParameterIn;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.extensions.Extension;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameters;
@@ -202,7 +203,14 @@ public interface TestService {
            @Parameter(name = "id", description = "Test ID to retrieve Label Values for", example = "101"),
            @Parameter(name = "filtering", description = "Retrieve values for Filtering Labels", example = "true"),
            @Parameter(name = "metrics", description = "Retrieve values for Metric Labels", example = "false"),
-           @Parameter(name = "filter", description = "either a required json sub-document or path expression", example = "{\"key\":\"requiredValue\"} or $.count ? (@ < 20 && @ > 10)"),
+           @Parameter(
+                   name = "filter",
+                   description = "either a required json sub-document or path expression",
+                   examples = {
+                           @ExampleObject(name="object", value="{labelName:necessaryValue,...}", description = "json object that must exist in the values object"),
+                           @ExampleObject(name="string", value="$.count ? (@ < 20 && @ > 10)",description = "valid filtering jsonpath that returns null if not found (not predicates)")
+                   }
+           ),
            @Parameter(name = "before", description = "ISO-like date time string or epoch millis", example = "1970-01-01T00:00:00+00:00 or an integer"),
            @Parameter(name = "after", description = "ISO-like date time string or epoch millis", example = "1970-01-01T00:00:00+00:00 or an integer"),
            @Parameter(name = "sort", description = "json path to sortable value or start or stop for sorting by time",example = "$.label or start or stop"),
