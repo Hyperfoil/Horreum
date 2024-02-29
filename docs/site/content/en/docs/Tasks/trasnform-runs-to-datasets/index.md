@@ -7,7 +7,7 @@ weight: 5
 
 Horreum stores data in the JSON format. The raw document uploaded to repository turns into a **Run**, however most of operations and visualizations work on **Datasets**. By default there's a 1-on-1 relation between Runs and Datasets; the default transformation extracts objects annotated with a [JSON schema](https://json-schema.org/) (the `$schema` property) and puts them into an array - it's easier to process Datasets internally after that. It is possible to customize this transformation, though, and most importantly - you can create multiple Datasets out of a single Run. This is useful e.g. when your tooling produces single document that contains results for multiple tests, or with different configurations. With the Run split into more Datasets it's much easier to display and analyze these results individually.
 
-We assume that you've already [created a test](./create_test.html), [uploaded](./upload.html) some data and [defined the Schema](./define_schema.html).
+We assume that you've already [created a test](/docs/tasks/create-new-test), [uploaded](/docs/tasks/upload-run) some data and [defined the Schema](docs/tasks/define-schema-and-views).
 In this example we use test `acme-regression` with the basic schema `urn:acme-schema:1.0` and uploaded JSON:
 
 ```json

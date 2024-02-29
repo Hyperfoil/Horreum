@@ -1,6 +1,6 @@
 ---
 title: Create new test
-description: Create a new Test to store bechmark Run data
+description: Create a new Test to store benchmark Run data
 date: 2023-10-15
 weight: 2
 ---
@@ -30,4 +30,4 @@ When you're done you can navigate to **Tests** in the bar on the top of the scre
 Manage Teams
 {{% /imgproc %}}
 
-The test is there but in the Run Count column you don't see any runs. Now you can continue with [uploading data](./upload.html) into Horreum.
+The test is there but in the Run Count column you don't see any runs. Now you can continue with [uploading data](/docs/tasks/upload-run) into Horreum.

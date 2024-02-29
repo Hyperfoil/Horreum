@@ -40,7 +40,7 @@ A `Label` can be defined as either a `Metrics` label, a `Filtering` label, or bo
 `Filtering Labels` are combined into [`Fingerprints`](#fingerprint) that uniquely identify comparable Datasets within uploaded Runs.
 
 ## Extractor
-An `Extractor` is a **required** JSONPath expression that refers to a section of an uploaded JSON document. An Extractor can return on of;
+An `Extractor` is a **required** JSONPath expression that refers to a section of an uploaded JSON document. An Extractor can return one of:
 
 - A scalar value
 - An array of values
@@ -56,7 +56,7 @@ A Combination Function is an optional Javascript function that takes all Extract
 ## Test
 A `Test` is a **required** repository for particular similar [`runs`](#run) and [`datasets`](#dataset)
 
-You can think of a `test`` as a repo for the results of a particular benchmark, i.e. a benchmark performs a certain set of actions against a system under test
+You can think of a `test` as a repo for the results of a particular benchmark, i.e. a benchmark performs a certain set of actions against a system under test
 
 `Test` [`Runs`](#run) can have different configurations, making them not always directly comparable, but the Run results stored under one Test can be filtered by their [`Fingerprint`](#fingerprint) to ensure that all [`Datasets`](#dataset) used for analysis are comparable
 

@@ -40,13 +40,13 @@ User logged in
 {{% /imgproc %}}
 
 
-Finally hit the Save button, go to Tests and in the table click on the 1 with folder icon in Datasets column. (Note that by default a Run produces single dataset - more about this in [Transform Runs into Datasets](./datasets.html). This will bring you to the listing of datasets in this test, and this time you can see in Schema tab that the schema was recognized.
+Finally hit the Save button, go to Tests and in the table click on the 1 with folder icon in Datasets column. (Note that by default a Run produces single dataset - more about this in [Transform Runs into Datasets](/docs/tasks/trasnform-runs-to-datasets). This will bring you to the listing of datasets in this test, and this time you can see in Schema tab that the schema was recognized.
 
 {{% imgproc datasets Fit "1200x300" %}}
 User logged in
 {{% /imgproc %}}
 
-However you still don't see the labels - for that click on the 'Edit test' button and switch to 'Views' tab. The 'Default' View is already created but it's empty; hit the 'Add component' button on the right side twice and fill in the columns, using the labels we've created before. We can further customize the 'Throughput' by adding the " reqs/s" suffix. Note that this function can return any HTML, this will be included into the page as-is. The rendering happens client-side and you have the dataset entity (not just the JSON document) as the second argument to the render function. Third argument would be your personal OAuth token.
+However you still don't see the labels - for that click on the 'Edit test' button and switch to 'Views' tab. The 'Default' View is already created but it's empty; hit the 'Add component' button on the right side twice and fill in the columns, using the labels we've created before. We can further customize the 'Throughput' by adding the "reqs/s" suffix. Note that this function can return any HTML, this will be included into the page as-is. The rendering happens client-side and you have the dataset entity (not just the JSON document) as the second argument to the render function. Third argument would be your personal OAuth token.
 
 It's not necessary to turn URLs into hyperlinks, though; Horreum will do that for you.
 
@@ -60,4 +60,4 @@ To see the result click on the Save button and then on 'Dataset list' in the upp
 User logged in
 {{% /imgproc %}}
 
-You might be wondering why you can't set the JSON path directly in the view; [Concepts](/docs/about/concepts.html) explains why this separation is useful when the format of your data evolves. Also, label defined once can be used on multiple places, e.g. for [Change Detection](./change_detection.html).
+You might be wondering why you can't set the JSON path directly in the view; [Concepts](/docs/concepts/core-concepts) explains why this separation is useful when the format of your data evolves. Also, label defined once can be used on multiple places, e.g. for [Change Detection](/docs/tasks/configure-change-detection).

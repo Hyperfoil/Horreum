@@ -60,7 +60,7 @@ When Keycloak starts you should access its admin console and adjust URLs for cli
 
 After that create the role `__user_reader`, go to 'Role Mappings' tab, select `realm-management` in Client Roles and give this user the `view-users` role. Make sure that this user has the `offline_access` Realm Role as well.
 
-Now you can create team roles, users and [assign them appropriately](user_management.html). For correct integration with Grafana please remember to set email for each user (this will be used purely to match Grafana identities).
+Now you can create team roles, users and [assign them appropriately](/docs/concepts/users). For correct integration with Grafana please remember to set email for each user (this will be used purely to match Grafana identities).
 
 You should also open `horreum` client, switch to 'Credentials' tab and record the Secret (UUID identifier).
 
