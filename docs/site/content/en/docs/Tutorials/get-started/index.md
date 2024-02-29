@@ -41,7 +41,7 @@ User logged in
 {{% /imgproc %}}
 
 
-You can explore the application but at this moment it is empty. Let's continue with [creating a test and uploading a run](create_test_run.html).
+You can explore the application but at this moment it is empty. Let's continue with [creating a test and uploading a run](/docs/tutorials/create-test-run).
 
 ### stop Horreum
 

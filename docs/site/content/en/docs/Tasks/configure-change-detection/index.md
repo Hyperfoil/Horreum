@@ -92,4 +92,4 @@ Missing Data
 
 In the 'General' tab it is possible to switch off all notifications from this test without unsubscribing or changing rules. This is useful e.g. when you bulk upload historical results and don't want to spam everyone's mailbox.
 
-You can continue exploring Horreum in the [Actions guide](./actions.html).
+You can continue exploring Horreum in the [Actions guide](/docs/tasks/configure-actions).

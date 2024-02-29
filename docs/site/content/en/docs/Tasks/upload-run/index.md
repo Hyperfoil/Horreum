@@ -7,16 +7,16 @@ weight: 3
 
 Horreum accepts any valid **JSON** as the input. To get maximum out of Horreum, though, it is recommended to categorize the input using [JSON schema](https://json-schema.org/).
 
-There are two principial ways to authorize operations:
+There are two principal ways to authorize operations:
 
 - Authentication against OIDC provider (Keycloak): This is the standard way that you use when accessing Horreum UI - you use your credentials to get a JSON Web Token (JWT) and this is stored in the browser session. When accessing Horreum over the REST API you need to use this for [Bearer Authentication](https://datatracker.ietf.org/doc/html/rfc6750#section-2.1). The authorization is based on the teams and roles within those teams that you have.
 - Horreum Tokens: In order to provide access to non-authenticated users via link, or let automated scripts perform tasks Horreum can generate a random token consisting of 80 hexadecimal digits. This token cannot be used in the `Authorization` header; operations that support tokens usually accept `token` parameter.
 
-If you're running your tests in Jenkins you can skip a lot of the complexity below using [Horreum Plugin](https://plugins.jenkins.io/horreum/). This plugins supports both Jenkins Pipeline and Freeform jobs.
+If you're running your tests in Jenkins you can skip a lot of the complexity below using [Horreum Plugin](https://plugins.jenkins.io/horreum/). This plugin supports both Jenkins Pipeline and Freeform jobs.
 
 ## Getting JWT token
 
-New data can be uploaded into Horreum only by authorized users. We recommend setting up a separate user account for the load-driver (e.g. [Hyperfoil](https://hyperfoil.io)) or CI toolchain that will upload the data as part of your benchmark pipeline. This user must have the permission to upload for given team, e.g. if you'll use `dev-team` as the owner this role is called `dev-uploader` and it is a composition of the team role (`dev-team`) and `uploader` role. You can read more about user management [here](/docs/about/users.html).
+New data can be uploaded into Horreum only by authorized users. We recommend setting up a separate user account for the load-driver (e.g. [Hyperfoil](https://hyperfoil.io)) or CI toolchain that will upload the data as part of your benchmark pipeline. This user must have the permission to upload for given team, e.g. if you'll use `dev-team` as the owner this role is called `dev-uploader` and it is a composition of the team role (`dev-team`) and `uploader` role. You can read more about user management [here](/docs/concepts/users).
 
 ```bash
 TOKEN=$(curl -s http://localhost:8180/realms/horreum/protocol/openid-connect/token \
@@ -76,7 +76,7 @@ curl 'http://localhost:8080/api/run/data?test='$TEST'&start='$START'&stop='$STOP
     -d @/path/to/data.json
 ```
 
-Assuming that you've [created the test](/docs/howto/create_test.html) let's try to upload this JSON document:
+Assuming that you've [created the test](/docs/tasks/create-new-test) let's try to upload this JSON document:
 
 ```json
 {
@@ -111,4 +111,4 @@ Even though the uploaded JSON has `$schema` key the Schema column in the table a
 Run Details
 {{% /imgproc %}}
 
-This page shows the Original Run and an empty Dataset #1. The Dataset content is empty because without the Schema it cannot be used in any meaningful way - let's [create the schema and add some labels](/docs/howto/define_schema.html).
+This page shows the Original Run and an empty Dataset #1. The Dataset content is empty because without the Schema it cannot be used in any meaningful way - let's [create the schema and add some labels](/docs/tasks/define-schema-and-views).

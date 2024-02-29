@@ -26,7 +26,7 @@ spec:
   volumeMode: Filesystem
 ```
 
-3. Create horreum CR, so that all pods wil lbe created by the horreum operator (`oc apply -f <your_cr_filename>.yaml -n <your_horreum_namespace>`).
+3. Create horreum CR, so that all pods will be created by the horreum operator (`oc apply -f <your_cr_filename>.yaml -n <your_horreum_namespace>`).
    See an [example](https://github.com/Hyperfoil/horreum-operator/tree/master/deploy/crds/hyperfoil.io_v1alpha1_horreum_cr.yaml) of the `horreum` resource:
 
 ```yaml
@@ -59,7 +59,7 @@ If you're planning to use secured routes (edge termination) it is recommended to
 
 Currently you must set both Horreum and Keycloak route host explicitly, otherwise you could not log in (TODO).
 
-When the `horreum` resource gets ready, login into Keycloak using administrator credentials (these are automatically created if you don't specify existing secret) and create a new user in the `horreum` realm, a new team role (with `-team` suffix) and assign it to the user along with [other appropriate predefined roles](/docs/about/users.html). Administrator credentials can be found using this:
+When the `horreum` resource gets ready, login into Keycloak using administrator credentials (these are automatically created if you don't specify existing secret) and create a new user in the `horreum` realm, a new team role (with `-team` suffix) and assign it to the user along with [other appropriate predefined roles](/docs/concepts/users). Administrator credentials can be found using this:
 
 ```sh
 NAME=$(oc get horreum -o jsonpath='{$.items[0].metadata.name}')
@@ -67,7 +67,7 @@ oc get secret $NAME-keycloak-admin -o json | \
     jq '{ user: .data.username | @base64d, password: .data.password | @base64d }'
 ```
 
-For details of roles in Horreum please refer to [user management](/docs/about/users.html).
+For details of roles in Horreum please refer to [user management](/docs/concepts/users).
 
 ## Hyperfoil integration
 
