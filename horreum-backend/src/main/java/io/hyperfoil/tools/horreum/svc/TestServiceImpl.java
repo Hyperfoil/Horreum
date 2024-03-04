@@ -321,7 +321,9 @@ public class TestServiceImpl implements TestService {
          testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')");
          Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
       }
-      Util.addPaging(testSql, limit, page, "test.name", direction);
+      if( limit > 0 && page > 0 ) {
+         Util.addPaging(testSql, limit, page, "test.name", direction);
+      }
 
       org.hibernate.query.Query<TestSummary> testQuery = em.unwrap(Session.class).createNativeQuery(testSql.toString(), Tuple.class)
               .setTupleTransformer((tuples, aliases) ->

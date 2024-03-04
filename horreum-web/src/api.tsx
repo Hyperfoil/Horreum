@@ -239,7 +239,7 @@ export function fetchTestsSummary(alertingContext: AlertContextType, roles?: str
 }
 
 export function fetchTests(alertingContext: AlertContextType,roles?: string, folder?: string) : Promise<Test[]> {
-    return apiCall(testApi.summary( roles, folder, undefined, undefined, undefined), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
+    return apiCall(testApi.summary( roles, folder, -1, -1, undefined), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
         .then(summary => summary.tests?.map(t => mapTestSummaryToTest(t)) || [])
 }
 
