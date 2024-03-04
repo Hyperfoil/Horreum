@@ -27,8 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Backporting
-        uses: kiegroup/git-backporting@main
+        uses: kiegroup/git-backporting@v4.5.1
         with:
           target-branch: 0.11.x
           pull-request: ${{ github.event.pull_request.url }}
           auth: ${{ secrets.BACKPORT_TOKEN }}
+          no-squash: true
