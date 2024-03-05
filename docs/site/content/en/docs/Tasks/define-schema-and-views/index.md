@@ -2,7 +2,7 @@
 title: Define a Schema
 description: Define a Horreum schema to provide the meta-data to allow Horreum to process Run data
 date: 2023-10-15
-weight: 4
+weight: 
 ---
 > **Prerequisites**: You have already
 
@@ -31,9 +31,12 @@ Switch tab to 'Labels' and add two **labels**: let's call first `ci-url` where y
 User logged in
 {{% /imgproc %}}
 
-The other label will be called `throughput` and we extract two elements from the JSON document: `requests` using `$.results.requests` and `duration` using `$.results.duration`. In this case the input to the calculation function will be an object with two fields: `requests` and `duration`. You can get throughput by adding combination function (in Javascript) in the lambda syntax `value => value.requests / value.duration`. Had we used only one JSON Path the only argument to the function would be directly the result of the JSON Path query.
+## Combination Functions
 
-Note that this function is calculated server-side and it is cached it the database. It is automatically recalculated when the label definition changes; the datasets are processed asynchronously, though, so there might be some lag.
+In the situation a derived metric is necessary the `Combination Function` is used to calculate the value. 
+Here we create a seperate Label called `throughput` and we extract two elements from the JSON document: `requests` using `$.results.requests` and `duration` using `$.results.duration`. In this case the input to the calculation function will be an object with two fields: `requests` and `duration`. You can get throughput by adding combination function (in JavaScript) in the lambda syntax `value => value.requests / value.duration`. Had we used only one JSON Path the only argument to the function would be directly the result of the JSON Path query.
+
+Note that this function is calculated server-side and it is cached in the database. It is automatically recalculated when the label definition changes; the datasets are processed asynchronously, though, so there might be some lag.
 
 {{% imgproc second_label Fit "1200x300" %}}
 User logged in
