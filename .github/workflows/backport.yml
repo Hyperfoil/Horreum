@@ -29,7 +29,7 @@ jobs:
       - name: Backporting
         uses: kiegroup/git-backporting@v4.5.1
         with:
-          target-branch: 0.11.x
+          target-branch: 0.12.x
           pull-request: ${{ github.event.pull_request.url }}
           auth: ${{ secrets.BACKPORT_TOKEN }}
           no-squash: true
