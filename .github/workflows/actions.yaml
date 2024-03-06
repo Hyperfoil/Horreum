@@ -1,0 +1,8 @@
+name: 'Horreum Action'
+description: 'Metadata for Github Action for Horreum project'
+inputs:
+
+outputs:
+
+runs:
+  using: 'node20'
