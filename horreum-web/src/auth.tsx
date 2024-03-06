@@ -185,7 +185,7 @@ export const LoginLogout = () => {
     const authenticated = useSelector(isAuthenticatedSelector)
     const [loginModalOpen, setLoginModalOpen] = useState(false)
     const dispatch = useDispatch()
-    if (oidc && !keycloak) {
+    if (!keycloak) {
         return <Button isDisabled>Cannot log in</Button>
     }
     if (authenticated) {
