@@ -16,7 +16,12 @@ import jakarta.ws.rs.core.MediaType;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
+import org.eclipse.microprofile.openapi.annotations.callbacks.Callback;
+import org.eclipse.microprofile.openapi.annotations.callbacks.CallbackOperation;
+import org.eclipse.microprofile.openapi.annotations.callbacks.Callbacks;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Path("/api/action")
@@ -25,6 +30,108 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 @Tag(name = "action", description = "Manage Actions")
 public interface ActionService {
    @POST
+   /*@Callback(name = "HttpAction",
+   callbackUrlExpression = "http://acme.com",
+   operations = {@CallbackOperation (
+       method = "GET",
+       summary = "A simple Http Action request",
+       description="This will initiate a Http callback to a url that is set as an Action.",
+       responses = {
+           @APIResponse(
+              responseCode = "404",
+              description = "callback failed",
+              content = @Content(
+                  mediaType = "text/html"
+              )),
+           @APIResponse(
+               responseCode = "200",
+               description = "callback worked",
+               content = @Content(
+                   mediaType = "text/html"
+               )
+           )
+       }
+   )})*/
+   @Callbacks(
+      value = {
+      @Callback(
+         name="HttpAction",
+         callbackUrlExpression = "http://acme.com",
+         operations = {
+             @CallbackOperation(
+                 method = "GET",
+                 summary = "A simple Http Action request",
+                 description="This will initiate a Http callback to a url that is set as an Action.",
+                 responses = {
+                     @APIResponse(
+                         responseCode = "404",
+                         description = "callback failed",
+                         content = @Content(
+                             mediaType = "text/html"
+                         )),
+                     @APIResponse(
+                         responseCode = "200",
+                         description = "callback worked",
+                         content = @Content(
+                             mediaType = "text/html"
+                         )
+                     )
+                 }
+             )
+      }),
+      @Callback(
+          name="GithubIssueCommentAction",
+          callbackUrlExpression = "https://github.com/issue/comment/action",
+          operations = {
+              @CallbackOperation(
+                  method = "POST",
+                  summary = "A Http Action request to create a comment",
+                  description = "This will initiate a Http callback to a url that is set as an Action.",
+                  responses = {
+                      @APIResponse(
+                          responseCode = "404",
+                          description = "callback failed",
+                          content = @Content(
+                              mediaType = "text/html"
+                          )),
+                      @APIResponse(
+                          responseCode = "200",
+                          description = "callback worked",
+                          content = @Content(
+                              mediaType = "text/html"
+                          )
+                      )
+                  }
+              )
+
+       }),
+       @Callback(
+           name="GithubIssueCreateAction",
+           callbackUrlExpression = "https://github.com/issue/create/action",
+           operations = {
+               @CallbackOperation(
+                   method = "POST",
+                   summary = "A Http Action request to create an issue",
+                   description = "This will initiate a Http callback to a url that is set as an Action.",
+                   responses = {
+                       @APIResponse(
+                           responseCode = "404",
+                           description = "callback failed",
+                           content = @Content(
+                               mediaType = "text/html"
+                           )),
+                       @APIResponse(
+                           responseCode = "200",
+                           description = "callback worked",
+                           content = @Content(
+                               mediaType = "text/html"
+                           )
+                       )
+                   }
+               )
+
+           })
+      } )
    Action add(Action action);
 
    @GET
