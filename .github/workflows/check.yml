@@ -1,0 +1,17 @@
+name: Format check
+
+on: [pull_request]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Prettier
+        run: npm install prettier
+
+      - name: Check formatting
+        run: npx prettier --check "horreum-web/package-lock.json"
