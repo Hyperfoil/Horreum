@@ -23,7 +23,6 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.NaturalId;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -40,7 +39,6 @@ import java.util.Set;
 @Cacheable
 public class UserInfo extends PanacheEntityBase {
     @Id
-    @NaturalId
     @NotNull
     @Username
     public String username;
