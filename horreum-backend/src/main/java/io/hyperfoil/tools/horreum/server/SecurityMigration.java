@@ -33,7 +33,7 @@ public class SecurityMigration {
     void onStart(@Observes StartupEvent event, Keycloak keycloak) {
         if (keycloakURL.isPresent() && performRolesMigration()) {
             LOGGER.info("Perform roles migration from keycloak...");
-            for (UserRepresentation kcUser : keycloak.realm(realm).users().list()) {
+            for (UserRepresentation kcUser : keycloak.realm(realm).users().list(0, Integer.MAX_VALUE)) {
                 performUserMigration(kcUser, keycloak.realm(realm).users().get(kcUser.getId()).roles().getAll().getRealmMappings());
             }
             LOGGER.info("Migration from keycloak complete");
