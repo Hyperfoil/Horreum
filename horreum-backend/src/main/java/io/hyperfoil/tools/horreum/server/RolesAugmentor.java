@@ -4,6 +4,7 @@ import io.hyperfoil.tools.horreum.entity.user.TeamMembership;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
 import io.hyperfoil.tools.horreum.entity.user.UserRole;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
+import io.quarkus.arc.lookup.LookupIfProperty;
 import io.quarkus.arc.profile.UnlessBuildProfile;
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.security.identity.AuthenticationRequestContext;
@@ -17,7 +18,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 @UnlessBuildProfile("test")
-@IfBuildProperty(name = "horreum.roles.provider", stringValue = "database")
+@LookupIfProperty(name = "horreum.roles.provider", stringValue = "database")
 public class RolesAugmentor implements SecurityIdentityAugmentor {
 
     @Inject RoleManager roleManager;

@@ -28,6 +28,10 @@ public class SecurityMigration {
     @ConfigProperty(name = "quarkus.keycloak.admin-client.server-url") Optional<String> keycloakURL;
     @ConfigProperty(name = "horreum.keycloak.realm", defaultValue = "horreum") String realm;
 
+    @ConfigProperty(name = "horreum.roles.provider", defaultValue = "keycloak") String provider;
+
+    private static final String MIGRATION_PROVIDER = "database";
+
     @Inject RoleManager roleManager;
 
     void onStart(@Observes StartupEvent event, Keycloak keycloak) {
@@ -42,9 +46,10 @@ public class SecurityMigration {
 
     private boolean performRolesMigration() {
         // an empty `userinfo_teams` table is the hint to perform migration of roles from keycloak
+        // only migrate if we users have defined the "database" provider
         try {
             roleManager.setRoles(Roles.HORREUM_SYSTEM);
-            return TeamMembership.count() == 0;
+            return MIGRATION_PROVIDER.equals(provider) && TeamMembership.count() == 0;
         } finally {
             roleManager.setRoles("");
         }
