@@ -116,6 +116,6 @@ public class ConfigServiceTest extends BaseServiceTest {
                 .extract().as(ConfigService.VersionInfo.class);
 
         assertNotNull(info);
-        assertEquals("/link/to/privacy/statement", info.privacyStatement);
+        assertEquals("/path/to/privacy/statement/link", info.privacyStatement);
     }
 }
