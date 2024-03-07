@@ -211,7 +211,7 @@ public class TestServiceImpl implements TestService {
    TestDAO addAuthenticated(Test dto) {
       TestDAO existing = TestDAO.find("id", dto.id).firstResult();
       if(existing == null)
-         dto.id = null;
+         dto.clearIds();
       TestDAO test = TestMapper.to(dto);
       if (test.notificationsEnabled == null) {
          test.notificationsEnabled = true;
@@ -245,7 +245,7 @@ public class TestServiceImpl implements TestService {
             test.views = Collections.singleton(new ViewDAO("Default", test));
          }
          try {
-            em.merge(test);
+            em.persist(test);
             em.flush();
          } catch (PersistenceException e) {
             if (e.getCause() instanceof org.hibernate.exception.ConstraintViolationException) {
