@@ -4,7 +4,7 @@ info:
   title: Horreum REST API
   description: "Horreum automated change anomaly detection. For more information,\
     \ please see [https://horreum.hyperfoil.io/](https://horreum.hyperfoil.io/)"
-  version: "0.12"
+  version: "0.13"
 tags:
 - name: Config
   description: Endpoint providing configuration for the Horreum System
@@ -4596,6 +4596,10 @@ components:
           description: Timestamp of server startup
           type: integer
           example: 2023-10-18 18:00:57
+        privacyStatement:
+          description: Privacy statement
+          type: string
+          example: link/to/external/privacy/statement
     Watch:
       required:
       - users

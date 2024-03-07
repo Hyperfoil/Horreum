@@ -13,8 +13,11 @@ import {
 import { QuestionCircleIcon } from "@patternfly/react-icons"
 import {
 	Table,
-	TableBody
+	TableBody,
 } from '@patternfly/react-table/deprecated';
+import {
+    TableText
+} from '@patternfly/react-table';
 
 import { configApi } from "./api"
 import { formatDateTime } from "./utils"
@@ -22,6 +25,7 @@ import { formatDateTime } from "./utils"
 type VersionInfo = {
     version: string
     startTimestamp: number
+    privacyStatement?: string
 }
 
 const VERSION_ERROR = {
@@ -94,6 +98,9 @@ export default function About() {
                         rows={[
                             ["Version", versionInfo.version],
                             ["Up since", formatDateTime(versionInfo.startTimestamp)],
+                            versionInfo.privacyStatement
+                                ? ["Privacy Statement",  <TableText><a href={versionInfo.privacyStatement}>{versionInfo.privacyStatement}</a></TableText>]
+                                : [],
                         ]}
                     >
                         <TableBody />
