@@ -15,7 +15,8 @@ public class HorreumTestProfile implements QuarkusTestProfile {
             "quarkus.oidc.token.issuer", "https://server.example.com",
             "smallrye.jwt.sign.key.location", "/privateKey.jwk",
             "horreum.url", "http://localhost:8081",
-            "horreum.test-mode", "true");
+            "horreum.test-mode", "true",
+            "horreum.privacy", "/path/to/privacy/statement/link");
    }
    @Override
    public boolean disableGlobalTestResources() {
