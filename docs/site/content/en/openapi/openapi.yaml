@@ -4596,6 +4596,10 @@ components:
           description: Timestamp of server startup
           type: integer
           example: 2023-10-18 18:00:57
+        privacyStatement:
+          description: Privacy statement
+          type: string
+          example: link/to/external/privacy/statement
     Watch:
       required:
       - users

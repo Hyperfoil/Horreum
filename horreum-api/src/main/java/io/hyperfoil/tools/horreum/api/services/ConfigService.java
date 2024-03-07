@@ -84,6 +84,8 @@ public interface ConfigService {
       @JsonProperty(required = true)
       @Schema(description="Timestamp of server startup", example = "2023-10-18 18:00:57")
       public long startTimestamp;
+      @Schema(description="Privacy statement", example="link/to/external/privacy/statement")
+      public String privacyStatement;
    }
 
    class KeycloakConfig {
