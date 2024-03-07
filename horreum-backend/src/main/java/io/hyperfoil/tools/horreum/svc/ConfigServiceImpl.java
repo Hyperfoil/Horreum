@@ -2,13 +2,10 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.Version;
 import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.services.ConfigService;
 import io.hyperfoil.tools.horreum.datastore.BackendResolver;
-import io.hyperfoil.tools.horreum.datastore.DatastoreResponse;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -18,8 +15,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotNull;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import java.util.Collections;
@@ -28,12 +25,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.keycloak.util.JsonSerialization.mapper;
-
 @ApplicationScoped
 public class ConfigServiceImpl implements ConfigService {
 
     private static final Logger log = Logger.getLogger(ConfigServiceImpl.class);
+
+    @ConfigProperty(name = "horreum.privacy")
+    Optional<String> privacyStatement;
 
     @Inject
     SecurityIdentity identity;
@@ -59,6 +57,7 @@ public class ConfigServiceImpl implements ConfigService {
         VersionInfo info = new VersionInfo();
         info.version = Version.VERSION;
         info.startTimestamp = startTimestamp;
+        info.privacyStatement = privacyStatement.orElse(null);
         return info;
     }
 
