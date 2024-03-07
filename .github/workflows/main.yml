@@ -2,7 +2,7 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ master, 0.11.x ]
+    branches: [ master, 0.12.x ]
     tags: [ "*" ]
   pull_request:
   workflow_dispatch:
