@@ -8,7 +8,7 @@ public class ExtractorMapper {
     public static Extractor from(ExtractorDAO e) {
         Extractor dto = new Extractor();
         dto.name = e.name;
-        dto.array = e.array;
+        dto.isArray = e.isArray;
         dto.jsonpath = e.jsonpath;
 
         return dto;
@@ -17,7 +17,7 @@ public class ExtractorMapper {
     public static ExtractorDAO to(Extractor dto) {
         ExtractorDAO e = new ExtractorDAO();
         e.name = dto.name;
-        e.array = dto.array;
+        e.isArray = dto.isArray;
         e.jsonpath = dto.jsonpath;
 
         return e;

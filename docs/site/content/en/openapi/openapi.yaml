@@ -2958,7 +2958,7 @@ components:
       required:
       - name
       - jsonpath
-      - array
+      - isarray
       type: object
       properties:
         name:
@@ -2971,7 +2971,7 @@ components:
             value in the JSON document. This is a pSQL json path expression
           type: string
           example: $.buildInfo.buildID
-        array:
+        isarray:
           description: Does the JSON path expression reference an Array?
           type: boolean
           example: false

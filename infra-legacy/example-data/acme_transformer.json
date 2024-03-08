@@ -8,12 +8,12 @@
     {
       "name": "hash",
       "jsonpath": "$.buildHash",
-      "array": false
+      "isarray": false
     },
     {
       "name": "results",
       "jsonpath": "$.results",
-      "array": false
+      "isarray": false
     }
   ],
   "function": "({results, hash}) => results.map(r => ({ ...r, hash }))"

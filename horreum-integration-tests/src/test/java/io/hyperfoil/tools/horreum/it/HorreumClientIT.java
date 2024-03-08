@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.it;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.HorreumClient;
@@ -129,6 +130,51 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         Assertions.assertEquals("foobar", preview.value.textValue());
     }
 
+    @org.junit.jupiter.api.Test
+    public void testJavascriptExecutionWithArray() throws InterruptedException {
+        Schema schema = new Schema();
+        schema.id = -1;
+        schema.uri = "urn:dummy:schema-array";
+        schema.name = "DummyArray";
+        schema.owner = dummyTest.owner;
+        schema.access = Access.PUBLIC;
+        schema.id = horreumClient.schemaService.add(schema);
+
+        long now = System.currentTimeMillis();
+        String ts = String.valueOf(now);
+
+        ArrayNode arrayNode = JsonNodeFactory.instance.arrayNode()
+                .add(JsonNodeFactory.instance.objectNode().put("key", "value1"))
+                .add(JsonNodeFactory.instance.objectNode().put("key", "value2"))
+                .add(JsonNodeFactory.instance.objectNode().put("key", "value3"));
+        ObjectNode data = JsonNodeFactory.instance.objectNode()
+                .put("$schema", schema.uri);
+
+        data.putIfAbsent("samplesArray", arrayNode);
+
+        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null, data);
+
+        int datasetId = -1;
+        while (System.currentTimeMillis() < now + 10000) {
+            DatasetService.DatasetList datasets = horreumClient.datasetService.listByTest(dummyTest.id, null, null, null, null, null, null);
+            if (datasets.datasets.isEmpty()) {
+                //noinspection BusyWait
+                Thread.sleep(50);
+            } else {
+                Assertions.assertEquals(1, datasets.datasets.size());
+                datasetId = datasets.datasets.iterator().next().id;
+            }
+        }
+        Assertions.assertNotEquals(-1, datasetId);
+
+        Label label = new Label();
+        label.name = "reduced-array";
+        label.schemaId = schema.id;
+        label.function = "value => { return value.reduce((a,b) => a + '' + b); }";
+        label.extractors = Collections.singletonList(new Extractor("value", "$.samplesArray.key", true));
+        DatasetService.LabelPreview preview = horreumClient.datasetService.previewLabel(datasetId, label);
+        Assertions.assertEquals("value1value2value3", preview.value.textValue());
+    }
 
     @org.junit.jupiter.api.Test
     public void runExperiment() {

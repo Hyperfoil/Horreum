@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -53,7 +52,6 @@ import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.RestAssured;
 import io.restassured.specification.RequestSpecification;
-import org.testcontainers.shaded.org.checkerframework.checker.units.qual.A;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -452,10 +450,10 @@ public class RunServiceTest extends BaseServiceTest {
    private void testTransformationWithoutMatch(TestInfo info, Schema schema, ObjectNode data) throws InterruptedException {
       Extractor firstMatch = new Extractor("foo", "$.foo", false);
       Extractor allMatches = new Extractor("bar", "$.bar[*].x", false);
-      allMatches.array = true;
+      allMatches.isArray = true;
       Extractor value = new Extractor("value", "$.value", false);
       Extractor values = new Extractor("values", "$.values[*]", false);
-      values.array = true;
+      values.isArray = true;
 
       Transformer transformerNoFunc = createTransformer("noFunc", schema, null, firstMatch, allMatches);
       Transformer transformerFunc = createTransformer("func", schema, "({foo, bar}) => ({ foo, bar })", firstMatch, allMatches);
