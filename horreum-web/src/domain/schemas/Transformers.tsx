@@ -271,7 +271,7 @@ export default function Transformers(props: TransformersProps) {
                                         update({
                                             extractors: [
                                                 ...selected.extractors,
-                                                { name: "", jsonpath: "", array: false },
+                                                { name: "", jsonpath: "", isarray: false },
                                             ],
                                         })
                                     }}

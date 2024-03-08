@@ -254,7 +254,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                                             update({
                                                 extractors: [
                                                     ...selected.extractors,
-                                                    { name: "", jsonpath: "", array: false },
+                                                    { name: "", jsonpath: "", isarray: false },
                                                 ],
                                             })
                                         }}
