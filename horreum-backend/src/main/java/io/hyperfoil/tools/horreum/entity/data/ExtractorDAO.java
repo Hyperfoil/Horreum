@@ -14,15 +14,15 @@ public class ExtractorDAO {
 
    @NotNull
    @Column(name = "isarray")
-   public boolean array;
+   public boolean isArray;
 
    public ExtractorDAO() {
    }
 
-   public ExtractorDAO(String name, String jsonpath, boolean array) {
+   public ExtractorDAO(String name, String jsonpath, boolean isArray) {
       this.name = name;
       this.jsonpath = jsonpath;
-      this.array = array;
+      this.isArray = isArray;
    }
 
    @Override
@@ -30,7 +30,7 @@ public class ExtractorDAO {
       return "ExtractorDAO{" +
               "name='" + name + '\'' +
               ", jsonpath='" + jsonpath + '\'' +
-              ", array=" + array +
+              ", isarray=" + isArray +
               '}';
    }
 }
