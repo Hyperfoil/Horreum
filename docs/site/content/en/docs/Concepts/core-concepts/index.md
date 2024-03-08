@@ -125,3 +125,15 @@ In Horreum a `Report Configuration` is used for compiling a summary of informati
 
 ## Report
 A `Report` is an instance of a `Report Configuration`. Creation date and time is used for differentiating each `Report`.
+
+## Actions
+An `Action` is the ability by Horreum to send an Event notification to an external system. These are added to a [`Test`](#test).
+
+## Global Action
+Actions that occur globally in `Horreum`
+
+## Test Action
+Actions only for a particular [`Test`](#test)
+
+## Action allow list
+`Horreum` will only allow generic HTTP requests to domains that have been pre-configured in Horreum by an Administrator.
