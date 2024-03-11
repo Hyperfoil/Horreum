@@ -8,19 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.report.ReportComment;
-import io.hyperfoil.tools.horreum.api.report.ReportComponent;
 import io.hyperfoil.tools.horreum.api.report.TableReport;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -132,7 +128,7 @@ public class ReportServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest("missing"));
       createComparisonSchema();
 
-      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
       int runId = uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(queue.poll(10, TimeUnit.SECONDS));
 
@@ -155,7 +151,7 @@ public class ReportServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest("previewMissingComponent"));
       createComparisonSchema();
 
-      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
       int runId = uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(queue.poll(10, TimeUnit.SECONDS));
 

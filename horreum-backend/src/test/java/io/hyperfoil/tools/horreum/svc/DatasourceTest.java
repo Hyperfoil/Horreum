@@ -8,15 +8,13 @@ import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
-import io.hyperfoil.tools.horreum.api.services.ConfigService;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.test.ElasticsearchTestProfile;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
@@ -57,7 +55,7 @@ public class DatasourceTest extends BaseServiceTest{
 
         TestConfig testConfig = createNewTestAndDatastores(info);
 
-        BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == testConfig.test.id);
+        BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW,  testConfig.test.id);
 
         String payload = """
                 { 

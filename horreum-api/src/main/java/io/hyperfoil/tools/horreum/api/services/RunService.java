@@ -307,14 +307,6 @@ public interface RunService {
                             @RestForm("metadata") FileUpload metadata);
 
     @GET
-    @Path("{id}/waitforDatasets")
-    @Operation(description = "Blocking call, waiting for datasets to be produced")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "Run ID", example = "101"),
-    })
-    void waitForDatasets(@PathParam("id") int id);
-
-    @GET
     @Path("autocomplete")
     @ApiIgnore
     List<String> autocomplete(@Parameter(required = true) @QueryParam("query") String query);

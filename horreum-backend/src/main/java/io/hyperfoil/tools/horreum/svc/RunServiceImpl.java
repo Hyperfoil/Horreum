@@ -2,9 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -12,8 +9,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -21,7 +16,7 @@ import java.util.stream.StreamSupport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.*;
 import io.hyperfoil.tools.horreum.api.data.*;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
@@ -40,9 +35,6 @@ import jakarta.transaction.SystemException;
 import jakarta.transaction.Transaction;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
@@ -55,7 +47,6 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.datastore.BackendResolver;
 import io.hyperfoil.tools.horreum.datastore.Datastore;
 import io.hyperfoil.tools.horreum.datastore.DatastoreResponse;
@@ -129,9 +120,6 @@ public class RunServiceImpl implements RunService {
 
    @Inject
    SqlServiceImpl sqlService;
-
-   @Inject
-   MessageBus messageBus;
 
    @Inject
    TestServiceImpl testService;
@@ -529,32 +517,6 @@ public class RunServiceImpl implements RunService {
       return addRunFromData(start, stop, test, owner, access, token, schemaUri, description, dataNode.toString(), metadataNode);
    }
 
-   @Override
-   public void waitForDatasets(int runId) {
-      //first check if we have a dataset already generated
-      if(DatasetDAO.count("run.id = ?1", runId) > 0)
-         return;
-
-      // wait for at least one (1) dataset. we do not know how many datasets will be produced
-      CountDownLatch dsAvailableLatch = new CountDownLatch(1);
-      // create new dataset listener
-      messageBus.subscribe(MessageBusChannels.DATASET_NEW,"DatasetService", Dataset.EventNew.class, (event) -> {
-         if (event.runId == runId) {
-            dsAvailableLatch.countDown();
-         }
-      });
-
-      try {
-         // if there is not already a dataset in the db, wait for msg back from db that at least one dataset is available
-         if (DatasetDAO.find("run.id", runId).count() == 0) {
-            dsAvailableLatch.await(10L, TimeUnit.SECONDS);
-         }
-      } catch (InterruptedException e) {
-         //TODO :: make timeout configurable
-         ServiceException.serverError("Dataset was not produced within 10 seconds");
-      }
-   }
-
    @PermitAll // all because of possible token-based upload
    @Transactional
    @WithRoles
@@ -704,7 +666,7 @@ public class RunServiceImpl implements RunService {
       mediator.newRun(RunMapper.from(run));
       transform(run.id, false);
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.RUN_NEW, test.id, RunMapper.from(run)));
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.RUN_NEW, test.id, RunMapper.from(run)));
 
       return run.id;
    }
@@ -1016,7 +978,7 @@ public class RunServiceImpl implements RunService {
          run.trashed = trashed;
          run.persist();
          if(mediator.testMode())
-            Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.RUN_TRASHED, run.testid, id));
+            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.RUN_TRASHED, run.testid, id));
       }
       // if the run was trashed because of a deleted test we need to ensure that the test actually exist
       // before we try to recalculate the dataset
@@ -1372,7 +1334,7 @@ public class RunServiceImpl implements RunService {
          mediator.newDataset(new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation));
          mediator.validateDataset(ds.id);
          if(mediator.testMode())
-            Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_NEW, ds.testid, new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation)));
+            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_NEW, ds.testid, new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation)));
       } catch (TransactionRequiredException tre) {
          log.error("Failed attempt to persist and send Dataset event during inactive Transaction. Likely due to prior error.", tre);
       }

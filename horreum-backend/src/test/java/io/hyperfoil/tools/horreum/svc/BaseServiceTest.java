@@ -14,12 +14,9 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,7 +32,7 @@ import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
@@ -64,7 +61,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.action.GitHubIssueCommentAction;
 import io.hyperfoil.tools.horreum.action.HttpAction;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
+import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 import io.hyperfoil.tools.horreum.experiment.RelativeDifferenceExperimentModel;
 import io.hyperfoil.tools.horreum.server.CloseMe;
@@ -97,10 +94,13 @@ public class BaseServiceTest {
    protected RoleManager roleManager;
 
    @Inject
-   MessageBus messageBus;
+   BlockingTaskDispatcher messageBus;
 
    @Inject
    ObjectMapper mapper;
+
+   @Inject
+   ServiceMediator serviceMediator;
 
    List<Runnable> afterMethodCleanup = new ArrayList<>();
 
@@ -359,9 +359,6 @@ public class BaseServiceTest {
               .extract().as(RunService.RunExtended.class);
    }
 
-   protected void waitForDatasets(int datasetId) {
-      jsonRequest().get("/api/run/"+datasetId+"/waitforDatasets").then().statusCode(204);
-   }
 
    protected List<ExperimentService.ExperimentResult> runExperiments(int datasetId) {
       return jsonRequest().get("/api/experiment/run?datasetId=" + datasetId)
@@ -545,31 +542,7 @@ public class BaseServiceTest {
       return jsonRequest().get("/api/alerting/variables?test=" + testId)
               .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, Variable.class));
    }
-
-   protected <E> BlockingQueue<E> eventConsumerQueue(Class<? extends E> eventClass, MessageBusChannels eventType, Predicate<E> filter) {
-      BlockingQueue<E> queue = new LinkedBlockingDeque<>();
-      AutoCloseable closeable = messageBus.subscribe(eventType, getClass().getName() + "_" + ThreadLocalRandom.current().nextLong(), eventClass, msg -> {
-         if (eventClass.isInstance(msg)) {
-            E event = eventClass.cast(msg);
-            if (filter.test(event)) {
-               queue.add(event);
-            } else {
-               log.debugf("Ignoring event %s", event);
-            }
-         } else {
-            throw new IllegalStateException("Unexpected type for event " + eventType + ": " + msg);
-         }
-      });
-      afterMethodCleanup.add(() -> {
-         try {
-            closeable.close();
-         } catch (Exception e) {
-            throw new RuntimeException(e);
-         }
-      });
-      return queue;
-   }
-
+   
    protected ArrayNode jsonArray(String... items) {
       ArrayNode array = JsonNodeFactory.instance.arrayNode(items.length);
       for (String item : items) {
@@ -578,15 +551,15 @@ public class BaseServiceTest {
       return array;
    }
 
-   protected BlockingQueue<Integer> trashRun(int runId) throws InterruptedException {
-      BlockingQueue<Integer> trashedQueue = eventConsumerQueue(Integer.class, MessageBusChannels.RUN_TRASHED, r -> true);
+   protected BlockingQueue<Integer> trashRun(int runId, Integer testId) throws InterruptedException {
+      BlockingQueue<Integer> trashedQueue = serviceMediator.getEventQueue(AsyncEventChannels.RUN_TRASHED, testId);
       jsonRequest().post("/api/run/" + runId + "/trash").then().statusCode(204);
       assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
       return trashedQueue;
    }
 
    protected <T> T withExampleDataset(Test test, JsonNode data, Function<Dataset, T> testLogic) {
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
       try {
          RunDAO run = new RunDAO();
          tm.begin();
@@ -721,7 +694,7 @@ public class BaseServiceTest {
             .body(prefix).post("/api/action/allowedSites").then().statusCode(200);
    }
 
-   protected Response addTestHttpAction(Test test, MessageBusChannels event, String url) {
+   protected Response addTestHttpAction(Test test, AsyncEventChannels event, String url) {
       Action action = new Action();
       action.event = event.name();
       action.type = HttpAction.TYPE_HTTP;
@@ -731,7 +704,7 @@ public class BaseServiceTest {
       return jsonRequest().auth().oauth2(getAdminToken()).body(action).post("/api/action");
    }
 
-   protected Response addTestGithubIssueCommentAction(Test test, MessageBusChannels event, String formatter, String owner, String repo, String issue, String secretToken) {
+   protected Response addTestGithubIssueCommentAction(Test test, AsyncEventChannels event, String formatter, String owner, String repo, String issue, String secretToken) {
       Action action = new Action();
       action.event = event.name();
       action.type = GitHubIssueCommentAction.TYPE_GITHUB_ISSUE_COMMENT;
@@ -745,7 +718,7 @@ public class BaseServiceTest {
       return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
    }
 
-   protected Response addGlobalAction(MessageBusChannels event, String url) {
+   protected Response addGlobalAction(AsyncEventChannels event, String url) {
       Action action = new Action();
       action.event = event.name();
       action.type = "http";
@@ -957,7 +930,7 @@ public class BaseServiceTest {
    }
 
    protected void uploadExampleRuns(Test test) throws InterruptedException {
-      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> queue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS,test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts - 1, createRunData("production", "windows", "jvm", 1, 0.5, 150_000_000, 123) , test.name);

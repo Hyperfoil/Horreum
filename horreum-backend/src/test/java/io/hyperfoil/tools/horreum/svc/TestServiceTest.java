@@ -16,7 +16,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
@@ -25,12 +25,8 @@ import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.ViewComponent;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.restassured.common.mapper.TypeRef;
 import io.restassured.response.Response;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import org.apache.commons.collections4.functors.ComparatorPredicate;
-import org.hibernate.persister.collection.mutation.RowMutationOperations;
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
 
@@ -64,14 +60,14 @@ public class TestServiceTest extends BaseServiceTest {
          assertNotNull(TestDAO.findById(test.id));
       }
 
-      BlockingQueue<Dataset.EventNew> dsQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dsQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_NEW, test.id);
       int runId = uploadRun("{ \"foo\" : \"bar\" }", test.name);
       assertNotNull(dsQueue.poll(10, TimeUnit.SECONDS));
 
       jsonRequest().get("/api/test/summary?roles=__my").then().statusCode(200);
 
 
-      BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, MessageBusChannels.RUN_TRASHED, id -> id == runId);
+      BlockingQueue<Integer> events = serviceMediator.getEventQueue( AsyncEventChannels.RUN_TRASHED, test.id);
       deleteTest(test);
       assertNotNull(events.poll(10, TimeUnit.SECONDS));
 
@@ -92,7 +88,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<Dataset.EventNew> newDatasetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> newDatasetQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_NEW, test.id);
       final int NUM_DATASETS = 5;
       for (int i = 0; i < NUM_DATASETS; ++i) {
          uploadRun(runWithValue(i, schema), test.name);
@@ -129,11 +125,11 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testAddTestAction(TestInfo info) {
       Test test = createTest(createExampleTest(getTestName(info)));
-      addTestHttpAction(test, MessageBusChannels.RUN_NEW, "https://attacker.com").then().statusCode(400);
+      addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "https://attacker.com").then().statusCode(400);
 
       addAllowedSite("https://example.com");
 
-      Action action = addTestHttpAction(test, MessageBusChannels.RUN_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
+      Action action = addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       action.active = false;
@@ -148,7 +144,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<Dataset.EventNew> newDatasetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> newDatasetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
       uploadRun(runWithValue(42, schema), test.name);
       Dataset.EventNew event = newDatasetQueue.poll(10, TimeUnit.SECONDS);
       assertNotNull(event);
@@ -186,7 +182,7 @@ public class TestServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
 
-      BlockingQueue<Dataset.LabelsUpdatedEvent> newDatasetQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> newDatasetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
       uploadRun(runWithValue(42, schema), test.name);
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
       assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
@@ -239,8 +235,8 @@ public class TestServiceTest extends BaseServiceTest {
       view.testId = test.id;
       updateView(view);
 
-      addTestHttpAction(test, MessageBusChannels.RUN_NEW, "http://example.com");
-      addTestGithubIssueCommentAction(test, MessageBusChannels.EXPERIMENT_RESULT_NEW,
+      addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "http://example.com");
+      addTestGithubIssueCommentAction(test, AsyncEventChannels.EXPERIMENT_RESULT_NEW,
             ExperimentResultToMarkdown.NAME, "hyperfoil", "horreum", "123", "super-secret-github-token");
 
       addChangeDetectionVariable(test, schema.id);
@@ -263,7 +259,7 @@ public class TestServiceTest extends BaseServiceTest {
 
 
       if (wipe) {
-         BlockingQueue<Test> events = eventConsumerQueue(Test.class, MessageBusChannels.TEST_DELETED, t -> (true));
+         BlockingQueue<Test> events = serviceMediator.getEventQueue(AsyncEventChannels.TEST_DELETED, test.id);
          deleteTest(test);
          Test deleted = events.poll(10, TimeUnit.SECONDS);
          assertNotNull(deleted);

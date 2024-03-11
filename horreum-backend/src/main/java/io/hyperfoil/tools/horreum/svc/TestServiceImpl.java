@@ -4,10 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
-import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.*;
@@ -16,7 +15,6 @@ import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
 import io.hyperfoil.tools.horreum.mapper.TestTokenMapper;
 import io.hyperfoil.tools.horreum.api.services.TestService;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.server.EncryptionManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
@@ -36,7 +34,6 @@ import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
-import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,7 +48,6 @@ import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -101,9 +97,6 @@ public class TestServiceImpl implements TestService {
    EntityManager em;
 
    @Inject
-   MessageBus messageBus;
-
-   @Inject
    SecurityIdentity identity;
 
    @Inject
@@ -132,7 +125,7 @@ public class TestServiceImpl implements TestService {
       mediator.deleteTest(test.id);
       test.delete();
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.TEST_DELETED, test.id, TestMapper.from(test)));;
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.TEST_DELETED, test.id, TestMapper.from(test)));;
    }
 
    @Override
@@ -256,7 +249,7 @@ public class TestServiceImpl implements TestService {
          }
          mediator.newTest(TestMapper.from(test));
          if(mediator.testMode())
-            Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.TEST_NEW, test.id, TestMapper.from(test)));
+            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.TEST_NEW, test.id, TestMapper.from(test)));
       }
       return test;
    }

@@ -122,10 +122,6 @@ public class RunServiceExtension implements RunService {
       return delegate.listAllRuns(query, matchAll, roles, trashed, limit, page, sort, direction);
    }
 
-   @Override
-   public void waitForDatasets(int runId) {
-      delegate.waitForDatasets(runId);
-   }
 
    @Override
    public RunCount runCount(int testId) {
