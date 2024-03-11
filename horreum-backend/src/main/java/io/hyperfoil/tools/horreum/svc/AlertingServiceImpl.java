@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModelResolver;
 import io.hyperfoil.tools.horreum.hibernate.IntArrayType;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -47,7 +47,7 @@ import io.hyperfoil.tools.horreum.api.alerting.*;
 import io.hyperfoil.tools.horreum.api.changes.Dashboard;
 import io.hyperfoil.tools.horreum.api.changes.Target;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
+import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
@@ -189,7 +189,7 @@ public class AlertingServiceImpl implements AlertingService {
    EntityManager em;
 
    @Inject
-   MessageBus messageBus;
+   BlockingTaskDispatcher messageBus;
 
    @Inject
    SecurityIdentity identity;
@@ -495,12 +495,12 @@ public class AlertingServiceImpl implements AlertingService {
       if (!missingValueVariables.isEmpty()) {
          MissingValuesEvent event = new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify);
          if(mediator.testMode())
-            Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_MISSING_VALUES, dataset.testid, event));
+            mediator.publishEvent(AsyncEventChannels.DATASET_MISSING_VALUES, dataset.testid, event);
          mediator.missingValuesDataset(event);
       }
       DataPoint.DatasetProcessedEvent event = new DataPoint.DatasetProcessedEvent( DatasetMapper.fromInfo( dataset.getInfo()), notify);
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATAPOINT_PROCESSED, dataset.testid, event));
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_PROCESSED, dataset.testid, event));
       mediator.dataPointsProcessed(event);
    }
 
@@ -515,7 +515,7 @@ public class AlertingServiceImpl implements AlertingService {
       DataPoint.Event event = new DataPoint.Event(DataPointMapper.from( dataPoint), dataset.testid, notify);
       onNewDataPoint(event); //Test failure if we do not start a new thread and new tx
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATAPOINT_NEW, dataset.testid, event));
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_NEW, dataset.testid, event));
    }
 
    private void logCalculationMessage(DatasetDAO dataSet, int level, String format, Object... args) {
@@ -674,7 +674,7 @@ public class AlertingServiceImpl implements AlertingService {
                String testName = TestDAO.<TestDAO>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
                Change.Event event = new Change.Event(ChangeMapper.from(change), testName, DatasetMapper.fromInfo(info), notify);
                if(mediator.testMode())
-                  Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.CHANGE_NEW, change.dataset.testid, event));
+                  Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.CHANGE_NEW, change.dataset.testid, event));
                mediator.executeBlocking(() -> mediator.newChange(event)) ;
             });
          }

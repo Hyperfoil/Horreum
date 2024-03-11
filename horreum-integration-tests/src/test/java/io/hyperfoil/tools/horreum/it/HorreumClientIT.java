@@ -295,9 +295,6 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
             Integer lastRunID = runsSummary.runs.stream().map(run -> run.id).max((Comparator.comparingInt(anInt -> anInt))).get();
 
-            //wait for dataset(s) to be calculated
-            horreumClient.runService.waitForDatasets(lastRunID);
-
             RunService.RunExtended extendedRun = horreumClient.runService.getRun(lastRunID, null);
 
             assertNotNull(extendedRun.datasets);

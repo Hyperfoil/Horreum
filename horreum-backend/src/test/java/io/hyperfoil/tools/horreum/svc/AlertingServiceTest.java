@@ -25,7 +25,7 @@ import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.alerting.RunExpectation;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.restassured.common.mapper.TypeRef;
 import jakarta.inject.Inject;
 
@@ -77,13 +77,16 @@ public class AlertingServiceTest extends BaseServiceTest {
    @Inject
    AlertingServiceImpl alertingService;
 
+   @Inject
+   ServiceMediator serviceMediator;
+
    @org.junit.jupiter.api.Test
    public void testNotifications(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
       Schema schema = createExampleSchema(info);
       setTestVariables(test, "Value", new Label("value", schema.id));
 
-      BlockingQueue<DataPoint.Event> dpe = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> dpe = serviceMediator.getEventQueue(AsyncEventChannels.DATAPOINT_NEW, test.id);
       uploadRun(runWithValue(42, schema).toString(), test.name);
 
       DataPoint.Event event1 = dpe.poll(10, TimeUnit.SECONDS);
@@ -117,7 +120,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
       runJson.put("$schema", schema.uri);
 
-      BlockingQueue<MissingValuesEvent> missingQueue = eventConsumerQueue(MissingValuesEvent.class, MessageBusChannels.DATASET_MISSING_VALUES, e -> e.dataset.testId == test.id);
+      BlockingQueue<MissingValuesEvent> missingQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_MISSING_VALUES, test.id);
       missingQueue.drainTo(new ArrayList<>());
       int runId = uploadRun(runJson, test.name);
 
@@ -150,8 +153,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       Schema schema = createExampleSchema(info);
       ChangeDetection cd = addChangeDetectionVariable(test, schema.id);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
-      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, MessageBusChannels.CHANGE_NEW, e -> e.dataset.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATAPOINT_NEW, test.id);
+      BlockingQueue<Change.Event> changeQueue = serviceMediator.getEventQueue(AsyncEventChannels.CHANGE_NEW, test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(1, schema), test.name);
@@ -174,10 +177,16 @@ public class AlertingServiceTest extends BaseServiceTest {
       // The change is detected already at run 4 because it's > than the previous mean
       assertEquals(run4, changeEvent1.change.dataset.runId);
 
-      ((ObjectNode) cd.config).put("filter", "min");
+      cd.config.put("filter", "min");
       setTestVariables(test, "Value", new Label("value", schema.id), cd);
       // After changing the variable the past datapoints and changes are removed; we need to recalculate them again
-      jsonRequest().post("/api/alerting/recalculate?test=" + test.id).then().statusCode(204);
+      String notifyPath = "/api/alerting/recalculate?test="
+              .concat(test.id.toString())
+              .concat("&notify=false&debug=false&recalc=true&from=")
+              .concat(Long.toString(Long.MIN_VALUE)).concat("&to=")
+              .concat(Long.toString(Long.MAX_VALUE));
+
+      jsonRequest().post(notifyPath).then().statusCode(204);
 
       for (int i = 0; i < 5; ++i) {
          DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
@@ -225,8 +234,8 @@ public class AlertingServiceTest extends BaseServiceTest {
 
       addChangeDetectionVariable(test, schema.id);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == testId);
-      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, MessageBusChannels.CHANGE_NEW, e -> e.dataset.testId == testId);
+      BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATAPOINT_NEW, testId);
+      BlockingQueue<Change.Event> changeQueue = serviceMediator.getEventQueue( AsyncEventChannels.CHANGE_NEW, testId);
 
       long ts = System.currentTimeMillis();
       for (int i = 0; i < 12; i += 3) {
@@ -271,7 +280,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
       addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == testId);
+      BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATAPOINT_NEW, testId);
       uploadRun(runWithValue(42, schema).put("foo", "aaa").put("bar", "bbb"), test.name);
       assertValue(datapointQueue, 42);
 
@@ -316,7 +325,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
       addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == testId);
+      BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATAPOINT_NEW, testId);
 
       uploadRun(runWithValue(1, schema).put("foo", "aaa").put("bar", "bbb"), test.name);
       assertValue(datapointQueue, 1);
@@ -378,7 +387,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       int firstRuleId = addMissingDataRule(test, "my rule", jsonArray("value"), "value => value > 2", 10000);
       assertTrue(firstRuleId > 0);
 
-      BlockingQueue<Dataset.EventNew> newDatasetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> newDatasetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
       long now = System.currentTimeMillis();
       uploadRun(now - 20000, runWithValue(3, schema), test.name);
       Dataset.EventNew firstEvent = newDatasetQueue.poll(10, TimeUnit.SECONDS);
@@ -420,7 +429,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       em.clear();
 
       pollMissingDataRuleResultsByDataset(thirdEvent.datasetId, 1);
-      trashRun(thirdRunId);
+      trashRun(thirdRunId, test.id);
       pollMissingDataRuleResultsByDataset(thirdEvent.datasetId, 0);
 
       alertingService.checkMissingDataset();
@@ -563,7 +572,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       Schema schema = createExampleSchema(info);
       addChangeDetectionVariable(test, schema.id);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATAPOINT_NEW, test.id);
 
       uploadRun(runWithValue(42, schema), test.name);
       DataPoint first = assertValue(datapointQueue, 42);
@@ -615,8 +624,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       rd.config = config;
       setTestVariables(test, "Value", new Label("value", schema.id), rd);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
-      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, MessageBusChannels.CHANGE_NEW, e -> e.dataset.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATAPOINT_NEW, test.id);
+      BlockingQueue<Change.Event> changeQueue = serviceMediator.getEventQueue(AsyncEventChannels.CHANGE_NEW, test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(4, schema), test.name);
@@ -647,7 +656,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       addChangeDetectionVariable(test, schema.id);
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATAPOINT_NEW, test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(1, schema).put("timestamp", 1662023776000L), test.name);
@@ -697,7 +706,7 @@ public class AlertingServiceTest extends BaseServiceTest {
       LabelDAO l = LabelDAO.find("name", "value").firstResult();
       Label label = LabelMapper.from(l);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATAPOINT_NEW, test.id);
 
       long ts = System.currentTimeMillis();
       uploadRun(ts, ts, runWithValue(1, schema), test.name);
@@ -724,8 +733,8 @@ public class AlertingServiceTest extends BaseServiceTest {
       addLabel(schema, "timestamp", null, new Extractor("ts", "$.timestamp", false));
       setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), null);
 
-      BlockingQueue<DataPoint.Event> datapointQueue = eventConsumerQueue(DataPoint.Event.class, MessageBusChannels.DATAPOINT_NEW, e -> e.testId == test.id);
-      BlockingQueue<Change.Event> changeQueue = eventConsumerQueue(Change.Event.class, MessageBusChannels.CHANGE_NEW, e -> e.dataset.testId == test.id);
+      BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATAPOINT_NEW, test.id);
+      BlockingQueue<Change.Event> changeQueue = serviceMediator.getEventQueue( AsyncEventChannels.CHANGE_NEW, test.id);
 
       int[] order = new int[] { 5, 0, 1, 7, 4, 8, 2, 3, 9, 6 };
       double[] values = new double[] { 1, 2, 2, 2, 1, 1, 2, 1, 1, 2};

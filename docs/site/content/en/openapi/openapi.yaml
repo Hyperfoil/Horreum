@@ -1233,24 +1233,6 @@ paths:
       responses:
         "201":
           description: Created
-  /api/run/{id}/waitforDatasets:
-    get:
-      tags:
-      - Run
-      description: "Blocking call, waiting for datasets to be produced"
-      operationId: waitForDatasets
-      parameters:
-      - name: id
-        in: path
-        description: Run ID
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 101
-      responses:
-        "204":
-          description: No Content
   /api/schema:
     get:
       tags:

@@ -18,7 +18,7 @@ import java.util.stream.StreamSupport;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.internal.services.SqlService;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import jakarta.inject.Inject;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -191,7 +191,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          int labelB = addLabel(schemas[1], "B", "v => v + 1", new Extractor("value", "$.value", false));
          int labelC = addLabel(schemas[1], "C", null, new Extractor("value", "$.value", false));
          Test test = createTest(createExampleTest("dummy"));
-         BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+         BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
          withExampleDataset(test, createABData(), ds -> {
             waitForUpdate(updateQueue, ds);
             List<LabelValueDAO> values = LabelValueDAO.<LabelValueDAO>find("datasetId", ds.id).list();
@@ -226,7 +226,7 @@ public class DatasetServiceTest extends BaseServiceTest {
 
    private List<Label.Value> withLabelValues(ArrayNode data) {
       Test test = createTest(createExampleTest("dummy"));
-      BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
       return withExampleDataset(test, data, ds -> {
          waitForUpdate(updateQueue, ds);
          return LabelValueDAO.<LabelValueDAO>find("datasetId", ds.id).list().stream().map(LabelMapper::fromValue).collect(Collectors.toList());
@@ -236,8 +236,8 @@ public class DatasetServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testSchemaAfterData() throws InterruptedException {
       Test test = createTest(createExampleTest("xxx"));
-      BlockingQueue<Dataset.EventNew> dsQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
-      BlockingQueue<Dataset.LabelsUpdatedEvent> labelQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.EventNew> dsQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_NEW, test.id);
+      BlockingQueue<Dataset.LabelsUpdatedEvent> labelQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
       JsonNode data = JsonNodeFactory.instance.arrayNode()
             .add(JsonNodeFactory.instance.objectNode().put("$schema", "urn:another"))
             .add(JsonNodeFactory.instance.objectNode().put("$schema", "urn:foobar").put("value", 42));
@@ -312,7 +312,7 @@ public class DatasetServiceTest extends BaseServiceTest {
          int labelB = addLabel(schemas[1], "b", null, valuePath);
          // view update should happen in the same transaction as labels update so we can use the event
          log.debugf("Waiting for  MessageBusChannels.DATASET_UPDATED_LABELS");
-         BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+         BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
          withExampleDataset(test, createABData(), ds -> {
             waitForUpdate(updateQueue, ds);
             JsonNode datasets = fetchDatasetsByTest(test.id);
@@ -416,7 +416,7 @@ public class DatasetServiceTest extends BaseServiceTest {
       test = createTest(test);
       int testId = test.id;
 
-      BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, testId));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, testId);
       long timestamp = System.currentTimeMillis();
       uploadRun(timestamp, timestamp,
             JsonNodeFactory.instance.objectNode().put("$schema", schema.uri).put("value", 42),
@@ -435,17 +435,15 @@ public class DatasetServiceTest extends BaseServiceTest {
    public void testDatasetListOrdering(){
       String testname = "road-runner";
       Test test = createTest(createExampleTest(testname));
-      BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = eventConsumerQueue(Dataset.LabelsUpdatedEvent.class, MessageBusChannels.DATASET_UPDATED_LABELS, e -> checkTestId(e.datasetId, test.id));
+      BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
       long timestamp = System.currentTimeMillis();
       int initialRunID = uploadRun(timestamp, timestamp,
           JsonNodeFactory.instance.objectNode(),
           test.name);
-      waitForDatasets(initialRunID);
       timestamp = System.currentTimeMillis();
       int latterRunID = uploadRun(timestamp, timestamp,
           JsonNodeFactory.instance.objectNode(),
           test.name);
-      waitForDatasets(latterRunID);
       DatasetService.DatasetList datasetsList = listTestDatasets(test.id, null);
       assertEquals(2, datasetsList.datasets.size());
       assertEquals(0, datasetsList.datasets.get(0).ordinal);

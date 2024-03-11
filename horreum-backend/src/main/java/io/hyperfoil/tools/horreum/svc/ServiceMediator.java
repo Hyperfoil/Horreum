@@ -4,10 +4,11 @@ import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
@@ -22,9 +23,17 @@ import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.eclipse.microprofile.reactive.messaging.OnOverflow;
+import org.jboss.logging.Logger;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 @ApplicationScoped
 public class ServiceMediator {
+    private static final Logger log = Logger.getLogger(ServiceMediator.class);
 
     @Inject
     private TestServiceImpl testService;
@@ -76,6 +85,8 @@ public class ServiceMediator {
     @Channel("run-recalc-out")
     Emitter<Integer> runEmitter;
 
+    private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events =  new ConcurrentHashMap<>();
+
     public ServiceMediator() {
     }
 
@@ -86,7 +97,6 @@ public class ServiceMediator {
     boolean testMode() {
         return testMode;
     }
-
     @Transactional
     void newTest(Test test) {
         actionService.onNewTest(test);
@@ -138,8 +148,8 @@ public class ServiceMediator {
     @Blocking(ordered = false, value = "horreum.dataset.pool")
     @ActivateRequestContext
     public void processDatasetEvents(Dataset.EventNew newEvent) {
-            datasetService.onNewDatasetNoLock(newEvent);
-            validateDataset(newEvent.datasetId);
+        datasetService.onNewDatasetNoLock(newEvent);
+        validateDataset(newEvent.datasetId);
     }
 
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
@@ -150,7 +160,7 @@ public class ServiceMediator {
     @Blocking(ordered = false, value = "horreum.run.pool")
     @ActivateRequestContext
     public void processRunRecalculation(int runId) {
-            runService.transform(runId, true);
+        runService.transform(runId, true);
     }
 
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
@@ -222,4 +232,27 @@ public class ServiceMediator {
     public void validateSchema(int schemaId) {
         schemaService.revalidateAll(schemaId);
     }
+
+    public <T> void publishEvent(AsyncEventChannels channel, int testId, T payload) {
+        if (testMode ) {
+            log.debugf("Publishing test %d on %s: %s", testId, channel, payload);
+//        eventBus.publish(channel.name(), new MessageBus.Message(BigInteger.ZERO.longValue(), testId, 0, payload));
+            events.putIfAbsent(channel, new HashMap<>());
+            BlockingQueue<Object> queue = events.get(channel).computeIfAbsent(testId, k -> new LinkedBlockingQueue<>());
+            queue.add(payload);
+        } else {
+            //no-op
+        }
+    }
+
+    public <T> BlockingQueue<T> getEventQueue(AsyncEventChannels channel, Integer id) {
+        if (testMode ) {
+            events.putIfAbsent(channel, new HashMap<>());
+            BlockingQueue<?> queue = events.get(channel).computeIfAbsent(id, k -> new LinkedBlockingQueue<>());
+            return (BlockingQueue<T>) queue;
+        } else {
+            return null;
+        }
+    }
+
 }

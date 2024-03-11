@@ -1,12 +1,44 @@
 package io.hyperfoil.tools.horreum.bus;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.ReentrantLock;
-
+import io.hyperfoil.tools.horreum.svc.Util;
+import io.quarkus.runtime.Startup;
+import io.vertx.core.Vertx;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-public class TaskQueue {
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+@Startup
+@ApplicationScoped
+public class BlockingTaskDispatcher {
+   private static final Logger log = Logger.getLogger(BlockingTaskDispatcher.class);
+   @Inject
+   Vertx vertx;
+
+   private final ConcurrentMap<Integer, TaskQueue> taskQueues = new ConcurrentHashMap<>();
+
+   public void executeForTest(int testId, Runnable runnable) {
+      Runnable task = Util.wrapForBlockingExecution(runnable);
+      vertx.executeBlocking(promise -> {
+         try {
+            TaskQueue queue = taskQueues.computeIfAbsent(testId, TaskQueue::new);
+            queue.executeOrAdd(task);
+         } catch (Exception e) {
+            log.error("Failed to execute blocking task", e);
+         } finally {
+            promise.complete();
+         }
+      });
+   }
+
+}
+
+class TaskQueue {
    private static final Logger log = Logger.getLogger(TaskQueue.class);
    private final int testId;
    private final Queue<Runnable> queue = new ConcurrentLinkedQueue<>();
@@ -39,3 +71,4 @@ public class TaskQueue {
       } while (!queue.isEmpty());
    }
 }
+

@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.*;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.security.PermitAll;
@@ -40,7 +40,6 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLogDAO;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -174,9 +173,6 @@ public class DatasetServiceImpl implements DatasetService {
    //@formatter:on
    @Inject
    EntityManager em;
-
-   @Inject
-   MessageBus messageBus;
 
    @Inject
    ServiceMediator mediator;
@@ -409,19 +405,6 @@ public class DatasetServiceImpl implements DatasetService {
       return DatasetMapper.from(dataset);
    }
 
-   public void onLabelChanged(String param) {
-      String[] parts = param.split(";");
-      if (parts.length != 3) {
-         log.errorf("Invalid parameter to onLabelChanged: %s", param);
-         return;
-      }
-      int testId = Integer.parseInt(parts[0]);
-      int datasetId = Integer.parseInt(parts[1]);
-      int labelId = Integer.parseInt(parts[2]);
-      // This is invoked when the label is added/updated. We won't send notifications
-      // for that (user can check if there are any changes on his own).
-      messageBus.executeForTest(testId, () -> calculateLabelValues(testId, datasetId, labelId, true));
-   }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
@@ -472,7 +455,7 @@ public class DatasetServiceImpl implements DatasetService {
       createFingerprint(datasetId, testId);
       mediator.updateLabels(new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_UPDATED_LABELS, testId, new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation)));
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_UPDATED_LABELS, testId, new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation)));
    }
 
    @Transactional
