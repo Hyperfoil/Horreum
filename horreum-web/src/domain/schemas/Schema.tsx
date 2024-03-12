@@ -196,7 +196,7 @@ function General(props: GeneralProps) {
                         }}
                     />
                 ) : (
-                    <AccessIcon access={schema.access as Access} />
+                    <AccessIcon access={schema.access as Access} showText={false} />
                 )}
             </FormGroup>
         </Form>

@@ -55,7 +55,7 @@ import { NoSchemaInDataset } from "./NoSchema"
 import ButtonLink from "../../components/ButtonLink"
 import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
 import ViewSelect from "../../components/ViewSelect"
-import AccessIconOnly from "../../components/AccessIconOnly"
+import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
@@ -126,7 +126,7 @@ const staticColumns: DatasetColumn[] = [
             <>
                 {teamToName(arg.cell.value.owner)}
                 <span style={{ marginLeft: '8px' }}>
-                <AccessIconOnly access={arg.cell.value.access} />
+                    <AccessIcon access={arg.cell.value.access} showText={false} />
                 </span>
             </>
         ),
