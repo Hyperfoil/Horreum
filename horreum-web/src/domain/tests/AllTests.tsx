@@ -47,7 +47,7 @@ import {
     removeUserOrTeam,
     TestStorage
 } from "../../api"
-import AccessIconOnly from "../../components/AccessIconOnly"
+import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
@@ -350,7 +350,7 @@ export default function AllTests() {
                     <>
                         {teamToName(arg.cell.value.owner)}
                         <span style={{ marginLeft: '8px' }}>
-                            <AccessIconOnly access={arg.cell.value.access} />
+                            <AccessIcon access={arg.cell.value.access} showText={false} />
                         </span>
                     </>
                 ),
