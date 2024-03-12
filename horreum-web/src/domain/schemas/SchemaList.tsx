@@ -11,7 +11,7 @@ import ButtonLink from "../../components/ButtonLink"
 import { CellProps, Column } from "react-table"
 import {Access, SortDirection, Schema, schemaApi} from "../../api"
 import SchemaImportButton from "./SchemaImportButton"
-import AccessIconOnly from "../../components/AccessIconOnly"
+import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
@@ -85,7 +85,7 @@ export default function SchemaList() {
                     <>
                         {teamToName(arg.cell.value.owner)}
                         <span style={{ marginLeft: '8px' }}>
-                        <AccessIconOnly access={arg.cell.value.access} />
+                            <AccessIcon access={arg.cell.value.access} showText={false} />
                         </span>
                     </>
                 ),
