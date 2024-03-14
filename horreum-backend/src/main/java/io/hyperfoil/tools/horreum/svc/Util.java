@@ -649,13 +649,11 @@ public class Util {
          if (str.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}")){
             str=str+"Z";
          }
-         //ISO_DATE_TIME
-         if(str.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:Z|[+\\-]\\d{2}:\\d{2})")){
-            try {
-               return ZonedDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME).toInstant();
-            } catch (DateTimeParseException e) {
-               e.printStackTrace();
-            }
+         //ISO_DATE_TIME, do not verify with pattern because multipel patterns are possible
+         try {
+            return ZonedDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME).toInstant();
+         } catch (DateTimeParseException e) {
+            e.printStackTrace();
          }
       }
       return null;//nothing matched
