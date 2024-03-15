@@ -39,7 +39,7 @@ jobs:
         run: |
           echo "NO_SQUASH_OPTION=false" >> $GITHUB_ENV
       - name: Backporting
-        uses: kiegroup/git-backporting@v4.5.1
+        uses: kiegroup/git-backporting@v4.5.2
         with:
           target-branch: 0.12.x
           pull-request: ${{ github.event.pull_request.url }}
