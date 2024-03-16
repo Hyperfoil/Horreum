@@ -1,0 +1,6 @@
+# ignore files and folders
+node_modules
+package-lock.json
+package.json
+build
+.git
