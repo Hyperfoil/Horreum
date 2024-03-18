@@ -653,7 +653,7 @@ public class Util {
          try {
             return ZonedDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME).toInstant();
          } catch (DateTimeParseException e) {
-            e.printStackTrace();
+            log.warn("failed to convert "+time+" to timestamp using "+str,e);
          }
       }
       return null;//nothing matched
