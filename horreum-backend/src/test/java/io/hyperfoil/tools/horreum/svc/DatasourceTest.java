@@ -12,7 +12,7 @@ import io.hyperfoil.tools.horreum.api.services.ConfigService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
+import io.hyperfoil.tools.horreum.test.ElasticsearchTestProfile;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
-@TestProfile(HorreumTestProfile.class)
+@TestProfile(ElasticsearchTestProfile.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class DatasourceTest extends BaseServiceTest{
 
