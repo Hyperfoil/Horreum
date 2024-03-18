@@ -19,7 +19,7 @@
   </modules>
 
   <properties>
-    <compiler-plugin.version>3.12.1</compiler-plugin.version>
+    <compiler-plugin.version>3.13.0</compiler-plugin.version>
     <failsafe-plugin.version>3.2.5</failsafe-plugin.version>
     <maven.compiler.release>11</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
