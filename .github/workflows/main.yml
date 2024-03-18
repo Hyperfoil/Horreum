@@ -38,7 +38,7 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
     - name: Install Hunter
-      run: pipx install git+ssh://git@github.com/datastax-labs/hunter
+      run: pipx install git+https://github.com/datastax-labs/hunter.git
     - name: Maven Version
       run: mvn --version
     - name: Build and Test
