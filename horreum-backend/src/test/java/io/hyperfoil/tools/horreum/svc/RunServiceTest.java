@@ -538,6 +538,15 @@ public class RunServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
+   public void add_microseconds_in_timestamp() throws JsonProcessingException {
+      Test test = createExampleTest("foo");
+      test = createTest(test);
+      JsonNode payload = new ObjectMapper().readTree("{\"start_time\": \"2024-03-13T21:18:10.878423-04:00\", \"stop_time\": \"2024-03-13T21:18:11.878423-04:00\"}");
+      String runId = uploadRun("$.start_time", "$.stop_time", test.name, test.owner, Access.PUBLIC,
+              null, null, "test", payload);
+   }
+
+   @org.junit.jupiter.api.Test
    public void testUploadToPrivateTest() throws JsonProcessingException {
       Test test = createExampleTest("supersecret");
       test.access = Access.PRIVATE;
