@@ -110,7 +110,7 @@ public class SchemaServiceImpl implements SchemaService {
    private final CustomType JSON_STRING_ARRY_TYPE = new CustomType<>(new JsonBinaryType(String[].class), new TypeConfiguration());
 
    private static final JsonSchemaFactory JSON_SCHEMA_FACTORY = new JsonSchemaFactory.Builder()
-         .defaultMetaSchemaURI(JsonMetaSchema.getV4().getUri())
+         .defaultMetaSchemaIri(JsonMetaSchema.getV4().getIri())
          .addMetaSchema(JsonMetaSchema.getV4())
          .addMetaSchema(JsonMetaSchema.getV6())
          .addMetaSchema(JsonMetaSchema.getV7())
