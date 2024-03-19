@@ -41,7 +41,7 @@ import {runApi, RunSummary, SortDirection, Test} from "../../api"
 import { NoSchemaInRun } from "./NoSchema"
 import { Description, ExecutionTime, Menu } from "./components"
 import SchemaList from "./SchemaList"
-import AccessIconOnly from "../../components/AccessIconOnly"
+import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {RunImportModal} from "./RunImportModal";
@@ -217,8 +217,8 @@ export default function RunList() {
                 <>
                     {teamToName(arg.cell.value.owner)}
                     <span style={{ marginLeft: '8px' }}>
-                <AccessIconOnly access={arg.cell.value.access} />
-                </span>
+                        <AccessIcon access={arg.cell.value.access} showText={false} />
+                    </span>
                 </>
             ),
         },
