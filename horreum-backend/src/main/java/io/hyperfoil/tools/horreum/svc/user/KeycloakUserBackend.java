@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static io.hyperfoil.tools.horreum.svc.UserServiceImpl.getTeamPrefix;
 import static java.text.MessageFormat.format;
+import static java.util.stream.Collectors.joining;
 
 /**
  * Implementation of {@link UserBackEnd} using an external Keycloak server.
@@ -50,6 +50,10 @@ public class KeycloakUserBackend implements UserBackEnd {
 
     private static UserService.UserData toUserInfo(UserRepresentation rep) {
         return new UserService.UserData(rep.getId(), rep.getUsername(), rep.getFirstName(), rep.getLastName(), rep.getEmail());
+    }
+
+    private static String getTeamPrefix(String team) {
+        return team.substring(0, team.length() - 4);
     }
 
     private static boolean isTeam(String role) {
@@ -159,7 +163,7 @@ public class KeycloakUserBackend implements UserBackEnd {
             LOG.warnv("Cannot find user with username {0}", username);
             throw ServiceException.badRequest(format("User {0} does not exist", username));
         } else if (matchingUsers.size() > 1) {
-            LOG.warnv("Multiple matches for exact search for username {0}: {1}", username, matchingUsers);
+            LOG.warnv("Multiple matches for exact search for username {0}: {1}", username, matchingUsers.stream().map(UserRepresentation::getId).collect(joining(" ")));
             throw ServiceException.serverError(format("More than one user with username {0}", username));
         }
         return matchingUsers.get(0).getId();
@@ -269,6 +273,8 @@ public class KeycloakUserBackend implements UserBackEnd {
         } catch (ClientErrorException e) {
             if (e.getResponse().getStatus() == Response.Status.CONFLICT.getStatusCode()) {
                 LOG.warnv("Registration of role {0} failed because it already exists", roleName);
+            } else {
+                throw ServiceException.serverError(format("Unable to create role {0}", roleName));
             }
         } catch (Throwable t) {
             throw ServiceException.serverError(format("Unable to create role {0}", roleName));
@@ -313,8 +319,7 @@ public class KeycloakUserBackend implements UserBackEnd {
                         usersResource.get(user.getId()).roles().realmLevel().remove(List.of(adminRole));
                         LOG.infov("Removed administrator role from user {0}", user.getUsername());
                     } catch (Throwable t) {
-                        LOG.warnv(t, "Cannot remove admin role from user {0}", user.getUsername());
-                        throw ServiceException.serverError(format("Cannot remove admin role from user {0}", user.getUsername()));
+                        LOG.warnv("Could not remove admin role from user {0} due to {1}", user.getUsername(), t.getMessage());
                     }
                 }
             }
@@ -325,8 +330,7 @@ public class KeycloakUserBackend implements UserBackEnd {
                         usersResource.get(findMatchingUserId(username)).roles().realmLevel().add(List.of(adminRole));
                         LOG.infov("Added administrator role to user {0}", username);
                     } catch (Throwable t) {
-                        LOG.warnv(t, "Cannot add admin role to user {0}", username);
-                        throw ServiceException.serverError(format("Cannot add admin role to user {0}", username));
+                        LOG.warnv("Could not add admin role to user {0} due to {1}", username, t.getMessage());
                     }
                 }
             }

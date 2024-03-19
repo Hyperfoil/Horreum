@@ -13,10 +13,12 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static java.text.MessageFormat.format;
+import static java.util.Collections.emptyList;
 
 @Authenticated
 @ApplicationScoped
@@ -43,13 +45,8 @@ public class UserServiceImpl implements UserService {
     // ideally we want to enforce these roles in some of the endpoints, but for now this has to be done in the code
     // @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
     @Override public void createUser(NewUser user) {
-        if (user == null) {
-            throw ServiceException.badRequest("Missing user as the request body");
-        } else if (user.team != null && !user.team.endsWith("-team")) {
-            throw ServiceException.badRequest(format("Team {0} does not end with ´´-team´´ suffix", user.team));
-        }
+        validateNewUser(user);
         userIsManagerForTeam(user.team);
-
         backend.get().createUser(user);
         LOG.infov("{0} created user {1} {2} with username {3} on team {4}", identity.getPrincipal().getName(), user.user.firstName, user.user.lastName, user.user.username, user.team);
     }
@@ -58,29 +55,43 @@ public class UserServiceImpl implements UserService {
         return backend.get().getTeams();
     }
 
-    @WithRoles(addUsername = true)
+    @Transactional
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override public String defaultTeam() {
         UserInfo userInfo = UserInfo.findById(identity.getPrincipal().getName());
-        return userInfo != null ? userInfo.defaultTeam : null;
+        if (userInfo == null) {
+            throw ServiceException.notFound(format("User with username {0} not found", identity.getPrincipal().getName()));
+        }
+        return userInfo.defaultTeam != null ? userInfo.defaultTeam : "";
     }
 
     @Transactional
     @WithRoles(addUsername = true)
-    @Override public void setDefaultTeam(String team) {
+    @Override public void setDefaultTeam(String unsafeTeam) {
         UserInfo userInfo = UserInfo.findById(identity.getPrincipal().getName());
-        userInfo.defaultTeam = Util.destringify(team);
+        if (userInfo == null) {
+            throw ServiceException.notFound(format("User with username {0} not found", identity.getPrincipal().getName()));
+        }
+        userInfo.defaultTeam = validateTeamName(unsafeTeam);
         userInfo.persistAndFlush();
     }
 
     // @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
-    @Override public Map<String, List<String>> teamMembers(String team) {
+    @Override public Map<String, List<String>> teamMembers(String unsafeTeam) {
+        String team = validateTeamName(unsafeTeam);
         userIsManagerForTeam(team);
         return backend.get().teamMembers(team);
     }
 
     // @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
-    @Override public void updateTeamMembers(String team, Map<String, List<String>> roles) {
+    @Override public void updateTeamMembers(String unsafeTeam, Map<String, List<String>> newRoles) {
+        String team = validateTeamName(unsafeTeam);
         userIsManagerForTeam(team);
+
+        // add existing users missing from the new roles map to get their roles removed
+        Map<String, List<String>> roles = new HashMap<>(newRoles);
+        backend.get().teamMembers(team).forEach((username, old) -> roles.putIfAbsent(username, emptyList()));
+
         backend.get().updateTeamMembers(team, roles);
     }
 
@@ -90,15 +101,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @RolesAllowed(Roles.ADMIN)
-    @Override public void addTeam(String team) {
+    @Override public void addTeam(String unsafeTeam) {
+        String team = validateTeamName(unsafeTeam);
         backend.get().addTeam(team);
-        LOG.infov("{0} created team {0}", identity.getPrincipal().getName(), team);
+        LOG.infov("{0} created team {1}", identity.getPrincipal().getName(), team);
     }
 
     @RolesAllowed(Roles.ADMIN)
-    @Override public void deleteTeam(String team) {
+    @Override public void deleteTeam(String unsafeTeam) {
+        String team = validateTeamName(unsafeTeam);
         backend.get().deleteTeam(team);
-        LOG.infov("{0} deleted team {0}", identity.getPrincipal().getName(), team);
+        LOG.infov("{0} deleted team {1}", identity.getPrincipal().getName(), team);
     }
 
     @RolesAllowed(Roles.ADMIN)
@@ -115,12 +128,22 @@ public class UserServiceImpl implements UserService {
     }
 
     private void userIsManagerForTeam(String team) {
-        if (!identity.getRoles().contains(Roles.ADMIN) && !identity.hasRole(getTeamPrefix(team) + Roles.MANAGER)) {
+        if (!identity.getRoles().contains(Roles.ADMIN) && !identity.hasRole(team.substring(0, team.length() - 4) + Roles.MANAGER)) {
             throw ServiceException.badRequest(format("This user is not a manager for team {0}", team));
         }
     }
 
-    public static String getTeamPrefix(String team) {
+    private static void validateNewUser(NewUser user) {
+        if (user == null) {
+            throw ServiceException.badRequest("Missing user as the request body");
+        }
+        if (user.team != null) {
+            user.team = validateTeamName(user.team);
+        }
+    }
+
+    private static String validateTeamName(String unsafeTean) {
+        String team = Util.destringify(unsafeTean);
         if (team == null || team.isBlank()) {
             throw ServiceException.badRequest("No team name!!!");
         } else if (team.startsWith("horreum.")) {
@@ -130,6 +153,6 @@ public class UserServiceImpl implements UserService {
         } else if (team.length() > 64) {
             throw ServiceException.badRequest("Team name too long. Please think on a shorter team name!!!");
         }
-        return team.substring(0, team.length() - 4);
+        return team;
     }
 }

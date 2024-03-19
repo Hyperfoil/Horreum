@@ -64,7 +64,7 @@ public class SecurityMigration {
             Optional<UserInfo> storedUserInfo = UserInfo.findByIdOptional(kcUser.getUsername());
             UserInfo userInfo = storedUserInfo.orElseGet(() -> new UserInfo(kcUser.getUsername()));
             userInfo.email = kcUser.getEmail();
-            userInfo.fistName = kcUser.getFirstName();
+            userInfo.firstName = kcUser.getFirstName();
             userInfo.lastName = kcUser.getLastName();
 
             for (RoleRepresentation kcRole : kcRoles) {
