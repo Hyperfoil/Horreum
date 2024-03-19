@@ -10,17 +10,17 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Map;
 
+import static java.lang.System.getProperty;
+
 public class PostgresResource implements QuarkusTestResourceLifecycleManager {
    private PostgreSQLContainer<?> postgresContainer;
-
-   public static final String POSTGRES_VERSION = "postgres:13";
 
    private Boolean inContainer = false;
 
    @Override
    public void init(Map<String, String> initArgs) {
       if (ConfigProvider.getConfig().getOptionalValue("horreum.test.postgres.enabled", boolean.class).orElse(true)) {
-         postgresContainer = new PostgreSQLContainer<>(POSTGRES_VERSION)
+         postgresContainer = new PostgreSQLContainer<>(getProperty("horreum.dev-services.postgres.image"))
                .withDatabaseName("horreum")
                .withUsername("dbadmin")
                .withPassword("secret");

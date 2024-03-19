@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-import static io.hyperfoil.tools.horreum.svc.UserServiceImpl.getTeamPrefix;
-import static java.util.stream.Collectors.toList;
+import static java.text.MessageFormat.format;
+import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toSet;
 
 /**
@@ -39,33 +39,44 @@ public class DatabaseUserBackend implements UserBackEnd {
     private static final Logger LOG = Logger.getLogger(DatabaseUserBackend.class);
 
     private static UserService.UserData toUserInfo(UserInfo info) {
-        return new UserService.UserData("", info.username, info.fistName, info.lastName, info.email);
+        return new UserService.UserData("", info.username, info.firstName, info.lastName, info.email);
     }
 
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Override public List<UserService.UserData> searchUsers(String query) {
-        List<UserInfo> users = UserInfo.list("username like ?1", "%" + query + "%");
-        return users.stream().map(DatabaseUserBackend::toUserInfo).collect(toList());
-    }
-
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Override public List<UserService.UserData> info(List<String> usernames) {
-        List<UserInfo> users = UserInfo.list("username in ?1", usernames);
-        return users.stream().map(DatabaseUserBackend::toUserInfo).collect(toList());
+    private static String removeTeamSuffix(String team) {
+        return team.substring(0, team.length() - 5);
     }
 
     @Transactional
-    @WithRoles(fromParams = NewUserParameterConverter.class)
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    @Override public List<UserService.UserData> searchUsers(String query) {
+        List<UserInfo> users = UserInfo.list("lower(firstName) like ?1 or lower(lastName) like ?1", "%" + query.toLowerCase() + "%");
+        return users.stream().map(DatabaseUserBackend::toUserInfo).toList();
+    }
+
+    @Transactional
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    @Override public List<UserService.UserData> info(List<String> usernames) {
+        List<UserInfo> users = UserInfo.list("username in ?1", usernames);
+        return users.stream().map(DatabaseUserBackend::toUserInfo).toList();
+    }
+
+    @Transactional
+    @WithRoles(fromParams = NewUserParameterConverter.class, extras = Roles.HORREUM_SYSTEM)
     @Override public void createUser(UserService.NewUser user) {
-        Optional<UserInfo> storedUserInfo = UserInfo.findByIdOptional(user.user.username);
-        UserInfo userInfo = storedUserInfo.orElseGet(() -> new UserInfo(user.user.username));
+        if (UserInfo.findByIdOptional(user.user.username).isPresent()) {
+            throw ServiceException.badRequest("User exists with same username");
+        }
+        if (UserInfo.count("email", user.user.email) > 0) {
+            throw ServiceException.badRequest("User exists with same email");
+        }
+        UserInfo userInfo = new UserInfo(user.user.username);
         userInfo.email = user.user.email;
-        userInfo.fistName = user.user.firstName;
+        userInfo.firstName = user.user.firstName;
         userInfo.lastName = user.user.lastName;
         userInfo.setPassword(user.password);
 
-        String teamName = user.team.substring(0, user.team.length() - 5);
-        if (teamName != null) {
+        if (user.team != null) {
+            String teamName = removeTeamSuffix(user.team);
             for (String role : user.roles) {
                 if ("viewer".equals(role)) {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_VIEWER);
@@ -75,10 +86,8 @@ public class DatabaseUserBackend implements UserBackEnd {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_UPLOADER);
                 } else if ("manager".equals(role)) {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_MANAGER);
-                } else if ("admin".equals(role)) {
-                    userInfo.roles.add(UserRole.ADMIN);
                 } else {
-                    LOG.infov("Dropping role {0} for user {1} {2}", role, userInfo.fistName, userInfo.lastName);
+                    LOG.infov("Dropping role {0} for user {1} {2}", role, userInfo.firstName, userInfo.lastName);
                 }
             }
         }
@@ -90,16 +99,18 @@ public class DatabaseUserBackend implements UserBackEnd {
         userInfo.teams.add(new TeamMembership(userInfo, storedTeam.orElseGet(() -> Team.getEntityManager().merge(new Team(teamName))), role));
     }
 
+    @Transactional
     @Override public List<String> getTeams() {
         List<Team> teams = Team.listAll();
-        return teams.stream().map(t -> t.teamName + "-team").collect(toList());
+        return teams.stream().map(t -> t.teamName + "-team").toList();
     }
 
+    @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override public Map<String, List<String>> teamMembers(String team) {
-        Team teamEntity = Team.find("teamName", team.substring(0, team.length() - 5)).firstResult();
+        Team teamEntity = Team.find("teamName", removeTeamSuffix(team)).firstResult();
         if (teamEntity == null) {
-            throw ServiceException.notFound("The team " + team + " does not exist");
+            return emptyMap();
         }
 
         Map<String, List<String>> userMap = new HashMap<>();
@@ -110,11 +121,12 @@ public class DatabaseUserBackend implements UserBackEnd {
     @Transactional
     @WithRoles(fromParams = UpdateTeamMembersParameterConverter.class)
     @Override public void updateTeamMembers(String team, Map<String, List<String>> roles) {
-        Team teamEntity = Team.find("teamName", team.substring(0, team.length() - 5)).firstResult();
+        Team teamEntity = Team.find("teamName", removeTeamSuffix(team)).firstResult();
         if (teamEntity == null) {
-            throw ServiceException.notFound("The team " + team + " does not exist");
+            throw ServiceException.notFound(format("The team {0} does not exist", team));
         }
 
+        // need to remove from the "owning" side of the relationship
         roles.forEach((username, teamRoles) -> {
             Optional<UserInfo> user = UserInfo.findByIdOptional(username);
             user.ifPresent(u -> {
@@ -127,34 +139,49 @@ public class DatabaseUserBackend implements UserBackEnd {
         });
     }
 
+    @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override public List<String> getAllTeams() {
         List<Team> teams = Team.listAll();
-        return teams.stream().map(t -> t.teamName + "-team").collect(toList());
+        return teams.stream().map(t -> t.teamName + "-team").toList();
     }
 
     @Transactional
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override public void addTeam(String team) {
-        String prefix = getTeamPrefix(team); // perform validation of the team name
-        Team.getEntityManager().merge(new Team(prefix.substring(0, prefix.length() - 1)));
+        Team.getEntityManager().merge(new Team(removeTeamSuffix(team)));
     }
 
     @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override public void deleteTeam(String team) {
-        String prefix = getTeamPrefix(team);
-        Team teamEntity = Team.find("teamName", prefix.substring(0, prefix.length() - 1)).firstResult();
+        Team teamEntity = Team.find("teamName", removeTeamSuffix(team)).firstResult();
         if (teamEntity == null) {
-            throw ServiceException.notFound("The team " + team + " does not exist");
+            throw ServiceException.notFound(format("The team {0} does not exist", team));
         }
-        TeamMembership.delete("team", teamEntity);
-        teamEntity.delete();
+        // need to delete memberships with roles
+        deleteTeamAndMemberships(teamEntity);
     }
 
+    @Transactional
+    @WithRoles(fromParams = DeleteTeamAndMembershipsParameterConverter.class)
+    void deleteTeamAndMemberships(Team teamEntity) {
+        try {
+            // need to remove from the "owning" side of the relationship
+            teamEntity.teams.stream().map(membership -> membership.user.username).forEach(username -> {
+                Optional<UserInfo> user = UserInfo.findByIdOptional(username);
+                user.ifPresent(u -> u.teams.removeIf(membership -> teamEntity.equals(membership.team)));
+            });
+            teamEntity.delete();
+        } catch (Throwable t) {
+            LOG.warnv("Unable to delete team {0} due to {1}", teamEntity.teamName, t.getMessage());
+            throw ServiceException.serverError(format("Unable to delete team {0}", teamEntity.teamName));
+        }
+    }
+
+    @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override public List<UserService.UserData> administrators() {
-        return getAdministratorUsers().stream().map(DatabaseUserBackend::toUserInfo).collect(toList());
+        return getAdministratorUsers().stream().map(DatabaseUserBackend::toUserInfo).toList();
     }
 
     @Transactional
@@ -199,7 +226,16 @@ public class DatabaseUserBackend implements UserBackEnd {
     public static final class UpdateTeamMembersParameterConverter implements Function<Object[], String[]> {
         @SuppressWarnings("unchecked")
         @Override public String[] apply(Object[] objects) {
-            return ((Map<String, List<String>>) objects[1]).keySet().toArray(new String[0]);
+            return ((Map<String, List<String>>) objects[1]).keySet().toArray(String[]::new);
+        }
+    }
+
+    /**
+     * Extract usernames from parameters of `deleteTeamAndMemberships()`
+     */
+    public static final class DeleteTeamAndMembershipsParameterConverter implements Function<Object[], String[]> {
+        @Override public String[] apply(Object[] objects) {
+            return ((Team) objects[0]).teams.stream().map(membership -> membership.user.username).toArray(String[]::new);
         }
     }
 }

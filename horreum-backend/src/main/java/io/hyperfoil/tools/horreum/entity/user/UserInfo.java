@@ -46,7 +46,7 @@ public class UserInfo extends PanacheEntityBase {
     @Password String password;
 
     @Column(name = "email") public String email;
-    @Column(name = "first_name") public String fistName;
+    @Column(name = "first_name") public String firstName;
     @Column(name = "last_name") public String lastName;
 
     @Roles
@@ -57,13 +57,13 @@ public class UserInfo extends PanacheEntityBase {
             uniqueConstraints = @UniqueConstraint(columnNames = { "username", "role" })
     )
     @Column(name = "role")
-    @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+    @Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
     public Set<UserRole> roles;
 
     public String defaultTeam;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "user")
-    @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
+    @Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
     public Set<TeamMembership> teams;
 
     public UserInfo() {}
