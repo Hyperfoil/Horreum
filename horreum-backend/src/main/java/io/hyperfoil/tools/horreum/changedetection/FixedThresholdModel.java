@@ -30,7 +30,6 @@ public class FixedThresholdModel implements ChangeDetectionModel {
               .addComponent("min", new ConditionConfig.NumberBound(), "Minimum", "Lower bound for acceptable datapoint values.")
               .addComponent("max", new ConditionConfig.NumberBound(), "Maximum", "Upper bound for acceptable datapoint values.");
       conditionConfig.defaults.put("model", new TextNode(NAME));
-
       return conditionConfig;
    }
 
@@ -71,5 +70,8 @@ public class FixedThresholdModel implements ChangeDetectionModel {
 
    }
 
-
+   @Override
+   public ModelType getType() {
+      return ModelType.CONTINOUS;
+   }
 }

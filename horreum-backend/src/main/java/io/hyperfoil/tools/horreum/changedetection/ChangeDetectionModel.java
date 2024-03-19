@@ -14,5 +14,6 @@ public interface ChangeDetectionModel {
 
     ChangeDetectionModelType type();
     void analyze(List<DataPointDAO> dataPoints, JsonNode configuration, Consumer<ChangeDAO> changeConsumer);
+    ModelType getType();
 
 }

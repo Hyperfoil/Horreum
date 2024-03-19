@@ -13,7 +13,8 @@ import java.util.Optional;
         description = "Type of Change Detection Model")
 public enum ChangeDetectionModelType {
     FIXED_THRESHOLD("fixedThreshold", new TypeReference<FixedThresholdDetectionConfig>() {}),
-    RELATIVE_DIFFERENCE ("relativeDifference", new TypeReference<RelativeDifferenceDetectionConfig>() {});
+    RELATIVE_DIFFERENCE ("relativeDifference", new TypeReference<RelativeDifferenceDetectionConfig>() {}),
+    EDIVISIVE_HUNTER ("hunterEDivisive", new TypeReference<EDivisiveDetectionConfig>() {});
     private static final ChangeDetectionModelType[] VALUES = values();
 
     private final String name;

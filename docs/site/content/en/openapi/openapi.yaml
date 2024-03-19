@@ -2402,16 +2402,19 @@ components:
           oneOf:
           - $ref: '#/components/schemas/RelativeDifferenceDetectionConfig'
           - $ref: '#/components/schemas/FixedThresholdDetectionConfig'
+          - $ref: '#/components/schemas/EDivisiveDetectionConfig'
           discriminator:
             propertyName: model
             mapping:
               relativeDifference: '#/components/schemas/RelativeDifferenceDetectionConfig'
               fixedThreshold: '#/components/schemas/FixedThresholdDetectionConfig'
+              hunterEDivisive: '#/components/schemas/EDivisiveDetectionConfig'
     ChangeDetectionModelType:
       description: Type of Change Detection Model
       enum:
       - FIXED_THRESHOLD
       - RELATIVE_DIFFERENCE
+      - EDIVISIVE_HUNTER
       type: string
     ComparisonResult:
       description: Result of performing a Comparison
@@ -2749,6 +2752,14 @@ components:
       - ELASTICSEARCH
       type: string
       example: ELASTICSEARCH
+    EDivisiveDetectionConfig:
+      required:
+      - builtIn
+      type: object
+      properties:
+        builtIn:
+          description: Built In
+          type: boolean
     ElasticsearchDatastoreConfig:
       description: Type of backend datastore
       required:

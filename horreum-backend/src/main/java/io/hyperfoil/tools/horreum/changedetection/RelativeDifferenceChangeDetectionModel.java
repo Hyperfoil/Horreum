@@ -129,4 +129,9 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
 
 
     }
+
+    @Override
+    public ModelType getType() {
+        return ModelType.CONTINOUS;
+    }
 }
