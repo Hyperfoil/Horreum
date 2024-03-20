@@ -10,7 +10,7 @@ import {
     Nav,
     NavItem,
     NavList,
-    Page, PageSidebar, PageSidebarBody, Sidebar, SidebarContent, SidebarPanel, SkipToContent
+    Page, PageSidebar, PageSidebarBody, Sidebar, SidebarContent, SidebarPanel, SkipToContent, ToggleGroup, Toolbar, ToolbarContent, ToolbarGroup, ToolbarItem
 } from '@patternfly/react-core';
 
 import {
@@ -128,6 +128,29 @@ function Main() {
 
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
+    const headerToolbar = (
+        <Toolbar id="header-toolbar">
+            <ToolbarContent>
+                <ToolbarGroup align={{ default: 'alignRight' }}>
+                    <ToolbarItem>
+                        <UserProfileLink/>
+                    </ToolbarItem>
+                    {/* { isAdmin && (
+                        <ToolbarItem>
+                            <AdminLink />
+                        </ToolbarItem>
+                    )} */}
+                    <ToolbarItem>
+                        <LoginLogout/>
+                    </ToolbarItem>
+                    <ToolbarItem>
+                        <About/>
+                    </ToolbarItem>
+                </ToolbarGroup>
+            </ToolbarContent>
+        </Toolbar>
+    )
+
     const Header = (
         <Masthead>
             <MastheadToggle>
@@ -137,18 +160,12 @@ function Main() {
             </MastheadToggle>
             <MastheadMain>
                 <MastheadBrand>
-                    {/*<Brand src={logo} alt="Patterfly Logo" heights={{ default: '36px' }} />*/}
+                    {/* <Brand src={"./logo.png"} alt="Horreum Logo" heights={{ default: '36px' }} /> */}
                     {/*<Brand alt="Horreum" heights={{default: '36px'}}/>*/}
                 </MastheadBrand>
             </MastheadMain>
             <MastheadContent>
-                <UserProfileLink/>
-                {/*{isAdmin && (*/}
-                {/*    <AdminLink />*/}
-                {/*)}*/}
-                <LoginLogout/>
-                <About/>
-
+                { headerToolbar }
             </MastheadContent>
 
             {/*<PageHeaderTools>*/}
