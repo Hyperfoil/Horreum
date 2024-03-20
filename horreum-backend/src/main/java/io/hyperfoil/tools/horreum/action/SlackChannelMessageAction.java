@@ -28,7 +28,7 @@ public class SlackChannelMessageAction extends SlackPluginBase implements Action
 
    @Override
    public void validate(JsonNode config, JsonNode secrets) {
-      log.infof("Validating config %s, secrets %s", config, secrets);
+      log.tracef("Validating config %s, secrets %s", config, secrets);
       requireProperties(secrets, "token");
       requireProperties(config, "formatter", "channel");
    }
@@ -64,7 +64,7 @@ public class SlackChannelMessageAction extends SlackPluginBase implements Action
       text.put("text", comment);
       blocks.add(section);
 
-      log.infof("Slack URL %s, token %s, body %s", url, token, body);
+      log.tracef("Slack URL %s, token %s, body %s", url, token, body);
       return post(url, secrets, body)
             .onItem().transformToUni(response -> {
                if (response.statusCode() < 400) {
