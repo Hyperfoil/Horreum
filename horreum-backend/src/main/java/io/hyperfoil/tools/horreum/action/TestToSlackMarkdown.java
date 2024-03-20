@@ -6,8 +6,6 @@ import java.nio.charset.StandardCharsets;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
