@@ -43,7 +43,7 @@ jobs:
       run: mvn clean install -B --file pom.xml ${{ matrix.os.build-options }}
     - name: Upload artifact for failed workflow
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test logs
         path: |
