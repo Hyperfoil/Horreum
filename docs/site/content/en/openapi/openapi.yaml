@@ -1012,6 +1012,22 @@ paths:
           default: 0
           type: integer
         example: 2
+      - name: include
+        in: query
+        description: name of a label to include in the result
+        schema:
+          type: array
+          items:
+            type: string
+        example: id
+      - name: exclude
+        in: query
+        description: name of a label to exclude from the result
+        schema:
+          type: array
+          items:
+            type: string
+        example: id
       responses:
         "200":
           description: label Values
@@ -2008,7 +2024,7 @@ paths:
       tags:
       - Test
       description: List all Label Values for a Test
-      operationId: listLabelValues
+      operationId: labelValues
       parameters:
       - name: id
         in: path
@@ -2090,6 +2106,22 @@ paths:
           default: 0
           type: integer
         example: 2
+      - name: include
+        in: query
+        description: name of a label to include in the result
+        schema:
+          type: array
+          items:
+            type: string
+        example: id
+      - name: exclude
+        in: query
+        description: name of a label to exclude from the result
+        schema:
+          type: array
+          items:
+            type: string
+        example: id
       responses:
         "200":
           description: OK

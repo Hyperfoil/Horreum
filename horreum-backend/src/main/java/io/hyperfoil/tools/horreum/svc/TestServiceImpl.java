@@ -78,7 +78,7 @@ public class TestServiceImpl implements TestService {
    protected static final String LABEL_VALUES_QUERY = """
          WITH
          combined as (
-         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
                   FROM dataset
                   LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
                   LEFT JOIN label ON label.id = lv.label_id
@@ -550,9 +550,10 @@ public class TestServiceImpl implements TestService {
       return false;
    }
 
+   @Transactional
    @WithRoles
    @Override
-   public List<ExportedLabelValues> listLabelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, int limit, int page) {
+   public List<ExportedLabelValues> labelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, int limit, int page, List<String> include, List<String> exclude) {
       Test test = get(testId,null);
       if(test == null){
          throw ServiceException.serverError("Cannot find test "+testId);
@@ -600,6 +601,22 @@ public class TestServiceImpl implements TestService {
             filterSql+=FILTER_SEPARATOR+FILTER_AFTER;
          }
       }
+
+      String includeExcludeSql = "";
+      if (include!=null && !include.isEmpty()){
+         if(exclude!=null && !exclude.isEmpty()){
+            include = new ArrayList<>(include);
+            include.removeAll(exclude);
+         }
+         if(!include.isEmpty()) {
+            includeExcludeSql = " AND label.name in :include";
+         }
+      }
+      //includeExcludeSql is empty if include did not contain entries after exclude removal
+      if(includeExcludeSql.isEmpty() && exclude!=null && !exclude.isEmpty()){
+         includeExcludeSql=" AND label.name NOT in :exclude";
+      }
+
       if(filterSql.isBlank() && filter != null && !filter.isBlank()){
          //TODO there was an error with the filter, do we return that info to the user?
       }
@@ -625,7 +642,9 @@ public class TestServiceImpl implements TestService {
 
           String sql = LABEL_VALUES_QUERY
                   .replace("FILTER_PLACEHOLDER",filterSql)
+                  .replace("INCLUDE_EXCLUDE_PLACEHOLDER",includeExcludeSql)
                   .replace("ORDER_PLACEHOLDER",orderSql);
+
            NativeQuery query =  ((NativeQuery) em.createNativeQuery(sql))
              .setParameter("testId", test.id)
              .setParameter("filteringLabels", filtering)
@@ -644,12 +663,17 @@ public class TestServiceImpl implements TestService {
                  query.setParameter("after",afterInstant, StandardBasicTypes.INSTANT);
               }
            }
+           if(includeExcludeSql.contains(":include")){
+              query.setParameter("include",include);
+           }else if (includeExcludeSql.contains(":exclude")){
+              query.setParameter("exclude",exclude);
+           }
            if(orderSql.contains(LABEL_ORDER_JSONPATH)){
                query.setParameter("orderBy", sort);
            }
-             query
-                .setParameter("limit",limit)//limit
-                .setParameter("offset",limit * page)//offset
+           query
+                .setParameter("limit",limit)
+                .setParameter("offset",limit * Math.max(0,page))
                 .unwrap(NativeQuery.class)
                 .addScalar("values", JsonBinaryType.INSTANCE)
                 .addScalar("runId",Integer.class)

@@ -31,6 +31,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.RestForm;
+import org.jboss.resteasy.reactive.Separator;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 @Path("/api/run")
@@ -110,7 +111,17 @@ public interface RunService {
             @Parameter(name = "sort", description = "label name for sorting"),
             @Parameter(name = "direction",description = "either Ascending or Descending",example="count"),
             @Parameter(name = "limit",description = "the maximum number of results to include",example="10"),
-            @Parameter(name = "page",description = "which page to skip to when using a limit",example="2")
+            @Parameter(name = "page",description = "which page to skip to when using a limit",example="2"),
+            @Parameter(name = "include", description = "label name(s) to include in the result as scalar or comma separated",
+                    examples = {
+                            @ExampleObject(name="single", value="id", description = "including a single label"),
+                            @ExampleObject(name="multiple", value="id,count", description = "including multiple labels")
+                    }),
+            @Parameter(name = "exclude", description = "label name(s) to exclude from the result as scalar or comma separated",
+                    examples = {
+                            @ExampleObject(name="single", value="id", description = "excluding a single label"),
+                            @ExampleObject(name="multiple", value="id,count", description = "excluding multiple labels")
+                    })
     })
     @APIResponses(
             value = {
@@ -132,7 +143,9 @@ public interface RunService {
             @QueryParam("sort") @DefaultValue("") String sort,
             @QueryParam("direction") @DefaultValue("Ascending") String direction,
             @QueryParam("limit") @DefaultValue(""+Integer.MAX_VALUE) int limit,
-            @QueryParam("page") @DefaultValue("0") int page);
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("include") @Separator(",") List<String> include,
+            @QueryParam("exclude") @Separator(",") List<String> exclude);
 
     @GET
     @Path("{id}/metadata")

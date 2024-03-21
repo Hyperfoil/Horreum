@@ -14,6 +14,9 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
@@ -27,6 +30,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.restassured.common.mapper.TypeRef;
 import io.restassured.response.Response;
+import jakarta.inject.Inject;
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
 
@@ -51,6 +55,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(HorreumTestProfile.class)
 public class TestServiceTest extends BaseServiceTest {
+
+   @Inject
+   TestService testService;
 
    @org.junit.jupiter.api.Test
    public void testCreateDelete(TestInfo info) throws InterruptedException {
@@ -354,9 +361,131 @@ public class TestServiceTest extends BaseServiceTest {
       assertEquals("RulesWithJoinsProvides", ((FingerprintValue<String>) values.get(1).values.get(1).children.get(2)).value);
    }
 
+   private int labelValuesSetup(Test t) throws JsonProcessingException {
+      Schema fooSchema = createSchema("foo","urn:foo");
+      Extractor fooExtractor = new Extractor();
+      fooExtractor.name="foo";
+      fooExtractor.jsonpath="$.foo";
+      Extractor barExtractor = new Extractor();
+      barExtractor.name="bar";
+      barExtractor.jsonpath="$.bar";
+      addLabel(fooSchema,"labelFoo","",fooExtractor);
+      addLabel(fooSchema,"labelBar","",barExtractor);
+
+
+      ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);;
+      JsonNode data = mapper.readTree("{ \"foo\": \"uno\", \"bar\": \"dox\"}");
+      String idString = uploadRun(data,t.name,fooSchema.uri);
+      int id = Integer.parseInt(idString);
+      return id;
+   }
 
    @org.junit.jupiter.api.Test
-   public void testListLabelValues() throws JsonProcessingException {
+   public void labelValuesIncludeExcluded() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/test/"+t.id+"/labelValues?include=labelFoo&exclude=labelFoo")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertFalse(objectNode.has("labelFoo"),objectNode.toString());
+      assertTrue(objectNode.has("labelBar"),objectNode.toString());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void labelValuesIncludeTwoParams() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/test/"+t.id+"/labelValues?include=labelFoo&include=labelBar")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertTrue(objectNode.has("labelFoo"),objectNode.toString());
+      assertTrue(objectNode.has("labelBar"),objectNode.toString());
+   }
+   @org.junit.jupiter.api.Test
+   public void labelValuesIncludeTwoSeparated() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/test/"+t.id+"/labelValues?include=labelFoo,labelBar")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertTrue(objectNode.has("labelFoo"),objectNode.toString());
+      assertTrue(objectNode.has("labelBar"),objectNode.toString());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void labelValuesInclude() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/test/"+t.id+"/labelValues?include=labelFoo")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertTrue(objectNode.has("labelFoo"));
+      assertFalse(objectNode.has("labelBar"));
+   }
+   @org.junit.jupiter.api.Test
+   public void labelValuesExclude() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/test/"+t.id+"/labelValues?exclude=labelFoo")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertFalse(objectNode.has("labelFoo"),objectNode.toPrettyString());
+      assertTrue(objectNode.has("labelBar"),objectNode.toPrettyString());
+
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testLabelValues() throws JsonProcessingException {
       List<Object[]> toParse = new ArrayList<>();
       toParse.add(new Object[]{mapper.readTree("""
                   {

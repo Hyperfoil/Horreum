@@ -271,10 +271,10 @@ public class RunServiceImpl implements RunService {
       }
    }
 
-   //this is nearly identical to TestServiceImpl.listLabelValues (except the return object)
+   //this is nearly identical to TestServiceImpl.labelValues (except the return object)
    //this reads from the dataset table but provides data specific to the run...
    @Override
-   public List<ExportedLabelValues> labelValues(int runId, String filter, String sort, String direction, int limit, int page){
+   public List<ExportedLabelValues> labelValues(int runId, String filter, String sort, String direction, int limit, int page, List<String> include, List<String> exclude){
       List<ExportedLabelValues> rtrn = new ArrayList<>();
       Run run = getRun(runId,null);
       if(run == null){
@@ -314,10 +314,25 @@ public class RunServiceImpl implements RunService {
             orderSql="order by combined.datasetId DESC";
          }
       }
+      String includeExcludeSql = "";
+      if (include!=null && !include.isEmpty()) {
+         if (exclude != null && !exclude.isEmpty()) {
+            include = new ArrayList<>(include);
+            include.removeAll(exclude);
+         }
+         if (!include.isEmpty()) {
+            includeExcludeSql = " AND label.name in :include";
+         }
+      }
+      //includeExcludeSql is empty if include did not contain entries after exclude removal
+      if(includeExcludeSql.isEmpty() && exclude!=null && !exclude.isEmpty()){
+         includeExcludeSql=" AND label.name NOT in :exclude";
+      }
+
       String sql = """
          WITH
          combined as (
-         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::::jsonb) AS values, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
                   FROM dataset
                   LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
                   LEFT JOIN label ON label.id = lv.label_id
@@ -326,6 +341,7 @@ public class RunServiceImpl implements RunService {
          ) select * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER limit :limit offset :offset
          """
               .replace("FILTER_PLACEHOLDER",filterSql)
+              .replace("INCLUDE_EXCLUDE_PLACEHOLDER",includeExcludeSql)
               .replace("ORDER_PLACEHOLDER",orderSql);
 
       NativeQuery query = ((NativeQuery) em.createNativeQuery(sql))
@@ -337,12 +353,17 @@ public class RunServiceImpl implements RunService {
             query.setParameter("filter", filter);
          }
       }
+      if(includeExcludeSql.contains(":include")){
+         query.setParameter("include",include);
+      }else if (includeExcludeSql.contains(":exclude")){
+         query.setParameter("exclude",exclude);
+      }
       if(orderSql.contains(":orderBy")){
          query.setParameter("orderBy",sort);
       }
       query
          .setParameter("limit",limit)
-         .setParameter("offset",limit * page)
+         .setParameter("offset",limit * Math.max(0,page))
          .unwrap(NativeQuery.class)
               .addScalar("values", JsonBinaryType.INSTANCE)
               .addScalar("datasetId",Integer.class)
