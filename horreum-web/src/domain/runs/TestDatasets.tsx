@@ -232,7 +232,7 @@ export default function TestDatasets() {
     }
 
     const labelsSource = useCallback(() => {
-        return testApi.listLabelValues(testIdInt)
+        return testApi.labelValues(testIdInt)
             .then((result: Array<ExportedLabelValues>) => {
                 return flattenLabelValues(result);
             })

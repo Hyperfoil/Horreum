@@ -35,6 +35,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.jboss.resteasy.reactive.Separator;
 
 import java.util.Collection;
 import java.util.List;
@@ -216,7 +217,17 @@ public interface TestService {
            @Parameter(name = "sort", description = "json path to sortable value or start or stop for sorting by time",example = "$.label or start or stop"),
            @Parameter(name = "direction",description = "either Ascending or Descending",example="count"),
            @Parameter(name = "limit",description = "the maximum number of results to include",example="10"),
-           @Parameter(name = "page",description = "which page to skip to when using a limit",example="2")
+           @Parameter(name = "page",description = "which page to skip to when using a limit",example="2"),
+           @Parameter(name = "include", description = "label name(s) to include in the result as scalar or comma separated",
+                   examples = {
+                           @ExampleObject(name="single", value="id", description = "including a single label"),
+                           @ExampleObject(name="multiple", value="id,count", description = "including multiple labels")
+                   }),
+           @Parameter(name = "exclude", description = "label name(s) to exclude from the result as scalar or comma separated",
+                   examples = {
+                           @ExampleObject(name="single", value="id", description = "excluding a single label"),
+                           @ExampleObject(name="multiple", value="id,count", description = "excluding multiple labels")
+                   })
    })
    @APIResponses(
            value = { @APIResponse( responseCode = "200",
@@ -224,7 +235,7 @@ public interface TestService {
                            @Content ( schema = @Schema(type = SchemaType.ARRAY, implementation = ExportedLabelValues.class)) }
            )}
    )
-   List<ExportedLabelValues> listLabelValues(
+   List<ExportedLabelValues> labelValues(
            @PathParam("id") int testId,
            @QueryParam("filter") @DefaultValue("{}") String filter,
            @QueryParam("before") @DefaultValue("") String before,
@@ -234,7 +245,9 @@ public interface TestService {
            @QueryParam("sort") @DefaultValue("") String sort,
            @QueryParam("direction") @DefaultValue("Ascending") String direction,
            @QueryParam("limit") @DefaultValue(""+Integer.MAX_VALUE) int limit,
-           @QueryParam("page") @DefaultValue("0") int page);
+           @QueryParam("page") @DefaultValue("0") int page,
+           @QueryParam("include") @Separator(",") List<String> include,
+           @QueryParam("exclude") @Separator(",") List<String> exclude);
 
    @POST
    @Consumes(MediaType.APPLICATION_JSON)

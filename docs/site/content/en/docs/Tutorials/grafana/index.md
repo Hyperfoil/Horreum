@@ -103,3 +103,24 @@ We set the `filter` parameter by editing the Query for the grafana panel but it 
 Define filter for query
 {{% /imgproc %}}
 
+## Filtering labels
+
+Another common consideration is the amount of data in the `/labelValues` response. Tests with lots of labels, or labels that produce a lot of data,
+can see the `/labelValues` transfer json size grow well beyond what they need for a particular integration. Horreum has the `include` and `exclude`
+query parameter options on the `/labelValues` endpoint.
+
+### Include
+Adding `include=foo` to the `/labelValues` endpoint query tells Horreum to only include the `foo` label and its value in the `values` part of the 
+`/labelValues` response. You can specify multiple labels with `incude=foo&include=bar` or `include=foo,bar` using url encoding or with curl:
+```bash
+curl --query-param "include=foo" --query-param "include=bar" ...
+```
+
+Note: any `include` that is also mentioned in `exclude` will not be part of the response `values`
+
+### Exclude
+This functions similar to `include` except that it removes a label name from the response `values` field for the `/labelValues` endpoint. This filter
+option leaves all other labels in the `values` field.
+If a user specifies both `include` and `exclude` then the response will only contain the `include` label names that are not also in `exclude`. If all
+`include` are also in `exclude` then the `exclude` takes priority and the response will contain all labels that are not mentioned in `exclude`.
+Horreum uses this default behavior to avoid sending any data that is explicitly excluded. 
