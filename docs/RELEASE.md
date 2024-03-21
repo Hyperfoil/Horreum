@@ -95,6 +95,10 @@ docker push quay.io/hyperfoil/horreum:<release>
 docker push quay.io/hyperfoil/horreum:latest
 ```
 
+Generate release notes:
+
+https://github.com/Hyperfoil/Horreum/releases
+
 ## After the release
 
 The version identifier for a release is from
