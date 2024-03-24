@@ -9,11 +9,19 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+import org.jboss.logging.Logger;
+import org.jboss.logmanager.Level;
+import org.jboss.logmanager.LogContext;
+import org.jboss.logmanager.formatters.PatternFormatter;
+import org.jboss.logmanager.handlers.OutputStreamHandler;
 import org.junit.jupiter.api.Test;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.time.Instant;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -21,7 +29,38 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @TestProfile(HorreumTestProfile.class)
 public class UtilTest {
 
+    public static class StringHandler extends OutputStreamHandler{
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
+        public StringHandler(){
+            setOutputStream(baos);
+            this.setFormatter(new PatternFormatter("%m"));
+            this.setLevel(Level.ALL);
+            this.setAutoFlush(true);
+            LogContext.getLogContext().getLogger("").addHandler(this);
+        }
+
+        public String getLog(){return baos.toString();}
+
+        @Override
+        public void close() throws SecurityException {
+            LogContext.getLogContext().getLogger("").removeHandler(this);
+            super.close();
+            try {
+                baos.close();
+            } catch (IOException e) { /* meh */}
+        }
+    }
+
+    @Test
+    public void toInstant_nulls() throws UnsupportedEncodingException {
+        try(StringHandler handler = new StringHandler()){
+            assertNull(Util.toInstant(null),"null input should return null");
+            assertNull(Util.toInstant(""),"empty string should return null");
+            assertNull(Util.toInstant(" "),"blank string should return null");
+            assertFalse(handler.getLog().contains("DateTimeParseException"),handler.getLog());
+        }
+    }
     @Test
     public void toInstant_valid() throws IOException {
         //already an instant
@@ -38,7 +77,6 @@ public class UtilTest {
         //json
         assertNotNull(Util.toInstant(new TextNode("2020-01-01")),"failed to parse json text YYYY-MM-DD");
         assertNotNull(Util.toInstant(new LongNode(System.currentTimeMillis())),"failed to parse current millis as json node");
-
     }
 
 }
