@@ -634,6 +634,9 @@ public class Util {
          return Instant.ofEpochMilli(((Number) time).longValue());
       } else {
          String str = time.toString().trim();
+         if(str.isBlank()){
+            return null;
+         }
          if(str.matches("\\d+")){
             try {
                return Instant.ofEpochMilli(Long.parseLong((String) time));
@@ -653,7 +656,7 @@ public class Util {
          try {
             return ZonedDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME).toInstant();
          } catch (DateTimeParseException e) {
-            log.warn("failed to convert "+time+" to timestamp using "+str,e);
+            log.debug("failed to convert "+time+" to timestamp using "+str);
          }
       }
       return null;//nothing matched
