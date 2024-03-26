@@ -333,13 +333,13 @@ public abstract class UserServiceAbstractTest {
 
         // create a test user
         UserService.NewUser testUser = new UserService.NewUser();
-        testUser.user = new UserService.UserData("", firstUser, "Create", "User", "create@horreum.io");
+        testUser.user = new UserService.UserData("", "horreum." + firstUser, "Create", "User", "create@horreum.io");
         testUser.password = "secret";
         testUser.roles = Collections.emptyList();
 
-        // test reserved team name
-        testUser.team = "horreum.create-user-team";
+        // test reserved user name
         assertThrows(ServiceException.class, () -> userService.createUser(testUser));
+        testUser.user.username = firstUser;
 
         // test long team name
         testUser.team = "a-very-very-long-team-name-that-goes-over-the-maximum-capacity-team";
