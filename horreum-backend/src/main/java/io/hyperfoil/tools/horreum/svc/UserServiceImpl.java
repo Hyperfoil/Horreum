@@ -136,6 +136,10 @@ public class UserServiceImpl implements UserService {
     private static void validateNewUser(NewUser user) {
         if (user == null) {
             throw ServiceException.badRequest("Missing user as the request body");
+        } else if (user.user == null || user.user.username == null) {
+            throw ServiceException.badRequest("Missing new user info");
+        } else if (user.user.username.startsWith("horreum.")) {
+            throw ServiceException.badRequest("User names starting with 'horreum.' are reserved for internal use");
         }
         if (user.team != null) {
             user.team = validateTeamName(user.team);
