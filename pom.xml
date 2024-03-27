@@ -82,7 +82,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <commons.math3.version>3.6.1</commons.math3.version>
         <graalvm.version>23.0.3</graalvm.version>
-        <quarkus.version>3.6.8</quarkus.version>
+        <quarkus.version>3.9.1</quarkus.version>
         <quinoa.version>2.3.6</quinoa.version>
         <surefire-plugin.version>3.2.5</surefire-plugin.version>
         <failsafe-plugin.version>3.2.5</failsafe-plugin.version>
