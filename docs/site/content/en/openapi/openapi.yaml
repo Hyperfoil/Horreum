@@ -1014,20 +1014,32 @@ paths:
         example: 2
       - name: include
         in: query
-        description: name of a label to include in the result
+        description: label name(s) to include in the result as scalar or comma separated
         schema:
           type: array
           items:
             type: string
-        example: id
+        examples:
+          single:
+            description: including a single label
+            value: id
+          multiple:
+            description: including multiple labels
+            value: "id,count"
       - name: exclude
         in: query
-        description: name of a label to exclude from the result
+        description: label name(s) to exclude from the result as scalar or comma separated
         schema:
           type: array
           items:
             type: string
-        example: id
+        examples:
+          single:
+            description: excluding a single label
+            value: id
+          multiple:
+            description: excluding multiple labels
+            value: "id,count"
       responses:
         "200":
           description: label Values
@@ -2108,20 +2120,32 @@ paths:
         example: 2
       - name: include
         in: query
-        description: name of a label to include in the result
+        description: label name(s) to include in the result as scalar or comma separated
         schema:
           type: array
           items:
             type: string
-        example: id
+        examples:
+          single:
+            description: including a single label
+            value: id
+          multiple:
+            description: including multiple labels
+            value: "id,count"
       - name: exclude
         in: query
-        description: name of a label to exclude from the result
+        description: label name(s) to exclude from the result as scalar or comma separated
         schema:
           type: array
           items:
             type: string
-        example: id
+        examples:
+          single:
+            description: excluding a single label
+            value: id
+          multiple:
+            description: excluding multiple labels
+            value: "id,count"
       responses:
         "200":
           description: OK
