@@ -11,6 +11,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
@@ -21,7 +22,11 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 public interface SqlService {
    @GET
    @Path("testjsonpath")
-   JsonpathValidation testJsonPath(@Parameter(required = true) @QueryParam("query") String jsonpath);
+   @Operation(description = "Test a JSONPath for syntax errors using database")
+   JsonpathValidation testJsonPath(@Parameter(required = true,
+                            name="testjsonpath",
+                            description = "JSONPath to be tested",
+                            example = "$.qdup") @QueryParam("query") String jsonpath);
 
    @Path("roles")
    @GET
@@ -31,14 +36,20 @@ public interface SqlService {
    @GET
    @Path("{id}/queryrun")
    QueryResult queryRunData(@PathParam("id") int id,
-                            @Parameter(required = true) @QueryParam("query") String jsonpath,
+                            @Parameter(required = true,
+                            name = "query",
+                            description = "JSONPath path executed on the Run",
+                            example = "$.results") @QueryParam("query") String jsonpath,
                             @QueryParam("uri") String schemaUri,
                             @QueryParam("array") @DefaultValue("false") boolean array);
 
    @Path("{id}/querydataset")
    @GET
    QueryResult queryDatasetData(@PathParam("id") int datasetId,
-                         @Parameter(required = true) @QueryParam("query") String jsonpath,
+                         @Parameter(required = true,
+                         name = "query",
+                         description = "JSONPath path executed on the Dataset",
+                         example = "$.test") @QueryParam("query") String jsonpath,
                          @QueryParam("array") @DefaultValue("false") boolean array,
                          @QueryParam("schemaUri") String schemaUri);
 
