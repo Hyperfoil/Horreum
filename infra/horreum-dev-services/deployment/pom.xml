@@ -21,6 +21,12 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-arc-deployment</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.graalvm.sdk</groupId>
+          <artifactId>graal-sdk</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
