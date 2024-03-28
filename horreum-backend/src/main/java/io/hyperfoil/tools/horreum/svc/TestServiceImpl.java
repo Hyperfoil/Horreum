@@ -204,7 +204,7 @@ public class TestServiceImpl implements TestService {
    TestDAO addAuthenticated(Test dto) {
       TestDAO existing = TestDAO.find("id", dto.id).firstResult();
       if(existing == null)
-         dto.id = null;
+         dto.clearIds();
       TestDAO test = TestMapper.to(dto);
       if (test.notificationsEnabled == null) {
          test.notificationsEnabled = true;
@@ -228,7 +228,7 @@ public class TestServiceImpl implements TestService {
 
          test.views = existing.views;
          test.tokens = existing.tokens;
-         em.merge(test);
+         test = em.merge(test);
          if(shouldRecalculateLables)
            mediator.updateFingerprints(test.id);
       }
@@ -238,7 +238,7 @@ public class TestServiceImpl implements TestService {
             test.views = Collections.singleton(new ViewDAO("Default", test));
          }
          try {
-            em.merge(test);
+            test = em.merge(test);
             em.flush();
          } catch (PersistenceException e) {
             if (e.getCause() instanceof org.hibernate.exception.ConstraintViolationException) {
@@ -248,8 +248,11 @@ public class TestServiceImpl implements TestService {
             }
          }
          mediator.newTest(TestMapper.from(test));
-         if(mediator.testMode())
-            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.TEST_NEW, test.id, TestMapper.from(test)));
+         if(mediator.testMode()) {
+            int testId = test.id;
+            Test testDTO = TestMapper.from(test);
+            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.TEST_NEW, testId, testDTO));
+         }
       }
       return test;
    }
