@@ -1,55 +1,52 @@
-import {useState, useMemo, useEffect, useContext} from "react"
+import {useContext, useEffect, useMemo, useState} from "react"
 
-import { useSelector } from "react-redux"
+import {useSelector} from "react-redux"
 
 import {
-	Button,
-	Card,
-	CardHeader,
-	CardBody,
-    Flex, FlexItem,
-	Modal,
-	PageSection,
-	Spinner,
-	CardFooter,
-	Pagination
+    Button,
+    Card,
+    CardBody,
+    CardFooter,
+    CardHeader,
+    Flex,
+    FlexItem,
+    Modal,
+    PageSection,
+    Pagination,
+    Spinner
 } from '@patternfly/react-core';
-import {
-	Dropdown,
-	DropdownToggle,
-	DropdownItem
-} from '@patternfly/react-core/deprecated';
+import {Dropdown, DropdownItem, DropdownToggle} from '@patternfly/react-core/deprecated';
 import {NavLink, useLocation, useNavigate} from "react-router-dom"
-import { EyeIcon, EyeSlashIcon, FolderOpenIcon } from "@patternfly/react-icons"
+import {EyeIcon, EyeSlashIcon, FolderOpenIcon} from "@patternfly/react-icons"
 
 import Table from "../../components/Table"
-import ActionMenu, { MenuItem, ActionMenuProps, useChangeAccess } from "../../components/ActionMenu"
+import ActionMenu, {ActionMenuProps, MenuItem, useChangeAccess} from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
-import TeamSelect, { Team, ONLY_MY_OWN } from "../../components/TeamSelect"
+import TeamSelect, {ONLY_MY_OWN, Team} from "../../components/TeamSelect"
 import FolderSelect from "../../components/FolderSelect"
-import FoldersTree from "./FoldersTree"
 import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
 import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
-import TestImportButton from "./TestImportButton"
 
-import { isAuthenticatedSelector, useTester, teamToName, teamsSelector, userProfileSelector } from "../../auth"
-import { CellProps, Column, UseSortByColumnOptions } from "react-table"
-import { noop } from "../../utils"
+import {isAuthenticatedSelector, teamsSelector, teamToName, userProfileSelector, useTester} from "../../auth"
+import {CellProps, Column, UseSortByColumnOptions} from "react-table"
+import {noop} from "../../utils"
 import {
-    SortDirection,
     Access,
-    mapTestSummaryToTest,
-    updateFolder,
-    deleteTest,
-    updateAccess,
     addUserOrTeam,
+    deleteTest,
     fetchTestsSummariesByFolder,
+    mapTestSummaryToTest,
     removeUserOrTeam,
-    TestStorage
+    SortDirection,
+    TestStorage,
+    updateAccess,
+    updateFolder,
+    fetchFolders
 } from "../../api"
 import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import FoldersDropDown from "../../components/FoldersDropdown";
 
 type WatchDropdownProps = {
     id: number
@@ -235,7 +232,7 @@ function MoveToFolderProvider(props: ActionMenuProps, isOwner: boolean, close: (
         modal: (
             <Modal
                 key="moveToFolder"
-                title={`Move test ${config.name} from ${config.folder || "Horreum"} to another folder`}
+                title={`Move test ${config.name} from ${config.folder || "H431orreum"} to another folder`}
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
                 actions={[
@@ -313,26 +310,7 @@ export default function AllTests() {
                         data,
                     } = arg
                     return (
-                        <NavLink to={`/run/dataset/list/${data[index].id}`}>
-                            {value === undefined ? "(unknown)" : value}&nbsp;
-                            <FolderOpenIcon />
-                        </NavLink>
-                    )
-                },
-            },
-            {
-                Header: "Runs",
-                accessor: "runs",
-                Cell: (arg: C) => {
-                    const {
-                        cell: {
-                            value,
-                            row: { index },
-                        },
-                        data,
-                    } = arg
-                    return (
-                        <NavLink to={`/run/list/${data[index].id}`}>
+                        <NavLink to={`/test/${data[index].id}#data`}>
                             {value === undefined ? "(unknown)" : value}&nbsp;
                             <FolderOpenIcon />
                         </NavLink>
@@ -394,6 +372,7 @@ export default function AllTests() {
     const teams = useSelector(teamsSelector)
     const isAuthenticated = useSelector(isAuthenticatedSelector)
     const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
+
     const [loading, setLoading] = useState(false)
     const [limit, setLimit] = useState(20)
     const [page, setPage] = useState(1)
@@ -401,15 +380,12 @@ export default function AllTests() {
     const pagination = useMemo(() => ({ page, limit, direction, folder }), [page, limit, direction, folder])
     const [count, setCount] = useState(0)
 
+    const [folders, setFolders] = useState<string[]>([])
+
     const loadTests = () => {
-        setLoading(true)
         fetchTestsSummariesByFolder(alerting, SortDirection.Ascending, pagination.folder, pagination.limit, pagination.page, rolesFilter.key, )
-            .then(summary => {setTests(summary.tests?.map(t => mapTestSummaryToTest(t)) || [])
-                if (summary.count) {
-                    setCount(summary.count)
-                }
-            })
-            .finally( () => setLoading(false))
+            .then(summary => setTests(summary.tests?.map(t => mapTestSummaryToTest(t)) || []))
+        fetchFolders(alerting).then(setFolders)
     }
     useEffect(() => {
         loadTests()
@@ -423,43 +399,38 @@ export default function AllTests() {
     return (
         <PageSection>
             <Card>
-
                 <CardHeader>
                     <Flex>
-                    {isTester && (
                         <FlexItem>
-                            <ButtonLink to="/test/_new">New Test</ButtonLink>
-                            <TestImportButton
-                                tests={allTests || []}
-                                onImported={() => loadTests()}
-                            />
+                            <FoldersDropDown folders={folders} folder={folder || ""} onChange={f => {
+                                setFolder(f)
+                                navigate(f ? `/test?folder=${f}` : "/test", { replace: true })
+                            }}/>
                         </FlexItem>
-                    )}
-                    {isAuthenticated && (
-                        <FlexItem>
-                        {/* <div style={{ width: "200px"}}> not necessary when inside a FlexItem?*/}
-                            <TeamSelect
-                                includeGeneral={true}
-                                selection={rolesFilter}
-                                onSelect={selection => {
-                                    setRolesFilter(selection)
-                                }}
-                            />
-                        {/* </div> */}
-                        </FlexItem>
-                    )}
+                        {isAuthenticated && (
+                            <FlexItem>
+                                {/* <div style={{ width: "200px"}}> not necessary when insidie a FlexItem?*/}
+                                <TeamSelect
+                                    includeGeneral={true}
+                                    selection={rolesFilter}
+                                    onSelect={selection => {
+                                        setRolesFilter(selection)
+                                    }}
+                                />
+                                {/* </div> */}
+                            </FlexItem>
+                        )}
+
+                        {isTester && (
+                            <FlexItem align={{ default: 'alignRight' }}>
+                                <ButtonLink to="/test/_new#settings">New Test</ButtonLink>
+                            </FlexItem>
+                        )}
+
                     </Flex>
                 </CardHeader>
                 <CardBody style={{ overflowX: "auto" }}>
-                    <FoldersTree
-                        folder={pagination.folder || DEFAULT_FOLDER}
-                        onChange={f => {
-                            setFolder(f)
-                            setPage(1)
-                            navigate(f ? `/test?folder=${f}` : "/test", { replace: true })
-                        }}
-                    />
-                    <Table<TestStorage> columns={columns}
+                    <Table columns={columns}
                         data={allTests || []}
                         isLoading={loading}
                         sortBy={[{ id: "name", desc: false }]}

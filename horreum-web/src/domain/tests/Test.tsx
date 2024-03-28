@@ -17,11 +17,10 @@ import {
 } from "@patternfly/react-core"
 import { Link } from "react-router-dom"
 
-import ButtonLink from "../../components/ButtonLink"
 import SavedTabs, { SavedTab, TabFunctions, saveFunc, resetFunc, modifiedFunc } from "../../components/SavedTabs"
 
 import { useTester, teamsSelector } from "../../auth"
-import General from "./General"
+import TestSettings from "./TestSettings"
 import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
 import Experiments from "./Experiments"
@@ -35,9 +34,14 @@ import {fetchTest, fetchViews, Test, View} from "../../api";
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
+import TestDatasets from "../runs/TestDatasets";
+import Changes from "../alerting/Changes";
+import Reports from "../reports/Reports";
+import RunList from "../runs/RunList";
 
 type Params = {
     testId: string
+    tab: string
 }
 
 
@@ -47,6 +51,7 @@ export default function TestView() {
     const [test, setTest] = useState<Test | undefined>()
     const [views, setViews] = useState<View[]>( [])
     const [modified, setModified] = useState(false)
+    const dataFuncsRef = useRef<TabFunctions>()
     const generalFuncsRef = useRef<TabFunctions>()
     const accessFuncsRef = useRef<TabFunctions>()
     const viewFuncsRef = useRef<TabFunctions>()
@@ -96,12 +101,6 @@ export default function TestView() {
                                 <BreadcrumbItem isActive>{test?.name || "New test"}</BreadcrumbItem>
                             </Breadcrumb>
                         </FlexItem>
-                        <FlexItem>
-                            <ButtonLink to={`/run/dataset/list/${testIdVal}`}>Dataset list</ButtonLink>
-                            <ButtonLink to={`/run/list/${testIdVal}`} variant="secondary">
-                                Run list
-                            </ButtonLink>
-                        </FlexItem>
                     </Flex>
                 </CardHeader>
                 {!loaded && testIdVal !== 0 && (
@@ -120,13 +119,58 @@ export default function TestView() {
                             canSave={isTester}
                         >
                             <SavedTab
-                                title="General"
-                                fragment="general"
+                                title="Runs"
+                                fragment="run"
+                                isHidden={testIdVal <= 0}
+                                isModified={() => modified}
+                                onSave={() => Promise.resolve()}
+                                onReset={() => Promise.resolve()}
+                            >
+                                <RunList/>
+                            </SavedTab>
+                            <SavedTab
+                                title="Datasets"
+                                fragment="data"
+                                isHidden={testIdVal <= 0}
+                                isModified={() => modified}
+                                onSave={() => Promise.resolve()}
+                                onReset={() => Promise.resolve()}
+                            >
+                                <TestDatasets/>
+                            </SavedTab>
+
+                            <SavedTab
+                                title="Changes"
+                                fragment="changes"
+                                isHidden={testIdVal <= 0}
+                                isModified={() => modified}
+                                onSave={() => Promise.resolve()}
+                                onReset={() => Promise.resolve()}
+                            >
+
+                                <Changes testID={testIdVal}/>
+
+                            </SavedTab>
+
+                            <SavedTab
+                                title="Reports"
+                                fragment="reports-tab"
+                                isHidden={testIdVal <= 0}
+                                isModified={() => modified}
+                                onSave={() => Promise.resolve()}
+                                onReset={() => Promise.resolve()}
+                            >
+                                <Reports testId={testIdVal} />
+                            </SavedTab>
+
+                            <SavedTab
+                                title="Settings"
+                                fragment="settings"
                                 onSave={saveFunc(generalFuncsRef)}
                                 onReset={resetFunc(generalFuncsRef)}
                                 isModified={() => modified}
                             >
-                                <General
+                                <TestSettings
                                     test={test || undefined}
                                     onTestIdChange={setTestIdVal}
                                     onModified={setModified}
@@ -202,6 +246,7 @@ export default function TestView() {
                             <SavedTab
                                 title="Experiments"
                                 fragment="experiments"
+                                isHidden={testIdVal <= 0}
                                 onSave={saveFunc(experimentsFuncsRef)}
                                 onReset={resetFunc(experimentsFuncsRef)}
                                 isModified={() => modified}

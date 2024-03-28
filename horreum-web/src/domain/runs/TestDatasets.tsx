@@ -67,7 +67,7 @@ type DatasetColumn = Column<DatasetSummary> & UseSortByColumnOptions<DatasetSumm
 
 const staticColumns: DatasetColumn[] = [
     {
-        Header: "Run",
+        Header: "Data",
         accessor: "runId",
         Cell: (arg: C) => {
             const {
@@ -81,22 +81,6 @@ const staticColumns: DatasetColumn[] = [
                     </NavLink>
                 </>
             )
-        },
-    },
-    {
-        Header: "Schema(s)",
-        accessor: "schemas",
-        disableSortBy: true,
-        Cell: (arg: C) => {
-            const {
-                cell: { value },
-            } = arg
-            // LEFT JOIN results in schema.id == 0
-            if (!value || (value as string[]).length == 0) {
-                return <NoSchemaInDataset />
-            } else {
-                return <SchemaList schemas={value} validationErrors={arg.row.original.validationErrors || []} />
-            }
         },
     },
     {
@@ -238,22 +222,10 @@ export default function TestDatasets() {
             })
     }, [testIdInt, teams, token])
     return (
-        <PageSection>
             <Card>
                 <CardHeader>
                     <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
                         <ToolbarGroup>
-                            <ToolbarItem style={{ flexGrow: 100 }}>
-                                <Breadcrumb>
-                                    <BreadcrumbItem>
-                                        <Link to="/test">Tests</Link>
-                                    </BreadcrumbItem>
-                                    <BreadcrumbItem>
-                                        {test ? <Link to={"/test/" + test.id}>{test.name}</Link> : "unknown"}
-                                    </BreadcrumbItem>
-                                    <BreadcrumbItem isActive>Datasets</BreadcrumbItem>
-                                </Breadcrumb>
-                            </ToolbarItem>
                             <ToolbarItem>
                                 <Flex>
                                     <FlexItem>View:</FlexItem>
@@ -276,12 +248,6 @@ export default function TestDatasets() {
                                 </ExpandableSectionToggle>
                             </ToolbarItem>
                             <ToolbarItem>
-                                <NavLink className="pf-v5-c-button pf-m-primary" to={`/test/${testId}`}>
-                                    Edit test
-                                </NavLink>
-                                <NavLink className="pf-v5-c-button pf-m-secondary" to={`/run/list/${testId}`}>
-                                    View runs
-                                </NavLink>
                                 <Button
                                     variant="secondary"
                                     onClick={() => {
@@ -334,15 +300,6 @@ export default function TestDatasets() {
                         </ButtonLink>
                     </CardBody>
                 )}
-                <CardHeader style={{ margin: 0, display: "block", textAlign: "right" }}>
-                    <Pagination
-                        itemCount={datasets?.total}
-                        perPage={perPage}
-                        page={page}
-                        onSetPage={(e, p) => setPage(p)}
-                        onPerPageSelect={(e, pp) => setPerPage(pp)}
-                    />
-                </CardHeader>
                 <CardBody style={{ overflowX: "auto" }}>
                     <Table
                         columns={columns}
@@ -369,6 +326,5 @@ export default function TestDatasets() {
                     />
                 </CardFooter>
             </Card>
-        </PageSection>
     )
 }
