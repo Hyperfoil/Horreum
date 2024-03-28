@@ -255,8 +255,7 @@ public class DatasourceTest extends BaseServiceTest{
             request.setJsonEntity(payload.toString());
             Response response = elasticRestClient.performRequest(request);
             assertNotNull(response);
-            String header = response.getHeader("Location");
-            assertNotNull(header);
+            assertEquals(2, response.getStatusLine().getStatusCode() / 100); // response is 2xx
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
