@@ -1,4 +1,4 @@
-name: Format check - package-lock.json
+name: Reformat - package-lock.json
 
 on:
   pull_request:
@@ -6,18 +6,24 @@ on:
       - 'horreum-web/package-lock.json'
 
 jobs:
-  format:
+  reformat:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
+        uses: actions/checkout@v4
       - name: Install Prettier
-        run: npm install prettier
-
+        run: npm install --save-dev prettier
       - name: Check formatting
         run: |
           if [[ -n "$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} -- horreum-web/package-lock.json)" ]]; then
-            npx prettier --check "horreum-web/package-lock.json"
+            npx prettier --check horreum-web/package-lock.json
           fi
+      - name: Reformat
+        if: ${{ failure() }}
+        run: |
+          npx prettier --write horreum-web/package-lock.json
+          git config user.name 'github-actions'
+          git config user.email 'github-actions@github.com'
+          git commit -am "style: format with Prettier"
+          git push
