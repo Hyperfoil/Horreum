@@ -70,6 +70,8 @@ export default function ActionList() {
                             return config.url
                         case "github":
                             return config.issueURL || `${config.owner}/${config.repo}/${config.issue}`
+                        case "slack":
+                            return config.channel
                         default:
                             return "unknown"
                     }

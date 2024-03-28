@@ -19,20 +19,41 @@ import {
 } from "@patternfly/react-core"
 import { HelpIcon } from "@patternfly/react-icons"
 import { ReactElement, useState } from "react"
-import { Action, HttpAction as Http, GithubIssueCommentAction as GithubIssueComment, GithubIssueCreateAction as GithubIssueCreate} from "../../api"
+import {
+    Action, ActionConfig,
+    HttpActionConfig as Http,
+    GithubIssueCommentActionConfig as GithubIssueComment,
+    GithubIssueCreateActionConfig as GithubIssueCreate,
+    SlackChannelMessageActionConfig as SlackChannelMessage,
+    HttpActionConfigFromJSON,
+    GithubIssueCommentActionConfigFromJSON,
+    GithubIssueCreateActionConfigFromJSON,
+    SlackChannelMessageActionConfigFromJSON,
+} from "../../api"
 import EnumSelect from "../../components/EnumSelect"
 import HttpActionUrlSelector from "../../components/HttpActionUrlSelector"
-import { CHANGE_NEW, EXPERIMENT_RESULT_NEW } from "./reducers"
+import { CHANGE_NEW, EXPERIMENT_RESULT_NEW, TEST_NEW } from "./reducers"
 
-function defaultConfig(type: string) {
-    switch (type) {
-        case "http":
-            return { url: "" }
-        case "github":
-            return { issueUrl: "${$.path.to.issue.url}" }
-        default:
-            return {}
-    }
+function defaultConfig(type: string): ActionConfig {
+  var config
+  switch (type) {
+    case "http":
+      config = HttpActionConfigFromJSON({ url: "", type: "http" })
+      break
+    case "github-issue-comment":
+      config = GithubIssueCommentActionConfigFromJSON({ type: "github-issue-comment" })
+      break
+    case "github-issue-create":
+      config = GithubIssueCreateActionConfigFromJSON({ owner: "", repo: "", title: "", type: "github-issue-create" })
+      break
+    case "slack-channel-message":
+      config = SlackChannelMessageActionConfigFromJSON({ channel: "", type: "slack-channel-message" })
+      break
+    default:
+      config = { type }
+      break
+  }
+  return config as ActionConfig
 }
 
 type ActionComponentFormProps = {
@@ -73,18 +94,16 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         http: "Generic HTTP POST request",
                         "github-issue-comment": "GitHub issue comment",
                         "github-issue-create": "Create GitHub issue",
+                        "slack-channel-message": "Slack message",
                     }}
                     selected={props.action.type}
                     onSelect={type => {
-                        update({ type, config: defaultConfig(type) })
+                        update({ type: type, config: defaultConfig(type) })
                     }}
                     isDisabled={!props.isTester}
                 />
             </FormGroup>
-            <FormGroup
-                label="Run always"
-                fieldId="runAlways"
-            >
+            <FormGroup label="Run always" fieldId="runAlways">
                 <Switch
                     label="Enabled"
                     labelOff="Disabled"
@@ -93,16 +112,19 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                 />
                 <FormHelperText>
                     <HelperText>
-                        <HelperTextItem>Run this action even when notifications are disabled, this event is caused by a recalculation etc.</HelperTextItem>
+                        <HelperTextItem>
+                            Run this action even when notifications are disabled, this event is caused by a
+                            recalculation etc.
+                        </HelperTextItem>
                     </HelperText>
                 </FormHelperText>
             </FormGroup>
             {props.action.type === "http" && (
                 <HttpActionUrlSelector
                     active={props.isTester}
-                    value={(props.action.config as Http).url || ""}
+                    value={(props.action.config as Http)?.url || ""}
                     setValue={value => {
-                        update({ config: { url: value } })
+                        updateConfig({ url: value })
                     }}
                     isReadOnly={!props.isTester}
                     setValid={props.setValid}
@@ -143,7 +165,9 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                             <TextInput
                                 id="issueUrl"
                                 value={(props.action.config as GithubIssueComment).issueUrl}
-                                onChange={(_event, issueUrl) => update({ config: { ...props.action.config, issueUrl } })}
+                                onChange={(_event, issueUrl) =>
+                                    updateConfig({ issueUrl })
+                                }
                             />
                         </FormGroup>
                     ) : (
@@ -218,6 +242,37 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                 props.action.event === CHANGE_NEW ? { changeToMarkdown: "Change to Markdown" } : {}
                             }
                             selected={(props.action.config as GithubIssueCreate).formatter}
+                            onSelect={formatter => updateConfig({ formatter })}
+                        />
+                    </FormGroup>
+                </>
+            )}
+            {props.action.type === "slack-channel-message" && (
+                <>
+                    <SlackTokenInput
+                        helpIcon={<ExpressionHelp {...props} />}
+                        secrets={props.action.secrets}
+                        onChange={secrets => update({ secrets })}
+                    />
+                    <FormGroup label="Channel" labelIcon={<ExpressionHelp {...props} />} fieldId="channel">
+                        <TextInput
+                            id="channel"
+                            value={(props.action.config as SlackChannelMessage).channel}
+                            onChange={(_event, channel) => updateConfig({ channel })}
+                        />
+                    </FormGroup>
+                    <FormGroup label="Formatter" fieldId="formatter">
+                        <EnumSelect
+                            options={
+                                props.action.event === CHANGE_NEW
+                                    ? { changeToMarkdown: "Change to Markdown" }
+                                    : props.action.event === EXPERIMENT_RESULT_NEW
+                                      ? { experimentResultToMarkdown: "Experiment result to Markdown" }
+                                      : props.action.event === TEST_NEW
+                                        ? { testToSlack: "Test to Slack Markdown" }
+                                        : {}
+                            }
+                            selected={(props.action.config as SlackChannelMessage)?.formatter}
                             onSelect={formatter => updateConfig({ formatter })}
                         />
                     </FormGroup>
@@ -300,6 +355,39 @@ function GitHubTokenInput(props: GitHubTokenInputProps) {
                 Github Docs
             </a>{" "}
             for more info about tokens.
+        </FormGroup>
+    )
+}
+
+type SlackTokenInputProps = {
+    helpIcon: ReactElement
+    secrets: any
+    onChange(secrets: any): void
+}
+
+function SlackTokenInput(props: SlackTokenInputProps) {
+    return (
+        <FormGroup label="Token" labelIcon={props.helpIcon} fieldId="token">
+            <TextInput
+                id="token"
+                value={props.secrets.token || ""}
+                onFocus={() => {
+                    if (!props.secrets.modified) {
+                        props.onChange({ token: "" })
+                    }
+                }}
+                onBlur={() => {
+                    if (!props.secrets.token && !props.secrets.modified) {
+                        props.onChange({ token: "********" })
+                    }
+                }}
+                onChange={(_event, token) => props.onChange({ token, modified: true })}
+            />
+            See{" "}
+            <a href="https://api.slack.com/authentication/oauth-v2" target="_blank">
+                Slack API OAuth authentication
+            </a>{" "}
+            for more info about authenticating Slack apps with OAuth tokens.
         </FormGroup>
     )
 }

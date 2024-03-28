@@ -47,6 +47,8 @@ release.properties
 
 # testing
 /horreum-web/coverage
+/horreum-integration-tests/dependency-reduced-pom.xml
+/horreum-integration-tests/test.log
 
 # production
 /horreum-web/build
