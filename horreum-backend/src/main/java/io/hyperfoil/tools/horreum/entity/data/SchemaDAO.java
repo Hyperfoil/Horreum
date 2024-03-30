@@ -2,16 +2,15 @@ package io.hyperfoil.tools.horreum.entity.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 
+import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.NamedNativeQueries;
 import jakarta.persistence.NamedNativeQuery;
@@ -20,6 +19,10 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.databind.JsonNode;
+
+import static jakarta.persistence.GenerationType.SEQUENCE;
+import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
+import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 
 @NamedNativeQueries({
    @NamedNativeQuery(
@@ -66,13 +69,10 @@ public class SchemaDAO extends ProtectedBaseEntity {
    @Id
    @GenericGenerator(
          name = "schemaIdGenerator",
-         strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
-         parameters = {
-               @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "schema_id_seq"),
-               @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
-         }
+         type = SeqIdGenerator.class,
+         parameters = { @Parameter(name = SEQUENCE_PARAM, value = "schema_id_seq"), @Parameter(name = INCREMENT_PARAM, value = "1") }
    )
-   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "schemaIdGenerator")
+   @GeneratedValue(strategy = SEQUENCE, generator = "schemaIdGenerator")
    public Integer id;
 
    @NotNull

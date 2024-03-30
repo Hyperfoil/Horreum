@@ -2,11 +2,11 @@ package io.hyperfoil.tools.horreum.entity.data;
 
 import java.util.function.Function;
 
+import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -14,7 +14,9 @@ import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
+
+import static jakarta.persistence.GenerationType.SEQUENCE;
+import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 
 @Entity(name = "test_token")
 public class TestTokenDAO {
@@ -28,12 +30,10 @@ public class TestTokenDAO {
    @NotNull
    @GenericGenerator(
          name = "tokenIdGenerator",
-         strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
-         parameters = {
-               @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
-         }
+         type = SeqIdGenerator.class,
+         parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
    )
-   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "tokenIdGenerator")
+   @GeneratedValue(strategy = SEQUENCE, generator = "tokenIdGenerator")
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)
