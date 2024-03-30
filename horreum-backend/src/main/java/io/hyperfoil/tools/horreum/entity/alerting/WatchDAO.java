@@ -2,13 +2,13 @@ package io.hyperfoil.tools.horreum.entity.alerting;
 
 import java.util.List;
 
+import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
 import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
@@ -20,10 +20,12 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
+import static jakarta.persistence.GenerationType.SEQUENCE;
+import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 
 /**
  * Records parties interested in new {@link ChangeDAO changes} in given test.
@@ -35,12 +37,10 @@ public class WatchDAO extends PanacheEntityBase {
    @Id
    @GenericGenerator(
          name = "subscriptionIdGenerator",
-         strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
-         parameters = {
-               @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
-         }
+         type = SeqIdGenerator.class,
+         parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
    )
-   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "subscriptionIdGenerator")
+   @GeneratedValue(strategy = SEQUENCE, generator = "subscriptionIdGenerator")
    public Integer id;
 
    @OneToOne(fetch = FetchType.LAZY, optional = false)

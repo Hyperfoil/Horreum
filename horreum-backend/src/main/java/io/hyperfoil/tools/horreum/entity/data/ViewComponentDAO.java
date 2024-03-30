@@ -2,12 +2,12 @@ package io.hyperfoil.tools.horreum.entity.data;
 
 import java.util.Objects;
 
+import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -19,13 +19,15 @@ import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
+import static jakarta.persistence.GenerationType.SEQUENCE;
+import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 
 /**
  * Security model: view components are owned by {@link ViewDAO} and this is owned by {@link TestDAO}, therefore
@@ -38,13 +40,10 @@ public class ViewComponentDAO extends PanacheEntityBase {
    @Id
    @GenericGenerator(
          name = "viewComponentIdGenerator",
-         strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
-         parameters = {
-               @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
-
-         }
+         type = SeqIdGenerator.class,
+         parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
    )
-   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "viewComponentIdGenerator")
+   @GeneratedValue(strategy = SEQUENCE, generator = "viewComponentIdGenerator")
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)
