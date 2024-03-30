@@ -3,33 +3,33 @@ package io.hyperfoil.tools.horreum.entity.backend;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
+import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
 import org.hibernate.type.SqlTypes;
+
+import static jakarta.persistence.GenerationType.SEQUENCE;
+import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
+import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 
 @Entity(name = "backendconfig")
 public class DatastoreConfigDAO extends PanacheEntityBase {
     @Id
     @GenericGenerator(
             name = "datastoreIdGenerator",
-            strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
-            parameters = {
-                    @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "backend_id_seq"),
-                    @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
-            }
+            type = SeqIdGenerator.class,
+            parameters = { @Parameter(name = SEQUENCE_PARAM, value = "backend_id_seq"), @Parameter(name = INCREMENT_PARAM, value = "1") }
     )
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "datastoreIdGenerator")
+    @GeneratedValue(strategy = SEQUENCE, generator = "datastoreIdGenerator")
     @Column(name="id")
     public Integer id;
 

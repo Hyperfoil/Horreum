@@ -1,25 +1,26 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
-
+import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
 import jakarta.persistence.*;
 
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
+import org.hibernate.annotations.Parameter;
+
+import static jakarta.persistence.GenerationType.SEQUENCE;
+import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 
 @Entity(name = "TransformationLog")
 public class TransformationLogDAO extends PersistentLogDAO {
    @Id
    @GenericGenerator(
            name = "transformationlog_id_generator",
-           strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
-           parameters = {
-                   @org.hibernate.annotations.Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
-           }
+           type = SeqIdGenerator.class,
+           parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
    )
-   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "transformationlog_id_generator")
+   @GeneratedValue(strategy = SEQUENCE, generator = "transformationlog_id_generator")
    public Long id;
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)

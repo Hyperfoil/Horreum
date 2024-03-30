@@ -2,11 +2,13 @@ package io.hyperfoil.tools.horreum.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
+import org.hibernate.annotations.Parameter;
+
+import static jakarta.persistence.GenerationType.SEQUENCE;
+import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 
 @Entity(name = "ActionLog")
 public class ActionLogDAO extends PersistentLogDAO {
@@ -14,12 +16,10 @@ public class ActionLogDAO extends PersistentLogDAO {
    @Id
    @GenericGenerator(
            name = "actionlog_id_generator",
-           strategy = "io.hyperfoil.tools.horreum.entity.SeqIdGenerator",
-           parameters = {
-                   @org.hibernate.annotations.Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1"),
-           }
+           type = SeqIdGenerator.class,
+           parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
    )
-   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "actionlog_id_generator")
+   @GeneratedValue(strategy = SEQUENCE, generator = "actionlog_id_generator")
    public Long id;
 
    @NotNull
