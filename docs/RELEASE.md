@@ -150,6 +150,17 @@ on:
   workflow_dispatch:
 ```
 
+Update the Github action to notify openapi changes to the clients on every stable branch push:
+```yaml
+on:
+  push:
+    branches:
+      - main
+      - 0.12.x
+    paths:
+      - "docs/site/content/en/openapi/openapi.yaml"
+```
+
 Commit the changes:
 
 ```bash
