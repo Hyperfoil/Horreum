@@ -425,4 +425,23 @@ public abstract class UserServiceAbstractTest {
             assertThrows(ForbiddenException.class, () -> userService.updateAdministrators(null));
         });
     }
+
+    @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
+    @Test void userCountAfterDeleteTeamTest() {
+        int beforeCount = userService.searchUsers("").size();
+        String testTeam = "funky-test-team", otherTeam = "some-team-that-does-not-exist-team";
+        userService.addTeam(testTeam);
+        String testUserName = "funky-team-user";
+
+        // create a test user
+        UserService.NewUser testUser = new UserService.NewUser();
+        testUser.user = new UserService.UserData("", testUserName, "Fun", "Key", "funky@horreum.io");
+        testUser.password = "secret";
+        testUser.team = testTeam;
+        testUser.roles = Collections.emptyList();
+        userService.createUser(testUser);
+        assertEquals(beforeCount + 1, userService.searchUsers("").size());
+        userService.deleteTeam (testTeam);
+        assertEquals(beforeCount, userService.searchUsers("").size());
+    }
 }
