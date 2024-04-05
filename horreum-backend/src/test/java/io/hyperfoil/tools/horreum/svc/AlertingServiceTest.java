@@ -12,8 +12,8 @@ import java.util.stream.IntStream;
 import io.hyperfoil.tools.horreum.api.alerting.*;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
-import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
+import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.restassured.common.mapper.TypeRef;
 import jakarta.inject.Inject;
 
