@@ -736,12 +736,13 @@ public class AlertingServiceImpl implements AlertingService {
          List<VariableDAO> variables = variablesDTO.stream().map(VariableMapper::to).collect(Collectors.toList());
          List<VariableDAO> currentVariables = VariableDAO.list("testId", testId);
          updateCollection(currentVariables, variables, v -> v.id, item -> {
-            if (item.id != null && item.id <= 0) {
+            if (item.id != null && item.id < 0) {
                item.id = null;
             }
             if (item.changeDetection != null) {
                ensureDefaults(item.changeDetection);
                item.changeDetection.forEach(rd -> rd.variable = item);
+               item.changeDetection.stream().filter(rd -> rd.id != null && rd.id == -1).forEach(rd -> rd.id = null);
             }
             item.testId = testId;
                 item.persist(); // insert
@@ -754,7 +755,7 @@ public class AlertingServiceImpl implements AlertingService {
                ensureDefaults(matching.changeDetection);
             }
             updateCollection(current.changeDetection, matching.changeDetection, rd -> rd.id, item -> {
-               if (item.id != null && item.id <= 0) {
+               if (item.id != null && item.id < 0) {
                   item.id = null;
                }
                item.variable = current;
