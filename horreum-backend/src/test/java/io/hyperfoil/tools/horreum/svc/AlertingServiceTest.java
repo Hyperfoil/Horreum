@@ -1,35 +1,22 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
-import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
-import io.hyperfoil.tools.horreum.api.alerting.RunExpectation;
+import io.hyperfoil.tools.horreum.api.alerting.*;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
+import io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
 import io.restassured.common.mapper.TypeRef;
 import jakarta.inject.Inject;
 
-import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
@@ -63,6 +50,8 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.RestAssured;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -765,6 +754,43 @@ public class AlertingServiceTest extends BaseServiceTest {
       List<AlertingService.DatapointLastTimestamp> timestamps =
       jsonRequest().body(params).post("/api/alerting/datapoint/last")
               .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, AlertingService.DatapointLastTimestamp.class));
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testUpdateVariablesHandlesNegativeId(TestInfo info) throws Exception {
+      Test test = createTest(createExampleTest(getTestName(info)));
+      Schema schema = createExampleSchema(info);
+      ChangeDetection cd = addChangeDetectionVariable(test, schema.id);
+
+      cd.config.put("filter", "min");
+      setTestVariables(test, "Value", new Label("value", schema.id), cd);//create
+
+      List<Variable> variables = variables(test.id);
+      assertEquals(1, variables.size());
+      assertNotNull(variables.get(0).id);
+
+      ChangeDetection problematicChangeDetection = new ChangeDetection();
+      problematicChangeDetection.id = -1; //UI typically sets this value
+      problematicChangeDetection.model = RelativeDifferenceChangeDetectionModel.NAME;
+      problematicChangeDetection.config = JsonNodeFactory.instance.objectNode().put("threshold", 0.2).put("minPrevious", 2).put("window", 2).put("filter", "mean");
+      List<String> labels = Collections.singletonList("foobar");
+      Set<ChangeDetection> cdSet = Collections.singleton(problematicChangeDetection);
+
+      Variable throughput = new Variable();
+      throughput.id = -1; //UI typically sets this value
+      throughput.testId = test.id;
+      throughput.name = "throughput";
+      throughput.labels = labels;
+      throughput.changeDetection = cdSet;
+      variables.add(throughput);
+
+      updateVariables(test.id, variables);//update
+      List<Variable> updated = variables(test.id);
+      Variable updatedThroughput = updated.stream().filter(v -> v.name.equals(throughput.name)).findFirst().get();
+      assertNotEquals(-1, updatedThroughput.id);
+      assertEquals(throughput.changeDetection.size(), updatedThroughput.changeDetection.size());
+      ChangeDetection updatedChangeDetection = updatedThroughput.changeDetection.stream().findFirst().get();
+      assertNotEquals(-1, updatedChangeDetection.id);
    }
 
    private void checkChanges(Test test) {
