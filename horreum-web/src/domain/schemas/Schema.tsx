@@ -37,10 +37,11 @@ import SavedTabs, { SavedTab, TabFunctions, modifiedFunc, resetFunc, saveFunc } 
 import TeamSelect from "../../components/TeamSelect"
 import Transformers from "./Transformers"
 import Labels from "./Labels"
-import {Access, getSchema, Schema as SchemaDef, schemaApi} from "../../api"
+import {Access, getSchema, Schema as SchemaDef, schemaApi, Banner as BannerData} from "../../api"
 import SchemaExportImport from "./SchemaExportImport"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import { TimeoutBanner, TimeoutBannerProps } from "../../Banner"
 
 type SchemaParams = {
     schemaId: string
@@ -212,6 +213,7 @@ export default function Schema() {
     const [editorSchema, setEditorSchema] = useState(schema?.schema ? toString(schema?.schema) : undefined)
     const [modifiedSchema, setModifiedSchema] = useState(schema)
     const [modified, setModified] = useState(false)
+    const [showMessageBanner, setShowMessageBanner] = useState(false)
 
     // any tester can save to add new labels/transformers
     const isTester = useTester()
@@ -246,8 +248,6 @@ export default function Schema() {
         return schemaUri || undefined
     }
 
-
-
     const save = () => {
         if (!modified) {
             return Promise.resolve(schemaIdVal)
@@ -261,13 +261,29 @@ export default function Schema() {
         return schemaApi.add(newSchema)
             .then(id=>  id,
                 error => alerting.dispatchError(error, "SAVE_SCHEMA", "Failed to save schema")
-            ).then(id => setSchemaIdVal(id))
+            ).then(id => {
+                setSchemaIdVal(id)
+                setShowMessageBanner(true)
+            })
     }
     const transformersFuncsRef = useRef<TabFunctions>()
     const labelsFuncsRef = useRef<TabFunctions>()
 
+    const bannerProps = {
+        bannerData: {
+            title: "Schema sync alert",
+            message: "Horreum schema changes is processed asynchronously. As a result, changes in runs and schemas links may not be reflected immediately.",
+            severity: "info",
+            active: true,
+        },
+        onTimeout: () => setShowMessageBanner(false)
+    } as TimeoutBannerProps
+
     return (
         <PageSection>
+            {showMessageBanner && (
+                <TimeoutBanner {...bannerProps} />
+            )}
             {loading && (
                 <Bullseye>
                     <Spinner />
