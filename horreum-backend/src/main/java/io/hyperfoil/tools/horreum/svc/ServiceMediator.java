@@ -10,7 +10,6 @@ import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
-import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.smallrye.reactive.messaging.annotations.Blocking;
 import io.vertx.core.Vertx;
@@ -84,6 +83,10 @@ public class ServiceMediator {
     @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
     @Channel("run-recalc-out")
     Emitter<Integer> runEmitter;
+
+    @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
+    @Channel("schema-sync-out")
+    Emitter<Integer> schemaEmitter;
 
     private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events =  new ConcurrentHashMap<>();
 
@@ -168,6 +171,18 @@ public class ServiceMediator {
         runEmitter.send(runId);
     }
 
+    @Incoming("schema-sync-in")
+    @Blocking(ordered = false, value = "horreum.schema.pool")
+    @ActivateRequestContext
+    public void processSchemaSync(int schemaId) {
+        runService.onNewOrUpdatedSchema(schemaId);
+    }
+
+    @Transactional(Transactional.TxType.NOT_SUPPORTED)
+    void queueSchemaSync(int schemaId) {
+        schemaEmitter.send(schemaId);
+    }
+
     void dataPointsProcessed(DataPoint.DatasetProcessedEvent event) {
         experimentService.onDatapointsCreated(event);
     }
@@ -216,9 +231,6 @@ public class ServiceMediator {
             subscriptionService.importSubscriptions(test);
     }
 
-    public void newOrUpdatedSchema(SchemaDAO schema) {
-        runService.processNewOrUpdatedSchema(schema);
-    }
     public void updateFingerprints(int testId) {
         datasetService.updateFingerprints(testId);
     }
@@ -246,7 +258,7 @@ public class ServiceMediator {
     }
 
     public <T> BlockingQueue<T> getEventQueue(AsyncEventChannels channel, Integer id) {
-        if (testMode ) {
+        if (testMode) {
             events.putIfAbsent(channel, new HashMap<>());
             BlockingQueue<?> queue = events.get(channel).computeIfAbsent(id, k -> new LinkedBlockingQueue<>());
             return (BlockingQueue<T>) queue;
