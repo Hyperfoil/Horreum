@@ -13,6 +13,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
+import java.util.Objects;
 import java.util.Set;
 
 @Entity(name = "team")
@@ -41,5 +42,20 @@ public class Team extends PanacheEntityBase {
 
     public Team(String teamName) {
         this.teamName = teamName;
+    }
+
+    @Override public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        } else if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        return Objects.equals(id, ((Team) o).id) && Objects.equals(teamName, ((Team) o).teamName);
+    }
+
+    @Override public int hashCode() {
+        int result = Objects.hashCode(id);
+        result = 31 * result + Objects.hashCode(teamName);
+        return result;
     }
 }
