@@ -25,6 +25,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -78,4 +79,26 @@ public class UserInfo extends PanacheEntityBase {
         password = BcryptUtil.bcryptHash(clearPassword);
     }
 
+    @Override public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        } else if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        UserInfo userInfo = (UserInfo) o;
+        return username.equals(userInfo.username)
+               && Objects.equals(password, userInfo.password)
+               && Objects.equals(email, userInfo.email)
+               && Objects.equals(firstName, userInfo.firstName)
+               && Objects.equals(lastName, userInfo.lastName);
+    }
+
+    @Override public int hashCode() {
+        int result = username.hashCode();
+        result = 31 * result + Objects.hashCode(password);
+        result = 31 * result + Objects.hashCode(email);
+        result = 31 * result + Objects.hashCode(firstName);
+        result = 31 * result + Objects.hashCode(lastName);
+        return result;
+    }
 }

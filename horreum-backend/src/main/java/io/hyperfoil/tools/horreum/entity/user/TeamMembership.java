@@ -26,20 +26,20 @@ public class TeamMembership extends PanacheEntityBase {
     @Id
     @Column(name = "team_role")
     @Enumerated(EnumType.STRING)
-    public TeamRole roles;
+    public TeamRole role;
 
     public TeamMembership(){}
 
-    public TeamMembership(UserInfo user, Team team, TeamRole roles) {
+    public TeamMembership(UserInfo user, Team team, TeamRole role) {
         this.user = user;
         this.team = team;
-        this.roles = roles;
+        this.role = role;
     }
 
     public TeamMembership(UserInfo user, Team team, String uiRole) {
         this.user = user;
         this.team = team;
-        this.roles = switch (uiRole) {
+        this.role = switch (uiRole) {
             case "viewer" -> TeamRole.TEAM_VIEWER;
             case "tester" -> TeamRole.TEAM_TESTER;
             case "uploader" -> TeamRole.TEAM_UPLOADER;
@@ -48,8 +48,25 @@ public class TeamMembership extends PanacheEntityBase {
         };
     }
 
+    @Override public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        } else if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        TeamMembership that = (TeamMembership) o;
+        return user.equals(that.user) && team.equals(that.team) && role == that.role;
+    }
+
+    @Override public int hashCode() {
+        int result = user.hashCode();
+        result = 31 * result + team.hashCode();
+        result = 31 * result + role.hashCode();
+        return result;
+    }
+
     public String asUIRole() {
-        return switch (roles) {
+        return switch (role) {
             case TEAM_VIEWER -> "viewer";
             case TEAM_TESTER -> "tester";
             case TEAM_UPLOADER -> "uploader";
@@ -62,7 +79,7 @@ public class TeamMembership extends PanacheEntityBase {
     }
     
     public String asRole() {
-        return team.teamName + "-" + switch (roles) {
+        return team.teamName + "-" + switch (role) {
             case TEAM_VIEWER -> "viewer";
             case TEAM_TESTER -> "tester";
             case TEAM_UPLOADER -> "uploader";
