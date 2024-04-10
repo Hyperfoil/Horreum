@@ -33,11 +33,12 @@ public class UserServiceImpl implements UserService {
         return identity.getRoles().stream().toList();
     }
 
+    @RolesAllowed({Roles.MANAGER, Roles.ADMIN})
     @Override public List<UserData> searchUsers(String query) {
         return backend.get().searchUsers(query);
     }
 
-    // @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN })
+    @RolesAllowed({Roles.MANAGER, Roles.ADMIN})
     @Override public List<UserData> info(List<String> usernames) {
         return backend.get().info(usernames);
     }
