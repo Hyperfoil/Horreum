@@ -17,6 +17,7 @@ import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -280,34 +281,28 @@ public abstract class UserServiceAbstractTest {
             userService.createUser(testUser);
         }
 
-        overrideTestSecurity("some-random-researching-dude", Set.of("researcher-role"), () -> {
-            // test all users match - beginning / middle / end
-            assertUserSearch("barr", usernames);
-            assertUserSearch(lastname.toLowerCase(), usernames);
+        // test all users match - beginning / middle / end
+        assertUserSearch("barr", usernames);
+        assertUserSearch(lastname.toLowerCase(), usernames);
 
-            // test some users match
-            assertUserSearch("barre", usernames[0], usernames[2]);
-            assertUserSearch("barra", usernames[1], usernames[3]);
+        // test some users match
+        assertUserSearch("barre", usernames[0], usernames[2]);
+        assertUserSearch("barra", usernames[1], usernames[3]);
 
-            // test single user match
-            assertUserSearch("barreiro", usernames[0]);
-            assertUserSearch("barreto", usernames[2]);
+        // test single user match
+        assertUserSearch("barreiro", usernames[0]);
+        assertUserSearch("barreto", usernames[2]);
 
-            // test no user match
-            assertUserSearch("test");
-            assertUserSearch("non-existent-user");
+        // test no user match
+        assertUserSearch("non-existent-user");
 
-            // test user info
-            List<UserService.UserData> userDataList = userService.info(List.of(usernames));
-            assertEquals(usernames.length, userDataList.size());
-            assertEquals(lastname, userDataList.get(0).lastName);
+        // test user info
+        List<UserService.UserData> userDataList = userService.info(List.of(usernames));
+        assertEquals(usernames.length, userDataList.size());
+        assertEquals(lastname, userDataList.get(0).lastName);
 
-            // no user should return empty list
-            assertTrue(userService.info(List.of("non-existent-user")).isEmpty());
-
-            // test roles of random user
-            assertEquals(List.of("researcher-role"), userService.getRoles());
-        });
+        // no user should return empty list
+        assertTrue(userService.info(List.of("non-existent-user")).isEmpty());
 
         // test roles of admin user
         assertEquals(List.of("admin"), userService.getRoles());
@@ -423,6 +418,39 @@ public abstract class UserServiceAbstractTest {
             assertThrows(ForbiddenException.class, () -> userService.deleteTeam(null));
             assertThrows(ForbiddenException.class, userService::administrators);
             assertThrows(ForbiddenException.class, () -> userService.updateAdministrators(null));
+            assertThrows(ForbiddenException.class, () -> userService.searchUsers(null) );
+            assertThrows(ForbiddenException.class, () -> userService.info(new ArrayList<>()) );
+        });
+    }
+
+    @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
+    @Test void userSearchOnlyForAdminManagerTest() {
+        int beforeCount = userService.searchUsers("").size();
+        String testTeam = "foobar-test-team";
+        userService.addTeam(testTeam);
+        String testUserName = "foo-team-user";
+
+        UserService.NewUser testUser = new UserService.NewUser();
+        testUser.user = new UserService.UserData("", testUserName, "Foo", "Bar", "foobar@horreum.io");
+        testUser.password = "secret";
+        testUser.team = testTeam;
+        testUser.roles = Collections.emptyList();
+        userService.createUser(testUser);
+        assertEquals(beforeCount + 1, userService.searchUsers("").size());
+        assertEquals(1, userService.info(List.of(testUserName)).size());
+        UserService.NewUser testManagerUser = new UserService.NewUser();
+        String testManagerUserName = "aacme";
+        testManagerUser.user = new UserService.UserData("", testManagerUserName, "Andrew", "acme", "aacme@horreum.io");
+        testManagerUser.password = "secret";
+        testManagerUser.team = testTeam;
+        testManagerUser.roles = List.of(Roles.MANAGER);
+        userService.createUser(testManagerUser);
+        assertEquals(1, userService.searchUsers(testManagerUserName).size());
+        assertEquals(1, userService.info(List.of(testManagerUserName)).size());
+        int fooBarTestTeamCount = userService.searchUsers("").size();
+        overrideTestSecurity(testManagerUserName, Set.of(Roles.MANAGER), () -> {
+            assertEquals(fooBarTestTeamCount, userService.searchUsers("").size());
+            assertEquals(1, userService.info(List.of(testManagerUserName)).size());
         });
     }
 }

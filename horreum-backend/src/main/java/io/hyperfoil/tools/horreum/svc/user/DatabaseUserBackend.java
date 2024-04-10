@@ -49,7 +49,7 @@ public class DatabaseUserBackend implements UserBackEnd {
     @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override public List<UserService.UserData> searchUsers(String query) {
-        List<UserInfo> users = UserInfo.list("lower(firstName) like ?1 or lower(lastName) like ?1", "%" + query.toLowerCase() + "%");
+        List<UserInfo> users = UserInfo.list("lower(firstName) like ?1 or lower(lastName) like ?1 or lower(username) like ?1", "%" + query.toLowerCase() + "%");
         return users.stream().map(DatabaseUserBackend::toUserInfo).toList();
     }
 
