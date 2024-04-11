@@ -124,7 +124,7 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onNewTest(Test test) {
-      executeActions(AsyncEventChannels.TEST_NEW, -1, test, true);
+      executeActions(AsyncEventChannels.TEST_NEW, test.id, test, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
