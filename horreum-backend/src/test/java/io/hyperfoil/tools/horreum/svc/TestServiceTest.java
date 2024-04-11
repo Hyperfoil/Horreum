@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
@@ -129,6 +130,11 @@ public class TestServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testAddTestAction(TestInfo info) {
       Test test = createTest(createExampleTest(getTestName(info)));
+
+      // look for the TEST_NEW action log for test just created
+      List<ActionLog> actionLog = jsonRequest().auth().oauth2(getTesterToken()).queryParam("level", PersistentLogDAO.DEBUG).get("/api/log/action/" + test.id).then().statusCode(200).extract().body().jsonPath().getList(".");
+      assertFalse(actionLog.isEmpty());
+
       addTestHttpAction(test, MessageBusChannels.RUN_NEW, "https://attacker.com").then().statusCode(400);
 
       addAllowedSite("https://example.com");
