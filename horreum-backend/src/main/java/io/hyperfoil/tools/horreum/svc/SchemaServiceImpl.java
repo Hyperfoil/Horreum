@@ -90,7 +90,6 @@ public class SchemaServiceImpl implements SchemaService {
 
    //@formatter:off
    private static final String UPDATE_TOKEN = "UPDATE schema SET token = ? WHERE id = ?";
-   private static final String CHANGE_ACCESS = "UPDATE schema SET owner = ?, access = ? WHERE id = ?";
    private static final String FETCH_SCHEMAS_RECURSIVE =
          """
          WITH RECURSIVE refs(uri) AS
@@ -230,10 +229,10 @@ public class SchemaServiceImpl implements SchemaService {
       Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
       if (limit != null && page != null) {
          List<SchemaDAO> schemas = SchemaDAO.findAll(Sort.by(sort).direction(sortDirection)).page(Page.of(page, limit)).list();
-         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).collect(Collectors.toList()), SchemaDAO.count());
+         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).toList(), SchemaDAO.count());
       } else {
          List<SchemaDAO> schemas = SchemaDAO.listAll(Sort.by(sort).direction(sortDirection));
-         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).collect(Collectors.toList()), SchemaDAO.count());
+         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).toList(), SchemaDAO.count());
       }
    }
 
@@ -291,17 +290,15 @@ public class SchemaServiceImpl implements SchemaService {
    @Override
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
    public void updateAccess(int id, String owner, Access access) {
-      if (access.ordinal() < Access.PUBLIC.ordinal() || access.ordinal() > Access.PRIVATE.ordinal()) {
-         throw ServiceException.badRequest("Access not within bounds");
+      SchemaDAO schema = SchemaDAO.findById(id);
+      if (schema == null) {
+         throw ServiceException.notFound("Schema not found");
       }
-      Query query = em.createNativeQuery(CHANGE_ACCESS);
-      query.setParameter(1, owner);
-      query.setParameter(2, access);
-      query.setParameter(3, id);
+
+      schema.owner = owner;
+      schema.access = access;
       try {
-         if (query.executeUpdate() != 1) {
-            throw ServiceException.serverError("Access change failed (missing permissions?)");
-         }
+         schema.persist();
       }
       catch (Exception e) {
          throw ServiceException.serverError("Access change failed (missing permissions?) "+e.getMessage());
@@ -576,7 +573,7 @@ public class SchemaServiceImpl implements SchemaService {
    @Override
    public List<Transformer> listTransformers(int schemaId) {
       List<TransformerDAO> transformers = TransformerDAO.find("schema.id", Sort.by("name"), schemaId).list();
-      return transformers.stream().map(TransformerMapper::from).collect(Collectors.toList());
+      return transformers.stream().map(TransformerMapper::from).toList();
    }
 
    @RolesAllowed(Roles.TESTER)
@@ -921,14 +918,14 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
-   class RecreateDataset {
+   static class RecreateDataset {
       private int datasetId;
       private int testId;
    }
 
-   private class HorreumURIFetcher implements SchemaLoader {
+   private static class HorreumURIFetcher implements SchemaLoader {
 
-      private Map<AbsoluteIri, InputStream> uriToResource = new HashMap<>();
+      private final Map<AbsoluteIri, InputStream> uriToResource = new HashMap<>();
 
       void addResource(AbsoluteIri uri, String schema) {
          addResource(uri, new ByteArrayInputStream(schema.getBytes(StandardCharsets.UTF_8)));
