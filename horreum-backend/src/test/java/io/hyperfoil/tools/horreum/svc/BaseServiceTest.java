@@ -457,12 +457,26 @@ public class BaseServiceTest {
    }
 
    protected Schema createSchema(String name, String uri, JsonNode jsonSchema) {
+      return createSchema(name, uri, jsonSchema, null);
+   }
+
+   protected Schema createSchema(String name, String uri, JsonNode jsonSchema, String token) {
       Schema schema = new Schema();
       schema.owner = TESTER_ROLES[0];
       schema.name = name;
       schema.uri = uri;
       schema.schema = jsonSchema;
+      schema.token = token;
       return addOrUpdateSchema(schema);
+   }
+
+   protected Schema getSchema(int id, String token) {
+      return jsonRequest().auth().oauth2(getTesterToken())
+          .header(HttpHeaders.CONTENT_TYPE, "application/json")
+          .get("/api/schema/" + id+"?token="+token)
+          .then()
+          .statusCode(200)
+          .extract().as(Schema.class);
    }
 
    protected Schema addOrUpdateSchema(Schema schema) {

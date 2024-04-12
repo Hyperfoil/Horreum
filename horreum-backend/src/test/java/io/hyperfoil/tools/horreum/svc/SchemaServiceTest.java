@@ -1,28 +1,25 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.Extractor;
+import io.hyperfoil.tools.horreum.api.data.Label;
+import io.hyperfoil.tools.horreum.api.data.Schema;
+import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.data.Transformer;
 import io.hyperfoil.tools.horreum.api.report.TableReport;
 import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
+import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
+import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
+import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
-import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -33,21 +30,186 @@ import io.restassured.common.mapper.TypeRef;
 import jakarta.inject.Inject;
 import jakarta.persistence.Tuple;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.TestInfo;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(HorreumTestProfile.class)
-public class SchemaServiceTest extends BaseServiceTest {
+class SchemaServiceTest extends BaseServiceTest {
 
    @Inject
    ServiceMediator serviceMediator;
 
    @org.junit.jupiter.api.Test
-   public void testValidateRun() throws IOException, InterruptedException {
+   void testGetSchema() {
+      String schemaUri = "urn:dummy:schema";
+      Schema schema = createSchema("Dummy schema", schemaUri);
+      assertNotNull(schema);
+      assertTrue(schema.id > 0);
+
+      Schema retrieved = getSchema(schema.id, null);
+      assertEquals(schema.id, retrieved.id);
+      assertEquals(schema.uri, retrieved.uri);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testGetSchemaNotFound() {
+      jsonRequest().get("/api/schema/9999")
+          .then()
+          .statusCode(404);
+   }
+   
+   @org.junit.jupiter.api.Test
+   void testGetSchemaByUri() {
+      String schemaUri = "urn:dummy:schema";
+      Schema schema = createSchema("Dummy schema", schemaUri);
+
+      int schemaId = jsonRequest().get("/api/schema/idByUri/" + schemaUri)
+          .then()
+          .statusCode(200)
+          .extract()
+          .as(Integer.class);
+
+      assertEquals(schema.id, schemaId);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testGetSchemaByUriNotFound() {
+      jsonRequest().get("/api/schema/idByUri/urn:unknown:schema")
+          .then()
+          .statusCode(404);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testCreateSchemaWithInvalidId() {
+      Schema schema = new Schema();
+      schema.owner = TESTER_ROLES[0];
+      schema.name = "InvalidSchema";
+      schema.uri = "urn:invalid-id:schema";
+      schema.id = 9999; // does not exist
+
+      jsonRequest().body(schema).post("/api/schema")
+          .then()
+          .statusCode(400);
+   }
+
+
+   @org.junit.jupiter.api.Test
+   void testListSchemasWithDifferentOrderings() {
+      // create some schemas
+      createSchema("Ghi", "urn:schema:ghi");
+      createSchema("Abc", "urn:schema:abc");
+      createSchema("Def", "urn:schema:def");
+
+      // by default order by name and with ascending direction
+      SchemaService.SchemaQueryResult res = listSchemas(null, null, null, null);
+      assertEquals(3, res.schemas.size());
+      assertEquals(3, res.count);
+      assertEquals("Ghi", res.schemas.get(0).name);
+
+      // limit the list to 2 results
+      res = listSchemas(2, 0, null, null);
+      assertEquals(2, res.schemas.size());
+      // total number of records
+      assertEquals(3, res.count);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testDropTokenFromSchema() {
+      // create some schemas
+      Schema s = createSchema("dummy", "urn:dummy:schema", null, "my-super-token");
+
+      Util.withTx(tm, () -> {
+         SchemaDAO schema = SchemaDAO.findById(s.id);
+         assertNotNull(schema);
+         assertEquals("my-super-token", schema.token);
+         return null;
+      });
+
+      jsonRequest().delete("/api/schema/" + s.id + "/dropToken")
+          .then()
+          .statusCode(204);
+
+      Util.withTx(tm, () -> {
+         SchemaDAO schema = SchemaDAO.findById(s.id);
+         assertNotNull(schema);
+         assertNull(schema.token);
+         return null;
+      });
+   }
+
+   @org.junit.jupiter.api.Test
+   void testResetSchemaToken() {
+      Schema s = createSchema("dummy", "urn:dummy:schema", null, "my-super-token");
+
+      Util.withTx(tm, () -> {
+         SchemaDAO schema = SchemaDAO.findById(s.id);
+         assertNotNull(schema);
+         assertEquals("my-super-token", schema.token);
+         return null;
+      });
+
+      jsonRequest().post("/api/schema/" + s.id + "/resetToken")
+          .then()
+          .statusCode(200);
+
+      Util.withTx(tm, () -> {
+         SchemaDAO schema = SchemaDAO.findById(s.id);
+         assertNotNull(schema);
+         assertNotNull(schema.token);
+         assertNotEquals("my-super-token", schema.token);
+         return null;
+      });
+   }
+
+   @org.junit.jupiter.api.Test
+   void testUpdateTokenWithInvalidSchemaId() {
+      jsonRequest().post("/api/schema/9999/resetToken")
+          .then()
+          .statusCode(500);
+
+      jsonRequest().delete("/api/schema/9999/dropToken")
+          .then()
+          .statusCode(500);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testUpdateSchemaAccess() {
+      Schema s = createSchema("dummy", "urn:dummy:schema");
+      assertEquals(TESTER_ROLES[0], s.owner);
+      assertEquals(Access.PUBLIC, s.access);
+
+      jsonRequest()
+          .auth().oauth2(getTesterToken())
+          // access=1 => PROTECTED
+          .post("/api/schema/" + s.id + "/updateAccess?owner=" + TESTER_ROLES[0] + "&access=1")
+          .then()
+          .statusCode(204);
+
+      s = getSchema(s.id, null);
+      assertNotNull(s);
+      assertEquals(TESTER_ROLES[0], s.owner);
+      assertEquals(Access.PROTECTED, s.access);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testValidateRun() throws IOException, InterruptedException {
       JsonNode allowAny = load("/allow-any.json");
       Schema allowAnySchema = createSchema("any", allowAny.path("$id").asText(), allowAny);
       JsonNode allowNone = load("/allow-none.json");
@@ -102,7 +264,7 @@ public class SchemaServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testEditSchema() {
+   void testEditSchema() {
       Schema schema = createSchema("My Schema", "urn:my:schema");
       assertEquals("My Schema", schema.name);
       Assertions.assertTrue(schema.id != null && schema.id > 0);
@@ -199,7 +361,7 @@ public class SchemaServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testImportWithTransformers() throws JsonProcessingException {
+   void testImportWithTransformers() throws JsonProcessingException {
       Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
       p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
       String s1 = readFile(p.resolve("quarkus_sb_schema.json").toFile());
@@ -220,12 +382,12 @@ public class SchemaServiceTest extends BaseServiceTest {
 
 
    @org.junit.jupiter.api.Test
-   public void testExportImportWithWipe() {
+   void testExportImportWithWipe() {
       testExportImport(true);
    }
 
    @org.junit.jupiter.api.Test
-   public void testExportImportWithoutWipe() {
+   void testExportImportWithoutWipe() {
       testExportImport(false);
    }
 
@@ -233,10 +395,10 @@ public class SchemaServiceTest extends BaseServiceTest {
       Schema schema = createSchema("Test schema", "urn:xxx:1.0");
       addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
       addLabel(schema, "bar", "({bar, goo}) => ({ bar, goo })",
-            new Extractor("bar", "$.bar", true), new Extractor("goo", "$.goo", false));
+          new Extractor("bar", "$.bar", true), new Extractor("goo", "$.goo", false));
 
       createTransformer("Blabla", schema, "({x, y}) => ({ z: 1 })",
-            new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
+          new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
       String exportJson = jsonRequest().get("/api/schema/" + schema.id + "/export").then().statusCode(200).extract().body().asString();
       HashMap<String, List<JsonNode>> db = dumpDatabaseContents();
@@ -245,7 +407,6 @@ public class SchemaServiceTest extends BaseServiceTest {
          deleteSchema(schema);
          TestUtil.eventually(() -> {
             Util.withTx(tm, () -> {
-               em.clear();
                assertEquals(0, SchemaDAO.count());
                assertEquals(0, LabelDAO.count());
                assertEquals(0, TransformerDAO.count());
@@ -262,7 +423,61 @@ public class SchemaServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testFindUsages() throws InterruptedException  {
+   void testUpdateSchemaTransformer() {
+      Schema schema = createSchema("Dummy schema", "urn:xxx:1.0");
+
+      Transformer t = createTransformer("Blabla", schema, "({x, y}) => ({ z: 1 })",
+          new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
+      assertNotNull(t);
+      assertEquals(2, t.extractors.size());
+
+      // add another extractor
+      t.extractors.add(new Extractor("z", "$.z", false));
+      Integer id = jsonRequest().body(t).post("/api/schema/"+schema.id+"/transformers")
+          .then().statusCode(200).extract().as(Integer.class);
+
+      TransformerDAO transformer = TransformerDAO.findById(id);
+      assertNotNull(transformer);
+      assertEquals(3, transformer.extractors.size());
+   }
+
+   @org.junit.jupiter.api.Test
+   void testUpdateSchemaTransformerWithoutPrivileges() {
+      Schema schema = createSchema("Dummy schema", "urn:xxx:1.0");
+
+      Transformer t = createTransformer("Blabla", schema, "({x, y}) => ({ z: 1 })",
+          new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
+      assertNotNull(t);
+      assertEquals(2, t.extractors.size());
+
+      // add another extractor
+      t.extractors.add(new Extractor("z", "$.z", false));
+      jsonRequest()
+          .auth().oauth2(getAdminToken())
+          .body(t).post("/api/schema/"+schema.id+"/transformers")
+          .then().statusCode(403);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testUpdateSchemaTransformerOnWrongSchema() {
+      Schema schema1 = createSchema("Dummy schema 1", "urn:xxx:1.0");
+      Schema schema2 = createSchema("Dummy schema 2", "urn:xxx:2.0");
+
+      Transformer t = createTransformer("Blabla", schema1, "({x, y}) => ({ z: 1 })",
+          new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
+      assertNotNull(t);
+      assertEquals(2, t.extractors.size());
+
+      // add another extractor
+      t.extractors.add(new Extractor("z", "$.z", false));
+      jsonRequest()
+          // wrong schema id in the path
+          .body(t).post("/api/schema/"+schema2.id+"/transformers")
+          .then().statusCode(400);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testFindUsages() throws InterruptedException  {
       Test test = createTest(createExampleTest("nofilter"));
       createComparisonSchema();
       uploadExampleRuns(test);
@@ -282,7 +497,53 @@ public class SchemaServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testCreateSchemaAfterRunWithArrayData() throws InterruptedException {
+   void testUpdateSchemaLabel() {
+      Schema schema = createSchema("Dummy schema", "urn:xxx:1.0");
+
+      int labelId = addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
+      assertTrue(labelId > 0);
+
+      int labelUpdatedId = updateLabel(schema, labelId, "foo-updated", null, new Extractor("foo1", "$.foo1", false), new Extractor("foo2", "$.foo2", false));
+      assertEquals(labelId, labelUpdatedId);
+
+      LabelDAO label = LabelDAO.findById(labelId);
+      assertNotNull(label);
+      assertEquals("foo-updated", label.name);
+      assertEquals(2, label.extractors.size());
+   }
+
+   @org.junit.jupiter.api.Test
+   void testDeleteLabel() {
+      Schema schema = createSchema("Dummy schema", "urn:xxx:1.0");
+
+      int labelId = addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
+      assertTrue(labelId > 0);
+
+      deleteLabel(schema, labelId);
+
+      LabelDAO label = LabelDAO.findById(labelId);
+      assertNull(label);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testDeleteLabelOnDifferentSchema() {
+      Schema schema1 = createSchema("Dummy schema 1", "urn:xxx:1.0");
+      Schema schema2 = createSchema("Dummy schema 2", "urn:xxx:2.0");
+
+      int labelId = addLabel(schema1, "foo", null, new Extractor("foo", "$.foo", false));
+      assertTrue(labelId > 0);
+
+      jsonRequest().delete("/api/schema/" + schema2.id + "/labels/" + labelId).then().statusCode(400);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testDeleteNotExistingLabel() {
+      Schema schema = createSchema("Dummy schema", "urn:xxx:1.0");
+      jsonRequest().delete("/api/schema/" + schema.id + "/labels/-1").then().statusCode(404);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testCreateSchemaAfterRunWithArrayData() {
       String schemaUri = "urn:unknown:schema";
       Test test = createTest(createExampleTest("dummy-test"));
 
@@ -306,7 +567,6 @@ public class SchemaServiceTest extends BaseServiceTest {
 
       TestUtil.eventually(() -> {
          Util.withTx(tm, () -> {
-            em.clear();
             List<?> runSchemas = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
             // two records as the run is an array of two objects, both referencing the same schema
             assertEquals(2, runSchemas.size());
@@ -316,7 +576,7 @@ public class SchemaServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testCreateSchemaAfterRunWithMultipleSchemas() throws InterruptedException {
+   void testCreateSchemaAfterRunWithMultipleSchemas() {
       String firstSchemaUri = "urn:unknown1:schema";
       String secondSchemaUri = "urn:unknown2:schema";
       Test test = createTest(createExampleTest("dummy-test"));
@@ -341,7 +601,6 @@ public class SchemaServiceTest extends BaseServiceTest {
 
       TestUtil.eventually(() -> {
          Util.withTx(tm, () -> {
-            em.clear();
             List<Tuple> runSchemas = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1", Tuple.class).setParameter(1, runId).getResultList();
             // 1 record as the run is an array of two objects referencing different schemas and only the first one is created
             assertEquals(1, runSchemas.size());
@@ -352,7 +611,7 @@ public class SchemaServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testCreateSchemaAfterRunWithObjectData() throws InterruptedException {
+   void testCreateSchemaAfterRunWithObjectData() {
       String schemaUri = "urn:unknown:schema";
       Test test = createTest(createExampleTest("dummy-test"));
 
@@ -375,7 +634,6 @@ public class SchemaServiceTest extends BaseServiceTest {
 
       TestUtil.eventually(() -> {
          Util.withTx(tm, () -> {
-            em.clear();
             List<?> runSchemas = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
             // run has single object data, thus referencing one schema
             assertEquals(1, runSchemas.size());
@@ -385,7 +643,7 @@ public class SchemaServiceTest extends BaseServiceTest {
    }
 
    @org.junit.jupiter.api.Test
-   public void testChangeUriForReferencedSchema() throws InterruptedException {
+   void testChangeUriForReferencedSchema() {
       String schemaUri = "urn:dummy:schema";
       Schema schema = createSchema("Dummy schema", schemaUri);
       assertNotNull(schema);
@@ -414,5 +672,68 @@ public class SchemaServiceTest extends BaseServiceTest {
 
       List<?> runSchemasAfter = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
       assertEquals(0, runSchemasAfter.size());
+   }
+
+   @org.junit.jupiter.api.Test
+   void testDeleteSchemaAfterRun() {
+      String schemaUri = "urn:dummy:schema";
+      Schema schema = createSchema("Dummy schema", schemaUri);
+      assertNotNull(schema);
+      assertTrue(schema.id > 0);
+
+      Test test = createTest(createExampleTest("dummy-test"));
+
+      ArrayNode data = JsonNodeFactory.instance.arrayNode();
+      data.addObject().put("$schema", schemaUri).put("foo", "bar");
+      data.addObject().put("$schema", schemaUri).put("foo", "bar");
+      int runId = uploadRun(data.toString(), test.name);
+      assertTrue(runId > 0);
+
+      // no validation errors
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM run_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM dataset_validationerrors").getSingleResult());
+
+      List<?> runSchemasBefore = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
+      assertEquals(2, runSchemasBefore.size());
+      List<?> datasetSchemasBefore = em.createNativeQuery("SELECT * FROM dataset_schemas").getResultList();
+      assertEquals(2, datasetSchemasBefore.size());
+
+      // delete the schema afterward
+      deleteSchema(schema);
+
+      assertEquals(0, SchemaDAO.count());
+      List<?> runSchemasAfter = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
+      assertEquals(0, runSchemasAfter.size());
+      List<?> datasetSchemasAfter = em.createNativeQuery("SELECT * FROM dataset_schemas").getResultList();
+      assertEquals(0, datasetSchemasAfter.size());
+   }
+
+   // utility to get list of schemas
+   private SchemaService.SchemaQueryResult listSchemas(Integer limit, Integer page, String sort, SortDirection direction) {
+      StringBuilder query = new StringBuilder("/api/schema/");
+      if (limit != null || page != null || sort != null || direction != null) {
+         query.append("?");
+
+         if (limit != null) {
+            query.append("limit=").append(limit).append("&");
+         }
+
+         if (page != null) {
+            query.append("page=").append(page).append("&");
+         }
+
+         if (sort != null) {
+            query.append("sort=").append(sort).append("&");
+         }
+
+         if (direction != null) {
+            query.append("direction=").append(direction);
+         }
+      }
+      return jsonRequest().get(query.toString())
+          .then()
+          .statusCode(200)
+          .extract()
+          .as(SchemaService.SchemaQueryResult.class);
    }
 }
