@@ -24,7 +24,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import io.hyperfoil.tools.horreum.api.data.*;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
+import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModelResolver;
 import io.hyperfoil.tools.horreum.hibernate.IntArrayType;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.security.PermitAll;
@@ -45,8 +47,7 @@ import io.hyperfoil.tools.horreum.api.alerting.*;
 import io.hyperfoil.tools.horreum.api.changes.Dashboard;
 import io.hyperfoil.tools.horreum.api.changes.Target;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
-import io.hyperfoil.tools.horreum.changedetection.FixedThresholdModel;
+import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
@@ -181,10 +182,6 @@ public class AlertingServiceImpl implements AlertingService {
    private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
    private static final Instant VERY_DISTANT_FUTURE = Instant.parse("2666-06-06T06:06:06.00Z");
 
-   private static final Map<String, ChangeDetectionModel> MODELS = Map.of(
-           RelativeDifferenceChangeDetectionModel.NAME, new RelativeDifferenceChangeDetectionModel(),
-           FixedThresholdModel.NAME, new FixedThresholdModel());
-
    @Inject
    TestServiceImpl testService;
 
@@ -192,7 +189,7 @@ public class AlertingServiceImpl implements AlertingService {
    EntityManager em;
 
    @Inject
-   MessageBus messageBus;
+   BlockingTaskDispatcher messageBus;
 
    @Inject
    SecurityIdentity identity;
@@ -217,6 +214,9 @@ public class AlertingServiceImpl implements AlertingService {
 
    @Inject
    Session session;
+
+   @Inject
+   ChangeDetectionModelResolver modelResolver;
 
    static ConcurrentHashMap<Integer, AtomicInteger> retryCounterSet = new ConcurrentHashMap<>();
 
@@ -495,12 +495,12 @@ public class AlertingServiceImpl implements AlertingService {
       if (!missingValueVariables.isEmpty()) {
          MissingValuesEvent event = new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify);
          if(mediator.testMode())
-            Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_MISSING_VALUES, dataset.testid, event));
+            mediator.publishEvent(AsyncEventChannels.DATASET_MISSING_VALUES, dataset.testid, event);
          mediator.missingValuesDataset(event);
       }
       DataPoint.DatasetProcessedEvent event = new DataPoint.DatasetProcessedEvent( DatasetMapper.fromInfo( dataset.getInfo()), notify);
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATAPOINT_PROCESSED, dataset.testid, event));
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_PROCESSED, dataset.testid, event));
       mediator.dataPointsProcessed(event);
    }
 
@@ -515,7 +515,7 @@ public class AlertingServiceImpl implements AlertingService {
       DataPoint.Event event = new DataPoint.Event(DataPointMapper.from( dataPoint), dataset.testid, notify);
       onNewDataPoint(event); //Test failure if we do not start a new thread and new tx
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATAPOINT_NEW, dataset.testid, event));
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_NEW, dataset.testid, event));
    }
 
    private void logCalculationMessage(DatasetDAO dataSet, int level, String format, Object... args) {
@@ -650,7 +650,7 @@ public class AlertingServiceImpl implements AlertingService {
       } else {
          int datasetId = dataPoints.get(0).getDatasetId();
          for (ChangeDetectionDAO detection : ChangeDetectionDAO.<ChangeDetectionDAO>find("variable", variable).list()) {
-            ChangeDetectionModel model = MODELS.get(detection.model);
+            ChangeDetectionModel model = modelResolver.getModel(ChangeDetectionModelType.fromString(detection.model));
             if (model == null) {
                logChangeDetectionMessage(variable.testId, datasetId, PersistentLogDAO.ERROR, "Cannot find change detection model %s", detection.model);
                continue;
@@ -674,7 +674,7 @@ public class AlertingServiceImpl implements AlertingService {
                String testName = TestDAO.<TestDAO>findByIdOptional(variable.testId).map(test -> test.name).orElse("<unknown>");
                Change.Event event = new Change.Event(ChangeMapper.from(change), testName, DatasetMapper.fromInfo(info), notify);
                if(mediator.testMode())
-                  Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.CHANGE_NEW, change.dataset.testid, event));
+                  Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.CHANGE_NEW, change.dataset.testid, event));
                mediator.executeBlocking(() -> mediator.newChange(event)) ;
             });
          }
@@ -736,12 +736,13 @@ public class AlertingServiceImpl implements AlertingService {
          List<VariableDAO> variables = variablesDTO.stream().map(VariableMapper::to).collect(Collectors.toList());
          List<VariableDAO> currentVariables = VariableDAO.list("testId", testId);
          updateCollection(currentVariables, variables, v -> v.id, item -> {
-            if (item.id != null && item.id <= 0) {
+            if (item.id != null && item.id < 0) {
                item.id = null;
             }
             if (item.changeDetection != null) {
                ensureDefaults(item.changeDetection);
                item.changeDetection.forEach(rd -> rd.variable = item);
+               item.changeDetection.stream().filter(rd -> rd.id != null && rd.id == -1).forEach(rd -> rd.id = null);
             }
             item.testId = testId;
                 item.persist(); // insert
@@ -754,7 +755,7 @@ public class AlertingServiceImpl implements AlertingService {
                ensureDefaults(matching.changeDetection);
             }
             updateCollection(current.changeDetection, matching.changeDetection, rd -> rd.id, item -> {
-               if (item.id != null && item.id <= 0) {
+               if (item.id != null && item.id < 0) {
                   item.id = null;
                }
                item.variable = current;
@@ -781,7 +782,7 @@ public class AlertingServiceImpl implements AlertingService {
 
    private void ensureDefaults(Set<ChangeDetectionDAO> rds) {
       rds.forEach(rd -> {
-         ChangeDetectionModel model = MODELS.get(rd.model);
+         ChangeDetectionModel model = modelResolver.getModel(ChangeDetectionModelType.fromString(rd.model));
          if (model == null) {
             throw ServiceException.badRequest("Unknown model " + rd.model);
          }
@@ -1108,11 +1109,10 @@ public class AlertingServiceImpl implements AlertingService {
       }
       return labels.stream().reduce(JsonNodeFactory.instance.arrayNode(), ArrayNode::add, ArrayNode::addAll);
    }
-
    @PermitAll
    @Override
    public List<ConditionConfig> changeDetectionModels() {
-      return MODELS.values().stream().map(ChangeDetectionModel::config).collect(Collectors.toList());
+      return modelResolver.getModels().values().stream().map(ChangeDetectionModel::config).collect(Collectors.toList());
    }
 
    @PermitAll
@@ -1121,11 +1121,11 @@ public class AlertingServiceImpl implements AlertingService {
       ChangeDetectionDAO lastDatapoint = new ChangeDetectionDAO();
       lastDatapoint.model = RelativeDifferenceChangeDetectionModel.NAME;
       lastDatapoint.config = JsonNodeFactory.instance.objectNode()
-            .put("window", 1).put("filter", "mean").put("threshold", 0.2).put("minPrevious", 5);
+            .put("window", 1).put("model", RelativeDifferenceChangeDetectionModel.NAME).put("filter", "mean").put("threshold", 0.2).put("minPrevious", 5);
       ChangeDetectionDAO floatingWindow = new ChangeDetectionDAO();
       floatingWindow.model = RelativeDifferenceChangeDetectionModel.NAME;
       floatingWindow.config = JsonNodeFactory.instance.objectNode()
-            .put("window", 5).put("filter", "mean").put("threshold", 0.1).put("minPrevious", 5);
+            .put("window", 5).put("model", RelativeDifferenceChangeDetectionModel.NAME).put("filter", "mean").put("threshold", 0.1).put("minPrevious", 5);
       return Arrays.asList(lastDatapoint, floatingWindow).stream().map(ChangeDetectionMapper::from).collect(Collectors.toList());
    }
 

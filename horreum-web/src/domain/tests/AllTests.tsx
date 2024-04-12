@@ -37,8 +37,6 @@ import { CellProps, Column, UseSortByColumnOptions } from "react-table"
 import { noop } from "../../utils"
 import {
     SortDirection,
-    testApi,
-    TestQueryResult,
     Access,
     mapTestSummaryToTest,
     updateFolder,
@@ -49,7 +47,7 @@ import {
     removeUserOrTeam,
     TestStorage
 } from "../../api"
-import AccessIconOnly from "../../components/AccessIconOnly"
+import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
@@ -57,6 +55,8 @@ type WatchDropdownProps = {
     id: number
     watching?: string[]
 }
+
+const DEFAULT_FOLDER: string = "";
 
 const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
     const { alerting } = useContext(AppContext) as AppContextType;
@@ -280,7 +280,7 @@ export default function AllTests() {
     const navigate = useNavigate()
     const location = useLocation()
     const params = new URLSearchParams(location.search)
-    const [folder, setFolder] = useState(params.get("folder"))
+    const [folder, setFolder] = useState( "folder" in params ? params.get("folder") ?? DEFAULT_FOLDER : DEFAULT_FOLDER)
 
     document.title = "Tests | Horreum"
     const watchingColumn: Col = {
@@ -291,26 +291,6 @@ export default function AllTests() {
             return <WatchDropdown watching={arg.cell.value} id={arg.row.original.id} />
         },
     }
-    const [page, setPage] = useState(1)
-    const [perPage, setPerPage] = useState(20)
-    const [direction] = useState<SortDirection>("Ascending")
-    const pagination = useMemo(() => ({ page, perPage, direction }), [page, perPage, direction])
-    const [tests, setTets] = useState<TestQueryResult>()
-    const [loading, setLoading] = useState(false)
-
-    useEffect(() => {
-        setLoading(true)
-        testApi.list(
-            "_my",
-            pagination.perPage,
-            pagination.page - 1,
-            "name",
-            SortDirection.Ascending,
-        )
-            .then(setTets)
-            .catch(error => alerting.dispatchError(error, "FETCH_Tests", "Failed to fetch Tests"))
-            .finally(() => setLoading(false))
-    }, [pagination])
 
     let columns: Col[] = useMemo(
         () => [
@@ -370,7 +350,7 @@ export default function AllTests() {
                     <>
                         {teamToName(arg.cell.value.owner)}
                         <span style={{ marginLeft: '8px' }}>
-                            <AccessIconOnly access={arg.cell.value.access} />
+                            <AccessIcon access={arg.cell.value.access} showText={false} />
                         </span>
                     </>
                 ),
@@ -387,8 +367,8 @@ export default function AllTests() {
                     })
                     const move = useMoveToFolder({
                         name: arg.row.original.name,
-                        folder: folder || "",
-                        onMove: (id, newFolder) => updateFolder(id, folder || "", newFolder, alerting).then(loadTests),
+                        folder: pagination.folder || DEFAULT_FOLDER,
+                        onMove: (id, newFolder) => updateFolder(id, pagination.folder, newFolder, alerting).then(loadTests),
                     })
                     const del = useDelete({
                         name: arg.row.original.name,
@@ -414,15 +394,26 @@ export default function AllTests() {
     const teams = useSelector(teamsSelector)
     const isAuthenticated = useSelector(isAuthenticatedSelector)
     const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
+    const [loading, setLoading] = useState(false)
+    const [limit, setLimit] = useState(20)
+    const [page, setPage] = useState(1)
+    const [direction] = useState<SortDirection>("Ascending")
+    const pagination = useMemo(() => ({ page, limit, direction, folder }), [page, limit, direction, folder])
+    const [count, setCount] = useState(0)
 
     const loadTests = () => {
-        fetchTestsSummariesByFolder(alerting, rolesFilter.key, folder || undefined)
-            .then(summary => setTests(summary.tests?.map(t => mapTestSummaryToTest(t)) || []))
+        setLoading(true)
+        fetchTestsSummariesByFolder(alerting, SortDirection.Ascending, pagination.folder, pagination.limit, pagination.page, rolesFilter.key, )
+            .then(summary => {setTests(summary.tests?.map(t => mapTestSummaryToTest(t)) || [])
+                if (summary.count) {
+                    setCount(summary.count)
+                }
+            })
+            .finally( () => setLoading(false))
     }
-
     useEffect(() => {
         loadTests()
-    }, [isAuthenticated, teams, rolesFilter, folder])
+    } , [isAuthenticated, teams, rolesFilter, pagination])
     if (isAuthenticated) {
         columns = [watchingColumn, ...columns]
     }
@@ -432,7 +423,7 @@ export default function AllTests() {
     return (
         <PageSection>
             <Card>
-                
+
                 <CardHeader>
                     <Flex>
                     {isTester && (
@@ -446,7 +437,7 @@ export default function AllTests() {
                     )}
                     {isAuthenticated && (
                         <FlexItem>
-                        {/* <div style={{ width: "200px"}}> not necessary when insidie a FlexItem?*/} 
+                        {/* <div style={{ width: "200px"}}> not necessary when inside a FlexItem?*/}
                             <TeamSelect
                                 includeGeneral={true}
                                 selection={rolesFilter}
@@ -461,9 +452,10 @@ export default function AllTests() {
                 </CardHeader>
                 <CardBody style={{ overflowX: "auto" }}>
                     <FoldersTree
-                        folder={folder || ""}
+                        folder={pagination.folder || DEFAULT_FOLDER}
                         onChange={f => {
                             setFolder(f)
+                            setPage(1)
                             navigate(f ? `/test?folder=${f}` : "/test", { replace: true })
                         }}
                     />
@@ -476,11 +468,11 @@ export default function AllTests() {
                 </CardBody>
                 <CardFooter style={{ textAlign: "right" }}>
                     <Pagination
-                        itemCount={tests?.count || 0}
-                        perPage={perPage}
+                        itemCount={count}
+                        perPage={limit}
                         page={page}
                         onSetPage={(e, p) => setPage(p)}
-                        onPerPageSelect={(e, pp) => setPerPage(pp)}
+                        onPerPageSelect={(e, pp) => setLimit(pp)}
                     />
                 </CardFooter>
             </Card>

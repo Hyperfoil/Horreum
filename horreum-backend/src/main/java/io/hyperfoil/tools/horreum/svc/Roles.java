@@ -1,8 +1,10 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import jakarta.persistence.Query;
@@ -56,6 +58,34 @@ public final class Roles {
          }
       }
       return false;
+   }
+
+   static void addRoles(SecurityIdentity identity, StringBuilder query, String roles, boolean isMultiConditionExp, List<String> ordinals) {
+      if (hasRolesParam(roles)) {
+         List<String> actualRoles = new ArrayList<>();
+         if (roles.equals(MY_ROLES)) {
+            if (!identity.isAnonymous()) {
+               actualRoles.addAll(identity.getRoles());
+            }
+         } else {
+            actualRoles.add(roles);
+         }
+         if (actualRoles.size() != 0) {
+            if (isMultiConditionExp) {
+               query.append(" AND ");
+            }
+            query.append("owner IN (");
+            int max = ordinals.size() + actualRoles.size() ;
+            for (int i = ordinals.size(); i < max; i += 1) {
+               query.append("?").append(i + 1);
+               if (i < (max - 1)) {
+                  query.append(", ");
+               }
+            }
+            query.append(")");
+            ordinals.addAll(actualRoles);
+         }
+      }
    }
 
    static Set<String> expandRoles(String roles, SecurityIdentity identity) {

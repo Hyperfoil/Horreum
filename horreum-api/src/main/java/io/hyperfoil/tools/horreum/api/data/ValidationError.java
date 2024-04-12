@@ -37,6 +37,8 @@ public class ValidationError {
         public String path;
 
         public String evaluationPath;
+        @Deprecated
+        public String schemaPath;
         public String schemaLocation;
         public String instanceLocation;
         public String property;

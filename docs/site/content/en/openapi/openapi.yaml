@@ -4,7 +4,7 @@ info:
   title: Horreum REST API
   description: "Horreum automated change anomaly detection. For more information,\
     \ please see [https://horreum.hyperfoil.io/](https://horreum.hyperfoil.io/)"
-  version: "0.12"
+  version: "0.13"
 tags:
 - name: Config
   description: Endpoint providing configuration for the Horreum System
@@ -978,10 +978,10 @@ paths:
         examples:
           object:
             description: json object that must exist in the values object
-            value:
-              key: requiredValue
+            value: "{labelName:necessaryValue,...}"
           string:
-            description: valid jsonpath that returns null of not found (not predicates)
+            description: valid filtering jsonpath that returns null if not found (not
+              predicates)
             value: $.count ? (@ < 20 && @ > 10)
       - name: sort
         in: query
@@ -1012,6 +1012,34 @@ paths:
           default: 0
           type: integer
         example: 2
+      - name: include
+        in: query
+        description: label name(s) to include in the result as scalar or comma separated
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          single:
+            description: including a single label
+            value: id
+          multiple:
+            description: including multiple labels
+            value: "id,count"
+      - name: exclude
+        in: query
+        description: label name(s) to exclude from the result as scalar or comma separated
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          single:
+            description: excluding a single label
+            value: id
+          multiple:
+            description: excluding multiple labels
+            value: "id,count"
       responses:
         "200":
           description: label Values
@@ -1233,24 +1261,6 @@ paths:
       responses:
         "201":
           description: Created
-  /api/run/{id}/waitforDatasets:
-    get:
-      tags:
-      - Run
-      description: "Blocking call, waiting for datasets to be produced"
-      operationId: waitForDatasets
-      parameters:
-      - name: id
-        in: path
-        description: Run ID
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 101
-      responses:
-        "204":
-          description: No Content
   /api/schema:
     get:
       tags:
@@ -1881,6 +1891,28 @@ paths:
         schema:
           type: string
         example: My Team Folder
+      - name: limit
+        in: query
+        description: limit the result count
+        schema:
+          default: 20
+          type: integer
+        example: 20
+      - name: page
+        in: query
+        description: 'filter by page number of a paginated list of '
+        schema:
+          default: 1
+          type: integer
+        example: 1
+      - name: direction
+        in: query
+        description: Sort direction
+        schema:
+          allOf:
+          - $ref: '#/components/schemas/SortDirection'
+          - default: Ascending
+        example: Ascending
       responses:
         "200":
           description: OK
@@ -2004,7 +2036,7 @@ paths:
       tags:
       - Test
       description: List all Label Values for a Test
-      operationId: listLabelValues
+      operationId: labelValues
       parameters:
       - name: id
         in: path
@@ -2034,8 +2066,14 @@ paths:
         schema:
           default: "{}"
           type: string
-        example:
-          key: requiredValue
+        examples:
+          object:
+            description: json object that must exist in the values object
+            value: "{labelName:necessaryValue,...}"
+          string:
+            description: valid filtering jsonpath that returns null if not found (not
+              predicates)
+            value: $.count ? (@ < 20 && @ > 10)
       - name: before
         in: query
         description: ISO-like date time string or epoch millis
@@ -2080,6 +2118,34 @@ paths:
           default: 0
           type: integer
         example: 2
+      - name: include
+        in: query
+        description: label name(s) to include in the result as scalar or comma separated
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          single:
+            description: including a single label
+            value: id
+          multiple:
+            description: including multiple labels
+            value: "id,count"
+      - name: exclude
+        in: query
+        description: label name(s) to exclude from the result as scalar or comma separated
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          single:
+            description: excluding a single label
+            value: id
+          multiple:
+            description: excluding multiple labels
+            value: "id,count"
       responses:
         "200":
           description: OK
@@ -2372,8 +2438,19 @@ components:
         config:
           type: object
           oneOf:
-          - $ref: '#/components/schemas/RelativeDifferenceDetection'
-          - $ref: '#/components/schemas/FixedThresholdDetection'
+          - $ref: '#/components/schemas/RelativeDifferenceDetectionConfig'
+          - $ref: '#/components/schemas/FixedThresholdDetectionConfig'
+          discriminator:
+            propertyName: model
+            mapping:
+              relativeDifference: '#/components/schemas/RelativeDifferenceDetectionConfig'
+              fixedThreshold: '#/components/schemas/FixedThresholdDetectionConfig'
+    ChangeDetectionModelType:
+      description: Type of Change Detection Model
+      enum:
+      - FIXED_THRESHOLD
+      - RELATIVE_DIFFERENCE
+      type: string
     ComparisonResult:
       description: Result of performing a Comparison
       type: object
@@ -2747,6 +2824,9 @@ components:
           type: string
         evaluationPath:
           type: string
+        schemaPath:
+          type: string
+          deprecated: true
         schemaLocation:
           type: string
         instanceLocation:
@@ -2916,7 +2996,7 @@ components:
       required:
       - name
       - jsonpath
-      - array
+      - isarray
       type: object
       properties:
         name:
@@ -2929,7 +3009,7 @@ components:
             value in the JSON document. This is a pSQL json path expression
           type: string
           example: $.buildInfo.buildID
-        array:
+        isarray:
           description: Does the JSON path expression reference an Array?
           type: boolean
           example: false
@@ -2958,13 +3038,45 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FingerprintValue'
-    FixedThresholdDetection:
+    FixThresholdConfig:
+      required:
+      - value
+      - enabled
+      - inclusive
       type: object
       properties:
+        value:
+          description: Threshold Value
+          type: integer
+          example: 95
+        enabled:
+          description: Threshold enabled/disabled
+          type: boolean
+          example: true
+        inclusive:
+          description: Is threshold inclusive of defined value?
+          type: boolean
+          example: false
+    FixedThresholdDetectionConfig:
+      required:
+      - builtIn
+      - min
+      - max
+      type: object
+      properties:
+        builtIn:
+          description: Built In
+          type: boolean
         min:
-          $ref: '#/components/schemas/Threshold'
+          description: Lower bound for acceptable datapoint values
+          type: object
+          allOf:
+          - $ref: '#/components/schemas/FixThresholdConfig'
         max:
-          $ref: '#/components/schemas/Threshold'
+          description: Upper bound for acceptable datapoint values
+          type: object
+          allOf:
+          - $ref: '#/components/schemas/FixThresholdConfig'
     GithubIssueCommentAction:
       type: object
       properties:
@@ -3345,20 +3457,39 @@ components:
           description: Total number of generated datasets
           type: integer
           example: 186
-    RelativeDifferenceDetection:
+    RelativeDifferenceDetectionConfig:
+      required:
+      - builtIn
+      - filter
+      - window
+      - threshold
+      - minPrevious
       type: object
       properties:
+        builtIn:
+          description: Built In
+          type: boolean
         filter:
+          description: Relative Difference Detection filter
           type: string
+          example: mean
         window:
           format: int32
+          description: Number of most recent datapoints used for aggregating the value
+            for comparison.
           type: integer
+          example: 5
         threshold:
           format: double
+          description: Maximum difference between the aggregated value of last <window>
+            datapoints and the mean of preceding values.
           type: number
+          example: 0.2
         minPrevious:
           format: int32
+          description: Minimal number of preceding datapoints
           type: integer
+          example: 5
     ReportComponent:
       description: Report Component
       required:
@@ -4218,6 +4349,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/Datastore'
     TestListing:
+      required:
+      - tests
+      - count
       type: object
       properties:
         tests:
@@ -4225,6 +4359,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TestSummary'
+        count:
+          format: int64
+          description: Number of tests when pagination is ignored
+          type: integer
     TestQueryResult:
       required:
       - tests
@@ -4319,16 +4457,6 @@ components:
           description: Token description
           type: string
           example: my reporting service token
-    Threshold:
-      type: object
-      properties:
-        value:
-          format: int32
-          type: integer
-        enabled:
-          type: boolean
-        inclusive:
-          type: boolean
     TransformationLog:
       description: Transformation Log
       required:
@@ -4506,6 +4634,10 @@ components:
           description: Timestamp of server startup
           type: integer
           example: 2023-10-18 18:00:57
+        privacyStatement:
+          description: Privacy statement
+          type: string
+          example: link/to/external/privacy/statement
     Watch:
       required:
       - users

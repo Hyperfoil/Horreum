@@ -634,6 +634,9 @@ public class Util {
          return Instant.ofEpochMilli(((Number) time).longValue());
       } else {
          String str = time.toString().trim();
+         if(str.isBlank()){
+            return null;
+         }
          if(str.matches("\\d+")){
             try {
                return Instant.ofEpochMilli(Long.parseLong((String) time));
@@ -650,12 +653,10 @@ public class Util {
             str=str+"Z";
          }
          //ISO_DATE_TIME
-         if(str.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:Z|[+\\-]\\d{2}:\\d{2})")){
-            try {
-               return ZonedDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME).toInstant();
-            } catch (DateTimeParseException e) {
-               e.printStackTrace();
-            }
+         try {
+            return ZonedDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME).toInstant();
+         } catch (DateTimeParseException e) {
+            log.debug("failed to convert "+time+" to timestamp using "+str);
          }
       }
       return null;//nothing matched

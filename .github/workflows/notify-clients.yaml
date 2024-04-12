@@ -1,0 +1,34 @@
+name: Notify clients
+
+on:
+  push:
+    branches:
+      - main
+      - 0.12.x
+    paths:
+      - "docs/site/content/en/openapi/openapi.yaml"
+
+jobs:
+  clients-notification:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        clients:
+          - name: Golang
+            repository: Hyperfoil/horreum-client-golang
+          - name: Python
+            repository: Hyperfoil/horreum-client-python
+
+    steps:
+      - name: Extract trigger branch
+        id: extractor
+        shell: bash
+        run: |
+          echo "current_branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+      - name: Notify ${{ matrix.clients.name }} client
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CLIENTS_NOTIFICATION_TOKEN }}
+          repository: ${{ matrix.clients.repository }}
+          event-type: detected-horreum-openapi-change
+          client-payload: '{"branch": "${{ steps.extractor.outputs.current_branch }}"}'

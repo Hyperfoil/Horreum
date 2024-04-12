@@ -35,7 +35,17 @@ docker logout quay.io
 
 Backports are automatically created from PRs against the master branch to the stable branch.
 
-To backport a change, add the `backport` label to the PR that you opened against the master branch.
+To backport a change, add the `backport` (or `backport-squash` but not both) label to the PR that you opened against the master branch.
+
+Which label should I use?
+* `backport`: (default) this uses the `no-squash=true` option so that the tool tries to backport all commits coming
+from the original pull request you are trying to backport.
+> _**Note**_ that in this case the commit SHAs should exist during the backporting, i.e,
+delete the source branch only after the backporting PR got created.
+* `backport-squash`: with this label you set `no-squash=false` option, so that the tool tries to backport the pull request
+`merge_commit_sha`.
+> _**Note**_ the value of the `merge_commit_sha` attribute changes depending on the state of the pull request, see [Github doc](https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request)
+  for more details.
 
 After the PR is merged, the backport PR will be automatically created.
 
@@ -84,6 +94,10 @@ and finally push them
 docker push quay.io/hyperfoil/horreum:<release>
 docker push quay.io/hyperfoil/horreum:latest
 ```
+
+Generate release notes:
+
+https://github.com/Hyperfoil/Horreum/releases
 
 ## After the release
 
@@ -134,6 +148,17 @@ on:
     tags: [ "*" ]
   pull_request:
   workflow_dispatch:
+```
+
+Update the Github action to notify openapi changes to the clients on every stable branch push:
+```yaml
+on:
+  push:
+    branches:
+      - main
+      - 0.12.x
+    paths:
+      - "docs/site/content/en/openapi/openapi.yaml"
 ```
 
 Commit the changes:

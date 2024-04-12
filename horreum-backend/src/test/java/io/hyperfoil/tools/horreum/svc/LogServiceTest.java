@@ -9,7 +9,7 @@ import io.hyperfoil.tools.horreum.api.data.ActionLog;
 import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
@@ -44,7 +44,7 @@ public class LogServiceTest extends BaseServiceTest {
       ObjectNode runJson = JsonNodeFactory.instance.objectNode();
       runJson.put("$schema", schema.uri);
 
-      BlockingQueue<MissingValuesEvent> missingQueue = eventConsumerQueue(MissingValuesEvent.class, MessageBusChannels.DATASET_MISSING_VALUES, e -> e.dataset.testId == test.id);
+      BlockingQueue<MissingValuesEvent> missingQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_MISSING_VALUES, test.id);
       missingQueue.drainTo(new ArrayList<>());
       int runId = uploadRun(runJson, test.name);
 
@@ -115,9 +115,9 @@ public class LogServiceTest extends BaseServiceTest {
                 .then().statusCode(200).extract().body().as(new ParameterizedTypeImpl(List.class, ActionLog.class));
         assertEquals(actionCountLog, actionLogs.size());
 
-      BlockingQueue<Integer> events = eventConsumerQueue(Integer.class, MessageBusChannels.RUN_TRASHED, id -> id == runId);
+      BlockingQueue<Integer> runTrashedEvents = serviceMediator.getEventQueue( AsyncEventChannels.RUN_TRASHED, test.id);
       deleteTest(test);
-      assertNotNull(events.poll(10, TimeUnit.SECONDS));
+      assertNotNull(runTrashedEvents.poll(10, TimeUnit.SECONDS));
 
         datasetLogCount = jsonRequest()
                 .auth()

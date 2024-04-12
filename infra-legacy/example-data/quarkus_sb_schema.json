@@ -21,7 +21,7 @@
         {
           "name": "springNativeMaxRss",
           "jsonpath": "$.results.\"spring-native\".load.avMaxRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -38,7 +38,7 @@
         {
           "name": "quarkusJvmMaxRss",
           "jsonpath": "$.results.\"quarkus-native\".load.avMaxRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -55,7 +55,7 @@
         {
           "name": "springJvmMaxRss",
           "jsonpath": "$.results.\"spring-jvm\".load.avMaxRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -72,7 +72,7 @@
         {
           "name": "springNativeRssStartup",
           "jsonpath": "$.results.\"spring-native\".rss.avStartupRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -89,7 +89,7 @@
         {
           "name": "springJvmAvBuildTime",
           "jsonpath": "$.results.\"spring-jvm\".build.avBuildTime",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -106,7 +106,7 @@
         {
           "name": "springJvmAvTimeToFirstRequest",
           "jsonpath": "$.results.\"spring-jvm\".startup.avStartTime",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -123,7 +123,7 @@
         {
           "name": "quarkusNativeAvTimeToFirstRequest",
           "jsonpath": "$.results.\"quarkus-native\".startup.avStartTime",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -140,7 +140,7 @@
         {
           "name": "quarkusJvmMaxRss",
           "jsonpath": "$.results.\"quarkus-jvm\".load.avMaxRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -157,7 +157,7 @@
         {
           "name": "quarkusJvmRssStartup",
           "jsonpath": "$.results.\"quarkus-jvm\".rss.avStartupRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -174,7 +174,7 @@
         {
           "name": "quarkusJvmAvThroughput",
           "jsonpath": "$.results.\"quarkus-jvm\".load.avThroughput",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -191,7 +191,7 @@
         {
           "name": "springNativeAvThroughput",
           "jsonpath": "$.results.\"spring-native\".load.avThroughput",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -208,7 +208,7 @@
         {
           "name": "quarkusNativeAvThroughput",
           "jsonpath": "$.results.\"quarkus-native\".load.avThroughput",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -225,7 +225,7 @@
         {
           "name": "springJvmAvThroughput",
           "jsonpath": "$.results.\"spring-jvm\".load.avThroughput",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -242,7 +242,7 @@
         {
           "name": "quarkusNativeRssStartup",
           "jsonpath": "$.results.\"quarkus-native\".rss.avStartupRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -259,7 +259,7 @@
         {
           "name": "quarkusNativeRssFirstRequest",
           "jsonpath": "$.results.\"quarkus-native\".rss.avFirstRequestRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -276,7 +276,7 @@
         {
           "name": "springJvmRssStartup",
           "jsonpath": "$.results.\"spring-jvm\".rss.avStartupRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -293,7 +293,7 @@
         {
           "name": "springNativeAvBuildTime",
           "jsonpath": "$.results.\"spring-native\".build.avBuildTime",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -310,7 +310,7 @@
         {
           "name": "quarkusJvmAvBuildTime",
           "jsonpath": "$.results.\"quarkus-jvm\".build.avBuildTime",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -327,7 +327,7 @@
         {
           "name": "springNativeAvTimeToFirstRequest",
           "jsonpath": "$.results.\"spring-native\".startup.avStartTime",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -344,7 +344,7 @@
         {
           "name": "quarkusJvmAvTimeToFirstRequest",
           "jsonpath": "$.results.\"quarkus-jvm\".startup.avStartTime",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -361,7 +361,7 @@
         {
           "name": "quarkusJvmRssFirstRequest",
           "jsonpath": "$.results.\"quarkus-jvm\".rss.avFirstRequestRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -378,7 +378,7 @@
         {
           "name": "springNativeRssFirstRequest",
           "jsonpath": "$.results.\"spring-native\".rss.avFirstRequestRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -395,7 +395,7 @@
         {
           "name": "springJvmRssFirstRequest",
           "jsonpath": "$.results.\"spring-jvm\".rss.avFirstRequestRss",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -412,7 +412,7 @@
         {
           "name": "quarkusNativeAvBuildTime",
           "jsonpath": "$.results.\"quarkus-native\".build.avBuildTime",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -429,7 +429,7 @@
         {
           "name": "quarkus_version",
           "jsonpath": "$.config.QUARKUS_VERSION",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -446,7 +446,7 @@
         {
           "name": "spring_boot_version",
           "jsonpath": "$.config.SPRING_BOOT_VERSION",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -463,7 +463,7 @@
         {
           "name": "spring_native_maxThroughputDensity",
           "jsonpath": "$.results.\"spring-native\".load.maxThroughputDensity",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -480,7 +480,7 @@
         {
           "name": "quarkus_native_maxThroughputDensity",
           "jsonpath": "$.results.\"quarkus-native\".load.maxThroughputDensity",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -497,7 +497,7 @@
         {
           "name": "spring_jvm_maxThroughputDensity",
           "jsonpath": "$.results.\"spring-jvm\".load.maxThroughputDensity",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -514,7 +514,7 @@
         {
           "name": "quarkus_jvm_maxThroughputDensity",
           "jsonpath": "$.results.\"quarkus-jvm\".load.maxThroughputDensity",
-          "array": false
+          "isarray": false
         }
       ],
       "function": null,
@@ -535,62 +535,62 @@
         {
           "name": "runtimeName",
           "jsonpath": "$.results[*].keyvalue().key",
-          "array": true
+          "isarray": true
         },
         {
           "name": "rssStartup",
           "jsonpath": "$.results[*].*.rss.avStartupRss",
-          "array": true
+          "isarray": true
         },
         {
           "name": "maxRss",
           "jsonpath": "$.results[*].*.load.avMaxRss",
-          "array": true
+          "isarray": true
         },
         {
           "name": "avBuildTime",
           "jsonpath": "$.results[*].*.build.avBuildTime",
-          "array": true
+          "isarray": true
         },
         {
           "name": "avTimeToFirstRequest",
           "jsonpath": "$.results[*].*.startup.avStartTime",
-          "array": true
+          "isarray": true
         },
         {
           "name": "avThroughput",
           "jsonpath": "$.results[*].*.load.avThroughput",
-          "array": true
+          "isarray": true
         },
         {
           "name": "rssFirstRequest",
           "jsonpath": "$.results[*].*.rss.avFirstRequestRss",
-          "array": true
+          "isarray": true
         },
         {
           "name": "maxThroughputDensity",
           "jsonpath": "$.results[*].*.load.maxThroughputDensity",
-          "array": true
+          "isarray": true
         },
         {
           "name": "buildId",
           "jsonpath": "$.env.BUILD_ID",
-          "array": false
+          "isarray": false
         },
         {
           "name": "buildUrl",
           "jsonpath": "$.env.BUILD_URL",
-          "array": false
+          "isarray": false
         },
         {
           "name": "quarkusVersion",
           "jsonpath": "$.config.QUARKUS_VERSION",
-          "array": false
+          "isarray": false
         },
         {
           "name": "springVersion",
           "jsonpath": "$.config.SPRING_BOOT_VERSION",
-          "array": false
+          "isarray": false
         }
       ],
       "function": "({runtimeName, rssStartup, maxRss, avBuildTime, avTimeToFirstRequest, avThroughput, rssFirstRequest, maxThroughputDensity, buildId, buildUrl, quarkusVersion, springVersion}) => {  \n   var map = runtimeName.map((name, i) => ({\n   runtime: name.split('-')[0],\n   buildType: name.split('-')[1],\n   rssStartup: rssStartup[i],\n   maxRss: maxRss[i],\n   avBuildTime: avBuildTime[i],\n   avTimeToFirstRequest: avTimeToFirstRequest[i],\n   avThroughput: avThroughput[i],\n   rssFirstRequest: rssFirstRequest[i],\n   maxThroughputDensity: maxThroughputDensity[i],\n   buildId: buildId,\n   buildUrl: buildUrl,\n   version: ((name.split('-')[0].substring(0, 6) == 'spring' ) ? springVersion: quarkusVersion )\n}))\nreturn map;\n}",

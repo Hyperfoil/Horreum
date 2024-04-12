@@ -1,6 +1,6 @@
 package io.hyperfoil.tools.horreum.bus;
 
-public enum MessageBusChannels {
+public enum AsyncEventChannels {
     DATAPOINT_NEW,
     DATAPOINT_PROCESSED,
     DATASET_NEW,

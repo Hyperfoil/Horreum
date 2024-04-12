@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.TestExport;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -40,7 +40,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLogDAO;
 import io.hyperfoil.tools.horreum.experiment.ExperimentConditionModel;
@@ -60,8 +59,6 @@ public class ExperimentServiceImpl implements ExperimentService {
    EntityManager em;
    @Inject
    ServiceMediator mediator;
-   @Inject
-   MessageBus messageBus;
 
    @Inject
    TransactionManager tm;
@@ -136,7 +133,7 @@ public class ExperimentServiceImpl implements ExperimentService {
    @Transactional
    public void onDatapointsCreated(DataPoint.DatasetProcessedEvent event) {
       // TODO: experiments can use any datasets, including private ones, possibly leaking the information
-      runExperiments(event.dataset, result -> Util.registerTxSynchronization(tm, value -> messageBus.publish(MessageBusChannels.EXPERIMENT_RESULT_NEW, event.dataset.testId, result)),
+      runExperiments(event.dataset, result -> Util.registerTxSynchronization(tm, value -> mediator.publishEvent(AsyncEventChannels.EXPERIMENT_RESULT_NEW, event.dataset.testId, result)),
             logs -> logs.forEach(log -> log.persist()), event.notify);
    }
 

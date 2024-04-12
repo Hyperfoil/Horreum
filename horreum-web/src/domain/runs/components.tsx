@@ -303,7 +303,7 @@ function renderImpl(value: any, render: RenderFunction, sub?: string, fullItem?:
         } else {
             return rendered + ""
         }
-    } catch (e) {
+    } catch (e: any) {
         console.warn("Error in render function %s trying to render %O: %O", render.toString(), value, e)
         return (
             <Tooltip
@@ -311,13 +311,13 @@ function renderImpl(value: any, render: RenderFunction, sub?: string, fullItem?:
                     <span>
                         Error in render function{" "}
                         <pre>
-                            <code>{render}</code>
+                            <code>{render.toString()}</code>
                         </pre>
                         trying to render{" "}
                         <pre>
-                            <code>{JSON.stringify(value)}</code>
+                            <code>{value === undefined ? "undefined" : JSON.stringify(value)}</code>
                         </pre>
-                        : {e}
+                        : {e.message}
                     </span>
                 }
             >

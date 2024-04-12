@@ -8,7 +8,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
+import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -24,7 +24,7 @@ public class EventAggregator {
    Vertx vertx;
 
    @Inject
-   MessageBus messageBus;
+   BlockingTaskDispatcher messageBus;
 
    @Inject
    ServiceMediator mediator;

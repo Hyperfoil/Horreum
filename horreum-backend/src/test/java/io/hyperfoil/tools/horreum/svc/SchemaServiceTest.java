@@ -20,7 +20,7 @@ import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.report.TableReport;
 import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
@@ -30,6 +30,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.common.mapper.TypeRef;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.TestInfo;
 
@@ -40,6 +41,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(HorreumTestProfile.class)
 public class SchemaServiceTest extends BaseServiceTest {
+
+   @Inject
+   ServiceMediator serviceMediator;
+
    @org.junit.jupiter.api.Test
    public void testValidateRun() throws IOException, InterruptedException {
       JsonNode allowAny = load("/allow-any.json");
@@ -48,8 +53,8 @@ public class SchemaServiceTest extends BaseServiceTest {
       Schema allowNoneSchema = createSchema("none", allowNone.path("$id").asText(), allowNone);
 
       Test test = createTest(createExampleTest("schemaTest"));
-      BlockingQueue<Schema.ValidationEvent> runValidations = eventConsumerQueue(Schema.ValidationEvent.class, MessageBusChannels.RUN_VALIDATED, e -> checkRunTestId(e.id, test.id));
-      BlockingQueue<Schema.ValidationEvent> datasetValidations = eventConsumerQueue(Schema.ValidationEvent.class, MessageBusChannels.DATASET_VALIDATED, e -> checkTestId(e.id, test.id));
+      BlockingQueue<Schema.ValidationEvent> runValidations = serviceMediator.getEventQueue(AsyncEventChannels.RUN_VALIDATED, test.id) ;
+      BlockingQueue<Schema.ValidationEvent> datasetValidations = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_VALIDATED, test.id) ;
 
       ArrayNode data = JsonNodeFactory.instance.arrayNode();
       data.addObject().put("$schema", allowAnySchema.uri).put("foo", "bar");

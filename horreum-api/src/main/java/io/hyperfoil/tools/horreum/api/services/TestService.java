@@ -26,6 +26,7 @@ import org.eclipse.microprofile.openapi.annotations.enums.ParameterIn;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.extensions.Extension;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameters;
@@ -34,11 +35,10 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
-import org.jboss.resteasy.annotations.Query;
+import org.jboss.resteasy.reactive.Separator;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Path("/api/test")
@@ -87,15 +87,24 @@ public interface TestService {
                    @QueryParam("sort") @DefaultValue("name") String sort,
                    @QueryParam("direction") SortDirection direction);
 
+   public static final String DEFAULT_LIMIT = "20";
+   public static final String DEFAULT_PAGE = "1";
+
    @Path("summary")
    @GET
    @Operation(description="Retrieve a summary of Tests in a folder")
    @Parameters(value = {
            @Parameter(name = "roles", description = "\"__my\", \"__all\" or a comma delimited  list of roles", example = "__my"),
            @Parameter(name = "folder", description = "name of the Folder containing the Tests", example = "My Team Folder"),
+           @Parameter(name = "limit", description = "limit the result count", example = DEFAULT_LIMIT, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_LIMIT)),
+           @Parameter(name = "page", description = "filter by page number of a paginated list of ", example = DEFAULT_PAGE, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_PAGE)),
+           @Parameter(name = "direction", description = "Sort direction", example ="Ascending")
    }
    )
-   TestListing summary(@QueryParam("roles") String roles, @QueryParam("folder") String folder);
+   TestListing summary(@QueryParam("roles") String roles, @QueryParam("folder") String folder,
+                  @DefaultValue(DEFAULT_LIMIT) @QueryParam("limit") Integer limit,
+                  @DefaultValue(DEFAULT_PAGE) @QueryParam("page") Integer page,
+                  @DefaultValue("Ascending") @QueryParam("direction") SortDirection direction);
 
    @Path("folders")
    @GET
@@ -195,13 +204,30 @@ public interface TestService {
            @Parameter(name = "id", description = "Test ID to retrieve Label Values for", example = "101"),
            @Parameter(name = "filtering", description = "Retrieve values for Filtering Labels", example = "true"),
            @Parameter(name = "metrics", description = "Retrieve values for Metric Labels", example = "false"),
-           @Parameter(name = "filter", description = "either a required json sub-document or path expression", example = "{\"key\":\"requiredValue\"} or $.count ? (@ < 20 && @ > 10)"),
+           @Parameter(
+                   name = "filter",
+                   description = "either a required json sub-document or path expression",
+                   examples = {
+                           @ExampleObject(name="object", value="{labelName:necessaryValue,...}", description = "json object that must exist in the values object"),
+                           @ExampleObject(name="string", value="$.count ? (@ < 20 && @ > 10)",description = "valid filtering jsonpath that returns null if not found (not predicates)")
+                   }
+           ),
            @Parameter(name = "before", description = "ISO-like date time string or epoch millis", example = "1970-01-01T00:00:00+00:00 or an integer"),
            @Parameter(name = "after", description = "ISO-like date time string or epoch millis", example = "1970-01-01T00:00:00+00:00 or an integer"),
            @Parameter(name = "sort", description = "json path to sortable value or start or stop for sorting by time",example = "$.label or start or stop"),
            @Parameter(name = "direction",description = "either Ascending or Descending",example="count"),
            @Parameter(name = "limit",description = "the maximum number of results to include",example="10"),
-           @Parameter(name = "page",description = "which page to skip to when using a limit",example="2")
+           @Parameter(name = "page",description = "which page to skip to when using a limit",example="2"),
+           @Parameter(name = "include", description = "label name(s) to include in the result as scalar or comma separated",
+                   examples = {
+                           @ExampleObject(name="single", value="id", description = "including a single label"),
+                           @ExampleObject(name="multiple", value="id,count", description = "including multiple labels")
+                   }),
+           @Parameter(name = "exclude", description = "label name(s) to exclude from the result as scalar or comma separated",
+                   examples = {
+                           @ExampleObject(name="single", value="id", description = "excluding a single label"),
+                           @ExampleObject(name="multiple", value="id,count", description = "excluding multiple labels")
+                   })
    })
    @APIResponses(
            value = { @APIResponse( responseCode = "200",
@@ -209,7 +235,7 @@ public interface TestService {
                            @Content ( schema = @Schema(type = SchemaType.ARRAY, implementation = ExportedLabelValues.class)) }
            )}
    )
-   List<ExportedLabelValues> listLabelValues(
+   List<ExportedLabelValues> labelValues(
            @PathParam("id") int testId,
            @QueryParam("filter") @DefaultValue("{}") String filter,
            @QueryParam("before") @DefaultValue("") String before,
@@ -219,7 +245,9 @@ public interface TestService {
            @QueryParam("sort") @DefaultValue("") String sort,
            @QueryParam("direction") @DefaultValue("Ascending") String direction,
            @QueryParam("limit") @DefaultValue(""+Integer.MAX_VALUE) int limit,
-           @QueryParam("page") @DefaultValue("0") int page);
+           @QueryParam("page") @DefaultValue("0") int page,
+           @QueryParam("include") @Separator(",") List<String> include,
+           @QueryParam("exclude") @Separator(",") List<String> exclude);
 
    @POST
    @Consumes(MediaType.APPLICATION_JSON)
@@ -264,8 +292,15 @@ public interface TestService {
    void importTest(ObjectNode test);
 
    class TestListing {
+      public TestListing(){}
+
+      @JsonProperty(required = true)
       @Schema(description = "Array of Test Summaries")
       public List<TestSummary> tests;
+
+      @JsonProperty(required = true)
+      @Schema(description = "Number of tests when pagination is ignored")
+      public Long count;
    }
 
    @Schema(type = SchemaType.OBJECT, allOf = ProtectedType.class)
@@ -297,6 +332,8 @@ public interface TestService {
       @Schema(description="Datastore id",
               example = "1", required = true)
       public Integer datastoreId;
+
+      public TestSummary(){}
 
       public TestSummary(int id, String name, String folder, String description,
                          Number datasets, Number runs, String owner, Access access) {

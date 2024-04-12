@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,6 +18,7 @@ import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
@@ -26,7 +26,7 @@ import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.restassured.response.Response;
 import jakarta.ws.rs.core.HttpHeaders;
@@ -53,7 +53,6 @@ import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.RestAssured;
 import io.restassured.specification.RequestSpecification;
-import org.testcontainers.shaded.org.checkerframework.checker.units.qual.A;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -67,7 +66,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
       Extractor path = new Extractor("foo", "$.value", false);
       Schema schema = createExampleSchema(info);
 
@@ -84,7 +83,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testTransformationWithoutSchema(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_NEW, test.id);
 
       Schema schema = createExampleSchema(info);
 
@@ -93,7 +92,7 @@ public class RunServiceTest extends BaseServiceTest {
       assertNewDataset(dataSetQueue, runId);
       em.clear();
 
-      BlockingQueue<Integer> trashedQueue = trashRun(runId);
+      BlockingQueue<Integer> trashedQueue = trashRun(runId, test.id);
 
       RunDAO run = RunDAO.findById(runId);
       assertNotNull(run);
@@ -109,14 +108,135 @@ public class RunServiceTest extends BaseServiceTest {
       assertFalse(run.trashed);
       assertNewDataset(dataSetQueue, runId);
    }
+   private int labelValuesSetup(Test t) throws JsonProcessingException {
+      Schema fooSchema = createSchema("foo","urn:foo");
+      Extractor fooExtractor = new Extractor();
+      fooExtractor.name="foo";
+      fooExtractor.jsonpath="$.foo";
+      Extractor barExtractor = new Extractor();
+      barExtractor.name="bar";
+      barExtractor.jsonpath="$.bar";
+      addLabel(fooSchema,"labelFoo","",fooExtractor);
+      addLabel(fooSchema,"labelBar","",barExtractor);
+
+
+      ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);;
+      JsonNode data = mapper.readTree("{ \"foo\": \"uno\", \"bar\": \"dox\"}");
+      String idString = uploadRun(data,t.name,fooSchema.uri);
+      int id = Integer.parseInt(idString);
+      return id;
+   }
 
    @org.junit.jupiter.api.Test
-   public void labelValues_publicTest_publicRun(TestInfo info) throws InterruptedException {
+   public void labelValuesIncludeExcluded() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      int id = labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/run/"+id+"/labelValues?include=labelFoo&exclude=labelFoo")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertFalse(objectNode.has("labelFoo"),objectNode.toString());
+      assertTrue(objectNode.has("labelBar"),objectNode.toString());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void labelValuesIncludeTwoParams() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      int id = labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/run/"+id+"/labelValues?include=labelFoo&include=labelBar")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertTrue(objectNode.has("labelFoo"),objectNode.toString());
+      assertTrue(objectNode.has("labelBar"),objectNode.toString());
+   }
+   @org.junit.jupiter.api.Test
+   public void labelValuesIncludeTwoSeparated() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      int id = labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/run/"+id+"/labelValues?include=labelFoo,labelBar")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertTrue(objectNode.has("labelFoo"),objectNode.toString());
+      assertTrue(objectNode.has("labelBar"),objectNode.toString());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void labelValuesInclude() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      int id = labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/run/"+id+"/labelValues?include=labelFoo")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertTrue(objectNode.has("labelFoo"));
+      assertFalse(objectNode.has("labelBar"));
+   }
+   @org.junit.jupiter.api.Test
+   public void labelValuesExclude() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      int id = labelValuesSetup(t);
+
+      JsonNode response = jsonRequest()
+              .get("/api/run/"+id+"/labelValues?exclude=labelFoo")
+              .then()
+              .statusCode(200)
+              .extract()
+              .body()
+              .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size());
+      assertInstanceOf(ObjectNode.class,arrayResponse.get(0));
+      ObjectNode objectNode = (ObjectNode)arrayResponse.get(0).get("values");
+      assertFalse(objectNode.has("labelFoo"),objectNode.toPrettyString());
+      assertTrue(objectNode.has("labelBar"),objectNode.toPrettyString());
+
+   }
+   @org.junit.jupiter.api.Test
+   public void labelValuesPublicTestPublicRun(TestInfo info) throws InterruptedException {
       Test test = createExampleTest(getTestName(info));
       test.access= Access.PUBLIC;
       Test persistedTest = createTest(test);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == persistedTest.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, persistedTest.id);
       Schema schema = createExampleSchema(info);
 
       int runId = uploadRun(runWithValue(42, schema).toString(), test.name);
@@ -151,7 +271,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testTransformationWithoutSchemaInUpload(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
 
       setTestVariables(test, "Value", new Label("value", 1));
 
@@ -168,7 +288,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
       Schema schema = createExampleSchema(info);
 
       Transformer transformer = createTransformer("acme", schema, "");
@@ -190,7 +310,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_NEW, test.id);
       Schema schema = createExampleSchema("AcneCorp", "AcneInc", "AcneRrUs", false);
 
       Extractor path = new Extractor("foo", "$.value", false);
@@ -221,7 +341,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(exampleTest);
       addTransformer(test, acmeTransformer, roadRunnerTransformer);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
 
       String data = runWithValueSchemas(42.0d, acmeSchema, roadRunnerSchema).toString();
       int runId = uploadRun(data, test.name);
@@ -244,7 +364,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
       Schema acmeSchema = createExampleSchema("AceCorp", "AceInc", "AceRrUs", false);
 
       uploadRun(runWithValue(42.0d, acmeSchema), test.name);
@@ -265,7 +385,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void testTransformationNestedSchemasWithoutTransformers(TestInfo info) throws InterruptedException {
       Test test = createTest(createExampleTest(getTestName(info)));
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_NEW, test.id);
       Schema schemaA = createExampleSchema("Ada", "Ada", "Ada", false);
       Schema schemaB = createExampleSchema("Bdb", "Bdb", "Bdb", false);
       Schema schemaC = createExampleSchema("Cdc", "Cdc", "Cdc", false);
@@ -299,7 +419,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
 
       Schema appleSchema = createExampleSchema("AppleCorp", "AppleInc", "AppleRrUs", false);
 
@@ -342,7 +462,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(exampleTest);
       addTransformer(test, arrayTransformer, scalarTransformer);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
 
       ObjectNode data = runWithValue(42.0d, schema);
 
@@ -370,7 +490,7 @@ public class RunServiceTest extends BaseServiceTest {
       Schema schemaA = createExampleSchema("Aba", "Aba", "Aba", false);
       Test test = createTest(createExampleTest(getTestName(info)));
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
 
       uploadRun(runWithValue(42, schemaA), test.name);
       Dataset.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
@@ -398,7 +518,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerA, transformerB);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_NEW, test.id);
 
       uploadRun(runWithValue(42, schemaB), test.name);
       Dataset.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
@@ -433,7 +553,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test test = createTest(exampleTest);
       addTransformer(test, scalarTransformer);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
 
       ObjectNode data = runWithValue(42.0d, schema);
 
@@ -452,10 +572,10 @@ public class RunServiceTest extends BaseServiceTest {
    private void testTransformationWithoutMatch(TestInfo info, Schema schema, ObjectNode data) throws InterruptedException {
       Extractor firstMatch = new Extractor("foo", "$.foo", false);
       Extractor allMatches = new Extractor("bar", "$.bar[*].x", false);
-      allMatches.array = true;
+      allMatches.isArray = true;
       Extractor value = new Extractor("value", "$.value", false);
       Extractor values = new Extractor("values", "$.values[*]", false);
-      values.array = true;
+      values.isArray = true;
 
       Transformer transformerNoFunc = createTransformer("noFunc", schema, null, firstMatch, allMatches);
       Transformer transformerFunc = createTransformer("func", schema, "({foo, bar}) => ({ foo, bar })", firstMatch, allMatches);
@@ -463,7 +583,7 @@ public class RunServiceTest extends BaseServiceTest {
 
       Test test = createTest(createExampleTest(getTestName(info)));
       addTransformer(test, transformerNoFunc, transformerFunc, transformerCombined);
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue( AsyncEventChannels.DATASET_NEW, test.id);
 
       uploadRun(data, test.name);
       Dataset.EventNew event = dataSetQueue.poll(POLL_DURATION_SECONDS, TimeUnit.SECONDS);
@@ -537,6 +657,15 @@ public class RunServiceTest extends BaseServiceTest {
       assertEquals(expectedTarget, scalarTarget);
       String arrayTarget = n.path(1).path("$schema").textValue();
       assertEquals(expectedTarget, arrayTarget);
+   }
+
+   @org.junit.jupiter.api.Test
+   public void addMicrosecondsInTimestamp() throws JsonProcessingException {
+      Test test = createExampleTest("foo");
+      test = createTest(test);
+      JsonNode payload = new ObjectMapper().readTree("{\"start_time\": \"2024-03-13T21:18:10.878423-04:00\", \"stop_time\": \"2024-03-13T21:18:11.878423-04:00\"}");
+      String runId = uploadRun("$.start_time", "$.stop_time", test.name, test.owner, Access.PUBLIC,
+              null, null, "test", payload);
    }
 
    @org.junit.jupiter.api.Test
@@ -638,7 +767,7 @@ public class RunServiceTest extends BaseServiceTest {
       metadata.add(simpleObject("urn:bar", "bar", "yyy"));
       metadata.add(simpleObject("urn:goo", "goo", "zzz"));
 
-      BlockingQueue<Dataset.EventNew> dsQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dsQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
 
       int run1 = uploadRun(now, data, metadata, test.name);
 
@@ -670,7 +799,7 @@ public class RunServiceTest extends BaseServiceTest {
       Test exampleTest = createExampleTest(getTestName(info));
       Test test = createTest(exampleTest);
 
-      BlockingQueue<Dataset.EventNew> dataSetQueue = eventConsumerQueue(Dataset.EventNew.class, MessageBusChannels.DATASET_NEW, e -> e.testId == test.id);
+      BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW, test.id);
       Schema schemaA = createExampleSchema("AcneCorp", "AcneInc", "RootSchema", false);
       Schema schemaB = createExampleSchema("AcneCorp", "AcneInc", "", false);
 
@@ -955,9 +1084,6 @@ public class RunServiceTest extends BaseServiceTest {
          RunService.RunsSummary runsSummary = listTestRuns(test.id, false, null, null, "name", SortDirection.Ascending);
 
          Integer lastRunID = runsSummary.runs.stream().map(run -> run.id).max((Comparator.comparingInt(anInt -> anInt))).get();
-
-         //wait for dataset(s) to be calculated
-         waitForDatasets(lastRunID);
 
          RunService.RunExtended extendedRun = getRun(lastRunID, null);
 

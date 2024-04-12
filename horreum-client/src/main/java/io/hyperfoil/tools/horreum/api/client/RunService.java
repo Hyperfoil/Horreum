@@ -111,10 +111,6 @@ public interface RunService {
                            @QueryParam("direction") SortDirection direction);
 
    @GET
-   @Path("{id}/waitforDatasets")
-   void waitForDatasets(@PathParam("id") int runId);
-
-   @GET
    @Path("count")
    RunCount runCount(@QueryParam("testId") int testId);
 

@@ -15,15 +15,15 @@ A `Folder` is an *optional* organizational structure to hold [`Tests`](#test)
 
 A `Schema` is **required** by Horreum to define the meta-data associated with a [`Run`](#run)
 
-It allows Horreum to process the JSON content to provide validation, charting, and change detection 
+It allows `Horreum` to process the JSON content to provide validation, charting, and change detection 
 
 A `Schema` defines the following; 
 
-1. An *optional* expected structure of a Dataset via JSON validation schemas
+1. An *optional* expected structure of a Dataset via a [`JSON Validation Schema`](#json-validation-schema)
 2. **Required** [`Labels`](#label) that define how to use the data in the JSON document
 3. *Optional* [`Transformers`](#transformers), to transform uploaded JSON documents into one or more datasets.
 
-A Schema can apply to an entire Run JSON document, or parts of a Run JSON document
+A `Schema` can apply to an entire Run JSON document, or parts of a Run JSON document
 
 ## Label
 A `Label` is **required** to define how metrics are extracted from the JSON document and processed by Horreum. 
@@ -40,7 +40,7 @@ A `Label` can be defined as either a `Metrics` label, a `Filtering` label, or bo
 `Filtering Labels` are combined into [`Fingerprints`](#fingerprint) that uniquely identify comparable Datasets within uploaded Runs.
 
 ## Extractor
-An `Extractor` is a **required** JSONPath expression that refers to a section of an uploaded JSON document. An Extractor can return on of;
+An `Extractor` is a **required** JSONPath expression that refers to a section of an uploaded JSON document. An Extractor can return one of:
 
 - A scalar value
 - An array of values
@@ -49,14 +49,14 @@ An `Extractor` is a **required** JSONPath expression that refers to a section of
 {{% alert title="Note" %}}In the majority of cases, an Extractor will simply point to a single, scalar value{{% /alert %}}
 
 ## Combination Function:
-A Combination Function is an optional Javascript function that takes all Extractor values as input and produces a Label value. 
+A Combination Function is an optional JavaScript function that takes all Extractor values as input and produces a Label value. See [Function](#function)
 
 {{% alert title="Note" %}}In the majority of cases, the Combination Function is simply an Identity function with a single input and does not need to be defined{{% /alert %}}
 
 ## Test
 A `Test` is a **required** repository for particular similar [`runs`](#run) and [`datasets`](#dataset)
 
-You can think of a `test`` as a repo for the results of a particular benchmark, i.e. a benchmark performs a certain set of actions against a system under test
+You can think of a `test` as a repo for the results of a particular benchmark, i.e. a benchmark performs a certain set of actions against a system under test
 
 `Test` [`Runs`](#run) can have different configurations, making them not always directly comparable, but the Run results stored under one Test can be filtered by their [`Fingerprint`](#fingerprint) to ensure that all [`Datasets`](#dataset) used for analysis are comparable
 
@@ -88,38 +88,52 @@ It is possible for a [`Run`](#run) to include multiple [`Datasets`](#dataset), a
 
 A `Fingerprint` is combination of [`Filtering labels`](#label) that unique identifies comparable [`datasets`](#dataset) within a [`test`](#test)
 
+## Function
+A `Function` is a JavaScript function that is executed on the server side. Functions can be used for validating expected data formats, substitution and rendering. Also used in [`Combination Function`](#combination-function)s to create derived metrics. See [Define Functions](/docs/tasks/define-functions/) for more detailed information.
+
 ## Datasource
 
 A `Datasource` is a **required** top-level organizational construct that defines the source of the data to be stored or retrieved by Horreum. Currently, Horreum supports 2 types of `Datasource`: Postgres and Elasticsearch
 
 ## Baseline
 
-The *initial* sample for an `Experiment` comparison. Configured in an `Experiment Profile`.
+The *initial* sample for an [`Experiment`](#experiment) comparison. Configured in an [`Experiment Profile`](#experiment-profile).
 
 ## Change Detection Variable
 
-Change detection tracks `Schema` `Label`s that have been configured as a Change Detection Variable.
+Change detection tracks [`Schema`](#schema) [`Label`](#label)s that have been configured as a Change Detection Variable.
 
 ## Experiment
 
-This enables running a comparison between `Runs` for a particular `Test`. There can be multiple `Profile`s configured for an `Experiment` to check for a variety of desired conditions. The outcome status for each `Profile` condition will be one of the following:
+This enables running a comparison between [`Runs`](#run) for a particular [`Test`](#test). There can be multiple [`Profile`](#experiment-profile)s configured for an [`Experiment`](#experiment) to check for a variety of desired conditions. The outcome status for each [`Profile`](#experiment-profile) condition will be one of the following:
 - SAME
 - WORSE
 - BETTER
 
 ## Experiment Profile
 
-A `Profile` consists of:
-- `Experiment` selector
-- `Baseline`
+A [`Profile`](#experiment-profile) consists of:
+- [`Experiment`](#experiment) selector
+- [`Baseline`](#baseline)
 - 0, 1 or many Comparison conditions
 
 ## JSON validation schema
-An *optional* schema added to a `Test` to validate uploaded `Run` JSON data.
+An *optional* schema added to a [`Test`](#test) to validate uploaded [`Run`](#run) JSON data.
 
+## Report Configuration
+In Horreum a `Report Configuration` is used for compiling a summary of information to be displayed using tables.
 
+## Report
+A `Report` is an instance of a `Report Configuration`. Creation date and time is used for differentiating each `Report`.
 
+## Actions
+An `Action` is the ability by Horreum to send an Event notification to an external system. These are added to a [`Test`](#test).
 
+## Global Action
+Actions that occur globally in `Horreum`
 
+## Test Action
+Actions only for a particular [`Test`](#test)
 
-
+## Action allow list
+`Horreum` will only allow generic HTTP requests to domains that have been pre-configured in Horreum by an Administrator.

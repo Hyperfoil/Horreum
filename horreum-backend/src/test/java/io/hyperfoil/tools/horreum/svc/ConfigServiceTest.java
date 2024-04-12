@@ -6,6 +6,7 @@ import io.hyperfoil.tools.horreum.api.data.datastore.BaseDatastoreConfig;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
 import io.hyperfoil.tools.horreum.api.data.datastore.PostgresDatastoreConfig;
+import io.hyperfoil.tools.horreum.api.services.ConfigService;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -32,15 +33,14 @@ public class ConfigServiceTest extends BaseServiceTest {
 
     @org.junit.jupiter.api.Test
     public void getBackends(TestInfo testInfo) {
-        List<Object> backends = RestAssured.given().auth().oauth2(getTesterToken())
+        List<?> backends = RestAssured.given().auth().oauth2(getTesterToken())
                 .get("/api/config/datastore/".concat(TESTER_ROLES[0]))
                 .then()
                 .statusCode(200)
                 .extract().as(List.class);
 
-        Assert.assertNotNull(backends);
-        Assert.assertNotEquals(0, backends.size());
-
+        assertNotNull(backends);
+        assertNotEquals(0, backends.size());
     }
 
 
@@ -107,6 +107,15 @@ public class ConfigServiceTest extends BaseServiceTest {
 
     }
 
+    @org.junit.jupiter.api.Test
+    public void checkPrivacyStatement(TestInfo testInfo) {
+        ConfigService.VersionInfo info = RestAssured.given().auth().oauth2(getTesterToken())
+                .get("/api/config/version/")
+                .then()
+                .statusCode(200)
+                .extract().as(ConfigService.VersionInfo.class);
 
-
+        assertNotNull(info);
+        assertEquals("/path/to/privacy/statement/link", info.privacyStatement);
+    }
 }

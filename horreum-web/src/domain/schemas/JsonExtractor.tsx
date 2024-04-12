@@ -216,10 +216,10 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                                     name={variantName}
                                     id="first"
                                     label="First match"
-                                    isChecked={!extractor.array}
+                                    isChecked={!extractor.isarray}
                                     isDisabled={props.readOnly}
                                     onChange={(_event, checked) => {
-                                        extractor.array = !checked
+                                        extractor.isarray = !checked
                                         props.onUpdate()
                                     }}
                                 />
@@ -229,10 +229,10 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                                     name={variantName}
                                     id="all"
                                     label="All matches"
-                                    isChecked={extractor.array}
+                                    isChecked={extractor.isarray}
                                     isDisabled={props.readOnly}
                                     onChange={(_event, checked) => {
-                                        extractor.array = checked
+                                        extractor.isarray = checked
                                         props.onUpdate()
                                     }}
                                 />
@@ -259,10 +259,10 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                 uri={props.schemaUri}
                 target={props.jsonpathTarget}
                 jsonpath={modalOpen ? extractor.jsonpath : undefined}
-                array={extractor.array}
+                array={extractor.isarray}
                 onChange={(jsonpath, array) => {
                     extractor.jsonpath = jsonpath
-                    extractor.array = array
+                    extractor.isarray = array
                     props.onUpdate()
                 }}
                 onClose={() => setModalOpen(false)}

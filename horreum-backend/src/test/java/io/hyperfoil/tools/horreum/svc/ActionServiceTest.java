@@ -9,9 +9,10 @@ import java.util.Arrays;
 
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import jakarta.ws.rs.core.HttpHeaders;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.TestInfo;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
@@ -29,12 +30,15 @@ import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 @TestProfile(HorreumTestProfile.class)
 public class ActionServiceTest extends BaseServiceTest {
 
+   @ConfigProperty(name = "quarkus.http.port")
+   String port;
+
    @org.junit.jupiter.api.Test
    public void testFailingHttp(TestInfo testInfo) {
       Test test = createTest(createExampleTest(getTestName(testInfo)));
 
-      addAllowedSite("http://some-non-existent-domain.com");
-      addTestHttpAction(test, MessageBusChannels.RUN_NEW, "http://some-non-existent-domain.com");
+      addAllowedSite("http://localhost:".concat(port));
+      addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "http://localhost:".concat(port));
 
       uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
 
@@ -48,14 +52,14 @@ public class ActionServiceTest extends BaseServiceTest {
 
    @org.junit.jupiter.api.Test
    public void testAddGlobalAction() {
-      String responseType = addGlobalAction(MessageBusChannels.TEST_NEW, "https://attacker.com")
+      String responseType = addGlobalAction(AsyncEventChannels.TEST_NEW, "https://attacker.com")
             .then().statusCode(400).extract().header(HttpHeaders.CONTENT_TYPE);
       // constraint violations are mapped to 400 + JSON response, we want explicit error
       assertTrue(responseType.startsWith("text/plain")); // text/plain;charset=UTF-8
 
       addAllowedSite("https://example.com");
 
-      Action action = addGlobalAction(MessageBusChannels.TEST_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
+      Action action = addGlobalAction(AsyncEventChannels.TEST_NEW, "https://example.com/foo/bar").then().statusCode(200).extract().body().as(Action.class);
       assertNotNull(action.id);
       assertTrue(action.active);
       given().auth().oauth2(getAdminToken()).delete("/api/action/" + action.id);

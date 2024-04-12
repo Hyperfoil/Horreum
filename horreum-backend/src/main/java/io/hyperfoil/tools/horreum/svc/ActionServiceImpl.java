@@ -5,7 +5,7 @@ import io.hyperfoil.tools.horreum.api.data.AllowedSite;
 import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.ActionMapper;
@@ -37,15 +37,12 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -75,7 +72,7 @@ public class ActionServiceImpl implements ActionService {
       plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
    }
 
-   private void executeActions(MessageBusChannels event, int testId, Object payload, boolean notify){
+   private void executeActions(AsyncEventChannels event, int testId, Object payload, boolean notify){
       List<ActionDAO> actions = getActions(event.name(), testId);
       if (actions.isEmpty()) {
          new ActionLogDAO(PersistentLogDAO.DEBUG, testId, event.name(), null, "No actions found.").persist();
@@ -127,7 +124,7 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onNewTest(Test test) {
-      executeActions(MessageBusChannels.TEST_NEW, -1, test, true);
+      executeActions(AsyncEventChannels.TEST_NEW, -1, test, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -140,7 +137,7 @@ public class ActionServiceImpl implements ActionService {
    @Transactional
    public void onNewRun(Run run) {
       Integer testId = run.testid;
-      executeActions(MessageBusChannels.RUN_NEW, testId, run, true);
+      executeActions(AsyncEventChannels.RUN_NEW, testId, run, true);
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -148,7 +145,7 @@ public class ActionServiceImpl implements ActionService {
    public void onNewChange(Change.Event changeEvent) {
       int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
             .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
-      executeActions(MessageBusChannels.CHANGE_NEW, testId, changeEvent, changeEvent.notify);
+      executeActions(AsyncEventChannels.CHANGE_NEW, testId, changeEvent, changeEvent.notify);
    }
 
    void validate(Action action) {
@@ -305,7 +302,7 @@ public class ActionServiceImpl implements ActionService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    public void onNewExperimentResult(ExperimentService.ExperimentResult result) {
-      executeActions(MessageBusChannels.EXPERIMENT_RESULT_NEW, result.profile.testId, result, result.notify);
+      executeActions(AsyncEventChannels.EXPERIMENT_RESULT_NEW, result.profile.testId, result, result.notify);
    }
 
    void exportTest(TestExport test) {

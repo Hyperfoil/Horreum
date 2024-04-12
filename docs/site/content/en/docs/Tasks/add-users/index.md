@@ -5,7 +5,7 @@ date: 2023-10-15
 weight: 1
 ---
 
-Horreum is a multi-tenanted system, hosting data for multiple teams: for a detailed discussion please see [User management and security](/docs/about/users.html).
+Horreum is a multi-tenanted system, hosting data for multiple teams: for a detailed discussion please see [User management and security](/docs/concepts/users).
 
 Users who have a `-manager` role (e.g. `engineers-manager`) can create new users, add/remove existing users to to the team and manage permissions. In order to do so visit your profile settings by clicking on your name in upper right corner, and switch to the Managed Teams tab.
 

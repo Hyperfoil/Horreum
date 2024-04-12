@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.hyperfoil.tools</groupId>
         <artifactId>horreum</artifactId>
-        <version>0.12-SNAPSHOT</version>
+        <version>0.13-SNAPSHOT</version>
     </parent>
 
     <artifactId>horreum-api</artifactId>
@@ -15,7 +15,7 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <openapi-version>0.12</openapi-version>
+        <openapi-version>0.13</openapi-version>
     </properties>
     <dependencies>
         <dependency>
@@ -114,7 +114,7 @@
             <plugin>
                 <groupId>org.openapitools</groupId>
                 <artifactId>openapi-generator-maven-plugin</artifactId>
-                <version>7.2.0</version>
+                <version>7.4.0</version>
                 <executions>
                     <execution>
                         <id>typescript</id>

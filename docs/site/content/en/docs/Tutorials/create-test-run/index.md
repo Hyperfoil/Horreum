@@ -10,7 +10,7 @@ weight: 2
 
 This tutorial will present the most basic thing Horreum can do: store your benchmark results in the form of JSON files. 
 
-We assume that you already went through the [previous tutorial](start.html), Horreum is up and you are logged in.
+We assume that you already went through the [previous tutorial](/docs/tutorials/get-started), Horreum is up and you are logged in.
 
 {{% imgproc logged_in Fit "1200x300" %}}
 User logged in

@@ -1,6 +1,6 @@
 import ImportButton from "../../components/ImportButton"
 
-import {Test, testApi} from "../../api"
+import {Test, testApi, TestExport} from "../../api"
 
 type TestImportButtonProps = {
     tests: Test[]
@@ -22,7 +22,7 @@ export default function TestImportButton(props: TestImportButtonProps) {
                     </>
                 ) : null
             }}
-            onImport={config => testApi.importTest(config)}
+            onImport={config => testApi.importTest(config as TestExport)}
             {...props}
         />
     )

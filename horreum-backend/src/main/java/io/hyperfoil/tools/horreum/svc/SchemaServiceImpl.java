@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.networknt.schema.AbsoluteIri;
 import com.networknt.schema.JsonMetaSchema;
 import com.networknt.schema.SchemaLocation;
@@ -13,26 +14,24 @@ import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.SchemaExport;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
-import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
 import io.hyperfoil.tools.horreum.mapper.SchemaMapper;
 import io.hyperfoil.tools.horreum.mapper.TransformerMapper;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
+import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.hyperfoil.tools.horreum.mapper.ValidationErrorMapper;
-import io.hyperfoil.tools.horreum.mapper.VariableMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -40,7 +39,6 @@ import io.quarkus.security.identity.SecurityIdentity;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
@@ -64,7 +62,6 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import jakarta.ws.rs.DefaultValue;
 import org.hibernate.ScrollMode;
@@ -72,19 +69,15 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.query.SelectionQuery;
-import org.hibernate.type.CustomType;
 import org.hibernate.type.StandardBasicTypes;
-import org.hibernate.type.spi.TypeConfiguration;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import com.networknt.schema.JsonSchemaFactory;
 
-@ApplicationScoped
 public class SchemaServiceImpl implements SchemaService {
    private static final Logger log = Logger.getLogger(SchemaServiceImpl.class);
 
@@ -107,10 +100,8 @@ public class SchemaServiceImpl implements SchemaService {
          """;
    //@formatter:on
 
-   private final CustomType JSON_STRING_ARRY_TYPE = new CustomType<>(new JsonBinaryType(String[].class), new TypeConfiguration());
-
    private static final JsonSchemaFactory JSON_SCHEMA_FACTORY = new JsonSchemaFactory.Builder()
-         .defaultMetaSchemaURI(JsonMetaSchema.getV4().getUri())
+         .defaultMetaSchemaIri(JsonMetaSchema.getV4().getIri())
          .addMetaSchema(JsonMetaSchema.getV4())
          .addMetaSchema(JsonMetaSchema.getV6())
          .addMetaSchema(JsonMetaSchema.getV7())
@@ -133,7 +124,7 @@ public class SchemaServiceImpl implements SchemaService {
    ServiceMediator mediator;
 
    @Inject
-   MessageBus messageBus;
+   BlockingTaskDispatcher messageBus;
    @Inject
    Session session;
 
@@ -326,8 +317,8 @@ public class SchemaServiceImpl implements SchemaService {
       }
       run.persist();
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.RUN_VALIDATED, run.testid,
-                 new Schema.ValidationEvent(run.id, run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()) )));
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.RUN_VALIDATED, run.testid,
+              new Schema.ValidationEvent(run.id, run.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()) )));
 
       ;
    }
@@ -365,8 +356,9 @@ public class SchemaServiceImpl implements SchemaService {
          }
          dataset.persist();
       }
+
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.DATASET_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DatasetMapper.from(dataset).validationErrors )));
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_VALIDATED, dataset.testid, new Schema.ValidationEvent(dataset.id, DatasetMapper.from(dataset).validationErrors )));
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -543,17 +535,17 @@ public class SchemaServiceImpl implements SchemaService {
             .addScalar("testname", StandardBasicTypes.TEXT )
             .addScalar("configid", StandardBasicTypes.INTEGER)
             .addScalar("title", StandardBasicTypes.TEXT)
-            .addScalar("filterlabels", JSON_STRING_ARRY_TYPE)
-            .addScalar("categorylabels", JSON_STRING_ARRY_TYPE)
-            .addScalar("serieslabels", JSON_STRING_ARRY_TYPE)
-            .addScalar("scalelabels", JSON_STRING_ARRY_TYPE)
+            .addScalar("filterlabels", JsonBinaryType.INSTANCE)
+            .addScalar("categorylabels", JsonBinaryType.INSTANCE)
+            .addScalar("serieslabels", JsonBinaryType.INSTANCE)
+            .addScalar("scalelabels", JsonBinaryType.INSTANCE)
             .getResultList()) {
          Object[] columns = (Object[]) row;
          StringBuilder where = new StringBuilder();
-         if ( columns[4] != null) addPart(where, (String[]) columns[4], label, "filter");
-         if ( columns[5] != null) addPart(where, (String[]) columns[5], label, "series");
-         if ( columns[6] != null) addPart(where, (String[]) columns[6], label, "category");
-         if ( columns[7] != null) addPart(where, (String[]) columns[7], label, "label");
+         if ( columns[4] != null) addPart(where, (ArrayNode) columns[4], label, "filter");
+         if ( columns[5] != null) addPart(where, (ArrayNode) columns[5], label, "series");
+         if ( columns[6] != null) addPart(where, (ArrayNode) columns[6], label, "category");
+         if ( columns[7] != null) addPart(where, (ArrayNode) columns[7], label, "label");
          result.add(new LabelInReport((int) columns[0], (String) columns[1], (int) columns[2], (String) columns[3], where.toString(), null));
       }
       for (Object row: em.createNativeQuery("SELECT test.id as testid, test.name as testname, trc.id as configid, trc.title, rc.name FROM reportcomponent rc " +
@@ -907,12 +899,15 @@ public class SchemaServiceImpl implements SchemaService {
       }
    }
 
-   private void addPart(StringBuilder where, String[] column, String label, String type) {
-      if (Arrays.stream(column).anyMatch(col -> col.equals(label))) {
-         if (where.length() > 0) {
-            where.append(", ");
+   private void addPart(StringBuilder where, ArrayNode column, String label, String type) {
+      for (JsonNode col : column) {
+         if (label.equals(col.textValue())) {
+            if (!where.isEmpty()) {
+               where.append(", ");
+            }
+            where.append(type);
+            return;
          }
-         where.append(type);
       }
    }
 

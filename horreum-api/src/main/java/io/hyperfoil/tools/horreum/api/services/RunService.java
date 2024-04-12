@@ -31,6 +31,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.RestForm;
+import org.jboss.resteasy.reactive.Separator;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 @Path("/api/run")
@@ -104,13 +105,23 @@ public interface RunService {
     @Parameters(value = {
             @Parameter(name = "id", in =ParameterIn.PATH, description = "Run Id", example = "101"),
             @Parameter(name = "filter", description = "either a required json sub-document or path expression", examples = {
-                    @ExampleObject(name="object", value="{\"key\":\"requiredValue\"}", description = "json object that must exist in the values object"),
-                    @ExampleObject(name="string", value="$.count ? (@ < 20 && @ > 10)",description = "valid jsonpath that returns null of not found (not predicates)")
+                    @ExampleObject(name="object", value="{labelName:necessaryValue,...}", description = "json object that must exist in the values object"),
+                    @ExampleObject(name="string", value="$.count ? (@ < 20 && @ > 10)",description = "valid filtering jsonpath that returns null if not found (not predicates)")
             }),
             @Parameter(name = "sort", description = "label name for sorting"),
             @Parameter(name = "direction",description = "either Ascending or Descending",example="count"),
             @Parameter(name = "limit",description = "the maximum number of results to include",example="10"),
-            @Parameter(name = "page",description = "which page to skip to when using a limit",example="2")
+            @Parameter(name = "page",description = "which page to skip to when using a limit",example="2"),
+            @Parameter(name = "include", description = "label name(s) to include in the result as scalar or comma separated",
+                    examples = {
+                            @ExampleObject(name="single", value="id", description = "including a single label"),
+                            @ExampleObject(name="multiple", value="id,count", description = "including multiple labels")
+                    }),
+            @Parameter(name = "exclude", description = "label name(s) to exclude from the result as scalar or comma separated",
+                    examples = {
+                            @ExampleObject(name="single", value="id", description = "excluding a single label"),
+                            @ExampleObject(name="multiple", value="id,count", description = "excluding multiple labels")
+                    })
     })
     @APIResponses(
             value = {
@@ -132,7 +143,9 @@ public interface RunService {
             @QueryParam("sort") @DefaultValue("") String sort,
             @QueryParam("direction") @DefaultValue("Ascending") String direction,
             @QueryParam("limit") @DefaultValue(""+Integer.MAX_VALUE) int limit,
-            @QueryParam("page") @DefaultValue("0") int page);
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("include") @Separator(",") List<String> include,
+            @QueryParam("exclude") @Separator(",") List<String> exclude);
 
     @GET
     @Path("{id}/metadata")
@@ -305,14 +318,6 @@ public interface RunService {
                             @QueryParam("description") String description,
                             @RestForm("data") FileUpload data,
                             @RestForm("metadata") FileUpload metadata);
-
-    @GET
-    @Path("{id}/waitforDatasets")
-    @Operation(description = "Blocking call, waiting for datasets to be produced")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "Run ID", example = "101"),
-    })
-    void waitForDatasets(@PathParam("id") int id);
 
     @GET
     @Path("autocomplete")

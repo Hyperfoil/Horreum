@@ -4,10 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
-import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.bus.MessageBusChannels;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.*;
@@ -16,7 +15,6 @@ import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
 import io.hyperfoil.tools.horreum.mapper.TestTokenMapper;
 import io.hyperfoil.tools.horreum.api.services.TestService;
-import io.hyperfoil.tools.horreum.bus.MessageBus;
 import io.hyperfoil.tools.horreum.server.EncryptionManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
@@ -36,7 +34,6 @@ import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
-import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,7 +48,6 @@ import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -82,7 +78,7 @@ public class TestServiceImpl implements TestService {
    protected static final String LABEL_VALUES_QUERY = """
          WITH
          combined as (
-         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
                   FROM dataset
                   LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
                   LEFT JOIN label ON label.id = lv.label_id
@@ -99,9 +95,6 @@ public class TestServiceImpl implements TestService {
 
    @Inject
    EntityManager em;
-
-   @Inject
-   MessageBus messageBus;
 
    @Inject
    SecurityIdentity identity;
@@ -132,7 +125,7 @@ public class TestServiceImpl implements TestService {
       mediator.deleteTest(test.id);
       test.delete();
       if(mediator.testMode())
-         Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.TEST_DELETED, test.id, TestMapper.from(test)));;
+         Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.TEST_DELETED, test.id, TestMapper.from(test)));;
    }
 
    @Override
@@ -256,7 +249,7 @@ public class TestServiceImpl implements TestService {
          }
          mediator.newTest(TestMapper.from(test));
          if(mediator.testMode())
-            Util.registerTxSynchronization(tm, txStatus -> messageBus.publish(MessageBusChannels.TEST_NEW, test.id, TestMapper.from(test)));
+            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.TEST_NEW, test.id, TestMapper.from(test)));
       }
       return test;
    }
@@ -307,10 +300,9 @@ public class TestServiceImpl implements TestService {
    @Override
    @PermitAll
    @WithRoles
-   public TestListing summary(String roles, String folder) {
+   public TestListing summary(String roles, String folder, Integer limit, Integer page, SortDirection direction) {
       folder = normalizeFolderName(folder);
       StringBuilder testSql = new StringBuilder();
-      // TODO: materialize the counts in a table for quicker lookup
       testSql.append("WITH runs AS (SELECT testid, count(id) as count FROM run WHERE run.trashed = false OR run.trashed IS NULL GROUP BY testid), ");
       testSql.append("datasets AS (SELECT testid, count(id) as count FROM dataset GROUP BY testid) ");
       testSql.append("SELECT test.id,test.name,test.folder,test.description, COALESCE(datasets.count, 0) AS datasets, COALESCE(runs.count, 0) AS runs,test.owner,test.access ");
@@ -322,7 +314,10 @@ public class TestServiceImpl implements TestService {
          testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')");
          Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
       }
-      testSql.append(" ORDER BY test.name");
+      if( limit > 0 && page > 0 ) {
+         Util.addPaging(testSql, limit, page, "test.name", direction);
+      }
+
       org.hibernate.query.Query<TestSummary> testQuery = em.unwrap(Session.class).createNativeQuery(testSql.toString(), Tuple.class)
               .setTupleTransformer((tuples, aliases) ->
                       new TestSummary((int) tuples[0], (String) tuples[1], (String) tuples[2], (String) tuples[3],
@@ -334,7 +329,6 @@ public class TestServiceImpl implements TestService {
          Roles.addRolesParam(identity, testQuery, 2, roles);
       }
       List<TestSummary> summaryList = testQuery.getResultList();
-
       if ( ! identity.isAnonymous() ) {
          List<Integer> testIdSet = new ArrayList<>();
          Map<Integer, Set<String>> subscriptionMap = new HashMap<>();
@@ -362,9 +356,21 @@ public class TestServiceImpl implements TestService {
           summaryList.forEach(summary -> summary.watching = subscriptionMap.computeIfAbsent(summary.id, k -> Collections.emptySet()));
       }
 
-
+      if (folder == null){
+         folder = "";
+      }
       TestListing listing = new TestListing();
       listing.tests = summaryList;
+      StringBuilder countQuery = new StringBuilder();
+      List<String> ordinals = new ArrayList<>();
+      if (anyFolder) {
+         Roles.addRoles(identity, countQuery, roles, false, ordinals);
+      } else  {
+         ordinals.add(folder);
+         countQuery.append(" COALESCE(folder, '') IN (?1) ");
+         Roles.addRoles(identity, countQuery, roles, true, ordinals);
+      }
+      listing.count = TestDAO.count(countQuery.toString(), ordinals.toArray(new Object[]{}));
       return listing;
    }
 
@@ -544,9 +550,10 @@ public class TestServiceImpl implements TestService {
       return false;
    }
 
+   @Transactional
    @WithRoles
    @Override
-   public List<ExportedLabelValues> listLabelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, int limit, int page) {
+   public List<ExportedLabelValues> labelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, int limit, int page, List<String> include, List<String> exclude) {
       Test test = get(testId,null);
       if(test == null){
          throw ServiceException.serverError("Cannot find test "+testId);
@@ -594,6 +601,22 @@ public class TestServiceImpl implements TestService {
             filterSql+=FILTER_SEPARATOR+FILTER_AFTER;
          }
       }
+
+      String includeExcludeSql = "";
+      if (include!=null && !include.isEmpty()){
+         if(exclude!=null && !exclude.isEmpty()){
+            include = new ArrayList<>(include);
+            include.removeAll(exclude);
+         }
+         if(!include.isEmpty()) {
+            includeExcludeSql = " AND label.name in :include";
+         }
+      }
+      //includeExcludeSql is empty if include did not contain entries after exclude removal
+      if(includeExcludeSql.isEmpty() && exclude!=null && !exclude.isEmpty()){
+         includeExcludeSql=" AND label.name NOT in :exclude";
+      }
+
       if(filterSql.isBlank() && filter != null && !filter.isBlank()){
          //TODO there was an error with the filter, do we return that info to the user?
       }
@@ -619,7 +642,9 @@ public class TestServiceImpl implements TestService {
 
           String sql = LABEL_VALUES_QUERY
                   .replace("FILTER_PLACEHOLDER",filterSql)
+                  .replace("INCLUDE_EXCLUDE_PLACEHOLDER",includeExcludeSql)
                   .replace("ORDER_PLACEHOLDER",orderSql);
+
            NativeQuery query =  ((NativeQuery) em.createNativeQuery(sql))
              .setParameter("testId", test.id)
              .setParameter("filteringLabels", filtering)
@@ -638,12 +663,17 @@ public class TestServiceImpl implements TestService {
                  query.setParameter("after",afterInstant, StandardBasicTypes.INSTANT);
               }
            }
+           if(includeExcludeSql.contains(":include")){
+              query.setParameter("include",include);
+           }else if (includeExcludeSql.contains(":exclude")){
+              query.setParameter("exclude",exclude);
+           }
            if(orderSql.contains(LABEL_ORDER_JSONPATH)){
                query.setParameter("orderBy", sort);
            }
-             query
-                .setParameter("limit",limit)//limit
-                .setParameter("offset",limit * page)//offset
+           query
+                .setParameter("limit",limit)
+                .setParameter("offset",limit * Math.max(0,page))
                 .unwrap(NativeQuery.class)
                 .addScalar("values", JsonBinaryType.INSTANCE)
                 .addScalar("runId",Integer.class)
