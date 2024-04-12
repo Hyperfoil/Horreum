@@ -264,6 +264,9 @@ public interface SchemaService {
               example="64")
       public long count;
 
+      // required for automatic parsing on testing side
+      public SchemaQueryResult() {}
+
       public SchemaQueryResult(List<Schema> schemas, long count) {
          this.schemas = schemas;
          this.count = count;
