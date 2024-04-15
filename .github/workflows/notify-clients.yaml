@@ -3,7 +3,7 @@ name: Notify clients
 on:
   push:
     branches:
-      - main
+      - master
       - 0.12.x
     paths:
       - "docs/site/content/en/openapi/openapi.yaml"
