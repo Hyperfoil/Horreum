@@ -477,9 +477,11 @@ paths:
       parameters:
       - name: query
         in: query
+        description: JSONPath to be autocompleted
         required: true
         schema:
           type: string
+        example: $.
       responses:
         "200":
           description: OK

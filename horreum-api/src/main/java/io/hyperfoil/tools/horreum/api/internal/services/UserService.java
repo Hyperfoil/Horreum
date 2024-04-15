@@ -14,6 +14,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
+import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -33,7 +34,9 @@ public interface UserService {
    @GET
    @Path("search")
    @Blocking
-   List<UserData> searchUsers(@Parameter(required = true) @QueryParam("query") String query);
+   @Operation(description="Search for user(s) with an optional query condition.")
+   List<UserData> searchUsers(@Parameter(required = true, name="query", description = "filter users by username (case insensitive)",
+      example = "user") @QueryParam("query") String query);
 
    @POST
    @Path("info")

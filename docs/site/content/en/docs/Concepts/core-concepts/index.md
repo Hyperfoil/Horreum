@@ -137,3 +137,6 @@ Actions only for a particular [`Test`](#test)
 
 ## Action allow list
 `Horreum` will only allow generic HTTP requests to domains that have been pre-configured in Horreum by an Administrator.
+
+## API Filter Query
+`Horreum` [API](/docs/Reference/APIFilterQueryReference.md) provides query parameters that are `JSONPath` paths that filter operation results.

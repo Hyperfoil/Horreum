@@ -322,13 +322,16 @@ public interface RunService {
     @GET
     @Path("autocomplete")
     @ApiIgnore
-    List<String> autocomplete(@Parameter(required = true) @QueryParam("query") String query);
+    List<String> autocomplete(@Parameter(required = true,
+            name = "query",
+            description = "JSONPath to be autocompleted",
+            example = "$.") @QueryParam("query") String query);
 
     @GET
     @Path("list")
     @Operation(description = "Retrieve a paginated list of Runs with available count")
     @Parameters(value = {
-            @Parameter(name = "query", description = "query string to filter runs", example = ""),
+            @Parameter(name = "query", description = "query string to filter runs", example = "$.*"),
             @Parameter(name = "matchAll", description = "match all Runs?", example = "false"),
             @Parameter(name = "roles", description = "__my, __all or a comma delimited  list of roles", example = "__my"),
             @Parameter(name = "trashed", description = "show trashed runs", example = "false"),
