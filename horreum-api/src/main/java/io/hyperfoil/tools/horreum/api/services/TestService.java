@@ -380,6 +380,9 @@ public interface TestService {
       @JsonProperty(required = true)
       public long count;
 
+      // required for automatic parsing in testing
+      public TestQueryResult() {}
+
       public TestQueryResult(List<Test> tests, long count) {
          this.tests = tests;
          this.count = count;

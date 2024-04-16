@@ -1,6 +1,6 @@
 import React, {useMemo, useEffect, useState, useContext} from "react"
 import {Card, CardHeader, CardFooter, CardBody, PageSection, Pagination, Flex, FlexItem} from "@patternfly/react-core"
-import {NavLink} from "react-router-dom"
+import {NavLink, useNavigate} from "react-router-dom"
 
 import {useTester, teamsSelector, teamToName, isAuthenticatedSelector} from "../../auth"
 import {noop} from "../../utils"
@@ -10,8 +10,7 @@ import ActionMenu, {useChangeAccess, useDelete} from "../../components/ActionMen
 import ButtonLink from "../../components/ButtonLink"
 import {CellProps, Column} from "react-table"
 import {Access, SortDirection, Schema, schemaApi} from "../../api"
-import SchemaImportButton from "./SchemaImportButton"
-import TeamSelect, {ONLY_MY_OWN, Team} from "../../components/TeamSelect";
+import TeamSelect, {ONLY_MY_OWN, Team, createTeam} from "../../components/TeamSelect";
 import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
@@ -21,7 +20,10 @@ type C = CellProps<Schema>
 
 export default function SchemaList() {
     document.title = "Schemas | Horreum"
+    const params = new URLSearchParams(location.search)
+    const navigate = useNavigate()
     const {alerting} = useContext(AppContext) as AppContextType;
+    const teams = useSelector(teamsSelector)
 
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
@@ -31,6 +33,9 @@ export default function SchemaList() {
     const [schemaCount, setSchemaCount] = useState(0)
     const [loading, setLoading] = useState(false)
     const [reloadCounter, setReloadCounter] = useState(0)
+    const rolesFilterFromQuery = params.get("filter")
+    const [rolesFilter, setRolesFilter] = useState<Team>(rolesFilterFromQuery !== null ? createTeam(rolesFilterFromQuery) : ONLY_MY_OWN)
+
 
     const isTester = useTester()
 
@@ -45,7 +50,7 @@ export default function SchemaList() {
     const reloadSchemas = () => {
         setLoading(true)
         schemaApi
-            .list(pagination.perPage, pagination.page - 1, "", SortDirection.Ascending)
+            .list(pagination.perPage, pagination.page - 1, "", SortDirection.Ascending, rolesFilter.key)
             .then((result) => {
                 setSchemas(result.schemas)
                 setSchemaCount(result.count)
@@ -56,7 +61,16 @@ export default function SchemaList() {
 
     useEffect(() => {
         reloadSchemas()
-    }, [pagination, reloadCounter])
+    }, [pagination, reloadCounter, teams, rolesFilter])
+
+    useEffect(() => {
+        // set query param in the url
+        let query = ""
+        if (rolesFilter.key !== ONLY_MY_OWN.key) {
+            query = "?filter=" + rolesFilter.key
+        }
+        navigate(location.pathname + query)
+    }, [rolesFilter])
 
     const columns: Column<Schema>[] = useMemo(
         () => [
@@ -127,16 +141,14 @@ export default function SchemaList() {
         ],
         [schemas]
     )
-    const teams = useSelector(teamsSelector)
-    const isAuthenticated = useSelector(isAuthenticatedSelector)
-    const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
+
     return (
         <PageSection>
             <Card>
                 {isTester && (
                     <CardHeader>
                         <Flex>
-                            {/* <FlexItem>
+                            <FlexItem>
                                 <TeamSelect
                                     includeGeneral={true}
                                     selection={rolesFilter}
@@ -144,7 +156,7 @@ export default function SchemaList() {
                                         setRolesFilter(selection)
                                     }}
                                 />
-                            </FlexItem> */}
+                            </FlexItem>
 
                             <FlexItem align={{ default: 'alignRight' }}>
                                 <ButtonLink style={{marginRight: "16px", width: "100pt"}} to="/schema/_new">New

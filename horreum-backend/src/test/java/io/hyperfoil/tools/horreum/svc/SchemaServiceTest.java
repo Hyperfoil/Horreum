@@ -111,23 +111,63 @@ class SchemaServiceTest extends BaseServiceTest {
 
 
    @org.junit.jupiter.api.Test
-   void testListSchemasWithDifferentOrderings() {
+   void testListSchemas() {
       // create some schemas
-      createSchema("Ghi", "urn:schema:ghi");
-      createSchema("Abc", "urn:schema:abc");
-      createSchema("Def", "urn:schema:def");
+      createSchema("Ghi", "urn:schema:1");
+      createSchema("Abc", "urn:schema:2");
+      createSchema("Def", "urn:schema:3");
 
-      // by default order by name and with ascending direction
-      SchemaService.SchemaQueryResult res = listSchemas(null, null, null, null);
+      // by default order by name and with descending direction
+      SchemaService.SchemaQueryResult res = listSchemas(null, null, null, null, null, null);
       assertEquals(3, res.schemas.size());
       assertEquals(3, res.count);
       assertEquals("Ghi", res.schemas.get(0).name);
 
+      // order by uri with descending direction
+      res = listSchemas(null, null, null, null, "uri", null);
+      assertEquals(3, res.schemas.size());
+      assertEquals(3, res.count);
+      assertEquals("Def", res.schemas.get(0).name);
+
+      // order by uri with ascending direction
+      res = listSchemas(null, null, null, null, "uri", SortDirection.Ascending);
+      assertEquals(3, res.schemas.size());
+      assertEquals(3, res.count);
+      assertEquals("Ghi", res.schemas.get(0).name);
+
+      // order by name with ascending direction
+      res = listSchemas(null, null, null, null, "name", SortDirection.Ascending);
+      assertEquals(3, res.schemas.size());
+      assertEquals(3, res.count);
+      assertEquals("Abc", res.schemas.get(0).name);
+
       // limit the list to 2 results
-      res = listSchemas(2, 0, null, null);
+      res = listSchemas(null, null, 2, 0, null, null);
       assertEquals(2, res.schemas.size());
       // total number of records
       assertEquals(3, res.count);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testListSchemasWithDifferentRoles() {
+      // create some schemas
+      createSchema("Ghi", "urn:schema:ghi");
+      createSchema("Abc", "urn:schema:abc");
+      createSchema("Def", "urn:schema:def");
+      createSchema("jkl", "urn:schema:jkl");
+
+      // by default order by name and with ascending direction
+      SchemaService.SchemaQueryResult res = listSchemas(null, null, null, null, null, null);
+      assertEquals(4, res.schemas.size());
+      assertEquals(4, res.count);
+
+      res = listSchemas(getAdminToken(), Roles.MY_ROLES, null, null, null, null);
+      assertEquals(0, res.schemas.size());
+      assertEquals(4, res.count);
+
+      res = listSchemas(getAdminToken(), Roles.ALL_ROLES, null, null, null, null);
+      assertEquals(4, res.schemas.size());
+      assertEquals(4, res.count);
    }
 
    @org.junit.jupiter.api.Test
@@ -709,10 +749,14 @@ class SchemaServiceTest extends BaseServiceTest {
    }
 
    // utility to get list of schemas
-   private SchemaService.SchemaQueryResult listSchemas(Integer limit, Integer page, String sort, SortDirection direction) {
+   private SchemaService.SchemaQueryResult listSchemas(String token, String roles, Integer limit, Integer page, String sort, SortDirection direction) {
       StringBuilder query = new StringBuilder("/api/schema/");
-      if (limit != null || page != null || sort != null || direction != null) {
+      if (roles != null || limit != null || page != null || sort != null || direction != null) {
          query.append("?");
+
+         if (roles != null) {
+            query.append("roles=").append(roles).append("&");
+         }
 
          if (limit != null) {
             query.append("limit=").append(limit).append("&");
@@ -730,7 +774,10 @@ class SchemaServiceTest extends BaseServiceTest {
             query.append("direction=").append(direction);
          }
       }
-      return jsonRequest().get(query.toString())
+      return jsonRequest()
+          .auth()
+          .oauth2(token == null ? getTesterToken() : token)
+          .get(query.toString())
           .then()
           .statusCode(200)
           .extract()
