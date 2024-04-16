@@ -1,5 +1,43 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.hyperfoil.tools.horreum.action.ExperimentResultToMarkdown;
+import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.api.alerting.Watch;
+import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.services.SchemaService;
+import io.hyperfoil.tools.horreum.api.services.TestService;
+import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
+import io.hyperfoil.tools.horreum.entity.ExperimentProfileDAO;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetectionDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRuleDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
+import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
+import io.hyperfoil.tools.horreum.entity.data.RunDAO;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.hyperfoil.tools.horreum.server.CloseMe;
+import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
+import io.hyperfoil.tools.horreum.test.PostgresResource;
+import io.hyperfoil.tools.horreum.test.TestUtil;
+import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
+import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+import io.restassured.common.mapper.TypeRef;
+import io.restassured.response.Response;
+import org.hibernate.query.NativeQuery;
+import org.junit.jupiter.api.TestInfo;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -12,53 +50,49 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.services.SchemaService;
-import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
-import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
-import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
-import io.hyperfoil.tools.horreum.api.alerting.Watch;
-import io.hyperfoil.tools.horreum.api.data.*;
-import io.hyperfoil.tools.horreum.api.data.Extractor;
-import io.hyperfoil.tools.horreum.api.data.ViewComponent;
-import io.hyperfoil.tools.horreum.entity.alerting.*;
-import io.hyperfoil.tools.horreum.entity.data.*;
-import io.restassured.common.mapper.TypeRef;
-import io.restassured.response.Response;
-import jakarta.inject.Inject;
-import org.hibernate.query.NativeQuery;
-import org.junit.jupiter.api.TestInfo;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-
-import io.hyperfoil.tools.horreum.action.ExperimentResultToMarkdown;
-import io.hyperfoil.tools.horreum.api.services.TestService;
-import io.hyperfoil.tools.horreum.entity.ExperimentProfileDAO;
-import io.hyperfoil.tools.horreum.server.CloseMe;
-import io.hyperfoil.tools.horreum.test.PostgresResource;
-import io.hyperfoil.tools.horreum.test.TestUtil;
-import io.quarkus.test.common.QuarkusTestResource;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.TestProfile;
-import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(HorreumTestProfile.class)
-public class TestServiceTest extends BaseServiceTest {
+class TestServiceTest extends BaseServiceTest {
 
-   @Inject
-   TestService testService;
+   @org.junit.jupiter.api.Test
+   void testListTests() {
+      int count = 10;
+      // all with owner TESTER_ROLES[0];
+      createTests(count, "test-");
+
+      TestService.TestQueryResult testsResult = listTests(null,null, null, null, null, null);
+      assertEquals(count, testsResult.count);
+      assertEquals(count, testsResult.tests.size());
+
+      testsResult = listTests(null, null, 5, 0, null, null);
+      assertEquals(count, testsResult.count);
+      assertEquals(5, testsResult.tests.size());
+
+      // get all my tests
+      testsResult = listTests(null, Roles.MY_ROLES, null, null, null, null);
+      assertEquals(count, testsResult.count);
+      assertEquals(10, testsResult.tests.size());
+
+      // get my tests for admin user
+      testsResult = listTests(getAdminToken(), Roles.MY_ROLES, null, null, null, null);
+      assertEquals(count, testsResult.count);
+      assertEquals(0, testsResult.tests.size());
+
+      // get all tests for admin user
+      testsResult = listTests(getAdminToken(), Roles.ALL_ROLES, null, null, null, null);
+      assertEquals(count, testsResult.count);
+      assertEquals(10, testsResult.tests.size());
+   }
 
    @org.junit.jupiter.api.Test
    public void testCreateDelete(TestInfo info) throws InterruptedException {
@@ -584,4 +618,39 @@ public class TestServiceTest extends BaseServiceTest {
       jsonRequest().body(watch).post("/api/subscriptions/" + test.id);
    }
 
+   // utility to get list of schemas
+   private TestService.TestQueryResult listTests(String token, String roles, Integer limit, Integer page, String sort, SortDirection direction) {
+      StringBuilder query = new StringBuilder("/api/test/");
+      if (roles != null || limit != null || page != null || sort != null || direction != null) {
+         query.append("?");
+
+         if (roles != null) {
+            query.append("roles=").append(roles).append("&");
+         }
+
+         if (limit != null) {
+            query.append("limit=").append(limit).append("&");
+         }
+
+         if (page != null) {
+            query.append("page=").append(page).append("&");
+         }
+
+         if (sort != null) {
+            query.append("sort=").append(sort).append("&");
+         }
+
+         if (direction != null) {
+            query.append("direction=").append(direction);
+         }
+      }
+      return jsonRequest()
+          .auth()
+          .oauth2(token == null ? getTesterToken() : token)
+          .get(query.toString())
+          .then()
+          .statusCode(200)
+          .extract()
+          .as(TestService.TestQueryResult.class);
+   }
 }

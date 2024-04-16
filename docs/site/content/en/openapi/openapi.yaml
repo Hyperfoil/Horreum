@@ -675,6 +675,7 @@ paths:
         description: query string to filter runs
         schema:
           type: string
+        example: $.*
       - name: matchAll
         in: query
         description: match all Runs?
@@ -1296,6 +1297,12 @@ paths:
         schema:
           $ref: '#/components/schemas/SortDirection'
         example: Ascending
+      - name: roles
+        in: query
+        description: "__my, __all or a comma delimited  list of roles"
+        schema:
+          type: string
+        example: __my
       responses:
         "200":
           description: OK

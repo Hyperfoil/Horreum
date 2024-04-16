@@ -1,12 +1,17 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.networknt.schema.AbsoluteIri;
 import com.networknt.schema.JsonMetaSchema;
+import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SchemaLocation;
 import com.networknt.schema.resource.InputStreamSource;
 import com.networknt.schema.resource.SchemaLoader;
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
@@ -14,7 +19,10 @@ import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.SchemaExport;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
+import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
+import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
+import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
@@ -25,44 +33,23 @@ import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
 import io.hyperfoil.tools.horreum.mapper.SchemaMapper;
 import io.hyperfoil.tools.horreum.mapper.TransformerMapper;
-import io.hyperfoil.tools.horreum.api.services.SchemaService;
-import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
-import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.hyperfoil.tools.horreum.mapper.ValidationErrorMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
-
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.Query;
-import jakarta.transaction.TransactionManager;
 import jakarta.persistence.Tuple;
+import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
-
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.TreeMap;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
 import jakarta.ws.rs.DefaultValue;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
@@ -72,11 +59,13 @@ import org.hibernate.query.SelectionQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import com.networknt.schema.JsonSchemaFactory;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class SchemaServiceImpl implements SchemaService {
    private static final Logger log = Logger.getLogger(SchemaServiceImpl.class);
@@ -212,19 +201,37 @@ public class SchemaServiceImpl implements SchemaService {
    @PermitAll
    @WithRoles
    @Override
-   public SchemaQueryResult list(Integer limit, Integer page, String sort,
+   public SchemaQueryResult list(String roles, Integer limit, Integer page, String sort,
                                  @DefaultValue("Ascending")  SortDirection direction) {
+      PanacheQuery<SchemaDAO> query;
+      Set<String> actualRoles = null;
+      if (Roles.hasRolesParam(roles)) {
+         if (roles.equals(Roles.MY_ROLES)) {
+            if (!identity.isAnonymous()) {
+               actualRoles = identity.getRoles();
+            }
+         } else {
+            actualRoles = new HashSet<>(Arrays.asList(roles.split(";")));
+         }
+      }
+
       if (sort == null || sort.isEmpty()) {
          sort = "name";
       }
       Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
-      if (limit != null && page != null) {
-         List<SchemaDAO> schemas = SchemaDAO.findAll(Sort.by(sort).direction(sortDirection)).page(Page.of(page, limit)).list();
-         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).toList(), SchemaDAO.count());
+      Sort sortOpts = Sort.by(sort).direction(sortDirection);
+
+      if (actualRoles == null) {
+         query = SchemaDAO.findAll(sortOpts);
       } else {
-         List<SchemaDAO> schemas = SchemaDAO.listAll(Sort.by(sort).direction(sortDirection));
-         return new SchemaQueryResult( schemas.stream().map(SchemaMapper::from).toList(), SchemaDAO.count());
+         query = SchemaDAO.find("owner IN ?1", sortOpts, actualRoles);
       }
+
+      if (limit != null && page != null) {
+         query.page(Page.of(page, limit));
+      }
+
+      return new SchemaQueryResult( query.list().stream().map(SchemaMapper::from).toList(), SchemaDAO.count());
    }
 
    @WithRoles

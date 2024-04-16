@@ -90,9 +90,11 @@ public interface SchemaService {
            @Parameter(name = "limit", description = "limit the number of results", example = "20"),
            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas", example = "2"),
            @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
-           @Parameter(name = "direction", description = "Sort direction", example ="Ascending")
+           @Parameter(name = "direction", description = "Sort direction", example ="Ascending"),
+           @Parameter(name = "roles", description = "__my, __all or a comma delimited  list of roles", example = "__my"),
    })
-   SchemaQueryResult list(@QueryParam("limit") Integer limit,
+   SchemaQueryResult list(@QueryParam("roles") String roles,
+                          @QueryParam("limit") Integer limit,
                           @QueryParam("page") Integer page,
                           @QueryParam("sort") String sort,
                           @QueryParam("direction") SortDirection direction);
