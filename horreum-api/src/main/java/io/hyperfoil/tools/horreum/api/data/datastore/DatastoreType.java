@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.api.data.datastore;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
@@ -10,7 +9,8 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
         description = "Type of backend datastore")
 public enum DatastoreType {
     POSTGRES("POSTGRES", new TypeReference<PostgresDatastoreConfig>() {}),
-    ELASTICSEARCH ("ELASTICSEARCH", new TypeReference<ElasticsearchDatastoreConfig>() {});
+    ELASTICSEARCH ("ELASTICSEARCH", new TypeReference<ElasticsearchDatastoreConfig>() {}),
+    COLLECTORAPI("COLLECTORAPI", new TypeReference<CollectorApiDatastoreConfig>() {});
     private static final DatastoreType[] VALUES = values();
 
     private final String name;
